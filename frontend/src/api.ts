@@ -76,4 +76,13 @@ export const api = {
   updateLayout: (id: string, data: any) => request<any>(`/toolbox-layouts/${id}`, { method: "PUT", body: JSON.stringify(data) }),
   deleteLayout: (id: string) => request<any>(`/toolbox-layouts/${id}`, { method: "DELETE" }),
   analyzeToolbox: (image_base64: string) => request<any>(`/toolbox/analyze`, { method: "POST", body: JSON.stringify({ image_base64 }) }),
+
+  // Warranty claims
+  listWarrantyClaims: (params?: { dealer_id?: string; status?: string; archived?: boolean }) =>
+    request<any[]>(`/warranty-claims${qs(params)}`),
+  warrantyClaimsSummary: () => request<any>(`/warranty-claims/summary`),
+  updateWarrantyClaim: (id: string, data: any) =>
+    request<any>(`/warranty-claims/${id}`, { method: "PUT", body: JSON.stringify(data) }),
+  deleteWarrantyClaim: (id: string) =>
+    request<any>(`/warranty-claims/${id}`, { method: "DELETE" }),
 };

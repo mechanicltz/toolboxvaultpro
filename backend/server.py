@@ -163,6 +163,37 @@ class RepairInfo(BaseModel):
     notes: Optional[str] = ""
 
 
+# Warranty claim — long-lived record that survives "Mark Repaired"
+CLAIM_STATUSES = ["broken", "awaiting_approval", "waiting_replacement", "completed", "rejected"]
+
+
+class WarrantyClaim(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    tool_id: str
+    tool_name: str = ""
+    tool_photo: Optional[str] = None
+    dealer_id: Optional[str] = None
+    dealer_name: str = ""
+    repair_company: Optional[str] = ""
+    contact: Optional[str] = ""
+    notified_at: Optional[str] = ""
+    expected_completion: Optional[str] = ""
+    claim_status: str = "broken"
+    notes: Optional[str] = ""
+    created_at: str = Field(default_factory=now_iso)
+    updated_at: str = Field(default_factory=now_iso)
+    completed_at: Optional[str] = None
+
+
+class WarrantyClaimUpdate(BaseModel):
+    claim_status: Optional[str] = None
+    repair_company: Optional[str] = None
+    contact: Optional[str] = None
+    notified_at: Optional[str] = None
+    expected_completion: Optional[str] = None
+    notes: Optional[str] = None
+
+
 # Consumable
 class ConsumableInfo(BaseModel):
     store_name: Optional[str] = ""
@@ -740,6 +771,61 @@ async def update_tool(tool_id: str, payload: ToolUpdate):
 
     await db.tools.update_one({"id": tool_id}, {"$set": updates})
     new_doc = await db.tools.find_one({"id": tool_id}, {"_id": 0})
+
+    # Sync warranty claim record:
+    # Newly broken → create a new open claim (if no open claim already exists for this tool)
+    just_flagged = updates.get("needs_repair") is True and not doc.get("needs_repair")
+    just_unflagged = updates.get("needs_repair") is False and doc.get("needs_repair")
+    if just_flagged:
+        existing_open = await db.warranty_claims.find_one(
+            {"tool_id": tool_id, "claim_status": {"$nin": ["completed", "rejected"]}},
+            {"_id": 0, "id": 1},
+        )
+        if not existing_open:
+            ri = (new_doc.get("repair_info") or {})
+            claim = WarrantyClaim(
+                tool_id=tool_id,
+                tool_name=new_doc.get("name", ""),
+                tool_photo=(new_doc.get("photos") or [None])[0],
+                dealer_id=new_doc.get("dealer_id"),
+                dealer_name=new_doc.get("dealer_name") or "",
+                repair_company=ri.get("company_notified") or "",
+                contact=ri.get("contact") or "",
+                notified_at=ri.get("notified_at") or "",
+                expected_completion=ri.get("expected_completion") or "",
+                claim_status="broken",
+                notes=ri.get("notes") or "",
+            )
+            await db.warranty_claims.insert_one(claim.dict())
+    elif "repair_info" in updates and new_doc.get("needs_repair"):
+        # Repair info edited while still broken → keep open claim in sync
+        ri = updates.get("repair_info") or {}
+        await db.warranty_claims.update_many(
+            {"tool_id": tool_id, "claim_status": {"$nin": ["completed", "rejected"]}},
+            {
+                "$set": {
+                    "repair_company": ri.get("company_notified") or "",
+                    "contact": ri.get("contact") or "",
+                    "notified_at": ri.get("notified_at") or "",
+                    "expected_completion": ri.get("expected_completion") or "",
+                    "notes": ri.get("notes") or "",
+                    "updated_at": now_iso(),
+                }
+            },
+        )
+    if just_unflagged:
+        # User hit "Mark Repaired" — close any still-open claim as completed
+        await db.warranty_claims.update_many(
+            {"tool_id": tool_id, "claim_status": {"$nin": ["completed", "rejected"]}},
+            {
+                "$set": {
+                    "claim_status": "completed",
+                    "completed_at": now_iso(),
+                    "updated_at": now_iso(),
+                }
+            },
+        )
+
     return Tool(**new_doc)
 
 
@@ -934,6 +1020,139 @@ async def update_layout(layout_id: str, payload: ToolboxLayoutUpdate):
 @api_router.delete("/toolbox-layouts/{layout_id}")
 async def delete_layout(layout_id: str):
     await db.toolbox_layouts.delete_one({"id": layout_id})
+    return {"ok": True}
+
+
+# ---------- Warranty Claims ----------
+@api_router.get("/warranty-claims", response_model=List[WarrantyClaim])
+async def list_warranty_claims(
+    dealer_id: Optional[str] = None,
+    status: Optional[str] = None,
+    archived: Optional[bool] = None,  # true -> completed/rejected only; false -> active only
+):
+    q: Dict[str, Any] = {}
+    if dealer_id:
+        # Special token "_none_" matches claims without a dealer
+        if dealer_id == "_none_":
+            q["$or"] = [{"dealer_id": None}, {"dealer_id": ""}]
+        else:
+            q["dealer_id"] = dealer_id
+    if status:
+        q["claim_status"] = status
+    elif archived is True:
+        q["claim_status"] = {"$in": ["completed", "rejected"]}
+    elif archived is False:
+        q["claim_status"] = {"$nin": ["completed", "rejected"]}
+    items = await db.warranty_claims.find(q, {"_id": 0}).sort("updated_at", -1).to_list(5000)
+    return [WarrantyClaim(**i) for i in items]
+
+
+@api_router.get("/warranty-claims/summary")
+async def warranty_claims_summary():
+    items = await db.warranty_claims.find({}, {"_id": 0}).to_list(10000)
+    dealers = await db.dealers.find({}, {"_id": 0, "id": 1, "name": 1}).to_list(2000)
+    dealer_name_by_id = {d["id"]: d["name"] for d in dealers}
+
+    by_dealer: Dict[str, Dict[str, Any]] = {}
+    totals = {
+        "total": len(items),
+        "open": 0,
+        "completed": 0,
+        "rejected": 0,
+        "broken": 0,
+        "awaiting_approval": 0,
+        "waiting_replacement": 0,
+    }
+    for i in items:
+        st = i.get("claim_status") or "broken"
+        if st in totals:
+            totals[st] = totals.get(st, 0) + 1
+        if st not in ("completed", "rejected"):
+            totals["open"] += 1
+        did = i.get("dealer_id") or "_none_"
+        if did not in by_dealer:
+            by_dealer[did] = {
+                "dealer_id": did if did != "_none_" else None,
+                "dealer_name": dealer_name_by_id.get(did, i.get("dealer_name") or ("No Dealer" if did == "_none_" else "Unknown Dealer")),
+                "open": 0,
+                "completed": 0,
+                "rejected": 0,
+                "total": 0,
+                "broken": 0,
+                "awaiting_approval": 0,
+                "waiting_replacement": 0,
+            }
+        bucket = by_dealer[did]
+        bucket["total"] += 1
+        if st in bucket:
+            bucket[st] = bucket.get(st, 0) + 1
+        if st not in ("completed", "rejected"):
+            bucket["open"] += 1
+    dealer_list = sorted(by_dealer.values(), key=lambda d: (-d["open"], d["dealer_name"].lower()))
+    return {"totals": totals, "dealers": dealer_list}
+
+
+@api_router.put("/warranty-claims/{claim_id}", response_model=WarrantyClaim)
+async def update_warranty_claim(claim_id: str, payload: WarrantyClaimUpdate):
+    doc = await db.warranty_claims.find_one({"id": claim_id}, {"_id": 0})
+    if not doc:
+        raise HTTPException(404, "Claim not found")
+    updates = {k: v for k, v in payload.dict().items() if v is not None}
+    if "claim_status" in updates and updates["claim_status"] not in CLAIM_STATUSES:
+        raise HTTPException(400, f"Invalid claim_status. Must be one of {CLAIM_STATUSES}")
+    updates["updated_at"] = now_iso()
+    new_status = updates.get("claim_status")
+    archiving = new_status in ("completed", "rejected") and doc.get("claim_status") not in ("completed", "rejected")
+    reopening = new_status not in (None, "completed", "rejected") and doc.get("claim_status") in ("completed", "rejected")
+    if archiving:
+        updates["completed_at"] = now_iso()
+    if reopening:
+        updates["completed_at"] = None
+    await db.warranty_claims.update_one({"id": claim_id}, {"$set": updates})
+
+    # Mirror to the underlying tool
+    tool_id = doc.get("tool_id")
+    if tool_id:
+        if archiving:
+            # Tool is no longer broken once claim is closed
+            await db.tools.update_one(
+                {"id": tool_id},
+                {"$set": {"needs_repair": False, "repair_info": None, "updated_at": now_iso()}},
+            )
+        elif reopening:
+            # Reopen — flag tool broken and rebuild repair_info from the claim
+            ri = {
+                "company_notified": doc.get("repair_company") or updates.get("repair_company") or "",
+                "contact": doc.get("contact") or updates.get("contact") or "",
+                "notified_at": doc.get("notified_at") or updates.get("notified_at") or "",
+                "expected_completion": doc.get("expected_completion") or updates.get("expected_completion") or "",
+                "repair_status": "Reported",
+                "notes": doc.get("notes") or updates.get("notes") or "",
+            }
+            await db.tools.update_one(
+                {"id": tool_id},
+                {"$set": {"needs_repair": True, "repair_info": ri, "updated_at": now_iso()}},
+            )
+        elif new_status and new_status not in ("completed", "rejected"):
+            # Plain status change while still active — keep tool's repair_info repair_status in sync
+            label_map = {
+                "broken": "Reported",
+                "awaiting_approval": "Reported",
+                "waiting_replacement": "Awaiting Parts",
+            }
+            tdoc = await db.tools.find_one({"id": tool_id}, {"_id": 0, "repair_info": 1, "needs_repair": 1})
+            if tdoc and tdoc.get("needs_repair"):
+                ri = dict(tdoc.get("repair_info") or {})
+                ri["repair_status"] = label_map.get(new_status, ri.get("repair_status") or "Reported")
+                await db.tools.update_one({"id": tool_id}, {"$set": {"repair_info": ri, "updated_at": now_iso()}})
+
+    new = await db.warranty_claims.find_one({"id": claim_id}, {"_id": 0})
+    return WarrantyClaim(**new)
+
+
+@api_router.delete("/warranty-claims/{claim_id}")
+async def delete_warranty_claim(claim_id: str):
+    await db.warranty_claims.delete_one({"id": claim_id})
     return {"ok": True}
 
 

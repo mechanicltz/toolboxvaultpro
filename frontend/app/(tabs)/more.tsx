@@ -81,6 +81,13 @@ export default function MoreScreen() {
           testID="more-warranty"
           onPress={() => router.push("/warranty")}
         />
+        <Row
+          icon="construct"
+          title="Warranty Claims"
+          subtitle="Track broken items by dealer"
+          testID="more-claims"
+          onPress={() => router.push("/warranty-claims")}
+        />
 
         <Text style={styles.sectionLabel}>DISPLAY</Text>
         <View style={styles.toggleRow}>
