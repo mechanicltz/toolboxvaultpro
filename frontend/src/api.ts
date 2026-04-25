@@ -52,6 +52,7 @@ export const api = {
   listBorrowers: () => request<any[]>(`/borrowers`),
   createBorrower: (data: any) => request<any>(`/borrowers`, { method: "POST", body: JSON.stringify(data) }),
   deleteBorrower: (id: string) => request<any>(`/borrowers/${id}`, { method: "DELETE" }),
+  borrowerHistory: (id: string) => request<any>(`/borrowers/${id}/history`),
 
   // Dealers
   listDealers: () => request<any[]>(`/dealers`),

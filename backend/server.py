@@ -479,6 +479,92 @@ async def delete_borrower(borrower_id: str):
     return {"ok": True}
 
 
+@api_router.get("/borrowers/{borrower_id}/history")
+async def borrower_history(borrower_id: str):
+    b = await db.borrowers.find_one({"id": borrower_id}, {"_id": 0})
+    if not b:
+        raise HTTPException(404, "Borrower not found")
+    name = b.get("name", "")
+    name_rx = {"$regex": f"^{re.escape(name)}$", "$options": "i"}
+
+    # All tools that have ever been checked out by this borrower id OR name
+    tools = await db.tools.find(
+        {
+            "$or": [
+                {"checkout_history.borrower_id": borrower_id},
+                {"checkout_history.borrower_name": name_rx},
+                {"current_checkout.borrower_id": borrower_id},
+                {"current_checkout.borrower_name": name_rx},
+            ]
+        },
+        {"_id": 0},
+    ).to_list(5000)
+
+    per_tool: List[Dict[str, Any]] = []
+    total_checkouts = 0
+    currently_held: List[Dict[str, Any]] = []
+    all_records: List[Dict[str, Any]] = []
+
+    for t in tools:
+        # Collect all checkouts (history + current) attributed to this borrower
+        records = []
+        for r in (t.get("checkout_history") or []):
+            if r.get("borrower_id") == borrower_id or (
+                r.get("borrower_name", "").lower() == name.lower()
+            ):
+                records.append(r)
+        cur = t.get("current_checkout") or {}
+        is_active = bool(t.get("is_checked_out")) and (
+            cur.get("borrower_id") == borrower_id
+            or (cur.get("borrower_name", "").lower() == name.lower())
+        )
+        if is_active:
+            records.append(cur)
+            currently_held.append(
+                {
+                    "tool_id": t.get("id"),
+                    "tool_name": t.get("name"),
+                    "checked_out_at": cur.get("checked_out_at"),
+                    "notes": cur.get("notes", ""),
+                }
+            )
+        if not records:
+            continue
+        last = max(records, key=lambda r: r.get("checked_out_at", ""))
+        per_tool.append(
+            {
+                "tool_id": t.get("id"),
+                "tool_name": t.get("name"),
+                "photo": (t.get("photos") or [None])[0],
+                "checkout_count": len(records),
+                "last_checked_out_at": last.get("checked_out_at"),
+                "currently_out": is_active,
+            }
+        )
+        total_checkouts += len(records)
+        for r in records:
+            all_records.append(
+                {
+                    "tool_id": t.get("id"),
+                    "tool_name": t.get("name"),
+                    "checked_out_at": r.get("checked_out_at"),
+                    "checked_in_at": r.get("checked_in_at"),
+                    "notes": r.get("notes", ""),
+                }
+            )
+
+    per_tool.sort(key=lambda x: x["checkout_count"], reverse=True)
+    all_records.sort(key=lambda r: r.get("checked_out_at") or "", reverse=True)
+    return {
+        "borrower": Borrower(**b).dict(),
+        "total_checkouts": total_checkouts,
+        "unique_tools": len(per_tool),
+        "currently_held": currently_held,
+        "per_tool": per_tool,
+        "history": all_records[:200],
+    }
+
+
 # ---------- Dealers ----------
 @api_router.post("/dealers", response_model=Dealer)
 async def create_dealer(payload: DealerCreate):

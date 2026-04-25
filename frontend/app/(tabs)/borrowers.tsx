@@ -11,12 +11,14 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import { useFocusEffect } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import { theme } from "../../src/theme";
 import { api } from "../../src/api";
 import { confirm } from "../../src/confirm";
+import { formatDateTime } from "../../src/dt";
 
 export default function BorrowersScreen() {
+  const router = useRouter();
   const [borrowers, setBorrowers] = useState<any[]>([]);
   const [tools, setTools] = useState<any[]>([]);
   const [showAdd, setShowAdd] = useState(false);
@@ -101,7 +103,12 @@ export default function BorrowersScreen() {
         renderItem={({ item }) => {
           const active = toolsByBorrower(item.name);
           return (
-            <View style={styles.row}>
+            <TouchableOpacity
+              testID={`borrower-row-${item.id}`}
+              style={styles.row}
+              onPress={() => router.push(`/borrower/${item.id}`)}
+              activeOpacity={0.7}
+            >
               <View style={styles.avatar}>
                 <Text style={styles.avatarText}>
                   {item.name.charAt(0).toUpperCase()}
@@ -114,18 +121,22 @@ export default function BorrowersScreen() {
                 )}
                 <Text style={styles.rowMeta}>
                   {active.length > 0
-                    ? `Has ${active.length} tool${active.length > 1 ? "s" : ""}`
-                    : "No active checkouts"}
+                    ? `Has ${active.length} tool${active.length > 1 ? "s" : ""}  ·  Tap for full history`
+                    : "Tap for full checkout history"}
                 </Text>
               </View>
               <TouchableOpacity
                 testID={`delete-borrower-${item.id}`}
-                onPress={() => remove(item.id, item.name)}
+                onPress={(e) => {
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                  (e as any)?.stopPropagation?.();
+                  remove(item.id, item.name);
+                }}
                 hitSlop={10}
               >
                 <Ionicons name="trash-outline" size={20} color={theme.colors.danger} />
               </TouchableOpacity>
-            </View>
+            </TouchableOpacity>
           );
         }}
       />

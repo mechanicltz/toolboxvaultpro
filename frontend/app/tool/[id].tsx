@@ -19,6 +19,7 @@ import * as Sharing from "expo-sharing";
 import { theme } from "../../src/theme";
 import { api } from "../../src/api";
 import { confirm } from "../../src/confirm";
+import { formatDateTime } from "../../src/dt";
 
 export default function ToolDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -232,11 +233,30 @@ export default function ToolDetail() {
                 { backgroundColor: tool.is_checked_out ? theme.colors.accentSecondary : theme.colors.success },
               ]}
             />
-            <Text style={styles.statusText}>
-              {tool.is_checked_out
-                ? `OUT WITH ${tool.current_checkout?.borrower_name?.toUpperCase()}`
-                : "AVAILABLE"}
-            </Text>
+            <View style={{ flex: 1 }}>
+              {tool.is_checked_out ? (
+                <>
+                  <TouchableOpacity
+                    testID="banner-borrower-link"
+                    onPress={() => {
+                      if (tool.current_checkout?.borrower_id)
+                        router.push(`/borrower/${tool.current_checkout.borrower_id}`);
+                    }}
+                    disabled={!tool.current_checkout?.borrower_id}
+                  >
+                    <Text style={styles.statusText}>
+                      OUT WITH {tool.current_checkout?.borrower_name?.toUpperCase()}
+                      {tool.current_checkout?.borrower_id ? "  ›" : ""}
+                    </Text>
+                  </TouchableOpacity>
+                  <Text style={styles.statusSub}>
+                    Since {formatDateTime(tool.current_checkout?.checked_out_at)}
+                  </Text>
+                </>
+              ) : (
+                <Text style={styles.statusText}>AVAILABLE</Text>
+              )}
+            </View>
           </View>
 
           <Text style={styles.title}>{tool.name}</Text>
@@ -280,15 +300,28 @@ export default function ToolDetail() {
             <>
               <Text style={styles.sectionLabel}>HISTORY</Text>
               {tool.checkout_history.slice().reverse().map((h: any, i: number) => (
-                <View key={i} style={styles.histRow}>
+                <TouchableOpacity
+                  key={i}
+                  testID={`hist-${i}`}
+                  style={styles.histRow}
+                  onPress={() => h.borrower_id && router.push(`/borrower/${h.borrower_id}`)}
+                  disabled={!h.borrower_id}
+                  activeOpacity={0.7}
+                >
                   <View>
-                    <Text style={styles.histName}>{h.borrower_name}</Text>
+                    <Text style={styles.histName}>
+                      {h.borrower_name}
+                      {h.borrower_id ? "  ›" : ""}
+                    </Text>
                     <Text style={styles.histDate}>
-                      {(h.checked_out_at || "").substring(0, 10)} → {(h.checked_in_at || "").substring(0, 10) || "—"}
+                      Out: {formatDateTime(h.checked_out_at)}
+                    </Text>
+                    <Text style={styles.histDate}>
+                      In:{"  "}{h.checked_in_at ? formatDateTime(h.checked_in_at) : "—"}
                     </Text>
                     {!!h.notes && <Text style={styles.histNotes}>{h.notes}</Text>}
                   </View>
-                </View>
+                </TouchableOpacity>
               ))}
             </>
           )}
