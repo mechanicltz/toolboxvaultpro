@@ -1,0 +1,80 @@
+{
+  "project_details": {
+    "name": "ToolBox / Garage Tracker",
+    "type": "React Native Expo App",
+    "theme": "Dark",
+    "archetype": "Archetype 2: The Performance Pro (Tactical Industrial)",
+    "vibe": "Modern industrial design, rugged, reliable, high-contrast, tactical toolbox feel."
+  },
+  "typography": {
+    "heading_font": "Barlow Condensed (or similar strong condensed sans like Bebas Neue)",
+    "body_font": "Inter or IBM Plex Sans",
+    "hierarchy": {
+      "h1": "text-4xl uppercase tracking-tighter font-black",
+      "h2": "text-2xl uppercase tracking-tight font-bold",
+      "h3": "text-xl font-bold",
+      "body": "text-base leading-relaxed tracking-normal",
+      "caption": "text-sm text-zinc-400 uppercase tracking-widest font-bold"
+    }
+  },
+  "colors": {
+    "background_primary": "#0A0A0A",
+    "background_secondary": "#171717",
+    "surface": "#27272A",
+    "accent_primary": "#FFB300",
+    "accent_secondary": "#FF6B00",
+    "text_primary": "#FFFFFF",
+    "text_secondary": "#A1A1AA",
+    "text_on_accent": "#000000",
+    "border": "#3F3F46",
+    "success": "#22C55E",
+    "danger": "#EF4444"
+  },
+  "layout_and_spacing": {
+    "general": "Mobile-first rugged layout. Generous spacing (p-4 to p-6) to ensure easy thumb reach and high visibility.",
+    "buttons": "Large touch targets, minimum 48px height. No pill shapes; use rounded-sm or sharp corners.",
+    "cards": "Flat, tactical minimalist. No soft shadows. Rely on 1px solid strokes (border-zinc-700) and inner glow highlights.",
+    "navigation": "Dark bottom tab bar with bright yellow/orange active states. Utilize a prominent Floating Action Button (FAB) for the primary 'Add Tool' action."
+  },
+  "components": {
+    "buttons": "Primary: Solid #FFB300 background with #000000 text. Secondary: Transparent with #3F3F46 border and #FFFFFF text. Heavy font weight.",
+    "inputs": "Solid dark background (bg-zinc-900), 1px border. Focus state illuminates the border with the accent color (#FFB300) and increases border thickness to 2px.",
+    "tags": "Geometric shape, filled with 15% opacity of the accent color, bordered by 1px solid accent color.",
+    "lists": "Cardless, dense layout. Separated by a crisp 1px bottom border. Thumbnail image on the left, high-contrast title, and subtle grey subtitle.",
+    "photo_capture": "Full-screen camera view with a large, high-visibility yellow capture button.",
+    "status_indicators": "Small, bright dot indicators for check-in (Green/White) and check-out (Orange/Red)."
+  },
+  "motion": {
+    "general": "Snap transitions. Fast, mechanical, and precise. Avoid slow, floaty ease-ins. Think 'heavy machinery locking into place'.",
+    "click_states": "Scale down slightly (scale-95) to mimic pushing a stiff physical button."
+  },
+  "media": [
+    {
+      "category": "splash_background",
+      "url": "https://static.prod-images.emergentagent.com/jobs/7dbaee0c-d9c1-4d08-97ef-874c0e4c9bb1/images/f1fbdc8f24ca3dbdd8747157659b735eeb9f83ede482800c680a9d02e7e8fc6b.png",
+      "description": "Dark matte black metal texture with neon safety orange line. Use as a splash screen or empty state background."
+    },
+    {
+      "category": "drill_mockup",
+      "url": "https://static.prod-images.emergentagent.com/jobs/7dbaee0c-d9c1-4d08-97ef-874c0e4c9bb1/images/5dd2ebf5561afdef87190599d7819a2eb3065ce44b9397c33d71b7da20a9dd94.png",
+      "description": "Close up of a yellow power drill. Use as a placeholder for tool images in the inventory."
+    },
+    {
+      "category": "workbench_placeholder",
+      "url": "https://images.pexels.com/photos/8985913/pexels-photo-8985913.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+      "description": "Dark garage workbench. Use as a fallback image for locations (Garage/Toolbox) or category headers."
+    }
+  ],
+  "instructions_to_main_agent": [
+    "1. Initialize the React Native Expo app with a dark theme as the default.",
+    "2. Set up React Navigation: A Bottom Tab Navigator (Inventory, Borrowers, Reports) and a Stack Navigator for flows (Tool Details, Add/Edit Tool, Check-In/Out).",
+    "3. Apply the 'Performance Pro / Tactical Industrial' aesthetic. Strictly use the provided color palette (#0A0A0A base, #FFB300 accents).",
+    "4. Use a local storage solution (AsyncStorage or SQLite via expo-sqlite) to persist tools, tags, locations, borrowers, and base64 strings of captured photos.",
+    "5. For icons, use Lucide React Native. Ensure the stroke widths are crisp.",
+    "6. Build reusable, tactical UI components: A hard-edged primary button (bg-yellow-500, text-black, uppercase), text inputs with sharp focus states, and geometric tags.",
+    "7. Implement the Check-In/Out modal with a segmented control or toggle for 'Select from list' vs 'Free text entry' for borrowers.",
+    "8. Use `expo-camera` or `expo-image-picker` to capture photos, converting them to base64 before saving to state/db.",
+    "9. Use `expo-print` to generate PDF inventory/checkout reports and `expo-sharing` to allow users to export them.",
+    "10. Ensure all touchable/interactive elements have `testID` attributes mapped to their role (e.g., testID='add-tool-submit-button')."
+  ]
+}
