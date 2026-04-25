@@ -15,27 +15,39 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter, useFocusEffect } from "expo-router";
 import { theme } from "../../src/theme";
 import { api } from "../../src/api";
+import { usePrefs } from "../../src/prefs";
+import { SummaryHeader } from "../../src/SummaryHeader";
+
+type Filter = "all" | "available" | "out" | "consumables";
 
 export default function InventoryScreen() {
   const router = useRouter();
+  const { prefs } = usePrefs();
   const [tools, setTools] = useState<any[]>([]);
+  const [agg, setAgg] = useState<any>(null);
   const [search, setSearch] = useState("");
   const [refreshing, setRefreshing] = useState(false);
-  const [filter, setFilter] = useState<"all" | "available" | "out">("all");
-  const [stats, setStats] = useState<any>({});
+  const [filter, setFilter] = useState<Filter>("all");
+  const [warningCount, setWarningCount] = useState(0);
 
   const load = useCallback(async () => {
+    const params: any = { search: search || undefined };
+    if (filter === "available") params.checked_out = false;
+    if (filter === "out") params.checked_out = true;
+    if (filter === "consumables") params.is_consumable = true;
     try {
-      const params: any = { search: search || undefined };
-      if (filter === "available") params.checked_out = false;
-      if (filter === "out") params.checked_out = true;
-      const [t, s] = await Promise.all([api.listTools(params), api.getStats()]);
+      const [t, a, w] = await Promise.all([
+        api.listTools(params),
+        api.aggregate(params),
+        prefs.warranty_alerts ? api.warrantyAlerts(60) : Promise.resolve({ expiring: [], expired: [] }),
+      ]);
       setTools(t);
-      setStats(s);
+      setAgg(a);
+      setWarningCount((w.expiring?.length || 0) + (w.expired?.length || 0));
     } catch (e) {
       console.error(e);
     }
-  }, [search, filter]);
+  }, [search, filter, prefs.warranty_alerts]);
 
   useFocusEffect(
     useCallback(() => {
@@ -61,34 +73,28 @@ export default function InventoryScreen() {
           <Text style={styles.title}>TOOLBOX</Text>
           <Text style={styles.subtitle}>Inventory Tracker</Text>
         </View>
-        <View style={styles.statsRow}>
-          <View style={styles.statBlock}>
-            <Text style={styles.statValue}>{stats.total_tools ?? 0}</Text>
-            <Text style={styles.statLabel}>Total</Text>
-          </View>
-          <View style={styles.statDivider} />
-          <View style={styles.statBlock}>
-            <Text style={[styles.statValue, { color: theme.colors.success }]}>
-              {stats.available ?? 0}
-            </Text>
-            <Text style={styles.statLabel}>In</Text>
-          </View>
-          <View style={styles.statDivider} />
-          <View style={styles.statBlock}>
-            <Text style={[styles.statValue, { color: theme.colors.accentSecondary }]}>
-              {stats.checked_out ?? 0}
-            </Text>
-            <Text style={styles.statLabel}>Out</Text>
-          </View>
-        </View>
       </View>
+
+      {prefs.warranty_alerts && warningCount > 0 && (
+        <TouchableOpacity
+          testID="warranty-banner"
+          style={styles.warrantyBanner}
+          onPress={() => router.push("/warranty")}
+        >
+          <Ionicons name="shield-checkmark" size={18} color={theme.colors.warning} />
+          <Text style={styles.warrantyText}>
+            {warningCount} warranty alert{warningCount > 1 ? "s" : ""} — tap to view
+          </Text>
+          <Ionicons name="chevron-forward" size={16} color={theme.colors.warning} />
+        </TouchableOpacity>
+      )}
 
       <View style={styles.searchRow}>
         <View style={styles.searchBox}>
           <Ionicons name="search" size={18} color={theme.colors.textMuted} />
           <TextInput
             testID="search-input"
-            placeholder="Search tools, tags, location..."
+            placeholder="Search name, brand, dealer, agent, tag..."
             placeholderTextColor={theme.colors.textMuted}
             style={styles.searchInput}
             value={search}
@@ -111,6 +117,7 @@ export default function InventoryScreen() {
           { k: "all", label: "ALL" },
           { k: "available", label: "AVAILABLE" },
           { k: "out", label: "CHECKED OUT" },
+          { k: "consumables", label: "CONSUMABLES" },
         ].map((f) => (
           <TouchableOpacity
             key={f.k}
@@ -124,6 +131,10 @@ export default function InventoryScreen() {
           </TouchableOpacity>
         ))}
       </ScrollView>
+
+      {prefs.show_details_summary && agg && (
+        <SummaryHeader agg={agg} showPrices={prefs.show_prices} />
+      )}
 
       <FlatList
         data={tools}
@@ -154,6 +165,11 @@ export default function InventoryScreen() {
               ) : (
                 <Ionicons name="construct" size={28} color={theme.colors.accent} />
               )}
+              {item.is_consumable && (
+                <View style={styles.consumableBadge}>
+                  <Ionicons name="repeat" size={10} color="#000" />
+                </View>
+              )}
             </View>
             <View style={{ flex: 1 }}>
               <Text style={styles.rowTitle} numberOfLines={1}>
@@ -161,7 +177,8 @@ export default function InventoryScreen() {
               </Text>
               <Text style={styles.rowSub} numberOfLines={1}>
                 {item.location_name || "No location"}
-                {item.brand ? `  ·  ${item.brand}` : ""}
+                {item.dealer_name ? `  ·  ${item.dealer_name}` : ""}
+                {prefs.show_prices && item.cost ? `  ·  $${Number(item.cost).toFixed(0)}` : ""}
               </Text>
               {item.tag_names?.length > 0 && (
                 <View style={styles.tagRow}>
@@ -206,20 +223,8 @@ export default function InventoryScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.colors.bg },
-  header: {
-    paddingHorizontal: 20,
-    paddingTop: 12,
-    paddingBottom: 16,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  title: {
-    color: theme.colors.textPrimary,
-    fontSize: 28,
-    fontWeight: "900",
-    letterSpacing: 2,
-  },
+  header: { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 12 },
+  title: { color: "#fff", fontSize: 28, fontWeight: "900", letterSpacing: 2 },
   subtitle: {
     color: theme.colors.accent,
     fontSize: 11,
@@ -228,25 +233,26 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
     marginTop: 2,
   },
-  statsRow: {
+  warrantyBanner: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: theme.colors.bgSecondary,
+    gap: 8,
+    marginHorizontal: 20,
+    marginBottom: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    backgroundColor: "rgba(245, 158, 11, 0.12)",
     borderWidth: 1,
-    borderColor: theme.colors.border,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    borderColor: theme.colors.warning,
     borderRadius: 4,
   },
-  statBlock: { alignItems: "center", paddingHorizontal: 8 },
-  statValue: { color: theme.colors.textPrimary, fontWeight: "900", fontSize: 18 },
-  statLabel: {
-    color: theme.colors.textMuted,
-    fontSize: 9,
+  warrantyText: {
+    color: theme.colors.warning,
+    flex: 1,
+    fontSize: 12,
     fontWeight: "700",
-    letterSpacing: 1,
+    letterSpacing: 0.5,
   },
-  statDivider: { width: 1, height: 24, backgroundColor: theme.colors.border },
   searchRow: { paddingHorizontal: 20, marginBottom: 8 },
   searchBox: {
     flexDirection: "row",
@@ -259,7 +265,7 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     gap: 8,
   },
-  searchInput: { flex: 1, color: theme.colors.textPrimary, fontSize: 15 },
+  searchInput: { flex: 1, color: "#fff", fontSize: 15 },
   filterRow: { paddingHorizontal: 20, paddingVertical: 8, gap: 8 },
   chip: {
     borderWidth: 1,
@@ -269,10 +275,7 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     marginRight: 8,
   },
-  chipActive: {
-    backgroundColor: theme.colors.accent,
-    borderColor: theme.colors.accent,
-  },
+  chipActive: { backgroundColor: theme.colors.accent, borderColor: theme.colors.accent },
   chipText: {
     color: theme.colors.textSecondary,
     fontSize: 11,
@@ -301,7 +304,18 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   thumbImg: { width: "100%", height: "100%" },
-  rowTitle: { color: theme.colors.textPrimary, fontWeight: "700", fontSize: 16 },
+  consumableBadge: {
+    position: "absolute",
+    top: -4,
+    right: -4,
+    backgroundColor: theme.colors.accent,
+    width: 18,
+    height: 18,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 9,
+  },
+  rowTitle: { color: "#fff", fontWeight: "700", fontSize: 16 },
   rowSub: { color: theme.colors.textSecondary, fontSize: 12, marginTop: 2 },
   tagRow: { flexDirection: "row", marginTop: 6, gap: 4, flexWrap: "wrap" },
   tag: {
@@ -328,7 +342,7 @@ const styles = StyleSheet.create({
   },
   empty: { alignItems: "center", marginTop: 80, paddingHorizontal: 40 },
   emptyTitle: {
-    color: theme.colors.textPrimary,
+    color: "#fff",
     fontSize: 18,
     fontWeight: "900",
     letterSpacing: 2,
@@ -350,10 +364,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     borderRadius: 4,
-    shadowColor: theme.colors.accent,
-    shadowOpacity: 0.5,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 0 },
     elevation: 8,
   },
 });

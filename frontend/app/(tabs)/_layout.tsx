@@ -18,7 +18,7 @@ export default function TabsLayout() {
         tabBarActiveTintColor: theme.colors.accent,
         tabBarInactiveTintColor: theme.colors.textMuted,
         tabBarLabelStyle: {
-          fontSize: 11,
+          fontSize: 10,
           fontWeight: "700",
           letterSpacing: 1,
           textTransform: "uppercase",
@@ -32,6 +32,16 @@ export default function TabsLayout() {
           tabBarButtonTestID: "tab-inventory",
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="construct" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="dealers"
+        options={{
+          title: "Dealers",
+          tabBarButtonTestID: "tab-dealers",
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="briefcase" size={size} color={color} />
           ),
         }}
       />
@@ -56,15 +66,16 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
-        name="settings"
+        name="more"
         options={{
-          title: "Settings",
-          tabBarButtonTestID: "tab-settings",
+          title: "More",
+          tabBarButtonTestID: "tab-more",
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="settings" size={size} color={color} />
+            <Ionicons name="apps" size={size} color={color} />
           ),
         }}
       />
+      <Tabs.Screen name="settings" options={{ href: null }} />
     </Tabs>
   );
 }

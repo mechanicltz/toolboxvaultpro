@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   Alert,
   Platform,
+  Switch,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -23,7 +24,7 @@ const escapeHtml = (s: string) =>
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;");
 
-const buildHtml = (title: string, subtitle: string, tools: any[]) => {
+const buildHtml = (title: string, subtitle: string, tools: any[], includePhotos: boolean) => {
   const totalValue = tools.reduce((s, t) => s + (t.cost || 0), 0);
   const rows = tools
     .map((t, i) => {
@@ -33,12 +34,17 @@ const buildHtml = (title: string, subtitle: string, tools: any[]) => {
       const checkout = t.is_checked_out
         ? `<div class="meta">With: <b>${escapeHtml(t.current_checkout?.borrower_name || "")}</b> · Since ${escapeHtml((t.current_checkout?.checked_out_at || "").substring(0, 10))}</div>`
         : "";
+      const photoCell = includePhotos && t.photos?.[0]
+        ? `<td style="width:70px"><img src="${t.photos[0]}" style="width:60px;height:60px;object-fit:cover;border:1px solid #ccc"/></td>`
+        : "";
       return `
         <tr>
           <td class="num">${i + 1}</td>
+          ${photoCell}
           <td>
             <div class="name">${escapeHtml(t.name)}</div>
             <div class="meta">${escapeHtml(t.brand || "")} ${escapeHtml(t.model || "")}</div>
+            <div class="meta">${escapeHtml(t.dealer_name || "")}${t.dealer_name && t.purchased_from_agent_name ? " · " + escapeHtml(t.purchased_from_agent_name) : ""}</div>
             <div class="meta">${escapeHtml(t.tag_names?.join(", ") || "")}</div>
             ${checkout}
           </td>
@@ -48,6 +54,7 @@ const buildHtml = (title: string, subtitle: string, tools: any[]) => {
         </tr>`;
     })
     .join("");
+  const photoHeader = includePhotos ? "<th>Photo</th>" : "";
 
   return `<!DOCTYPE html><html><head><meta charset="utf-8"><style>
     body { font-family: -apple-system, Helvetica, Arial; margin: 24px; color: #111; }
@@ -78,7 +85,7 @@ const buildHtml = (title: string, subtitle: string, tools: any[]) => {
       <div class="stat"><div class="v">$${totalValue.toFixed(2)}</div><div class="l">Total Value</div></div>
     </div>
     <table>
-      <thead><tr><th>#</th><th>Tool</th><th>Location</th><th>Cost</th><th>Status</th></tr></thead>
+      <thead><tr><th>#</th>${photoHeader}<th>Tool</th><th>Location</th><th>Cost</th><th>Status</th></tr></thead>
       <tbody>${rows || '<tr><td colspan="5" style="text-align:center;color:#999;padding:20px">No items</td></tr>'}</tbody>
     </table>
     <div class="footer">Toolbox Tracker · ${tools.length} item(s)</div>
@@ -88,6 +95,7 @@ const buildHtml = (title: string, subtitle: string, tools: any[]) => {
 export default function ReportsScreen() {
   const [stats, setStats] = useState<any>({});
   const [busy, setBusy] = useState(false);
+  const [includePhotos, setIncludePhotos] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -113,7 +121,7 @@ export default function ReportsScreen() {
         title = "AVAILABLE TOOLS";
         subtitle = "Tools currently in inventory";
       }
-      const html = buildHtml(title, subtitle, tools);
+      const html = buildHtml(title, subtitle, tools, includePhotos);
       const { uri } = await Print.printToFileAsync({ html });
       if (Platform.OS === "web") {
         // Open in new tab on web
@@ -167,6 +175,18 @@ export default function ReportsScreen() {
         </View>
 
         <Text style={styles.sectionLabel}>EXPORT REPORTS</Text>
+
+        <View style={styles.toggleRow}>
+          <Ionicons name="image" size={20} color={theme.colors.accent} />
+          <Text style={styles.toggleText}>Include photos in PDF</Text>
+          <Switch
+            testID="toggle-include-photos"
+            value={includePhotos}
+            onValueChange={setIncludePhotos}
+            trackColor={{ true: theme.colors.accent, false: theme.colors.border }}
+            thumbColor="#fff"
+          />
+        </View>
 
         <TouchableOpacity
           testID="report-full-btn"

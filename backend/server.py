@@ -6,9 +6,11 @@ import os
 import logging
 from pathlib import Path
 from pydantic import BaseModel, Field
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 import uuid
-from datetime import datetime, timezone
+import json
+import re
+from datetime import datetime, timezone, timedelta
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -16,6 +18,8 @@ load_dotenv(ROOT_DIR / '.env')
 mongo_url = os.environ['MONGO_URL']
 client = AsyncIOMotorClient(mongo_url)
 db = client[os.environ['DB_NAME']]
+
+EMERGENT_LLM_KEY = os.environ.get('EMERGENT_LLM_KEY', '')
 
 app = FastAPI()
 api_router = APIRouter(prefix="/api")
@@ -30,12 +34,16 @@ class Location(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     name: str
     description: Optional[str] = ""
+    parent_layout_id: Optional[str] = None  # if this location is a drawer in a toolbox
+    drawer_index: Optional[int] = None
     created_at: str = Field(default_factory=now_iso)
 
 
 class LocationCreate(BaseModel):
     name: str
     description: Optional[str] = ""
+    parent_layout_id: Optional[str] = None
+    drawer_index: Optional[int] = None
 
 
 class Tag(BaseModel):
@@ -50,6 +58,16 @@ class TagCreate(BaseModel):
     color: Optional[str] = "#FFB300"
 
 
+class Category(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    name: str
+    created_at: str = Field(default_factory=now_iso)
+
+
+class CategoryCreate(BaseModel):
+    name: str
+
+
 class Borrower(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     name: str
@@ -62,12 +80,80 @@ class BorrowerCreate(BaseModel):
     contact: Optional[str] = ""
 
 
+# Dealer & Agents
+class Agent(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    name: str
+    phone: Optional[str] = ""
+    email: Optional[str] = ""
+    notes: Optional[str] = ""
+    started_at: str = Field(default_factory=now_iso)
+    ended_at: Optional[str] = None  # when this agent stopped being current
+
+
+class AgentCreate(BaseModel):
+    name: str
+    phone: Optional[str] = ""
+    email: Optional[str] = ""
+    notes: Optional[str] = ""
+
+
+class Dealer(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    name: str
+    phone: Optional[str] = ""
+    website: Optional[str] = ""
+    address: Optional[str] = ""
+    notes: Optional[str] = ""
+    agents: List[Agent] = []
+    current_agent_id: Optional[str] = None
+    created_at: str = Field(default_factory=now_iso)
+
+
+class DealerCreate(BaseModel):
+    name: str
+    phone: Optional[str] = ""
+    website: Optional[str] = ""
+    address: Optional[str] = ""
+    notes: Optional[str] = ""
+
+
+class DealerUpdate(BaseModel):
+    name: Optional[str] = None
+    phone: Optional[str] = None
+    website: Optional[str] = None
+    address: Optional[str] = None
+    notes: Optional[str] = None
+
+
+# Documents
 class Document(BaseModel):
     name: str
-    data: str  # base64
+    data: str
     mime_type: Optional[str] = "application/octet-stream"
 
 
+# Warranty
+class Warranty(BaseModel):
+    has_warranty: bool = False
+    provider: Optional[str] = ""
+    contact: Optional[str] = ""
+    terms: Optional[str] = ""
+    length_months: Optional[int] = 0
+    start_date: Optional[str] = ""  # YYYY-MM-DD
+    expiry_date: Optional[str] = ""  # YYYY-MM-DD
+    document: Optional[Document] = None
+
+
+# Consumable
+class ConsumableInfo(BaseModel):
+    store_name: Optional[str] = ""
+    website: Optional[str] = ""
+    sku: Optional[str] = ""
+    notes: Optional[str] = ""
+
+
+# Checkout
 class CheckoutRecord(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     borrower_name: str
@@ -89,10 +175,19 @@ class Tool(BaseModel):
     condition: Optional[str] = "Good"
     location_id: Optional[str] = None
     location_name: Optional[str] = ""
+    category_id: Optional[str] = None
+    category_name: Optional[str] = ""
     tag_ids: List[str] = []
     tag_names: List[str] = []
-    photos: List[str] = []  # base64 strings
+    photos: List[str] = []
     documents: List[Document] = []
+    is_consumable: bool = False
+    consumable_info: Optional[ConsumableInfo] = None
+    warranty: Optional[Warranty] = None
+    dealer_id: Optional[str] = None
+    dealer_name: Optional[str] = ""
+    purchased_from_agent_id: Optional[str] = None  # snapshot at purchase
+    purchased_from_agent_name: Optional[str] = ""
     is_checked_out: bool = False
     current_checkout: Optional[CheckoutRecord] = None
     checkout_history: List[CheckoutRecord] = []
@@ -111,10 +206,19 @@ class ToolCreate(BaseModel):
     condition: Optional[str] = "Good"
     location_id: Optional[str] = None
     location_name: Optional[str] = ""
+    category_id: Optional[str] = None
+    category_name: Optional[str] = ""
     tag_ids: List[str] = []
     tag_names: List[str] = []
     photos: List[str] = []
     documents: List[Document] = []
+    is_consumable: bool = False
+    consumable_info: Optional[ConsumableInfo] = None
+    warranty: Optional[Warranty] = None
+    dealer_id: Optional[str] = None
+    dealer_name: Optional[str] = ""
+    purchased_from_agent_id: Optional[str] = None
+    purchased_from_agent_name: Optional[str] = ""
 
 
 class ToolUpdate(BaseModel):
@@ -128,10 +232,19 @@ class ToolUpdate(BaseModel):
     condition: Optional[str] = None
     location_id: Optional[str] = None
     location_name: Optional[str] = None
+    category_id: Optional[str] = None
+    category_name: Optional[str] = None
     tag_ids: Optional[List[str]] = None
     tag_names: Optional[List[str]] = None
     photos: Optional[List[str]] = None
     documents: Optional[List[Document]] = None
+    is_consumable: Optional[bool] = None
+    consumable_info: Optional[ConsumableInfo] = None
+    warranty: Optional[Warranty] = None
+    dealer_id: Optional[str] = None
+    dealer_name: Optional[str] = None
+    purchased_from_agent_id: Optional[str] = None
+    purchased_from_agent_name: Optional[str] = None
 
 
 class CheckoutRequest(BaseModel):
@@ -140,11 +253,79 @@ class CheckoutRequest(BaseModel):
     notes: Optional[str] = ""
 
 
+# Toolbox layout (photo with drawers)
+class DrawerRegion(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    name: str
+    x: float  # 0..1 normalized
+    y: float
+    width: float
+    height: float
+    location_id: Optional[str] = None  # link to a Location
+
+
+class ToolboxLayout(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    name: str
+    photo: str  # base64 data URI
+    drawers: List[DrawerRegion] = []
+    created_at: str = Field(default_factory=now_iso)
+
+
+class ToolboxLayoutCreate(BaseModel):
+    name: str
+    photo: str
+    drawers: List[DrawerRegion] = []
+
+
+class ToolboxLayoutUpdate(BaseModel):
+    name: Optional[str] = None
+    photo: Optional[str] = None
+    drawers: Optional[List[DrawerRegion]] = None
+
+
+class AnalyzeRequest(BaseModel):
+    image_base64: str  # base64 without data: prefix
+
+
 # ---------- Helpers ----------
-def clean(doc):
-    if doc and "_id" in doc:
-        doc.pop("_id")
-    return doc
+def build_tool_query(
+    search: Optional[str] = None,
+    location_id: Optional[str] = None,
+    tag_id: Optional[str] = None,
+    category_id: Optional[str] = None,
+    dealer_id: Optional[str] = None,
+    checked_out: Optional[bool] = None,
+    is_consumable: Optional[bool] = None,
+):
+    query: Dict[str, Any] = {}
+    if search:
+        rx = {"$regex": re.escape(search), "$options": "i"}
+        query["$or"] = [
+            {"name": rx},
+            {"description": rx},
+            {"brand": rx},
+            {"model": rx},
+            {"serial_number": rx},
+            {"tag_names": rx},
+            {"location_name": rx},
+            {"category_name": rx},
+            {"dealer_name": rx},
+            {"purchased_from_agent_name": rx},
+        ]
+    if location_id:
+        query["location_id"] = location_id
+    if tag_id:
+        query["tag_ids"] = tag_id
+    if category_id:
+        query["category_id"] = category_id
+    if dealer_id:
+        query["dealer_id"] = dealer_id
+    if checked_out is not None:
+        query["is_checked_out"] = checked_out
+    if is_consumable is not None:
+        query["is_consumable"] = is_consumable
+    return query
 
 
 # ---------- Root ----------
@@ -163,7 +344,7 @@ async def create_location(payload: LocationCreate):
 
 @api_router.get("/locations", response_model=List[Location])
 async def list_locations():
-    items = await db.locations.find({}, {"_id": 0}).to_list(1000)
+    items = await db.locations.find({}, {"_id": 0}).to_list(2000)
     return [Location(**i) for i in items]
 
 
@@ -176,20 +357,48 @@ async def delete_location(loc_id: str):
 # ---------- Tags ----------
 @api_router.post("/tags", response_model=Tag)
 async def create_tag(payload: TagCreate):
-    t = Tag(**payload.dict())
+    name = payload.name.strip()
+    existing = await db.tags.find_one({"name": {"$regex": f"^{re.escape(name)}$", "$options": "i"}}, {"_id": 0})
+    if existing:
+        return Tag(**existing)
+    t = Tag(name=name, color=payload.color or "#FFB300")
     await db.tags.insert_one(t.dict())
     return t
 
 
 @api_router.get("/tags", response_model=List[Tag])
 async def list_tags():
-    items = await db.tags.find({}, {"_id": 0}).to_list(1000)
+    items = await db.tags.find({}, {"_id": 0}).sort("name", 1).to_list(2000)
     return [Tag(**i) for i in items]
 
 
 @api_router.delete("/tags/{tag_id}")
 async def delete_tag(tag_id: str):
     await db.tags.delete_one({"id": tag_id})
+    return {"ok": True}
+
+
+# ---------- Categories ----------
+@api_router.post("/categories", response_model=Category)
+async def create_category(payload: CategoryCreate):
+    name = payload.name.strip()
+    existing = await db.categories.find_one({"name": {"$regex": f"^{re.escape(name)}$", "$options": "i"}}, {"_id": 0})
+    if existing:
+        return Category(**existing)
+    c = Category(name=name)
+    await db.categories.insert_one(c.dict())
+    return c
+
+
+@api_router.get("/categories", response_model=List[Category])
+async def list_categories():
+    items = await db.categories.find({}, {"_id": 0}).sort("name", 1).to_list(2000)
+    return [Category(**i) for i in items]
+
+
+@api_router.delete("/categories/{cat_id}")
+async def delete_category(cat_id: str):
+    await db.categories.delete_one({"id": cat_id})
     return {"ok": True}
 
 
@@ -203,7 +412,7 @@ async def create_borrower(payload: BorrowerCreate):
 
 @api_router.get("/borrowers", response_model=List[Borrower])
 async def list_borrowers():
-    items = await db.borrowers.find({}, {"_id": 0}).to_list(1000)
+    items = await db.borrowers.find({}, {"_id": 0}).to_list(2000)
     return [Borrower(**i) for i in items]
 
 
@@ -211,6 +420,101 @@ async def list_borrowers():
 async def delete_borrower(borrower_id: str):
     await db.borrowers.delete_one({"id": borrower_id})
     return {"ok": True}
+
+
+# ---------- Dealers ----------
+@api_router.post("/dealers", response_model=Dealer)
+async def create_dealer(payload: DealerCreate):
+    d = Dealer(**payload.dict())
+    await db.dealers.insert_one(d.dict())
+    return d
+
+
+@api_router.get("/dealers", response_model=List[Dealer])
+async def list_dealers():
+    items = await db.dealers.find({}, {"_id": 0}).sort("name", 1).to_list(2000)
+    return [Dealer(**i) for i in items]
+
+
+@api_router.get("/dealers/{dealer_id}", response_model=Dealer)
+async def get_dealer(dealer_id: str):
+    d = await db.dealers.find_one({"id": dealer_id}, {"_id": 0})
+    if not d:
+        raise HTTPException(404, "Dealer not found")
+    return Dealer(**d)
+
+
+@api_router.put("/dealers/{dealer_id}", response_model=Dealer)
+async def update_dealer(dealer_id: str, payload: DealerUpdate):
+    d = await db.dealers.find_one({"id": dealer_id}, {"_id": 0})
+    if not d:
+        raise HTTPException(404, "Dealer not found")
+    updates = {k: v for k, v in payload.dict().items() if v is not None}
+    await db.dealers.update_one({"id": dealer_id}, {"$set": updates})
+    new = await db.dealers.find_one({"id": dealer_id}, {"_id": 0})
+    return Dealer(**new)
+
+
+@api_router.delete("/dealers/{dealer_id}")
+async def delete_dealer(dealer_id: str):
+    await db.dealers.delete_one({"id": dealer_id})
+    return {"ok": True}
+
+
+@api_router.post("/dealers/{dealer_id}/agents", response_model=Dealer)
+async def add_agent(dealer_id: str, payload: AgentCreate):
+    d = await db.dealers.find_one({"id": dealer_id}, {"_id": 0})
+    if not d:
+        raise HTTPException(404, "Dealer not found")
+    agent = Agent(**payload.dict())
+    agents = d.get("agents") or []
+    agents.append(agent.dict())
+    update = {"agents": agents}
+    if not d.get("current_agent_id"):
+        update["current_agent_id"] = agent.id
+    await db.dealers.update_one({"id": dealer_id}, {"$set": update})
+    new = await db.dealers.find_one({"id": dealer_id}, {"_id": 0})
+    return Dealer(**new)
+
+
+@api_router.delete("/dealers/{dealer_id}/agents/{agent_id}", response_model=Dealer)
+async def remove_agent(dealer_id: str, agent_id: str):
+    d = await db.dealers.find_one({"id": dealer_id}, {"_id": 0})
+    if not d:
+        raise HTTPException(404, "Dealer not found")
+    agents = [a for a in (d.get("agents") or []) if a.get("id") != agent_id]
+    update = {"agents": agents}
+    if d.get("current_agent_id") == agent_id:
+        update["current_agent_id"] = agents[0]["id"] if agents else None
+    await db.dealers.update_one({"id": dealer_id}, {"$set": update})
+    new = await db.dealers.find_one({"id": dealer_id}, {"_id": 0})
+    return Dealer(**new)
+
+
+@api_router.post("/dealers/{dealer_id}/current-agent/{agent_id}", response_model=Dealer)
+async def set_current_agent(dealer_id: str, agent_id: str):
+    d = await db.dealers.find_one({"id": dealer_id}, {"_id": 0})
+    if not d:
+        raise HTTPException(404, "Dealer not found")
+    agents = d.get("agents") or []
+    if not any(a.get("id") == agent_id for a in agents):
+        raise HTTPException(400, "Agent not found in dealer")
+    # Mark previous current's ended_at, mark this one's started_at if needed
+    now = now_iso()
+    for a in agents:
+        if a.get("id") == d.get("current_agent_id") and a.get("id") != agent_id:
+            if not a.get("ended_at"):
+                a["ended_at"] = now
+        if a.get("id") == agent_id:
+            a["ended_at"] = None
+            if not a.get("started_at"):
+                a["started_at"] = now
+    await db.dealers.update_one(
+        {"id": dealer_id},
+        {"$set": {"current_agent_id": agent_id, "agents": agents}},
+    )
+    new = await db.dealers.find_one({"id": dealer_id}, {"_id": 0})
+    return Dealer(**new)
 
 
 # ---------- Tools ----------
@@ -226,27 +530,13 @@ async def list_tools(
     search: Optional[str] = None,
     location_id: Optional[str] = None,
     tag_id: Optional[str] = None,
+    category_id: Optional[str] = None,
+    dealer_id: Optional[str] = None,
     checked_out: Optional[bool] = None,
+    is_consumable: Optional[bool] = None,
 ):
-    query = {}
-    if search:
-        query["$or"] = [
-            {"name": {"$regex": search, "$options": "i"}},
-            {"description": {"$regex": search, "$options": "i"}},
-            {"brand": {"$regex": search, "$options": "i"}},
-            {"model": {"$regex": search, "$options": "i"}},
-            {"serial_number": {"$regex": search, "$options": "i"}},
-            {"tag_names": {"$regex": search, "$options": "i"}},
-            {"location_name": {"$regex": search, "$options": "i"}},
-        ]
-    if location_id:
-        query["location_id"] = location_id
-    if tag_id:
-        query["tag_ids"] = tag_id
-    if checked_out is not None:
-        query["is_checked_out"] = checked_out
-
-    items = await db.tools.find(query, {"_id": 0}).sort("created_at", -1).to_list(2000)
+    query = build_tool_query(search, location_id, tag_id, category_id, dealer_id, checked_out, is_consumable)
+    items = await db.tools.find(query, {"_id": 0}).sort("created_at", -1).to_list(5000)
     return [Tool(**i) for i in items]
 
 
@@ -290,13 +580,7 @@ async def checkout_tool(tool_id: str, payload: CheckoutRequest):
     )
     await db.tools.update_one(
         {"id": tool_id},
-        {
-            "$set": {
-                "is_checked_out": True,
-                "current_checkout": record.dict(),
-                "updated_at": now_iso(),
-            }
-        },
+        {"$set": {"is_checked_out": True, "current_checkout": record.dict(), "updated_at": now_iso()}},
     )
     new_doc = await db.tools.find_one({"id": tool_id}, {"_id": 0})
     return Tool(**new_doc)
@@ -311,41 +595,231 @@ async def checkin_tool(tool_id: str):
         raise HTTPException(status_code=400, detail="Tool is not checked out")
     record = doc.get("current_checkout") or {}
     record["checked_in_at"] = now_iso()
-    history = doc.get("checkout_history", [])
+    history = doc.get("checkout_history") or []
     history.append(record)
     await db.tools.update_one(
         {"id": tool_id},
-        {
-            "$set": {
-                "is_checked_out": False,
-                "current_checkout": None,
-                "checkout_history": history,
-                "updated_at": now_iso(),
-            }
-        },
+        {"$set": {"is_checked_out": False, "current_checkout": None, "checkout_history": history, "updated_at": now_iso()}},
     )
     new_doc = await db.tools.find_one({"id": tool_id}, {"_id": 0})
     return Tool(**new_doc)
+
+
+# ---------- Aggregate / Stats ----------
+@api_router.get("/aggregate")
+async def aggregate(
+    search: Optional[str] = None,
+    location_id: Optional[str] = None,
+    tag_id: Optional[str] = None,
+    category_id: Optional[str] = None,
+    dealer_id: Optional[str] = None,
+    checked_out: Optional[bool] = None,
+    is_consumable: Optional[bool] = None,
+):
+    query = build_tool_query(search, location_id, tag_id, category_id, dealer_id, checked_out, is_consumable)
+    items = await db.tools.find(query, {"_id": 0}).to_list(5000)
+    total_value = sum((i.get("cost") or 0) for i in items)
+    checked_out_n = sum(1 for i in items if i.get("is_checked_out"))
+    consumables_n = sum(1 for i in items if i.get("is_consumable"))
+    locations: Dict[str, int] = {}
+    categories: Dict[str, int] = {}
+    dealers: Dict[str, int] = {}
+    tag_set: set = set()
+    for i in items:
+        ln = i.get("location_name") or "—"
+        cn = i.get("category_name") or "—"
+        dn = i.get("dealer_name") or "—"
+        locations[ln] = locations.get(ln, 0) + 1
+        categories[cn] = categories.get(cn, 0) + 1
+        dealers[dn] = dealers.get(dn, 0) + 1
+        for t in (i.get("tag_names") or []):
+            tag_set.add(t)
+    return {
+        "count": len(items),
+        "total_value": round(total_value, 2),
+        "checked_out": checked_out_n,
+        "available": len(items) - checked_out_n,
+        "consumables": consumables_n,
+        "location_breakdown": locations,
+        "category_breakdown": categories,
+        "dealer_breakdown": dealers,
+        "tag_count": len(tag_set),
+        "unique_tags": sorted(tag_set),
+    }
 
 
 @api_router.get("/stats")
 async def get_stats():
     total = await db.tools.count_documents({})
     checked_out = await db.tools.count_documents({"is_checked_out": True})
+    consumables = await db.tools.count_documents({"is_consumable": True})
     locations = await db.locations.count_documents({})
     tags = await db.tags.count_documents({})
+    categories = await db.categories.count_documents({})
     borrowers = await db.borrowers.count_documents({})
+    dealers = await db.dealers.count_documents({})
     pipeline = [{"$group": {"_id": None, "total_value": {"$sum": "$cost"}}}]
     agg = await db.tools.aggregate(pipeline).to_list(1)
     total_value = agg[0]["total_value"] if agg else 0
+    # Warranty expiring within 60 days
+    soon = (datetime.now(timezone.utc) + timedelta(days=60)).date().isoformat()
+    today = datetime.now(timezone.utc).date().isoformat()
+    expiring = await db.tools.count_documents({
+        "warranty.has_warranty": True,
+        "warranty.expiry_date": {"$gte": today, "$lte": soon},
+    })
+    expired = await db.tools.count_documents({
+        "warranty.has_warranty": True,
+        "warranty.expiry_date": {"$lt": today, "$ne": ""},
+    })
     return {
         "total_tools": total,
         "checked_out": checked_out,
         "available": total - checked_out,
-        "total_value": total_value,
+        "consumables": consumables,
+        "total_value": round(total_value, 2),
         "locations": locations,
         "tags": tags,
+        "categories": categories,
         "borrowers": borrowers,
+        "dealers": dealers,
+        "warranty_expiring_soon": expiring,
+        "warranty_expired": expired,
+    }
+
+
+@api_router.get("/warranty-alerts")
+async def warranty_alerts(days: int = 60):
+    today = datetime.now(timezone.utc).date()
+    soon = (today + timedelta(days=days)).isoformat()
+    today_iso = today.isoformat()
+    items = await db.tools.find(
+        {"warranty.has_warranty": True, "warranty.expiry_date": {"$ne": ""}},
+        {"_id": 0, "id": 1, "name": 1, "warranty": 1, "photos": 1},
+    ).to_list(5000)
+    expiring = []
+    expired = []
+    for i in items:
+        ex = (i.get("warranty") or {}).get("expiry_date") or ""
+        if not ex:
+            continue
+        if ex < today_iso:
+            expired.append(i)
+        elif ex <= soon:
+            expiring.append(i)
+    return {"expiring": expiring, "expired": expired}
+
+
+# ---------- Toolbox Layouts ----------
+@api_router.post("/toolbox-layouts", response_model=ToolboxLayout)
+async def create_layout(payload: ToolboxLayoutCreate):
+    lay = ToolboxLayout(**payload.dict())
+    await db.toolbox_layouts.insert_one(lay.dict())
+    return lay
+
+
+@api_router.get("/toolbox-layouts", response_model=List[ToolboxLayout])
+async def list_layouts():
+    items = await db.toolbox_layouts.find({}, {"_id": 0}).to_list(2000)
+    return [ToolboxLayout(**i) for i in items]
+
+
+@api_router.get("/toolbox-layouts/{layout_id}", response_model=ToolboxLayout)
+async def get_layout(layout_id: str):
+    d = await db.toolbox_layouts.find_one({"id": layout_id}, {"_id": 0})
+    if not d:
+        raise HTTPException(404, "Layout not found")
+    return ToolboxLayout(**d)
+
+
+@api_router.put("/toolbox-layouts/{layout_id}", response_model=ToolboxLayout)
+async def update_layout(layout_id: str, payload: ToolboxLayoutUpdate):
+    d = await db.toolbox_layouts.find_one({"id": layout_id}, {"_id": 0})
+    if not d:
+        raise HTTPException(404, "Layout not found")
+    updates = {k: v for k, v in payload.dict().items() if v is not None}
+    await db.toolbox_layouts.update_one({"id": layout_id}, {"$set": updates})
+    new = await db.toolbox_layouts.find_one({"id": layout_id}, {"_id": 0})
+    return ToolboxLayout(**new)
+
+
+@api_router.delete("/toolbox-layouts/{layout_id}")
+async def delete_layout(layout_id: str):
+    await db.toolbox_layouts.delete_one({"id": layout_id})
+    return {"ok": True}
+
+
+# ---------- AI Toolbox Analysis ----------
+@api_router.post("/toolbox/analyze")
+async def analyze_toolbox(payload: AnalyzeRequest):
+    if not EMERGENT_LLM_KEY:
+        raise HTTPException(500, "EMERGENT_LLM_KEY not configured")
+    try:
+        from emergentintegrations.llm.chat import LlmChat, UserMessage, ImageContent
+    except Exception as e:
+        raise HTTPException(500, f"Integrations library missing: {e}")
+
+    img_b64 = payload.image_base64
+    if "," in img_b64 and img_b64.startswith("data:"):
+        img_b64 = img_b64.split(",", 1)[1]
+
+    chat = LlmChat(
+        api_key=EMERGENT_LLM_KEY,
+        session_id=f"toolbox-{uuid.uuid4()}",
+        system_message=(
+            "You are a vision assistant that analyzes a photograph of a tool storage "
+            "unit (toolbox, cabinet, chest, shelf). Identify horizontal drawers, "
+            "shelves, or compartments visible in the image. Always respond with strict "
+            "JSON only, no prose, no markdown."
+        ),
+    ).with_model("gemini", "gemini-2.5-pro")
+
+    prompt = (
+        "Look at this tool storage photo and respond with strict JSON: "
+        '{"suggested_drawers": <integer 0-30>, '
+        '"labels": [<array of short string names ordered top to bottom, e.g. \"Top Drawer\", \"Drawer 2\">], '
+        '"confidence": <\"low\"|\"medium\"|\"high\">, '
+        '"notes": <short string explaining what you see>}. '
+        "Count distinct drawers/compartments only. If unclear, give a best guess and set confidence accordingly."
+    )
+
+    msg = UserMessage(text=prompt, file_contents=[ImageContent(image_base64=img_b64)])
+    try:
+        response_text = await chat.send_message(msg)
+    except Exception as e:
+        raise HTTPException(500, f"AI request failed: {e}")
+
+    raw = str(response_text or "").strip()
+    # Strip code fences if present
+    if raw.startswith("```"):
+        raw = re.sub(r"^```(?:json)?\s*", "", raw)
+        raw = re.sub(r"\s*```$", "", raw)
+    try:
+        data = json.loads(raw)
+    except Exception:
+        # Try to extract JSON object
+        m = re.search(r"\{.*\}", raw, re.DOTALL)
+        if m:
+            try:
+                data = json.loads(m.group(0))
+            except Exception:
+                data = {"suggested_drawers": 0, "labels": [], "confidence": "low", "notes": raw[:200]}
+        else:
+            data = {"suggested_drawers": 0, "labels": [], "confidence": "low", "notes": raw[:200]}
+
+    sd = int(data.get("suggested_drawers") or 0)
+    sd = max(0, min(sd, 40))
+    labels = data.get("labels") or []
+    if not isinstance(labels, list):
+        labels = []
+    labels = [str(x)[:60] for x in labels][:sd]
+    while len(labels) < sd:
+        labels.append(f"Drawer {len(labels) + 1}")
+    return {
+        "suggested_drawers": sd,
+        "labels": labels,
+        "confidence": str(data.get("confidence") or "medium"),
+        "notes": str(data.get("notes") or "")[:400],
     }
 
 
