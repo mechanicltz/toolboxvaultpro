@@ -29,6 +29,7 @@ export default function TabsLayout() {
         name="index"
         options={{
           title: "Inventory",
+          tabBarButtonTestID: "tab-inventory",
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="construct" size={size} color={color} />
           ),
@@ -38,6 +39,7 @@ export default function TabsLayout() {
         name="borrowers"
         options={{
           title: "People",
+          tabBarButtonTestID: "tab-people",
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="people" size={size} color={color} />
           ),
@@ -47,6 +49,7 @@ export default function TabsLayout() {
         name="reports"
         options={{
           title: "Reports",
+          tabBarButtonTestID: "tab-reports",
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="document-text" size={size} color={color} />
           ),
@@ -56,6 +59,7 @@ export default function TabsLayout() {
         name="settings"
         options={{
           title: "Settings",
+          tabBarButtonTestID: "tab-settings",
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="settings" size={size} color={color} />
           ),

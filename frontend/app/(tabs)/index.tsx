@@ -143,7 +143,7 @@ export default function InventoryScreen() {
         }
         renderItem={({ item }) => (
           <TouchableOpacity
-            testID={`tool-row-${item.id}`}
+            testID={`tool-card-${item.id}`}
             style={styles.row}
             onPress={() => router.push(`/tool/${item.id}`)}
             activeOpacity={0.7}
