@@ -63,9 +63,9 @@ export default function MoreScreen() {
         <Row
           icon="location"
           title="Locations"
-          subtitle="Storage locations"
+          subtitle="Nested storage hierarchy"
           testID="more-locations"
-          onPress={() => router.push("/manage/locations")}
+          onPress={() => router.push("/locations")}
         />
         <Row
           icon="cube"

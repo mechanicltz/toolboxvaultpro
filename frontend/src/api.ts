@@ -35,7 +35,8 @@ export const api = {
   // Locations
   listLocations: () => request<any[]>(`/locations`),
   createLocation: (data: any) => request<any>(`/locations`, { method: "POST", body: JSON.stringify(data) }),
-  deleteLocation: (id: string) => request<any>(`/locations/${id}`, { method: "DELETE" }),
+  updateLocation: (id: string, data: any) => request<any>(`/locations/${id}`, { method: "PUT", body: JSON.stringify(data) }),
+  deleteLocation: (id: string, cascade = false) => request<any>(`/locations/${id}${cascade ? "?cascade=true" : ""}`, { method: "DELETE" }),
 
   // Tags
   listTags: () => request<any[]>(`/tags`),

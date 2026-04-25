@@ -1,0 +1,342 @@
+import { useCallback, useState } from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TextInput,
+  TouchableOpacity,
+  Alert,
+  Modal,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { Ionicons } from "@expo/vector-icons";
+import { useFocusEffect, useRouter } from "expo-router";
+import { theme } from "../src/theme";
+import { api } from "../src/api";
+import { confirm } from "../src/confirm";
+import { buildLocationTree, LocationNode } from "../src/locationTree";
+
+export default function LocationsTreeScreen() {
+  const router = useRouter();
+  const [nodes, setNodes] = useState<LocationNode[]>([]);
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const [adding, setAdding] = useState<{ parentId: string | null; parentName: string } | null>(null);
+  const [name, setName] = useState("");
+
+  const load = useCallback(async () => {
+    const flat = await api.listLocations();
+    const tree = buildLocationTree(flat);
+    setNodes(tree);
+    // Auto-expand top-level on first load
+    if (expanded.size === 0 && tree.length > 0) {
+      const all = new Set<string>();
+      const collectIds = (ns: LocationNode[]) => {
+        ns.forEach((n) => {
+          all.add(n.id);
+          collectIds(n.children);
+        });
+      };
+      collectIds(tree);
+      setExpanded(all);
+    }
+  }, [expanded.size]);
+
+  useFocusEffect(
+    useCallback(() => {
+      load();
+    }, [load])
+  );
+
+  const toggle = (id: string) => {
+    setExpanded((cur) => {
+      const next = new Set(cur);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const add = async () => {
+    if (!name.trim() || !adding) return;
+    await api.createLocation({
+      name: name.trim(),
+      parent_id: adding.parentId,
+    });
+    if (adding.parentId) setExpanded((cur) => new Set(cur).add(adding.parentId!));
+    setName("");
+    setAdding(null);
+    load();
+  };
+
+  const remove = async (n: LocationNode) => {
+    if (n.children.length > 0) {
+      const which = await new Promise<"cancel" | "promote" | "cascade">((resolve) => {
+        if (typeof window !== "undefined" && typeof window.confirm === "function") {
+          // web: 2-step confirm
+          const yes = window.confirm(
+            `Delete "${n.name}"?\n\nIt has ${n.children.length} sub-location(s).\n\nOK = move children up to parent\nCancel = abort`
+          );
+          if (!yes) return resolve("cancel");
+          const cascade = window.confirm(
+            `Also delete ALL sub-locations under "${n.name}"?\n\nOK = delete everything\nCancel = keep children, just remove this one`
+          );
+          return resolve(cascade ? "cascade" : "promote");
+        }
+        Alert.alert(
+          `Delete "${n.name}"?`,
+          `This has ${n.children.length} sub-location(s).`,
+          [
+            { text: "Cancel", style: "cancel", onPress: () => resolve("cancel") },
+            { text: "Move children up", onPress: () => resolve("promote") },
+            { text: "Delete all", style: "destructive", onPress: () => resolve("cascade") },
+          ]
+        );
+      });
+      if (which === "cancel") return;
+      await api.deleteLocation(n.id, which === "cascade");
+    } else {
+      if (!(await confirm(`Delete "${n.name}"?`, "This will remove this location.", "Delete", true))) return;
+      await api.deleteLocation(n.id);
+    }
+    load();
+  };
+
+  const renderNode = (n: LocationNode) => {
+    const isOpen = expanded.has(n.id);
+    return (
+      <View key={n.id}>
+        <View style={[styles.row, { paddingLeft: 16 + n.depth * 18 }]}>
+          {n.children.length > 0 ? (
+            <TouchableOpacity testID={`expand-${n.id}`} onPress={() => toggle(n.id)} hitSlop={6}>
+              <Ionicons
+                name={isOpen ? "chevron-down" : "chevron-forward"}
+                size={18}
+                color={theme.colors.textSecondary}
+              />
+            </TouchableOpacity>
+          ) : (
+            <View style={{ width: 18 }} />
+          )}
+          <Ionicons
+            name={n.children.length > 0 ? "folder" : "location"}
+            size={16}
+            color={theme.colors.accent}
+          />
+          <Text style={styles.rowText}>{n.name}</Text>
+          {n.children.length > 0 && (
+            <Text style={styles.countBadge}>{n.children.length}</Text>
+          )}
+          <TouchableOpacity
+            testID={`addchild-${n.id}`}
+            onPress={() => setAdding({ parentId: n.id, parentName: n.path })}
+            hitSlop={6}
+            style={styles.iconBtn}
+          >
+            <Ionicons name="add" size={18} color={theme.colors.accent} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            testID={`del-loc-${n.id}`}
+            onPress={() => remove(n)}
+            hitSlop={6}
+            style={styles.iconBtn}
+          >
+            <Ionicons name="close" size={18} color={theme.colors.danger} />
+          </TouchableOpacity>
+        </View>
+        {isOpen && n.children.map(renderNode)}
+      </View>
+    );
+  };
+
+  return (
+    <SafeAreaView style={styles.container} edges={["top"]}>
+      <View style={styles.topBar}>
+        <TouchableOpacity onPress={() => router.back()} hitSlop={10}>
+          <Ionicons name="arrow-back" size={26} color="#fff" />
+        </TouchableOpacity>
+        <Text style={styles.title}>LOCATIONS</Text>
+        <TouchableOpacity
+          testID="add-root-btn"
+          onPress={() => setAdding({ parentId: null, parentName: "" })}
+          hitSlop={10}
+        >
+          <Ionicons name="add" size={26} color={theme.colors.accent} />
+        </TouchableOpacity>
+      </View>
+      <ScrollView contentContainerStyle={{ paddingBottom: 60 }}>
+        {nodes.length === 0 ? (
+          <View style={styles.empty}>
+            <Ionicons name="location-outline" size={48} color={theme.colors.textMuted} />
+            <Text style={styles.emptyTitle}>NO LOCATIONS</Text>
+            <Text style={styles.emptyText}>
+              Add a top-level location like "Garage" or "Workshop", then nest sub-locations
+              (toolboxes → drawers → boxes) inside.
+            </Text>
+            <TouchableOpacity
+              style={styles.btn}
+              onPress={() => setAdding({ parentId: null, parentName: "" })}
+            >
+              <Ionicons name="add" size={18} color="#000" />
+              <Text style={styles.btnText}>ADD LOCATION</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          nodes.map(renderNode)
+        )}
+        <Text style={styles.tip}>
+          Tap a row's <Text style={{ color: theme.colors.accent }}>+</Text> to add a sub-location.
+          Locations can nest unlimited levels deep.
+        </Text>
+      </ScrollView>
+
+      <Modal visible={!!adding} transparent animationType="slide">
+        <View style={styles.modalBg}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>
+              {adding?.parentId ? "ADD SUB-LOCATION" : "NEW LOCATION"}
+            </Text>
+            {adding?.parentName ? (
+              <Text style={styles.modalParent}>under: {adding.parentName}</Text>
+            ) : null}
+            <TextInput
+              testID="new-loc-input"
+              placeholder="e.g. Green Toolbox, Top Drawer..."
+              placeholderTextColor={theme.colors.textMuted}
+              style={styles.input}
+              value={name}
+              onChangeText={setName}
+              onSubmitEditing={add}
+              autoFocus
+            />
+            <View style={{ flexDirection: "row", gap: 10 }}>
+              <TouchableOpacity
+                style={styles.btnGhost}
+                onPress={() => {
+                  setAdding(null);
+                  setName("");
+                }}
+              >
+                <Text style={styles.btnGhostText}>CANCEL</Text>
+              </TouchableOpacity>
+              <TouchableOpacity testID="save-loc-btn" style={styles.btn} onPress={add}>
+                <Text style={styles.btnText}>SAVE</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: theme.colors.bg },
+  topBar: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
+  },
+  title: { color: "#fff", fontSize: 16, fontWeight: "900", letterSpacing: 2 },
+  row: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingVertical: 12,
+    paddingRight: 12,
+    borderBottomColor: theme.colors.borderSubtle,
+    borderBottomWidth: 1,
+  },
+  rowText: { color: "#fff", fontSize: 15, flex: 1 },
+  countBadge: {
+    color: theme.colors.textMuted,
+    fontSize: 11,
+    fontWeight: "800",
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    backgroundColor: theme.colors.surface,
+    borderRadius: 2,
+  },
+  iconBtn: {
+    width: 32,
+    height: 32,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: 4,
+  },
+  empty: { alignItems: "center", paddingVertical: 60, paddingHorizontal: 40 },
+  emptyTitle: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "900",
+    letterSpacing: 2,
+    marginTop: 16,
+  },
+  emptyText: {
+    color: theme.colors.textSecondary,
+    textAlign: "center",
+    marginTop: 8,
+    marginBottom: 20,
+    lineHeight: 20,
+  },
+  tip: {
+    color: theme.colors.textMuted,
+    fontStyle: "italic",
+    fontSize: 12,
+    padding: 20,
+    textAlign: "center",
+  },
+  modalBg: { flex: 1, backgroundColor: "rgba(0,0,0,0.7)", justifyContent: "flex-end" },
+  modalCard: {
+    backgroundColor: theme.colors.bgSecondary,
+    padding: 24,
+    borderTopWidth: 2,
+    borderTopColor: theme.colors.accent,
+  },
+  modalTitle: {
+    color: "#fff",
+    fontSize: 18,
+    fontWeight: "900",
+    letterSpacing: 2,
+    marginBottom: 8,
+  },
+  modalParent: { color: theme.colors.accent, fontSize: 12, marginBottom: 12 },
+  input: {
+    backgroundColor: theme.colors.bg,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    color: "#fff",
+    paddingHorizontal: 14,
+    height: 48,
+    borderRadius: 4,
+    marginBottom: 12,
+    fontSize: 15,
+  },
+  btn: {
+    flex: 1,
+    flexDirection: "row",
+    backgroundColor: theme.colors.accent,
+    height: 48,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 4,
+    gap: 8,
+  },
+  btnText: { color: "#000", fontWeight: "900", letterSpacing: 2, fontSize: 14 },
+  btnGhost: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    height: 48,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 4,
+  },
+  btnGhostText: { color: "#fff", fontWeight: "800", letterSpacing: 2, fontSize: 14 },
+});

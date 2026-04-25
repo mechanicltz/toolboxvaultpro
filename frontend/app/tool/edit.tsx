@@ -12,6 +12,7 @@ import * as FileSystem from "expo-file-system";
 import { theme } from "../../src/theme";
 import { api } from "../../src/api";
 import { TagInput, CategoryPicker } from "../../src/Pickers";
+import { buildLocationTree, flattenLocationTree } from "../../src/locationTree";
 
 export default function ToolEdit() {
   const { id } = useLocalSearchParams<{ id?: string }>();
@@ -276,19 +277,34 @@ export default function ToolEdit() {
           {locations.length === 0 ? (
             <Text style={styles.helper}>No locations yet. Add some in More → Locations.</Text>
           ) : (
-            <View style={styles.chipWrap}>
+            <View>
               <TouchableOpacity
                 testID="loc-clear"
-                style={[styles.chip, !locationId && styles.chipActive]}
+                style={[styles.locRow, !locationId && styles.locRowActive]}
                 onPress={() => { setLocationId(null); setLocationName(""); }}
               >
-                <Text style={[styles.chipText, !locationId && styles.chipTextActive]}>NONE</Text>
+                <Ionicons name="ban" size={14} color={theme.colors.textMuted} />
+                <Text style={[styles.locText, { color: theme.colors.textMuted }]}>NONE</Text>
               </TouchableOpacity>
-              {locations.map((l) => (
-                <TouchableOpacity key={l.id} testID={`pick-loc-${l.id}`}
-                  style={[styles.chip, locationId === l.id && styles.chipActive]}
-                  onPress={() => { setLocationId(l.id); setLocationName(l.name); }}>
-                  <Text style={[styles.chipText, locationId === l.id && styles.chipTextActive]}>{l.name}</Text>
+              {flattenLocationTree(buildLocationTree(locations)).map((n) => (
+                <TouchableOpacity
+                  key={n.id}
+                  testID={`pick-loc-${n.id}`}
+                  style={[
+                    styles.locRow,
+                    { paddingLeft: 14 + n.depth * 16 },
+                    locationId === n.id && styles.locRowActive,
+                  ]}
+                  onPress={() => { setLocationId(n.id); setLocationName(n.path); }}
+                >
+                  <Ionicons
+                    name={n.children.length > 0 ? "folder" : "location"}
+                    size={14}
+                    color={locationId === n.id ? "#000" : theme.colors.accent}
+                  />
+                  <Text style={[styles.locText, locationId === n.id && { color: "#000" }]}>
+                    {n.name}
+                  </Text>
                 </TouchableOpacity>
               ))}
             </View>
@@ -492,6 +508,18 @@ const styles = StyleSheet.create({
   chipActive: { backgroundColor: theme.colors.accent, borderColor: theme.colors.accent },
   chipText: { color: theme.colors.textSecondary, fontSize: 12, fontWeight: "700", letterSpacing: 0.5 },
   chipTextActive: { color: "#000" },
+  locRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderBottomColor: theme.colors.borderSubtle,
+    borderBottomWidth: 1,
+    backgroundColor: theme.colors.bgSecondary,
+  },
+  locRowActive: { backgroundColor: theme.colors.accent },
+  locText: { color: "#fff", fontSize: 14, fontWeight: "600" },
   pickerRow: {
     flexDirection: "row", alignItems: "center", gap: 12,
     backgroundColor: theme.colors.bgSecondary, borderWidth: 1, borderColor: theme.colors.border,

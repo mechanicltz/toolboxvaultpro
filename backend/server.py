@@ -34,6 +34,7 @@ class Location(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     name: str
     description: Optional[str] = ""
+    parent_id: Optional[str] = None  # for nested locations
     parent_layout_id: Optional[str] = None  # if this location is a drawer in a toolbox
     drawer_index: Optional[int] = None
     created_at: str = Field(default_factory=now_iso)
@@ -42,8 +43,15 @@ class Location(BaseModel):
 class LocationCreate(BaseModel):
     name: str
     description: Optional[str] = ""
+    parent_id: Optional[str] = None
     parent_layout_id: Optional[str] = None
     drawer_index: Optional[int] = None
+
+
+class LocationUpdate(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    parent_id: Optional[str] = None
 
 
 class Tag(BaseModel):
@@ -348,8 +356,57 @@ async def list_locations():
     return [Location(**i) for i in items]
 
 
+@api_router.put("/locations/{loc_id}", response_model=Location)
+async def update_location(loc_id: str, payload: LocationUpdate):
+    doc = await db.locations.find_one({"id": loc_id}, {"_id": 0})
+    if not doc:
+        raise HTTPException(404, "Location not found")
+    updates = {k: v for k, v in payload.dict().items() if v is not None}
+    # Prevent cycles: ensure new parent isn't a descendant of this location
+    if "parent_id" in updates and updates["parent_id"]:
+        if updates["parent_id"] == loc_id:
+            raise HTTPException(400, "Location cannot be its own parent")
+        # Walk up the chain to ensure no cycle
+        cur = updates["parent_id"]
+        depth = 0
+        while cur and depth < 50:
+            p = await db.locations.find_one({"id": cur}, {"_id": 0, "parent_id": 1, "id": 1})
+            if not p:
+                break
+            if p.get("id") == loc_id:
+                raise HTTPException(400, "Cannot create a cycle in locations")
+            cur = p.get("parent_id")
+            depth += 1
+    await db.locations.update_one({"id": loc_id}, {"$set": updates})
+    new_doc = await db.locations.find_one({"id": loc_id}, {"_id": 0})
+    return Location(**new_doc)
+
+
 @api_router.delete("/locations/{loc_id}")
-async def delete_location(loc_id: str):
+async def delete_location(loc_id: str, cascade: bool = False):
+    if cascade:
+        # collect this id and all descendants iteratively
+        all_ids = [loc_id]
+        frontier = [loc_id]
+        while frontier:
+            children = await db.locations.find(
+                {"parent_id": {"$in": frontier}}, {"_id": 0, "id": 1}
+            ).to_list(5000)
+            ids = [c["id"] for c in children]
+            if not ids:
+                break
+            all_ids.extend(ids)
+            frontier = ids
+        await db.locations.delete_many({"id": {"$in": all_ids}})
+        return {"ok": True, "deleted": len(all_ids)}
+    # default: only delete if no children, else reparent children to this loc's parent
+    doc = await db.locations.find_one({"id": loc_id}, {"_id": 0})
+    if not doc:
+        return {"ok": True}
+    parent_of_deleted = doc.get("parent_id")
+    await db.locations.update_many(
+        {"parent_id": loc_id}, {"$set": {"parent_id": parent_of_deleted}}
+    )
     await db.locations.delete_one({"id": loc_id})
     return {"ok": True}
 
