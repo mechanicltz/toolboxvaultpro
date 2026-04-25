@@ -136,7 +136,6 @@ export default function ToolDetail() {
   };
 
   const markRepaired = async () => {
-    if (!(await confirm("Mark as repaired?", "This will clear the broken flag.", "Mark Repaired"))) return;
     try {
       await api.updateTool(tool.id, {
         needs_repair: false,
