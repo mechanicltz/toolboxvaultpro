@@ -126,7 +126,7 @@ backend:
 frontend:
   - task: "Tool edit screen — Broken / In Repair toggle + status, company, contact, notified date (defaults to today), expected back, notes"
     implemented: true
-    working: "NA"
+    working: true
     file: "/app/frontend/app/tool/edit.tsx"
     stuck_count: 0
     priority: "high"
@@ -135,10 +135,13 @@ frontend:
       - working: "NA"
         agent: "main"
         comment: "Added repair section after consumable. Toggle defaults notified_at to today. Status chips: Reported / In Repair / Awaiting Parts / Repaired."
+      - working: true
+        agent: "testing"
+        comment: "PASS (mobile 390x844). toggle-repair switches the section on and reveals all four status chips (rep-status-Reported, rep-status-In Repair, rep-status-Awaiting Parts, rep-status-Repaired). Selected 'In Repair'. Filled rep-company='ACME Repair', rep-contact='555-1234', rep-expected='2025-07-15', rep-notes=\"Won't power on\". rep-notified auto-populated to today (2026-04-25) as expected. SAVE persisted the tool and navigated back to the inventory list."
 
   - task: "Tool detail screen — In Repair banner with company, dates, contact, notes"
     implemented: true
-    working: "NA"
+    working: true
     file: "/app/frontend/app/tool/[id].tsx"
     stuck_count: 0
     priority: "high"
@@ -147,10 +150,13 @@ frontend:
       - working: "NA"
         agent: "main"
         comment: "Added a red repair banner under the status banner that shows when needs_repair=true."
+      - working: true
+        agent: "testing"
+        comment: "PASS. Detail screen for the saved 'Test Drill' shows the red-bordered repair banner with text 'IN REPAIR · IN REPAIR', plus 'At: ACME Repair', 'Notified: 2026-04-25', 'Expected back: 2025-07-15', 'Contact: 555-1234', and notes \"Won't power on\". All fields render correctly under the AVAILABLE status banner."
 
   - task: "Inventory list — Broken filter chip + repair badge per row"
     implemented: true
-    working: "NA"
+    working: true
     file: "/app/frontend/app/(tabs)/index.tsx"
     stuck_count: 0
     priority: "high"
@@ -159,10 +165,13 @@ frontend:
       - working: "NA"
         agent: "main"
         comment: "Added BROKEN filter chip (top-left after ALL) using needs_repair=true API filter. Cards now show a red REPAIR icon/text instead of OUT/IN when broken. Summary header shows Repair count when > 0."
+      - working: true
+        agent: "testing"
+        comment: "PASS. filter-broken chip is positioned right after ALL and turns solid red when active. Tapping it filters the list to broken tools only (Test Drill appeared after creation). The Test Drill row shows a red wrench icon and 'REPAIR' label in place of OUT/IN. Summary header showed '1 Repair'. Search bar and other filter chips (filter-all/available/out/consumables) remain functional."
 
   - task: "Reports — Broken / In Repair report card + repair status / dates columns"
     implemented: true
-    working: "NA"
+    working: true
     file: "/app/frontend/app/(tabs)/reports.tsx"
     stuck_count: 0
     priority: "high"
@@ -171,6 +180,9 @@ frontend:
       - working: "NA"
         agent: "main"
         comment: "Added 'BROKEN / IN REPAIR' report card (PDF + CSV) and two new column toggles: Repair Status, Repair Dates. Stats grid shows In Repair count when > 0."
+      - working: true
+        agent: "testing"
+        comment: "PASS. 'In Repair' stat card is visible in the stat grid (rendered uppercase as 'IN REPAIR' due to textTransform CSS) when needs_repair > 0. report-broken-btn 'BROKEN / IN REPAIR' card present. col-repair_status and col-repair_dates Switches toggle on/off. Selecting CSV format and clicking the broken report card triggered a download named 'broken___in_repair.csv'; the downloaded file contains the 'Repair Status' and 'Repair Dates' columns and the 'Test Drill' row. PDF path was not exercised (popup-based; per instructions). Cleanup: Test Drill was deleted via delete-tool-btn and is no longer in the inventory. Regression: dealers, people (borrowers), more, and reports tabs all load. The only console messages were benign 'Failed to fetch' warnings caused by in-flight list requests being aborted on quick navigation — no functional impact."
 
 metadata:
   created_by: "main_agent"
@@ -196,3 +208,5 @@ agent_communication:
     message: "Backend tested via /app/backend_test.py against EXPO_PUBLIC_BACKEND_URL/api. Result: 30/34 checks PASS, 4 FAIL — all rooted in ONE missing-field bug. CRITICAL: The Tool response model in /app/backend/server.py (lines ~184-213) does NOT declare `needs_repair` or `repair_info` fields. They exist on ToolCreate/ToolUpdate, and MongoDB stores them correctly (proven by /api/aggregate.needs_repair=2 and /api/stats.needs_repair=2 after creating two broken tools, and GET /api/tools?needs_repair=true returning exactly the right 2 tools), but every Tool response strips them out. So PUT/GET /api/tools/{id} return needs_repair=null and repair_info=null/{} to the client. FIX (one-line in Tool model): add `needs_repair: bool = False` and `repair_info: Optional[RepairInfo] = None` next to is_consumable/consumable_info. AUTO-CHECKIN logic itself is correct — after PUT needs_repair=true on a checked-out tool, is_checked_out=false, current_checkout=null, checkout_history has 1 entry with checked_in_at non-null and notes containing '[auto check-in: marked for repair]'. Regression on POST/PUT/DELETE /api/tools, checkout, checkin, /api/locations, /api/dealers all PASS. After main agent adds the two fields to the Tool model, please retest."
   - agent: "testing"
     message: "Retest after fix: 34/34 PASS. The Tool model now exposes needs_repair and repair_info (server.py L204-205). All previously failing assertions now pass: PUT/GET return populated repair_info, list filter is correct in both directions, aggregate/stats counts match (=2), and auto-checkin behavior is fully verified. Regression on tools/locations/dealers also green. Test data created during the run was cleaned up. Backend task is complete — no further action needed from main agent on this task; safe to summarise and finish."
+  - agent: "testing"
+    message: "Frontend Broken/Repair flow tested end-to-end on web preview at 390x844 mobile viewport. ALL 4 frontend tasks PASS. Verified: (1) filter-broken chip renders right after ALL, turns red when active, filters list correctly. (2) New Tool screen — toggle-repair reveals all 4 status chips (rep-status-Reported/In Repair/Awaiting Parts/Repaired); rep-notified auto-defaults to today's YYYY-MM-DD; rep-company/rep-contact/rep-expected/rep-notes all save correctly. (3) Inventory list shows red REPAIR badge instead of OUT/IN; summary shows 'Repair' count. (4) Detail screen renders red-bordered banner: 'IN REPAIR · IN REPAIR', 'At: ACME Repair', 'Notified: 2026-04-25', 'Expected back: 2025-07-15', 'Contact: 555-1234', notes. (5) Reports tab shows 'In Repair' stat card (rendered uppercase via CSS textTransform), report-broken-btn 'BROKEN / IN REPAIR' card, and col-repair_status / col-repair_dates Switches. CSV export (format=csv) on the broken report downloaded broken___in_repair.csv containing the Repair Status and Repair Dates columns and the Test Drill row. (6) delete-tool-btn cleanup succeeded. Regression: search input works, all other filter chips work, dealers/people/more/reports tabs load. The only console messages were benign 'Failed to fetch' warnings caused by in-flight list requests being aborted on quick navigation away from the inventory tab — no functional impact and not user-visible. All tasks marked working: true and needs_retesting: false."
