@@ -141,11 +141,11 @@ frontend:
 
   - task: "Tool detail screen — In Repair banner with company, dates, contact, notes; quick MARK BROKEN / MARK REPAIRED actions"
     implemented: true
-    working: "NA"
+    working: true
     file: "/app/frontend/app/tool/[id].tsx"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
