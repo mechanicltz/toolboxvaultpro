@@ -96,9 +96,12 @@ export default function ToolDetail() {
   };
 
   const doCheckin = async () => {
-    if (!(await confirm("Check in tool?", `Mark ${tool.name} as returned.`, "Check In"))) return;
-    await api.checkinTool(tool.id);
-    load();
+    try {
+      await api.checkinTool(tool.id);
+      load();
+    } catch (e: any) {
+      Alert.alert("Error", e.message || "Check in failed");
+    }
   };
 
   const doDelete = async () => {
@@ -413,22 +416,22 @@ export default function ToolDetail() {
       </ScrollView>
 
       <View style={styles.actionBar}>
-        {tool.is_checked_out ? (
-          <TouchableOpacity testID="checkin-btn" style={[styles.btnSuccess, { flex: 1 }]} onPress={doCheckin}>
-            <Ionicons name="checkmark" size={22} color="#000" />
-            <Text style={styles.btnText}>CHECK IN</Text>
-          </TouchableOpacity>
-        ) : tool.needs_repair ? (
-          <TouchableOpacity
-            testID="mark-repaired-btn"
-            style={[styles.btnSuccess, { flex: 1 }]}
-            onPress={markRepaired}
-          >
-            <Ionicons name="checkmark-circle" size={22} color="#000" />
-            <Text style={styles.btnText}>MARK REPAIRED</Text>
-          </TouchableOpacity>
-        ) : (
-          <View style={{ flexDirection: "row", gap: 10 }}>
+        <View style={{ flexDirection: "row", gap: 10 }}>
+          {tool.is_checked_out ? (
+            <TouchableOpacity testID="checkin-btn" style={[styles.btnSuccess, { flex: 2 }]} onPress={doCheckin}>
+              <Ionicons name="checkmark" size={22} color="#000" />
+              <Text style={styles.btnText}>CHECK IN</Text>
+            </TouchableOpacity>
+          ) : tool.needs_repair ? (
+            <TouchableOpacity
+              testID="mark-repaired-btn"
+              style={[styles.btnSuccess, { flex: 2 }]}
+              onPress={markRepaired}
+            >
+              <Ionicons name="checkmark-circle" size={22} color="#000" />
+              <Text style={styles.btnText}>MARK REPAIRED</Text>
+            </TouchableOpacity>
+          ) : (
             <TouchableOpacity
               testID="checkout-btn"
               style={[styles.btn, { flex: 2 }]}
@@ -437,6 +440,9 @@ export default function ToolDetail() {
               <Ionicons name="log-out-outline" size={22} color="#000" />
               <Text style={styles.btnText}>CHECK OUT</Text>
             </TouchableOpacity>
+          )}
+
+          {!tool.needs_repair && (
             <TouchableOpacity
               testID="mark-broken-btn"
               style={[styles.btnDanger, { flex: 1 }]}
@@ -445,8 +451,8 @@ export default function ToolDetail() {
               <Ionicons name="build" size={20} color="#fff" />
               <Text style={[styles.btnText, { color: "#fff" }]}>BROKEN</Text>
             </TouchableOpacity>
-          </View>
-        )}
+          )}
+        </View>
       </View>
 
       <Modal visible={showCheckout} transparent animationType="slide">
