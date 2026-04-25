@@ -122,17 +122,18 @@ export default function ReportsScreen() {
         subtitle = "Tools currently in inventory";
       }
       const html = buildHtml(title, subtitle, tools, includePhotos);
-      const { uri } = await Print.printToFileAsync({ html });
       if (Platform.OS === "web") {
-        // Open in new tab on web
-        window.open(uri, "_blank");
-      } else if (await Sharing.isAvailableAsync()) {
-        await Sharing.shareAsync(uri, {
-          mimeType: "application/pdf",
-          dialogTitle: title,
-        });
+        await Print.printAsync({ html });
       } else {
-        Alert.alert("PDF saved", `Saved to: ${uri}`);
+        const { uri } = await Print.printToFileAsync({ html });
+        if (await Sharing.isAvailableAsync()) {
+          await Sharing.shareAsync(uri, {
+            mimeType: "application/pdf",
+            dialogTitle: title,
+          });
+        } else {
+          Alert.alert("PDF saved", `Saved to: ${uri}`);
+        }
       }
     } catch (e: any) {
       Alert.alert("Error", e.message || "Could not generate PDF");

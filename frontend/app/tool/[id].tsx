@@ -135,10 +135,13 @@ export default function ToolDetail() {
       ${history ? `<h3 style="margin-top:20px">Checkout History</h3><table><thead><tr><th>Borrower</th><th>Out</th><th>In</th></tr></thead><tbody>${history}</tbody></table>` : ""}
     </body></html>`;
     try {
-      const { uri } = await Print.printToFileAsync({ html });
-      if (Platform.OS === "web") window.open(uri, "_blank");
-      else if (await Sharing.isAvailableAsync())
-        await Sharing.shareAsync(uri, { mimeType: "application/pdf" });
+      if (Platform.OS === "web") {
+        await Print.printAsync({ html });
+      } else {
+        const { uri } = await Print.printToFileAsync({ html });
+        if (await Sharing.isAvailableAsync())
+          await Sharing.shareAsync(uri, { mimeType: "application/pdf" });
+      }
     } catch (e: any) {
       Alert.alert("Error", e.message);
     }
