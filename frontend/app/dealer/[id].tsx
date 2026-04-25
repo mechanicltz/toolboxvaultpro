@@ -53,7 +53,11 @@ export default function DealerDetail() {
   }
 
   const cur = (dealer.agents || []).find((a: any) => a.id === dealer.current_agent_id);
-  const past = (dealer.agents || []).filter((a: any) => a.id !== dealer.current_agent_id);
+  const allAgents = (dealer.agents || []).slice().sort((a: any, b: any) => {
+    if (a.id === dealer.current_agent_id) return -1;
+    if (b.id === dealer.current_agent_id) return 1;
+    return 0;
+  });
   const total = tools.reduce((s, t) => s + (t.cost || 0), 0);
   const cats = new Set(tools.map((t) => t.category_name).filter(Boolean));
   const tags = new Set(tools.flatMap((t) => t.tag_names || []));
@@ -179,33 +183,7 @@ export default function DealerDetail() {
         )}
 
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionLabel}>CURRENT AGENT</Text>
-        </View>
-        {cur ? (
-          <View style={styles.currentAgent}>
-            <View style={styles.currentBadge}>
-              <Ionicons name="star" size={12} color="#000" />
-              <Text style={styles.currentBadgeText}>CURRENT</Text>
-            </View>
-            <Text style={styles.agentName}>{cur.name}</Text>
-            {!!cur.phone && (
-              <TouchableOpacity onPress={() => callOrEmail(cur.phone)}>
-                <Text style={styles.agentMeta}>📞 {cur.phone}</Text>
-              </TouchableOpacity>
-            )}
-            {!!cur.email && (
-              <TouchableOpacity onPress={() => callOrEmail(cur.email)}>
-                <Text style={styles.agentMeta}>✉️ {cur.email}</Text>
-              </TouchableOpacity>
-            )}
-            {!!cur.notes && <Text style={styles.agentMeta}>{cur.notes}</Text>}
-          </View>
-        ) : (
-          <Text style={styles.empty}>No current agent. Add one below.</Text>
-        )}
-
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionLabel}>ALL AGENTS ({(dealer.agents || []).length})</Text>
+          <Text style={styles.sectionLabel}>AGENTS ({(dealer.agents || []).length})</Text>
           <TouchableOpacity
             testID="add-agent-btn"
             style={styles.addBtn}
@@ -215,33 +193,62 @@ export default function DealerDetail() {
             <Text style={styles.addBtnText}>ADD</Text>
           </TouchableOpacity>
         </View>
-        {past.map((a: any) => (
-          <View key={a.id} style={styles.agentRow}>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.agentName}>{a.name}</Text>
-              <Text style={styles.agentMeta} numberOfLines={1}>
-                {[a.phone, a.email].filter(Boolean).join("  ·  ") || "No contact info"}
-              </Text>
-              {a.ended_at && (
+        {allAgents.length === 0 && (
+          <Text style={styles.empty}>No agents yet. Add one to get started.</Text>
+        )}
+        {allAgents.map((a: any) => {
+          const isCurrent = a.id === dealer.current_agent_id;
+          return (
+            <View
+              key={a.id}
+              style={[styles.agentCard, isCurrent && styles.agentCardActive]}
+            >
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                {isCurrent && (
+                  <View style={styles.currentBadge}>
+                    <Ionicons name="star" size={10} color="#000" />
+                    <Text style={styles.currentBadgeText}>CURRENT</Text>
+                  </View>
+                )}
+                <Text style={styles.agentName}>{a.name}</Text>
+              </View>
+              {!!a.phone && (
+                <TouchableOpacity onPress={() => callOrEmail(a.phone)}>
+                  <Text style={styles.agentMeta}>📞 {a.phone}</Text>
+                </TouchableOpacity>
+              )}
+              {!!a.email && (
+                <TouchableOpacity onPress={() => callOrEmail(a.email)}>
+                  <Text style={styles.agentMeta}>✉️ {a.email}</Text>
+                </TouchableOpacity>
+              )}
+              {!!a.notes && <Text style={styles.agentMeta}>{a.notes}</Text>}
+              {a.ended_at && !isCurrent && (
                 <Text style={styles.agentMeta}>Ended: {a.ended_at.substring(0, 10)}</Text>
               )}
+              <View style={styles.agentActions}>
+                {!isCurrent && (
+                  <TouchableOpacity
+                    testID={`set-current-${a.id}`}
+                    style={styles.agentActionBtn}
+                    onPress={() => setCurrent(a.id)}
+                  >
+                    <Ionicons name="star-outline" size={16} color={theme.colors.accent} />
+                    <Text style={styles.agentActionText}>SET CURRENT</Text>
+                  </TouchableOpacity>
+                )}
+                <TouchableOpacity
+                  testID={`remove-agent-${a.id}`}
+                  style={[styles.agentActionBtn, { borderColor: theme.colors.danger }]}
+                  onPress={() => removeAgent(a.id, a.name)}
+                >
+                  <Ionicons name="trash-outline" size={16} color={theme.colors.danger} />
+                  <Text style={[styles.agentActionText, { color: theme.colors.danger }]}>REMOVE</Text>
+                </TouchableOpacity>
+              </View>
             </View>
-            <TouchableOpacity
-              testID={`set-current-${a.id}`}
-              onPress={() => setCurrent(a.id)}
-              hitSlop={8}
-            >
-              <Ionicons name="star-outline" size={20} color={theme.colors.accent} />
-            </TouchableOpacity>
-            <TouchableOpacity
-              testID={`remove-agent-${a.id}`}
-              onPress={() => removeAgent(a.id, a.name)}
-              hitSlop={8}
-            >
-              <Ionicons name="trash-outline" size={20} color={theme.colors.danger} />
-            </TouchableOpacity>
-          </View>
-        ))}
+          );
+        })}
 
         <Text style={styles.sectionLabel}>TOOLS PURCHASED FROM {dealer.name.toUpperCase()}</Text>
         {tools.length === 0 ? (
@@ -450,6 +457,42 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
   },
   contactText: { color: "#fff", fontSize: 14 },
+  agentCard: {
+    marginHorizontal: 20,
+    marginBottom: 10,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.bgSecondary,
+    borderRadius: 4,
+  },
+  agentCardActive: {
+    borderColor: theme.colors.accent,
+    borderLeftWidth: 4,
+    backgroundColor: "rgba(255,179,0,0.06)",
+  },
+  agentActions: {
+    flexDirection: "row",
+    gap: 8,
+    marginTop: 12,
+    flexWrap: "wrap",
+  },
+  agentActionBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    borderWidth: 1,
+    borderColor: theme.colors.accent,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 4,
+  },
+  agentActionText: {
+    color: theme.colors.accent,
+    fontWeight: "800",
+    fontSize: 11,
+    letterSpacing: 1,
+  },
   currentAgent: {
     marginHorizontal: 20,
     paddingVertical: 14,

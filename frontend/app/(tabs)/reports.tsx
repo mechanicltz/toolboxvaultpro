@@ -178,7 +178,7 @@ export default function ReportsScreen() {
 
         <View style={styles.toggleRow}>
           <Ionicons name="image" size={20} color={theme.colors.accent} />
-          <Text style={styles.toggleText}>Include photos in PDF</Text>
+          <Text style={styles.toggleText} numberOfLines={1}>Include photos in PDF</Text>
           <Switch
             testID="toggle-include-photos"
             value={includePhotos}

@@ -179,7 +179,7 @@ export function CategoryPicker({
             testID="cat-input"
             placeholder="Type or pick a category..."
             placeholderTextColor={theme.colors.textMuted}
-            style={[styles.input, { paddingHorizontal: 14 }]}
+            style={styles.formInput}
             value={text}
             onChangeText={setText}
             onSubmitEditing={() => {
@@ -248,6 +248,16 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 14,
     paddingVertical: 6,
+  },
+  formInput: {
+    backgroundColor: theme.colors.bgSecondary,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    color: "#fff",
+    paddingHorizontal: 14,
+    height: 48,
+    borderRadius: 4,
+    fontSize: 15,
   },
   dropdown: {
     maxHeight: 180,

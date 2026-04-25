@@ -1,28 +1,31 @@
-# Toolbox Tracker — PRD
+# Toolbox Tracker — PRD (v2)
 
 ## Goal
-A mobile-first tool inventory tracker for managing tools across a toolbox/garage.
+A mobile-first tool inventory tracker for managing tools across a toolbox/garage with deep dealer & warranty tracking.
 
 ## Users
 Single user (no auth). Personal home/workshop use.
 
 ## Core Features
-- **Tool Inventory**: Add tools with name, description, brand, model, serial number, cost, purchase date, condition, location, tags, photos (base64), documents (base64).
-- **Search & Filter**: Full-text search across name/description/brand/model/serial/tags/location. Filter by ALL / AVAILABLE / CHECKED OUT.
-- **Locations**: Manage named locations (Garage, Toolbox, Shed, Workbench, etc.).
-- **Tags**: Manage colored tags (Power, Hand, Cordless, etc.).
-- **People (Borrowers)**: Save people who borrow tools, or use free-text entry.
-- **Check-out / Check-in**: Track who has each tool, with notes and complete history.
-- **PDF Reports**: Export Full Inventory, Checked-Out only, Available only, and per-tool detail (with photos & history).
-- **Photos**: Capture from camera or pick from gallery, stored as base64.
-- **Documents**: Attach files (warranty, manual) as base64.
+- **Tool Inventory** with full details: name, description, brand, model, serial, cost, purchase date, condition, location, **category**, tags, photos, documents.
+- **Categories** (one per tool, autocomplete-create).
+- **Tags** (many per tool, free-form add-as-you-type with autocomplete).
+- **Dealers** with multiple **Agents**. One "current" agent at a time. Each tool snapshots which agent it was purchased from (so changing the current agent never alters past purchase records).
+- **Warranty tracking** per tool: provider, contact, terms, length (months), start date, auto-computed expiry. Visible badge on inventory tab when warranties are expiring soon or expired (toggleable).
+- **Consumables**: flag a tool as consumable + replacement info (store, website, SKU, notes). Filter the inventory by consumables.
+- **Search & Filter**: full-text across all fields including dealer/agent/category. Filter chips: ALL / AVAILABLE / CHECKED OUT / CONSUMABLES.
+- **Detail summary headers** on every list/search result: count, total $, dealer breakdown, category breakdown, location breakdown, tag count. Toggleable to hide $ amounts globally.
+- **Borrower (People)** check-in/check-out with full history.
+- **PDF Reports**: Full Inventory, Checked-Out, Available, per-tool detail. Optional "Include photos" toggle.
+- **Toolbox Photo Mapping**: take a photo of your toolbox; **Gemini 2.5 Pro** analyzes drawer count + labels; user fine-tunes drawer regions; tap a drawer marker to see tools inside it. Drawers auto-create matching Locations.
 
 ## Design
 Modern industrial dark theme — black background, yellow/orange accents (`#FFB300`), sharp edges, condensed/heavy typography, status dots.
 
 ## Tech
 - Backend: FastAPI + MongoDB (motor), all routes under `/api`.
-- Frontend: Expo Router (file-based), React Native, expo-image-picker, expo-document-picker, expo-print, expo-sharing.
+- Frontend: Expo Router (file-based), React Native, expo-image-picker, expo-document-picker, expo-print, expo-sharing, AsyncStorage for prefs.
+- AI: Gemini 2.5 Pro vision via emergentintegrations (uses Emergent universal key).
 
 ## Smart Enhancement
-Total inventory **value tracking** with cost rollups on the Reports dashboard — answers "how much is my toolbox worth?" for insurance / tax records.
+Total inventory **value** rollups by dealer/category/search context — answers "how much did I spend with Matco?" or "what's my power tools investment?" instantly.
