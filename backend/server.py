@@ -153,6 +153,16 @@ class Warranty(BaseModel):
     document: Optional[Document] = None
 
 
+# Repair info
+class RepairInfo(BaseModel):
+    company_notified: Optional[str] = ""
+    notified_at: Optional[str] = ""  # date or ISO
+    expected_completion: Optional[str] = ""  # date
+    repair_status: Optional[str] = "Reported"  # Reported / In Repair / Awaiting Parts / Repaired
+    contact: Optional[str] = ""
+    notes: Optional[str] = ""
+
+
 # Consumable
 class ConsumableInfo(BaseModel):
     store_name: Optional[str] = ""
@@ -222,6 +232,8 @@ class ToolCreate(BaseModel):
     documents: List[Document] = []
     is_consumable: bool = False
     consumable_info: Optional[ConsumableInfo] = None
+    needs_repair: bool = False
+    repair_info: Optional[RepairInfo] = None
     warranty: Optional[Warranty] = None
     dealer_id: Optional[str] = None
     dealer_name: Optional[str] = ""
@@ -248,6 +260,8 @@ class ToolUpdate(BaseModel):
     documents: Optional[List[Document]] = None
     is_consumable: Optional[bool] = None
     consumable_info: Optional[ConsumableInfo] = None
+    needs_repair: Optional[bool] = None
+    repair_info: Optional[RepairInfo] = None
     warranty: Optional[Warranty] = None
     dealer_id: Optional[str] = None
     dealer_name: Optional[str] = None
@@ -305,6 +319,7 @@ def build_tool_query(
     dealer_id: Optional[str] = None,
     checked_out: Optional[bool] = None,
     is_consumable: Optional[bool] = None,
+    needs_repair: Optional[bool] = None,
 ):
     query: Dict[str, Any] = {}
     if search:
@@ -333,6 +348,8 @@ def build_tool_query(
         query["is_checked_out"] = checked_out
     if is_consumable is not None:
         query["is_consumable"] = is_consumable
+    if needs_repair is not None:
+        query["needs_repair"] = needs_repair
     return query
 
 
@@ -677,8 +694,9 @@ async def list_tools(
     dealer_id: Optional[str] = None,
     checked_out: Optional[bool] = None,
     is_consumable: Optional[bool] = None,
+    needs_repair: Optional[bool] = None,
 ):
-    query = build_tool_query(search, location_id, tag_id, category_id, dealer_id, checked_out, is_consumable)
+    query = build_tool_query(search, location_id, tag_id, category_id, dealer_id, checked_out, is_consumable, needs_repair)
     items = await db.tools.find(query, {"_id": 0}).sort("created_at", -1).to_list(5000)
     return [Tool(**i) for i in items]
 
@@ -758,12 +776,14 @@ async def aggregate(
     dealer_id: Optional[str] = None,
     checked_out: Optional[bool] = None,
     is_consumable: Optional[bool] = None,
+    needs_repair: Optional[bool] = None,
 ):
-    query = build_tool_query(search, location_id, tag_id, category_id, dealer_id, checked_out, is_consumable)
+    query = build_tool_query(search, location_id, tag_id, category_id, dealer_id, checked_out, is_consumable, needs_repair)
     items = await db.tools.find(query, {"_id": 0}).to_list(5000)
     total_value = sum((i.get("cost") or 0) for i in items)
     checked_out_n = sum(1 for i in items if i.get("is_checked_out"))
     consumables_n = sum(1 for i in items if i.get("is_consumable"))
+    needs_repair_n = sum(1 for i in items if i.get("needs_repair"))
     locations: Dict[str, int] = {}
     categories: Dict[str, int] = {}
     dealers: Dict[str, int] = {}
@@ -783,6 +803,7 @@ async def aggregate(
         "checked_out": checked_out_n,
         "available": len(items) - checked_out_n,
         "consumables": consumables_n,
+        "needs_repair": needs_repair_n,
         "location_breakdown": locations,
         "category_breakdown": categories,
         "dealer_breakdown": dealers,
@@ -796,6 +817,7 @@ async def get_stats():
     total = await db.tools.count_documents({})
     checked_out = await db.tools.count_documents({"is_checked_out": True})
     consumables = await db.tools.count_documents({"is_consumable": True})
+    needs_repair = await db.tools.count_documents({"needs_repair": True})
     locations = await db.locations.count_documents({})
     tags = await db.tags.count_documents({})
     categories = await db.categories.count_documents({})
@@ -820,6 +842,7 @@ async def get_stats():
         "checked_out": checked_out,
         "available": total - checked_out,
         "consumables": consumables,
+        "needs_repair": needs_repair,
         "total_value": round(total_value, 2),
         "locations": locations,
         "tags": tags,
