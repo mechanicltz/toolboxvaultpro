@@ -33,6 +33,18 @@ export default function ToolDetail() {
   const [coNotes, setCoNotes] = useState("");
   const [photoIdx, setPhotoIdx] = useState(0);
 
+  // Repair modal
+  const todayStr = () => new Date().toISOString().substring(0, 10);
+  const [showRepair, setShowRepair] = useState(false);
+  const [repairForm, setRepairForm] = useState({
+    company_notified: "",
+    notified_at: "",
+    expected_completion: "",
+    repair_status: "Reported",
+    contact: "",
+    notes: "",
+  });
+
   const load = useCallback(async () => {
     if (!id) return;
     try {
@@ -93,6 +105,44 @@ export default function ToolDetail() {
     if (!(await confirm("Delete tool?", "This cannot be undone.", "Delete", true))) return;
     await api.deleteTool(tool.id);
     router.back();
+  };
+
+  const openRepair = () => {
+    setRepairForm({
+      company_notified: tool.repair_info?.company_notified || "",
+      notified_at: tool.repair_info?.notified_at || todayStr(),
+      expected_completion: tool.repair_info?.expected_completion || "",
+      repair_status: tool.repair_info?.repair_status || "Reported",
+      contact: tool.repair_info?.contact || "",
+      notes: tool.repair_info?.notes || "",
+    });
+    setShowRepair(true);
+  };
+
+  const saveRepair = async () => {
+    try {
+      await api.updateTool(tool.id, {
+        needs_repair: true,
+        repair_info: { ...repairForm },
+      });
+      setShowRepair(false);
+      load();
+    } catch (e: any) {
+      Alert.alert("Error", e.message || "Could not save repair info");
+    }
+  };
+
+  const markRepaired = async () => {
+    if (!(await confirm("Mark as repaired?", "This will clear the broken flag.", "Mark Repaired"))) return;
+    try {
+      await api.updateTool(tool.id, {
+        needs_repair: false,
+        repair_info: null,
+      });
+      load();
+    } catch (e: any) {
+      Alert.alert("Error", e.message || "Could not update tool");
+    }
   };
 
   const exportPdf = async () => {
@@ -260,7 +310,12 @@ export default function ToolDetail() {
           </View>
 
           {tool.needs_repair && (
-            <View style={styles.repairBanner}>
+            <TouchableOpacity
+              testID="repair-banner"
+              activeOpacity={0.7}
+              style={styles.repairBanner}
+              onPress={openRepair}
+            >
               <Ionicons name="build" size={20} color={theme.colors.danger} />
               <View style={{ flex: 1 }}>
                 <Text style={styles.repairTitle}>
@@ -284,7 +339,8 @@ export default function ToolDetail() {
                   </Text>
                 )}
               </View>
-            </View>
+              <Ionicons name="create-outline" size={18} color={theme.colors.danger} />
+            </TouchableOpacity>
           )}
 
           <Text style={styles.title}>{tool.name}</Text>
@@ -358,19 +414,38 @@ export default function ToolDetail() {
 
       <View style={styles.actionBar}>
         {tool.is_checked_out ? (
-          <TouchableOpacity testID="checkin-btn" style={styles.btnSuccess} onPress={doCheckin}>
+          <TouchableOpacity testID="checkin-btn" style={[styles.btnSuccess, { flex: 1 }]} onPress={doCheckin}>
             <Ionicons name="checkmark" size={22} color="#000" />
             <Text style={styles.btnText}>CHECK IN</Text>
           </TouchableOpacity>
-        ) : (
+        ) : tool.needs_repair ? (
           <TouchableOpacity
-            testID="checkout-btn"
-            style={styles.btn}
-            onPress={() => setShowCheckout(true)}
+            testID="mark-repaired-btn"
+            style={[styles.btnSuccess, { flex: 1 }]}
+            onPress={markRepaired}
           >
-            <Ionicons name="log-out-outline" size={22} color="#000" />
-            <Text style={styles.btnText}>CHECK OUT</Text>
+            <Ionicons name="checkmark-circle" size={22} color="#000" />
+            <Text style={styles.btnText}>MARK REPAIRED</Text>
           </TouchableOpacity>
+        ) : (
+          <View style={{ flexDirection: "row", gap: 10 }}>
+            <TouchableOpacity
+              testID="checkout-btn"
+              style={[styles.btn, { flex: 2 }]}
+              onPress={() => setShowCheckout(true)}
+            >
+              <Ionicons name="log-out-outline" size={22} color="#000" />
+              <Text style={styles.btnText}>CHECK OUT</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              testID="mark-broken-btn"
+              style={[styles.btnDanger, { flex: 1 }]}
+              onPress={openRepair}
+            >
+              <Ionicons name="build" size={20} color="#fff" />
+              <Text style={[styles.btnText, { color: "#fff" }]}>BROKEN</Text>
+            </TouchableOpacity>
+          </View>
         )}
       </View>
 
@@ -455,6 +530,123 @@ export default function ToolDetail() {
               </TouchableOpacity>
               <TouchableOpacity testID="confirm-checkout-btn" style={styles.btn} onPress={doCheckout}>
                 <Text style={styles.btnText}>CHECK OUT</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Repair Modal — quick mark-broken / edit repair info */}
+      <Modal visible={showRepair} transparent animationType="slide">
+        <View style={styles.modalBg}>
+          <View style={[styles.modalCard, { borderTopColor: theme.colors.danger, maxHeight: "90%" }]}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 12 }}>
+              <Ionicons name="build" size={22} color={theme.colors.danger} />
+              <Text style={styles.modalTitle}>
+                {tool.needs_repair ? "EDIT REPAIR INFO" : "MARK AS BROKEN"}
+              </Text>
+            </View>
+
+            <ScrollView style={{ maxHeight: 460 }} keyboardShouldPersistTaps="handled">
+              <Text style={styles.repairLabel}>STATUS</Text>
+              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6, marginBottom: 10 }}>
+                {["Reported", "In Repair", "Awaiting Parts", "Repaired"].map((s) => (
+                  <TouchableOpacity
+                    key={s}
+                    testID={`repmod-status-${s}`}
+                    style={[
+                      styles.repChip,
+                      repairForm.repair_status === s && styles.repChipActive,
+                    ]}
+                    onPress={() => setRepairForm({ ...repairForm, repair_status: s })}
+                  >
+                    <Text style={[
+                      styles.repChipText,
+                      repairForm.repair_status === s && styles.repChipTextActive,
+                    ]}>{s}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              <Text style={styles.repairLabel}>REPAIR COMPANY</Text>
+              <TextInput
+                testID="repmod-company"
+                placeholder="ACME Repair Shop"
+                placeholderTextColor={theme.colors.textMuted}
+                value={repairForm.company_notified}
+                style={styles.input}
+                onChangeText={(v) => setRepairForm({ ...repairForm, company_notified: v })}
+              />
+
+              <Text style={styles.repairLabel}>CONTACT</Text>
+              <TextInput
+                testID="repmod-contact"
+                placeholder="800-555-1234"
+                placeholderTextColor={theme.colors.textMuted}
+                value={repairForm.contact}
+                style={styles.input}
+                onChangeText={(v) => setRepairForm({ ...repairForm, contact: v })}
+              />
+
+              <View style={{ flexDirection: "row", gap: 10 }}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.repairLabel}>NOTIFIED ON</Text>
+                  <TextInput
+                    testID="repmod-notified"
+                    placeholder="YYYY-MM-DD"
+                    placeholderTextColor={theme.colors.textMuted}
+                    value={repairForm.notified_at}
+                    style={styles.input}
+                    onChangeText={(v) => setRepairForm({ ...repairForm, notified_at: v })}
+                  />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.repairLabel}>EXPECTED BACK</Text>
+                  <TextInput
+                    testID="repmod-expected"
+                    placeholder="YYYY-MM-DD"
+                    placeholderTextColor={theme.colors.textMuted}
+                    value={repairForm.expected_completion}
+                    style={styles.input}
+                    onChangeText={(v) => setRepairForm({ ...repairForm, expected_completion: v })}
+                  />
+                </View>
+              </View>
+
+              <Text style={styles.repairLabel}>NOTES</Text>
+              <TextInput
+                testID="repmod-notes"
+                placeholder="What's wrong? RMA #..."
+                placeholderTextColor={theme.colors.textMuted}
+                value={repairForm.notes}
+                style={[styles.input, { height: 80, textAlignVertical: "top" }]}
+                multiline
+                onChangeText={(v) => setRepairForm({ ...repairForm, notes: v })}
+              />
+
+              {!tool.needs_repair && tool.is_checked_out && (
+                <Text style={{ color: theme.colors.warning, fontSize: 12, marginVertical: 6 }}>
+                  Heads up: this tool is currently checked out to{" "}
+                  {tool.current_checkout?.borrower_name}. Marking it broken will auto check-in.
+                </Text>
+              )}
+            </ScrollView>
+
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={styles.btnGhost}
+                onPress={() => setShowRepair(false)}
+              >
+                <Text style={styles.btnGhostText}>CANCEL</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                testID="confirm-repair-btn"
+                style={[styles.btn, { backgroundColor: theme.colors.danger }]}
+                onPress={saveRepair}
+              >
+                <Text style={[styles.btnText, { color: "#fff" }]}>
+                  {tool.needs_repair ? "SAVE" : "MARK BROKEN"}
+                </Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -622,6 +814,36 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     gap: 8,
   },
+  btnDanger: {
+    flexDirection: "row",
+    backgroundColor: theme.colors.danger,
+    height: 52,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 4,
+    gap: 6,
+  },
+  repairLabel: {
+    color: theme.colors.textMuted,
+    fontSize: 10,
+    fontWeight: "800",
+    letterSpacing: 1.5,
+    marginTop: 8,
+    marginBottom: 4,
+  },
+  repChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: 4,
+  },
+  repChipActive: {
+    borderColor: theme.colors.danger,
+    backgroundColor: theme.colors.danger,
+  },
+  repChipText: { color: theme.colors.textSecondary, fontSize: 12, fontWeight: "700", letterSpacing: 0.5 },
+  repChipTextActive: { color: "#fff" },
   btnText: { color: "#000", fontWeight: "900", letterSpacing: 2, fontSize: 14 },
   modalBg: { flex: 1, backgroundColor: "rgba(0,0,0,0.7)", justifyContent: "flex-end" },
   modalCard: {
