@@ -16,6 +16,7 @@ import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { theme } from "../../src/theme";
 import { api } from "../../src/api";
 import { usePrefs } from "../../src/prefs";
+import { confirm } from "../../src/confirm";
 
 export default function DealerDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -76,45 +77,25 @@ export default function DealerDetail() {
     load();
   };
 
-  const setCurrent = (agentId: string) => {
-    Alert.alert("Change current agent?", "Past agents are kept in history.", [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Set as current",
-        onPress: async () => {
-          await api.setCurrentAgent(id!, agentId);
-          load();
-        },
-      },
-    ]);
+  const setCurrent = async (agentId: string) => {
+    const ok = await confirm("Change current agent?", "Past agents are kept in history.", "Set as current");
+    if (!ok) return;
+    await api.setCurrentAgent(id!, agentId);
+    load();
   };
 
-  const removeAgent = (agentId: string, name: string) => {
-    Alert.alert(`Remove ${name}?`, "This removes the agent from this dealer.", [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Remove",
-        style: "destructive",
-        onPress: async () => {
-          await api.removeAgent(id!, agentId);
-          load();
-        },
-      },
-    ]);
+  const removeAgent = async (agentId: string, name: string) => {
+    const ok = await confirm(`Remove ${name}?`, "This removes the agent from this dealer.", "Remove", true);
+    if (!ok) return;
+    await api.removeAgent(id!, agentId);
+    load();
   };
 
-  const removeDealer = () => {
-    Alert.alert("Delete dealer?", "Tools keep their dealer name as text.", [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Delete",
-        style: "destructive",
-        onPress: async () => {
-          await api.deleteDealer(id!);
-          router.back();
-        },
-      },
-    ]);
+  const removeDealer = async () => {
+    const ok = await confirm("Delete dealer?", "Tools keep their dealer name as text.", "Delete", true);
+    if (!ok) return;
+    await api.deleteDealer(id!);
+    router.back();
   };
 
   const callOrEmail = (val: string) => {

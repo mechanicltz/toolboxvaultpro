@@ -13,6 +13,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { theme } from "../../src/theme";
 import { api } from "../../src/api";
+import { confirm } from "../../src/confirm";
 
 type Kind = "categories" | "tags" | "locations";
 
@@ -53,18 +54,10 @@ export default function ManageScreen() {
     load();
   };
 
-  const remove = (id: string, n: string) => {
-    Alert.alert(`Delete "${n}"?`, "Existing tools will keep the name as text.", [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Delete",
-        style: "destructive",
-        onPress: async () => {
-          await fetcher[k].del(id);
-          load();
-        },
-      },
-    ]);
+  const remove = async (id: string, n: string) => {
+    if (!(await confirm(`Delete "${n}"?`, "Existing tools will keep the name as text.", "Delete", true))) return;
+    await fetcher[k].del(id);
+    load();
   };
 
   return (

@@ -9,6 +9,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { theme } from "../../src/theme";
 import { api } from "../../src/api";
+import { confirm } from "../../src/confirm";
 
 export default function ToolboxDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -115,19 +116,11 @@ export default function ToolboxDetail() {
     load();
   };
 
-  const removeDrawer = (drawerId: string) => {
-    Alert.alert("Remove drawer?", "Tools assigned to it keep the location.", [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Remove",
-        style: "destructive",
-        onPress: async () => {
-          const drawers = (layout.drawers || []).filter((d: any) => d.id !== drawerId);
-          await api.updateLayout(layout.id, { drawers });
-          load();
-        },
-      },
-    ]);
+  const removeDrawer = async (drawerId: string) => {
+    if (!(await confirm("Remove drawer?", "Tools assigned to it keep the location.", "Remove", true))) return;
+    const drawers = (layout.drawers || []).filter((d: any) => d.id !== drawerId);
+    await api.updateLayout(layout.id, { drawers });
+    load();
   };
 
   const saveDrawer = async () => {
@@ -147,18 +140,10 @@ export default function ToolboxDetail() {
     load();
   };
 
-  const removeLayout = () => {
-    Alert.alert("Delete this toolbox?", "Drawers/locations stay but are unlinked.", [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Delete",
-        style: "destructive",
-        onPress: async () => {
-          await api.deleteLayout(layout.id);
-          router.back();
-        },
-      },
-    ]);
+  const removeLayout = async () => {
+    if (!(await confirm("Delete this toolbox?", "Drawers/locations stay but are unlinked.", "Delete", true))) return;
+    await api.deleteLayout(layout.id);
+    router.back();
   };
 
   const onImgLayout = (e: LayoutChangeEvent) => {

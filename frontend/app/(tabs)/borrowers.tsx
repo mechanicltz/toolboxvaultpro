@@ -14,6 +14,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect } from "expo-router";
 import { theme } from "../../src/theme";
 import { api } from "../../src/api";
+import { confirm } from "../../src/confirm";
 
 export default function BorrowersScreen() {
   const [borrowers, setBorrowers] = useState<any[]>([]);
@@ -46,18 +47,10 @@ export default function BorrowersScreen() {
     load();
   };
 
-  const remove = (id: string, n: string) => {
-    Alert.alert("Delete person?", `Remove ${n} from your list?`, [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Delete",
-        style: "destructive",
-        onPress: async () => {
-          await api.deleteBorrower(id);
-          load();
-        },
-      },
-    ]);
+  const remove = async (id: string, n: string) => {
+    if (!(await confirm("Delete person?", `Remove ${n} from your list?`, "Delete", true))) return;
+    await api.deleteBorrower(id);
+    load();
   };
 
   const toolsByBorrower = (borrowerName: string) =>

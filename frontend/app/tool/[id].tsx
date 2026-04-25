@@ -18,6 +18,7 @@ import * as Print from "expo-print";
 import * as Sharing from "expo-sharing";
 import { theme } from "../../src/theme";
 import { api } from "../../src/api";
+import { confirm } from "../../src/confirm";
 
 export default function ToolDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -81,31 +82,16 @@ export default function ToolDetail() {
     }
   };
 
-  const doCheckin = () => {
-    Alert.alert("Check in tool?", `Mark ${tool.name} as returned.`, [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Check In",
-        onPress: async () => {
-          await api.checkinTool(tool.id);
-          load();
-        },
-      },
-    ]);
+  const doCheckin = async () => {
+    if (!(await confirm("Check in tool?", `Mark ${tool.name} as returned.`, "Check In"))) return;
+    await api.checkinTool(tool.id);
+    load();
   };
 
-  const doDelete = () => {
-    Alert.alert("Delete tool?", "This cannot be undone.", [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Delete",
-        style: "destructive",
-        onPress: async () => {
-          await api.deleteTool(tool.id);
-          router.back();
-        },
-      },
-    ]);
+  const doDelete = async () => {
+    if (!(await confirm("Delete tool?", "This cannot be undone.", "Delete", true))) return;
+    await api.deleteTool(tool.id);
+    router.back();
   };
 
   const exportPdf = async () => {
