@@ -95,6 +95,17 @@ export default function ToolDetail() {
   };
 
   const exportPdf = async () => {
+    let printWin: Window | null = null;
+    if (Platform.OS === "web") {
+      printWin = window.open("", "_blank");
+      if (!printWin) {
+        Alert.alert("Popup blocked", "Please allow popups for this site.");
+        return;
+      }
+      printWin.document.write(
+        "<!doctype html><title>Loading...</title><body style='font-family:Helvetica;padding:40px;color:#666'>Generating report...</body>"
+      );
+    }
     const esc = (s: any) => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;");
     const photoTags = (tool.photos || [])
       .slice(0, 4)
@@ -136,13 +147,22 @@ export default function ToolDetail() {
     </body></html>`;
     try {
       if (Platform.OS === "web") {
-        await Print.printAsync({ html });
+        if (!printWin) return;
+        const fullHtml = html.replace(
+          "</body>",
+          "<script>setTimeout(function(){window.print();},600);</script></body>"
+        );
+        printWin.document.open();
+        printWin.document.write(fullHtml);
+        printWin.document.close();
+        printWin.document.title = tool.name;
       } else {
         const { uri } = await Print.printToFileAsync({ html });
         if (await Sharing.isAvailableAsync())
           await Sharing.shareAsync(uri, { mimeType: "application/pdf" });
       }
     } catch (e: any) {
+      if (printWin) printWin.close();
       Alert.alert("Error", e.message);
     }
   };

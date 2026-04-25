@@ -105,6 +105,22 @@ export default function ReportsScreen() {
 
   const generate = async (kind: "all" | "out" | "in") => {
     if (busy) return;
+    // On web: open a popup synchronously on click (BEFORE any await) so the
+    // browser's popup blocker doesn't fire. Fill it with content once data arrives.
+    let printWin: Window | null = null;
+    if (Platform.OS === "web") {
+      printWin = window.open("", "_blank");
+      if (!printWin) {
+        Alert.alert(
+          "Popup blocked",
+          "Please allow popups for this site so I can open the PDF report.",
+        );
+        return;
+      }
+      printWin.document.write(
+        "<!doctype html><title>Loading report...</title><body style='font-family:Helvetica;padding:40px;color:#666'>Generating report...</body>"
+      );
+    }
     setBusy(true);
     try {
       let tools: any[] = [];
@@ -123,7 +139,13 @@ export default function ReportsScreen() {
       }
       const html = buildHtml(title, subtitle, tools, includePhotos);
       if (Platform.OS === "web") {
-        await Print.printAsync({ html });
+        if (!printWin) return;
+        const printScript = `<script>setTimeout(function(){window.print();},600);</script>`;
+        const fullHtml = html.replace("</body>", `${printScript}</body>`);
+        printWin.document.open();
+        printWin.document.write(fullHtml);
+        printWin.document.close();
+        printWin.document.title = title;
       } else {
         const { uri } = await Print.printToFileAsync({ html });
         if (await Sharing.isAvailableAsync()) {
@@ -136,7 +158,8 @@ export default function ReportsScreen() {
         }
       }
     } catch (e: any) {
-      Alert.alert("Error", e.message || "Could not generate PDF");
+      if (printWin) printWin.close();
+      Alert.alert("Error", e.message || "Could not generate report");
     } finally {
       setBusy(false);
     }
