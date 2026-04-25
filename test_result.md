@@ -107,11 +107,11 @@ user_problem_statement: "Track tools in toolboxes/garage with checkout, dealers,
 backend:
   - task: "Broken / Repair tracking on tools (needs_repair + RepairInfo) with auto-checkin"
     implemented: true
-    working: false
+    working: true
     file: "/app/backend/server.py"
-    stuck_count: 1
+    stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
@@ -119,6 +119,9 @@ backend:
       - working: false
         agent: "testing"
         comment: "CRITICAL BUG: The `Tool` Pydantic response model (server.py lines ~184-213) is MISSING the `needs_repair: bool = False` and `repair_info: Optional[RepairInfo] = None` fields. They exist on ToolCreate and ToolUpdate but not on Tool. As a result, every endpoint that returns a Tool/List[Tool] (GET /api/tools, GET /api/tools/{id}, PUT /api/tools/{id}, POST /api/tools, POST /api/tools/{id}/checkout, POST /api/tools/{id}/checkin) silently drops these fields from the response — clients see needs_repair=null and repair_info=null even though MongoDB correctly persists them. Evidence from backend_test.py against the live preview URL: PUT to set needs_repair=true returned needs_repair=None / repair_info=None; GET /tools/{id} returned repair_info={} / needs_repair=None; GET /tools?needs_repair=true correctly returned exactly the 2 broken tools (filter works), but each item's needs_repair was None in the response body. Persistence/filter side effects are correct: /api/aggregate returned needs_repair=2 and /api/stats returned needs_repair=2 after creating two broken tools. AUTO-CHECKIN logic itself works correctly: after PUT needs_repair=true on a checked-out tool, is_checked_out=false, current_checkout=null, checkout_history has exactly 1 entry with checked_in_at set and notes containing '[auto check-in: marked for repair]'. Regression endpoints all PASS: POST/PUT/DELETE /api/tools, POST /api/tools/{id}/checkout, POST /api/tools/{id}/checkin, GET /api/locations, POST /api/dealers, GET /api/dealers. FIX REQUIRED: Add `needs_repair: bool = False` and `repair_info: Optional[RepairInfo] = None` to the Tool model class so they are serialized in responses."
+      - working: true
+        agent: "testing"
+        comment: "RETEST PASSED: Main agent added `needs_repair: bool = False` and `repair_info: Optional[RepairInfo] = None` to the Tool response model (server.py lines 204-205). Re-ran /app/backend_test.py against the live preview URL — 34/34 checks PASS, 0 FAIL. Confirmed: (1) PUT /api/tools/{id} with needs_repair=true + full repair_info now returns those fields populated correctly; (2) GET /api/tools/{id} returns full repair_info matching what was set (company_notified='ACME Repair', notified_at, expected_completion, repair_status='In Repair', contact, notes); (3) GET /api/tools?needs_repair=true returns only the 2 broken tools and each item's needs_repair=true in the body; needs_repair=false correctly excludes them; (4) /api/aggregate.needs_repair=2 and /api/stats.needs_repair=2; (5) AUTO-CHECKIN: after PUT needs_repair=true on a checked-out tool, is_checked_out=false, current_checkout=null, checkout_history has exactly 1 entry with checked_in_at non-null and notes containing '[auto check-in: marked for repair]'; (6) Regression all green: POST/PUT/DELETE /api/tools, checkout/checkin, /api/locations, /api/dealers. All test data was cleaned up at the end of the run."
 
 frontend:
   - task: "Tool edit screen — Broken / In Repair toggle + status, company, contact, notified date (defaults to today), expected back, notes"
@@ -176,8 +179,7 @@ metadata:
   run_ui: false
 
 test_plan:
-  current_focus:
-    - "Broken / Repair tracking on tools (needs_repair + RepairInfo) with auto-checkin"
+  current_focus: []
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
@@ -192,3 +194,5 @@ agent_communication:
               5) Existing tool checkout/checkin/CRUD must still work — please regression-test those quickly."
   - agent: "testing"
     message: "Backend tested via /app/backend_test.py against EXPO_PUBLIC_BACKEND_URL/api. Result: 30/34 checks PASS, 4 FAIL — all rooted in ONE missing-field bug. CRITICAL: The Tool response model in /app/backend/server.py (lines ~184-213) does NOT declare `needs_repair` or `repair_info` fields. They exist on ToolCreate/ToolUpdate, and MongoDB stores them correctly (proven by /api/aggregate.needs_repair=2 and /api/stats.needs_repair=2 after creating two broken tools, and GET /api/tools?needs_repair=true returning exactly the right 2 tools), but every Tool response strips them out. So PUT/GET /api/tools/{id} return needs_repair=null and repair_info=null/{} to the client. FIX (one-line in Tool model): add `needs_repair: bool = False` and `repair_info: Optional[RepairInfo] = None` next to is_consumable/consumable_info. AUTO-CHECKIN logic itself is correct — after PUT needs_repair=true on a checked-out tool, is_checked_out=false, current_checkout=null, checkout_history has 1 entry with checked_in_at non-null and notes containing '[auto check-in: marked for repair]'. Regression on POST/PUT/DELETE /api/tools, checkout, checkin, /api/locations, /api/dealers all PASS. After main agent adds the two fields to the Tool model, please retest."
+  - agent: "testing"
+    message: "Retest after fix: 34/34 PASS. The Tool model now exposes needs_repair and repair_info (server.py L204-205). All previously failing assertions now pass: PUT/GET return populated repair_info, list filter is correct in both directions, aggregate/stats counts match (=2), and auto-checkin behavior is fully verified. Regression on tools/locations/dealers also green. Test data created during the run was cleaned up. Backend task is complete — no further action needed from main agent on this task; safe to summarise and finish."

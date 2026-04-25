@@ -201,6 +201,8 @@ class Tool(BaseModel):
     documents: List[Document] = []
     is_consumable: bool = False
     consumable_info: Optional[ConsumableInfo] = None
+    needs_repair: bool = False
+    repair_info: Optional[RepairInfo] = None
     warranty: Optional[Warranty] = None
     dealer_id: Optional[str] = None
     dealer_name: Optional[str] = ""
