@@ -101,3 +101,94 @@
 #====================================================================================================
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
 #====================================================================================================
+
+user_problem_statement: "Track tools in toolboxes/garage with checkout, dealers, photos, nested locations, warranty, broken/repair tracking, AI-powered toolbox analysis, customizable PDF/Excel reports."
+
+backend:
+  - task: "Broken / Repair tracking on tools (needs_repair + RepairInfo) with auto-checkin"
+    implemented: true
+    working: false
+    file: "/app/backend/server.py"
+    stuck_count: 1
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Tool model already had needs_repair + repair_info (company_notified, notified_at, expected_completion, repair_status, contact, notes). Added auto-checkin behavior in PUT /api/tools/{id}: when a tool is newly flagged needs_repair=true and is_checked_out, the current checkout is closed (checked_in_at set to now, note appended), pushed to checkout_history, and is_checked_out cleared. listTools and aggregate already filter on needs_repair."
+      - working: false
+        agent: "testing"
+        comment: "CRITICAL BUG: The `Tool` Pydantic response model (server.py lines ~184-213) is MISSING the `needs_repair: bool = False` and `repair_info: Optional[RepairInfo] = None` fields. They exist on ToolCreate and ToolUpdate but not on Tool. As a result, every endpoint that returns a Tool/List[Tool] (GET /api/tools, GET /api/tools/{id}, PUT /api/tools/{id}, POST /api/tools, POST /api/tools/{id}/checkout, POST /api/tools/{id}/checkin) silently drops these fields from the response — clients see needs_repair=null and repair_info=null even though MongoDB correctly persists them. Evidence from backend_test.py against the live preview URL: PUT to set needs_repair=true returned needs_repair=None / repair_info=None; GET /tools/{id} returned repair_info={} / needs_repair=None; GET /tools?needs_repair=true correctly returned exactly the 2 broken tools (filter works), but each item's needs_repair was None in the response body. Persistence/filter side effects are correct: /api/aggregate returned needs_repair=2 and /api/stats returned needs_repair=2 after creating two broken tools. AUTO-CHECKIN logic itself works correctly: after PUT needs_repair=true on a checked-out tool, is_checked_out=false, current_checkout=null, checkout_history has exactly 1 entry with checked_in_at set and notes containing '[auto check-in: marked for repair]'. Regression endpoints all PASS: POST/PUT/DELETE /api/tools, POST /api/tools/{id}/checkout, POST /api/tools/{id}/checkin, GET /api/locations, POST /api/dealers, GET /api/dealers. FIX REQUIRED: Add `needs_repair: bool = False` and `repair_info: Optional[RepairInfo] = None` to the Tool model class so they are serialized in responses."
+
+frontend:
+  - task: "Tool edit screen — Broken / In Repair toggle + status, company, contact, notified date (defaults to today), expected back, notes"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/app/tool/edit.tsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Added repair section after consumable. Toggle defaults notified_at to today. Status chips: Reported / In Repair / Awaiting Parts / Repaired."
+
+  - task: "Tool detail screen — In Repair banner with company, dates, contact, notes"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/app/tool/[id].tsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Added a red repair banner under the status banner that shows when needs_repair=true."
+
+  - task: "Inventory list — Broken filter chip + repair badge per row"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/app/(tabs)/index.tsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Added BROKEN filter chip (top-left after ALL) using needs_repair=true API filter. Cards now show a red REPAIR icon/text instead of OUT/IN when broken. Summary header shows Repair count when > 0."
+
+  - task: "Reports — Broken / In Repair report card + repair status / dates columns"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/app/(tabs)/reports.tsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Added 'BROKEN / IN REPAIR' report card (PDF + CSV) and two new column toggles: Repair Status, Repair Dates. Stats grid shows In Repair count when > 0."
+
+metadata:
+  created_by: "main_agent"
+  version: "1.0"
+  test_sequence: 3
+  run_ui: false
+
+test_plan:
+  current_focus:
+    - "Broken / Repair tracking on tools (needs_repair + RepairInfo) with auto-checkin"
+  stuck_tasks: []
+  test_all: false
+  test_priority: "high_first"
+
+agent_communication:
+  - agent: "main"
+    message: "Implemented Broken/Repair tracking end-to-end. Please test the backend endpoints:
+              1) POST /api/tools to create a tool, then PUT /api/tools/{id} with needs_repair=true and a repair_info payload — confirm fields persist.
+              2) Create another tool, checkout via POST /api/tools/{id}/checkout, then PUT /api/tools/{id} with needs_repair=true — confirm is_checked_out becomes false and the checkout record was pushed into checkout_history with checked_in_at set and notes containing '[auto check-in: marked for repair]'.
+              3) GET /api/tools?needs_repair=true should return only broken tools.
+              4) /api/aggregate and /api/stats should report needs_repair counts.
+              5) Existing tool checkout/checkin/CRUD must still work — please regression-test those quickly."
+  - agent: "testing"
+    message: "Backend tested via /app/backend_test.py against EXPO_PUBLIC_BACKEND_URL/api. Result: 30/34 checks PASS, 4 FAIL — all rooted in ONE missing-field bug. CRITICAL: The Tool response model in /app/backend/server.py (lines ~184-213) does NOT declare `needs_repair` or `repair_info` fields. They exist on ToolCreate/ToolUpdate, and MongoDB stores them correctly (proven by /api/aggregate.needs_repair=2 and /api/stats.needs_repair=2 after creating two broken tools, and GET /api/tools?needs_repair=true returning exactly the right 2 tools), but every Tool response strips them out. So PUT/GET /api/tools/{id} return needs_repair=null and repair_info=null/{} to the client. FIX (one-line in Tool model): add `needs_repair: bool = False` and `repair_info: Optional[RepairInfo] = None` next to is_consumable/consumable_info. AUTO-CHECKIN logic itself is correct — after PUT needs_repair=true on a checked-out tool, is_checked_out=false, current_checkout=null, checkout_history has 1 entry with checked_in_at non-null and notes containing '[auto check-in: marked for repair]'. Regression on POST/PUT/DELETE /api/tools, checkout, checkin, /api/locations, /api/dealers all PASS. After main agent adds the two fields to the Tool model, please retest."

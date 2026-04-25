@@ -18,7 +18,7 @@ import { api } from "../../src/api";
 import { usePrefs } from "../../src/prefs";
 import { SummaryHeader } from "../../src/SummaryHeader";
 
-type Filter = "all" | "available" | "out" | "consumables";
+type Filter = "all" | "broken" | "available" | "out" | "consumables";
 
 export default function InventoryScreen() {
   const router = useRouter();
@@ -35,6 +35,7 @@ export default function InventoryScreen() {
     if (filter === "available") params.checked_out = false;
     if (filter === "out") params.checked_out = true;
     if (filter === "consumables") params.is_consumable = true;
+    if (filter === "broken") params.needs_repair = true;
     try {
       const [t, a, w] = await Promise.all([
         api.listTools(params),
@@ -115,6 +116,7 @@ export default function InventoryScreen() {
       >
         {[
           { k: "all", label: "ALL" },
+          { k: "broken", label: "🔧 BROKEN" },
           { k: "available", label: "AVAILABLE" },
           { k: "out", label: "CHECKED OUT" },
           { k: "consumables", label: "CONSUMABLES" },
@@ -123,9 +125,17 @@ export default function InventoryScreen() {
             key={f.k}
             testID={`filter-${f.k}`}
             onPress={() => setFilter(f.k as any)}
-            style={[styles.chip, filter === f.k && styles.chipActive]}
+            style={[
+              styles.chip,
+              filter === f.k && styles.chipActive,
+              f.k === "broken" && filter === f.k && { backgroundColor: theme.colors.danger, borderColor: theme.colors.danger },
+            ]}
           >
-            <Text style={[styles.chipText, filter === f.k && styles.chipTextActive]}>
+            <Text style={[
+              styles.chipText,
+              filter === f.k && styles.chipTextActive,
+              f.k === "broken" && filter === f.k && { color: "#fff" },
+            ]}>
               {f.label}
             </Text>
           </TouchableOpacity>
@@ -191,19 +201,28 @@ export default function InventoryScreen() {
               )}
             </View>
             <View style={styles.rowRight}>
-              <View
-                style={[
-                  styles.statusDot,
-                  {
-                    backgroundColor: item.is_checked_out
-                      ? theme.colors.accentSecondary
-                      : theme.colors.success,
-                  },
-                ]}
-              />
-              <Text style={styles.statusText}>
-                {item.is_checked_out ? "OUT" : "IN"}
-              </Text>
+              {item.needs_repair ? (
+                <>
+                  <Ionicons name="build" size={16} color={theme.colors.danger} />
+                  <Text style={[styles.statusText, { color: theme.colors.danger }]}>REPAIR</Text>
+                </>
+              ) : (
+                <>
+                  <View
+                    style={[
+                      styles.statusDot,
+                      {
+                        backgroundColor: item.is_checked_out
+                          ? theme.colors.accentSecondary
+                          : theme.colors.success,
+                      },
+                    ]}
+                  />
+                  <Text style={styles.statusText}>
+                    {item.is_checked_out ? "OUT" : "IN"}
+                  </Text>
+                </>
+              )}
             </View>
           </TouchableOpacity>
         )}

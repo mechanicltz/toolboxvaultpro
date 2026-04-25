@@ -716,6 +716,26 @@ async def update_tool(tool_id: str, payload: ToolUpdate):
         raise HTTPException(status_code=404, detail="Tool not found")
     updates = {k: v for k, v in payload.dict().items() if v is not None}
     updates["updated_at"] = now_iso()
+
+    # Auto-checkin when a tool is being newly flagged as broken / needing repair
+    becomes_broken = (
+        updates.get("needs_repair") is True
+        and not doc.get("needs_repair")
+        and doc.get("is_checked_out")
+    )
+    if becomes_broken:
+        record = doc.get("current_checkout") or {}
+        if record:
+            record = dict(record)
+            record["checked_in_at"] = now_iso()
+            note_extra = " [auto check-in: marked for repair]"
+            record["notes"] = (record.get("notes") or "") + note_extra
+            history = doc.get("checkout_history") or []
+            history.append(record)
+            updates["is_checked_out"] = False
+            updates["current_checkout"] = None
+            updates["checkout_history"] = history
+
     await db.tools.update_one({"id": tool_id}, {"$set": updates})
     new_doc = await db.tools.find_one({"id": tool_id}, {"_id": 0})
     return Tool(**new_doc)

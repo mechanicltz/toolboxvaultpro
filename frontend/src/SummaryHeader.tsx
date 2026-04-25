@@ -35,6 +35,9 @@ export function SummaryHeader({
           />
         )}
         <Stat label="Out" value={String(agg.checked_out ?? 0)} color={theme.colors.accentSecondary} />
+        {(agg.needs_repair ?? 0) > 0 && (
+          <Stat label="Repair" value={String(agg.needs_repair)} color={theme.colors.danger} />
+        )}
         <Stat label="Tags" value={String(agg.tag_count ?? 0)} />
       </View>
       {!compact && (

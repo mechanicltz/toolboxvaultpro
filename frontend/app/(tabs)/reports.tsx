@@ -72,6 +72,22 @@ const COLUMNS: ColDef[] = [
     label: "Consumable",
     get: (t) => (t.is_consumable ? "Yes" : "No"),
   },
+  {
+    id: "repair_status",
+    label: "Repair Status",
+    get: (t) =>
+      t.needs_repair
+        ? `${t.repair_info?.repair_status || "Reported"}${t.repair_info?.company_notified ? ` @ ${t.repair_info.company_notified}` : ""}`
+        : "—",
+  },
+  {
+    id: "repair_dates",
+    label: "Repair Dates",
+    get: (t) =>
+      t.needs_repair
+        ? `Notified ${t.repair_info?.notified_at || "—"} · Back ${t.repair_info?.expected_completion || "—"}`
+        : "—",
+  },
   { id: "description", label: "Description", get: (t) => t.description || "" },
 ];
 
@@ -206,7 +222,7 @@ export default function ReportsScreen() {
     );
   };
 
-  const generate = async (kind: "all" | "out" | "in") => {
+  const generate = async (kind: "all" | "out" | "in" | "broken") => {
     if (busy) return;
 
     let titleBase = "FULL INVENTORY";
@@ -220,6 +236,10 @@ export default function ReportsScreen() {
       titleBase = "AVAILABLE TOOLS";
       subtitle = "Tools currently in inventory";
       filter = { checked_out: false };
+    } else if (kind === "broken") {
+      titleBase = "BROKEN / IN REPAIR";
+      subtitle = "Tools flagged for repair";
+      filter = { needs_repair: true };
     }
     const fmtSuffix = format === "pdf" ? "REPORT" : "EXPORT";
     const title = `${titleBase} ${fmtSuffix}`;
@@ -332,6 +352,14 @@ export default function ReportsScreen() {
             </Text>
             <Text style={styles.statLabel}>Total Value</Text>
           </View>
+          {(stats.needs_repair ?? 0) > 0 && (
+            <View style={styles.statCard}>
+              <Text style={[styles.statValue, { color: theme.colors.danger }]}>
+                {stats.needs_repair}
+              </Text>
+              <Text style={styles.statLabel}>In Repair</Text>
+            </View>
+          )}
         </View>
 
         <Text style={styles.sectionLabel}>FORMAT</Text>
@@ -467,6 +495,22 @@ export default function ReportsScreen() {
           <View style={{ flex: 1 }}>
             <Text style={styles.reportTitle}>AVAILABLE</Text>
             <Text style={styles.reportDesc}>Tools currently in inventory</Text>
+          </View>
+          <Ionicons name="download-outline" size={22} color={theme.colors.textSecondary} />
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          testID="report-broken-btn"
+          style={styles.reportCard}
+          onPress={() => generate("broken")}
+          disabled={busy}
+        >
+          <View style={[styles.reportIcon, { backgroundColor: "rgba(239,68,68,0.12)" }]}>
+            <Ionicons name="build" size={24} color={theme.colors.danger} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.reportTitle}>BROKEN / IN REPAIR</Text>
+            <Text style={styles.reportDesc}>Tools flagged for repair tracking</Text>
           </View>
           <Ionicons name="download-outline" size={22} color={theme.colors.textSecondary} />
         </TouchableOpacity>

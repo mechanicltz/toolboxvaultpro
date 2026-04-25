@@ -38,6 +38,18 @@ export default function ToolEdit() {
   const [isConsumable, setIsConsumable] = useState(false);
   const [consumableInfo, setConsumableInfo] = useState({ store_name: "", website: "", sku: "", notes: "" });
 
+  // Repair / Broken
+  const todayStr = () => new Date().toISOString().substring(0, 10);
+  const [needsRepair, setNeedsRepair] = useState(false);
+  const [repairInfo, setRepairInfo] = useState({
+    company_notified: "",
+    notified_at: "",
+    expected_completion: "",
+    repair_status: "Reported",
+    contact: "",
+    notes: "",
+  });
+
   // Warranty
   const [hasWarranty, setHasWarranty] = useState(false);
   const [warranty, setWarranty] = useState({
@@ -72,6 +84,17 @@ export default function ToolEdit() {
         setPhotos(t.photos || []); setDocuments(t.documents || []);
         setIsConsumable(!!t.is_consumable);
         if (t.consumable_info) setConsumableInfo({ ...consumableInfo, ...t.consumable_info });
+        setNeedsRepair(!!t.needs_repair);
+        if (t.repair_info) {
+          setRepairInfo({
+            company_notified: t.repair_info.company_notified || "",
+            notified_at: t.repair_info.notified_at || "",
+            expected_completion: t.repair_info.expected_completion || "",
+            repair_status: t.repair_info.repair_status || "Reported",
+            contact: t.repair_info.contact || "",
+            notes: t.repair_info.notes || "",
+          });
+        }
         if (t.warranty?.has_warranty) {
           setHasWarranty(true);
           setWarranty({
@@ -177,6 +200,15 @@ export default function ToolEdit() {
       photos, documents,
       is_consumable: isConsumable,
       consumable_info: isConsumable ? consumableInfo : null,
+      needs_repair: needsRepair,
+      repair_info: needsRepair ? {
+        company_notified: repairInfo.company_notified,
+        notified_at: repairInfo.notified_at,
+        expected_completion: repairInfo.expected_completion,
+        repair_status: repairInfo.repair_status,
+        contact: repairInfo.contact,
+        notes: repairInfo.notes,
+      } : null,
       warranty: hasWarranty ? {
         has_warranty: true,
         provider: warranty.provider, contact: warranty.contact, terms: warranty.terms,
@@ -193,7 +225,7 @@ export default function ToolEdit() {
       router.back();
     } catch (e: any) { Alert.alert("Error", e.message); }
     finally { setSaving(false); }
-  }, [name, description, brand, model, serial, cost, purchaseDate, condition, locationId, locationName, category, tags, photos, documents, isConsumable, consumableInfo, hasWarranty, warranty, dealerId, dealerName, purchasedAgentId, purchasedAgentName, isEdit, id, router]);
+  }, [name, description, brand, model, serial, cost, purchaseDate, condition, locationId, locationName, category, tags, photos, documents, isConsumable, consumableInfo, needsRepair, repairInfo, hasWarranty, warranty, dealerId, dealerName, purchasedAgentId, purchasedAgentName, isEdit, id, router]);
 
   if (loading) {
     return (
@@ -367,6 +399,62 @@ export default function ToolEdit() {
               <TextInput testID="cons-notes" placeholder="Replacement instructions..." placeholderTextColor={theme.colors.textMuted}
                 value={consumableInfo.notes} style={[styles.input, { height: 70, textAlignVertical: "top" }]}
                 multiline onChangeText={(v) => setConsumableInfo({ ...consumableInfo, notes: v })} />
+            </View>
+          )}
+
+          {/* Broken / Needs Repair */}
+          <View style={[styles.toggleRow, needsRepair && { backgroundColor: "rgba(220,38,38,0.08)" }]}>
+            <Ionicons name="build" size={20} color={needsRepair ? theme.colors.danger : theme.colors.accent} />
+            <Text style={styles.toggleText}>BROKEN / IN REPAIR</Text>
+            <Switch testID="toggle-repair" value={needsRepair} onValueChange={(v) => {
+              setNeedsRepair(v);
+              if (v && !repairInfo.notified_at) {
+                setRepairInfo({ ...repairInfo, notified_at: todayStr() });
+              }
+            }}
+              trackColor={{ true: theme.colors.danger, false: theme.colors.border }} thumbColor="#fff" />
+          </View>
+          {needsRepair && (
+            <View style={[styles.subSection, { borderLeftColor: theme.colors.danger }]}>
+              <Text style={[styles.label, { marginTop: 0 }]}>STATUS</Text>
+              <View style={styles.chipWrap}>
+                {["Reported", "In Repair", "Awaiting Parts", "Repaired"].map((s) => (
+                  <TouchableOpacity key={s} testID={`rep-status-${s}`}
+                    style={[styles.chip, repairInfo.repair_status === s && styles.chipActive]}
+                    onPress={() => setRepairInfo({ ...repairInfo, repair_status: s })}>
+                    <Text style={[styles.chipText, repairInfo.repair_status === s && styles.chipTextActive]}>{s}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              <Text style={styles.label}>REPAIR COMPANY</Text>
+              <TextInput testID="rep-company" placeholder="ACME Repair Shop" placeholderTextColor={theme.colors.textMuted}
+                value={repairInfo.company_notified} style={styles.input}
+                onChangeText={(v) => setRepairInfo({ ...repairInfo, company_notified: v })} />
+              <Text style={styles.label}>CONTACT (phone / email)</Text>
+              <TextInput testID="rep-contact" placeholder="800-555-1234" placeholderTextColor={theme.colors.textMuted}
+                value={repairInfo.contact} style={styles.input}
+                onChangeText={(v) => setRepairInfo({ ...repairInfo, contact: v })} />
+              <View style={styles.row2}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.label}>NOTIFIED ON</Text>
+                  <TextInput testID="rep-notified" placeholder="YYYY-MM-DD" placeholderTextColor={theme.colors.textMuted}
+                    value={repairInfo.notified_at} style={styles.input}
+                    onChangeText={(v) => setRepairInfo({ ...repairInfo, notified_at: v })} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.label}>EXPECTED BACK</Text>
+                  <TextInput testID="rep-expected" placeholder="YYYY-MM-DD" placeholderTextColor={theme.colors.textMuted}
+                    value={repairInfo.expected_completion} style={styles.input}
+                    onChangeText={(v) => setRepairInfo({ ...repairInfo, expected_completion: v })} />
+                </View>
+              </View>
+              <Text style={styles.label}>NOTES</Text>
+              <TextInput testID="rep-notes" placeholder="What's wrong? RMA #..." placeholderTextColor={theme.colors.textMuted}
+                value={repairInfo.notes} style={[styles.input, { height: 70, textAlignVertical: "top" }]} multiline
+                onChangeText={(v) => setRepairInfo({ ...repairInfo, notes: v })} />
+              <Text style={[styles.helper, { color: theme.colors.warning, marginTop: 4 }]}>
+                Marking as broken will auto check-in this tool if it's currently out.
+              </Text>
             </View>
           )}
 

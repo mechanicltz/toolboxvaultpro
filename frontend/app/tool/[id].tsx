@@ -259,6 +259,34 @@ export default function ToolDetail() {
             </View>
           </View>
 
+          {tool.needs_repair && (
+            <View style={styles.repairBanner}>
+              <Ionicons name="build" size={20} color={theme.colors.danger} />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.repairTitle}>
+                  IN REPAIR · {(tool.repair_info?.repair_status || "Reported").toUpperCase()}
+                </Text>
+                {!!tool.repair_info?.company_notified && (
+                  <Text style={styles.repairLine}>At: {tool.repair_info.company_notified}</Text>
+                )}
+                {!!tool.repair_info?.notified_at && (
+                  <Text style={styles.repairLine}>Notified: {tool.repair_info.notified_at}</Text>
+                )}
+                {!!tool.repair_info?.expected_completion && (
+                  <Text style={styles.repairLine}>Expected back: {tool.repair_info.expected_completion}</Text>
+                )}
+                {!!tool.repair_info?.contact && (
+                  <Text style={styles.repairLine}>Contact: {tool.repair_info.contact}</Text>
+                )}
+                {!!tool.repair_info?.notes && (
+                  <Text style={[styles.repairLine, { fontStyle: "italic", marginTop: 4 }]}>
+                    {tool.repair_info.notes}
+                  </Text>
+                )}
+              </View>
+            </View>
+          )}
+
           <Text style={styles.title}>{tool.name}</Text>
           {!!tool.description && (
             <Text style={styles.description}>{tool.description}</Text>
@@ -483,6 +511,26 @@ const styles = StyleSheet.create({
   },
   statusDot: { width: 10, height: 10, borderRadius: 5 },
   statusText: { color: "#fff", fontWeight: "800", letterSpacing: 1, fontSize: 12 },
+  statusSub: { color: theme.colors.textSecondary, fontSize: 11, marginTop: 2 },
+  repairBanner: {
+    flexDirection: "row",
+    gap: 12,
+    alignItems: "flex-start",
+    padding: 12,
+    borderWidth: 1,
+    borderColor: theme.colors.danger,
+    backgroundColor: "rgba(239,68,68,0.08)",
+    borderRadius: 4,
+    marginBottom: 16,
+  },
+  repairTitle: {
+    color: theme.colors.danger,
+    fontWeight: "900",
+    letterSpacing: 1.5,
+    fontSize: 12,
+    marginBottom: 4,
+  },
+  repairLine: { color: "#fff", fontSize: 13, marginTop: 1 },
   title: { color: "#fff", fontSize: 26, fontWeight: "900", letterSpacing: 1 },
   description: { color: theme.colors.textSecondary, fontSize: 15, marginTop: 8, lineHeight: 22 },
   tagWrap: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 16 },
