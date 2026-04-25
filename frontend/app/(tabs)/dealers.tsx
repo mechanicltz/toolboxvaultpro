@@ -15,6 +15,7 @@ import { useFocusEffect, useRouter } from "expo-router";
 import { theme } from "../../src/theme";
 import { api } from "../../src/api";
 import { usePrefs } from "../../src/prefs";
+import { confirm } from "../../src/confirm";
 
 export default function DealersScreen() {
   const router = useRouter();
@@ -48,6 +49,12 @@ export default function DealersScreen() {
     const ts = tools.filter((x) => x.dealer_id === id);
     const total = ts.reduce((s, t) => s + (t.cost || 0), 0);
     return { count: ts.length, total };
+  };
+
+  const remove = async (dealerId: string, name: string) => {
+    if (!(await confirm(`Delete ${name}?`, "Tools keep the dealer name as text. This cannot be undone.", "Delete", true))) return;
+    await api.deleteDealer(dealerId);
+    load();
   };
 
   return (
@@ -96,6 +103,19 @@ export default function DealersScreen() {
                   {`  ·  ${(item.agents || []).length} AGENT${(item.agents || []).length === 1 ? "" : "S"}`}
                 </Text>
               </View>
+              <TouchableOpacity
+                testID={`delete-dealer-row-${item.id}`}
+                onPress={(e) => {
+                  // prevent row navigation
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                  (e as any)?.stopPropagation?.();
+                  remove(item.id, item.name);
+                }}
+                hitSlop={10}
+                style={styles.rowDeleteBtn}
+              >
+                <Ionicons name="trash-outline" size={18} color={theme.colors.danger} />
+              </TouchableOpacity>
               <Ionicons name="chevron-forward" size={20} color={theme.colors.textMuted} />
             </TouchableOpacity>
           );
@@ -189,6 +209,16 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     letterSpacing: 1,
     marginTop: 4,
+  },
+  rowDeleteBtn: {
+    width: 36,
+    height: 36,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: 4,
+    marginRight: 4,
   },
   empty: { alignItems: "center", paddingVertical: 60, paddingHorizontal: 40 },
   emptyTitle: {
