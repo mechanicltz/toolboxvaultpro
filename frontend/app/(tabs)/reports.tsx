@@ -17,6 +17,7 @@ import * as Sharing from "expo-sharing";
 import * as FileSystem from "expo-file-system";
 import { theme } from "../../src/theme";
 import { api } from "../../src/api";
+import { buildLocationTree, flattenLocationTree } from "../../src/locationTree";
 
 const escapeHtml = (s: any) =>
   String(s ?? "")
@@ -210,11 +211,96 @@ export default function ReportsScreen() {
   const [format, setFormat] = useState<"pdf" | "csv">("pdf");
   const [selected, setSelected] = useState<string[]>(DEFAULT_COLS);
 
+  // Filters
+  const [allTags, setAllTags] = useState<any[]>([]);
+  const [allCategories, setAllCategories] = useState<any[]>([]);
+  const [allLocations, setAllLocations] = useState<any[]>([]);
+  const [tagFilter, setTagFilter] = useState<string[]>([]);
+  const [categoryFilter, setCategoryFilter] = useState<string[]>([]);
+  const [locationFilter, setLocationFilter] = useState<string[]>([]);
+
   useFocusEffect(
     useCallback(() => {
       api.getStats().then(setStats).catch(() => {});
+      api.listTags().then(setAllTags).catch(() => {});
+      api.listCategories().then(setAllCategories).catch(() => {});
+      api.listLocations().then(setAllLocations).catch(() => {});
     }, [])
   );
+
+  // Build set of effective location IDs (selected + all descendants)
+  const effectiveLocationIds = useCallback((): Set<string> => {
+    if (locationFilter.length === 0) return new Set();
+    const tree = buildLocationTree(allLocations);
+    const flat = flattenLocationTree(tree);
+    const byId: Record<string, any> = {};
+    flat.forEach((n) => (byId[n.id] = n));
+    const out = new Set<string>();
+    const collect = (id: string) => {
+      if (out.has(id)) return;
+      out.add(id);
+      const node = byId[id];
+      if (node) node.children.forEach((c: any) => collect(c.id));
+    };
+    locationFilter.forEach(collect);
+    return out;
+  }, [locationFilter, allLocations]);
+
+  // Apply filters to a tools array (client-side)
+  const applyFilters = useCallback(
+    (tools: any[]): any[] => {
+      const locIds = effectiveLocationIds();
+      return tools.filter((t) => {
+        if (categoryFilter.length > 0) {
+          if (!t.category_id || !categoryFilter.includes(t.category_id)) return false;
+        }
+        if (tagFilter.length > 0) {
+          const ids: string[] = t.tag_ids || [];
+          if (!ids.some((id) => tagFilter.includes(id))) return false;
+        }
+        if (locIds.size > 0) {
+          if (!t.location_id || !locIds.has(t.location_id)) return false;
+        }
+        return true;
+      });
+    },
+    [tagFilter, categoryFilter, effectiveLocationIds]
+  );
+
+  const filterCount =
+    tagFilter.length + categoryFilter.length + locationFilter.length;
+
+  const clearFilters = () => {
+    setTagFilter([]);
+    setCategoryFilter([]);
+    setLocationFilter([]);
+  };
+
+  // Build a "filtered by ..." subtitle suffix
+  const filterSubtitle = (): string => {
+    const parts: string[] = [];
+    if (categoryFilter.length > 0) {
+      const names = allCategories
+        .filter((c) => categoryFilter.includes(c.id))
+        .map((c) => c.name);
+      parts.push(`Categories: ${names.join(", ")}`);
+    }
+    if (tagFilter.length > 0) {
+      const names = allTags
+        .filter((t) => tagFilter.includes(t.id))
+        .map((t) => t.name);
+      parts.push(`Tags: ${names.join(", ")}`);
+    }
+    if (locationFilter.length > 0) {
+      const tree = buildLocationTree(allLocations);
+      const flat = flattenLocationTree(tree);
+      const names = flat
+        .filter((n) => locationFilter.includes(n.id))
+        .map((n) => n.name);
+      parts.push(`Locations: ${names.join(", ")}`);
+    }
+    return parts.length > 0 ? `  ·  Filtered by ${parts.join(" · ")}` : "";
+  };
 
   const toggleCol = (id: string) => {
     setSelected((cur) =>
@@ -264,10 +350,15 @@ export default function ReportsScreen() {
 
     setBusy(true);
     try {
-      const tools = await api.listTools(filter);
+      let tools = await api.listTools(filter);
+      // Apply user-selected tag/category/location filters client-side
+      tools = applyFilters(tools);
+      // Append filter context to subtitle
+      const fSub = filterSubtitle();
+      const finalSubtitle = `${subtitle}${fSub}`;
 
       if (format === "pdf") {
-        const html = buildPdfHtml(title, subtitle, tools, selected);
+        const html = buildPdfHtml(title, finalSubtitle, tools, selected);
         if (Platform.OS === "web") {
           if (!printWin) return;
           const fullHtml = html.replace(
@@ -395,6 +486,142 @@ export default function ReportsScreen() {
         </View>
 
         <View style={styles.colsHeader}>
+          <Text style={styles.sectionLabel}>
+            FILTERS{filterCount > 0 ? ` (${filterCount})` : ""}
+          </Text>
+          {filterCount > 0 && (
+            <TouchableOpacity
+              testID="clear-filters-btn"
+              style={styles.miniBtn}
+              onPress={clearFilters}
+            >
+              <Text style={[styles.miniBtnText, { color: theme.colors.danger }]}>CLEAR</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+
+        {/* Categories filter */}
+        {allCategories.length > 0 && (
+          <View style={styles.filterBlock}>
+            <Text style={styles.filterTitle}>
+              <Ionicons name="folder" size={12} color={theme.colors.accent} /> CATEGORIES
+            </Text>
+            <View style={styles.chipWrap}>
+              {allCategories.map((c) => {
+                const on = categoryFilter.includes(c.id);
+                return (
+                  <TouchableOpacity
+                    key={c.id}
+                    testID={`filter-cat-${c.id}`}
+                    style={[styles.filterChip, on && styles.filterChipOn]}
+                    onPress={() =>
+                      setCategoryFilter((cur) =>
+                        on ? cur.filter((x) => x !== c.id) : [...cur, c.id]
+                      )
+                    }
+                  >
+                    <Text
+                      style={[
+                        styles.filterChipText,
+                        on && styles.filterChipTextOn,
+                      ]}
+                    >
+                      {c.name}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
+        )}
+
+        {/* Tags filter */}
+        {allTags.length > 0 && (
+          <View style={styles.filterBlock}>
+            <Text style={styles.filterTitle}>
+              <Ionicons name="pricetag" size={12} color={theme.colors.accent} /> TAGS
+            </Text>
+            <View style={styles.chipWrap}>
+              {allTags.map((t) => {
+                const on = tagFilter.includes(t.id);
+                return (
+                  <TouchableOpacity
+                    key={t.id}
+                    testID={`filter-tag-${t.id}`}
+                    style={[styles.filterChip, on && styles.filterChipOn]}
+                    onPress={() =>
+                      setTagFilter((cur) =>
+                        on ? cur.filter((x) => x !== t.id) : [...cur, t.id]
+                      )
+                    }
+                  >
+                    <Text
+                      style={[
+                        styles.filterChipText,
+                        on && styles.filterChipTextOn,
+                      ]}
+                    >
+                      #{t.name}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
+        )}
+
+        {/* Locations filter (nested with descendants auto-included) */}
+        {allLocations.length > 0 && (
+          <View style={styles.filterBlock}>
+            <Text style={styles.filterTitle}>
+              <Ionicons name="location" size={12} color={theme.colors.accent} /> LOCATIONS
+              <Text style={{ color: theme.colors.textMuted, fontSize: 9 }}>  ·  selecting a parent includes all sublocations</Text>
+            </Text>
+            <View style={{ borderWidth: 1, borderColor: theme.colors.border, borderRadius: 4, overflow: "hidden" }}>
+              {flattenLocationTree(buildLocationTree(allLocations)).map((n) => {
+                const on = locationFilter.includes(n.id);
+                return (
+                  <TouchableOpacity
+                    key={n.id}
+                    testID={`filter-loc-${n.id}`}
+                    style={[
+                      styles.locFilterRow,
+                      { paddingLeft: 12 + n.depth * 16 },
+                      on && { backgroundColor: theme.colors.accent },
+                    ]}
+                    onPress={() =>
+                      setLocationFilter((cur) =>
+                        on ? cur.filter((x) => x !== n.id) : [...cur, n.id]
+                      )
+                    }
+                  >
+                    <Ionicons
+                      name={on ? "checkbox" : "square-outline"}
+                      size={14}
+                      color={on ? "#000" : theme.colors.textMuted}
+                    />
+                    <Ionicons
+                      name={n.children.length > 0 ? "folder" : "location"}
+                      size={12}
+                      color={on ? "#000" : theme.colors.accent}
+                    />
+                    <Text
+                      style={[
+                        styles.locFilterText,
+                        on && { color: "#000", fontWeight: "800" },
+                      ]}
+                      numberOfLines={1}
+                    >
+                      {n.name}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
+        )}
+
+        <View style={styles.colsHeader}>
           <Text style={styles.sectionLabel}>COLUMNS ({selected.length}/{COLUMNS.length})</Text>
           <View style={{ flexDirection: "row", gap: 8 }}>
             <TouchableOpacity
@@ -448,6 +675,15 @@ export default function ReportsScreen() {
         })}
 
         <Text style={[styles.sectionLabel, { marginTop: 24 }]}>EXPORT</Text>
+
+        {filterCount > 0 && (
+          <View style={styles.filterActiveBanner}>
+            <Ionicons name="funnel" size={14} color={theme.colors.accent} />
+            <Text style={styles.filterActiveText}>
+              {filterCount} FILTER{filterCount === 1 ? "" : "S"} APPLIED — REPORTS WILL ONLY INCLUDE MATCHING TOOLS
+            </Text>
+          </View>
+        )}
 
         <TouchableOpacity
           testID="report-full-btn"
@@ -622,6 +858,74 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
   },
   colLabel: { color: theme.colors.textSecondary, fontSize: 14, flex: 1 },
+  filterBlock: {
+    marginBottom: 14,
+  },
+  filterTitle: {
+    color: theme.colors.textSecondary,
+    fontSize: 11,
+    fontWeight: "800",
+    letterSpacing: 1.5,
+    marginBottom: 8,
+  },
+  chipWrap: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 6,
+  },
+  filterChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: theme.radii.pill,
+    backgroundColor: theme.colors.bgSecondary,
+  },
+  filterChipOn: {
+    backgroundColor: theme.colors.accent,
+    borderColor: theme.colors.accent,
+  },
+  filterChipText: {
+    color: theme.colors.textSecondary,
+    fontSize: 12,
+    fontWeight: "700",
+  },
+  filterChipTextOn: { color: "#000", fontWeight: "900" },
+  locFilterRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingVertical: 9,
+    paddingRight: 12,
+    borderBottomColor: theme.colors.borderSubtle,
+    borderBottomWidth: 1,
+    backgroundColor: theme.colors.bgSecondary,
+  },
+  locFilterText: {
+    color: theme.colors.textPrimary,
+    fontSize: 13,
+    fontWeight: "600",
+    flex: 1,
+  },
+  filterActiveBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: "rgba(255,179,0,0.10)",
+    borderLeftWidth: 3,
+    borderLeftColor: theme.colors.accent,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    marginBottom: 8,
+    borderRadius: 4,
+  },
+  filterActiveText: {
+    color: theme.colors.accent,
+    fontSize: 11,
+    fontWeight: "800",
+    letterSpacing: 1,
+    flex: 1,
+  },
   reportCard: {
     flexDirection: "row",
     alignItems: "center",
