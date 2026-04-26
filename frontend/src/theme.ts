@@ -1,32 +1,30 @@
 export const theme = {
-  // Aurora Glass — modern, premium, dark with purple/cyan accents
+  // Cyber HUD — futuristic, terminal/Tron, neon glow
   colors: {
-    bg: "transparent",
-    bgSecondary: "rgba(20, 27, 45, 0.55)",
-    surface: "rgba(30, 39, 66, 0.65)",
-    surfaceAlt: "rgba(23, 31, 53, 0.70)",
-    glass: "rgba(255, 255, 255, 0.06)",
-    glassBorder: "rgba(255, 255, 255, 0.10)",
-    accent: "#A78BFA", // electric purple
-    accentSecondary: "#22D3EE", // cyan
-    textPrimary: "#FFFFFF",
-    textSecondary: "#CBD5E1",
-    textMuted: "#64748B",
-    textOnAccent: "#0B0F1A",
-    border: "#334155",
-    borderSubtle: "#1E293B",
-    success: "#34D399",
-    danger: "#FB7185",
-    warning: "#FB923C",
+    bg: "transparent", // grid is rendered in HUD background
+    bgSecondary: "rgba(0, 8, 20, 0.78)",
+    surface: "rgba(0, 30, 50, 0.65)",
+    surfaceAlt: "rgba(0, 18, 36, 0.78)",
+    glass: "rgba(0, 240, 255, 0.06)",
+    glassBorder: "rgba(0, 240, 255, 0.30)",
+    accent: "#00F0FF", // neon cyan
+    accentSecondary: "#FF00C8", // magenta
+    textPrimary: "#E6FBFF",
+    textSecondary: "#7EC8D9",
+    textMuted: "#4A6F7C",
+    textOnAccent: "#000814",
+    border: "rgba(0, 240, 255, 0.25)",
+    borderSubtle: "rgba(0, 240, 255, 0.10)",
+    success: "#00FF87",
+    danger: "#FF3366",
+    warning: "#FFB800",
   },
-  // Aurora gradient blobs / backgrounds
   gradients: {
-    aurora: ["#0B0F1A", "#1E1A4D", "#0B0F1A"],
-    auroraAccent: ["#7B3FE4", "#22D3EE"],
-    auroraSoft: ["rgba(167, 139, 250, 0.18)", "rgba(34, 211, 238, 0.06)"],
-    glass: ["rgba(255, 255, 255, 0.08)", "rgba(255, 255, 255, 0.02)"],
-    danger: ["#FB7185", "#F43F5E"],
-    success: ["#34D399", "#10B981"],
+    cyber: ["#000814", "#001428", "#000814"],
+    cyberAccent: ["#00F0FF", "#0077FF"],
+    cyberDanger: ["#FF3366", "#FF00C8"],
+    cyberSuccess: ["#00FF87", "#00F0FF"],
+    glass: ["rgba(0, 240, 255, 0.10)", "rgba(0, 240, 255, 0.02)"],
   },
   spacing: {
     xs: 4,
@@ -38,9 +36,9 @@ export const theme = {
   },
   radii: {
     none: 0,
-    sm: 8,
-    md: 14,
-    lg: 20,
+    sm: 0,
+    md: 2,
+    lg: 4,
     pill: 999,
   },
   font: {
@@ -50,5 +48,12 @@ export const theme = {
     body: 16,
     sm: 14,
     xs: 12,
+  },
+  // Glow shadows (web-friendly)
+  glow: {
+    cyan: "0 0 20px rgba(0, 240, 255, 0.6)",
+    magenta: "0 0 20px rgba(255, 0, 200, 0.5)",
+    danger: "0 0 16px rgba(255, 51, 102, 0.5)",
+    success: "0 0 16px rgba(0, 255, 135, 0.45)",
   },
 };
