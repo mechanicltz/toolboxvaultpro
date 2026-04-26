@@ -115,7 +115,28 @@ class Dealer(BaseModel):
     notes: Optional[str] = ""
     agents: List[Agent] = []
     current_agent_id: Optional[str] = None
+    credit_balance: float = 0.0
+    personal_balance: float = 0.0
+    transactions: List[Dict[str, Any]] = []  # list of BalanceTransaction
     created_at: str = Field(default_factory=now_iso)
+
+
+class BalanceTransaction(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    account: str  # "credit" or "personal"
+    type: str  # "payment" (decreases balance) or "charge" (increases balance)
+    amount: float
+    note: Optional[str] = ""
+    date: str = Field(default_factory=lambda: datetime.now(timezone.utc).strftime("%Y-%m-%d"))
+    created_at: str = Field(default_factory=now_iso)
+
+
+class TransactionCreate(BaseModel):
+    account: str  # "credit" | "personal"
+    type: str  # "payment" | "charge"
+    amount: float
+    note: Optional[str] = ""
+    date: Optional[str] = None
 
 
 class DealerCreate(BaseModel):
@@ -224,12 +245,13 @@ class Warranty(BaseModel):
 
 # Repair info
 class RepairInfo(BaseModel):
-    company_notified: Optional[str] = ""
+    company_notified: Optional[str] = ""  # legacy — auto-derived from dealer now
     notified_at: Optional[str] = ""  # date or ISO
     expected_completion: Optional[str] = ""  # date
-    repair_status: Optional[str] = "Reported"  # Reported / In Repair / Awaiting Parts / Repaired
-    contact: Optional[str] = ""
+    repair_status: Optional[str] = "Not Reported"  # Not Reported / Reported / In Repair / Awaiting Parts / Repaired
+    contact: Optional[str] = ""  # legacy — auto-derived from agent now
     notes: Optional[str] = ""
+    broken_photo: Optional[str] = ""  # extra photo, only shown on broken-item view
 
 
 # Warranty claim — long-lived record that survives "Mark Repaired"
@@ -418,41 +440,6 @@ class CheckoutRequest(BaseModel):
     borrower_name: str
     borrower_id: Optional[str] = None
     notes: Optional[str] = ""
-
-
-# Toolbox layout (photo with drawers)
-class DrawerRegion(BaseModel):
-    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    name: str
-    x: float  # 0..1 normalized
-    y: float
-    width: float
-    height: float
-    location_id: Optional[str] = None  # link to a Location
-
-
-class ToolboxLayout(BaseModel):
-    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    name: str
-    photo: str  # base64 data URI
-    drawers: List[DrawerRegion] = []
-    created_at: str = Field(default_factory=now_iso)
-
-
-class ToolboxLayoutCreate(BaseModel):
-    name: str
-    photo: str
-    drawers: List[DrawerRegion] = []
-
-
-class ToolboxLayoutUpdate(BaseModel):
-    name: Optional[str] = None
-    photo: Optional[str] = None
-    drawers: Optional[List[DrawerRegion]] = None
-
-
-class AnalyzeRequest(BaseModel):
-    image_base64: str  # base64 without data: prefix
 
 
 # ---------- Helpers ----------
@@ -919,6 +906,63 @@ async def set_current_agent(dealer_id: str, agent_id: str):
     await db.dealers.update_one(
         {"id": dealer_id},
         {"$set": {"current_agent_id": agent_id, "agents": agents}},
+    )
+    new = await db.dealers.find_one({"id": dealer_id}, {"_id": 0})
+    return Dealer(**new)
+
+
+# ---------- Dealer Balance Transactions ----------
+@api_router.post("/dealers/{dealer_id}/transactions", response_model=Dealer)
+async def add_dealer_transaction(dealer_id: str, payload: TransactionCreate):
+    d = await db.dealers.find_one({"id": dealer_id}, {"_id": 0})
+    if not d:
+        raise HTTPException(404, "Dealer not found")
+    if payload.account not in ("credit", "personal"):
+        raise HTTPException(400, "account must be 'credit' or 'personal'")
+    if payload.type not in ("payment", "charge"):
+        raise HTTPException(400, "type must be 'payment' or 'charge'")
+    amount = abs(float(payload.amount or 0))
+    if amount <= 0:
+        raise HTTPException(400, "amount must be > 0")
+    tx = BalanceTransaction(
+        account=payload.account,
+        type=payload.type,
+        amount=amount,
+        note=payload.note or "",
+        date=payload.date or datetime.now(timezone.utc).strftime("%Y-%m-%d"),
+    ).model_dump()
+    txs = list(d.get("transactions") or [])
+    txs.append(tx)
+    # Update balance: payment decreases, charge increases
+    delta = -amount if payload.type == "payment" else amount
+    field = "credit_balance" if payload.account == "credit" else "personal_balance"
+    new_balance = float(d.get(field) or 0.0) + delta
+    await db.dealers.update_one(
+        {"id": dealer_id},
+        {"$set": {field: new_balance, "transactions": txs}},
+    )
+    new = await db.dealers.find_one({"id": dealer_id}, {"_id": 0})
+    return Dealer(**new)
+
+
+@api_router.delete("/dealers/{dealer_id}/transactions/{tx_id}", response_model=Dealer)
+async def delete_dealer_transaction(dealer_id: str, tx_id: str):
+    d = await db.dealers.find_one({"id": dealer_id}, {"_id": 0})
+    if not d:
+        raise HTTPException(404, "Dealer not found")
+    txs = list(d.get("transactions") or [])
+    target = next((t for t in txs if t.get("id") == tx_id), None)
+    if not target:
+        raise HTTPException(404, "Transaction not found")
+    # Reverse the balance impact
+    amount = float(target.get("amount") or 0)
+    delta = amount if target.get("type") == "payment" else -amount
+    field = "credit_balance" if target.get("account") == "credit" else "personal_balance"
+    new_balance = float(d.get(field) or 0.0) + delta
+    txs = [t for t in txs if t.get("id") != tx_id]
+    await db.dealers.update_one(
+        {"id": dealer_id},
+        {"$set": {field: new_balance, "transactions": txs}},
     )
     new = await db.dealers.find_one({"id": dealer_id}, {"_id": 0})
     return Dealer(**new)
@@ -1496,45 +1540,6 @@ async def warranty_alerts(days: int = 60):
     return {"expiring": expiring, "expired": expired}
 
 
-# ---------- Toolbox Layouts ----------
-@api_router.post("/toolbox-layouts", response_model=ToolboxLayout)
-async def create_layout(payload: ToolboxLayoutCreate):
-    lay = ToolboxLayout(**payload.dict())
-    await db.toolbox_layouts.insert_one(lay.dict())
-    return lay
-
-
-@api_router.get("/toolbox-layouts", response_model=List[ToolboxLayout])
-async def list_layouts():
-    items = await db.toolbox_layouts.find({}, {"_id": 0}).to_list(2000)
-    return [ToolboxLayout(**i) for i in items]
-
-
-@api_router.get("/toolbox-layouts/{layout_id}", response_model=ToolboxLayout)
-async def get_layout(layout_id: str):
-    d = await db.toolbox_layouts.find_one({"id": layout_id}, {"_id": 0})
-    if not d:
-        raise HTTPException(404, "Layout not found")
-    return ToolboxLayout(**d)
-
-
-@api_router.put("/toolbox-layouts/{layout_id}", response_model=ToolboxLayout)
-async def update_layout(layout_id: str, payload: ToolboxLayoutUpdate):
-    d = await db.toolbox_layouts.find_one({"id": layout_id}, {"_id": 0})
-    if not d:
-        raise HTTPException(404, "Layout not found")
-    updates = {k: v for k, v in payload.dict().items() if v is not None}
-    await db.toolbox_layouts.update_one({"id": layout_id}, {"$set": updates})
-    new = await db.toolbox_layouts.find_one({"id": layout_id}, {"_id": 0})
-    return ToolboxLayout(**new)
-
-
-@api_router.delete("/toolbox-layouts/{layout_id}")
-async def delete_layout(layout_id: str):
-    await db.toolbox_layouts.delete_one({"id": layout_id})
-    return {"ok": True}
-
-
 # ---------- Warranty Claims ----------
 @api_router.get("/warranty-claims", response_model=List[WarrantyClaim])
 async def list_warranty_claims(
@@ -1737,78 +1742,7 @@ async def convert_wishlist_to_tool(item_id: str):
     return tool
 
 
-# ---------- AI Toolbox Analysis ----------
-@api_router.post("/toolbox/analyze")
-async def analyze_toolbox(payload: AnalyzeRequest):
-    if not EMERGENT_LLM_KEY:
-        raise HTTPException(500, "EMERGENT_LLM_KEY not configured")
-    try:
-        from emergentintegrations.llm.chat import LlmChat, UserMessage, ImageContent
-    except Exception as e:
-        raise HTTPException(500, f"Integrations library missing: {e}")
-
-    img_b64 = payload.image_base64
-    if "," in img_b64 and img_b64.startswith("data:"):
-        img_b64 = img_b64.split(",", 1)[1]
-
-    chat = LlmChat(
-        api_key=EMERGENT_LLM_KEY,
-        session_id=f"toolbox-{uuid.uuid4()}",
-        system_message=(
-            "You are a vision assistant that analyzes a photograph of a tool storage "
-            "unit (toolbox, cabinet, chest, shelf). Identify horizontal drawers, "
-            "shelves, or compartments visible in the image. Always respond with strict "
-            "JSON only, no prose, no markdown."
-        ),
-    ).with_model("gemini", "gemini-2.5-pro")
-
-    prompt = (
-        "Look at this tool storage photo and respond with strict JSON: "
-        '{"suggested_drawers": <integer 0-30>, '
-        '"labels": [<array of short string names ordered top to bottom, e.g. \"Top Drawer\", \"Drawer 2\">], '
-        '"confidence": <\"low\"|\"medium\"|\"high\">, '
-        '"notes": <short string explaining what you see>}. '
-        "Count distinct drawers/compartments only. If unclear, give a best guess and set confidence accordingly."
-    )
-
-    msg = UserMessage(text=prompt, file_contents=[ImageContent(image_base64=img_b64)])
-    try:
-        response_text = await chat.send_message(msg)
-    except Exception as e:
-        raise HTTPException(500, f"AI request failed: {e}")
-
-    raw = str(response_text or "").strip()
-    # Strip code fences if present
-    if raw.startswith("```"):
-        raw = re.sub(r"^```(?:json)?\s*", "", raw)
-        raw = re.sub(r"\s*```$", "", raw)
-    try:
-        data = json.loads(raw)
-    except Exception:
-        # Try to extract JSON object
-        m = re.search(r"\{.*\}", raw, re.DOTALL)
-        if m:
-            try:
-                data = json.loads(m.group(0))
-            except Exception:
-                data = {"suggested_drawers": 0, "labels": [], "confidence": "low", "notes": raw[:200]}
-        else:
-            data = {"suggested_drawers": 0, "labels": [], "confidence": "low", "notes": raw[:200]}
-
-    sd = int(data.get("suggested_drawers") or 0)
-    sd = max(0, min(sd, 40))
-    labels = data.get("labels") or []
-    if not isinstance(labels, list):
-        labels = []
-    labels = [str(x)[:60] for x in labels][:sd]
-    while len(labels) < sd:
-        labels.append(f"Drawer {len(labels) + 1}")
-    return {
-        "suggested_drawers": sd,
-        "labels": labels,
-        "confidence": str(data.get("confidence") or "medium"),
-        "notes": str(data.get("notes") or "")[:400],
-    }
+# ---------- AI Toolbox Analysis (REMOVED) ----------
 
 
 app.include_router(api_router)

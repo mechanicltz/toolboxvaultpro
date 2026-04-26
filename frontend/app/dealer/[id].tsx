@@ -17,6 +17,7 @@ import { theme } from "../../src/theme";
 import { api } from "../../src/api";
 import { usePrefs } from "../../src/prefs";
 import { confirm } from "../../src/confirm";
+import { BalanceSection } from "../../src/sections/BalanceSection";
 
 export default function DealerDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -157,6 +158,8 @@ export default function DealerDetail() {
           <Cell label="Tags" value={String(tags.size)} />
           <Cell label="Agents" value={String((dealer.agents || []).length)} />
         </View>
+
+        <BalanceSection dealer={dealer} onChange={load} />
 
         <Text style={styles.sectionLabel}>CONTACT</Text>
         <ContactRow icon="call" label={dealer.phone} onPress={() => callOrEmail(dealer.phone)} />

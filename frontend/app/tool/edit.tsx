@@ -46,9 +46,10 @@ export default function ToolEdit() {
     company_notified: "",
     notified_at: "",
     expected_completion: "",
-    repair_status: "Reported",
+    repair_status: "Not Reported",
     contact: "",
     notes: "",
+    broken_photo: "",
   });
 
   // Warranty
@@ -104,9 +105,10 @@ export default function ToolEdit() {
             company_notified: t.repair_info.company_notified || "",
             notified_at: t.repair_info.notified_at || "",
             expected_completion: t.repair_info.expected_completion || "",
-            repair_status: t.repair_info.repair_status || "Reported",
+            repair_status: t.repair_info.repair_status || "Not Reported",
             contact: t.repair_info.contact || "",
             notes: t.repair_info.notes || "",
+            broken_photo: t.repair_info.broken_photo || "",
           });
         }
         if (t.warranty?.has_warranty) {
@@ -261,12 +263,13 @@ export default function ToolEdit() {
       consumable_info: isConsumable ? consumableInfo : null,
       needs_repair: needsRepair,
       repair_info: needsRepair ? {
-        company_notified: repairInfo.company_notified,
+        company_notified: dealerName || "",
         notified_at: repairInfo.notified_at,
         expected_completion: repairInfo.expected_completion,
-        repair_status: repairInfo.repair_status,
-        contact: repairInfo.contact,
+        repair_status: repairInfo.repair_status || "Not Reported",
+        contact: purchasedAgentName || "",
         notes: repairInfo.notes,
+        broken_photo: repairInfo.broken_photo || "",
       } : null,
       warranty: hasWarranty ? {
         has_warranty: true,
@@ -499,7 +502,7 @@ export default function ToolEdit() {
             <View style={[styles.subSection, { borderLeftColor: theme.colors.danger }]}>
               <Text style={[styles.label, { marginTop: 0 }]}>STATUS</Text>
               <View style={styles.chipWrap}>
-                {["Reported", "In Repair", "Awaiting Parts", "Repaired"].map((s) => (
+                {["Not Reported", "Reported", "In Repair", "Awaiting Parts", "Repaired"].map((s) => (
                   <TouchableOpacity key={s} testID={`rep-status-${s}`}
                     style={[styles.chip, repairInfo.repair_status === s && styles.chipActive]}
                     onPress={() => setRepairInfo({ ...repairInfo, repair_status: s })}>
@@ -507,14 +510,20 @@ export default function ToolEdit() {
                   </TouchableOpacity>
                 ))}
               </View>
-              <Text style={styles.label}>REPAIR COMPANY</Text>
-              <TextInput testID="rep-company" placeholder="ACME Repair Shop" placeholderTextColor={theme.colors.textMuted}
-                value={repairInfo.company_notified} style={styles.input}
-                onChangeText={(v) => setRepairInfo({ ...repairInfo, company_notified: v })} />
-              <Text style={styles.label}>CONTACT (phone / email)</Text>
-              <TextInput testID="rep-contact" placeholder="800-555-1234" placeholderTextColor={theme.colors.textMuted}
-                value={repairInfo.contact} style={styles.input}
-                onChangeText={(v) => setRepairInfo({ ...repairInfo, contact: v })} />
+
+              <View style={styles.dealerInfoBox}>
+                <Ionicons name="briefcase" size={14} color={theme.colors.accent} />
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.dealerInfoLabel}>REPAIR COMPANY (auto)</Text>
+                  <Text style={styles.dealerInfoVal}>
+                    {dealerName || "— select a Dealer above to auto-fill —"}
+                  </Text>
+                  {!!purchasedAgentName && (
+                    <Text style={styles.dealerInfoSub}>Contact: {purchasedAgentName}</Text>
+                  )}
+                </View>
+              </View>
+
               <View style={styles.row2}>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.label}>NOTIFIED ON</Text>
@@ -537,6 +546,45 @@ export default function ToolEdit() {
               <TextInput testID="rep-notes" placeholder="What's wrong? RMA #..." placeholderTextColor={theme.colors.textMuted}
                 value={repairInfo.notes} style={[styles.input, { height: 70, textAlignVertical: "top" }]} multiline
                 onChangeText={(v) => setRepairInfo({ ...repairInfo, notes: v })} />
+
+              <Text style={styles.label}>BROKEN-ITEM PHOTO (optional)</Text>
+              <Text style={styles.helper}>
+                A photo of the damage. Only shows on the broken-item view & email card.
+              </Text>
+              {repairInfo.broken_photo ? (
+                <View style={styles.brokenPhotoBox}>
+                  <Image source={{ uri: repairInfo.broken_photo }} style={styles.brokenPhoto} />
+                  <TouchableOpacity
+                    testID="remove-broken-photo"
+                    style={styles.brokenRemove}
+                    onPress={() => setRepairInfo({ ...repairInfo, broken_photo: "" })}
+                  >
+                    <Ionicons name="close-circle" size={26} color={theme.colors.danger} />
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <TouchableOpacity
+                  testID="add-broken-photo"
+                  style={styles.addPhotoBtn}
+                  onPress={async () => {
+                    const res = await ImagePicker.launchImageLibraryAsync({
+                      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+                      base64: true,
+                      quality: 0.6,
+                    });
+                    if (!res.canceled && res.assets[0]?.base64) {
+                      setRepairInfo({
+                        ...repairInfo,
+                        broken_photo: `data:${res.assets[0].mimeType || "image/jpeg"};base64,${res.assets[0].base64}`,
+                      });
+                    }
+                  }}
+                >
+                  <Ionicons name="camera" size={18} color={theme.colors.accent} />
+                  <Text style={styles.addPhotoText}>ADD BROKEN-ITEM PHOTO</Text>
+                </TouchableOpacity>
+              )}
+
               <Text style={[styles.helper, { color: theme.colors.warning, marginTop: 4 }]}>
                 Marking as broken will auto check-in this tool if it's currently out.
               </Text>
@@ -1054,5 +1102,70 @@ const styles = StyleSheet.create({
     fontSize: 12,
     flex: 1,
     lineHeight: 16,
+  },
+  dealerInfoBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    backgroundColor: theme.colors.bgSecondary,
+    borderLeftWidth: 3,
+    borderLeftColor: theme.colors.accent,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    borderRadius: 4,
+    marginVertical: 8,
+  },
+  dealerInfoLabel: {
+    color: theme.colors.textMuted,
+    fontSize: 9,
+    fontWeight: "800",
+    letterSpacing: 1.5,
+  },
+  dealerInfoVal: {
+    color: theme.colors.textPrimary,
+    fontSize: 13,
+    fontWeight: "800",
+    marginTop: 3,
+  },
+  dealerInfoSub: {
+    color: theme.colors.accent,
+    fontSize: 11,
+    fontWeight: "700",
+    marginTop: 2,
+  },
+  brokenPhotoBox: {
+    marginTop: 6,
+    position: "relative",
+  },
+  brokenPhoto: {
+    width: "100%",
+    height: 200,
+    borderRadius: 6,
+    backgroundColor: theme.colors.bgSecondary,
+  },
+  brokenRemove: {
+    position: "absolute",
+    top: 6,
+    right: 6,
+    backgroundColor: "rgba(0,0,0,0.6)",
+    borderRadius: 13,
+  },
+  addPhotoBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingVertical: 14,
+    borderWidth: 1,
+    borderStyle: "dashed",
+    borderColor: theme.colors.accent,
+    borderRadius: 6,
+    marginTop: 6,
+  },
+  addPhotoText: {
+    color: theme.colors.accent,
+    fontWeight: "900",
+    fontSize: 12,
+    letterSpacing: 1.5,
   },
 });

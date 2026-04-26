@@ -10,6 +10,7 @@ import {
   Modal,
   TextInput,
   Platform,
+  Linking,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -114,6 +115,68 @@ export default function ToolDetail() {
     if (!(await confirm("Delete tool?", "This cannot be undone.", "Delete", true))) return;
     await api.deleteTool(tool.id);
     router.back();
+  };
+
+  const notifyDealer = async (t: any, mode: "email" | "sms") => {
+    try {
+      const dealers = await api.listDealers();
+      const dealer = dealers.find((d: any) => d.id === t.dealer_id);
+      const agent = dealer?.agents?.find((a: any) => a.id === dealer?.current_agent_id);
+      const phone = (agent?.phone || dealer?.phone || "").replace(/[^\d+]/g, "");
+      const email = (agent?.email || "").trim();
+      const subject = encodeURIComponent(`Repair request: ${t.name}`);
+      const body = encodeURIComponent(
+        [
+          `Hello${agent?.name ? ` ${agent.name}` : ""},`,
+          ``,
+          `I have a tool that needs repair / warranty service:`,
+          ``,
+          `Tool: ${t.name}`,
+          t.description ? `Description: ${t.description}` : "",
+          t.purchase_date ? `Purchased: ${t.purchase_date}` : "",
+          dealer?.name ? `Dealer: ${dealer.name}` : "",
+          t.repair_info?.notes ? `Issue: ${t.repair_info.notes}` : "",
+          ``,
+          `Please advise next steps. Thank you.`,
+        ].filter(Boolean).join("\n")
+      );
+      let url = "";
+      if (mode === "email") {
+        if (!email) {
+          Alert.alert("No email", "Set an email on the agent or dealer first.");
+          return;
+        }
+        url = `mailto:${email}?subject=${subject}&body=${body}`;
+      } else {
+        if (!phone) {
+          Alert.alert("No phone", "Set a phone on the agent or dealer first.");
+          return;
+        }
+        url = `sms:${phone}?body=${body}`;
+      }
+      if (Platform.OS === "web") {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (globalThis as any).window.location.href = url;
+      } else {
+        await Linking.openURL(url);
+      }
+      // Auto-mark as Reported once notified
+      const cur = t.repair_info?.repair_status || "Not Reported";
+      if (cur === "Not Reported") {
+        await api.updateTool(t.id, {
+          repair_info: {
+            ...(t.repair_info || {}),
+            company_notified: dealer?.name || "",
+            contact: agent?.name || "",
+            notified_at: new Date().toISOString().substring(0, 10),
+            repair_status: "Reported",
+          },
+        });
+        load();
+      }
+    } catch (e: any) {
+      Alert.alert("Error", e.message);
+    }
   };
 
   const openRepair = () => {
@@ -320,37 +383,62 @@ export default function ToolDetail() {
           <LostStatusBanner tool={tool} onChange={load} />
 
           {tool.needs_repair && (
-            <TouchableOpacity
-              testID="repair-banner"
-              activeOpacity={0.7}
-              style={styles.repairBanner}
-              onPress={openRepair}
-            >
-              <Ionicons name="build" size={20} color={theme.colors.danger} />
-              <View style={{ flex: 1 }}>
-                <Text style={styles.repairTitle}>
-                  IN REPAIR · {(tool.repair_info?.repair_status || "Reported").toUpperCase()}
-                </Text>
-                {!!tool.repair_info?.company_notified && (
-                  <Text style={styles.repairLine}>At: {tool.repair_info.company_notified}</Text>
-                )}
-                {!!tool.repair_info?.notified_at && (
-                  <Text style={styles.repairLine}>Notified: {tool.repair_info.notified_at}</Text>
-                )}
-                {!!tool.repair_info?.expected_completion && (
-                  <Text style={styles.repairLine}>Expected back: {tool.repair_info.expected_completion}</Text>
-                )}
-                {!!tool.repair_info?.contact && (
-                  <Text style={styles.repairLine}>Contact: {tool.repair_info.contact}</Text>
-                )}
-                {!!tool.repair_info?.notes && (
-                  <Text style={[styles.repairLine, { fontStyle: "italic", marginTop: 4 }]}>
-                    {tool.repair_info.notes}
+            <View style={styles.repairBanner}>
+              <View style={{ flexDirection: "row", gap: 10, alignItems: "flex-start" }}>
+                <Ionicons name="build" size={20} color={theme.colors.danger} />
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.repairTitle}>
+                    {(tool.repair_info?.repair_status || "Not Reported").toUpperCase()}
                   </Text>
-                )}
+                  {!!tool.repair_info?.company_notified && (
+                    <Text style={styles.repairLine}>At: {tool.repair_info.company_notified}</Text>
+                  )}
+                  {!!tool.repair_info?.notified_at && (
+                    <Text style={styles.repairLine}>Notified: {tool.repair_info.notified_at}</Text>
+                  )}
+                  {!!tool.repair_info?.expected_completion && (
+                    <Text style={styles.repairLine}>Expected back: {tool.repair_info.expected_completion}</Text>
+                  )}
+                  {!!tool.repair_info?.contact && (
+                    <Text style={styles.repairLine}>Contact: {tool.repair_info.contact}</Text>
+                  )}
+                  {!!tool.repair_info?.notes && (
+                    <Text style={[styles.repairLine, { fontStyle: "italic", marginTop: 4 }]}>
+                      {tool.repair_info.notes}
+                    </Text>
+                  )}
+                </View>
+                <TouchableOpacity testID="edit-repair-btn" onPress={openRepair} hitSlop={10}>
+                  <Ionicons name="create-outline" size={18} color={theme.colors.danger} />
+                </TouchableOpacity>
               </View>
-              <Ionicons name="create-outline" size={18} color={theme.colors.danger} />
-            </TouchableOpacity>
+
+              {!!tool.repair_info?.broken_photo && (
+                <Image
+                  source={{ uri: tool.repair_info.broken_photo }}
+                  style={styles.brokenPhoto}
+                />
+              )}
+
+              <View style={styles.notifyRow}>
+                <TouchableOpacity
+                  testID="notify-email-btn"
+                  style={styles.notifyBtn}
+                  onPress={() => notifyDealer(tool, "email")}
+                >
+                  <Ionicons name="mail" size={14} color="#fff" />
+                  <Text style={styles.notifyText}>EMAIL DEALER</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  testID="notify-sms-btn"
+                  style={styles.notifyBtn}
+                  onPress={() => notifyDealer(tool, "sms")}
+                >
+                  <Ionicons name="chatbubble" size={14} color="#fff" />
+                  <Text style={styles.notifyText}>TEXT DEALER</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
           )}
 
           <View style={styles.infoCard}>
@@ -724,9 +812,6 @@ const styles = StyleSheet.create({
   statusText: { color: theme.colors.textPrimary, fontWeight: "800", letterSpacing: 1, fontSize: 12 },
   statusSub: { color: theme.colors.textSecondary, fontSize: 11, marginTop: 2 },
   repairBanner: {
-    flexDirection: "row",
-    gap: 12,
-    alignItems: "flex-start",
     padding: 14,
     borderWidth: 1,
     borderColor: theme.colors.danger,
@@ -743,6 +828,34 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   repairLine: { color: theme.colors.textPrimary, fontSize: 13, marginTop: 1 },
+  brokenPhoto: {
+    width: "100%",
+    height: 220,
+    borderRadius: 6,
+    marginTop: 12,
+    backgroundColor: theme.colors.bg,
+  },
+  notifyRow: {
+    flexDirection: "row",
+    gap: 8,
+    marginTop: 12,
+  },
+  notifyBtn: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingVertical: 11,
+    backgroundColor: theme.colors.danger,
+    borderRadius: 4,
+  },
+  notifyText: {
+    color: "#fff",
+    fontWeight: "900",
+    fontSize: 11,
+    letterSpacing: 1.2,
+  },
   title: { color: theme.colors.textPrimary, fontSize: 26, fontWeight: "900", letterSpacing: 1 },
   description: { color: theme.colors.textSecondary, fontSize: 15, marginTop: 8, lineHeight: 22 },
   tagWrap: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 16 },

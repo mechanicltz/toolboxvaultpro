@@ -31,6 +31,16 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="index"
         options={{
+          title: "Home",
+          tabBarButtonTestID: "tab-home",
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="home" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="inventory"
+        options={{
           title: "Inventory",
           tabBarButtonTestID: "tab-inventory",
           tabBarIcon: ({ color, size }) => (
@@ -49,22 +59,12 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
-        name="borrowers"
+        name="claims"
         options={{
-          title: "People",
-          tabBarButtonTestID: "tab-people",
+          title: "Claims",
+          tabBarButtonTestID: "tab-claims",
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="people" size={size} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="reports"
-        options={{
-          title: "Reports",
-          tabBarButtonTestID: "tab-reports",
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="document-text" size={size} color={color} />
+            <Ionicons name="build" size={size} color={color} />
           ),
         }}
       />
@@ -78,7 +78,9 @@ export default function TabsLayout() {
           ),
         }}
       />
-      <Tabs.Screen name="settings" options={{ href: null }} />
+      {/* Hidden tabs (still routed but not shown in tab bar) */}
+      <Tabs.Screen name="borrowers" options={{ href: null }} />
+      <Tabs.Screen name="reports" options={{ href: null }} />
     </Tabs>
   );
 }

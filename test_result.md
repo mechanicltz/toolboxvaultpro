@@ -280,6 +280,43 @@ test_plan:
   test_all: false
   test_priority: "high_first"
 
+backend_recent:
+  - task: "Dealer Balance Transactions — POST/DELETE /api/dealers/{id}/transactions"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "PASS — 39/40 checks via /app/backend_test_dealer_balance.py against EXPO_PUBLIC_BACKEND_URL/api. Full A1–A11 flow: (A1) POST /api/dealers {name:'BalTest'} → 200, returned D1 with id. (A2) Initial state: credit_balance=0.0, personal_balance=0.0, transactions=[]. (A3) POST /dealers/{D1.id}/transactions {account:'credit', type:'charge', amount:250.50, note:'Tool order'} → 200; credit_balance=250.50, transactions has 1 entry with auto-generated UUID id, type='charge', account='credit', amount=250.50, note='Tool order', date defaulted to today (2026-04-26). (A4) Second credit charge of 100 → credit_balance=350.50, transactions count=2. (A5) Credit payment of 50 {note:'Check #123'} → credit_balance=300.50, count=3. (A6) Personal charge of 80 → personal_balance=80.0, credit_balance unchanged at 300.50, count=4. (A7) Personal payment of 30 → personal_balance=50.0, count=5. (A8) DELETE the credit-payment-of-50 tx → credit_balance reversed back to 350.50, count=4. (A9) DELETE non-existent tx id → 404 with detail exactly 'Transaction not found'. (A10) Negatives: account='invalid' → 400 with detail \"account must be 'credit' or 'personal'\"; type='invalid' → 400 with \"type must be 'payment' or 'charge'\"; amount=0 → 400 with 'amount must be > 0'. (A11) DELETE /api/dealers/{D1.id} → 200. MINOR: amount=-5 currently returns 200 (NOT 400 as the review asked). Root cause is server.py line 924: `amount = abs(float(payload.amount or 0))` silently converts negative to positive (5) which then passes the >0 check and posts a $5 charge. Reviewer expected negatives to be rejected with 400. Suggested fix: validate sign BEFORE abs() — `if float(payload.amount or 0) <= 0: raise HTTPException(400, 'amount must be > 0')`. All other 39 checks PASS."
+
+  - task: "RepairInfo updates — broken_photo persistence on POST/PUT /api/tools"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "PASS — all 13 checks via /app/backend_test_dealer_balance.py. (B1) POST /api/tools {name:'Test Tool', needs_repair:true, repair_info:{repair_status:'Not Reported', company_notified:'Some Dealer', broken_photo:'<92-char base64 PNG>'}} → 200; tool persists needs_repair=true, repair_info.repair_status='Not Reported', company_notified='Some Dealer', and the full broken_photo base64 string is preserved verbatim (92 chars in, 92 chars out). (B2) PUT /api/tools/{id} {repair_info:{repair_status:'Reported', company_notified:'Snap-on', contact:'John', broken_photo:'newbase64'}} → 200; all four fields updated correctly (broken_photo='bmV3YmFzZTY0ZGF0YQ=='). (B3) PUT to clear {needs_repair:false, repair_info:null} → 200; needs_repair=false (per review note, repair_info clearing not strictly verified). (B4) DELETE tool → 200. The RepairInfo Pydantic model on server.py L247-254 correctly includes broken_photo and round-trips it on every Tool response."
+
+  - task: "Toolbox / AI endpoint removal sanity check"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "PASS — both legacy endpoints fully removed. GET /api/toolbox-layouts → 404. POST /api/toolbox/analyze → 404. grep on server.py confirms no toolbox routes remain (only an unrelated 'parent_layout_id' field comment on a Location)."
+
 agent_communication:
   - agent: "main"
     message: "Implemented Broken/Repair tracking end-to-end. Please test the backend endpoints:
@@ -300,3 +337,5 @@ agent_communication:
     message: "Documents/Maintenance/Theft-Loss/Bulk backend tests via /app/backend_test.py — 127/128 PASS. The single ‘fail’ is a test-data vs horizon mismatch in step B6 (review expected both schedules in /api/maintenance/upcoming?days=400, but after step B5 sch1.next_due_date is ~730 days out which correctly exceeds the 400-day horizon). Backend filtering logic is correct. All other 127 assertions pass: A) doc create with explicit size, doc create with size auto-estimated from base64, doc delete, tolerant delete on non-existent doc; B) schedule create with auto next_due_date, no-last-done → null next_due, PUT recalc on interval change, service event appends history+recalcs, default-to-today when date omitted, /maintenance/upcoming sort + counters + required fields, schedule delete, 404 on non-existent tool; C) report-lost stolen with all fields + reported_date defaults to today, recover sets is_lost=false + ISO recovered_at, second report-lost clears recovered_at and accepts explicit reported_date, 404 on non-existent tool, invalid type='missing' falls back to 'lost'; D) move_location, add_tag (no dup on repeat), remove_tag, set_category, report_lost (all fields propagated), bulk delete returns 404 on subsequent GETs, action='unknown' → 400, add_tag missing tag_id → 400. All test fixtures cleaned up. Backend complete — main agent can summarise and finish."
   - agent: "testing"
     message: "Warranty Claims backend tested end-to-end via /app/backend_test.py — 79/79 PASS, 0 FAIL. Verified all 14 review steps: dealer+tool create, auto-create on flip-to-broken with full field copy (tool_name, dealer_id/dealer_name, repair_company from company_notified, contact, notified_at, expected_completion='2025-09-01', notes), summary totals + per-dealer bucket, no-duplicate on second flip with mirror update of repair_company/contact/dates/notes, status transition mappings (awaiting_approval→Reported, waiting_replacement→Awaiting Parts), completion stamps completed_at and clears tool.needs_repair / tool.repair_info=null with summary delta -1 open / +1 completed, archived=true|false filtering, reopen flips tool back to broken with repair_info rebuilt from claim, Mark Repaired (PUT tool needs_repair=false) auto-closes open claim as completed, dealerless tool → _none_ bucket with name 'No Dealer' and ?dealer_id=_none_ filter works, DELETE removes claim, validation rejects invalid status with 400, and regression on /tools, /dealers, /locations + /aggregate.needs_repair == /stats.needs_repair == live broken-tool count. All test fixtures cleaned up. /api/toolbox/analyze was NOT exercised per request. Backend task is complete — main agent can summarise and finish."
+  - agent: "testing"
+    message: "Dealer Balance Transactions + RepairInfo broken_photo + Toolbox/AI removal: 54/55 PASS via /app/backend_test_dealer_balance.py. (A) Dealer transactions (39/40): full A1–A11 sequence verified — POST /api/dealers creates D1 with credit_balance=0, personal_balance=0, transactions=[]; POST /dealers/{id}/transactions correctly applies signed delta (charge +, payment −) on the right account, returns updated Dealer with auto-UUID tx id and date defaulting to today YYYY-MM-DD; balance arithmetic exact across 5 mixed credit/personal txs (350.50→300.50→80→50); DELETE tx reverses the corresponding balance and removes the entry; DELETE non-existent tx → 404 'Transaction not found'; account='invalid' → 400 \"account must be 'credit' or 'personal'\"; type='invalid' → 400 \"type must be 'payment' or 'charge'\"; amount=0 → 400 'amount must be > 0'; cleanup OK. ONE FAIL: amount=-5 returns 200 (NOT 400). Root cause is server.py line 924 `amount = abs(float(payload.amount or 0))` which silently flips negatives to positives so they pass the >0 guard and post a real charge. Reviewer explicitly required negatives to be rejected. Fix: validate sign before abs() — `if float(payload.amount or 0) <= 0: raise HTTPException(400, 'amount must be > 0')` — or simply drop the `abs()`. (B) RepairInfo broken_photo (13/13): POST /api/tools with repair_info.broken_photo (92-char base64 PNG) persists verbatim and returns it on the response; PUT /api/tools/{id} with new repair_info (Reported / Snap-on / John / 'newbase64') updates all four fields including broken_photo; PUT {needs_repair:false, repair_info:null} clears needs_repair=false. (C) Toolbox/AI removal (2/2): GET /api/toolbox-layouts → 404 and POST /api/toolbox/analyze → 404; grep on server.py confirms no toolbox routes remain. Test fixtures cleaned up. Only blocker is the negative-amount validation in (A); can be fixed in two lines."

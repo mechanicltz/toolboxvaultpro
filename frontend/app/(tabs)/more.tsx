@@ -95,13 +95,6 @@ export default function MoreScreen() {
           onPress={() => router.push("/locations")}
         />
         <Row
-          icon="cube"
-          title="Toolbox Photos"
-          subtitle="AI drawer mapping"
-          testID="more-toolbox"
-          onPress={() => router.push("/toolbox")}
-        />
-        <Row
           icon="shield-checkmark"
           title="Warranty Alerts"
           subtitle="Expiring & expired warranties"

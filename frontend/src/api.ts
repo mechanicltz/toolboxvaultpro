@@ -73,14 +73,6 @@ export const api = {
   aggregate: (params?: any) => request<any>(`/aggregate${qs(params)}`),
   warrantyAlerts: (days = 60) => request<any>(`/warranty-alerts?days=${days}`),
 
-  // Toolbox layouts
-  listLayouts: () => request<any[]>(`/toolbox-layouts`),
-  getLayout: (id: string) => request<any>(`/toolbox-layouts/${id}`),
-  createLayout: (data: any) => request<any>(`/toolbox-layouts`, { method: "POST", body: JSON.stringify(data) }),
-  updateLayout: (id: string, data: any) => request<any>(`/toolbox-layouts/${id}`, { method: "PUT", body: JSON.stringify(data) }),
-  deleteLayout: (id: string) => request<any>(`/toolbox-layouts/${id}`, { method: "DELETE" }),
-  analyzeToolbox: (image_base64: string) => request<any>(`/toolbox/analyze`, { method: "POST", body: JSON.stringify({ image_base64 }) }),
-
   // Warranty claims
   listWarrantyClaims: (params?: { dealer_id?: string; status?: string; archived?: boolean }) =>
     request<any[]>(`/warranty-claims${qs(params)}`),
@@ -129,4 +121,10 @@ export const api = {
   // Bulk
   bulkTools: (data: any) =>
     request<any>(`/tools/bulk`, { method: "POST", body: JSON.stringify(data) }),
+
+  // Dealer balances
+  addDealerTransaction: (dealerId: string, data: any) =>
+    request<any>(`/dealers/${dealerId}/transactions`, { method: "POST", body: JSON.stringify(data) }),
+  deleteDealerTransaction: (dealerId: string, txId: string) =>
+    request<any>(`/dealers/${dealerId}/transactions/${txId}`, { method: "DELETE" }),
 };
