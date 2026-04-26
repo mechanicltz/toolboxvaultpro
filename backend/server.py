@@ -670,6 +670,28 @@ async def add_agent(dealer_id: str, payload: AgentCreate):
     return Dealer(**new)
 
 
+@api_router.put("/dealers/{dealer_id}/agents/{agent_id}", response_model=Dealer)
+async def update_agent(dealer_id: str, agent_id: str, payload: AgentCreate):
+    d = await db.dealers.find_one({"id": dealer_id}, {"_id": 0})
+    if not d:
+        raise HTTPException(404, "Dealer not found")
+    agents = d.get("agents") or []
+    found = False
+    for a in agents:
+        if a.get("id") == agent_id:
+            a["name"] = payload.name
+            a["phone"] = payload.phone or ""
+            a["email"] = payload.email or ""
+            a["notes"] = payload.notes or ""
+            found = True
+            break
+    if not found:
+        raise HTTPException(404, "Agent not found")
+    await db.dealers.update_one({"id": dealer_id}, {"$set": {"agents": agents}})
+    new = await db.dealers.find_one({"id": dealer_id}, {"_id": 0})
+    return Dealer(**new)
+
+
 @api_router.delete("/dealers/{dealer_id}/agents/{agent_id}", response_model=Dealer)
 async def remove_agent(dealer_id: str, agent_id: str):
     d = await db.dealers.find_one({"id": dealer_id}, {"_id": 0})

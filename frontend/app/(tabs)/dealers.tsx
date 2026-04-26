@@ -4,6 +4,7 @@ import {
   Text,
   StyleSheet,
   FlatList,
+  ScrollView,
   TouchableOpacity,
   TextInput,
   Modal,
@@ -23,7 +24,7 @@ export default function DealersScreen() {
   const [dealers, setDealers] = useState<any[]>([]);
   const [tools, setTools] = useState<any[]>([]);
   const [showAdd, setShowAdd] = useState(false);
-  const [name, setName] = useState("");
+  const [form, setForm] = useState<any>({ name: "", phone: "", website: "", address: "", notes: "" });
 
   const load = useCallback(async () => {
     const [d, t] = await Promise.all([api.listDealers(), api.listTools()]);
@@ -38,9 +39,10 @@ export default function DealersScreen() {
   );
 
   const create = async () => {
-    if (!name.trim()) return;
-    const d = await api.createDealer({ name: name.trim() });
-    setName("");
+    if (!form.name?.trim()) return;
+    const payload = { ...form, name: form.name.trim() };
+    const d = await api.createDealer(payload);
+    setForm({ name: "", phone: "", website: "", address: "", notes: "" });
     setShowAdd(false);
     router.push(`/dealer/${d.id}`);
   };
@@ -132,23 +134,33 @@ export default function DealersScreen() {
 
       <Modal visible={showAdd} transparent animationType="slide">
         <View style={styles.modalBg}>
-          <View style={styles.modalCard}>
+          <ScrollView style={styles.modalCard} keyboardShouldPersistTaps="handled">
             <Text style={styles.modalTitle}>NEW DEALER</Text>
-            <TextInput
-              testID="dealer-name-input"
-              placeholder="Dealer name (e.g. Matco)"
-              placeholderTextColor={theme.colors.textMuted}
-              style={styles.input}
-              value={name}
-              onChangeText={setName}
-              autoFocus
-            />
-            <View style={{ flexDirection: "row", gap: 10 }}>
+            {([
+              { k: "name", placeholder: "Dealer name (e.g. Matco)*", focus: true },
+              { k: "phone", placeholder: "Phone" },
+              { k: "website", placeholder: "Website" },
+              { k: "address", placeholder: "Address" },
+              { k: "notes", placeholder: "Notes", multiline: true },
+            ] as const).map((f) => (
+              <TextInput
+                key={f.k}
+                testID={`dealer-${f.k}-input`}
+                placeholder={f.placeholder}
+                placeholderTextColor={theme.colors.textMuted}
+                style={[styles.input, f.multiline && { height: 90, paddingTop: 12 }]}
+                value={form[f.k] || ""}
+                onChangeText={(v) => setForm({ ...form, [f.k]: v })}
+                multiline={f.multiline}
+                autoFocus={f.focus}
+              />
+            ))}
+            <View style={{ flexDirection: "row", gap: 10, marginTop: 4 }}>
               <TouchableOpacity
                 style={styles.btnGhost}
                 onPress={() => {
                   setShowAdd(false);
-                  setName("");
+                  setForm({ name: "", phone: "", website: "", address: "", notes: "" });
                 }}
               >
                 <Text style={styles.btnGhostText}>CANCEL</Text>
@@ -157,7 +169,7 @@ export default function DealersScreen() {
                 <Text style={styles.btnText}>CREATE</Text>
               </TouchableOpacity>
             </View>
-          </View>
+          </ScrollView>
         </View>
       </Modal>
     </SafeAreaView>
@@ -235,7 +247,7 @@ const styles = StyleSheet.create({
   },
   fab: {
     position: "absolute",
-    bottom: 24,
+    bottom: 90,
     right: 24,
     width: 56,
     height: 56,
@@ -250,6 +262,7 @@ const styles = StyleSheet.create({
     padding: 24,
     borderTopWidth: 2,
     borderTopColor: theme.colors.accent,
+    maxHeight: "85%",
   },
   modalTitle: {
     color: theme.colors.textPrimary,

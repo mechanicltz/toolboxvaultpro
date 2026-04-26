@@ -61,6 +61,7 @@ export const api = {
   updateDealer: (id: string, data: any) => request<any>(`/dealers/${id}`, { method: "PUT", body: JSON.stringify(data) }),
   deleteDealer: (id: string) => request<any>(`/dealers/${id}`, { method: "DELETE" }),
   addAgent: (dealerId: string, data: any) => request<any>(`/dealers/${dealerId}/agents`, { method: "POST", body: JSON.stringify(data) }),
+  updateAgent: (dealerId: string, agentId: string, data: any) => request<any>(`/dealers/${dealerId}/agents/${agentId}`, { method: "PUT", body: JSON.stringify(data) }),
   removeAgent: (dealerId: string, agentId: string) => request<any>(`/dealers/${dealerId}/agents/${agentId}`, { method: "DELETE" }),
   setCurrentAgent: (dealerId: string, agentId: string) => request<any>(`/dealers/${dealerId}/current-agent/${agentId}`, { method: "POST" }),
 

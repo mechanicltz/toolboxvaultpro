@@ -72,7 +72,13 @@ export default function DealerDetail() {
 
   const addAgent = async () => {
     if (!agentForm?.name?.trim()) return;
-    await api.addAgent(id!, agentForm);
+    if (agentForm.id) {
+      // Editing existing
+      const { id: agentId, ...rest } = agentForm;
+      await api.updateAgent(id!, agentId, rest);
+    } else {
+      await api.addAgent(id!, agentForm);
+    }
     setAgentForm(null);
     load();
   };
@@ -208,6 +214,20 @@ export default function DealerDetail() {
                 <Text style={styles.agentMeta}>Ended: {a.ended_at.substring(0, 10)}</Text>
               )}
               <View style={styles.agentActions}>
+                <TouchableOpacity
+                  testID={`edit-agent-${a.id}`}
+                  style={styles.agentActionBtn}
+                  onPress={() => setAgentForm({
+                    id: a.id,
+                    name: a.name || "",
+                    phone: a.phone || "",
+                    email: a.email || "",
+                    notes: a.notes || "",
+                  })}
+                >
+                  <Ionicons name="create-outline" size={16} color={theme.colors.accent} />
+                  <Text style={styles.agentActionText}>EDIT</Text>
+                </TouchableOpacity>
                 {!isCurrent && (
                   <TouchableOpacity
                     testID={`set-current-${a.id}`}
@@ -286,11 +306,11 @@ export default function DealerDetail() {
         </View>
       </Modal>
 
-      {/* Add agent modal */}
+      {/* Add / edit agent modal */}
       <Modal visible={!!agentForm} transparent animationType="slide">
         <View style={styles.modalBg}>
           <ScrollView style={styles.modalCard} keyboardShouldPersistTaps="handled">
-            <Text style={styles.modalTitle}>NEW AGENT</Text>
+            <Text style={styles.modalTitle}>{agentForm?.id ? "EDIT AGENT" : "NEW AGENT"}</Text>
             {(["name", "phone", "email", "notes"] as const).map((k) => (
               <TextInput
                 key={k}
@@ -308,7 +328,7 @@ export default function DealerDetail() {
                 <Text style={styles.btnGhostText}>CANCEL</Text>
               </TouchableOpacity>
               <TouchableOpacity testID="save-agent-btn" style={styles.btn} onPress={addAgent}>
-                <Text style={styles.btnText}>ADD</Text>
+                <Text style={styles.btnText}>{agentForm?.id ? "SAVE" : "ADD"}</Text>
               </TouchableOpacity>
             </View>
           </ScrollView>
