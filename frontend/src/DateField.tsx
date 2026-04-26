@@ -60,58 +60,37 @@ export function DateField({
   };
 
   if (Platform.OS === "web") {
-    const openCalendar = () => {
-      try {
-        const el = hiddenRef.current;
-        if (el && typeof el.showPicker === "function") el.showPicker();
-        else if (el) el.click();
-      } catch {
-        /* ignore */
-      }
-    };
+    // Render the native date input directly so clicking anywhere opens the OS calendar.
+    // The browser displays it in MM/DD/YYYY format (en-US locale).
     return (
-      <TouchableOpacity
-        activeOpacity={0.7}
-        onPress={openCalendar}
-        style={styles.input}
-      >
-        <View style={{ flex: 1, paddingVertical: 4 }}>
-          <Text
-            testID={testID}
-            style={{
-              color: display ? theme.colors.textPrimary : theme.colors.textMuted,
-              fontSize: 15,
-            }}
-          >
-            {display || placeholder || "MM/DD/YYYY"}
-          </Text>
-        </View>
-        <Ionicons name="calendar" size={20} color={theme.colors.accent} />
-        {value ? (
-          <TouchableOpacity onPress={() => { onChange(""); setText(""); }} hitSlop={8} style={{ marginLeft: 6 }}>
-            <Ionicons name="close-circle" size={18} color={theme.colors.textMuted} />
-          </TouchableOpacity>
-        ) : null}
-        {/* Hidden native date input — click it to open the OS calendar */}
+      <View style={styles.input}>
         {/* @ts-ignore — DOM element on web */}
         <input
-          ref={hiddenRef}
+          data-testid={testID}
           type="date"
           value={value || ""}
           onChange={(e: any) => onChange(e.target.value)}
+          placeholder="mm/dd/yyyy"
           style={{
-            position: "absolute",
-            inset: 0,
-            opacity: 0,
-            cursor: "pointer",
+            flex: 1,
+            backgroundColor: "transparent",
             border: 0,
-            background: "transparent",
-            color: "transparent",
-            zIndex: 1,
+            outline: "none",
+            color: theme.colors.textPrimary,
+            fontSize: 15,
+            fontFamily: "inherit",
+            colorScheme: "dark",
+            cursor: "pointer",
+            paddingTop: 4,
+            paddingBottom: 4,
           }}
-          tabIndex={-1}
         />
-      </TouchableOpacity>
+        {value ? (
+          <TouchableOpacity onPress={() => { onChange(""); setText(""); }} hitSlop={8}>
+            <Ionicons name="close-circle" size={18} color={theme.colors.textMuted} />
+          </TouchableOpacity>
+        ) : null}
+      </View>
     );
   }
 

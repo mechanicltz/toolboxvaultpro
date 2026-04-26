@@ -284,15 +284,54 @@ test_plan:
 backend_recent:
   - task: "GET /api/warranty-claims/{claim_id} (single) — for /claim/[id] detail screen"
     implemented: true
-    working: "NA"
+    working: true
     file: "/app/backend/server.py"
     stuck_count: 0
     priority: "medium"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: "Added GET endpoint that returns a single WarrantyClaim by id, used by the new /claim/[id] detail route. 404 when not found. Also rolled back the earlier auto-checkout-to-dealer logic for 'Sent in for Repairs' status per user request — that behavior was overwhelming."
+      - working: true
+        agent: "testing"
+        comment: "PASS — verified via /app/backend_test_regression.py against EXPO_PUBLIC_BACKEND_URL/api. (a) GET /api/warranty-claims (list) returned 200 with multiple claims; picked claim[0].id and GET /api/warranty-claims/{id} returned 200 with WarrantyClaim payload containing all required fields: id, tool_id, tool_name, dealer_id, dealer_name, claim_status, broken_photo, created_at, updated_at. (b) GET /api/warranty-claims/non-existent-id-zzzzz → 404 with detail 'Claim not found'. (c) Single endpoint correctly includes broken_photo field — used as part of the broken_photo round-trip below."
+
+  - task: "Dealer Route fields — route_frequency / route_day_of_week / route_anchor_date"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "PASS — 23/23 dealer-route checks via /app/backend_test_regression.py. (1) GET /api/dealers returns 200; existing dealer rows include all three new fields (route_frequency, route_day_of_week, route_anchor_date); pre-existing rows show route_frequency in the allowed set ('N/A'/'Weekly'/'Bi-weekly'/'Monthly') and route_day_of_week + route_anchor_date are strings (defaults '' / 'N/A' applied by Pydantic Optional defaults). (2) POST /api/dealers {name:'Test Route Dealer', route_frequency:'Weekly', route_day_of_week:'Wednesday'} → 200, response persists name, route_frequency='Weekly', route_day_of_week='Wednesday', route_anchor_date='' (default). (3) GET /api/dealers/{id} after POST round-trips both Weekly/Wednesday correctly (Mongo persistence verified). (4) PUT /api/dealers/{id} {route_frequency:'Bi-weekly', route_day_of_week:'Friday'} → 200; both fields updated. (5) PUT /api/dealers/{id} {route_frequency:'N/A'} → 200; route_frequency reset to 'N/A' cleanly, no crash, route_day_of_week preserved as a string. (6) DELETE /api/dealers/{id} → 200; subsequent GET returns 404. No regressions on dealer endpoints."
+
+  - task: "broken_photo on warranty claims — auto-create from POST /api/tools + mirror on PUT /api/tools"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "PASS — 13/13 broken_photo checks via /app/backend_test_regression.py. (1) POST /api/tools {name:'Test Broken', needs_repair:true, repair_info:{repair_status:'Reported', broken_photo:'data:image/png;base64,iVBORw0...AAAASUVORK5CYII='}, dealer_name:'Test Dealer', dealer_id:<fresh dealer>} → 200; tool persists needs_repair=true and repair_info.broken_photo equal to the full data URL we sent (134 chars round-tripped exactly). (2) On creation, the backend auto-creates a WarrantyClaim (server.py L987-1004) with claim_status='broken', tool_id matching, and broken_photo equal to the data URL we sent. GET /api/warranty-claims?tool_id={tool.id} → 200 with the expected claim. (3) PUT /api/tools/{id} {repair_info:{repair_status:'Reported', broken_photo:'data:image/png;base64,UPDATEDxxxxxxxx'}} → 200; tool.repair_info.broken_photo updated. (4) GET /api/warranty-claims/{claim_id} confirms the open claim's broken_photo was MIRRORED (server.py L1088-1104) to the new 'UPDATED...' value — not just the tool. (5) Single-claim GET response shape includes broken_photo field. All test fixtures (tool + dealer) cleaned up at the end."
+
+  - task: "Existing endpoints regression — list endpoints + aggregate/stats/maintenance/warranty"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "PASS — all 11 existing GET endpoints return 200 with valid JSON: /api/tools, /api/dealers, /api/locations, /api/tags, /api/categories, /api/borrowers, /api/aggregate, /api/stats, /api/maintenance/upcoming, /api/warranty-alerts, /api/warranty-claims/summary. No regressions caused by the new dealer route fields, broken_photo mirroring, or single-claim GET endpoint."
 
   - task: "Tool repair_status auto-checkout to dealer (Sent in for Repairs) + warranty_claims tool_id filter"
     implemented: true
@@ -387,5 +426,7 @@ agent_communication:
     message: "Personal Profile (singleton) backend tested via /app/backend_test_personal_profile.py against EXPO_PUBLIC_BACKEND_URL/api — 83/83 PASS, 0 FAIL. Verified all six review steps A→F plus regression G: (A) initial GET → 200 with all 12 string fields present (no null), is_company is bool, updated_at is non-empty ISO timestamp; (B) PUT full payload echoes every field exactly with a fresh updated_at; (C) GET-after-PUT confirms persistence and updated_at round-trips; (D) PUT partial {name:'Acme Inc.', is_company:true} returns 200 with name='Acme Inc.', is_company=true and — per upsert $set semantics — other fields reset to defaults but ALL come back as empty strings (NOT null) because the Pydantic model declares Optional[str]=''; (E) final GET confirms last-write-wins; (F) every GET response uses real Python str ('') for unset fields, never None; (G) regression GET /api/tools, /api/dealers, /api/locations all 200. The new endpoints did not break anything. Backend task complete; main agent can summarise and finish."
   - agent: "testing"
     message: "Auto-checkout-to-dealer + warranty_claims tool_id filter tested via /app/backend_test_repair_dealer.py — 62/62 PASS, 0 FAIL. (1.1-1.2) PUT /api/tools/{id} with repair_info.repair_status='Sent in for Repairs' on a tool with dealer_id=D1 correctly auto-checks-out: is_checked_out=true, current_checkout.borrower_id starts with 'dealer:{D1.id}', borrower_name='Test Dealer', notes contains 'Sent in for repairs', checked_in_at=null. (1.3) PUT with repair_status='Repaired' + needs_repair=false correctly auto-checks-in: is_checked_out=false, current_checkout=null, checkout_history appended new entry with borrower_id starting 'dealer:' and checked_in_at populated. (1.4) Reported→Sent in for Repairs→In Repair (without marking repaired): auto-checkin fires when transitioning AWAY from 'Sent in for Repairs', is_checked_out=false on the new tool. (1.5) Edge — tool with no dealer_id transitioning to 'Sent in for Repairs' does NOT crash, repair_status updates, is_checked_out remains false (silently skipped). (1.6) Edge — tool already manually checked out to a real borrower (non-dealer) does NOT get its current_checkout overwritten when status flips to 'Sent in for Repairs'; existing borrower id/name preserved. (2) GET /api/warranty-claims?tool_id={T1.id} returns exactly 1 item with tool_id==T1.id; combined with archived=false also returns 1; no-filter returns >=2 claims including both T1 and T2. All test fixtures cleaned up. Backend task complete — main agent can summarise and finish."
+  - agent: "testing"
+    message: "Regression test on recently-changed/added backend endpoints — 65/65 PASS via /app/backend_test_regression.py against EXPO_PUBLIC_BACKEND_URL/api. (1) Dealer Route fields: GET /api/dealers exposes route_frequency/route_day_of_week/route_anchor_date on existing rows with proper defaults; POST /api/dealers {Test Route Dealer, Weekly, Wednesday} persists all three fields; GET single dealer round-trips; PUT to {Bi-weekly, Friday} updates correctly; PUT {N/A} resets cleanly without crash; DELETE returns 200 and subsequent GET returns 404. (2) broken_photo on warranty claims: POST /api/tools with needs_repair=true and repair_info.broken_photo=<full data URL> auto-creates an open WarrantyClaim with broken_photo equal to the exact data URL (server.py L987-1004). PUT /api/tools/{id} updating broken_photo to 'data:image/png;base64,UPDATED...' is mirrored into the open claim (server.py L1088-1104) — verified via GET /api/warranty-claims/{claim_id}. Single-claim GET response includes broken_photo. (3) GET /api/warranty-claims/{claim_id}: 200 with full WarrantyClaim payload (id, tool_id, tool_name, dealer_id, dealer_name, claim_status, broken_photo, created_at, updated_at all present); GET /warranty-claims/non-existent-id → 404. (4) Existing endpoints regression: all 11 GETs (/tools, /dealers, /locations, /tags, /categories, /borrowers, /aggregate, /stats, /maintenance/upcoming, /warranty-alerts, /warranty-claims/summary) return 200 with valid JSON. All test fixtures (1 dealer + 1 tool) cleaned up. No regressions, no critical issues. Backend ready — main agent can summarise and finish."
   - agent: "main"
     message: "7-point UI/UX checklist completed in this session: (1) Global BottomBar (HOME/INVENTORY/DEALERS/CLAIMS/MORE) renders on every screen including stack screens; verified visually on inventory, dealers, claims, dealer detail, tool detail. (2) Email/SMS template in tool/[id].tsx and dealer-claims/[id].tsx now uses exact requested wording: 'Hello [dealer], I have a tool that needs repair / warranty. Tool: ... Serial: ... Purchased: ... [photo line if any] Please let me know when I can expect a repair/replacement. Thank you.' (3) Missing-contact prompt: instead of silent Alert, both screens now use confirm() and offer 'Open Dealer' to navigate to /dealer/{id} so user can add the missing email/phone. (4) Removed 'WARRANTY CLAIMS' chip and 'X open warranty claim' banner from inventory.tsx top row — bottom CLAIMS tab is sufficient. (5) Maintenance input UI verified: tool detail → MAINTENANCE section → SCHEDULE button → opens NEW MAINTENANCE SCHEDULE modal with TYPE chips, INTERVAL, LAST DONE date, NOTES. (6) Dealer screen restructured: removed 2-letter avatar; AGENTS section moved to top with bold/white sectionLabelStrong; TOOLS PURCHASED FROM [DEALER] right under agents with TOTAL SPENT pill; CONTACT section after; BalanceSection moved to bottom. (7) Claims history bug fixed: claims.tsx now fetches /api/warranty-claims/summary alongside live tools and uses summaryEntry.completed for the 'X DONE' count per dealer. Verified visually: Cornwell shows '0 OPEN, 1 DONE'. dealer-claims/[id].tsx now also fetches /api/warranty-claims?dealer_id=X&archived=true and renders archived claims as pseudo-tools in the COMPLETED tab. Awaiting user feedback / approval before next phase (QR labels, CSV import, kits)."

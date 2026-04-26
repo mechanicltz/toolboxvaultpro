@@ -680,7 +680,7 @@ export default function ToolEdit() {
 
               {warranty.coverage_type === "months" ? (
                 <>
-                  <Text style={styles.label}>EXPIRY DATE (auto)</Text>
+                  <Text style={styles.label}>EXPIRE DATE (auto)</Text>
                   <DateField
                     testID="war-expiry"
                     value={warranty.expiry_date}

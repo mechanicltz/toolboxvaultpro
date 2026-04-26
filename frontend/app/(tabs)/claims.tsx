@@ -15,15 +15,16 @@ import { useRouter, useFocusEffect } from "expo-router";
 import { theme } from "../../src/theme";
 import { api } from "../../src/api";
 import { formatDateUS as fmtDate } from "../../src/dateUtil";
+import { getCached, setCached } from "../../src/cache";
 
 type Mode = "dealers" | "all-open";
 
 export default function ClaimsScreen() {
   const router = useRouter();
   const [mode, setMode] = useState<Mode>("dealers");
-  const [dealers, setDealers] = useState<any[]>([]);
-  const [tools, setTools] = useState<any[]>([]);
-  const [summary, setSummary] = useState<any>({ totals: {}, dealers: [] });
+  const [dealers, setDealers] = useState<any[]>(() => getCached("dealers", []));
+  const [tools, setTools] = useState<any[]>(() => getCached("claims_tools", []));
+  const [summary, setSummary] = useState<any>(() => getCached("claims_summary", { totals: {}, dealers: [] }));
   const [refreshing, setRefreshing] = useState(false);
   const [search, setSearch] = useState("");
 
@@ -34,9 +35,9 @@ export default function ClaimsScreen() {
         api.listTools({ needs_repair: true }),
         api.warrantyClaimsSummary().catch(() => ({ totals: {}, dealers: [] })),
       ]);
-      setDealers(d || []);
-      setTools(t || []);
-      setSummary(s || { totals: {}, dealers: [] });
+      setDealers(setCached("dealers", d || []));
+      setTools(setCached("claims_tools", t || []));
+      setSummary(setCached("claims_summary", s || { totals: {}, dealers: [] }));
     } catch {
       /* ignore */
     }

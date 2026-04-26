@@ -18,19 +18,20 @@ import { api } from "../../src/api";
 import { usePrefs } from "../../src/prefs";
 import { confirm } from "../../src/confirm";
 import { ROUTE_FREQUENCIES, DAY_NAMES, routeLabel, nextRouteText } from "../../src/route";
+import { getCached, setCached } from "../../src/cache";
 
 export default function DealersScreen() {
   const router = useRouter();
   const { prefs } = usePrefs();
-  const [dealers, setDealers] = useState<any[]>([]);
-  const [tools, setTools] = useState<any[]>([]);
+  const [dealers, setDealers] = useState<any[]>(() => getCached("dealers", []));
+  const [tools, setTools] = useState<any[]>(() => getCached("tools", []));
   const [showAdd, setShowAdd] = useState(false);
   const [form, setForm] = useState<any>({ name: "", phone: "", website: "", address: "", notes: "", route_frequency: "N/A", route_day_of_week: "", route_anchor_date: "" });
 
   const load = useCallback(async () => {
     const [d, t] = await Promise.all([api.listDealers(), api.listTools()]);
-    setDealers(d);
-    setTools(t);
+    setDealers(setCached("dealers", d));
+    setTools(setCached("tools", t));
   }, []);
 
   useFocusEffect(

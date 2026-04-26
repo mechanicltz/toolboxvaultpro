@@ -15,16 +15,17 @@ import { api } from "../../src/api";
 import { PaymentModal } from "../../src/sections/PaymentModal";
 import { nextRouteDate, DAY_NAMES } from "../../src/route";
 import { formatDateUS } from "../../src/dateUtil";
+import { getCached, setCached } from "../../src/cache";
 
 export default function HomeScreen() {
   const router = useRouter();
-  const [stats, setStats] = useState<any>({});
-  const [agg, setAgg] = useState<any>({});
-  const [tools, setTools] = useState<any[]>([]);
-  const [wishlist, setWishlist] = useState<any[]>([]);
-  const [dealers, setDealers] = useState<any[]>([]);
-  const [mnt, setMnt] = useState<any>({ overdue: 0, due_soon: 0, total: 0 });
-  const [claims, setClaims] = useState<any>({ totals: { open: 0 } });
+  const [stats, setStats] = useState<any>(() => getCached("home_stats", {}));
+  const [agg, setAgg] = useState<any>(() => getCached("home_agg", {}));
+  const [tools, setTools] = useState<any[]>(() => getCached("tools", []));
+  const [wishlist, setWishlist] = useState<any[]>(() => getCached("wishlist", []));
+  const [dealers, setDealers] = useState<any[]>(() => getCached("dealers", []));
+  const [mnt, setMnt] = useState<any>(() => getCached("home_mnt", { overdue: 0, due_soon: 0, total: 0 }));
+  const [claims, setClaims] = useState<any>(() => getCached("claims_summary", { totals: { open: 0 } }));
   const [refreshing, setRefreshing] = useState(false);
   const [paymentTarget, setPaymentTarget] = useState<{ dealer: any; account: "credit" | "personal" } | null>(null);
 
@@ -39,13 +40,13 @@ export default function HomeScreen() {
         api.upcomingMaintenance(30).catch(() => ({ overdue: 0, due_soon: 0, total: 0 })),
         api.warrantyClaimsSummary().catch(() => ({ totals: { open: 0 } })),
       ]);
-      setStats(s);
-      setAgg(a);
-      setTools(t);
-      setWishlist(w);
-      setDealers(d);
-      setMnt(m);
-      setClaims(c);
+      setStats(setCached("home_stats", s));
+      setAgg(setCached("home_agg", a));
+      setTools(setCached("tools", t));
+      setWishlist(setCached("wishlist", w));
+      setDealers(setCached("dealers", d));
+      setMnt(setCached("home_mnt", m));
+      setClaims(setCached("claims_summary", c));
     } catch {
       /* ignore */
     }

@@ -19,6 +19,7 @@ import { useRouter, useFocusEffect } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import { theme } from "../../src/theme";
 import { api } from "../../src/api";
+import { getCached, setCached } from "../../src/cache";
 import { usePrefs } from "../../src/prefs";
 import { SummaryHeader } from "../../src/SummaryHeader";
 import { confirm } from "../../src/confirm";
@@ -30,8 +31,8 @@ type Filter = "all" | "available" | "out" | "consumables" | "lost" | "maintenanc
 export default function InventoryScreen() {
   const router = useRouter();
   const { prefs } = usePrefs();
-  const [tools, setTools] = useState<any[]>([]);
-  const [agg, setAgg] = useState<any>(null);
+  const [tools, setTools] = useState<any[]>(() => getCached("inv_tools", []));
+  const [agg, setAgg] = useState<any>(() => getCached("inv_agg", null));
   const [search, setSearch] = useState("");
   const [refreshing, setRefreshing] = useState(false);
   const [filter, setFilter] = useState<Filter>("all");
@@ -153,8 +154,8 @@ export default function InventoryScreen() {
           : filter === "maintenance"
           ? t.filter((x: any) => mIds.has(x.id))
           : t;
-      setTools(filteredTools);
-      setAgg(a);
+      setTools(setCached("inv_tools", filteredTools));
+      setAgg(setCached("inv_agg", a));
       setWarningCount((w.expiring?.length || 0) + (w.expired?.length || 0));
       setOpenClaims(cs?.totals?.open || 0);
       setMaintDueCount(mItems.length);
