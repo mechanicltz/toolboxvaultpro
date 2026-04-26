@@ -37,7 +37,7 @@ export function DateField({
     setText(display);
   }, [display]);
 
-  // Auto-mask DD/MM/YYYY as the user types
+  // Auto-mask MM/DD/YYYY as the user types
   const handleType = (raw: string) => {
     const digits = raw.replace(/\D/g, "").slice(0, 8);
     let out = digits;
@@ -45,8 +45,8 @@ export function DateField({
     else if (digits.length >= 3) out = `${digits.slice(0, 2)}/${digits.slice(2)}`;
     setText(out);
     if (digits.length === 8) {
-      const dd = digits.slice(0, 2);
-      const mm = digits.slice(2, 4);
+      const mm = digits.slice(0, 2);
+      const dd = digits.slice(2, 4);
       const yyyy = digits.slice(4);
       const m = parseInt(mm, 10);
       const d = parseInt(dd, 10);
@@ -75,7 +75,7 @@ export function DateField({
           testID={testID}
           value={text}
           onChangeText={handleType}
-          placeholder={placeholder || "DD/MM/YYYY"}
+          placeholder={placeholder || "MM/DD/YYYY"}
           placeholderTextColor={theme.colors.textMuted}
           keyboardType="numbers-and-punctuation"
           maxLength={10}

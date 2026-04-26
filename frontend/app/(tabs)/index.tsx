@@ -91,9 +91,9 @@ export default function HomeScreen() {
           <Text style={styles.title}>TOOLBOX</Text>
           <Text style={styles.subtitle}>SUMMARY  ·  {(() => {
             const d = new Date();
-            const dd = String(d.getDate()).padStart(2, "0");
             const mm = String(d.getMonth() + 1).padStart(2, "0");
-            return `${dd}/${mm}/${d.getFullYear()}`;
+            const dd = String(d.getDate()).padStart(2, "0");
+            return `${mm}/${dd}/${d.getFullYear()}`;
           })()}</Text>
         </View>
       </View>
