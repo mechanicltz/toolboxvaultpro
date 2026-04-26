@@ -147,7 +147,7 @@ export default function ClaimsScreen() {
                     testID={`claim-dealer-${d.id}`}
                     style={styles.dealerRow}
                     onPress={() =>
-                      router.push(`/dealer/${d.id}?tab=repairs`)
+                      router.push(`/dealer-claims/${d.id}`)
                     }
                   >
                     <View style={styles.dealerThumb}>
