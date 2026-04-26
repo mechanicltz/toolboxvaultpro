@@ -36,6 +36,7 @@ export default function ToolDetail() {
   const router = useRouter();
   const [tool, setTool] = useState<any>(null);
   const [borrowers, setBorrowers] = useState<any[]>([]);
+  const [dealers, setDealers] = useState<any[]>([]);
   const [showCheckout, setShowCheckout] = useState(false);
   const [coMode, setCoMode] = useState<"saved" | "free">("saved");
   const [coName, setCoName] = useState("");
@@ -79,9 +80,14 @@ export default function ToolDetail() {
   const load = useCallback(async () => {
     if (!id) return;
     try {
-      const [t, b] = await Promise.all([api.getTool(id), api.listBorrowers()]);
+      const [t, b, d] = await Promise.all([
+        api.getTool(id),
+        api.listBorrowers(),
+        api.listDealers(),
+      ]);
       setTool(t);
       setBorrowers(b);
+      setDealers(d || []);
     } catch {
       Alert.alert("Error", "Tool not found");
       router.back();
@@ -171,23 +177,16 @@ export default function ToolDetail() {
       }
 
       // Exact template requested
+      const greetName = agent?.name || dealer.name;
       const lines = [
-        `Hello ${dealer.name},`,
-        ``,
-        `I have a tool that needs repair / warranty.`,
+        `Hello ${greetName}, I have a repair/warranty tool.`,
         `Tool: ${t.name}`,
         `Serial Number: ${t.serial_number || "N/A"}`,
-        `Purchased Date: ${t.purchase_date || "N/A"}`,
+        `Purchase date: ${formatDateUS(t.purchase_date) || "N/A"}`,
       ];
       if (t.repair_info?.broken_photo) {
         lines.push(`(A photo of the broken item is available.)`);
       }
-      lines.push(
-        ``,
-        `Please let me know when I can expect a repair / replacement.`,
-        ``,
-        `Thank you.`
-      );
       const subject = encodeURIComponent(`Repair / Warranty: ${t.name}`);
       const body = encodeURIComponent(lines.join("\n"));
 
@@ -708,15 +707,44 @@ export default function ToolDetail() {
                 ))}
               </View>
 
-              <Text style={styles.repairLabel}>REPAIR COMPANY</Text>
-              <TextInput
-                testID="repmod-company"
-                placeholder="ACME Repair Shop"
-                placeholderTextColor={theme.colors.textMuted}
-                value={repairForm.company_notified}
-                style={styles.input}
-                onChangeText={(v) => setRepairForm({ ...repairForm, company_notified: v })}
-              />
+              <Text style={styles.repairLabel}>REPAIR COMPANY (DEALER)</Text>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={{ flexDirection: "row", gap: 8, paddingVertical: 4 }}
+              >
+                {dealers.length === 0 ? (
+                  <Text style={{ color: theme.colors.textMuted, fontSize: 12, paddingVertical: 8 }}>
+                    No dealers yet. Add one in the Dealers tab.
+                  </Text>
+                ) : (
+                  dealers.map((d) => {
+                    const sel = repairForm.company_notified === d.name;
+                    return (
+                      <TouchableOpacity
+                        key={d.id}
+                        testID={`repmod-dealer-${d.id}`}
+                        onPress={() =>
+                          setRepairForm({ ...repairForm, company_notified: d.name })
+                        }
+                        style={[
+                          styles.statusChip,
+                          sel && styles.statusChipActive,
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.statusChipText,
+                            sel && styles.statusChipTextActive,
+                          ]}
+                        >
+                          {d.name}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })
+                )}
+              </ScrollView>
 
               <Text style={styles.repairLabel}>CONTACT</Text>
               <TextInput

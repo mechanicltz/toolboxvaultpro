@@ -282,6 +282,18 @@ test_plan:
   test_priority: "high_first"
 
 backend_recent:
+  - task: "GET /api/warranty-claims/{claim_id} (single) — for /claim/[id] detail screen"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Added GET endpoint that returns a single WarrantyClaim by id, used by the new /claim/[id] detail route. 404 when not found. Also rolled back the earlier auto-checkout-to-dealer logic for 'Sent in for Repairs' status per user request — that behavior was overwhelming."
+
   - task: "Tool repair_status auto-checkout to dealer (Sent in for Repairs) + warranty_claims tool_id filter"
     implemented: true
     working: true

@@ -76,6 +76,7 @@ export const api = {
   // Warranty claims
   listWarrantyClaims: (params?: { dealer_id?: string; tool_id?: string; status?: string; archived?: boolean }) =>
     request<any[]>(`/warranty-claims${qs(params)}`),
+  getWarrantyClaim: (id: string) => request<any>(`/warranty-claims/${id}`),
   warrantyClaimsSummary: () => request<any>(`/warranty-claims/summary`),
   updateWarrantyClaim: (id: string, data: any) =>
     request<any>(`/warranty-claims/${id}`, { method: "PUT", body: JSON.stringify(data) }),

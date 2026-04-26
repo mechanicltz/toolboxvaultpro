@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { View, Text, StyleSheet, TouchableOpacity, Image } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
 import { theme } from "../theme";
 import { api } from "../api";
 import { formatDateUS } from "../dateUtil";
@@ -22,6 +23,7 @@ const STATUS_LABEL: Record<string, string> = {
 };
 
 export function ClaimsHistorySection({ toolId }: { toolId: string }) {
+  const router = useRouter();
   const [claims, setClaims] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -63,7 +65,12 @@ export function ClaimsHistorySection({ toolId }: { toolId: string }) {
         const color = STATUS_COLORS[status] || theme.colors.textMuted;
         const label = STATUS_LABEL[status] || status.toUpperCase();
         return (
-          <View key={c.id} style={styles.card}>
+          <TouchableOpacity
+            key={c.id}
+            testID={`claim-history-${c.id}`}
+            style={styles.card}
+            onPress={() => router.push(`/claim/${c.id}`)}
+          >
             <View style={styles.row}>
               <View style={styles.numCol}>
                 <Text style={styles.num}>#{idx + 1}</Text>
@@ -104,7 +111,7 @@ export function ClaimsHistorySection({ toolId }: { toolId: string }) {
                 <Text style={styles.notes}>{c.notes}</Text>
               </View>
             )}
-          </View>
+          </TouchableOpacity>
         );
       })}
     </View>

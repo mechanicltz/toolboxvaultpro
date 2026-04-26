@@ -95,6 +95,7 @@ export default function DealerClaimsScreen() {
   const completedFromTools = tools.filter((t) => isRepaired(t));
   const completedFromClaims = (archivedClaims || []).map((c: any) => ({
     id: c.tool_id || c.id,
+    claim_id: c.id,
     name: c.tool_name || "Tool",
     serial_number: c.serial_number || "",
     purchase_date: c.purchase_date || "",
@@ -137,23 +138,16 @@ export default function DealerClaimsScreen() {
         return;
       }
       const subject = encodeURIComponent(`Repair / Warranty: ${t.name}`);
+      const greetName = agent?.name || dealer?.name || "there";
       const lines = [
-        `Hello ${dealer?.name || "there"},`,
-        ``,
-        `I have a tool that needs repair / warranty.`,
+        `Hello ${greetName}, I have a repair/warranty tool.`,
         `Tool: ${t.name}`,
         `Serial Number: ${t.serial_number || "N/A"}`,
-        `Purchased Date: ${t.purchase_date || "N/A"}`,
+        `Purchase date: ${fmtDate(t.purchase_date) || "N/A"}`,
       ];
       if (t.repair_info?.broken_photo) {
         lines.push(`(A photo of the broken item is available.)`);
       }
-      lines.push(
-        ``,
-        `Please let me know when I can expect a repair / replacement.`,
-        ``,
-        `Thank you.`
-      );
       const body = encodeURIComponent(lines.join("\n"));
       let url = "";
       if (mode === "email") {
@@ -277,7 +271,11 @@ export default function DealerClaimsScreen() {
                 <TouchableOpacity
                   testID={`open-claim-${t.id}`}
                   style={styles.cardHead}
-                  onPress={() => router.push(`/tool/${t.id}`)}
+                  onPress={() =>
+                    t._archivedClaim && t.claim_id
+                      ? router.push(`/claim/${t.claim_id}`)
+                      : router.push(`/tool/${t.id}`)
+                  }
                   activeOpacity={0.7}
                 >
                   <View style={styles.thumb}>
@@ -342,10 +340,16 @@ export default function DealerClaimsScreen() {
                     <TouchableOpacity
                       testID={`detail-${t.id}`}
                       style={[styles.actionBtn, { backgroundColor: theme.colors.bg, borderWidth: 1, borderColor: theme.colors.border }]}
-                      onPress={() => router.push(`/tool/${t.id}`)}
+                      onPress={() =>
+                        t._archivedClaim && t.claim_id
+                          ? router.push(`/claim/${t.claim_id}`)
+                          : router.push(`/tool/${t.id}`)
+                      }
                     >
                       <Ionicons name="open" size={14} color={theme.colors.accent} />
-                      <Text style={[styles.actionText, { color: theme.colors.accent }]}>OPEN</Text>
+                      <Text style={[styles.actionText, { color: theme.colors.accent }]}>
+                        {t._archivedClaim ? "VIEW CLAIM" : "OPEN"}
+                      </Text>
                     </TouchableOpacity>
                   </View>
                 )}
