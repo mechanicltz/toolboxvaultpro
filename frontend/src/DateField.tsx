@@ -70,40 +70,29 @@ export function DateField({
       }
     };
     return (
-      <View style={styles.input}>
-        <TouchableOpacity
-          activeOpacity={0.7}
-          onPress={openCalendar}
-          style={{ flex: 1 }}
-        >
-          <TextInput
+      <TouchableOpacity
+        activeOpacity={0.7}
+        onPress={openCalendar}
+        style={styles.input}
+      >
+        <View style={{ flex: 1, paddingVertical: 4 }}>
+          <Text
             testID={testID}
-            value={text}
-            onChangeText={handleType}
-            placeholder={placeholder || "MM/DD/YYYY"}
-            placeholderTextColor={theme.colors.textMuted}
-            keyboardType="numbers-and-punctuation"
-            maxLength={10}
-            onFocus={openCalendar}
             style={{
-              backgroundColor: "transparent",
-              color: theme.colors.textPrimary,
+              color: display ? theme.colors.textPrimary : theme.colors.textMuted,
               fontSize: 15,
-              ...(Platform.OS === "web"
-                ? ({ outlineStyle: "none", borderWidth: 0 } as any)
-                : {}),
             }}
-          />
-        </TouchableOpacity>
-        <TouchableOpacity onPress={openCalendar} hitSlop={8} style={{ paddingHorizontal: 4 }}>
-          <Ionicons name="calendar" size={20} color={theme.colors.accent} />
-        </TouchableOpacity>
+          >
+            {display || placeholder || "MM/DD/YYYY"}
+          </Text>
+        </View>
+        <Ionicons name="calendar" size={20} color={theme.colors.accent} />
         {value ? (
-          <TouchableOpacity onPress={() => { onChange(""); setText(""); }} hitSlop={8}>
+          <TouchableOpacity onPress={() => { onChange(""); setText(""); }} hitSlop={8} style={{ marginLeft: 6 }}>
             <Ionicons name="close-circle" size={18} color={theme.colors.textMuted} />
           </TouchableOpacity>
         ) : null}
-        {/* Hidden native date input — opens browser calendar so user can pick visually */}
+        {/* Hidden native date input — click it to open the OS calendar */}
         {/* @ts-ignore — DOM element on web */}
         <input
           ref={hiddenRef}
@@ -112,16 +101,17 @@ export function DateField({
           onChange={(e: any) => onChange(e.target.value)}
           style={{
             position: "absolute",
-            width: 1,
-            height: 1,
+            inset: 0,
             opacity: 0,
-            pointerEvents: "none",
-            right: 0,
-            bottom: 0,
+            cursor: "pointer",
+            border: 0,
+            background: "transparent",
+            color: "transparent",
+            zIndex: 1,
           }}
           tabIndex={-1}
         />
-      </View>
+      </TouchableOpacity>
     );
   }
 
