@@ -3,7 +3,7 @@ import { Platform } from "react-native";
 export const theme = {
   // Original Industrial Dark — yellow/black workshop, with 3D depth
   colors: {
-    bg: "transparent",
+    bg: "#0A0A0A",
     bgSecondary: "#1A1A1A",
     surface: "#0F0F0F",
     surfaceAlt: "#171717",

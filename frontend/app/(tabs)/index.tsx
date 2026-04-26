@@ -415,7 +415,7 @@ const styles = StyleSheet.create({
     borderRadius: theme.radii.sm,
   },
   tagText: {
-    color: "#9A6B00",
+    color: theme.colors.accent,
     fontSize: 10,
     fontWeight: "700",
     letterSpacing: 0.5,

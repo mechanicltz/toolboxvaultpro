@@ -1,27 +1,15 @@
 import React from "react";
-import { View, StyleSheet, Platform } from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
+import { View, StyleSheet } from "react-native";
 import { theme } from "./theme";
 
-/** Original Industrial Dark background. */
+/**
+ * Simple solid dark background for predictable readability.
+ * Aurora ornamental glow removed — depth comes from card elevation, not the bg.
+ */
 export function AuroraBackground({ children }: { children: React.ReactNode }) {
   return (
     <View style={styles.root}>
-      <LinearGradient
-        colors={["#000000", "#0F0F0F", "#0A0A0A"]}
-        locations={[0, 0.5, 1]}
-        style={StyleSheet.absoluteFillObject}
-      />
-      {/* Subtle yellow vignette glow top-right */}
-      <View style={styles.glowTopRight}>
-        <LinearGradient
-          colors={["rgba(255, 179, 0, 0.10)", "rgba(255, 179, 0, 0)"]}
-          style={StyleSheet.absoluteFillObject}
-          start={{ x: 0.5, y: 0 }}
-          end={{ x: 0.5, y: 1 }}
-        />
-      </View>
-      <View style={{ flex: 1, zIndex: 1 }}>{children}</View>
+      <View style={{ flex: 1 }}>{children}</View>
     </View>
   );
 }
@@ -31,16 +19,7 @@ export function GlassCard({ children, style }: { children: React.ReactNode; styl
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: "#0A0A0A", overflow: "hidden" },
-  glowTopRight: {
-    position: "absolute",
-    top: -200,
-    right: -150,
-    width: 380,
-    height: 380,
-    borderRadius: 999,
-    ...Platform.select({ web: { filter: "blur(80px)" as any }, default: {} }),
-  },
+  root: { flex: 1, backgroundColor: theme.colors.bg },
 });
 
 const cardStyles = StyleSheet.create({
