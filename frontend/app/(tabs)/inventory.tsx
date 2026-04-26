@@ -25,7 +25,7 @@ import { confirm } from "../../src/confirm";
 import { ReportLostModal } from "../../src/sections/LostStatusSection";
 import { buildLocationTree, flattenLocationTree } from "../../src/locationTree";
 
-type Filter = "all" | "available" | "out" | "consumables" | "lost";
+type Filter = "all" | "available" | "out" | "consumables" | "lost" | "maintenance";
 
 export default function InventoryScreen() {
   const router = useRouter();
@@ -38,6 +38,7 @@ export default function InventoryScreen() {
   const [warningCount, setWarningCount] = useState(0);
   const [openClaims, setOpenClaims] = useState(0);
   const [maintDueCount, setMaintDueCount] = useState(0);
+  const [maintToolIds, setMaintToolIds] = useState<Set<string>>(new Set());
 
   // Bulk select mode
   const [selectMode, setSelectMode] = useState(false);
@@ -141,15 +142,22 @@ export default function InventoryScreen() {
         api.listTags().catch(() => []),
         api.upcomingMaintenance(60).catch(() => ({ overdue: [], due_soon: [] })),
       ]);
-      // Client-side filter for "lost" since backend doesn't expose this
-      const filteredTools = filter === "lost"
-        ? t.filter((x: any) => x?.lost_status?.is_lost)
-        : t;
+      // Build maintenance tool id set (overdue + due_soon)
+      const mItems: any[] = (mu as any)?.items || [];
+      const mIds = new Set<string>(mItems.map((x: any) => x.tool_id));
+      setMaintToolIds(mIds);
+      // Client-side filter for "lost" / "maintenance" since backend doesn't expose these as params
+      const filteredTools =
+        filter === "lost"
+          ? t.filter((x: any) => x?.lost_status?.is_lost)
+          : filter === "maintenance"
+          ? t.filter((x: any) => mIds.has(x.id))
+          : t;
       setTools(filteredTools);
       setAgg(a);
       setWarningCount((w.expiring?.length || 0) + (w.expired?.length || 0));
       setOpenClaims(cs?.totals?.open || 0);
-      setMaintDueCount((mu?.overdue?.length || 0) + (mu?.due_soon?.length || 0));
+      setMaintDueCount(mItems.length);
       setAllLocations(locs);
       setAllTags(tags);
     } catch (e) {
@@ -181,38 +189,6 @@ export default function InventoryScreen() {
           <Text style={styles.title}>TOOLBOX</Text>
           <Text style={styles.subtitle}>Inventory Tracker</Text>
         </View>
-        <TouchableOpacity
-          testID="header-maintenance-btn"
-          style={[
-            styles.headerBtn,
-            maintDueCount > 0 && {
-              borderColor: theme.colors.warning,
-              backgroundColor: "rgba(245,158,11,0.12)",
-            },
-          ]}
-          onPress={() => router.push("/maintenance")}
-        >
-          <Ionicons
-            name="settings"
-            size={18}
-            color={
-              maintDueCount > 0 ? theme.colors.warning : theme.colors.textPrimary
-            }
-          />
-          <Text
-            style={[
-              styles.headerBtnText,
-              maintDueCount > 0 && { color: theme.colors.warning },
-            ]}
-          >
-            MAINT
-          </Text>
-          {maintDueCount > 0 && (
-            <View style={styles.headerBadge}>
-              <Text style={styles.headerBadgeText}>{maintDueCount}</Text>
-            </View>
-          )}
-        </TouchableOpacity>
       </View>
 
       {prefs.warranty_alerts && warningCount > 0 && (
@@ -266,6 +242,7 @@ export default function InventoryScreen() {
             { k: "all", label: "ALL" },
             { k: "available", label: "AVAILABLE" },
             { k: "out", label: "CHECKED OUT" },
+            { k: "maintenance", label: maintDueCount > 0 ? `MAINT (${maintDueCount})` : "MAINT" },
             { k: "consumables", label: "CONSUMABLES" },
             { k: "lost", label: "LOST/STOLEN" },
           ].map((f) => (
