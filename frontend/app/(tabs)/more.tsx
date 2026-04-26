@@ -128,6 +128,20 @@ export default function MoreScreen() {
           testID="more-wishlist"
           onPress={() => router.push("/wishlist")}
         />
+        <Row
+          icon="document-text"
+          title="Reports"
+          subtitle="PDF / CSV exports & saved presets"
+          testID="more-reports"
+          onPress={() => router.push("/reports")}
+        />
+        <Row
+          icon="people"
+          title="Borrowers"
+          subtitle="Who has your tools"
+          testID="more-borrowers"
+          onPress={() => router.push("/borrowers")}
+        />
 
         <Text style={styles.sectionLabel}>DISPLAY</Text>
         <View style={styles.toggleRow}>
