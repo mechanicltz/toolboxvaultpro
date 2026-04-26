@@ -55,6 +55,7 @@ export default function ToolEdit() {
   const [hasWarranty, setHasWarranty] = useState(false);
   const [warranty, setWarranty] = useState({
     provider: "", contact: "", terms: "", length_months: "",
+    coverage_type: "months",
     start_date: "", expiry_date: "",
   });
 
@@ -115,6 +116,7 @@ export default function ToolEdit() {
             contact: t.warranty.contact || "",
             terms: t.warranty.terms || "",
             length_months: t.warranty.length_months ? String(t.warranty.length_months) : "",
+            coverage_type: t.warranty.coverage_type || "months",
             start_date: t.warranty.start_date || "",
             expiry_date: t.warranty.expiry_date || "",
           });
@@ -269,6 +271,7 @@ export default function ToolEdit() {
       warranty: hasWarranty ? {
         has_warranty: true,
         provider: warranty.provider, contact: warranty.contact, terms: warranty.terms,
+        coverage_type: warranty.coverage_type || "months",
         length_months: parseInt(warranty.length_months) || 0,
         start_date: warranty.start_date, expiry_date: warranty.expiry_date,
       } : { has_warranty: false },
@@ -566,19 +569,86 @@ export default function ToolEdit() {
                     onChange={(v) => onWarrantyChange("start_date", v)}
                   />
                 </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.label}>LENGTH (months)</Text>
-                  <TextInput testID="war-length" placeholder="12" placeholderTextColor={theme.colors.textMuted}
-                    value={warranty.length_months} style={styles.input} keyboardType="number-pad"
-                    onChangeText={(v) => onWarrantyChange("length_months", v)} />
-                </View>
               </View>
-              <Text style={styles.label}>EXPIRY DATE (auto)</Text>
-              <DateField
-                testID="war-expiry"
-                value={warranty.expiry_date}
-                onChange={(v) => onWarrantyChange("expiry_date", v)}
-              />
+
+              <Text style={styles.label}>WARRANTY LENGTH</Text>
+              <View style={styles.warrChipWrap}>
+                {[
+                  { lbl: "1 MO", t: "months", m: "1" },
+                  { lbl: "2 MO", t: "months", m: "2" },
+                  { lbl: "3 MO", t: "months", m: "3" },
+                  { lbl: "4 MO", t: "months", m: "4" },
+                  { lbl: "5 MO", t: "months", m: "5" },
+                  { lbl: "6 MO", t: "months", m: "6" },
+                  { lbl: "7 MO", t: "months", m: "7" },
+                  { lbl: "8 MO", t: "months", m: "8" },
+                  { lbl: "9 MO", t: "months", m: "9" },
+                  { lbl: "10 MO", t: "months", m: "10" },
+                  { lbl: "11 MO", t: "months", m: "11" },
+                  { lbl: "1 YR", t: "months", m: "12" },
+                  { lbl: "2 YR", t: "months", m: "24" },
+                  { lbl: "3 YR", t: "months", m: "36" },
+                  { lbl: "4 YR", t: "months", m: "48" },
+                  { lbl: "5 YR", t: "months", m: "60" },
+                  { lbl: "LIMITED", t: "limited", m: "0" },
+                  { lbl: "LIFETIME", t: "lifetime", m: "0" },
+                ].map((opt) => {
+                  const on =
+                    warranty.coverage_type === opt.t &&
+                    (opt.t !== "months" || warranty.length_months === opt.m);
+                  return (
+                    <TouchableOpacity
+                      key={opt.lbl}
+                      testID={`war-len-${opt.lbl.replace(/\s/g, "-")}`}
+                      style={[
+                        styles.warrChip,
+                        on && styles.warrChipOn,
+                        opt.t !== "months" && {
+                          borderColor: theme.colors.accent,
+                          borderWidth: on ? 0 : 1.5,
+                        },
+                      ]}
+                      onPress={() => {
+                        const next: any = {
+                          ...warranty,
+                          coverage_type: opt.t,
+                          length_months: opt.m,
+                        };
+                        if (opt.t !== "months") {
+                          next.expiry_date = "";
+                        } else if (next.start_date) {
+                          next.expiry_date = computeExpiry(next.start_date, opt.m);
+                        }
+                        setWarranty(next);
+                      }}
+                    >
+                      <Text style={[styles.warrChipText, on && styles.warrChipTextOn]}>
+                        {opt.lbl}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+
+              {warranty.coverage_type === "months" ? (
+                <>
+                  <Text style={styles.label}>EXPIRY DATE (auto)</Text>
+                  <DateField
+                    testID="war-expiry"
+                    value={warranty.expiry_date}
+                    onChange={(v) => onWarrantyChange("expiry_date", v)}
+                  />
+                </>
+              ) : (
+                <View style={styles.warrInfo}>
+                  <Ionicons name="information-circle" size={14} color={theme.colors.accent} />
+                  <Text style={styles.warrInfoText}>
+                    {warranty.coverage_type === "lifetime"
+                      ? "Lifetime warranty — no expiry date."
+                      : "Limited warranty — see terms below for coverage details."}
+                  </Text>
+                </View>
+              )}
               <Text style={styles.label}>TERMS / NOTES</Text>
               <TextInput testID="war-terms" placeholder="Coverage details..." placeholderTextColor={theme.colors.textMuted}
                 value={warranty.terms} style={[styles.input, { height: 70, textAlignVertical: "top" }]} multiline
@@ -935,5 +1005,54 @@ const styles = StyleSheet.create({
     fontWeight: "900",
     letterSpacing: 2.5,
     fontSize: 15,
+  },
+  warrChipWrap: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 6,
+    marginTop: 4,
+    marginBottom: 6,
+  },
+  warrChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: theme.radii.pill,
+    backgroundColor: theme.colors.bgSecondary,
+    minWidth: 56,
+    alignItems: "center",
+  },
+  warrChipOn: {
+    backgroundColor: theme.colors.accent,
+    borderColor: theme.colors.accent,
+  },
+  warrChipText: {
+    color: theme.colors.textSecondary,
+    fontSize: 12,
+    fontWeight: "800",
+    letterSpacing: 1,
+  },
+  warrChipTextOn: {
+    color: "#000",
+    fontWeight: "900",
+  },
+  warrInfo: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: "rgba(255,179,0,0.08)",
+    borderLeftWidth: 3,
+    borderLeftColor: theme.colors.accent,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 4,
+    marginTop: 4,
+  },
+  warrInfoText: {
+    color: theme.colors.textSecondary,
+    fontSize: 12,
+    flex: 1,
+    lineHeight: 16,
   },
 });

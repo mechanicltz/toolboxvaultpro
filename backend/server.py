@@ -216,6 +216,7 @@ class Warranty(BaseModel):
     contact: Optional[str] = ""
     terms: Optional[str] = ""
     length_months: Optional[int] = 0
+    coverage_type: Optional[str] = "months"  # "months" | "limited" | "lifetime"
     start_date: Optional[str] = ""  # YYYY-MM-DD
     expiry_date: Optional[str] = ""  # YYYY-MM-DD
     document: Optional[Document] = None
