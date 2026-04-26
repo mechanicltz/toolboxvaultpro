@@ -5,9 +5,11 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
+  TextInput,
   Alert,
   Platform,
   Switch,
+  Modal,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -15,9 +17,13 @@ import { useFocusEffect } from "expo-router";
 import * as Print from "expo-print";
 import * as Sharing from "expo-sharing";
 import * as FileSystem from "expo-file-system";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { theme } from "../../src/theme";
 import { api } from "../../src/api";
 import { buildLocationTree, flattenLocationTree } from "../../src/locationTree";
+import { DateField } from "../../src/DateField";
+
+const PRESET_KEY = "@reports_presets_v1";
 
 const escapeHtml = (s: any) =>
   String(s ?? "")
@@ -215,9 +221,31 @@ export default function ReportsScreen() {
   const [allTags, setAllTags] = useState<any[]>([]);
   const [allCategories, setAllCategories] = useState<any[]>([]);
   const [allLocations, setAllLocations] = useState<any[]>([]);
+  const [allDealers, setAllDealers] = useState<any[]>([]);
   const [tagFilter, setTagFilter] = useState<string[]>([]);
   const [categoryFilter, setCategoryFilter] = useState<string[]>([]);
   const [locationFilter, setLocationFilter] = useState<string[]>([]);
+  const [dealerFilter, setDealerFilter] = useState<string[]>([]);
+  // Date range filters (ISO YYYY-MM-DD strings; "" = unset)
+  const [purchaseFrom, setPurchaseFrom] = useState("");
+  const [purchaseTo, setPurchaseTo] = useState("");
+  const [warrantyFrom, setWarrantyFrom] = useState("");
+  const [warrantyTo, setWarrantyTo] = useState("");
+
+  // Presets
+  const [presets, setPresets] = useState<any[]>([]);
+  const [showPresetsModal, setShowPresetsModal] = useState(false);
+  const [showSavePresetModal, setShowSavePresetModal] = useState(false);
+  const [presetName, setPresetName] = useState("");
+
+  const loadPresets = useCallback(async () => {
+    try {
+      const raw = await AsyncStorage.getItem(PRESET_KEY);
+      setPresets(raw ? JSON.parse(raw) : []);
+    } catch {
+      setPresets([]);
+    }
+  }, []);
 
   useFocusEffect(
     useCallback(() => {
@@ -225,7 +253,9 @@ export default function ReportsScreen() {
       api.listTags().then(setAllTags).catch(() => {});
       api.listCategories().then(setAllCategories).catch(() => {});
       api.listLocations().then(setAllLocations).catch(() => {});
-    }, [])
+      api.listDealers().then(setAllDealers).catch(() => {});
+      loadPresets();
+    }, [loadPresets])
   );
 
   // Build set of effective location IDs (selected + all descendants)
@@ -261,19 +291,55 @@ export default function ReportsScreen() {
         if (locIds.size > 0) {
           if (!t.location_id || !locIds.has(t.location_id)) return false;
         }
+        if (dealerFilter.length > 0) {
+          if (!t.dealer_id || !dealerFilter.includes(t.dealer_id)) return false;
+        }
+        // Purchase date range
+        if (purchaseFrom || purchaseTo) {
+          const pd = (t.purchase_date || "").substring(0, 10);
+          if (!pd) return false;
+          if (purchaseFrom && pd < purchaseFrom) return false;
+          if (purchaseTo && pd > purchaseTo) return false;
+        }
+        // Warranty expiry date range
+        if (warrantyFrom || warrantyTo) {
+          const wd = (t.warranty?.expiry_date || "").substring(0, 10);
+          if (!wd) return false;
+          if (warrantyFrom && wd < warrantyFrom) return false;
+          if (warrantyTo && wd > warrantyTo) return false;
+        }
         return true;
       });
     },
-    [tagFilter, categoryFilter, effectiveLocationIds]
+    [
+      tagFilter,
+      categoryFilter,
+      effectiveLocationIds,
+      dealerFilter,
+      purchaseFrom,
+      purchaseTo,
+      warrantyFrom,
+      warrantyTo,
+    ]
   );
 
   const filterCount =
-    tagFilter.length + categoryFilter.length + locationFilter.length;
+    tagFilter.length +
+    categoryFilter.length +
+    locationFilter.length +
+    dealerFilter.length +
+    (purchaseFrom || purchaseTo ? 1 : 0) +
+    (warrantyFrom || warrantyTo ? 1 : 0);
 
   const clearFilters = () => {
     setTagFilter([]);
     setCategoryFilter([]);
     setLocationFilter([]);
+    setDealerFilter([]);
+    setPurchaseFrom("");
+    setPurchaseTo("");
+    setWarrantyFrom("");
+    setWarrantyTo("");
   };
 
   // Build a "filtered by ..." subtitle suffix
@@ -299,7 +365,85 @@ export default function ReportsScreen() {
         .map((n) => n.name);
       parts.push(`Locations: ${names.join(", ")}`);
     }
+    if (dealerFilter.length > 0) {
+      const names = allDealers
+        .filter((d) => dealerFilter.includes(d.id))
+        .map((d) => d.name);
+      parts.push(`Dealers: ${names.join(", ")}`);
+    }
+    if (purchaseFrom || purchaseTo) {
+      parts.push(`Purchased ${purchaseFrom || "—"} to ${purchaseTo || "—"}`);
+    }
+    if (warrantyFrom || warrantyTo) {
+      parts.push(`Warranty expires ${warrantyFrom || "—"} to ${warrantyTo || "—"}`);
+    }
     return parts.length > 0 ? `  ·  Filtered by ${parts.join(" · ")}` : "";
+  };
+
+  // Presets — save, load, delete
+  const persistPresets = async (next: any[]) => {
+    setPresets(next);
+    try {
+      await AsyncStorage.setItem(PRESET_KEY, JSON.stringify(next));
+    } catch {
+      /* ignore */
+    }
+  };
+
+  const captureSnapshot = () => ({
+    format,
+    selected,
+    tagFilter,
+    categoryFilter,
+    locationFilter,
+    dealerFilter,
+    purchaseFrom,
+    purchaseTo,
+    warrantyFrom,
+    warrantyTo,
+  });
+
+  const applyPreset = (p: any) => {
+    if (!p) return;
+    setFormat(p.format ?? "pdf");
+    setSelected(p.selected ?? DEFAULT_COLS);
+    setTagFilter(p.tagFilter ?? []);
+    setCategoryFilter(p.categoryFilter ?? []);
+    setLocationFilter(p.locationFilter ?? []);
+    setDealerFilter(p.dealerFilter ?? []);
+    setPurchaseFrom(p.purchaseFrom ?? "");
+    setPurchaseTo(p.purchaseTo ?? "");
+    setWarrantyFrom(p.warrantyFrom ?? "");
+    setWarrantyTo(p.warrantyTo ?? "");
+    setShowPresetsModal(false);
+  };
+
+  const savePreset = async () => {
+    const name = presetName.trim();
+    if (!name) {
+      Alert.alert("Required", "Please enter a name for this preset.");
+      return;
+    }
+    const snap = captureSnapshot();
+    const existingIdx = presets.findIndex((p) => p.name.toLowerCase() === name.toLowerCase());
+    let next: any[];
+    if (existingIdx >= 0) {
+      next = [...presets];
+      next[existingIdx] = { ...snap, name, updated_at: new Date().toISOString() };
+    } else {
+      next = [
+        ...presets,
+        { ...snap, name, created_at: new Date().toISOString() },
+      ];
+    }
+    await persistPresets(next);
+    setShowSavePresetModal(false);
+    setPresetName("");
+  };
+
+  const deletePreset = async (name: string) => {
+    const next = presets.filter((p) => p.name !== name);
+    await persistPresets(next);
   };
 
   const toggleCol = (id: string) => {
@@ -420,6 +564,43 @@ export default function ReportsScreen() {
       </View>
 
       <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 100 }}>
+        {/* Presets bar */}
+        <View style={styles.presetBar}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 6, flex: 1 }}>
+            <Ionicons name="bookmark" size={14} color={theme.colors.accent} />
+            <Text style={styles.presetBarLabel}>PRESETS</Text>
+            <Text style={styles.presetBarCount}>({presets.length})</Text>
+          </View>
+          <TouchableOpacity
+            testID="open-presets-btn"
+            style={styles.presetActionBtn}
+            onPress={() => setShowPresetsModal(true)}
+            disabled={presets.length === 0}
+          >
+            <Ionicons
+              name="folder-open"
+              size={14}
+              color={presets.length > 0 ? theme.colors.accent : theme.colors.textMuted}
+            />
+            <Text
+              style={[
+                styles.presetActionText,
+                presets.length === 0 && { color: theme.colors.textMuted },
+              ]}
+            >
+              LOAD
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            testID="save-preset-btn"
+            style={styles.presetActionBtn}
+            onPress={() => setShowSavePresetModal(true)}
+          >
+            <Ionicons name="save" size={14} color={theme.colors.accent} />
+            <Text style={styles.presetActionText}>SAVE</Text>
+          </TouchableOpacity>
+        </View>
+
         <View style={styles.statGrid}>
           <View style={styles.statCard}>
             <Text style={styles.statValue}>{stats.total_tools ?? 0}</Text>
@@ -621,8 +802,92 @@ export default function ReportsScreen() {
           </View>
         )}
 
+        {/* Dealers filter */}
+        {allDealers.length > 0 && (
+          <View style={styles.filterBlock}>
+            <Text style={styles.filterTitle}>
+              <Ionicons name="briefcase" size={12} color={theme.colors.accent} /> DEALERS
+            </Text>
+            <View style={styles.chipWrap}>
+              {allDealers.map((d) => {
+                const on = dealerFilter.includes(d.id);
+                return (
+                  <TouchableOpacity
+                    key={d.id}
+                    testID={`filter-dealer-${d.id}`}
+                    style={[styles.filterChip, on && styles.filterChipOn]}
+                    onPress={() =>
+                      setDealerFilter((cur) =>
+                        on ? cur.filter((x) => x !== d.id) : [...cur, d.id]
+                      )
+                    }
+                  >
+                    <Text
+                      style={[
+                        styles.filterChipText,
+                        on && styles.filterChipTextOn,
+                      ]}
+                    >
+                      {d.name}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
+        )}
+
+        {/* Purchase date range filter */}
+        <View style={styles.filterBlock}>
+          <Text style={styles.filterTitle}>
+            <Ionicons name="calendar" size={12} color={theme.colors.accent} /> PURCHASE DATE RANGE
+          </Text>
+          <View style={styles.dateRow}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.dateLabel}>FROM</Text>
+              <DateField
+                testID="filter-purchase-from"
+                value={purchaseFrom}
+                onChange={setPurchaseFrom}
+              />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.dateLabel}>TO</Text>
+              <DateField
+                testID="filter-purchase-to"
+                value={purchaseTo}
+                onChange={setPurchaseTo}
+              />
+            </View>
+          </View>
+        </View>
+
+        {/* Warranty expiry date range filter */}
+        <View style={styles.filterBlock}>
+          <Text style={styles.filterTitle}>
+            <Ionicons name="shield-checkmark" size={12} color={theme.colors.accent} /> WARRANTY EXPIRY RANGE
+          </Text>
+          <View style={styles.dateRow}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.dateLabel}>FROM</Text>
+              <DateField
+                testID="filter-warranty-from"
+                value={warrantyFrom}
+                onChange={setWarrantyFrom}
+              />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.dateLabel}>TO</Text>
+              <DateField
+                testID="filter-warranty-to"
+                value={warrantyTo}
+                onChange={setWarrantyTo}
+              />
+            </View>
+          </View>
+        </View>
+
         <View style={styles.colsHeader}>
-          <Text style={styles.sectionLabel}>COLUMNS ({selected.length}/{COLUMNS.length})</Text>
           <View style={{ flexDirection: "row", gap: 8 }}>
             <TouchableOpacity
               testID="cols-all"
@@ -763,6 +1028,109 @@ export default function ReportsScreen() {
           export from a tool's detail page.
         </Text>
       </ScrollView>
+
+      {/* Save preset modal */}
+      <Modal
+        visible={showSavePresetModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowSavePresetModal(false)}
+      >
+        <View style={styles.modalBg}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>SAVE AS PRESET</Text>
+            <Text style={styles.modalHint}>
+              Saves current format, columns, and all filters under a name you can reload later.
+            </Text>
+            <TextInput
+              testID="preset-name-input"
+              placeholder="e.g. Tax 2025 - Power Tools"
+              placeholderTextColor={theme.colors.textMuted}
+              value={presetName}
+              onChangeText={setPresetName}
+              style={styles.input}
+              autoFocus
+            />
+            <View style={{ flexDirection: "row", gap: 10, marginTop: 12 }}>
+              <TouchableOpacity
+                style={styles.btnGhost}
+                onPress={() => {
+                  setShowSavePresetModal(false);
+                  setPresetName("");
+                }}
+              >
+                <Text style={styles.btnGhostText}>CANCEL</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                testID="confirm-save-preset"
+                style={styles.btnPrimary}
+                onPress={savePreset}
+              >
+                <Text style={styles.btnPrimaryText}>SAVE</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Load presets modal */}
+      <Modal
+        visible={showPresetsModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowPresetsModal(false)}
+      >
+        <View style={[styles.modalBg, { justifyContent: "flex-end" }]}>
+          <View style={styles.modalSheet}>
+            <Text style={styles.modalTitle}>LOAD PRESET</Text>
+            <ScrollView style={{ maxHeight: 400 }}>
+              {presets.length === 0 ? (
+                <Text style={{ color: theme.colors.textMuted, padding: 16, textAlign: "center" }}>
+                  No saved presets yet.
+                </Text>
+              ) : (
+                presets.map((p) => {
+                  const fcount =
+                    (p.tagFilter?.length || 0) +
+                    (p.categoryFilter?.length || 0) +
+                    (p.locationFilter?.length || 0) +
+                    (p.dealerFilter?.length || 0) +
+                    (p.purchaseFrom || p.purchaseTo ? 1 : 0) +
+                    (p.warrantyFrom || p.warrantyTo ? 1 : 0);
+                  return (
+                    <View key={p.name} style={styles.presetItem}>
+                      <TouchableOpacity
+                        testID={`load-preset-${p.name}`}
+                        style={{ flex: 1 }}
+                        onPress={() => applyPreset(p)}
+                      >
+                        <Text style={styles.presetItemName}>{p.name}</Text>
+                        <Text style={styles.presetItemMeta}>
+                          {(p.format || "pdf").toUpperCase()} · {p.selected?.length || 0} cols · {fcount} filter{fcount === 1 ? "" : "s"}
+                        </Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        testID={`delete-preset-${p.name}`}
+                        onPress={() => deletePreset(p.name)}
+                        hitSlop={10}
+                        style={{ padding: 8 }}
+                      >
+                        <Ionicons name="trash-outline" size={18} color={theme.colors.danger} />
+                      </TouchableOpacity>
+                    </View>
+                  );
+                })
+              )}
+            </ScrollView>
+            <TouchableOpacity
+              style={styles.btnGhost}
+              onPress={() => setShowPresetsModal(false)}
+            >
+              <Text style={styles.btnGhostText}>CLOSE</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -925,6 +1293,150 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     letterSpacing: 1,
     flex: 1,
+  },
+  // Presets bar + items
+  presetBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: theme.colors.bgSecondary,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    marginBottom: 14,
+    borderRadius: 4,
+  },
+  presetBarLabel: {
+    color: theme.colors.textPrimary,
+    fontSize: 11,
+    fontWeight: "900",
+    letterSpacing: 2,
+  },
+  presetBarCount: {
+    color: theme.colors.textMuted,
+    fontSize: 11,
+    fontWeight: "700",
+  },
+  presetActionBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: 4,
+  },
+  presetActionText: {
+    color: theme.colors.accent,
+    fontSize: 10,
+    fontWeight: "900",
+    letterSpacing: 1.5,
+  },
+  presetItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.borderSubtle,
+  },
+  presetItemName: {
+    color: theme.colors.textPrimary,
+    fontSize: 14,
+    fontWeight: "800",
+  },
+  presetItemMeta: {
+    color: theme.colors.textMuted,
+    fontSize: 11,
+    fontWeight: "700",
+    marginTop: 3,
+    letterSpacing: 0.5,
+    textTransform: "uppercase",
+  },
+  // Date row
+  dateRow: { flexDirection: "row", gap: 10 },
+  dateLabel: {
+    color: theme.colors.textMuted,
+    fontSize: 9,
+    fontWeight: "800",
+    letterSpacing: 1.5,
+    marginBottom: 4,
+  },
+  // Modals
+  modalBg: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.7)",
+    justifyContent: "center",
+    padding: 24,
+  },
+  modalCard: {
+    backgroundColor: theme.colors.bgSecondary,
+    padding: 22,
+    borderRadius: theme.radii.md,
+    borderTopWidth: 2,
+    borderTopColor: theme.colors.accent,
+  },
+  modalSheet: {
+    backgroundColor: theme.colors.bgSecondary,
+    padding: 22,
+    borderTopWidth: 2,
+    borderTopColor: theme.colors.accent,
+    borderTopLeftRadius: theme.radii.md,
+    borderTopRightRadius: theme.radii.md,
+  },
+  modalTitle: {
+    color: theme.colors.textPrimary,
+    fontSize: 16,
+    fontWeight: "900",
+    letterSpacing: 2,
+    marginBottom: 10,
+  },
+  modalHint: {
+    color: theme.colors.textSecondary,
+    fontSize: 12,
+    marginBottom: 12,
+    lineHeight: 16,
+  },
+  input: {
+    backgroundColor: theme.colors.bg,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    color: theme.colors.textPrimary,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    borderRadius: 4,
+    fontSize: 15,
+  },
+  btnPrimary: {
+    flex: 1,
+    height: 44,
+    backgroundColor: theme.colors.accent,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: theme.radii.sm,
+  },
+  btnPrimaryText: {
+    color: "#000",
+    fontWeight: "900",
+    letterSpacing: 2,
+    fontSize: 14,
+  },
+  btnGhost: {
+    flex: 1,
+    height: 44,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: theme.radii.sm,
+  },
+  btnGhostText: {
+    color: theme.colors.textPrimary,
+    fontWeight: "800",
+    letterSpacing: 2,
+    fontSize: 14,
   },
   reportCard: {
     flexDirection: "row",
