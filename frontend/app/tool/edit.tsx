@@ -298,11 +298,28 @@ export default function ToolEdit() {
     <SafeAreaView style={styles.container} edges={["top"]}>
       <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1 }}>
         <View style={styles.topBar}>
-          <TouchableOpacity testID="cancel-btn" onPress={() => router.back()}>
+          <TouchableOpacity
+            testID="cancel-btn"
+            onPress={() => {
+              if (router.canGoBack()) {
+                router.back();
+              } else {
+                router.replace("/");
+              }
+            }}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            style={styles.topBarBtn}
+          >
             <Ionicons name="close" size={26} color={theme.colors.textPrimary} />
           </TouchableOpacity>
           <Text style={styles.topTitle}>{isEdit ? "EDIT TOOL" : "NEW TOOL"}</Text>
-          <TouchableOpacity testID="save-tool-btn" onPress={save} disabled={saving}>
+          <TouchableOpacity
+            testID="save-tool-btn"
+            onPress={save}
+            disabled={saving}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            style={styles.topBarBtn}
+          >
             {saving ? <ActivityIndicator color={theme.colors.accent} /> : <Text style={styles.saveText}>SAVE</Text>}
           </TouchableOpacity>
         </View>
@@ -780,7 +797,15 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.colors.bg },
   topBar: {
     flexDirection: "row", alignItems: "center", justifyContent: "space-between",
-    paddingHorizontal: 20, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: theme.colors.border,
+    paddingHorizontal: 12, paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: theme.colors.border,
+  },
+  topBarBtn: {
+    paddingHorizontal: 8,
+    paddingVertical: 8,
+    minWidth: 44,
+    minHeight: 44,
+    alignItems: "center",
+    justifyContent: "center",
   },
   topTitle: { color: theme.colors.textPrimary, fontSize: 16, fontWeight: "900", letterSpacing: 2 },
   saveText: { color: theme.colors.accent, fontWeight: "900", letterSpacing: 2, fontSize: 14 },
