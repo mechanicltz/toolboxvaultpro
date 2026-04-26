@@ -194,20 +194,6 @@ export default function InventoryScreen() {
         </TouchableOpacity>
       )}
 
-      {openClaims > 0 && (
-        <TouchableOpacity
-          testID="claims-banner"
-          style={styles.claimsBanner}
-          onPress={() => router.push("/warranty-claims")}
-        >
-          <Ionicons name="construct" size={18} color={theme.colors.danger} />
-          <Text style={styles.claimsBannerText}>
-            {openClaims} open warranty claim{openClaims > 1 ? "s" : ""} — tap to view
-          </Text>
-          <Ionicons name="chevron-forward" size={16} color={theme.colors.danger} />
-        </TouchableOpacity>
-      )}
-
       <View style={styles.searchRow}>
         <View style={[styles.searchBox, { flex: 1 }]}>
           <Ionicons name="search" size={18} color={theme.colors.textMuted} />
@@ -241,16 +227,6 @@ export default function InventoryScreen() {
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.filterRow}
         >
-          <TouchableOpacity
-            key="claims-link"
-            testID="filter-claims"
-            onPress={() => router.push("/warranty-claims")}
-            style={[styles.chip, styles.chipClaims]}
-          >
-            <Text style={[styles.chipText, styles.chipClaimsText]}>
-              🛡️ WARRANTY CLAIMS
-            </Text>
-          </TouchableOpacity>
           {[
             { k: "all", label: "ALL" },
             { k: "available", label: "AVAILABLE" },

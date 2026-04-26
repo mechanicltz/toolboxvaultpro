@@ -16,6 +16,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter, useFocusEffect } from "expo-router";
 import { theme } from "../../src/theme";
 import { api } from "../../src/api";
+import { confirm } from "../../src/confirm";
 
 type Tab = "open" | "completed";
 
@@ -24,19 +25,22 @@ export default function DealerClaimsScreen() {
   const router = useRouter();
   const [dealer, setDealer] = useState<any>(null);
   const [tools, setTools] = useState<any[]>([]);
+  const [archivedClaims, setArchivedClaims] = useState<any[]>([]);
   const [tab, setTab] = useState<Tab>("open");
   const [refreshing, setRefreshing] = useState(false);
 
   const load = useCallback(async () => {
     if (!id) return;
     try {
-      const [d, allTools] = await Promise.all([
+      const [d, allTools, archived] = await Promise.all([
         api.getDealer(id),
         api.listTools({ dealer_id: id }),
+        api.listWarrantyClaims({ dealer_id: id, archived: true }).catch(() => []),
       ]);
       setDealer(d);
-      // Only keep broken tools
+      // Only keep broken tools for live view
       setTools((allTools || []).filter((t: any) => t.needs_repair));
+      setArchivedClaims(archived || []);
     } catch {
       /* ignore */
     }
@@ -58,7 +62,33 @@ export default function DealerClaimsScreen() {
     (t.repair_info?.repair_status || "").toLowerCase() === "repaired";
 
   const open = tools.filter((t) => !isRepaired(t));
-  const completed = tools.filter((t) => isRepaired(t));
+  // Convert archived claims into pseudo-tools for unified display
+  const completedFromTools = tools.filter((t) => isRepaired(t));
+  const completedFromClaims = (archivedClaims || []).map((c: any) => ({
+    id: c.tool_id || c.id,
+    name: c.tool_name || "Tool",
+    serial_number: c.serial_number || "",
+    purchase_date: c.purchase_date || "",
+    photos: c.tool_photo ? [c.tool_photo] : [],
+    repair_info: {
+      company_notified: c.repair_company || "",
+      contact: c.contact || "",
+      notified_at: c.notified_at || "",
+      expected_completion: c.expected_completion || c.completed_at?.substring?.(0, 10) || "",
+      repair_status: c.claim_status === "rejected" ? "Rejected" : "Repaired",
+      notes: c.notes || "",
+      broken_photo: c.broken_photo || "",
+    },
+    needs_repair: false,
+    _archivedClaim: true,
+    _completedAt: c.completed_at,
+  }));
+  // Dedupe — prefer archive entry over the live tool's repair_info if present
+  const seenIds = new Set(completedFromClaims.map((x) => x.id));
+  const completed = [
+    ...completedFromClaims,
+    ...completedFromTools.filter((t) => !seenIds.has(t.id)),
+  ];
   const visible = tab === "open" ? open : completed;
 
   const notify = async (t: any, mode: "email" | "sms") => {
@@ -68,17 +98,12 @@ export default function DealerClaimsScreen() {
       const email = (agent?.email || "").trim();
       // Prompt to add contact info if missing
       if ((mode === "email" && !email) || (mode === "sms" && !phone)) {
-        const target = mode === "email" ? "email" : "phone number";
-        const ok = await new Promise<boolean>((resolve) => {
-          Alert.alert(
-            `No ${target} on file`,
-            `${dealer?.name || "Dealer"} doesn't have a${mode === "email" ? "n email" : " phone number"} for the current agent.\n\nWould you like to open the dealer page to add it?`,
-            [
-              { text: "Cancel", style: "cancel", onPress: () => resolve(false) },
-              { text: "Open Dealer", onPress: () => resolve(true) },
-            ]
-          );
-        });
+        const target = mode === "email" ? "email address" : "phone number";
+        const ok = await confirm(
+          `No ${target} on file`,
+          `${dealer?.name || "Dealer"} doesn't have a${mode === "email" ? "n " : " "}${target} for the current agent.\n\nWould you like to open the dealer page to add it?`,
+          "Open Dealer"
+        );
         if (ok) router.push(`/dealer/${dealer.id}`);
         return;
       }
@@ -88,15 +113,17 @@ export default function DealerClaimsScreen() {
         ``,
         `I have a tool that needs repair / warranty.`,
         `Tool: ${t.name}`,
-        `Serial Number: ${t.serial_number || t.serial || "N/A"}`,
+        `Serial Number: ${t.serial_number || "N/A"}`,
         `Purchased Date: ${t.purchase_date || "N/A"}`,
       ];
       if (t.repair_info?.broken_photo) {
-        lines.push(`(A photo of the broken item is attached / available.)`);
+        lines.push(`(A photo of the broken item is available.)`);
       }
       lines.push(
         ``,
-        `Please let me know when I can expect a repair / replacement. Thank you.`
+        `Please let me know when I can expect a repair / replacement.`,
+        ``,
+        `Thank you.`
       );
       const body = encodeURIComponent(lines.join("\n"));
       let url = "";

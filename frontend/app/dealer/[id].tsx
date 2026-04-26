@@ -141,13 +141,8 @@ export default function DealerDetail() {
         </View>
       </View>
 
-      <ScrollView contentContainerStyle={{ paddingBottom: 60 }}>
+      <ScrollView contentContainerStyle={{ paddingBottom: 100 }}>
         <View style={styles.heroBox}>
-          <View style={styles.bigAvatar}>
-            <Text style={styles.bigAvatarText}>
-              {dealer.name.substring(0, 2).toUpperCase()}
-            </Text>
-          </View>
           <Text style={styles.dealerName}>{dealer.name}</Text>
         </View>
 
@@ -159,21 +154,9 @@ export default function DealerDetail() {
           <Cell label="Agents" value={String((dealer.agents || []).length)} />
         </View>
 
-        <BalanceSection dealer={dealer} onChange={load} />
-
-        <Text style={styles.sectionLabel}>CONTACT</Text>
-        <ContactRow icon="call" label={dealer.phone} onPress={() => callOrEmail(dealer.phone)} />
-        <ContactRow icon="globe" label={dealer.website} onPress={() => callOrEmail(dealer.website)} />
-        <ContactRow icon="location" label={dealer.address} />
-        {!!dealer.notes && (
-          <View style={[styles.contactRow, { alignItems: "flex-start" }]}>
-            <Ionicons name="document-text-outline" size={18} color={theme.colors.accent} />
-            <Text style={[styles.contactText, { flex: 1 }]}>{dealer.notes}</Text>
-          </View>
-        )}
-
+        {/* AGENTS — placed at top per user preference */}
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionLabel}>AGENTS ({(dealer.agents || []).length})</Text>
+          <Text style={styles.sectionLabelStrong}>AGENTS ({(dealer.agents || []).length})</Text>
           <TouchableOpacity
             testID="add-agent-btn"
             style={styles.addBtn}
@@ -254,7 +237,18 @@ export default function DealerDetail() {
           );
         })}
 
-        <Text style={styles.sectionLabel}>TOOLS PURCHASED FROM {dealer.name.toUpperCase()}</Text>
+        {/* TOOLS PURCHASED — right under agents, with money total */}
+        <View style={styles.toolsHeader}>
+          <Text style={styles.sectionLabelStrong}>
+            TOOLS PURCHASED FROM {dealer.name.toUpperCase()}
+          </Text>
+          {prefs.show_prices && (
+            <View style={styles.totalPill}>
+              <Text style={styles.totalPillLabel}>TOTAL SPENT</Text>
+              <Text style={styles.totalPillValue}>${total.toFixed(2)}</Text>
+            </View>
+          )}
+        </View>
         {tools.length === 0 ? (
           <Text style={styles.empty}>No tools assigned yet.</Text>
         ) : (
@@ -265,7 +259,7 @@ export default function DealerDetail() {
               style={styles.toolRow}
               onPress={() => router.push(`/tool/${t.id}`)}
             >
-              <View>
+              <View style={{ flex: 1 }}>
                 <Text style={styles.toolName}>{t.name}</Text>
                 <Text style={styles.toolMeta}>
                   {t.purchased_from_agent_name
@@ -278,6 +272,20 @@ export default function DealerDetail() {
             </TouchableOpacity>
           ))
         )}
+
+        <Text style={styles.sectionLabel}>CONTACT</Text>
+        <ContactRow icon="call" label={dealer.phone} onPress={() => callOrEmail(dealer.phone)} />
+        <ContactRow icon="globe" label={dealer.website} onPress={() => callOrEmail(dealer.website)} />
+        <ContactRow icon="location" label={dealer.address} />
+        {!!dealer.notes && (
+          <View style={[styles.contactRow, { alignItems: "flex-start" }]}>
+            <Ionicons name="document-text-outline" size={18} color={theme.colors.accent} />
+            <Text style={[styles.contactText, { flex: 1 }]}>{dealer.notes}</Text>
+          </View>
+        )}
+
+        {/* Payment Accounts — moved to bottom */}
+        <BalanceSection dealer={dealer} onChange={load} />
       </ScrollView>
 
       {/* Edit dealer modal */}
@@ -427,6 +435,42 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 16,
     paddingBottom: 8,
+  },
+  sectionLabelStrong: {
+    color: theme.colors.textPrimary,
+    fontSize: 13,
+    fontWeight: "900",
+    letterSpacing: 2,
+    paddingHorizontal: 20,
+    paddingTop: 18,
+    paddingBottom: 10,
+    flexShrink: 1,
+  },
+  toolsHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingRight: 20,
+  },
+  totalPill: {
+    backgroundColor: theme.colors.accent,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 4,
+    alignItems: "center",
+    marginTop: 12,
+  },
+  totalPillLabel: {
+    color: "#000",
+    fontSize: 8,
+    fontWeight: "900",
+    letterSpacing: 1.2,
+  },
+  totalPillValue: {
+    color: "#000",
+    fontSize: 14,
+    fontWeight: "900",
+    letterSpacing: 0.5,
   },
   sectionHeader: {
     flexDirection: "row",

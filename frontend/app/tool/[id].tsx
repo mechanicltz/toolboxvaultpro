@@ -121,37 +121,56 @@ export default function ToolDetail() {
     try {
       const dealers = await api.listDealers();
       const dealer = dealers.find((d: any) => d.id === t.dealer_id);
+      if (!dealer) {
+        const ok = await confirm(
+          "No dealer assigned",
+          "This tool has no dealer. Add a dealer to send a repair / warranty request.",
+          "Open Dealers"
+        );
+        if (ok) router.push("/dealers");
+        return;
+      }
       const agent = dealer?.agents?.find((a: any) => a.id === dealer?.current_agent_id);
       const phone = (agent?.phone || dealer?.phone || "").replace(/[^\d+]/g, "");
       const email = (agent?.email || "").trim();
-      const subject = encodeURIComponent(`Repair request: ${t.name}`);
-      const body = encodeURIComponent(
-        [
-          `Hello${agent?.name ? ` ${agent.name}` : ""},`,
-          ``,
-          `I have a tool that needs repair / warranty service:`,
-          ``,
-          `Tool: ${t.name}`,
-          t.description ? `Description: ${t.description}` : "",
-          t.purchase_date ? `Purchased: ${t.purchase_date}` : "",
-          dealer?.name ? `Dealer: ${dealer.name}` : "",
-          t.repair_info?.notes ? `Issue: ${t.repair_info.notes}` : "",
-          ``,
-          `Please advise next steps. Thank you.`,
-        ].filter(Boolean).join("\n")
+
+      // Prompt to add contact info if missing
+      if ((mode === "email" && !email) || (mode === "sms" && !phone)) {
+        const target = mode === "email" ? "email address" : "phone number";
+        const ok = await confirm(
+          `No ${target} on file`,
+          `${dealer.name} doesn't have a${mode === "email" ? "n " : " "}${target} for the current agent.\n\nWould you like to open the dealer page to add it?`,
+          "Open Dealer"
+        );
+        if (ok) router.push(`/dealer/${dealer.id}`);
+        return;
+      }
+
+      // Exact template requested
+      const lines = [
+        `Hello ${dealer.name},`,
+        ``,
+        `I have a tool that needs repair / warranty.`,
+        `Tool: ${t.name}`,
+        `Serial Number: ${t.serial_number || "N/A"}`,
+        `Purchased Date: ${t.purchase_date || "N/A"}`,
+      ];
+      if (t.repair_info?.broken_photo) {
+        lines.push(`(A photo of the broken item is available.)`);
+      }
+      lines.push(
+        ``,
+        `Please let me know when I can expect a repair / replacement.`,
+        ``,
+        `Thank you.`
       );
+      const subject = encodeURIComponent(`Repair / Warranty: ${t.name}`);
+      const body = encodeURIComponent(lines.join("\n"));
+
       let url = "";
       if (mode === "email") {
-        if (!email) {
-          Alert.alert("No email", "Set an email on the agent or dealer first.");
-          return;
-        }
         url = `mailto:${email}?subject=${subject}&body=${body}`;
       } else {
-        if (!phone) {
-          Alert.alert("No phone", "Set a phone on the agent or dealer first.");
-          return;
-        }
         url = `sms:${phone}?body=${body}`;
       }
       if (Platform.OS === "web") {

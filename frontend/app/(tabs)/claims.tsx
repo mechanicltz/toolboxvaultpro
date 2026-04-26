@@ -22,17 +22,20 @@ export default function ClaimsScreen() {
   const [mode, setMode] = useState<Mode>("dealers");
   const [dealers, setDealers] = useState<any[]>([]);
   const [tools, setTools] = useState<any[]>([]);
+  const [summary, setSummary] = useState<any>({ totals: {}, dealers: [] });
   const [refreshing, setRefreshing] = useState(false);
   const [search, setSearch] = useState("");
 
   const load = useCallback(async () => {
     try {
-      const [d, t] = await Promise.all([
+      const [d, t, s] = await Promise.all([
         api.listDealers(),
         api.listTools({ needs_repair: true }),
+        api.warrantyClaimsSummary().catch(() => ({ totals: {}, dealers: [] })),
       ]);
       setDealers(d || []);
       setTools(t || []);
+      setSummary(s || { totals: {}, dealers: [] });
     } catch {
       /* ignore */
     }
@@ -139,8 +142,10 @@ export default function ClaimsScreen() {
               <Text style={styles.empty}>No dealers yet.</Text>
             ) : (
               filteredDealers.map((d) => {
-                const opened = (openByDealer[d.id] || []).length;
-                const done = (completedByDealer[d.id] || []).length;
+                const liveOpened = (openByDealer[d.id] || []).length;
+                const summaryEntry = (summary?.dealers || []).find((x: any) => x.dealer_id === d.id);
+                const opened = Math.max(liveOpened, summaryEntry?.open || 0);
+                const done = summaryEntry?.completed || 0;
                 return (
                   <TouchableOpacity
                     key={d.id}
