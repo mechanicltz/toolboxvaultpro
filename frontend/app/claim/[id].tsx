@@ -75,7 +75,21 @@ export default function ClaimDetailScreen() {
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} hitSlop={10}>
+        <TouchableOpacity
+          testID="claim-back-btn"
+          onPress={() => {
+            try {
+              if (router.canGoBack()) {
+                router.back();
+              } else {
+                router.replace("/claims");
+              }
+            } catch {
+              router.replace("/claims");
+            }
+          }}
+          hitSlop={10}
+        >
           <Ionicons name="arrow-back" size={24} color={theme.colors.textPrimary} />
         </TouchableOpacity>
         <View style={{ flex: 1 }}>

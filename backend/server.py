@@ -1037,6 +1037,13 @@ async def update_tool(tool_id: str, payload: ToolUpdate):
     updates = {k: v for k, v in payload.dict().items() if v is not None}
     updates["updated_at"] = now_iso()
 
+    # When the caller marks the tool as Repaired (needs_repair: false, repair_info: null),
+    # Pydantic's None values get filtered out above. Restore the null so the tool's
+    # repair_info (including broken_photo) is actually cleared — otherwise the next claim
+    # would inherit the previous claim's photo and notes.
+    if payload.needs_repair is False and doc.get("needs_repair"):
+        updates["repair_info"] = None
+
     # Auto-checkin when a tool is being newly flagged as broken / needing repair
     becomes_broken = (
         updates.get("needs_repair") is True
