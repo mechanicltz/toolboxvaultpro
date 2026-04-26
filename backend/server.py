@@ -921,7 +921,7 @@ async def add_dealer_transaction(dealer_id: str, payload: TransactionCreate):
         raise HTTPException(400, "account must be 'credit' or 'personal'")
     if payload.type not in ("payment", "charge"):
         raise HTTPException(400, "type must be 'payment' or 'charge'")
-    amount = abs(float(payload.amount or 0))
+    amount = float(payload.amount or 0)
     if amount <= 0:
         raise HTTPException(400, "amount must be > 0")
     tx = BalanceTransaction(
