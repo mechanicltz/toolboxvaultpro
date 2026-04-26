@@ -29,6 +29,7 @@ export default function InventoryScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [filter, setFilter] = useState<Filter>("all");
   const [warningCount, setWarningCount] = useState(0);
+  const [openClaims, setOpenClaims] = useState(0);
 
   const load = useCallback(async () => {
     const params: any = { search: search || undefined };
@@ -36,14 +37,16 @@ export default function InventoryScreen() {
     if (filter === "out") params.checked_out = true;
     if (filter === "consumables") params.is_consumable = true;
     try {
-      const [t, a, w] = await Promise.all([
+      const [t, a, w, cs] = await Promise.all([
         api.listTools(params),
         api.aggregate(params),
         prefs.warranty_alerts ? api.warrantyAlerts(60) : Promise.resolve({ expiring: [], expired: [] }),
+        api.warrantyClaimsSummary().catch(() => ({ totals: { open: 0 } })),
       ]);
       setTools(t);
       setAgg(a);
       setWarningCount((w.expiring?.length || 0) + (w.expired?.length || 0));
+      setOpenClaims(cs?.totals?.open || 0);
     } catch (e) {
       console.error(e);
     }
@@ -86,6 +89,20 @@ export default function InventoryScreen() {
             {warningCount} warranty alert{warningCount > 1 ? "s" : ""} — tap to view
           </Text>
           <Ionicons name="chevron-forward" size={16} color={theme.colors.warning} />
+        </TouchableOpacity>
+      )}
+
+      {openClaims > 0 && (
+        <TouchableOpacity
+          testID="claims-banner"
+          style={styles.claimsBanner}
+          onPress={() => router.push("/warranty-claims")}
+        >
+          <Ionicons name="construct" size={18} color={theme.colors.danger} />
+          <Text style={styles.claimsBannerText}>
+            {openClaims} open warranty claim{openClaims > 1 ? "s" : ""} — tap to view
+          </Text>
+          <Ionicons name="chevron-forward" size={16} color={theme.colors.danger} />
         </TouchableOpacity>
       )}
 
@@ -269,6 +286,26 @@ const styles = StyleSheet.create({
   },
   warrantyText: {
     color: theme.colors.warning,
+    flex: 1,
+    fontSize: 12,
+    fontWeight: "700",
+    letterSpacing: 0.5,
+  },
+  claimsBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginHorizontal: 20,
+    marginBottom: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    backgroundColor: "rgba(239, 68, 68, 0.12)",
+    borderWidth: 1,
+    borderColor: theme.colors.danger,
+    borderRadius: 4,
+  },
+  claimsBannerText: {
+    color: theme.colors.danger,
     flex: 1,
     fontSize: 12,
     fontWeight: "700",

@@ -10,10 +10,14 @@ import {
   ActivityIndicator,
   Modal,
   Alert,
+  Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter, useFocusEffect } from "expo-router";
+import * as Print from "expo-print";
+import * as Sharing from "expo-sharing";
+import * as FileSystem from "expo-file-system";
 import { theme } from "../src/theme";
 import { api } from "../src/api";
 import { confirm } from "../src/confirm";
@@ -112,6 +116,214 @@ export default function WarrantyClaimsScreen() {
     }
   };
 
+  const [busy, setBusy] = useState(false);
+
+  const fetchAllForExport = async () => {
+    // Pull all claims (active + completed) once
+    const claims = await api.listWarrantyClaims();
+    return claims;
+  };
+
+  const groupByDealer = (claims: any[]) => {
+    const map = new Map<string, { dealer_name: string; items: any[] }>();
+    claims.forEach((c) => {
+      const key = c.dealer_id || "_none_";
+      const name = c.dealer_name || "No Dealer";
+      if (!map.has(key)) map.set(key, { dealer_name: name, items: [] });
+      map.get(key)!.items.push(c);
+    });
+    return Array.from(map.values()).sort((a, b) => a.dealer_name.localeCompare(b.dealer_name));
+  };
+
+  const exportPdf = async () => {
+    if (busy) return;
+    setBusy(true);
+    let printWin: Window | null = null;
+    if (Platform.OS === "web") {
+      printWin = window.open("", "_blank");
+      if (!printWin) {
+        Alert.alert("Popup blocked", "Please allow popups for this site.");
+        setBusy(false);
+        return;
+      }
+      printWin.document.write(
+        "<!doctype html><title>Loading...</title><body style='font-family:Helvetica;padding:40px;color:#666'>Generating warranty claims report...</body>"
+      );
+    }
+    try {
+      const claims = await fetchAllForExport();
+      const groups = groupByDealer(claims);
+      const esc = (s: any) => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;");
+      const labelOf = (k: string) => statusMeta(k).label;
+      const colorOf = (k: string) => {
+        const m = statusMeta(k);
+        return m.color;
+      };
+      const totals = summary?.totals || {};
+      const today = new Date().toLocaleDateString();
+
+      const groupHtml = groups
+        .map((g) => {
+          const open = g.items.filter((c) => c.claim_status !== "completed" && c.claim_status !== "rejected");
+          const done = g.items.filter((c) => c.claim_status === "completed" || c.claim_status === "rejected");
+          const rows = (arr: any[]) =>
+            arr
+              .map(
+                (c) => `<tr>
+                  <td>${esc(c.tool_name)}</td>
+                  <td><span class="pill" style="background:${colorOf(c.claim_status)}22;color:${colorOf(c.claim_status)};border:1px solid ${colorOf(c.claim_status)}">${esc(labelOf(c.claim_status).toUpperCase())}</span></td>
+                  <td>${esc(c.repair_company || "—")}</td>
+                  <td>${esc(c.contact || "—")}</td>
+                  <td>${esc(c.notified_at || "—")}</td>
+                  <td>${esc(c.expected_completion || "—")}</td>
+                  <td>${esc(c.completed_at ? c.completed_at.substring(0, 10) : "—")}</td>
+                  <td style="font-style:italic;color:#666">${esc(c.notes || "")}</td>
+                </tr>`
+              )
+              .join("");
+          return `
+            <h2>${esc(g.dealer_name)}</h2>
+            <div class="counts">
+              <span class="count open">${open.length} OPEN</span>
+              <span class="count done">${done.length} CLOSED</span>
+            </div>
+            ${
+              open.length > 0
+                ? `<h3>Currently Broken</h3>
+                   <table>
+                     <thead><tr><th>Tool</th><th>Status</th><th>Company</th><th>Contact</th><th>Notified</th><th>Expected Back</th><th>Closed</th><th>Notes</th></tr></thead>
+                     <tbody>${rows(open)}</tbody>
+                   </table>`
+                : `<p class="muted">No currently broken items.</p>`
+            }
+            ${
+              done.length > 0
+                ? `<h3>Completed History</h3>
+                   <table>
+                     <thead><tr><th>Tool</th><th>Status</th><th>Company</th><th>Contact</th><th>Notified</th><th>Expected Back</th><th>Closed</th><th>Notes</th></tr></thead>
+                     <tbody>${rows(done)}</tbody>
+                   </table>`
+                : ""
+            }
+          `;
+        })
+        .join("<hr/>");
+
+      const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><style>
+        body{font-family:Helvetica;margin:24px;color:#111}
+        h1{font-size:24px;letter-spacing:2px;text-transform:uppercase;border-bottom:3px solid #FFB300;padding-bottom:8px;margin-bottom:8px}
+        .meta{color:#666;font-size:11px;text-transform:uppercase;letter-spacing:1px;margin-bottom:16px}
+        .totals{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:24px}
+        .totalCard{flex:1;min-width:120px;border:1px solid #ddd;padding:10px;border-radius:4px}
+        .totalLabel{font-size:9px;color:#666;text-transform:uppercase;letter-spacing:1.5px}
+        .totalValue{font-size:22px;font-weight:900;margin-top:4px}
+        h2{font-size:16px;letter-spacing:1px;text-transform:uppercase;margin:18px 0 6px;color:#FFB300}
+        h3{font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:#666;margin:14px 0 6px}
+        .counts{display:flex;gap:8px;margin-bottom:8px}
+        .count{font-size:10px;font-weight:800;padding:3px 8px;border:1px solid;border-radius:2px;letter-spacing:1px}
+        .count.open{color:#dc2626;border-color:#dc2626}
+        .count.done{color:#16a34a;border-color:#16a34a}
+        .muted{color:#999;font-style:italic;font-size:12px}
+        table{width:100%;border-collapse:collapse;font-size:11px;margin-bottom:8px}
+        th{background:#111;color:#FFB300;text-align:left;padding:6px;font-size:9px;letter-spacing:1px}
+        td{padding:6px;border-bottom:1px solid #eee;vertical-align:top}
+        .pill{display:inline-block;padding:2px 6px;font-size:9px;font-weight:700;letter-spacing:0.5px;border-radius:2px}
+        hr{border:none;border-top:1px solid #ddd;margin:18px 0}
+      </style></head><body>
+        <h1>Warranty Claims</h1>
+        <div class="meta">By Dealer · Generated ${today}</div>
+        <div class="totals">
+          <div class="totalCard"><div class="totalLabel">Total</div><div class="totalValue">${totals.total || 0}</div></div>
+          <div class="totalCard"><div class="totalLabel">Open</div><div class="totalValue" style="color:#dc2626">${totals.open || 0}</div></div>
+          <div class="totalCard"><div class="totalLabel">Replacement</div><div class="totalValue" style="color:#f59e0b">${totals.waiting_replacement || 0}</div></div>
+          <div class="totalCard"><div class="totalLabel">Completed</div><div class="totalValue" style="color:#16a34a">${totals.completed || 0}</div></div>
+        </div>
+        ${groups.length === 0 ? `<p class="muted">No warranty claims yet.</p>` : groupHtml}
+      </body></html>`;
+
+      if (Platform.OS === "web") {
+        if (!printWin) return;
+        const fullHtml = html.replace(
+          "</body>",
+          "<script>setTimeout(function(){window.print();},700);</script></body>"
+        );
+        printWin.document.open();
+        printWin.document.write(fullHtml);
+        printWin.document.close();
+        printWin.document.title = "Warranty Claims";
+      } else {
+        const { uri } = await Print.printToFileAsync({ html });
+        if (await Sharing.isAvailableAsync())
+          await Sharing.shareAsync(uri, { mimeType: "application/pdf" });
+      }
+    } catch (e: any) {
+      if (printWin) printWin.close();
+      Alert.alert("Error", e.message || "Could not export PDF");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const exportCsv = async () => {
+    if (busy) return;
+    setBusy(true);
+    try {
+      const claims = await fetchAllForExport();
+      const groups = groupByDealer(claims);
+      const escape = (s: any) => {
+        const v = String(s ?? "").replace(/"/g, '""');
+        return /[",\n]/.test(v) ? `"${v}"` : v;
+      };
+      const headers = [
+        "Dealer", "Tool", "Status", "Company", "Contact",
+        "Notified", "Expected Back", "Closed", "Notes",
+      ];
+      const lines = [headers.join(",")];
+      groups.forEach((g) => {
+        const sorted = [...g.items].sort((a, b) => {
+          const aClosed = a.claim_status === "completed" || a.claim_status === "rejected";
+          const bClosed = b.claim_status === "completed" || b.claim_status === "rejected";
+          if (aClosed === bClosed) return (a.tool_name || "").localeCompare(b.tool_name || "");
+          return aClosed ? 1 : -1;
+        });
+        sorted.forEach((c) => {
+          lines.push([
+            g.dealer_name,
+            c.tool_name || "",
+            statusMeta(c.claim_status).label,
+            c.repair_company || "",
+            c.contact || "",
+            c.notified_at || "",
+            c.expected_completion || "",
+            c.completed_at ? c.completed_at.substring(0, 10) : "",
+            c.notes || "",
+          ].map(escape).join(","));
+        });
+      });
+      const csv = lines.join("\n");
+      const filename = `warranty-claims-${new Date().toISOString().substring(0, 10)}.csv`;
+
+      if (Platform.OS === "web") {
+        const blob = new Blob([csv], { type: "text/csv" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = filename;
+        a.click();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+      } else {
+        const uri = (FileSystem as any).cacheDirectory + filename;
+        await (FileSystem as any).writeAsStringAsync(uri, csv);
+        if (await Sharing.isAvailableAsync())
+          await Sharing.shareAsync(uri, { mimeType: "text/csv" });
+      }
+    } catch (e: any) {
+      Alert.alert("Error", e.message || "Could not export CSV");
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const removeClaim = async (claim: any) => {
     if (!(await confirm("Delete claim?", "This permanently removes the claim record.", "Delete", true))) return;
     try {
@@ -144,6 +356,14 @@ export default function WarrantyClaimsScreen() {
         <View style={{ flex: 1, marginLeft: 12 }}>
           <Text style={styles.title}>WARRANTY CLAIMS</Text>
           <Text style={styles.subtitle}>By dealer · with status pipeline</Text>
+        </View>
+        <View style={{ flexDirection: "row", gap: 14 }}>
+          <TouchableOpacity testID="export-csv-btn" onPress={exportCsv} hitSlop={10} disabled={busy}>
+            <Ionicons name="grid-outline" size={22} color={busy ? theme.colors.textMuted : theme.colors.accent} />
+          </TouchableOpacity>
+          <TouchableOpacity testID="export-pdf-btn" onPress={exportPdf} hitSlop={10} disabled={busy}>
+            <Ionicons name="document-text-outline" size={22} color={busy ? theme.colors.textMuted : theme.colors.accent} />
+          </TouchableOpacity>
         </View>
       </View>
 
