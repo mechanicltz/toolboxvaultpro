@@ -19,6 +19,7 @@ import { usePrefs } from "../../src/prefs";
 import { confirm } from "../../src/confirm";
 import { formatDateUS } from "../../src/dateUtil";
 import { BalanceSection } from "../../src/sections/BalanceSection";
+import { ROUTE_FREQUENCIES, DAY_NAMES, routeLabel, nextRouteText } from "../../src/route";
 
 export default function DealerDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -129,6 +130,9 @@ export default function DealerDetail() {
                 website: dealer.website || "",
                 address: dealer.address || "",
                 notes: dealer.notes || "",
+                route_frequency: dealer.route_frequency || "N/A",
+                route_day_of_week: dealer.route_day_of_week || "",
+                route_anchor_date: dealer.route_anchor_date || "",
               });
               setEditing(true);
             }}
@@ -145,6 +149,20 @@ export default function DealerDetail() {
       <ScrollView contentContainerStyle={{ paddingBottom: 100 }}>
         <View style={styles.heroBox}>
           <Text style={styles.dealerName}>{dealer.name}</Text>
+        </View>
+
+        {/* Route info banner */}
+        <View style={styles.routeRow}>
+          <Ionicons name="map" size={18} color={theme.colors.accent} />
+          <View style={{ flex: 1 }}>
+            <Text style={styles.routeRowLabel}>ROUTE  ·  {routeLabel(dealer)}</Text>
+            {!!nextRouteText(dealer) && (
+              <Text style={styles.routeRowNext}>Next: {nextRouteText(dealer)}</Text>
+            )}
+            {!nextRouteText(dealer) && (
+              <Text style={styles.routeRowEmpty}>No route configured — tap edit to add</Text>
+            )}
+          </View>
         </View>
 
         {/* AGENTS — placed at top per user preference */}
@@ -298,6 +316,63 @@ export default function DealerDetail() {
                 multiline={k === "notes"}
               />
             ))}
+
+            <Text style={styles.editFieldLabel}>ROUTE FREQUENCY</Text>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{ flexDirection: "row", gap: 8, paddingVertical: 4, marginBottom: 8 }}
+            >
+              {ROUTE_FREQUENCIES.map((f) => {
+                const sel = (editForm.route_frequency || "N/A") === f;
+                return (
+                  <TouchableOpacity
+                    key={f}
+                    testID={`edit-route-freq-${f}`}
+                    onPress={() =>
+                      setEditForm({
+                        ...editForm,
+                        route_frequency: f,
+                        ...(f === "N/A"
+                          ? { route_day_of_week: "", route_anchor_date: "" }
+                          : {}),
+                        ...(f === "Monthly" ? { route_day_of_week: "" } : {}),
+                      })
+                    }
+                    style={[styles.editChip, sel && styles.editChipOn]}
+                  >
+                    <Text style={[styles.editChipText, sel && styles.editChipTextOn]}>{f.toUpperCase()}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+
+            {(editForm.route_frequency === "Weekly" ||
+              editForm.route_frequency === "Bi-weekly") && (
+              <>
+                <Text style={styles.editFieldLabel}>DAY OF WEEK</Text>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={{ flexDirection: "row", gap: 8, paddingVertical: 4, marginBottom: 8 }}
+                >
+                  {DAY_NAMES.map((d) => {
+                    const sel = editForm.route_day_of_week === d;
+                    return (
+                      <TouchableOpacity
+                        key={d}
+                        testID={`edit-route-day-${d}`}
+                        onPress={() => setEditForm({ ...editForm, route_day_of_week: d })}
+                        style={[styles.editChip, sel && styles.editChipOn]}
+                      >
+                        <Text style={[styles.editChipText, sel && styles.editChipTextOn]}>{d.slice(0, 3).toUpperCase()}</Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </ScrollView>
+              </>
+            )}
+
             <View style={{ flexDirection: "row", gap: 10 }}>
               <TouchableOpacity style={styles.btnGhost} onPress={() => setEditing(false)}>
                 <Text style={styles.btnGhostText}>CANCEL</Text>
@@ -384,6 +459,66 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   heroBox: { alignItems: "center", paddingVertical: 16 },
+  routeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    backgroundColor: theme.colors.bgSecondary,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderLeftWidth: 4,
+    borderLeftColor: theme.colors.accent,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    marginHorizontal: 16,
+    marginBottom: 8,
+    borderRadius: 4,
+  },
+  routeRowLabel: {
+    color: theme.colors.textPrimary,
+    fontSize: 11,
+    fontWeight: "900",
+    letterSpacing: 1.5,
+  },
+  routeRowNext: {
+    color: theme.colors.accent,
+    fontSize: 13,
+    fontWeight: "800",
+    marginTop: 3,
+  },
+  routeRowEmpty: {
+    color: theme.colors.textMuted,
+    fontSize: 11,
+    fontStyle: "italic",
+    marginTop: 3,
+  },
+  editFieldLabel: {
+    color: theme.colors.textMuted,
+    fontSize: 10,
+    fontWeight: "800",
+    letterSpacing: 1.5,
+    marginTop: 6,
+    marginBottom: 6,
+  },
+  editChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.bg,
+    borderRadius: 4,
+  },
+  editChipOn: {
+    backgroundColor: theme.colors.accent,
+    borderColor: theme.colors.accent,
+  },
+  editChipText: {
+    color: theme.colors.textSecondary,
+    fontSize: 11,
+    fontWeight: "800",
+    letterSpacing: 1,
+  },
+  editChipTextOn: { color: "#000" },
   bigAvatar: {
     width: 80,
     height: 80,
