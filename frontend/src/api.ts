@@ -86,4 +86,16 @@ export const api = {
     request<any>(`/warranty-claims/${id}`, { method: "PUT", body: JSON.stringify(data) }),
   deleteWarrantyClaim: (id: string) =>
     request<any>(`/warranty-claims/${id}`, { method: "DELETE" }),
+
+  // Wishlist
+  listWishlist: (params?: { purchased?: boolean }) =>
+    request<any[]>(`/wishlist${qs(params)}`),
+  createWishlist: (data: any) =>
+    request<any>(`/wishlist`, { method: "POST", body: JSON.stringify(data) }),
+  updateWishlist: (id: string, data: any) =>
+    request<any>(`/wishlist/${id}`, { method: "PUT", body: JSON.stringify(data) }),
+  deleteWishlist: (id: string) =>
+    request<any>(`/wishlist/${id}`, { method: "DELETE" }),
+  convertWishlist: (id: string) =>
+    request<any>(`/wishlist/${id}/convert`, { method: "POST" }),
 };

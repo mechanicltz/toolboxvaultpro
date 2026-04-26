@@ -194,6 +194,47 @@ class WarrantyClaimUpdate(BaseModel):
     notes: Optional[str] = None
 
 
+# Wish list — tools the user wants to buy
+class WishlistItem(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    name: str
+    url: Optional[str] = ""
+    description: Optional[str] = ""
+    price: Optional[float] = None
+    dealer_id: Optional[str] = None
+    dealer_name: Optional[str] = ""
+    priority: Optional[str] = "normal"  # low / normal / high
+    notes: Optional[str] = ""
+    purchased: bool = False
+    purchased_at: Optional[str] = None
+    converted_tool_id: Optional[str] = None
+    created_at: str = Field(default_factory=now_iso)
+    updated_at: str = Field(default_factory=now_iso)
+
+
+class WishlistItemCreate(BaseModel):
+    name: str
+    url: Optional[str] = ""
+    description: Optional[str] = ""
+    price: Optional[float] = None
+    dealer_id: Optional[str] = None
+    dealer_name: Optional[str] = ""
+    priority: Optional[str] = "normal"
+    notes: Optional[str] = ""
+
+
+class WishlistItemUpdate(BaseModel):
+    name: Optional[str] = None
+    url: Optional[str] = None
+    description: Optional[str] = None
+    price: Optional[float] = None
+    dealer_id: Optional[str] = None
+    dealer_name: Optional[str] = None
+    priority: Optional[str] = None
+    notes: Optional[str] = None
+    purchased: Optional[bool] = None
+
+
 # Consumable
 class ConsumableInfo(BaseModel):
     store_name: Optional[str] = ""
@@ -1176,6 +1217,75 @@ async def update_warranty_claim(claim_id: str, payload: WarrantyClaimUpdate):
 async def delete_warranty_claim(claim_id: str):
     await db.warranty_claims.delete_one({"id": claim_id})
     return {"ok": True}
+
+
+# ---------- Wishlist ----------
+@api_router.get("/wishlist", response_model=List[WishlistItem])
+async def list_wishlist(purchased: Optional[bool] = None):
+    q: Dict[str, Any] = {}
+    if purchased is not None:
+        q["purchased"] = purchased
+    items = await db.wishlist_items.find(q, {"_id": 0}).sort("created_at", -1).to_list(2000)
+    return [WishlistItem(**i) for i in items]
+
+
+@api_router.post("/wishlist", response_model=WishlistItem)
+async def create_wishlist(payload: WishlistItemCreate):
+    item = WishlistItem(**payload.dict())
+    if item.dealer_id and not item.dealer_name:
+        d = await db.dealers.find_one({"id": item.dealer_id}, {"_id": 0, "name": 1})
+        if d:
+            item.dealer_name = d.get("name") or ""
+    await db.wishlist_items.insert_one(item.dict())
+    return item
+
+
+@api_router.put("/wishlist/{item_id}", response_model=WishlistItem)
+async def update_wishlist(item_id: str, payload: WishlistItemUpdate):
+    doc = await db.wishlist_items.find_one({"id": item_id}, {"_id": 0})
+    if not doc:
+        raise HTTPException(404, "Wishlist item not found")
+    updates = {k: v for k, v in payload.dict().items() if v is not None}
+    updates["updated_at"] = now_iso()
+    if "dealer_id" in updates and updates["dealer_id"]:
+        d = await db.dealers.find_one({"id": updates["dealer_id"]}, {"_id": 0, "name": 1})
+        if d:
+            updates["dealer_name"] = d.get("name") or ""
+    if updates.get("purchased") is True and not doc.get("purchased"):
+        updates["purchased_at"] = now_iso()
+    elif updates.get("purchased") is False:
+        updates["purchased_at"] = None
+        updates["converted_tool_id"] = None
+    await db.wishlist_items.update_one({"id": item_id}, {"$set": updates})
+    new = await db.wishlist_items.find_one({"id": item_id}, {"_id": 0})
+    return WishlistItem(**new)
+
+
+@api_router.delete("/wishlist/{item_id}")
+async def delete_wishlist(item_id: str):
+    await db.wishlist_items.delete_one({"id": item_id})
+    return {"ok": True}
+
+
+@api_router.post("/wishlist/{item_id}/convert", response_model=Tool)
+async def convert_wishlist_to_tool(item_id: str):
+    """Convert a wishlist item into a real tool — marks as purchased."""
+    item = await db.wishlist_items.find_one({"id": item_id}, {"_id": 0})
+    if not item:
+        raise HTTPException(404, "Wishlist item not found")
+    tool = Tool(
+        name=item.get("name", ""),
+        description=item.get("description", "") or "",
+        cost=item.get("price") or 0,
+        dealer_id=item.get("dealer_id"),
+        dealer_name=item.get("dealer_name") or "",
+    )
+    await db.tools.insert_one(tool.dict())
+    await db.wishlist_items.update_one(
+        {"id": item_id},
+        {"$set": {"purchased": True, "purchased_at": now_iso(), "converted_tool_id": tool.id, "updated_at": now_iso()}},
+    )
+    return tool
 
 
 # ---------- AI Toolbox Analysis ----------

@@ -88,6 +88,13 @@ export default function MoreScreen() {
           testID="more-claims"
           onPress={() => router.push("/warranty-claims")}
         />
+        <Row
+          icon="heart"
+          title="Wish List"
+          subtitle="Saved links to tools you want"
+          testID="more-wishlist"
+          onPress={() => router.push("/wishlist")}
+        />
 
         <Text style={styles.sectionLabel}>DISPLAY</Text>
         <View style={styles.toggleRow}>
