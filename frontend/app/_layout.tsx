@@ -3,6 +3,7 @@ import { StatusBar } from "expo-status-bar";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { View } from "react-native";
 import { AuroraBackground } from "../src/Aurora";
+import { BottomBar } from "../src/BottomBar";
 
 export default function RootLayout() {
   return (
@@ -10,17 +11,20 @@ export default function RootLayout() {
       <StatusBar style="light" />
       <AuroraBackground>
         <View style={{ flex: 1 }}>
-          <Stack
-            screenOptions={{
-              headerShown: false,
-              contentStyle: { backgroundColor: "transparent" },
-              animation: "slide_from_right",
-            }}
-          >
-            <Stack.Screen name="(tabs)" />
-            <Stack.Screen name="tool/[id]" />
-            <Stack.Screen name="tool/edit" />
-          </Stack>
+          <View style={{ flex: 1 }}>
+            <Stack
+              screenOptions={{
+                headerShown: false,
+                contentStyle: { backgroundColor: "transparent" },
+                animation: "slide_from_right",
+              }}
+            >
+              <Stack.Screen name="(tabs)" />
+              <Stack.Screen name="tool/[id]" />
+              <Stack.Screen name="tool/edit" />
+            </Stack>
+          </View>
+          <BottomBar />
         </View>
       </AuroraBackground>
     </GestureHandlerRootView>

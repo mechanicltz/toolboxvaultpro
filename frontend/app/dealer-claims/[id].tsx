@@ -66,27 +66,43 @@ export default function DealerClaimsScreen() {
       const agent = dealer?.agents?.find((a: any) => a.id === dealer?.current_agent_id);
       const phone = (agent?.phone || dealer?.phone || "").replace(/[^\d+]/g, "");
       const email = (agent?.email || "").trim();
-      const subject = encodeURIComponent(`Repair request: ${t.name}`);
-      const body = encodeURIComponent(
-        [
-          `Hello${agent?.name ? ` ${agent.name}` : ""},`,
-          ``,
-          `I have a tool that needs repair / warranty service:`,
-          ``,
-          `Tool: ${t.name}`,
-          t.purchase_date ? `Purchased: ${t.purchase_date}` : "",
-          dealer?.name ? `Dealer: ${dealer.name}` : "",
-          t.repair_info?.notes ? `Issue: ${t.repair_info.notes}` : "",
-          ``,
-          `Please advise next steps. Thank you.`,
-        ].filter(Boolean).join("\n")
+      // Prompt to add contact info if missing
+      if ((mode === "email" && !email) || (mode === "sms" && !phone)) {
+        const target = mode === "email" ? "email" : "phone number";
+        const ok = await new Promise<boolean>((resolve) => {
+          Alert.alert(
+            `No ${target} on file`,
+            `${dealer?.name || "Dealer"} doesn't have a${mode === "email" ? "n email" : " phone number"} for the current agent.\n\nWould you like to open the dealer page to add it?`,
+            [
+              { text: "Cancel", style: "cancel", onPress: () => resolve(false) },
+              { text: "Open Dealer", onPress: () => resolve(true) },
+            ]
+          );
+        });
+        if (ok) router.push(`/dealer/${dealer.id}`);
+        return;
+      }
+      const subject = encodeURIComponent(`Repair / Warranty: ${t.name}`);
+      const lines = [
+        `Hello ${dealer?.name || "there"},`,
+        ``,
+        `I have a tool that needs repair / warranty.`,
+        `Tool: ${t.name}`,
+        `Serial Number: ${t.serial_number || t.serial || "N/A"}`,
+        `Purchased Date: ${t.purchase_date || "N/A"}`,
+      ];
+      if (t.repair_info?.broken_photo) {
+        lines.push(`(A photo of the broken item is attached / available.)`);
+      }
+      lines.push(
+        ``,
+        `Please let me know when I can expect a repair / replacement. Thank you.`
       );
+      const body = encodeURIComponent(lines.join("\n"));
       let url = "";
       if (mode === "email") {
-        if (!email) { Alert.alert("No email", "Set an email on the agent or dealer first."); return; }
         url = `mailto:${email}?subject=${subject}&body=${body}`;
       } else {
-        if (!phone) { Alert.alert("No phone", "Set a phone on the agent or dealer first."); return; }
         url = `sms:${phone}?body=${body}`;
       }
       if (Platform.OS === "web") {
