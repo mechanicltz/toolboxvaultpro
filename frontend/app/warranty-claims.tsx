@@ -10,6 +10,7 @@ import {
   ActivityIndicator,
   Modal,
   Alert,
+  TextInput,
   Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -118,10 +119,33 @@ export default function WarrantyClaimsScreen() {
 
   const [busy, setBusy] = useState(false);
 
+  // Filters (apply to view + export)
+  const [showFilters, setShowFilters] = useState(false);
+  const [filterStatuses, setFilterStatuses] = useState<string[]>(STATUS_LIST.map((s) => s.key));
+  const [filterFrom, setFilterFrom] = useState("");
+  const [filterTo, setFilterTo] = useState("");
+  const filtersActive =
+    filterStatuses.length !== STATUS_LIST.length || !!filterFrom || !!filterTo;
+
+  const passesFilter = (c: any) => {
+    if (filterStatuses.length && !filterStatuses.includes(c.claim_status)) return false;
+    const d = (c.notified_at || "").substring(0, 10);
+    if (filterFrom && d && d < filterFrom) return false;
+    if (filterTo && d && d > filterTo) return false;
+    if ((filterFrom || filterTo) && !d) return false;
+    return true;
+  };
+
+  const resetFilters = () => {
+    setFilterStatuses(STATUS_LIST.map((s) => s.key));
+    setFilterFrom("");
+    setFilterTo("");
+  };
+
   const fetchAllForExport = async () => {
     // Pull all claims (active + completed) once
     const claims = await api.listWarrantyClaims();
-    return claims;
+    return claims.filter(passesFilter);
   };
 
   const groupByDealer = (claims: any[]) => {
@@ -358,6 +382,16 @@ export default function WarrantyClaimsScreen() {
           <Text style={styles.subtitle}>By dealer · with status pipeline</Text>
         </View>
         <View style={{ flexDirection: "row", gap: 14 }}>
+          <TouchableOpacity testID="filters-btn" onPress={() => setShowFilters(true)} hitSlop={10}>
+            <View>
+              <Ionicons
+                name="options-outline"
+                size={22}
+                color={filtersActive ? theme.colors.danger : theme.colors.accent}
+              />
+              {filtersActive && <View style={styles.filterDot} />}
+            </View>
+          </TouchableOpacity>
           <TouchableOpacity testID="export-csv-btn" onPress={exportCsv} hitSlop={10} disabled={busy}>
             <Ionicons name="grid-outline" size={22} color={busy ? theme.colors.textMuted : theme.colors.accent} />
           </TouchableOpacity>
@@ -380,6 +414,27 @@ export default function WarrantyClaimsScreen() {
           <Stat label="Completed" value={totals.completed ?? 0} color={theme.colors.success} />
         </View>
 
+        {filtersActive && (
+          <TouchableOpacity
+            testID="filter-bar"
+            style={styles.filterBar}
+            onPress={() => setShowFilters(true)}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="funnel" size={14} color={theme.colors.danger} />
+            <Text style={styles.filterBarText}>
+              FILTERS ACTIVE
+              {filterStatuses.length !== STATUS_LIST.length
+                ? ` · ${filterStatuses.length}/${STATUS_LIST.length} statuses`
+                : ""}
+              {filterFrom || filterTo ? ` · ${filterFrom || "…"} → ${filterTo || "…"}` : ""}
+            </Text>
+            <TouchableOpacity onPress={resetFilters} hitSlop={8}>
+              <Ionicons name="close-circle" size={16} color={theme.colors.danger} />
+            </TouchableOpacity>
+          </TouchableOpacity>
+        )}
+
         {dealers.length === 0 ? (
           <View style={styles.empty}>
             <Ionicons name="construct-outline" size={64} color={theme.colors.textMuted} />
@@ -391,9 +446,15 @@ export default function WarrantyClaimsScreen() {
         ) : (
           dealers.map((d: any) => {
             const key = dealerKey(d);
-            const active = activeByDealer[key] || [];
-            const completed = completedByDealer[key] || [];
+            const active = (activeByDealer[key] || []).filter(passesFilter);
+            const completed = (completedByDealer[key] || []).filter(passesFilter);
             const showDone = !!showCompletedFor[key];
+            // Hide dealer entirely if all of its claims are filtered out
+            const dealerHasAny =
+              (activeByDealer[key]?.some(passesFilter) ?? false) ||
+              (showDone && completedByDealer[key]?.some(passesFilter)) ||
+              !filtersActive;
+            if (filtersActive && !dealerHasAny && active.length === 0 && completed.length === 0) return null;
             return (
               <View key={key} style={styles.dealerBlock} testID={`dealer-block-${key}`}>
                 <View style={styles.dealerHead}>
@@ -468,6 +529,83 @@ export default function WarrantyClaimsScreen() {
           })
         )}
       </ScrollView>
+
+      <Modal visible={showFilters} transparent animationType="slide">
+        <View style={styles.modalBg}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>FILTER CLAIMS</Text>
+            <Text style={styles.modalSub}>
+              Affects what's shown on screen and what's exported to PDF/CSV.
+            </Text>
+
+            <Text style={styles.fLabel}>STATUS</Text>
+            <View style={{ gap: 6, marginBottom: 12 }}>
+              {STATUS_LIST.map((s) => {
+                const checked = filterStatuses.includes(s.key);
+                return (
+                  <TouchableOpacity
+                    key={s.key}
+                    testID={`fstatus-${s.key}`}
+                    style={[styles.checkRow, checked && { borderColor: s.color }]}
+                    onPress={() => {
+                      setFilterStatuses((cur) =>
+                        cur.includes(s.key) ? cur.filter((k) => k !== s.key) : [...cur, s.key]
+                      );
+                    }}
+                  >
+                    <Ionicons
+                      name={checked ? "checkbox" : "square-outline"}
+                      size={20}
+                      color={checked ? s.color : theme.colors.textMuted}
+                    />
+                    <Ionicons name={s.icon} size={16} color={s.color} />
+                    <Text style={styles.checkText}>{s.label}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+
+            <Text style={styles.fLabel}>NOTIFIED DATE RANGE</Text>
+            <View style={{ flexDirection: "row", gap: 10, marginBottom: 12 }}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.fSubLabel}>FROM</Text>
+                <TextInput
+                  testID="fdate-from"
+                  placeholder="YYYY-MM-DD"
+                  placeholderTextColor={theme.colors.textMuted}
+                  style={styles.dateInput}
+                  value={filterFrom}
+                  onChangeText={setFilterFrom}
+                />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.fSubLabel}>TO</Text>
+                <TextInput
+                  testID="fdate-to"
+                  placeholder="YYYY-MM-DD"
+                  placeholderTextColor={theme.colors.textMuted}
+                  style={styles.dateInput}
+                  value={filterTo}
+                  onChangeText={setFilterTo}
+                />
+              </View>
+            </View>
+
+            <View style={{ flexDirection: "row", gap: 10 }}>
+              <TouchableOpacity testID="filters-reset" style={styles.btnGhost} onPress={resetFilters}>
+                <Text style={styles.btnGhostText}>RESET</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                testID="filters-apply"
+                style={[styles.btnGhost, { backgroundColor: theme.colors.accent, borderColor: theme.colors.accent }]}
+                onPress={() => setShowFilters(false)}
+              >
+                <Text style={[styles.btnGhostText, { color: "#000" }]}>APPLY</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       <Modal visible={!!pickerForClaim} transparent animationType="slide">
         <View style={styles.modalBg}>
@@ -677,6 +815,39 @@ const styles = StyleSheet.create({
   },
   modalTitle: { color: "#fff", fontSize: 18, fontWeight: "900", letterSpacing: 2 },
   modalSub: { color: theme.colors.textSecondary, fontSize: 12, marginTop: 4, marginBottom: 12 },
+  filterDot: {
+    position: "absolute",
+    top: -2, right: -2,
+    width: 8, height: 8, borderRadius: 4,
+    backgroundColor: theme.colors.danger,
+  },
+  filterBar: {
+    flexDirection: "row", alignItems: "center", gap: 8,
+    marginHorizontal: 16, marginBottom: 8,
+    paddingHorizontal: 12, paddingVertical: 8,
+    borderWidth: 1, borderColor: theme.colors.danger,
+    backgroundColor: "rgba(239,68,68,0.08)",
+    borderRadius: 4,
+  },
+  filterBarText: {
+    flex: 1,
+    color: theme.colors.danger,
+    fontSize: 10, fontWeight: "800", letterSpacing: 1,
+  },
+  fLabel: { color: theme.colors.textMuted, fontSize: 10, fontWeight: "800", letterSpacing: 1.5, marginTop: 4, marginBottom: 6 },
+  fSubLabel: { color: theme.colors.textMuted, fontSize: 9, fontWeight: "800", letterSpacing: 1, marginBottom: 4 },
+  checkRow: {
+    flexDirection: "row", alignItems: "center", gap: 10,
+    paddingHorizontal: 12, paddingVertical: 10,
+    borderWidth: 1, borderColor: theme.colors.border, borderRadius: 4,
+  },
+  checkText: { color: "#fff", fontSize: 14, fontWeight: "600" },
+  dateInput: {
+    backgroundColor: theme.colors.bg,
+    borderWidth: 1, borderColor: theme.colors.border,
+    color: "#fff", paddingHorizontal: 12, paddingVertical: 10,
+    borderRadius: 4, fontSize: 14,
+  },
   pickRow: {
     flexDirection: "row", alignItems: "center", gap: 12,
     paddingHorizontal: 12, paddingVertical: 12,
@@ -685,6 +856,7 @@ const styles = StyleSheet.create({
   },
   pickText: { flex: 1, fontSize: 14, fontWeight: "600" },
   btnGhost: {
+    flex: 1,
     borderWidth: 1, borderColor: theme.colors.border, height: 48, marginTop: 8,
     alignItems: "center", justifyContent: "center", borderRadius: 4,
   },
