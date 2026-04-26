@@ -214,15 +214,6 @@ export default function InsuranceReportScreen() {
           <Stat label="Total Value" value={`$${total.toFixed(2)}`} primary />
         </View>
 
-        <View style={styles.previewCard}>
-          <Text style={styles.previewTitle}>WHAT&apos;S IN THE REPORT</Text>
-          <Bullet text="Header: 'Insurance Inventory Report'" />
-          <Bullet text="Your name, address, phone, email + policy info" />
-          <Bullet text="Numbered list of every inventory item" />
-          <Bullet text="Item Name · Purchase Date · Brand · Serial · Value" />
-          <Bullet text="Total Value sum at the bottom" />
-        </View>
-
         <TouchableOpacity
           testID="ir-generate"
           style={[
