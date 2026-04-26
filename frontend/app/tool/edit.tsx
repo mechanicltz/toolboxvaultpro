@@ -749,23 +749,26 @@ export default function ToolEdit() {
       {/* Sticky bottom Save Bar */}
       <View style={styles.bottomBar}>
         <TouchableOpacity
-          testID="cancel-bottom-btn"
-          style={styles.btnGhost}
-          onPress={() => router.back()}
-          disabled={saving}
-        >
-          <Text style={styles.btnGhostText}>CANCEL</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
           testID="save-tool-bottom-btn"
-          style={[styles.btn, { flex: 2, backgroundColor: theme.colors.accent }]}
+          style={styles.bottomSaveBtn}
           onPress={save}
           disabled={saving}
+          activeOpacity={0.85}
         >
           {saving ? (
             <ActivityIndicator color="#000" />
           ) : (
-            <Text style={styles.btnText}>{isEdit ? "SAVE CHANGES" : "CREATE TOOL"}</Text>
+            <>
+              <Ionicons
+                name={isEdit ? "save" : "checkmark-circle"}
+                size={20}
+                color="#000"
+                style={{ marginRight: 8 }}
+              />
+              <Text style={styles.bottomSaveText}>
+                {isEdit ? "SAVE CHANGES" : "CREATE TOOL"}
+              </Text>
+            </>
           )}
         </TouchableOpacity>
       </View>
@@ -885,13 +888,27 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    flexDirection: "row",
-    gap: 10,
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingTop: 10,
+    paddingBottom: Platform.OS === "ios" ? 24 : 12,
     backgroundColor: theme.colors.bg,
     borderTopWidth: 1,
     borderTopColor: theme.colors.border,
-    ...(Platform.OS === "ios" ? { paddingBottom: 24 } : {}),
+    ...(theme.elevation.lg as object),
+  },
+  bottomSaveBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    height: 52,
+    backgroundColor: theme.colors.accent,
+    borderRadius: theme.radii.sm,
+    ...(theme.elevation.accent as object),
+  },
+  bottomSaveText: {
+    color: "#000",
+    fontWeight: "900",
+    letterSpacing: 2.5,
+    fontSize: 15,
   },
 });
