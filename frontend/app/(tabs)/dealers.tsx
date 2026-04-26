@@ -17,6 +17,7 @@ import { theme } from "../../src/theme";
 import { api } from "../../src/api";
 import { usePrefs } from "../../src/prefs";
 import { confirm } from "../../src/confirm";
+import { ROUTE_FREQUENCIES, DAY_NAMES, routeLabel, nextRouteText } from "../../src/route";
 
 export default function DealersScreen() {
   const router = useRouter();
@@ -24,7 +25,7 @@ export default function DealersScreen() {
   const [dealers, setDealers] = useState<any[]>([]);
   const [tools, setTools] = useState<any[]>([]);
   const [showAdd, setShowAdd] = useState(false);
-  const [form, setForm] = useState<any>({ name: "", phone: "", website: "", address: "", notes: "" });
+  const [form, setForm] = useState<any>({ name: "", phone: "", website: "", address: "", notes: "", route_frequency: "N/A", route_day_of_week: "", route_anchor_date: "" });
 
   const load = useCallback(async () => {
     const [d, t] = await Promise.all([api.listDealers(), api.listTools()]);
@@ -42,7 +43,7 @@ export default function DealersScreen() {
     if (!form.name?.trim()) return;
     const payload = { ...form, name: form.name.trim() };
     const d = await api.createDealer(payload);
-    setForm({ name: "", phone: "", website: "", address: "", notes: "" });
+    setForm({ name: "", phone: "", website: "", address: "", notes: "", route_frequency: "N/A", route_day_of_week: "", route_anchor_date: "" });
     setShowAdd(false);
     router.push(`/dealer/${d.id}`);
   };
@@ -102,7 +103,7 @@ export default function DealersScreen() {
                 <Text style={styles.rowMeta}>
                   {s.count} TOOL{s.count === 1 ? "" : "S"}
                   {prefs.show_prices ? `  ·  $${s.total.toFixed(2)}` : ""}
-                  {`  ·  ${(item.agents || []).length} AGENT${(item.agents || []).length === 1 ? "" : "S"}`}
+                  {`  ·  ${routeLabel(item)}`}
                 </Text>
               </View>
               <TouchableOpacity
@@ -155,12 +156,68 @@ export default function DealersScreen() {
                 autoFocus={f.focus}
               />
             ))}
+
+            {/* Route frequency */}
+            <Text style={styles.fieldLabel}>ROUTE FREQUENCY</Text>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{ flexDirection: "row", gap: 8, paddingVertical: 4, marginBottom: 8 }}
+            >
+              {ROUTE_FREQUENCIES.map((f) => {
+                const sel = (form.route_frequency || "N/A") === f;
+                return (
+                  <TouchableOpacity
+                    key={f}
+                    testID={`route-freq-${f}`}
+                    onPress={() =>
+                      setForm({
+                        ...form,
+                        route_frequency: f,
+                        // Reset day/anchor when N/A or Monthly
+                        ...(f === "N/A" ? { route_day_of_week: "", route_anchor_date: "" } : {}),
+                        ...(f === "Monthly" ? { route_day_of_week: "" } : {}),
+                      })
+                    }
+                    style={[styles.chip, sel && styles.chipOn]}
+                  >
+                    <Text style={[styles.chipText, sel && styles.chipTextOn]}>{f.toUpperCase()}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+
+            {/* Day of week — only for Weekly / Bi-weekly */}
+            {(form.route_frequency === "Weekly" || form.route_frequency === "Bi-weekly") && (
+              <>
+                <Text style={styles.fieldLabel}>DAY OF WEEK</Text>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={{ flexDirection: "row", gap: 8, paddingVertical: 4, marginBottom: 8 }}
+                >
+                  {DAY_NAMES.map((d) => {
+                    const sel = form.route_day_of_week === d;
+                    return (
+                      <TouchableOpacity
+                        key={d}
+                        testID={`route-day-${d}`}
+                        onPress={() => setForm({ ...form, route_day_of_week: d })}
+                        style={[styles.chip, sel && styles.chipOn]}
+                      >
+                        <Text style={[styles.chipText, sel && styles.chipTextOn]}>{d.slice(0, 3).toUpperCase()}</Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </ScrollView>
+              </>
+            )}
             <View style={{ flexDirection: "row", gap: 10, marginTop: 4 }}>
               <TouchableOpacity
                 style={styles.btnGhost}
                 onPress={() => {
                   setShowAdd(false);
-                  setForm({ name: "", phone: "", website: "", address: "", notes: "" });
+                  setForm({ name: "", phone: "", website: "", address: "", notes: "", route_frequency: "N/A", route_day_of_week: "", route_anchor_date: "" });
                 }}
               >
                 <Text style={styles.btnGhostText}>CANCEL</Text>
@@ -301,4 +358,31 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   btnGhostText: { color: theme.colors.textPrimary, fontWeight: "800", letterSpacing: 2, fontSize: 14 },
+  fieldLabel: {
+    color: theme.colors.textMuted,
+    fontSize: 10,
+    fontWeight: "800",
+    letterSpacing: 1.5,
+    marginBottom: 6,
+    marginTop: 4,
+  },
+  chip: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.bg,
+    borderRadius: 4,
+  },
+  chipOn: {
+    backgroundColor: theme.colors.accent,
+    borderColor: theme.colors.accent,
+  },
+  chipText: {
+    color: theme.colors.textSecondary,
+    fontSize: 11,
+    fontWeight: "800",
+    letterSpacing: 1,
+  },
+  chipTextOn: { color: "#000" },
 });

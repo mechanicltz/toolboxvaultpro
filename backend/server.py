@@ -113,6 +113,9 @@ class Dealer(BaseModel):
     website: Optional[str] = ""
     address: Optional[str] = ""
     notes: Optional[str] = ""
+    route_frequency: Optional[str] = "N/A"  # Weekly | Bi-weekly | Monthly | N/A
+    route_day_of_week: Optional[str] = ""  # Mon | Tue | Wed | Thu | Fri | Sat | Sun (when frequency is Weekly/Bi-weekly)
+    route_anchor_date: Optional[str] = ""  # YYYY-MM-DD anchor used to compute next visit (mainly for Bi-weekly/Monthly)
     agents: List[Agent] = []
     current_agent_id: Optional[str] = None
     credit_balance: float = 0.0
@@ -145,6 +148,9 @@ class DealerCreate(BaseModel):
     website: Optional[str] = ""
     address: Optional[str] = ""
     notes: Optional[str] = ""
+    route_frequency: Optional[str] = "N/A"
+    route_day_of_week: Optional[str] = ""
+    route_anchor_date: Optional[str] = ""
 
 
 class DealerUpdate(BaseModel):
@@ -153,6 +159,9 @@ class DealerUpdate(BaseModel):
     website: Optional[str] = None
     address: Optional[str] = None
     notes: Optional[str] = None
+    route_frequency: Optional[str] = None
+    route_day_of_week: Optional[str] = None
+    route_anchor_date: Optional[str] = None
 
 
 # Documents

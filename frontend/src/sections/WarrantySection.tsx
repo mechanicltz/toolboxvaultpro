@@ -1,0 +1,274 @@
+import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
+import { theme } from "../theme";
+import { formatDateUS } from "../dateUtil";
+
+const COVERAGE_LABEL: Record<string, string> = {
+  months: "TIME-LIMITED",
+  limited: "LIMITED COVERAGE",
+  lifetime: "LIFETIME",
+};
+
+function daysUntil(dateStr?: string): number | null {
+  if (!dateStr) return null;
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return null;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  d.setHours(0, 0, 0, 0);
+  return Math.floor((d.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+}
+
+export function WarrantySection({ tool }: { tool: any }) {
+  const router = useRouter();
+  const w = tool.warranty || {};
+  const has = w.has_warranty;
+
+  if (!has) {
+    return (
+      <View style={styles.wrap}>
+        <View style={styles.head}>
+          <Ionicons name="shield-outline" size={18} color={theme.colors.textMuted} />
+          <Text style={styles.title}>WARRANTY</Text>
+        </View>
+        <View style={styles.emptyCard}>
+          <Text style={styles.emptyText}>No warranty information available.</Text>
+          <TouchableOpacity
+            testID="add-warranty-link"
+            style={styles.addBtn}
+            onPress={() =>
+              router.push({ pathname: "/tool/edit", params: { id: tool.id, focus: "warranty" } })
+            }
+          >
+            <Ionicons name="add-circle" size={16} color={theme.colors.accent} />
+            <Text style={styles.addBtnText}>ADD WARRANTY INFORMATION</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
+
+  const coverageType = w.coverage_type || "months";
+  const isLifetime = coverageType === "lifetime";
+  const isLimited = coverageType === "limited";
+  const days = daysUntil(w.expiry_date);
+  const expired = days !== null && days < 0;
+  const expiringSoon = days !== null && days >= 0 && days <= 30;
+
+  let badgeColor = theme.colors.success;
+  let badgeLabel = "ACTIVE";
+  if (isLifetime) {
+    badgeColor = theme.colors.success;
+    badgeLabel = "LIFETIME";
+  } else if (isLimited) {
+    badgeColor = theme.colors.accent;
+    badgeLabel = "LIMITED";
+  } else if (expired) {
+    badgeColor = theme.colors.danger;
+    badgeLabel = "EXPIRED";
+  } else if (expiringSoon) {
+    badgeColor = theme.colors.warning;
+    badgeLabel = `EXPIRES IN ${days}D`;
+  } else if (days !== null) {
+    badgeLabel = `${days} DAYS LEFT`;
+  }
+
+  return (
+    <View style={styles.wrap}>
+      <View style={styles.head}>
+        <Ionicons name="shield-checkmark" size={18} color={theme.colors.success} />
+        <View style={{ flex: 1 }}>
+          <Text style={styles.title}>WARRANTY</Text>
+          <Text style={styles.sub}>
+            {COVERAGE_LABEL[coverageType] || coverageType.toUpperCase()}
+          </Text>
+        </View>
+        <View style={[styles.badge, { borderColor: badgeColor, backgroundColor: badgeColor + "15" }]}>
+          <Text style={[styles.badgeText, { color: badgeColor }]}>{badgeLabel}</Text>
+        </View>
+      </View>
+      <View style={styles.card}>
+        {!!w.provider && <Row label="Provider" value={w.provider} />}
+        {!!w.contact && <Row label="Contact" value={w.contact} />}
+        {!isLifetime && !!w.start_date && (
+          <Row label="Started" value={formatDateUS(w.start_date)} />
+        )}
+        {!isLifetime && !!w.expiry_date && (
+          <Row
+            label="Expires"
+            value={formatDateUS(w.expiry_date)}
+            valueColor={expired ? theme.colors.danger : expiringSoon ? theme.colors.warning : undefined}
+          />
+        )}
+        {!!w.length_months && coverageType === "months" && (
+          <Row
+            label="Length"
+            value={
+              w.length_months >= 12 && w.length_months % 12 === 0
+                ? `${w.length_months / 12} year${w.length_months === 12 ? "" : "s"}`
+                : `${w.length_months} month${w.length_months === 1 ? "" : "s"}`
+            }
+          />
+        )}
+        {!!w.terms && (
+          <View style={styles.terms}>
+            <Text style={styles.termsLabel}>TERMS</Text>
+            <Text style={styles.termsText}>{w.terms}</Text>
+          </View>
+        )}
+        <TouchableOpacity
+          testID="edit-warranty-link"
+          style={styles.editLink}
+          onPress={() =>
+            router.push({ pathname: "/tool/edit", params: { id: tool.id, focus: "warranty" } })
+          }
+        >
+          <Ionicons name="create-outline" size={14} color={theme.colors.accent} />
+          <Text style={styles.editLinkText}>EDIT WARRANTY</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+}
+
+function Row({
+  label,
+  value,
+  valueColor,
+}: {
+  label: string;
+  value: string;
+  valueColor?: string;
+}) {
+  return (
+    <View style={styles.row}>
+      <Text style={styles.rowLabel}>{label.toUpperCase()}</Text>
+      <Text style={[styles.rowValue, valueColor && { color: valueColor }]}>{value}</Text>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  wrap: { paddingHorizontal: 18, paddingTop: 18 },
+  head: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 8,
+  },
+  title: {
+    color: theme.colors.textPrimary,
+    fontSize: 13,
+    fontWeight: "900",
+    letterSpacing: 2,
+  },
+  sub: {
+    color: theme.colors.textMuted,
+    fontSize: 9,
+    fontWeight: "700",
+    letterSpacing: 1.5,
+    marginTop: 2,
+  },
+  badge: {
+    borderWidth: 1,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 3,
+  },
+  badgeText: {
+    fontSize: 9,
+    fontWeight: "900",
+    letterSpacing: 1.2,
+  },
+  card: {
+    backgroundColor: theme.colors.bgSecondary,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: 6,
+    padding: 12,
+  },
+  emptyCard: {
+    backgroundColor: theme.colors.bgSecondary,
+    borderWidth: 1,
+    borderStyle: "dashed",
+    borderColor: theme.colors.border,
+    borderRadius: 6,
+    padding: 16,
+    alignItems: "center",
+    gap: 12,
+  },
+  emptyText: {
+    color: theme.colors.textMuted,
+    fontSize: 13,
+    fontStyle: "italic",
+  },
+  addBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    borderWidth: 1,
+    borderColor: theme.colors.accent,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    borderRadius: 4,
+  },
+  addBtnText: {
+    color: theme.colors.accent,
+    fontWeight: "900",
+    letterSpacing: 1.5,
+    fontSize: 11,
+  },
+  row: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 6,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.borderSubtle,
+  },
+  rowLabel: {
+    color: theme.colors.textMuted,
+    fontSize: 10,
+    fontWeight: "800",
+    letterSpacing: 1.5,
+  },
+  rowValue: {
+    color: theme.colors.textPrimary,
+    fontSize: 13,
+    fontWeight: "700",
+  },
+  terms: {
+    marginTop: 8,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.borderSubtle,
+  },
+  termsLabel: {
+    color: theme.colors.textMuted,
+    fontSize: 9,
+    fontWeight: "800",
+    letterSpacing: 1.5,
+    marginBottom: 4,
+  },
+  termsText: {
+    color: theme.colors.textSecondary,
+    fontSize: 12,
+    lineHeight: 17,
+  },
+  editLink: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    alignSelf: "flex-end",
+    marginTop: 10,
+    paddingTop: 8,
+    paddingHorizontal: 6,
+  },
+  editLinkText: {
+    color: theme.colors.accent,
+    fontSize: 10,
+    fontWeight: "900",
+    letterSpacing: 1.5,
+  },
+});

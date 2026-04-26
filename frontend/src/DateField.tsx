@@ -71,26 +71,32 @@ export function DateField({
     };
     return (
       <View style={styles.input}>
-        <TextInput
-          testID={testID}
-          value={text}
-          onChangeText={handleType}
-          placeholder={placeholder || "MM/DD/YYYY"}
-          placeholderTextColor={theme.colors.textMuted}
-          keyboardType="numbers-and-punctuation"
-          maxLength={10}
-          style={{
-            backgroundColor: "transparent",
-            color: theme.colors.textPrimary,
-            fontSize: 15,
-            flex: 1,
-            ...(Platform.OS === "web"
-              ? ({ outlineStyle: "none", borderWidth: 0 } as any)
-              : {}),
-          }}
-        />
+        <TouchableOpacity
+          activeOpacity={0.7}
+          onPress={openCalendar}
+          style={{ flex: 1 }}
+        >
+          <TextInput
+            testID={testID}
+            value={text}
+            onChangeText={handleType}
+            placeholder={placeholder || "MM/DD/YYYY"}
+            placeholderTextColor={theme.colors.textMuted}
+            keyboardType="numbers-and-punctuation"
+            maxLength={10}
+            onFocus={openCalendar}
+            style={{
+              backgroundColor: "transparent",
+              color: theme.colors.textPrimary,
+              fontSize: 15,
+              ...(Platform.OS === "web"
+                ? ({ outlineStyle: "none", borderWidth: 0 } as any)
+                : {}),
+            }}
+          />
+        </TouchableOpacity>
         <TouchableOpacity onPress={openCalendar} hitSlop={8} style={{ paddingHorizontal: 4 }}>
-          <Ionicons name="calendar-outline" size={18} color={theme.colors.accent} />
+          <Ionicons name="calendar" size={20} color={theme.colors.accent} />
         </TouchableOpacity>
         {value ? (
           <TouchableOpacity onPress={() => { onChange(""); setText(""); }} hitSlop={8}>

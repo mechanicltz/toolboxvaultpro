@@ -13,6 +13,8 @@ import { useRouter, useFocusEffect } from "expo-router";
 import { theme } from "../../src/theme";
 import { api } from "../../src/api";
 import { PaymentModal } from "../../src/sections/PaymentModal";
+import { nextRouteDate, DAY_NAMES } from "../../src/route";
+import { formatDateUS } from "../../src/dateUtil";
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -84,6 +86,27 @@ export default function HomeScreen() {
     0
   );
 
+  // Compute the next dealer route across all dealers
+  const upcomingRoutes = dealers
+    .map((d) => ({ dealer: d, when: nextRouteDate(d) }))
+    .filter((x): x is { dealer: any; when: Date } => !!x.when);
+  let nextRouteBanner: { dateStr: string; dealers: string[] } | null = null;
+  if (upcomingRoutes.length) {
+    upcomingRoutes.sort((a, b) => a.when.getTime() - b.when.getTime());
+    const earliest = upcomingRoutes[0].when.getTime();
+    const sameDay = upcomingRoutes.filter(
+      (x) => x.when.getTime() === earliest
+    );
+    const dt = upcomingRoutes[0].when;
+    const dateStr = `${DAY_NAMES[dt.getDay()]} ${formatDateUS(
+      dt.toISOString().slice(0, 10)
+    )}`;
+    nextRouteBanner = {
+      dateStr,
+      dealers: sameDay.map((x) => x.dealer.name),
+    };
+  }
+
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <View style={styles.header}>
@@ -104,6 +127,24 @@ export default function HomeScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.colors.accent} />
         }
       >
+        {nextRouteBanner && (
+          <TouchableOpacity
+            testID="next-route-banner"
+            style={styles.routeBanner}
+            onPress={() => router.push("/dealers")}
+            activeOpacity={0.85}
+          >
+            <Ionicons name="map" size={22} color={theme.colors.accent} />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.routeBannerLabel}>NEXT DEALER ROUTE</Text>
+              <Text style={styles.routeBannerText}>
+                {nextRouteBanner.dealers.join(" & ")} on {nextRouteBanner.dateStr}
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={theme.colors.textMuted} />
+          </TouchableOpacity>
+        )}
+
         {/* Hero stats grid */}
         <View style={styles.gridRow}>
           <StatCard
@@ -353,5 +394,30 @@ const styles = StyleSheet.create({
     textAlign: "center",
     fontStyle: "italic",
     marginTop: 18,
+  },
+  routeBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    backgroundColor: theme.colors.bgSecondary,
+    borderWidth: 1,
+    borderColor: theme.colors.accent,
+    borderLeftWidth: 4,
+    borderRadius: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    marginBottom: 14,
+  },
+  routeBannerLabel: {
+    color: theme.colors.accent,
+    fontSize: 9,
+    fontWeight: "900",
+    letterSpacing: 1.5,
+  },
+  routeBannerText: {
+    color: theme.colors.textPrimary,
+    fontSize: 14,
+    fontWeight: "800",
+    marginTop: 3,
   },
 });

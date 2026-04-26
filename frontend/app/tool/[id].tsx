@@ -30,6 +30,7 @@ import {
 import { DocumentsSection } from "../../src/sections/DocumentsSection";
 import { MaintenanceSection } from "../../src/sections/MaintenanceSection";
 import { ClaimsHistorySection } from "../../src/sections/ClaimsHistorySection";
+import { WarrantySection } from "../../src/sections/WarrantySection";
 
 export default function ToolDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -512,6 +513,7 @@ export default function ToolDetail() {
 
             <DocumentsSection tool={tool} onChange={load} />
             <MaintenanceSection tool={tool} onChange={load} />
+            <WarrantySection tool={tool} />
             <ClaimsHistorySection toolId={tool.id} />
             <ReportLostButton tool={tool} onChange={load} />
 
