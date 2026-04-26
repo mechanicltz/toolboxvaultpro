@@ -139,7 +139,7 @@ export default function InventoryScreen() {
         api.warrantyClaimsSummary().catch(() => ({ totals: { open: 0 } })),
         api.listLocations().catch(() => []),
         api.listTags().catch(() => []),
-        api.maintenanceUpcoming(60).catch(() => ({ overdue: [], due_soon: [] })),
+        api.upcomingMaintenance(60).catch(() => ({ overdue: [], due_soon: [] })),
       ]);
       // Client-side filter for "lost" since backend doesn't expose this
       const filteredTools = filter === "lost"
