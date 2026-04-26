@@ -127,4 +127,9 @@ export const api = {
     request<any>(`/dealers/${dealerId}/transactions`, { method: "POST", body: JSON.stringify(data) }),
   deleteDealerTransaction: (dealerId: string, txId: string) =>
     request<any>(`/dealers/${dealerId}/transactions/${txId}`, { method: "DELETE" }),
+
+  // Personal Profile
+  getPersonalProfile: () => request<any>(`/personal-profile`),
+  updatePersonalProfile: (data: any) =>
+    request<any>(`/personal-profile`, { method: "PUT", body: JSON.stringify(data) }),
 };

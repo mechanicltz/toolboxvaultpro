@@ -13,7 +13,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import { useFocusEffect } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import * as Print from "expo-print";
 import * as Sharing from "expo-sharing";
 import * as FileSystem from "expo-file-system";
@@ -212,6 +212,7 @@ const buildCsv = (tools: any[], selectedIds: string[]) => {
 };
 
 export default function ReportsScreen() {
+  const router = useRouter();
   const [stats, setStats] = useState<any>({});
   const [busy, setBusy] = useState(false);
   const [format, setFormat] = useState<"pdf" | "csv">("pdf");
@@ -1014,6 +1015,24 @@ export default function ReportsScreen() {
             <Text style={styles.reportDesc}>Tools flagged for repair tracking</Text>
           </View>
           <Ionicons name="download-outline" size={22} color={theme.colors.textSecondary} />
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          testID="report-insurance-btn"
+          style={[styles.reportCard, { borderColor: theme.colors.accent }]}
+          onPress={() => router.push("/insurance-report")}
+          disabled={busy}
+        >
+          <View style={[styles.reportIcon, { backgroundColor: "rgba(255,179,0,0.15)" }]}>
+            <Ionicons name="shield" size={24} color={theme.colors.accent} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.reportTitle}>INSURANCE REPORT</Text>
+            <Text style={styles.reportDesc}>
+              Full inventory PDF with your policyholder info & total value
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color={theme.colors.accent} />
         </TouchableOpacity>
 
         {busy && (

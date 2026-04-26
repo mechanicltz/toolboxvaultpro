@@ -1745,6 +1745,44 @@ async def convert_wishlist_to_tool(item_id: str):
 # ---------- AI Toolbox Analysis (REMOVED) ----------
 
 
+# ---------- Personal Profile (singleton) ----------
+class PersonalProfile(BaseModel):
+    name: Optional[str] = ""
+    address: Optional[str] = ""
+    address2: Optional[str] = ""
+    city: Optional[str] = ""
+    state: Optional[str] = ""
+    zip_code: Optional[str] = ""
+    country: Optional[str] = ""
+    phone: Optional[str] = ""
+    email: Optional[str] = ""
+    policy_number: Optional[str] = ""
+    insurance_company: Optional[str] = ""
+    notes: Optional[str] = ""
+    is_company: Optional[bool] = False
+    updated_at: str = Field(default_factory=now_iso)
+
+
+@api_router.get("/personal-profile", response_model=PersonalProfile)
+async def get_personal_profile():
+    doc = await db.personal_profile.find_one({"_id": "self"}, {"_id": 0})
+    if not doc:
+        return PersonalProfile()
+    return PersonalProfile(**doc)
+
+
+@api_router.put("/personal-profile", response_model=PersonalProfile)
+async def update_personal_profile(payload: PersonalProfile):
+    data = payload.dict()
+    data["updated_at"] = now_iso()
+    await db.personal_profile.update_one(
+        {"_id": "self"},
+        {"$set": data},
+        upsert=True,
+    )
+    return PersonalProfile(**data)
+
+
 app.include_router(api_router)
 
 app.add_middleware(

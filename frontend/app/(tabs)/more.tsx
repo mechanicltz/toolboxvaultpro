@@ -72,6 +72,22 @@ export default function MoreScreen() {
         <Text style={styles.subtitle}>Manage everything</Text>
       </View>
       <ScrollView contentContainerStyle={{ paddingBottom: 100 }}>
+        <Text style={styles.sectionLabel}>OWNER</Text>
+        <Row
+          icon="person-circle"
+          title="Personal Information"
+          subtitle="Name, address, phone, insurance — used in reports"
+          testID="more-personal-info"
+          onPress={() => router.push("/personal-info")}
+        />
+        <Row
+          icon="shield"
+          title="Insurance Report"
+          subtitle="Generate full-inventory PDF for your insurer"
+          testID="more-insurance-report"
+          onPress={() => router.push("/insurance-report")}
+        />
+
         <Text style={styles.sectionLabel}>ORGANIZATION</Text>
         <Row
           icon="folder"
