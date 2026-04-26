@@ -272,7 +272,7 @@ export default function ToolDetail() {
           )}
         </View>
 
-        <View style={{ paddingHorizontal: 20 }}>
+        <View style={styles.bodyContainer}>
           <View
             style={[
               styles.statusBanner,
@@ -345,46 +345,47 @@ export default function ToolDetail() {
             </TouchableOpacity>
           )}
 
-          <Text style={styles.title}>{tool.name}</Text>
-          {!!tool.description && (
-            <Text style={styles.description}>{tool.description}</Text>
-          )}
+          <View style={styles.infoCard}>
+            <Text style={styles.title}>{tool.name}</Text>
+            {!!tool.description && (
+              <Text style={styles.description}>{tool.description}</Text>
+            )}
 
-          {(tool.tag_names || []).length > 0 && (
-            <View style={styles.tagWrap}>
-              {tool.tag_names.map((t: string) => (
-                <View key={t} style={styles.tag}>
-                  <Text style={styles.tagText}>{t}</Text>
-                </View>
-              ))}
+            {(tool.tag_names || []).length > 0 && (
+              <View style={styles.tagWrap}>
+                {tool.tag_names.map((t: string) => (
+                  <View key={t} style={styles.tag}>
+                    <Text style={styles.tagText}>{t}</Text>
+                  </View>
+                ))}
+              </View>
+            )}
+
+            <View style={styles.grid}>
+              <Field label="Brand" value={tool.brand} />
+              <Field label="Model" value={tool.model} />
+              <Field label="Serial #" value={tool.serial_number} />
+              <Field label="Cost" value={`$${(tool.cost || 0).toFixed(2)}`} />
+              <Field label="Location" value={tool.location_name} />
+              <Field label="Condition" value={tool.condition} />
+              <Field label="Purchased" value={tool.purchase_date} />
             </View>
-          )}
 
-          <View style={styles.grid}>
-            <Field label="Brand" value={tool.brand} />
-            <Field label="Model" value={tool.model} />
-            <Field label="Serial #" value={tool.serial_number} />
-            <Field label="Cost" value={`$${(tool.cost || 0).toFixed(2)}`} />
-            <Field label="Location" value={tool.location_name} />
-            <Field label="Condition" value={tool.condition} />
-            <Field label="Purchased" value={tool.purchase_date} />
-          </View>
+            {(tool.documents || []).length > 0 && (
+              <>
+                <Text style={styles.sectionLabel}>DOCUMENTS</Text>
+                {tool.documents.map((d: any, i: number) => (
+                  <View key={i} style={styles.docRow}>
+                    <Ionicons name="document" size={20} color={theme.colors.accent} />
+                    <Text style={styles.docName} numberOfLines={1}>{d.name}</Text>
+                  </View>
+                ))}
+              </>
+            )}
 
-          {(tool.documents || []).length > 0 && (
-            <>
-              <Text style={styles.sectionLabel}>DOCUMENTS</Text>
-              {tool.documents.map((d: any, i: number) => (
-                <View key={i} style={styles.docRow}>
-                  <Ionicons name="document" size={20} color={theme.colors.accent} />
-                  <Text style={styles.docName} numberOfLines={1}>{d.name}</Text>
-                </View>
-              ))}
-            </>
-          )}
-
-          {(tool.checkout_history || []).length > 0 && (
-            <>
-              <Text style={styles.sectionLabel}>HISTORY</Text>
+            {(tool.checkout_history || []).length > 0 && (
+              <>
+                <Text style={styles.sectionLabel}>HISTORY</Text>
               {tool.checkout_history.slice().reverse().map((h: any, i: number) => (
                 <TouchableOpacity
                   key={i}
@@ -411,6 +412,7 @@ export default function ToolDetail() {
               ))}
             </>
           )}
+          </View>
         </View>
       </ScrollView>
 
@@ -672,6 +674,17 @@ function Field({ label, value }: { label: string; value?: string }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.colors.bg },
+  bodyContainer: { paddingHorizontal: 16, paddingBottom: 12 },
+  infoCard: {
+    backgroundColor: theme.colors.bgSecondary,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: theme.radii.md,
+    padding: 18,
+    marginBottom: 16,
+    overflow: "hidden",
+    ...(theme.elevation.md as object),
+  },
   topBar: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -699,12 +712,13 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 14,
-    paddingVertical: 10,
+    paddingVertical: 12,
     borderWidth: 1,
-    borderRadius: 4,
+    borderRadius: theme.radii.md,
     backgroundColor: theme.colors.bgSecondary,
     gap: 8,
-    marginBottom: 16,
+    marginBottom: 14,
+    ...(theme.elevation.md as object),
   },
   statusDot: { width: 10, height: 10, borderRadius: 5 },
   statusText: { color: theme.colors.textPrimary, fontWeight: "800", letterSpacing: 1, fontSize: 12 },
@@ -713,15 +727,16 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: 12,
     alignItems: "flex-start",
-    padding: 12,
+    padding: 14,
     borderWidth: 1,
     borderColor: theme.colors.danger,
-    backgroundColor: "rgba(239,68,68,0.08)",
-    borderRadius: 4,
+    backgroundColor: "rgba(239, 68, 68, 0.18)",
+    borderRadius: theme.radii.md,
     marginBottom: 16,
+    ...(theme.elevation.md as object),
   },
   repairTitle: {
-    color: theme.colors.danger,
+    color: "#FCA5A5",
     fontWeight: "900",
     letterSpacing: 1.5,
     fontSize: 12,
@@ -796,37 +811,42 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    padding: 16,
-    backgroundColor: theme.colors.bgSecondary,
+    paddingHorizontal: 14,
+    paddingTop: 14,
+    paddingBottom: 24,
+    backgroundColor: "rgba(15, 15, 15, 0.96)",
     borderTopWidth: 1,
     borderTopColor: theme.colors.border,
   },
   btn: {
     flexDirection: "row",
     backgroundColor: theme.colors.accent,
-    height: 52,
+    height: 54,
     alignItems: "center",
     justifyContent: "center",
-    borderRadius: 4,
+    borderRadius: theme.radii.md,
     gap: 8,
+    ...(theme.elevation.accent as object),
   },
   btnSuccess: {
     flexDirection: "row",
     backgroundColor: theme.colors.success,
-    height: 52,
+    height: 54,
     alignItems: "center",
     justifyContent: "center",
-    borderRadius: 4,
+    borderRadius: theme.radii.md,
     gap: 8,
+    ...(theme.elevation.md as object),
   },
   btnDanger: {
     flexDirection: "row",
     backgroundColor: theme.colors.danger,
-    height: 52,
+    height: 54,
     alignItems: "center",
     justifyContent: "center",
-    borderRadius: 4,
+    borderRadius: theme.radii.md,
     gap: 6,
+    ...(theme.elevation.md as object),
   },
   repairLabel: {
     color: theme.colors.textMuted,
