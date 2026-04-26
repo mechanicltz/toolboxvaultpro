@@ -148,7 +148,7 @@ export default function MoreScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.colors.bg },
   header: { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 12 },
-  title: { color: "#fff", fontSize: 28, fontWeight: "900", letterSpacing: 2 },
+  title: { color: theme.colors.textPrimary, fontSize: 28, fontWeight: "900", letterSpacing: 2 },
   subtitle: {
     color: theme.colors.accent,
     fontSize: 11,
@@ -192,6 +192,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     borderRadius: 4,
   },
-  rowTitle: { color: "#fff", fontWeight: "700", fontSize: 15 },
+  rowTitle: { color: theme.colors.textPrimary, fontWeight: "700", fontSize: 15 },
   rowSub: { color: theme.colors.textSecondary, fontSize: 12, marginTop: 2 },
 });

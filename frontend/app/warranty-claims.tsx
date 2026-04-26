@@ -375,7 +375,7 @@ export default function WarrantyClaimsScreen() {
     <SafeAreaView style={styles.container} edges={["top"]}>
       <View style={styles.topBar}>
         <TouchableOpacity testID="claims-back" onPress={() => router.back()} hitSlop={10}>
-          <Ionicons name="arrow-back" size={26} color="#fff" />
+          <Ionicons name="arrow-back" size={26} color={theme.colors.textPrimary} />
         </TouchableOpacity>
         <View style={{ flex: 1, marginLeft: 12 }}>
           <Text style={styles.title}>WARRANTY CLAIMS</Text>
@@ -627,7 +627,7 @@ export default function WarrantyClaimsScreen() {
                   onPress={() => pickerForClaim && setStatus(pickerForClaim, s.key)}
                 >
                   <Ionicons name={s.icon} size={20} color={s.color} />
-                  <Text style={[styles.pickText, { color: "#fff" }]}>{s.label}</Text>
+                  <Text style={[styles.pickText, { color: theme.colors.textPrimary }]}>{s.label}</Text>
                   {active && <Ionicons name="checkmark" size={20} color={theme.colors.accent} />}
                 </TouchableOpacity>
               );
@@ -732,7 +732,7 @@ const styles = StyleSheet.create({
     borderBottomColor: theme.colors.border,
     borderBottomWidth: 1,
   },
-  title: { color: "#fff", fontSize: 20, fontWeight: "900", letterSpacing: 2 },
+  title: { color: theme.colors.textPrimary, fontSize: 20, fontWeight: "900", letterSpacing: 2 },
   subtitle: { color: theme.colors.accent, fontSize: 10, fontWeight: "700", letterSpacing: 1.5, marginTop: 2 },
   statRow: { flexDirection: "row", padding: 16, gap: 8 },
   statBox: {
@@ -744,10 +744,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     borderRadius: 4,
   },
-  statValue: { color: "#fff", fontSize: 22, fontWeight: "900" },
+  statValue: { color: theme.colors.textPrimary, fontSize: 22, fontWeight: "900" },
   statLabel: { color: theme.colors.textMuted, fontSize: 9, fontWeight: "800", letterSpacing: 1, marginTop: 4 },
   empty: { alignItems: "center", marginTop: 60, paddingHorizontal: 40 },
-  emptyTitle: { color: "#fff", fontSize: 16, fontWeight: "900", letterSpacing: 2, marginTop: 16 },
+  emptyTitle: { color: theme.colors.textPrimary, fontSize: 16, fontWeight: "900", letterSpacing: 2, marginTop: 16 },
   emptyText: { color: theme.colors.textSecondary, fontSize: 13, textAlign: "center", marginTop: 8 },
   dealerBlock: { borderBottomColor: theme.colors.border, borderBottomWidth: 1 },
   dealerHead: {
@@ -763,7 +763,7 @@ const styles = StyleSheet.create({
     alignItems: "center", justifyContent: "center",
     borderRadius: 4,
   },
-  dealerName: { color: "#fff", fontWeight: "800", fontSize: 15 },
+  dealerName: { color: theme.colors.textPrimary, fontWeight: "800", fontSize: 15 },
   countsRow: { flexDirection: "row", gap: 6, marginTop: 6 },
   pill: {
     flexDirection: "row",
@@ -796,7 +796,7 @@ const styles = StyleSheet.create({
   claimHead: { flexDirection: "row", alignItems: "center", gap: 10 },
   thumb: { width: 44, height: 44, borderRadius: 4, borderWidth: 1, borderColor: theme.colors.border },
   thumbPh: { backgroundColor: theme.colors.surface, alignItems: "center", justifyContent: "center" },
-  claimTitle: { color: "#fff", fontWeight: "700", fontSize: 14 },
+  claimTitle: { color: theme.colors.textPrimary, fontWeight: "700", fontSize: 14 },
   claimMeta: { color: theme.colors.textSecondary, fontSize: 11, marginTop: 2 },
   claimDate: { color: theme.colors.textMuted, fontSize: 10, marginTop: 2 },
   claimFoot: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
@@ -813,7 +813,7 @@ const styles = StyleSheet.create({
     borderTopWidth: 2,
     borderTopColor: theme.colors.accent,
   },
-  modalTitle: { color: "#fff", fontSize: 18, fontWeight: "900", letterSpacing: 2 },
+  modalTitle: { color: theme.colors.textPrimary, fontSize: 18, fontWeight: "900", letterSpacing: 2 },
   modalSub: { color: theme.colors.textSecondary, fontSize: 12, marginTop: 4, marginBottom: 12 },
   filterDot: {
     position: "absolute",
@@ -841,11 +841,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12, paddingVertical: 10,
     borderWidth: 1, borderColor: theme.colors.border, borderRadius: 4,
   },
-  checkText: { color: "#fff", fontSize: 14, fontWeight: "600" },
+  checkText: { color: theme.colors.textPrimary, fontSize: 14, fontWeight: "600" },
   dateInput: {
     backgroundColor: theme.colors.bg,
     borderWidth: 1, borderColor: theme.colors.border,
-    color: "#fff", paddingHorizontal: 12, paddingVertical: 10,
+    color: theme.colors.textPrimary, paddingHorizontal: 12, paddingVertical: 10,
     borderRadius: 4, fontSize: 14,
   },
   pickRow: {
@@ -860,5 +860,5 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: theme.colors.border, height: 48, marginTop: 8,
     alignItems: "center", justifyContent: "center", borderRadius: 4,
   },
-  btnGhostText: { color: "#fff", fontWeight: "800", letterSpacing: 2, fontSize: 14 },
+  btnGhostText: { color: theme.colors.textPrimary, fontWeight: "800", letterSpacing: 2, fontSize: 14 },
 });

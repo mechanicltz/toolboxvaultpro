@@ -162,7 +162,7 @@ export default function ToolboxDetail() {
     <SafeAreaView style={styles.container} edges={["top"]}>
       <View style={styles.topBar}>
         <TouchableOpacity onPress={() => router.back()} hitSlop={10}>
-          <Ionicons name="arrow-back" size={26} color="#fff" />
+          <Ionicons name="arrow-back" size={26} color={theme.colors.textPrimary} />
         </TouchableOpacity>
         <Text style={styles.title} numberOfLines={1}>{layout.name.toUpperCase()}</Text>
         <TouchableOpacity onPress={removeLayout} hitSlop={10}>
@@ -256,7 +256,7 @@ export default function ToolboxDetail() {
               onPress={() => setEditingDrawer({ ...d })}
               hitSlop={6}
             >
-              <Ionicons name="create-outline" size={18} color="#fff" />
+              <Ionicons name="create-outline" size={18} color={theme.colors.textPrimary} />
             </TouchableOpacity>
             <TouchableOpacity
               testID={`del-drawer-${d.id}`}
@@ -349,7 +349,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.border,
   },
-  title: { color: "#fff", fontSize: 16, fontWeight: "900", letterSpacing: 2, flex: 1, textAlign: "center" },
+  title: { color: theme.colors.textPrimary, fontSize: 16, fontWeight: "900", letterSpacing: 2, flex: 1, textAlign: "center" },
   imgWrap: { width: "100%", height: 360, backgroundColor: "#000" },
   img: { width: "100%", height: "100%" },
   marker: {
@@ -401,7 +401,7 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(34,197,94,0.05)",
     borderRadius: 4,
   },
-  drawerHead: { color: "#fff", fontWeight: "900", letterSpacing: 1, fontSize: 14 },
+  drawerHead: { color: theme.colors.textPrimary, fontWeight: "900", letterSpacing: 1, fontSize: 14 },
   drawerSub: { color: theme.colors.textSecondary, fontSize: 12, marginTop: 4 },
   drawerTool: {
     flexDirection: "row",
@@ -411,7 +411,7 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: theme.colors.borderSubtle,
   },
-  drawerToolName: { color: "#fff", flex: 1, fontWeight: "600" },
+  drawerToolName: { color: theme.colors.textPrimary, flex: 1, fontWeight: "600" },
   empty: { color: theme.colors.textMuted, fontStyle: "italic", marginTop: 8 },
   sectionLabel: {
     color: theme.colors.textMuted,
@@ -431,7 +431,7 @@ const styles = StyleSheet.create({
     borderBottomColor: theme.colors.borderSubtle,
     borderBottomWidth: 1,
   },
-  drawerName: { color: "#fff", fontWeight: "700" },
+  drawerName: { color: theme.colors.textPrimary, fontWeight: "700" },
   drawerMeta: { color: theme.colors.textMuted, fontSize: 11, marginTop: 2 },
   modalBg: {
     position: "absolute",
@@ -447,13 +447,13 @@ const styles = StyleSheet.create({
     borderTopColor: theme.colors.accent,
     borderRadius: 4,
   },
-  modalTitle: { color: "#fff", fontSize: 18, fontWeight: "900", letterSpacing: 2, marginBottom: 12 },
+  modalTitle: { color: theme.colors.textPrimary, fontSize: 18, fontWeight: "900", letterSpacing: 2, marginBottom: 12 },
   lbl: { color: theme.colors.textMuted, fontSize: 10, fontWeight: "800", letterSpacing: 2, marginBottom: 4 },
   input: {
     backgroundColor: theme.colors.bg,
     borderWidth: 1,
     borderColor: theme.colors.border,
-    color: "#fff",
+    color: theme.colors.textPrimary,
     paddingHorizontal: 12,
     height: 44,
     borderRadius: 4,
@@ -479,5 +479,5 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     borderRadius: 4,
   },
-  btnGhostText: { color: "#fff", fontWeight: "800", letterSpacing: 2, fontSize: 14 },
+  btnGhostText: { color: theme.colors.textPrimary, fontWeight: "800", letterSpacing: 2, fontSize: 14 },
 });

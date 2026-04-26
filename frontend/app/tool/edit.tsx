@@ -242,7 +242,7 @@ export default function ToolEdit() {
       <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1 }}>
         <View style={styles.topBar}>
           <TouchableOpacity testID="cancel-btn" onPress={() => router.back()}>
-            <Ionicons name="close" size={26} color="#fff" />
+            <Ionicons name="close" size={26} color={theme.colors.textPrimary} />
           </TouchableOpacity>
           <Text style={styles.topTitle}>{isEdit ? "EDIT TOOL" : "NEW TOOL"}</Text>
           <TouchableOpacity testID="save-tool-btn" onPress={save} disabled={saving}>
@@ -508,7 +508,7 @@ export default function ToolEdit() {
                 <Image source={{ uri: p }} style={styles.photo} />
                 <TouchableOpacity testID={`remove-photo-${i}`} style={styles.photoRemove}
                   onPress={() => setPhotos((arr) => arr.filter((_, idx) => idx !== i))}>
-                  <Ionicons name="close" size={16} color="#fff" />
+                  <Ionicons name="close" size={16} color={theme.colors.textPrimary} />
                 </TouchableOpacity>
               </View>
             ))}
@@ -578,7 +578,7 @@ const styles = StyleSheet.create({
     flexDirection: "row", alignItems: "center", justifyContent: "space-between",
     paddingHorizontal: 20, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: theme.colors.border,
   },
-  topTitle: { color: "#fff", fontSize: 16, fontWeight: "900", letterSpacing: 2 },
+  topTitle: { color: theme.colors.textPrimary, fontSize: 16, fontWeight: "900", letterSpacing: 2 },
   saveText: { color: theme.colors.accent, fontWeight: "900", letterSpacing: 2, fontSize: 14 },
   label: {
     color: theme.colors.textMuted, fontSize: 11, fontWeight: "800",
@@ -586,7 +586,7 @@ const styles = StyleSheet.create({
   },
   input: {
     backgroundColor: theme.colors.bgSecondary, borderWidth: 1, borderColor: theme.colors.border,
-    color: "#fff", paddingHorizontal: 14, paddingVertical: 12,
+    color: theme.colors.textPrimary, paddingHorizontal: 14, paddingVertical: 12,
     minHeight: 48, borderRadius: 4, fontSize: 15,
   },
   row2: { flexDirection: "row", gap: 10 },
@@ -607,19 +607,19 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.bgSecondary,
   },
   locRowActive: { backgroundColor: theme.colors.accent },
-  locText: { color: "#fff", fontSize: 14, fontWeight: "600" },
+  locText: { color: theme.colors.textPrimary, fontSize: 14, fontWeight: "600" },
   pickerRow: {
     flexDirection: "row", alignItems: "center", gap: 12,
     backgroundColor: theme.colors.bgSecondary, borderWidth: 1, borderColor: theme.colors.border,
     paddingHorizontal: 14, paddingVertical: 12, borderRadius: 4,
   },
-  pickerText: { color: "#fff", flex: 1, fontWeight: "600", fontSize: 14 },
+  pickerText: { color: theme.colors.textPrimary, flex: 1, fontWeight: "600", fontSize: 14 },
   toggleRow: {
     flexDirection: "row", alignItems: "center", gap: 12,
     paddingVertical: 14, marginTop: 16,
     borderTopWidth: 1, borderTopColor: theme.colors.border,
   },
-  toggleText: { color: "#fff", fontSize: 13, fontWeight: "900", letterSpacing: 1.5, flex: 1 },
+  toggleText: { color: theme.colors.textPrimary, fontSize: 13, fontWeight: "900", letterSpacing: 1.5, flex: 1 },
   subSection: {
     marginTop: 4, paddingLeft: 12,
     borderLeftWidth: 2, borderLeftColor: theme.colors.accent,
@@ -640,7 +640,7 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.bgSecondary, borderWidth: 1, borderColor: theme.colors.border,
     paddingHorizontal: 12, paddingVertical: 10, marginBottom: 6, borderRadius: 4,
   },
-  docName: { color: "#fff", flex: 1, fontSize: 13 },
+  docName: { color: theme.colors.textPrimary, flex: 1, fontSize: 13 },
   docAdd: {
     flexDirection: "row", gap: 8, alignItems: "center", justifyContent: "center",
     borderWidth: 2, borderStyle: "dashed", borderColor: theme.colors.border,
@@ -652,16 +652,16 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.bgSecondary, padding: 20,
     borderTopWidth: 2, borderTopColor: theme.colors.accent,
   },
-  modalTitle: { color: "#fff", fontSize: 18, fontWeight: "900", letterSpacing: 2, marginBottom: 12 },
+  modalTitle: { color: theme.colors.textPrimary, fontSize: 18, fontWeight: "900", letterSpacing: 2, marginBottom: 12 },
   dealerOpt: {
     paddingVertical: 14, paddingHorizontal: 14, borderWidth: 1,
     borderColor: theme.colors.border, marginBottom: 6, borderRadius: 4,
   },
-  dealerOptName: { color: "#fff", fontWeight: "700" },
+  dealerOptName: { color: theme.colors.textPrimary, fontWeight: "700" },
   dealerOptSub: { color: theme.colors.textSecondary, fontSize: 12, marginTop: 2 },
   btnGhost: {
     borderWidth: 1, borderColor: theme.colors.border, height: 48, marginTop: 8,
     alignItems: "center", justifyContent: "center", borderRadius: 4,
   },
-  btnGhostText: { color: "#fff", fontWeight: "800", letterSpacing: 2, fontSize: 14 },
+  btnGhostText: { color: theme.colors.textPrimary, fontWeight: "800", letterSpacing: 2, fontSize: 14 },
 });

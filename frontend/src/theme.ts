@@ -1,30 +1,30 @@
 export const theme = {
-  // Cyber HUD — futuristic, terminal/Tron, neon glow
+  // Workshop Pro Light — premium industrial, daylight-friendly, editorial
   colors: {
-    bg: "transparent", // grid is rendered in HUD background
-    bgSecondary: "rgba(0, 8, 20, 0.78)",
-    surface: "rgba(0, 30, 50, 0.65)",
-    surfaceAlt: "rgba(0, 18, 36, 0.78)",
-    glass: "rgba(0, 240, 255, 0.06)",
-    glassBorder: "rgba(0, 240, 255, 0.30)",
-    accent: "#00F0FF", // neon cyan
-    accentSecondary: "#FF00C8", // magenta
-    textPrimary: "#E6FBFF",
-    textSecondary: "#7EC8D9",
-    textMuted: "#4A6F7C",
-    textOnAccent: "#000814",
-    border: "rgba(0, 240, 255, 0.25)",
-    borderSubtle: "rgba(0, 240, 255, 0.10)",
-    success: "#00FF87",
-    danger: "#FF3366",
-    warning: "#FFB800",
+    bg: "transparent", // paper background rendered in workshop bg component
+    bgSecondary: "#FFFFFF",
+    surface: "#FFFFFF",
+    surfaceAlt: "#FAF7F1",
+    glass: "rgba(255, 255, 255, 0.92)",
+    glassBorder: "#E5E1D8",
+    accent: "#FFC107", // safety yellow
+    accentSecondary: "#0F172A", // deep navy
+    textPrimary: "#0F172A",
+    textSecondary: "#475569",
+    textMuted: "#94A3B8",
+    textOnAccent: "#0F172A",
+    border: "#D6D1C5",
+    borderSubtle: "#EAE6DD",
+    success: "#15803D",
+    danger: "#B91C1C",
+    warning: "#B45309",
   },
   gradients: {
-    cyber: ["#000814", "#001428", "#000814"],
-    cyberAccent: ["#00F0FF", "#0077FF"],
-    cyberDanger: ["#FF3366", "#FF00C8"],
-    cyberSuccess: ["#00FF87", "#00F0FF"],
-    glass: ["rgba(0, 240, 255, 0.10)", "rgba(0, 240, 255, 0.02)"],
+    paper: ["#F5F2ED", "#EDE8DD", "#F5F2ED"],
+    accent: ["#FFC107", "#FFA000"],
+    danger: ["#DC2626", "#B91C1C"],
+    success: ["#22C55E", "#15803D"],
+    glass: ["rgba(255, 255, 255, 0.95)", "rgba(255, 255, 255, 0.85)"],
   },
   spacing: {
     xs: 4,
@@ -36,9 +36,9 @@ export const theme = {
   },
   radii: {
     none: 0,
-    sm: 0,
-    md: 2,
-    lg: 4,
+    sm: 4,
+    md: 6,
+    lg: 8,
     pill: 999,
   },
   font: {
@@ -48,12 +48,5 @@ export const theme = {
     body: 16,
     sm: 14,
     xs: 12,
-  },
-  // Glow shadows (web-friendly)
-  glow: {
-    cyan: "0 0 20px rgba(0, 240, 255, 0.6)",
-    magenta: "0 0 20px rgba(255, 0, 200, 0.5)",
-    danger: "0 0 16px rgba(255, 51, 102, 0.5)",
-    success: "0 0 16px rgba(0, 255, 135, 0.45)",
   },
 };

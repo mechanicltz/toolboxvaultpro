@@ -245,7 +245,7 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     minWidth: 100,
-    color: "#fff",
+    color: theme.colors.textPrimary,
     fontSize: 14,
     paddingVertical: 6,
   },
@@ -253,7 +253,7 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.bgSecondary,
     borderWidth: 1,
     borderColor: theme.colors.border,
-    color: "#fff",
+    color: theme.colors.textPrimary,
     paddingHorizontal: 14,
     height: 48,
     borderRadius: 4,
@@ -282,7 +282,7 @@ const styles = StyleSheet.create({
     borderBottomColor: theme.colors.borderSubtle,
     borderBottomWidth: 1,
   },
-  suggestionText: { color: "#fff", fontSize: 14 },
+  suggestionText: { color: theme.colors.textPrimary, fontSize: 14 },
   selectedRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -294,5 +294,5 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderRadius: 4,
   },
-  selectedText: { color: "#fff", fontWeight: "700", flex: 1 },
+  selectedText: { color: theme.colors.textPrimary, fontWeight: "700", flex: 1 },
 });

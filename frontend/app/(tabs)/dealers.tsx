@@ -167,7 +167,7 @@ export default function DealersScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.colors.bg },
   header: { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 12 },
-  title: { color: "#fff", fontSize: 28, fontWeight: "900", letterSpacing: 2 },
+  title: { color: theme.colors.textPrimary, fontSize: 28, fontWeight: "900", letterSpacing: 2 },
   subtitle: {
     color: theme.colors.accent,
     fontSize: 11,
@@ -201,7 +201,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     letterSpacing: 1,
   },
-  rowTitle: { color: "#fff", fontWeight: "700", fontSize: 16 },
+  rowTitle: { color: theme.colors.textPrimary, fontWeight: "700", fontSize: 16 },
   rowSub: { color: theme.colors.textSecondary, fontSize: 12, marginTop: 2 },
   rowMeta: {
     color: theme.colors.textMuted,
@@ -222,7 +222,7 @@ const styles = StyleSheet.create({
   },
   empty: { alignItems: "center", paddingVertical: 60, paddingHorizontal: 40 },
   emptyTitle: {
-    color: "#fff",
+    color: theme.colors.textPrimary,
     fontSize: 16,
     fontWeight: "900",
     letterSpacing: 2,
@@ -252,7 +252,7 @@ const styles = StyleSheet.create({
     borderTopColor: theme.colors.accent,
   },
   modalTitle: {
-    color: "#fff",
+    color: theme.colors.textPrimary,
     fontSize: 20,
     fontWeight: "900",
     letterSpacing: 2,
@@ -262,7 +262,7 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.bg,
     borderWidth: 1,
     borderColor: theme.colors.border,
-    color: "#fff",
+    color: theme.colors.textPrimary,
     paddingHorizontal: 14,
     height: 48,
     borderRadius: 4,
@@ -287,5 +287,5 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     borderRadius: 4,
   },
-  btnGhostText: { color: "#fff", fontWeight: "800", letterSpacing: 2, fontSize: 14 },
+  btnGhostText: { color: theme.colors.textPrimary, fontWeight: "800", letterSpacing: 2, fontSize: 14 },
 });

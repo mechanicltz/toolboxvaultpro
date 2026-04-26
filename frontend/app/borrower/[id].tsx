@@ -27,7 +27,7 @@ export default function BorrowerHistory() {
   if (!data) {
     return (
       <SafeAreaView style={styles.container}>
-        <Text style={{ color: "#fff", padding: 20 }}>Loading...</Text>
+        <Text style={{ color: theme.colors.textPrimary, padding: 20 }}>Loading...</Text>
       </SafeAreaView>
     );
   }
@@ -37,7 +37,7 @@ export default function BorrowerHistory() {
     <SafeAreaView style={styles.container} edges={["top"]}>
       <View style={styles.topBar}>
         <TouchableOpacity onPress={() => router.back()} hitSlop={10}>
-          <Ionicons name="arrow-back" size={26} color="#fff" />
+          <Ionicons name="arrow-back" size={26} color={theme.colors.textPrimary} />
         </TouchableOpacity>
         <Text style={styles.title} numberOfLines={1}>{b.name.toUpperCase()}</Text>
         <View style={{ width: 26 }} />
@@ -165,7 +165,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.border,
   },
-  title: { color: "#fff", fontSize: 16, fontWeight: "900", letterSpacing: 2, flex: 1, textAlign: "center" },
+  title: { color: theme.colors.textPrimary, fontSize: 16, fontWeight: "900", letterSpacing: 2, flex: 1, textAlign: "center" },
   heroBox: { alignItems: "center", paddingVertical: 16 },
   bigAvatar: {
     width: 70, height: 70, backgroundColor: theme.colors.surface,
@@ -173,7 +173,7 @@ const styles = StyleSheet.create({
     alignItems: "center", justifyContent: "center", borderRadius: 4,
   },
   bigAvatarText: { color: theme.colors.accent, fontWeight: "900", fontSize: 22, letterSpacing: 2 },
-  bigName: { color: "#fff", fontSize: 22, fontWeight: "900", letterSpacing: 1, marginTop: 12 },
+  bigName: { color: theme.colors.textPrimary, fontSize: 22, fontWeight: "900", letterSpacing: 1, marginTop: 12 },
   contact: { color: theme.colors.textSecondary, fontSize: 13, marginTop: 4 },
   statGrid: { flexDirection: "row", flexWrap: "wrap", paddingHorizontal: 14, marginVertical: 12, gap: 8 },
   cell: {
@@ -182,7 +182,7 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.bgSecondary,
     alignItems: "center", borderRadius: 4,
   },
-  cellValue: { color: "#fff", fontWeight: "900", fontSize: 22 },
+  cellValue: { color: theme.colors.textPrimary, fontWeight: "900", fontSize: 22 },
   cellLabel: {
     color: theme.colors.textMuted, fontSize: 9,
     fontWeight: "800", letterSpacing: 1, marginTop: 2, textTransform: "uppercase",
@@ -208,7 +208,7 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.surface,
     alignItems: "center", justifyContent: "center",
   },
-  rowName: { color: "#fff", fontWeight: "700", fontSize: 14 },
+  rowName: { color: theme.colors.textPrimary, fontWeight: "700", fontSize: 14 },
   rowMeta: { color: theme.colors.textSecondary, fontSize: 11, marginTop: 2 },
   rowNotes: { color: theme.colors.textMuted, fontStyle: "italic", fontSize: 11, marginTop: 4 },
   countPill: {
@@ -227,7 +227,7 @@ const styles = StyleSheet.create({
     width: 10, height: 10, borderRadius: 5,
     backgroundColor: theme.colors.accent, marginTop: 6,
   },
-  histTool: { color: "#fff", fontWeight: "700", fontSize: 14 },
+  histTool: { color: theme.colors.textPrimary, fontWeight: "700", fontSize: 14 },
   histTime: { color: theme.colors.textSecondary, fontSize: 11, marginTop: 2 },
   empty: { color: theme.colors.textMuted, fontStyle: "italic", padding: 20, textAlign: "center" },
 });

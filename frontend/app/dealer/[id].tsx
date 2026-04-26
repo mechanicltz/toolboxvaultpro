@@ -48,7 +48,7 @@ export default function DealerDetail() {
   if (!dealer) {
     return (
       <SafeAreaView style={styles.container}>
-        <Text style={{ color: "#fff", padding: 20 }}>Loading...</Text>
+        <Text style={{ color: theme.colors.textPrimary, padding: 20 }}>Loading...</Text>
       </SafeAreaView>
     );
   }
@@ -109,7 +109,7 @@ export default function DealerDetail() {
     <SafeAreaView style={styles.container} edges={["top"]}>
       <View style={styles.topBar}>
         <TouchableOpacity onPress={() => router.back()} hitSlop={10}>
-          <Ionicons name="arrow-back" size={26} color="#fff" />
+          <Ionicons name="arrow-back" size={26} color={theme.colors.textPrimary} />
         </TouchableOpacity>
         <View style={{ flexDirection: "row", gap: 16 }}>
           <TouchableOpacity
@@ -126,7 +126,7 @@ export default function DealerDetail() {
             }}
             hitSlop={10}
           >
-            <Ionicons name="create-outline" size={24} color="#fff" />
+            <Ionicons name="create-outline" size={24} color={theme.colors.textPrimary} />
           </TouchableOpacity>
           <TouchableOpacity testID="delete-dealer-btn" onPress={removeDealer} hitSlop={10}>
             <Ionicons name="trash-outline" size={24} color={theme.colors.danger} />
@@ -376,7 +376,7 @@ const styles = StyleSheet.create({
     fontSize: 26,
     letterSpacing: 2,
   },
-  dealerName: { color: "#fff", fontSize: 24, fontWeight: "900", letterSpacing: 1, marginTop: 12 },
+  dealerName: { color: theme.colors.textPrimary, fontSize: 24, fontWeight: "900", letterSpacing: 1, marginTop: 12 },
   summaryGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -388,7 +388,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingVertical: 8,
   },
-  cellValue: { color: "#fff", fontWeight: "900", fontSize: 18 },
+  cellValue: { color: theme.colors.textPrimary, fontWeight: "900", fontSize: 18 },
   cellLabel: {
     color: theme.colors.textMuted,
     fontSize: 9,
@@ -437,7 +437,7 @@ const styles = StyleSheet.create({
     borderBottomColor: theme.colors.borderSubtle,
     borderBottomWidth: 1,
   },
-  contactText: { color: "#fff", fontSize: 14 },
+  contactText: { color: theme.colors.textPrimary, fontSize: 14 },
   agentCard: {
     marginHorizontal: 20,
     marginBottom: 10,
@@ -494,7 +494,7 @@ const styles = StyleSheet.create({
     borderRadius: 2,
   },
   currentBadgeText: { color: "#000", fontSize: 9, fontWeight: "900", letterSpacing: 1 },
-  agentName: { color: "#fff", fontWeight: "700", fontSize: 16, marginTop: 6 },
+  agentName: { color: theme.colors.textPrimary, fontWeight: "700", fontSize: 16, marginTop: 6 },
   agentMeta: { color: theme.colors.textSecondary, fontSize: 12, marginTop: 2 },
   agentRow: {
     flexDirection: "row",
@@ -514,7 +514,7 @@ const styles = StyleSheet.create({
     borderBottomColor: theme.colors.borderSubtle,
     borderBottomWidth: 1,
   },
-  toolName: { color: "#fff", fontWeight: "700", fontSize: 14 },
+  toolName: { color: theme.colors.textPrimary, fontWeight: "700", fontSize: 14 },
   toolMeta: { color: theme.colors.textSecondary, fontSize: 12, marginTop: 2 },
   empty: { color: theme.colors.textMuted, fontStyle: "italic", padding: 20 },
   modalBg: { flex: 1, backgroundColor: "rgba(0,0,0,0.7)", justifyContent: "flex-end" },
@@ -525,12 +525,12 @@ const styles = StyleSheet.create({
     borderTopColor: theme.colors.accent,
     maxHeight: "85%",
   },
-  modalTitle: { color: "#fff", fontSize: 20, fontWeight: "900", letterSpacing: 2, marginBottom: 16 },
+  modalTitle: { color: theme.colors.textPrimary, fontSize: 20, fontWeight: "900", letterSpacing: 2, marginBottom: 16 },
   input: {
     backgroundColor: theme.colors.bg,
     borderWidth: 1,
     borderColor: theme.colors.border,
-    color: "#fff",
+    color: theme.colors.textPrimary,
     paddingHorizontal: 14,
     paddingVertical: 12,
     minHeight: 48,
@@ -556,5 +556,5 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     borderRadius: 4,
   },
-  btnGhostText: { color: "#fff", fontWeight: "800", letterSpacing: 2, fontSize: 14 },
+  btnGhostText: { color: theme.colors.textPrimary, fontWeight: "800", letterSpacing: 2, fontSize: 14 },
 });

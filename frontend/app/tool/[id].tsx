@@ -66,7 +66,7 @@ export default function ToolDetail() {
   if (!tool) {
     return (
       <SafeAreaView style={styles.container}>
-        <Text style={{ color: "#fff", padding: 20 }}>Loading...</Text>
+        <Text style={{ color: theme.colors.textPrimary, padding: 20 }}>Loading...</Text>
       </SafeAreaView>
     );
   }
@@ -226,7 +226,7 @@ export default function ToolDetail() {
     <SafeAreaView style={styles.container} edges={["top"]}>
       <View style={styles.topBar}>
         <TouchableOpacity testID="back-btn" onPress={() => router.back()} hitSlop={10}>
-          <Ionicons name="arrow-back" size={26} color="#fff" />
+          <Ionicons name="arrow-back" size={26} color={theme.colors.textPrimary} />
         </TouchableOpacity>
         <View style={{ flexDirection: "row", gap: 18 }}>
           <TouchableOpacity testID="export-pdf-btn" onPress={exportPdf} hitSlop={10}>
@@ -237,7 +237,7 @@ export default function ToolDetail() {
             onPress={() => router.push({ pathname: "/tool/edit", params: { id: tool.id } })}
             hitSlop={10}
           >
-            <Ionicons name="create-outline" size={24} color="#fff" />
+            <Ionicons name="create-outline" size={24} color={theme.colors.textPrimary} />
           </TouchableOpacity>
           <TouchableOpacity testID="delete-tool-btn" onPress={doDelete} hitSlop={10}>
             <Ionicons name="trash-outline" size={24} color={theme.colors.danger} />
@@ -447,8 +447,8 @@ export default function ToolDetail() {
               style={[styles.btnDanger, { flex: 1 }]}
               onPress={openRepair}
             >
-              <Ionicons name="build" size={20} color="#fff" />
-              <Text style={[styles.btnText, { color: "#fff" }]}>BROKEN</Text>
+              <Ionicons name="build" size={20} color={theme.colors.textPrimary} />
+              <Text style={[styles.btnText, { color: theme.colors.textPrimary }]}>BROKEN</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -649,7 +649,7 @@ export default function ToolDetail() {
                 style={[styles.btn, { backgroundColor: theme.colors.danger }]}
                 onPress={saveRepair}
               >
-                <Text style={[styles.btnText, { color: "#fff" }]}>
+                <Text style={[styles.btnText, { color: theme.colors.textPrimary }]}>
                   {tool.needs_repair ? "SAVE" : "MARK BROKEN"}
                 </Text>
               </TouchableOpacity>
@@ -707,7 +707,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   statusDot: { width: 10, height: 10, borderRadius: 5 },
-  statusText: { color: "#fff", fontWeight: "800", letterSpacing: 1, fontSize: 12 },
+  statusText: { color: theme.colors.textPrimary, fontWeight: "800", letterSpacing: 1, fontSize: 12 },
   statusSub: { color: theme.colors.textSecondary, fontSize: 11, marginTop: 2 },
   repairBanner: {
     flexDirection: "row",
@@ -727,8 +727,8 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginBottom: 4,
   },
-  repairLine: { color: "#fff", fontSize: 13, marginTop: 1 },
-  title: { color: "#fff", fontSize: 26, fontWeight: "900", letterSpacing: 1 },
+  repairLine: { color: theme.colors.textPrimary, fontSize: 13, marginTop: 1 },
+  title: { color: theme.colors.textPrimary, fontSize: 26, fontWeight: "900", letterSpacing: 1 },
   description: { color: theme.colors.textSecondary, fontSize: 15, marginTop: 8, lineHeight: 22 },
   tagWrap: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 16 },
   tag: {
@@ -754,7 +754,7 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     textTransform: "uppercase",
   },
-  fieldValue: { color: "#fff", fontSize: 14, fontWeight: "600", marginTop: 4 },
+  fieldValue: { color: theme.colors.textPrimary, fontSize: 14, fontWeight: "600", marginTop: 4 },
   sectionLabel: {
     color: theme.colors.textMuted,
     fontSize: 11,
@@ -771,13 +771,13 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.borderSubtle,
   },
-  docName: { color: "#fff", flex: 1, fontSize: 14 },
+  docName: { color: theme.colors.textPrimary, flex: 1, fontSize: 14 },
   histRow: {
     paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.borderSubtle,
   },
-  histName: { color: "#fff", fontWeight: "700", fontSize: 14 },
+  histName: { color: theme.colors.textPrimary, fontWeight: "700", fontSize: 14 },
   histDate: { color: theme.colors.textSecondary, fontSize: 12, marginTop: 2 },
   histNotes: { color: theme.colors.textMuted, fontSize: 12, marginTop: 4, fontStyle: "italic" },
   consumableBox: {
@@ -790,7 +790,7 @@ const styles = StyleSheet.create({
   },
   consumableHead: { flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 8 },
   consumableTitle: { color: theme.colors.accent, fontWeight: "900", letterSpacing: 1.5, fontSize: 12 },
-  consumableLine: { color: "#fff", fontSize: 13, marginTop: 2 },
+  consumableLine: { color: theme.colors.textPrimary, fontSize: 13, marginTop: 2 },
   actionBar: {
     position: "absolute",
     bottom: 0,
@@ -848,7 +848,7 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.danger,
   },
   repChipText: { color: theme.colors.textSecondary, fontSize: 12, fontWeight: "700", letterSpacing: 0.5 },
-  repChipTextActive: { color: "#fff" },
+  repChipTextActive: { color: theme.colors.textPrimary },
   btnText: { color: "#000", fontWeight: "900", letterSpacing: 2, fontSize: 14 },
   modalBg: { flex: 1, backgroundColor: "rgba(0,0,0,0.7)", justifyContent: "flex-end" },
   modalCard: {
@@ -858,7 +858,7 @@ const styles = StyleSheet.create({
     borderTopColor: theme.colors.accent,
   },
   modalTitle: {
-    color: "#fff",
+    color: theme.colors.textPrimary,
     fontSize: 20,
     fontWeight: "900",
     letterSpacing: 2,
@@ -888,12 +888,12 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   borrowerPickActive: { borderColor: theme.colors.accent, backgroundColor: "rgba(255,179,0,0.1)" },
-  borrowerName: { color: "#fff", fontWeight: "600", fontSize: 14 },
+  borrowerName: { color: theme.colors.textPrimary, fontWeight: "600", fontSize: 14 },
   input: {
     backgroundColor: theme.colors.bg,
     borderWidth: 1,
     borderColor: theme.colors.border,
-    color: "#fff",
+    color: theme.colors.textPrimary,
     paddingHorizontal: 14,
     paddingVertical: 12,
     height: 48,
@@ -911,7 +911,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     borderRadius: 4,
   },
-  btnGhostText: { color: "#fff", fontWeight: "800", letterSpacing: 2, fontSize: 14 },
+  btnGhostText: { color: theme.colors.textPrimary, fontWeight: "800", letterSpacing: 2, fontSize: 14 },
   modalBg: { flex: 1, backgroundColor: "rgba(0,0,0,0.7)", justifyContent: "flex-end" },
   modalCard: {
     backgroundColor: theme.colors.bgSecondary,
@@ -920,7 +920,7 @@ const styles = StyleSheet.create({
     borderTopColor: theme.colors.accent,
   },
   modalTitle: {
-    color: "#fff",
+    color: theme.colors.textPrimary,
     fontSize: 20,
     fontWeight: "900",
     letterSpacing: 2,
@@ -950,12 +950,12 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   borrowerPickActive: { borderColor: theme.colors.accent, backgroundColor: "rgba(255,179,0,0.1)" },
-  borrowerName: { color: "#fff", fontWeight: "600", fontSize: 14 },
+  borrowerName: { color: theme.colors.textPrimary, fontWeight: "600", fontSize: 14 },
   input: {
     backgroundColor: theme.colors.bg,
     borderWidth: 1,
     borderColor: theme.colors.border,
-    color: "#fff",
+    color: theme.colors.textPrimary,
     paddingHorizontal: 14,
     paddingVertical: 12,
     height: 48,
@@ -973,5 +973,5 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     borderRadius: 4,
   },
-  btnGhostText: { color: "#fff", fontWeight: "800", letterSpacing: 2, fontSize: 14 },
+  btnGhostText: { color: theme.colors.textPrimary, fontWeight: "800", letterSpacing: 2, fontSize: 14 },
 });

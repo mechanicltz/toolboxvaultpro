@@ -6,8 +6,8 @@ import { AuroraBackground } from "../src/Aurora";
 
 export default function RootLayout() {
   return (
-    <GestureHandlerRootView style={{ flex: 1, backgroundColor: "#0B0F1A" }}>
-      <StatusBar style="light" />
+    <GestureHandlerRootView style={{ flex: 1, backgroundColor: "#F7F4EE" }}>
+      <StatusBar style="dark" />
       <AuroraBackground>
         <View style={{ flex: 1 }}>
           <Stack

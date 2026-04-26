@@ -64,7 +64,7 @@ export default function ManageScreen() {
     <SafeAreaView style={styles.container} edges={["top"]}>
       <View style={styles.topBar}>
         <TouchableOpacity onPress={() => router.back()} hitSlop={10}>
-          <Ionicons name="arrow-back" size={26} color="#fff" />
+          <Ionicons name="arrow-back" size={26} color={theme.colors.textPrimary} />
         </TouchableOpacity>
         <Text style={styles.title}>{TITLES[k]}</Text>
         <View style={{ width: 26 }} />
@@ -120,14 +120,14 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.border,
   },
-  title: { color: "#fff", fontSize: 18, fontWeight: "900", letterSpacing: 2 },
+  title: { color: theme.colors.textPrimary, fontSize: 18, fontWeight: "900", letterSpacing: 2 },
   addRow: { flexDirection: "row", padding: 16, gap: 8 },
   input: {
     flex: 1,
     backgroundColor: theme.colors.bgSecondary,
     borderWidth: 1,
     borderColor: theme.colors.border,
-    color: "#fff",
+    color: theme.colors.textPrimary,
     paddingHorizontal: 14,
     height: 48,
     borderRadius: 4,
@@ -154,6 +154,6 @@ const styles = StyleSheet.create({
     marginBottom: 6,
     borderRadius: 4,
   },
-  rowText: { color: "#fff", fontSize: 15, fontWeight: "600", flex: 1 },
+  rowText: { color: theme.colors.textPrimary, fontSize: 15, fontWeight: "600", flex: 1 },
   empty: { color: theme.colors.textMuted, fontStyle: "italic", padding: 24, textAlign: "center" },
 });

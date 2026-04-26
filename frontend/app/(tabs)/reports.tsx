@@ -432,7 +432,7 @@ export default function ReportsScreen() {
                 size={16}
                 color={on ? theme.colors.accent : theme.colors.textMuted}
               />
-              <Text style={[styles.colLabel, on && { color: "#fff" }]}>
+              <Text style={[styles.colLabel, on && { color: theme.colors.textPrimary }]}>
                 {c.label}
                 {c.numeric ? "  ·  totals" : ""}
               </Text>
@@ -534,7 +534,7 @@ export default function ReportsScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.colors.bg },
   header: { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 8 },
-  title: { color: "#fff", fontSize: 28, fontWeight: "900", letterSpacing: 2 },
+  title: { color: theme.colors.textPrimary, fontSize: 28, fontWeight: "900", letterSpacing: 2 },
   subtitle: {
     color: theme.colors.accent,
     fontSize: 11,
@@ -553,7 +553,7 @@ const styles = StyleSheet.create({
     padding: 14,
     borderRadius: 4,
   },
-  statValue: { color: "#fff", fontWeight: "900", fontSize: 24 },
+  statValue: { color: theme.colors.textPrimary, fontWeight: "900", fontSize: 24 },
   statLabel: {
     color: theme.colors.textMuted,
     fontSize: 10,
@@ -642,7 +642,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   reportTitle: {
-    color: "#fff",
+    color: theme.colors.textPrimary,
     fontWeight: "900",
     fontSize: 13,
     letterSpacing: 2,

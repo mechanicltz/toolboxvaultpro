@@ -262,7 +262,7 @@ export default function InventoryScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.colors.bg },
   header: { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 12 },
-  title: { color: "#fff", fontSize: 28, fontWeight: "900", letterSpacing: 2 },
+  title: { color: theme.colors.textPrimary, fontSize: 28, fontWeight: "900", letterSpacing: 2 },
   subtitle: {
     color: theme.colors.accent,
     fontSize: 11,
@@ -323,7 +323,7 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     gap: 8,
   },
-  searchInput: { flex: 1, color: "#fff", fontSize: 15 },
+  searchInput: { flex: 1, color: theme.colors.textPrimary, fontSize: 15 },
   filterWrap: { maxHeight: 48 },
   filterRow: { paddingHorizontal: 20, paddingVertical: 8, gap: 8, alignItems: "center" },
   chip: {
@@ -339,7 +339,7 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.danger,
     borderColor: theme.colors.danger,
   },
-  chipClaimsText: { color: "#fff" },
+  chipClaimsText: { color: theme.colors.textPrimary },
   chipText: {
     color: theme.colors.textSecondary,
     fontSize: 11,
@@ -379,7 +379,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     borderRadius: 9,
   },
-  rowTitle: { color: "#fff", fontWeight: "700", fontSize: 16 },
+  rowTitle: { color: theme.colors.textPrimary, fontWeight: "700", fontSize: 16 },
   rowSub: { color: theme.colors.textSecondary, fontSize: 12, marginTop: 2 },
   tagRow: { flexDirection: "row", marginTop: 6, gap: 4, flexWrap: "wrap" },
   tag: {
@@ -406,7 +406,7 @@ const styles = StyleSheet.create({
   },
   empty: { alignItems: "center", marginTop: 80, paddingHorizontal: 40 },
   emptyTitle: {
-    color: "#fff",
+    color: theme.colors.textPrimary,
     fontSize: 18,
     fontWeight: "900",
     letterSpacing: 2,

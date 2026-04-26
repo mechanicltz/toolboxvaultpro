@@ -153,7 +153,7 @@ export default function LocationsTreeScreen() {
     <SafeAreaView style={styles.container} edges={["top"]}>
       <View style={styles.topBar}>
         <TouchableOpacity onPress={() => router.back()} hitSlop={10}>
-          <Ionicons name="arrow-back" size={26} color="#fff" />
+          <Ionicons name="arrow-back" size={26} color={theme.colors.textPrimary} />
         </TouchableOpacity>
         <Text style={styles.title}>LOCATIONS</Text>
         <TouchableOpacity
@@ -241,7 +241,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.border,
   },
-  title: { color: "#fff", fontSize: 16, fontWeight: "900", letterSpacing: 2 },
+  title: { color: theme.colors.textPrimary, fontSize: 16, fontWeight: "900", letterSpacing: 2 },
   row: {
     flexDirection: "row",
     alignItems: "center",
@@ -251,7 +251,7 @@ const styles = StyleSheet.create({
     borderBottomColor: theme.colors.borderSubtle,
     borderBottomWidth: 1,
   },
-  rowText: { color: "#fff", fontSize: 15, flex: 1 },
+  rowText: { color: theme.colors.textPrimary, fontSize: 15, flex: 1 },
   countBadge: {
     color: theme.colors.textMuted,
     fontSize: 11,
@@ -272,7 +272,7 @@ const styles = StyleSheet.create({
   },
   empty: { alignItems: "center", paddingVertical: 60, paddingHorizontal: 40 },
   emptyTitle: {
-    color: "#fff",
+    color: theme.colors.textPrimary,
     fontSize: 16,
     fontWeight: "900",
     letterSpacing: 2,
@@ -300,7 +300,7 @@ const styles = StyleSheet.create({
     borderTopColor: theme.colors.accent,
   },
   modalTitle: {
-    color: "#fff",
+    color: theme.colors.textPrimary,
     fontSize: 18,
     fontWeight: "900",
     letterSpacing: 2,
@@ -311,7 +311,7 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.bg,
     borderWidth: 1,
     borderColor: theme.colors.border,
-    color: "#fff",
+    color: theme.colors.textPrimary,
     paddingHorizontal: 14,
     height: 48,
     borderRadius: 4,
@@ -338,5 +338,5 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     borderRadius: 4,
   },
-  btnGhostText: { color: "#fff", fontWeight: "800", letterSpacing: 2, fontSize: 14 },
+  btnGhostText: { color: theme.colors.textPrimary, fontWeight: "800", letterSpacing: 2, fontSize: 14 },
 });

@@ -75,7 +75,7 @@ export default function ToolboxList() {
     <SafeAreaView style={styles.container} edges={["top"]}>
       <View style={styles.topBar}>
         <TouchableOpacity onPress={() => router.back()} hitSlop={10}>
-          <Ionicons name="arrow-back" size={26} color="#fff" />
+          <Ionicons name="arrow-back" size={26} color={theme.colors.textPrimary} />
         </TouchableOpacity>
         <Text style={styles.title}>TOOLBOX PHOTOS</Text>
         <TouchableOpacity testID="new-toolbox-btn" onPress={startNew} hitSlop={10}>
@@ -161,9 +161,9 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.border,
   },
-  title: { color: "#fff", fontSize: 16, fontWeight: "900", letterSpacing: 2 },
+  title: { color: theme.colors.textPrimary, fontSize: 16, fontWeight: "900", letterSpacing: 2 },
   intro: { padding: 24, alignItems: "center" },
-  introTitle: { color: "#fff", fontSize: 18, fontWeight: "900", letterSpacing: 2, marginTop: 16 },
+  introTitle: { color: theme.colors.textPrimary, fontSize: 18, fontWeight: "900", letterSpacing: 2, marginTop: 16 },
   introText: { color: theme.colors.textSecondary, textAlign: "center", marginTop: 8, marginBottom: 24, lineHeight: 20 },
   card: {
     backgroundColor: theme.colors.bgSecondary,
@@ -175,7 +175,7 @@ const styles = StyleSheet.create({
   },
   cardImg: { width: "100%", height: 180, resizeMode: "cover" },
   cardInfo: { padding: 14 },
-  cardName: { color: "#fff", fontWeight: "900", fontSize: 16, letterSpacing: 1 },
+  cardName: { color: theme.colors.textPrimary, fontWeight: "900", fontSize: 16, letterSpacing: 1 },
   cardMeta: { color: theme.colors.accent, fontSize: 11, fontWeight: "800", letterSpacing: 1, marginTop: 4 },
   modalBg: {
     position: "absolute",
@@ -191,12 +191,12 @@ const styles = StyleSheet.create({
     borderTopColor: theme.colors.accent,
     borderRadius: 4,
   },
-  modalTitle: { color: "#fff", fontSize: 20, fontWeight: "900", letterSpacing: 2, marginBottom: 16 },
+  modalTitle: { color: theme.colors.textPrimary, fontSize: 20, fontWeight: "900", letterSpacing: 2, marginBottom: 16 },
   input: {
     backgroundColor: theme.colors.bg,
     borderWidth: 1,
     borderColor: theme.colors.border,
-    color: "#fff",
+    color: theme.colors.textPrimary,
     paddingHorizontal: 14,
     height: 48,
     borderRadius: 4,
@@ -223,5 +223,5 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     borderRadius: 4,
   },
-  btnGhostText: { color: "#fff", fontWeight: "800", letterSpacing: 2, fontSize: 14 },
+  btnGhostText: { color: theme.colors.textPrimary, fontWeight: "800", letterSpacing: 2, fontSize: 14 },
 });
