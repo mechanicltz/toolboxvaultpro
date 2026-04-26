@@ -520,6 +520,30 @@ async def list_tags():
     return [Tag(**i) for i in items]
 
 
+@api_router.put("/tags/{tag_id}", response_model=Tag)
+async def update_tag(tag_id: str, payload: TagCreate):
+    doc = await db.tags.find_one({"id": tag_id}, {"_id": 0})
+    if not doc:
+        raise HTTPException(404, "Tag not found")
+    new_name = (payload.name or "").strip()
+    if not new_name:
+        raise HTTPException(400, "Name required")
+    old_name = doc.get("name") or ""
+    update = {"name": new_name}
+    if payload.color:
+        update["color"] = payload.color
+    await db.tags.update_one({"id": tag_id}, {"$set": update})
+    if old_name and old_name != new_name:
+        # Rename references on tools (tag_names is a list of strings)
+        await db.tools.update_many(
+            {"tag_names": old_name},
+            {"$set": {"tag_names.$[el]": new_name}},
+            array_filters=[{"el": old_name}],
+        )
+    new = await db.tags.find_one({"id": tag_id}, {"_id": 0})
+    return Tag(**new)
+
+
 @api_router.delete("/tags/{tag_id}")
 async def delete_tag(tag_id: str):
     await db.tags.delete_one({"id": tag_id})
@@ -542,6 +566,23 @@ async def create_category(payload: CategoryCreate):
 async def list_categories():
     items = await db.categories.find({}, {"_id": 0}).sort("name", 1).to_list(2000)
     return [Category(**i) for i in items]
+
+
+@api_router.put("/categories/{cat_id}", response_model=Category)
+async def update_category(cat_id: str, payload: CategoryCreate):
+    doc = await db.categories.find_one({"id": cat_id}, {"_id": 0})
+    if not doc:
+        raise HTTPException(404, "Category not found")
+    new_name = (payload.name or "").strip()
+    if not new_name:
+        raise HTTPException(400, "Name required")
+    old_name = doc.get("name") or ""
+    await db.categories.update_one({"id": cat_id}, {"$set": {"name": new_name}})
+    if old_name and old_name != new_name:
+        # Rename references on tools (category is a single string)
+        await db.tools.update_many({"category": old_name}, {"$set": {"category": new_name}})
+    new = await db.categories.find_one({"id": cat_id}, {"_id": 0})
+    return Category(**new)
 
 
 @api_router.delete("/categories/{cat_id}")

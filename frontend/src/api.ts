@@ -41,11 +41,13 @@ export const api = {
   // Tags
   listTags: () => request<any[]>(`/tags`),
   createTag: (data: any) => request<any>(`/tags`, { method: "POST", body: JSON.stringify(data) }),
+  updateTag: (id: string, data: any) => request<any>(`/tags/${id}`, { method: "PUT", body: JSON.stringify(data) }),
   deleteTag: (id: string) => request<any>(`/tags/${id}`, { method: "DELETE" }),
 
   // Categories
   listCategories: () => request<any[]>(`/categories`),
   createCategory: (data: any) => request<any>(`/categories`, { method: "POST", body: JSON.stringify(data) }),
+  updateCategory: (id: string, data: any) => request<any>(`/categories/${id}`, { method: "PUT", body: JSON.stringify(data) }),
   deleteCategory: (id: string) => request<any>(`/categories/${id}`, { method: "DELETE" }),
 
   // Borrowers

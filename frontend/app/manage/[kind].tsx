@@ -29,11 +29,13 @@ export default function ManageScreen() {
   const k = (kind || "categories") as Kind;
   const [items, setItems] = useState<any[]>([]);
   const [name, setName] = useState("");
+  const [editId, setEditId] = useState<string | null>(null);
+  const [editValue, setEditValue] = useState("");
 
   const fetcher = {
-    categories: { list: api.listCategories, create: api.createCategory, del: api.deleteCategory },
-    tags: { list: api.listTags, create: api.createTag, del: api.deleteTag },
-    locations: { list: api.listLocations, create: api.createLocation, del: api.deleteLocation },
+    categories: { list: api.listCategories, create: api.createCategory, update: api.updateCategory, del: api.deleteCategory },
+    tags: { list: api.listTags, create: api.createTag, update: api.updateTag, del: api.deleteTag },
+    locations: { list: api.listLocations, create: api.createLocation, update: api.updateLocation, del: api.deleteLocation },
   } as const;
 
   const load = useCallback(async () => {
@@ -60,6 +62,31 @@ export default function ManageScreen() {
     load();
   };
 
+  const startEdit = (i: any) => {
+    setEditId(i.id);
+    setEditValue(i.name);
+  };
+
+  const cancelEdit = () => {
+    setEditId(null);
+    setEditValue("");
+  };
+
+  const saveEdit = async (id: string) => {
+    const trimmed = editValue.trim();
+    if (!trimmed) {
+      Alert.alert("Name required");
+      return;
+    }
+    try {
+      await fetcher[k].update(id, { name: trimmed });
+      cancelEdit();
+      load();
+    } catch (e: any) {
+      Alert.alert("Error", e.message || "Could not update");
+    }
+  };
+
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <View style={styles.topBar}>
@@ -84,25 +111,80 @@ export default function ManageScreen() {
           <Ionicons name="add" size={22} color="#000" />
         </TouchableOpacity>
       </View>
-      <ScrollView contentContainerStyle={{ paddingBottom: 60 }}>
+      <ScrollView contentContainerStyle={{ paddingBottom: 60 }} keyboardShouldPersistTaps="handled">
         {items.length === 0 ? (
           <Text style={styles.empty}>None yet. Add one above.</Text>
         ) : (
-          items.map((i) => (
-            <View key={i.id} style={styles.row}>
-              <Ionicons
-                name={
-                  k === "categories" ? "folder" : k === "tags" ? "pricetag" : "location"
-                }
-                size={18}
-                color={theme.colors.accent}
-              />
-              <Text style={styles.rowText}>{i.name}</Text>
-              <TouchableOpacity testID={`del-${i.id}`} onPress={() => remove(i.id, i.name)} hitSlop={8}>
-                <Ionicons name="close" size={20} color={theme.colors.danger} />
-              </TouchableOpacity>
-            </View>
-          ))
+          items.map((i) => {
+            const isEditing = editId === i.id;
+            return (
+              <View key={i.id} style={styles.row}>
+                <Ionicons
+                  name={k === "categories" ? "folder" : k === "tags" ? "pricetag" : "location"}
+                  size={18}
+                  color={theme.colors.accent}
+                />
+                {isEditing ? (
+                  <TextInput
+                    testID={`edit-input-${i.id}`}
+                    value={editValue}
+                    onChangeText={setEditValue}
+                    style={styles.editInput}
+                    autoFocus
+                    onSubmitEditing={() => saveEdit(i.id)}
+                  />
+                ) : (
+                  <TouchableOpacity
+                    testID={`row-${i.id}`}
+                    style={{ flex: 1 }}
+                    onPress={() => startEdit(i)}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={styles.rowText}>{i.name}</Text>
+                  </TouchableOpacity>
+                )}
+                {isEditing ? (
+                  <>
+                    <TouchableOpacity
+                      testID={`save-${i.id}`}
+                      onPress={() => saveEdit(i.id)}
+                      hitSlop={8}
+                      style={styles.iconAction}
+                    >
+                      <Ionicons name="checkmark" size={20} color={theme.colors.success} />
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      testID={`cancel-${i.id}`}
+                      onPress={cancelEdit}
+                      hitSlop={8}
+                      style={styles.iconAction}
+                    >
+                      <Ionicons name="close" size={20} color={theme.colors.textMuted} />
+                    </TouchableOpacity>
+                  </>
+                ) : (
+                  <>
+                    <TouchableOpacity
+                      testID={`edit-${i.id}`}
+                      onPress={() => startEdit(i)}
+                      hitSlop={8}
+                      style={styles.iconAction}
+                    >
+                      <Ionicons name="create-outline" size={18} color={theme.colors.accent} />
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      testID={`del-${i.id}`}
+                      onPress={() => remove(i.id, i.name)}
+                      hitSlop={8}
+                      style={styles.iconAction}
+                    >
+                      <Ionicons name="trash-outline" size={18} color={theme.colors.danger} />
+                    </TouchableOpacity>
+                  </>
+                )}
+              </View>
+            );
+          })
         )}
       </ScrollView>
     </SafeAreaView>
@@ -130,8 +212,9 @@ const styles = StyleSheet.create({
     color: theme.colors.textPrimary,
     paddingHorizontal: 14,
     height: 48,
-    borderRadius: 4,
+    borderRadius: theme.radii.md,
     fontSize: 15,
+    ...(theme.elevation.inset as object),
   },
   addBtn: {
     width: 48,
@@ -139,21 +222,38 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.accent,
     alignItems: "center",
     justifyContent: "center",
-    borderRadius: 4,
+    borderRadius: theme.radii.md,
+    ...(theme.elevation.accent as object),
   },
   row: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
+    gap: 10,
     backgroundColor: theme.colors.bgSecondary,
     borderWidth: 1,
     borderColor: theme.colors.border,
     paddingHorizontal: 14,
-    paddingVertical: 14,
+    paddingVertical: 12,
     marginHorizontal: 16,
-    marginBottom: 6,
-    borderRadius: 4,
+    marginBottom: 8,
+    borderRadius: theme.radii.md,
+    ...(theme.elevation.md as object),
   },
-  rowText: { color: theme.colors.textPrimary, fontSize: 15, fontWeight: "600", flex: 1 },
+  rowText: { color: theme.colors.textPrimary, fontSize: 15, fontWeight: "600" },
+  editInput: {
+    flex: 1,
+    backgroundColor: theme.colors.surfaceAlt,
+    borderWidth: 1,
+    borderColor: theme.colors.accent,
+    color: theme.colors.textPrimary,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: theme.radii.sm,
+    fontSize: 14,
+  },
+  iconAction: {
+    paddingHorizontal: 6,
+    paddingVertical: 4,
+  },
   empty: { color: theme.colors.textMuted, fontStyle: "italic", padding: 24, textAlign: "center" },
 });
