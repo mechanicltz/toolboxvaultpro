@@ -5,16 +5,19 @@ import { theme } from "../../src/theme";
 export default function TabsLayout() {
   return (
     <Tabs
+      sceneContainerStyle={{ backgroundColor: "transparent" }}
       screenOptions={{
         headerShown: false,
         tabBarStyle: {
-          backgroundColor: theme.colors.bgSecondary,
-          borderTopColor: theme.colors.border,
+          backgroundColor: "rgba(20, 27, 45, 0.85)",
+          borderTopColor: "rgba(255, 255, 255, 0.10)",
           borderTopWidth: 1,
           height: 70,
           paddingTop: 8,
           paddingBottom: 12,
+          position: "absolute",
         },
+        tabBarBackground: () => null,
         tabBarActiveTintColor: theme.colors.accent,
         tabBarInactiveTintColor: theme.colors.textMuted,
         tabBarLabelStyle: {
