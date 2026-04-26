@@ -13,6 +13,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter, useFocusEffect } from "expo-router";
+import { LinearGradient } from "expo-linear-gradient";
 import { theme } from "../../src/theme";
 import { api } from "../../src/api";
 import { usePrefs } from "../../src/prefs";
@@ -188,6 +189,12 @@ export default function InventoryScreen() {
             onPress={() => router.push(`/tool/${item.id}`)}
             activeOpacity={0.7}
           >
+            <LinearGradient
+              colors={["#1F1F1F", "#0E0E0E"]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 0, y: 1 }}
+              style={StyleSheet.absoluteFillObject}
+            />
             <View style={styles.thumb}>
               {item.photos?.[0] ? (
                 <Image source={{ uri: item.photos[0] }} style={styles.thumbImg} />
@@ -360,7 +367,7 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: "row",
     marginHorizontal: 16,
-    marginBottom: 10,
+    marginBottom: 14,
     paddingHorizontal: 14,
     paddingVertical: 12,
     alignItems: "center",
@@ -369,6 +376,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: theme.colors.borderSubtle,
     gap: 12,
+    overflow: "hidden",
     ...(theme.elevation.md as object),
   },
   thumb: {

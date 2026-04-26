@@ -1,111 +1,102 @@
 import { Platform } from "react-native";
 
 export const theme = {
-  // Workshop Pro Light — premium industrial, daylight-friendly, editorial, with 3D depth
+  // Original Industrial Dark — yellow/black workshop, with 3D depth
   colors: {
     bg: "transparent",
-    bgSecondary: "#FFFFFF",
-    surface: "#FFFFFF",
-    surfaceAlt: "#FAF7F1",
-    glass: "rgba(255, 255, 255, 0.92)",
-    glassBorder: "#E5E1D8",
-    accent: "#FFC107",
-    accentSecondary: "#0F172A",
-    textPrimary: "#0F172A",
-    textSecondary: "#475569",
-    textMuted: "#94A3B8",
-    textOnAccent: "#0F172A",
-    border: "#D6D1C5",
-    borderSubtle: "#EAE6DD",
-    success: "#15803D",
-    danger: "#B91C1C",
-    warning: "#B45309",
-    // Highlights for 3D depth
-    highlight: "rgba(255, 255, 255, 0.85)",
-    shadowDeep: "rgba(15, 23, 42, 0.18)",
-    shadowSoft: "rgba(15, 23, 42, 0.08)",
+    bgSecondary: "#1A1A1A",
+    surface: "#0F0F0F",
+    surfaceAlt: "#171717",
+    glass: "rgba(255, 179, 0, 0.06)",
+    glassBorder: "rgba(255, 179, 0, 0.18)",
+    accent: "#FFB300",
+    accentSecondary: "#F97316",
+    textPrimary: "#FFFFFF",
+    textSecondary: "#E5E5E5",
+    textMuted: "#737373",
+    textOnAccent: "#000000",
+    border: "#2D2D2D",
+    borderSubtle: "#1F1F1F",
+    success: "#10B981",
+    danger: "#EF4444",
+    warning: "#F59E0B",
+    highlight: "rgba(255, 255, 255, 0.10)",
+    shadowDeep: "rgba(0, 0, 0, 0.8)",
+    shadowSoft: "rgba(0, 0, 0, 0.5)",
   },
   gradients: {
-    paper: ["#F7F4EE", "#EDE8DD", "#F7F4EE"],
-    accent: ["#FFD54F", "#FFC107", "#FFA000"],
-    accentRaised: ["#FFE082", "#FFC107"],
-    surface: ["#FFFFFF", "#FAF7F1"],
-    surfaceRaised: ["#FFFFFF", "#F1ECDF"],
-    danger: ["#EF4444", "#B91C1C"],
-    success: ["#22C55E", "#15803D"],
+    base: ["#0A0A0A", "#181818", "#0A0A0A"],
+    accent: ["#FFD54F", "#FFB300", "#FF8F00"],
+    danger: ["#F87171", "#DC2626"],
+    success: ["#34D399", "#059669"],
+    surface: ["#202020", "#0F0F0F"],
+    surfaceRaised: ["#262626", "#101010"],
   },
   spacing: { xs: 4, sm: 8, md: 16, lg: 24, xl: 32, xxl: 48 },
-  radii: { none: 0, sm: 6, md: 10, lg: 14, pill: 999 },
+  radii: { none: 0, sm: 4, md: 8, lg: 12, pill: 999 },
   font: { h1: 32, h2: 24, h3: 20, body: 16, sm: 14, xs: 12 },
-
-  // 3D elevation system — multi-layer shadows for tactile depth
+  // 3D elevation system (dark theme — light highlights, deep black drop shadows)
   elevation: {
-    // Subtle lift (e.g. chips, inputs)
     sm: Platform.select({
       web: {
         boxShadow:
-          "0 1px 1px rgba(15, 23, 42, 0.04), 0 2px 4px rgba(15, 23, 42, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.6)" as any,
+          "0 1px 2px rgba(0, 0, 0, 0.50), 0 3px 6px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.10), inset 0 -1px 0 rgba(0, 0, 0, 0.50)" as any,
       },
       default: {
-        shadowColor: "#0F172A",
-        shadowOpacity: 0.08,
-        shadowOffset: { width: 0, height: 1 },
-        shadowRadius: 3,
-        elevation: 2,
+        shadowColor: "#000",
+        shadowOpacity: 0.45,
+        shadowOffset: { width: 0, height: 2 },
+        shadowRadius: 5,
+        elevation: 4,
       },
     }),
-    // Standard card lift
     md: Platform.select({
       web: {
         boxShadow:
-          "0 1px 2px rgba(15, 23, 42, 0.06), 0 4px 8px rgba(15, 23, 42, 0.08), 0 8px 16px rgba(15, 23, 42, 0.06), inset 0 1px 0 rgba(255, 255, 255, 0.85)" as any,
+          "0 2px 4px rgba(0, 0, 0, 0.55), 0 8px 16px rgba(0, 0, 0, 0.50), 0 16px 32px rgba(0, 0, 0, 0.40), inset 0 1px 0 rgba(255, 255, 255, 0.12), inset 0 -2px 0 rgba(0, 0, 0, 0.50)" as any,
       },
       default: {
-        shadowColor: "#0F172A",
-        shadowOpacity: 0.14,
-        shadowOffset: { width: 0, height: 4 },
-        shadowRadius: 8,
-        elevation: 5,
+        shadowColor: "#000",
+        shadowOpacity: 0.55,
+        shadowOffset: { width: 0, height: 6 },
+        shadowRadius: 12,
+        elevation: 8,
       },
     }),
-    // Raised: FAB, modals, banners
     lg: Platform.select({
       web: {
         boxShadow:
-          "0 2px 4px rgba(15, 23, 42, 0.08), 0 8px 16px rgba(15, 23, 42, 0.10), 0 16px 32px rgba(15, 23, 42, 0.10), inset 0 1px 0 rgba(255, 255, 255, 0.85)" as any,
+          "0 4px 8px rgba(0, 0, 0, 0.60), 0 16px 32px rgba(0, 0, 0, 0.55), 0 32px 64px rgba(0, 0, 0, 0.45), inset 0 2px 0 rgba(255, 255, 255, 0.12), inset 0 -3px 0 rgba(0, 0, 0, 0.55)" as any,
       },
       default: {
-        shadowColor: "#0F172A",
-        shadowOpacity: 0.20,
-        shadowOffset: { width: 0, height: 8 },
-        shadowRadius: 18,
-        elevation: 10,
+        shadowColor: "#000",
+        shadowOpacity: 0.65,
+        shadowOffset: { width: 0, height: 14 },
+        shadowRadius: 24,
+        elevation: 14,
       },
     }),
-    // Glow lift for accent buttons (warm yellow)
     accent: Platform.select({
       web: {
         boxShadow:
-          "0 2px 4px rgba(255, 160, 0, 0.30), 0 6px 14px rgba(255, 193, 7, 0.32), inset 0 1px 0 rgba(255, 255, 255, 0.6), inset 0 -2px 0 rgba(212, 130, 0, 0.25)" as any,
+          "0 4px 8px rgba(255, 143, 0, 0.45), 0 12px 24px rgba(255, 179, 0, 0.40), 0 20px 40px rgba(255, 179, 0, 0.20), inset 0 2px 0 rgba(255, 255, 255, 0.40), inset 0 -3px 0 rgba(184, 100, 0, 0.55)" as any,
       },
       default: {
-        shadowColor: "#FFA000",
-        shadowOpacity: 0.45,
-        shadowOffset: { width: 0, height: 4 },
-        shadowRadius: 10,
-        elevation: 6,
+        shadowColor: "#FF8F00",
+        shadowOpacity: 0.65,
+        shadowOffset: { width: 0, height: 8 },
+        shadowRadius: 16,
+        elevation: 12,
       },
     }),
-    // Pressed / recessed (search bars, inputs)
     inset: Platform.select({
       web: {
         boxShadow:
-          "inset 0 1px 2px rgba(15, 23, 42, 0.10), inset 0 2px 4px rgba(15, 23, 42, 0.04)" as any,
+          "inset 0 2px 4px rgba(0, 0, 0, 0.6), inset 0 4px 10px rgba(0, 0, 0, 0.4), inset 0 0 0 1px rgba(0, 0, 0, 0.4)" as any,
       },
       default: {
-        // RN doesn't support inset shadows natively
         borderTopWidth: 1,
-        borderTopColor: "rgba(15, 23, 42, 0.08)",
+        borderTopColor: "rgba(0, 0, 0, 0.6)",
       },
     }),
   },
