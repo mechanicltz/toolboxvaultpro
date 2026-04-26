@@ -18,7 +18,7 @@ import { api } from "../../src/api";
 import { usePrefs } from "../../src/prefs";
 import { SummaryHeader } from "../../src/SummaryHeader";
 
-type Filter = "all" | "broken" | "available" | "out" | "consumables";
+type Filter = "all" | "available" | "out" | "consumables";
 
 export default function InventoryScreen() {
   const router = useRouter();
@@ -35,7 +35,6 @@ export default function InventoryScreen() {
     if (filter === "available") params.checked_out = false;
     if (filter === "out") params.checked_out = true;
     if (filter === "consumables") params.is_consumable = true;
-    if (filter === "broken") params.needs_repair = true;
     try {
       const [t, a, w] = await Promise.all([
         api.listTools(params),
@@ -115,9 +114,18 @@ export default function InventoryScreen() {
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.filterRow}
         >
+          <TouchableOpacity
+            key="claims-link"
+            testID="filter-claims"
+            onPress={() => router.push("/warranty-claims")}
+            style={[styles.chip, styles.chipClaims]}
+          >
+            <Text style={[styles.chipText, styles.chipClaimsText]}>
+              🛡️ WARRANTY CLAIMS
+            </Text>
+          </TouchableOpacity>
           {[
             { k: "all", label: "ALL" },
-            { k: "broken", label: "🔧 BROKEN" },
             { k: "available", label: "AVAILABLE" },
             { k: "out", label: "CHECKED OUT" },
             { k: "consumables", label: "CONSUMABLES" },
@@ -126,17 +134,9 @@ export default function InventoryScreen() {
               key={f.k}
               testID={`filter-${f.k}`}
               onPress={() => setFilter(f.k as any)}
-              style={[
-                styles.chip,
-                filter === f.k && styles.chipActive,
-                f.k === "broken" && filter === f.k && { backgroundColor: theme.colors.danger, borderColor: theme.colors.danger },
-              ]}
+              style={[styles.chip, filter === f.k && styles.chipActive]}
             >
-              <Text style={[
-                styles.chipText,
-                filter === f.k && styles.chipTextActive,
-                f.k === "broken" && filter === f.k && { color: "#fff" },
-              ]}>
+              <Text style={[styles.chipText, filter === f.k && styles.chipTextActive]}>
                 {f.label}
               </Text>
             </TouchableOpacity>
@@ -298,6 +298,11 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   chipActive: { backgroundColor: theme.colors.accent, borderColor: theme.colors.accent },
+  chipClaims: {
+    backgroundColor: theme.colors.danger,
+    borderColor: theme.colors.danger,
+  },
+  chipClaimsText: { color: "#fff" },
   chipText: {
     color: theme.colors.textSecondary,
     fontSize: 11,

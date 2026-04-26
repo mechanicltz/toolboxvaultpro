@@ -33,15 +33,29 @@ export default function WarrantyClaimsScreen() {
   const [summary, setSummary] = useState<any>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [expandedDealer, setExpandedDealer] = useState<string | null>(null);
   const [showCompletedFor, setShowCompletedFor] = useState<Record<string, boolean>>({});
-  const [claimsByDealer, setClaimsByDealer] = useState<Record<string, any[]>>({});
+  const [activeByDealer, setActiveByDealer] = useState<Record<string, any[]>>({});
+  const [completedByDealer, setCompletedByDealer] = useState<Record<string, any[]>>({});
   const [pickerForClaim, setPickerForClaim] = useState<any | null>(null);
 
   const load = useCallback(async () => {
     try {
       const s = await api.warrantyClaimsSummary();
       setSummary(s);
+      // Pre-load active claims for every dealer so they're visible by default
+      const map: Record<string, any[]> = {};
+      await Promise.all(
+        (s?.dealers || []).map(async (d: any) => {
+          const key = d.dealer_id || "_none_";
+          try {
+            const items = await api.listWarrantyClaims({ dealer_id: key, archived: false });
+            map[key] = items;
+          } catch {
+            map[key] = [];
+          }
+        })
+      );
+      setActiveByDealer(map);
     } catch (e) {
       console.error(e);
     } finally {
@@ -58,50 +72,41 @@ export default function WarrantyClaimsScreen() {
   const onRefresh = async () => {
     setRefreshing(true);
     await load();
-    if (expandedDealer) await loadDealerClaims(expandedDealer, !!showCompletedFor[expandedDealer]);
+    // refresh any expanded completed lists too
+    await Promise.all(
+      Object.entries(showCompletedFor).map(async ([key, on]) => {
+        if (on) await loadCompletedClaims(key);
+      })
+    );
     setRefreshing(false);
   };
 
   const dealerKey = (d: any) => d.dealer_id || "_none_";
 
-  const loadDealerClaims = async (key: string, includeCompleted: boolean) => {
+  const loadCompletedClaims = async (key: string) => {
     try {
-      const params: any = { dealer_id: key };
-      if (!includeCompleted) params.archived = false;
-      const items = await api.listWarrantyClaims(params);
-      setClaimsByDealer((cur) => ({ ...cur, [key]: items }));
+      const items = await api.listWarrantyClaims({ dealer_id: key, archived: true });
+      setCompletedByDealer((cur) => ({ ...cur, [key]: items }));
     } catch (e) {
       console.error(e);
-    }
-  };
-
-  const toggleDealer = async (key: string) => {
-    if (expandedDealer === key) {
-      setExpandedDealer(null);
-      return;
-    }
-    setExpandedDealer(key);
-    if (!claimsByDealer[key]) {
-      await loadDealerClaims(key, !!showCompletedFor[key]);
     }
   };
 
   const toggleCompleted = async (key: string) => {
     const next = !showCompletedFor[key];
     setShowCompletedFor((cur) => ({ ...cur, [key]: next }));
-    await loadDealerClaims(key, next);
+    if (next && !completedByDealer[key]) {
+      await loadCompletedClaims(key);
+    }
   };
 
   const setStatus = async (claim: any, status: string) => {
     try {
       await api.updateWarrantyClaim(claim.id, { claim_status: status });
       setPickerForClaim(null);
-      await Promise.all([
-        load(),
-        expandedDealer
-          ? loadDealerClaims(expandedDealer, !!showCompletedFor[expandedDealer])
-          : Promise.resolve(),
-      ]);
+      await load();
+      const key = claim.dealer_id || "_none_";
+      if (showCompletedFor[key]) await loadCompletedClaims(key);
     } catch (e: any) {
       Alert.alert("Error", e.message || "Could not update claim");
     }
@@ -112,7 +117,8 @@ export default function WarrantyClaimsScreen() {
     try {
       await api.deleteWarrantyClaim(claim.id);
       const key = claim.dealer_id || "_none_";
-      await Promise.all([load(), loadDealerClaims(key, !!showCompletedFor[key])]);
+      await load();
+      if (showCompletedFor[key]) await loadCompletedClaims(key);
     } catch (e: any) {
       Alert.alert("Error", e.message || "Delete failed");
     }
@@ -165,17 +171,12 @@ export default function WarrantyClaimsScreen() {
         ) : (
           dealers.map((d: any) => {
             const key = dealerKey(d);
-            const isOpen = expandedDealer === key;
-            const claims = claimsByDealer[key] || [];
+            const active = activeByDealer[key] || [];
+            const completed = completedByDealer[key] || [];
             const showDone = !!showCompletedFor[key];
             return (
-              <View key={key} style={styles.dealerBlock}>
-                <TouchableOpacity
-                  testID={`dealer-row-${key}`}
-                  style={styles.dealerHead}
-                  onPress={() => toggleDealer(key)}
-                  activeOpacity={0.7}
-                >
+              <View key={key} style={styles.dealerBlock} testID={`dealer-block-${key}`}>
+                <View style={styles.dealerHead}>
                   <View style={styles.dealerIcon}>
                     <Ionicons name="briefcase" size={22} color={theme.colors.accent} />
                   </View>
@@ -189,96 +190,59 @@ export default function WarrantyClaimsScreen() {
                       )}
                     </View>
                   </View>
-                  <Ionicons
-                    name={isOpen ? "chevron-down" : "chevron-forward"}
-                    size={20}
-                    color={theme.colors.textSecondary}
-                  />
-                </TouchableOpacity>
+                </View>
 
-                {isOpen && (
-                  <View style={styles.dealerBody}>
-                    <TouchableOpacity
-                      testID={`toggle-completed-${key}`}
-                      style={styles.completedToggle}
-                      onPress={() => toggleCompleted(key)}
-                    >
-                      <Ionicons
-                        name={showDone ? "eye" : "eye-off"}
-                        size={16}
-                        color={theme.colors.accent}
-                      />
-                      <Text style={styles.completedToggleText}>
-                        {showDone ? "HIDE COMPLETED" : "SHOW COMPLETED"}
-                      </Text>
-                    </TouchableOpacity>
+                <View style={styles.dealerBody}>
+                  {active.length === 0 ? (
+                    <Text style={styles.muted}>No currently broken items.</Text>
+                  ) : (
+                    <>
+                      <Text style={styles.bodyLabel}>CURRENTLY BROKEN</Text>
+                      {active.map((c: any) => (
+                        <ClaimCard
+                          key={c.id}
+                          claim={c}
+                          onOpenTool={() => router.push(`/tool/${c.tool_id}`)}
+                          onPickStatus={() => setPickerForClaim(c)}
+                          onDelete={() => removeClaim(c)}
+                        />
+                      ))}
+                    </>
+                  )}
 
-                    {claims.length === 0 ? (
-                      <Text style={styles.muted}>
-                        {showDone ? "No completed claims yet." : "No active claims."}
-                      </Text>
-                    ) : (
-                      claims.map((c: any) => {
-                        const meta = statusMeta(c.claim_status);
-                        return (
-                          <View key={c.id} style={styles.claimCard} testID={`claim-${c.id}`}>
-                            <TouchableOpacity
-                              style={styles.claimHead}
-                              onPress={() => router.push(`/tool/${c.tool_id}`)}
-                              activeOpacity={0.7}
-                            >
-                              {c.tool_photo ? (
-                                <Image source={{ uri: c.tool_photo }} style={styles.thumb} />
-                              ) : (
-                                <View style={[styles.thumb, styles.thumbPh]}>
-                                  <Ionicons name="construct" size={20} color={theme.colors.accent} />
-                                </View>
-                              )}
-                              <View style={{ flex: 1 }}>
-                                <Text style={styles.claimTitle} numberOfLines={1}>
-                                  {c.tool_name}
-                                </Text>
-                                {!!c.repair_company && (
-                                  <Text style={styles.claimMeta} numberOfLines={1}>
-                                    {c.repair_company}
-                                  </Text>
-                                )}
-                                {!!c.notified_at && (
-                                  <Text style={styles.claimDate}>
-                                    Notified {c.notified_at}
-                                    {c.expected_completion ? ` · Back ${c.expected_completion}` : ""}
-                                  </Text>
-                                )}
-                              </View>
-                              <Ionicons name="chevron-forward" size={16} color={theme.colors.textMuted} />
-                            </TouchableOpacity>
-                            <View style={styles.claimFoot}>
-                              <TouchableOpacity
-                                testID={`claim-status-${c.id}`}
-                                style={[styles.statusPill, { borderColor: meta.color }]}
-                                onPress={() => setPickerForClaim(c)}
-                              >
-                                <Ionicons name={meta.icon} size={14} color={meta.color} />
-                                <Text style={[styles.statusPillText, { color: meta.color }]}>
-                                  {meta.label.toUpperCase()}
-                                </Text>
-                                <Ionicons name="chevron-down" size={12} color={meta.color} />
-                              </TouchableOpacity>
-                              <TouchableOpacity
-                                testID={`claim-delete-${c.id}`}
-                                onPress={() => removeClaim(c)}
-                                hitSlop={8}
-                                style={{ padding: 6 }}
-                              >
-                                <Ionicons name="trash-outline" size={18} color={theme.colors.textMuted} />
-                              </TouchableOpacity>
-                            </View>
-                          </View>
-                        );
-                      })
-                    )}
-                  </View>
-                )}
+                  <TouchableOpacity
+                    testID={`toggle-completed-${key}`}
+                    style={[styles.completedToggle, { marginTop: active.length > 0 ? 12 : 4 }]}
+                    onPress={() => toggleCompleted(key)}
+                  >
+                    <Ionicons
+                      name={showDone ? "chevron-down" : "chevron-forward"}
+                      size={14}
+                      color={theme.colors.accent}
+                    />
+                    <Text style={styles.completedToggleText}>
+                      {showDone ? "HIDE COMPLETED CLAIMS" : `SHOW COMPLETED CLAIMS (${d.completed + d.rejected})`}
+                    </Text>
+                  </TouchableOpacity>
+
+                  {showDone && (
+                    <View style={{ marginTop: 8, gap: 8 }}>
+                      {completed.length === 0 ? (
+                        <Text style={styles.muted}>No completed claims yet.</Text>
+                      ) : (
+                        completed.map((c: any) => (
+                          <ClaimCard
+                            key={c.id}
+                            claim={c}
+                            onOpenTool={() => router.push(`/tool/${c.tool_id}`)}
+                            onPickStatus={() => setPickerForClaim(c)}
+                            onDelete={() => removeClaim(c)}
+                          />
+                        ))
+                      )}
+                    </View>
+                  )}
+                </View>
               </View>
             );
           })
@@ -328,6 +292,65 @@ function Stat({ label, value, color }: { label: string; value: number; color?: s
     <View style={styles.statBox}>
       <Text style={[styles.statValue, color ? { color } : null]}>{value}</Text>
       <Text style={styles.statLabel}>{label}</Text>
+    </View>
+  );
+}
+
+function ClaimCard({
+  claim,
+  onOpenTool,
+  onPickStatus,
+  onDelete,
+}: {
+  claim: any;
+  onOpenTool: () => void;
+  onPickStatus: () => void;
+  onDelete: () => void;
+}) {
+  const meta = statusMeta(claim.claim_status);
+  return (
+    <View style={styles.claimCard} testID={`claim-${claim.id}`}>
+      <TouchableOpacity style={styles.claimHead} onPress={onOpenTool} activeOpacity={0.7}>
+        {claim.tool_photo ? (
+          <Image source={{ uri: claim.tool_photo }} style={styles.thumb} />
+        ) : (
+          <View style={[styles.thumb, styles.thumbPh]}>
+            <Ionicons name="construct" size={20} color={theme.colors.accent} />
+          </View>
+        )}
+        <View style={{ flex: 1 }}>
+          <Text style={styles.claimTitle} numberOfLines={1}>{claim.tool_name}</Text>
+          {!!claim.repair_company && (
+            <Text style={styles.claimMeta} numberOfLines={1}>{claim.repair_company}</Text>
+          )}
+          {!!claim.notified_at && (
+            <Text style={styles.claimDate}>
+              Notified {claim.notified_at}
+              {claim.expected_completion ? ` · Back ${claim.expected_completion}` : ""}
+            </Text>
+          )}
+        </View>
+        <Ionicons name="chevron-forward" size={16} color={theme.colors.textMuted} />
+      </TouchableOpacity>
+      <View style={styles.claimFoot}>
+        <TouchableOpacity
+          testID={`claim-status-${claim.id}`}
+          style={[styles.statusPill, { borderColor: meta.color }]}
+          onPress={onPickStatus}
+        >
+          <Ionicons name={meta.icon} size={14} color={meta.color} />
+          <Text style={[styles.statusPillText, { color: meta.color }]}>{meta.label.toUpperCase()}</Text>
+          <Ionicons name="chevron-down" size={12} color={meta.color} />
+        </TouchableOpacity>
+        <TouchableOpacity
+          testID={`claim-delete-${claim.id}`}
+          onPress={onDelete}
+          hitSlop={8}
+          style={{ padding: 6 }}
+        >
+          <Ionicons name="trash-outline" size={18} color={theme.colors.textMuted} />
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
@@ -396,6 +419,7 @@ const styles = StyleSheet.create({
   pillValue: { fontWeight: "900", fontSize: 13 },
   pillLabel: { fontSize: 8, fontWeight: "800", letterSpacing: 1 },
   dealerBody: { paddingHorizontal: 20, paddingBottom: 14, gap: 10 },
+  bodyLabel: { color: theme.colors.textMuted, fontSize: 10, fontWeight: "800", letterSpacing: 1.5, marginTop: 4 },
   completedToggle: {
     flexDirection: "row", alignItems: "center", gap: 6, alignSelf: "flex-start",
     borderWidth: 1, borderColor: theme.colors.border,
