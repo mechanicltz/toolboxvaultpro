@@ -11,12 +11,10 @@ export function ReportsFab() {
   const router = useRouter();
   const path = usePathname();
 
-  // Hide on reports/insurance-report pages themselves
-  const hide =
-    path === "/reports" ||
-    path?.startsWith("/insurance-report") ||
-    path?.startsWith("/personal-info");
-  if (hide) return null;
+  // Only show on the 5 main tab screens. Hide on detail/stack screens
+  // where the top-right area is already used by edit/delete/back buttons.
+  const TAB_PATHS = new Set(["/", "/inventory", "/dealers", "/claims", "/more"]);
+  if (!TAB_PATHS.has(path || "")) return null;
 
   return (
     <View pointerEvents="box-none" style={styles.wrap}>

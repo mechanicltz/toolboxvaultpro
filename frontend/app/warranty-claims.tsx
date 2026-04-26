@@ -22,6 +22,7 @@ import * as FileSystem from "expo-file-system";
 import { theme } from "../src/theme";
 import { api } from "../src/api";
 import { confirm } from "../src/confirm";
+import { formatDateUS } from "../src/dateUtil";
 
 const STATUS_LIST = [
   { key: "broken", label: "Broken", color: theme.colors.danger, icon: "alert-circle" as const },
@@ -184,7 +185,11 @@ export default function WarrantyClaimsScreen() {
         return m.color;
       };
       const totals = summary?.totals || {};
-      const today = new Date().toLocaleDateString();
+      const today = new Date();
+      const dd = String(today.getDate()).padStart(2, "0");
+      const mm = String(today.getMonth() + 1).padStart(2, "0");
+      const yyyy = today.getFullYear();
+      const todayStr = `${dd}/${mm}/${yyyy}`;
 
       const groupHtml = groups
         .map((g) => {

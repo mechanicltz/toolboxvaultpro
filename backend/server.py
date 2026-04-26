@@ -263,6 +263,7 @@ class WarrantyClaim(BaseModel):
     tool_id: str
     tool_name: str = ""
     tool_photo: Optional[str] = None
+    broken_photo: Optional[str] = ""
     dealer_id: Optional[str] = None
     dealer_name: str = ""
     repair_company: Optional[str] = ""
@@ -973,6 +974,25 @@ async def delete_dealer_transaction(dealer_id: str, tx_id: str):
 async def create_tool(payload: ToolCreate):
     tool = Tool(**payload.dict())
     await db.tools.insert_one(tool.dict())
+    # If created already broken, also create a warranty claim mirror with broken_photo
+    if tool.needs_repair:
+        ri = (tool.repair_info or RepairInfo()).dict() if hasattr(tool.repair_info, "dict") else (tool.repair_info or {})
+        if isinstance(ri, dict):
+            claim = WarrantyClaim(
+                tool_id=tool.id,
+                tool_name=tool.name,
+                tool_photo=(tool.photos or [None])[0] if tool.photos else None,
+                broken_photo=ri.get("broken_photo") or "",
+                dealer_id=tool.dealer_id,
+                dealer_name=tool.dealer_name or "",
+                repair_company=ri.get("company_notified") or "",
+                contact=ri.get("contact") or "",
+                notified_at=ri.get("notified_at") or "",
+                expected_completion=ri.get("expected_completion") or "",
+                claim_status="broken",
+                notes=ri.get("notes") or "",
+            )
+            await db.warranty_claims.insert_one(claim.dict())
     return tool
 
 
@@ -1045,6 +1065,7 @@ async def update_tool(tool_id: str, payload: ToolUpdate):
                 tool_id=tool_id,
                 tool_name=new_doc.get("name", ""),
                 tool_photo=(new_doc.get("photos") or [None])[0],
+                broken_photo=ri.get("broken_photo") or "",
                 dealer_id=new_doc.get("dealer_id"),
                 dealer_name=new_doc.get("dealer_name") or "",
                 repair_company=ri.get("company_notified") or "",
@@ -1067,6 +1088,7 @@ async def update_tool(tool_id: str, payload: ToolUpdate):
                     "notified_at": ri.get("notified_at") or "",
                     "expected_completion": ri.get("expected_completion") or "",
                     "notes": ri.get("notes") or "",
+                    "broken_photo": ri.get("broken_photo") or "",
                     "updated_at": now_iso(),
                 }
             },

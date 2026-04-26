@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   View,
   Text,
@@ -6,19 +6,15 @@ import {
   StyleSheet,
   Platform,
   Modal,
+  TextInput,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { theme } from "./theme";
-import { formatDateUS, todayISO } from "./dateUtil";
+import { formatDateUS, parseDateUS, todayISO } from "./dateUtil";
 
 /**
- * Cross-platform date field.
- * - Web: uses native <input type="date"> for the OS calendar/scrollwheel UI.
- * - Native: tap the field to open a centered modal with a spinner-style
- *   DateTimePicker (scroll wheels for month/day/year on iOS).
- *
- * Stores values as YYYY-MM-DD ISO under the hood, displays as MM/DD/YYYY.
- * Defaults the picker to today on first interaction when value is empty.
+ * Cross-platform date field. Always displays/inputs in DD/MM/YYYY.
+ * Stored value is YYYY-MM-DD ISO under the hood.
  */
 export function DateField({
   value,
@@ -33,34 +29,92 @@ export function DateField({
 }) {
   const display = formatDateUS(value);
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [text, setText] = useState(display);
+  const hiddenRef = useRef<any>(null);
+
+  // Sync displayed text whenever the external value changes (form reset, edit load, etc.)
+  useEffect(() => {
+    setText(display);
+  }, [display]);
+
+  // Auto-mask DD/MM/YYYY as the user types
+  const handleType = (raw: string) => {
+    const digits = raw.replace(/\D/g, "").slice(0, 8);
+    let out = digits;
+    if (digits.length >= 5) out = `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4)}`;
+    else if (digits.length >= 3) out = `${digits.slice(0, 2)}/${digits.slice(2)}`;
+    setText(out);
+    if (digits.length === 8) {
+      const dd = digits.slice(0, 2);
+      const mm = digits.slice(2, 4);
+      const yyyy = digits.slice(4);
+      const m = parseInt(mm, 10);
+      const d = parseInt(dd, 10);
+      const y = parseInt(yyyy, 10);
+      if (m >= 1 && m <= 12 && d >= 1 && d <= 31 && y >= 1900 && y <= 2200) {
+        onChange(`${yyyy}-${mm}-${dd}`);
+      }
+    } else if (digits.length === 0) {
+      onChange("");
+    }
+  };
 
   if (Platform.OS === "web") {
+    const openCalendar = () => {
+      try {
+        const el = hiddenRef.current;
+        if (el && typeof el.showPicker === "function") el.showPicker();
+        else if (el) el.click();
+      } catch {
+        /* ignore */
+      }
+    };
     return (
       <View style={styles.input}>
-        {/* @ts-ignore — using HTML element on web */}
-        <input
-          type="date"
-          data-testid={testID}
-          value={value || ""}
-          onChange={(e: any) => onChange(e.target.value)}
+        <TextInput
+          testID={testID}
+          value={text}
+          onChangeText={handleType}
+          placeholder={placeholder || "DD/MM/YYYY"}
+          placeholderTextColor={theme.colors.textMuted}
+          keyboardType="numbers-and-punctuation"
+          maxLength={10}
           style={{
             backgroundColor: "transparent",
-            border: "none",
-            outline: "none",
             color: theme.colors.textPrimary,
             fontSize: 15,
-            fontFamily: "inherit",
-            width: "100%",
-            colorScheme: "dark",
-            paddingTop: 2,
-            paddingBottom: 2,
+            flex: 1,
+            ...(Platform.OS === "web"
+              ? ({ outlineStyle: "none", borderWidth: 0 } as any)
+              : {}),
           }}
         />
+        <TouchableOpacity onPress={openCalendar} hitSlop={8} style={{ paddingHorizontal: 4 }}>
+          <Ionicons name="calendar-outline" size={18} color={theme.colors.accent} />
+        </TouchableOpacity>
         {value ? (
-          <TouchableOpacity onPress={() => onChange("")} hitSlop={8}>
+          <TouchableOpacity onPress={() => { onChange(""); setText(""); }} hitSlop={8}>
             <Ionicons name="close-circle" size={18} color={theme.colors.textMuted} />
           </TouchableOpacity>
         ) : null}
+        {/* Hidden native date input — opens browser calendar so user can pick visually */}
+        {/* @ts-ignore — DOM element on web */}
+        <input
+          ref={hiddenRef}
+          type="date"
+          value={value || ""}
+          onChange={(e: any) => onChange(e.target.value)}
+          style={{
+            position: "absolute",
+            width: 1,
+            height: 1,
+            opacity: 0,
+            pointerEvents: "none",
+            right: 0,
+            bottom: 0,
+          }}
+          tabIndex={-1}
+        />
       </View>
     );
   }
