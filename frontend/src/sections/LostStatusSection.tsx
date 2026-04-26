@@ -17,6 +17,7 @@ import { theme } from "../theme";
 import { api } from "../api";
 import { DateField } from "../DateField";
 import { confirm } from "../confirm";
+import { formatDateUS } from "../dateUtil";
 
 export function LostStatusBanner({
   tool,
@@ -55,7 +56,7 @@ export function LostStatusBanner({
             {isStolen ? "REPORTED STOLEN" : "REPORTED LOST"}
           </Text>
           {!!ls.reported_date && (
-            <Text style={styles.bannerLine}>Reported: {ls.reported_date}</Text>
+            <Text style={styles.bannerLine}>Reported: {formatDateUS(ls.reported_date)}</Text>
           )}
           {!!ls.police_report_number && (
             <Text style={styles.bannerLine}>

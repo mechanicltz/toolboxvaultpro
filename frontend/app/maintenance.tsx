@@ -13,6 +13,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter, useFocusEffect } from "expo-router";
 import { theme } from "../src/theme";
 import { api } from "../src/api";
+import { formatDateUS } from "../src/dateUtil";
 
 function daysUntil(iso: string): number {
   if (!iso) return 9999;
@@ -152,8 +153,8 @@ export default function MaintenanceScreen() {
                     {it.type}  ·  every {it.interval_months} mo
                   </Text>
                   <Text style={styles.itemDate}>
-                    Next due: {it.next_due_date}
-                    {it.last_done_date ? `  ·  Last: ${it.last_done_date}` : ""}
+                    Next due: {formatDateUS(it.next_due_date)}
+                    {it.last_done_date ? `  ·  Last: ${formatDateUS(it.last_done_date)}` : ""}
                   </Text>
                 </View>
                 <View

@@ -203,9 +203,9 @@ export default function WarrantyClaimsScreen() {
                   <td><span class="pill" style="background:${colorOf(c.claim_status)}22;color:${colorOf(c.claim_status)};border:1px solid ${colorOf(c.claim_status)}">${esc(labelOf(c.claim_status).toUpperCase())}</span></td>
                   <td>${esc(c.repair_company || "—")}</td>
                   <td>${esc(c.contact || "—")}</td>
-                  <td>${esc(c.notified_at || "—")}</td>
-                  <td>${esc(c.expected_completion || "—")}</td>
-                  <td>${esc(c.completed_at ? c.completed_at.substring(0, 10) : "—")}</td>
+                  <td>${esc(formatDateUS(c.notified_at) || "—")}</td>
+                  <td>${esc(formatDateUS(c.expected_completion) || "—")}</td>
+                  <td>${esc(formatDateUS(c.completed_at) || "—")}</td>
                   <td style="font-style:italic;color:#666">${esc(c.notes || "")}</td>
                 </tr>`
               )
@@ -322,9 +322,9 @@ export default function WarrantyClaimsScreen() {
             statusMeta(c.claim_status).label,
             c.repair_company || "",
             c.contact || "",
-            c.notified_at || "",
-            c.expected_completion || "",
-            c.completed_at ? c.completed_at.substring(0, 10) : "",
+            formatDateUS(c.notified_at) || "",
+            formatDateUS(c.expected_completion) || "",
+            formatDateUS(c.completed_at) || "",
             c.notes || "",
           ].map(escape).join(","));
         });
@@ -688,8 +688,8 @@ function ClaimCard({
           )}
           {!!claim.notified_at && (
             <Text style={styles.claimDate}>
-              Notified {claim.notified_at}
-              {claim.expected_completion ? ` · Back ${claim.expected_completion}` : ""}
+              Notified {formatDateUS(claim.notified_at)}
+              {claim.expected_completion ? ` · Back ${formatDateUS(claim.expected_completion)}` : ""}
             </Text>
           )}
         </View>

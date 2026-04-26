@@ -341,11 +341,12 @@ function buildHtml(
   includeThumbs: boolean,
   includeNotes: boolean
 ): string {
-  const today = new Date().toLocaleDateString("en-US", {
-    month: "long",
-    day: "numeric",
-    year: "numeric",
-  });
+  const today = (() => {
+    const d = new Date();
+    const dd = String(d.getDate()).padStart(2, "0");
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    return `${dd}/${mm}/${d.getFullYear()}`;
+  })();
 
   const profLines: string[] = [];
   if (profile.address) {
@@ -390,7 +391,7 @@ function buildHtml(
           <td class="num">${i + 1}</td>
           ${thumbCol}
           <td class="name">${esc(t.name) || "—"}</td>
-          <td>${esc(t.purchase_date) || "—"}</td>
+          <td>${esc(formatDateUS(t.purchase_date)) || "—"}</td>
           <td>${esc(t.brand) || "—"}</td>
           <td>${esc(t.serial_number) || "—"}</td>
           <td class="val">$${(t.cost || 0).toFixed(2)}</td>

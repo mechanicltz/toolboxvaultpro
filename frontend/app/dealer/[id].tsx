@@ -17,6 +17,7 @@ import { theme } from "../../src/theme";
 import { api } from "../../src/api";
 import { usePrefs } from "../../src/prefs";
 import { confirm } from "../../src/confirm";
+import { formatDateUS } from "../../src/dateUtil";
 import { BalanceSection } from "../../src/sections/BalanceSection";
 
 export default function DealerDetail() {
@@ -189,7 +190,7 @@ export default function DealerDetail() {
               )}
               {!!a.notes && <Text style={styles.agentMeta}>{a.notes}</Text>}
               {a.ended_at && !isCurrent && (
-                <Text style={styles.agentMeta}>Ended: {a.ended_at.substring(0, 10)}</Text>
+                <Text style={styles.agentMeta}>Ended: {formatDateUS(a.ended_at)}</Text>
               )}
               <View style={styles.agentActions}>
                 <TouchableOpacity

@@ -279,7 +279,7 @@ export default function ToolDetail() {
     const history = (tool.checkout_history || [])
       .map(
         (h: any) =>
-          `<tr><td>${esc(h.borrower_name)}</td><td>${esc((h.checked_out_at || "").substring(0, 10))}</td><td>${esc((h.checked_in_at || "").substring(0, 10))}</td></tr>`
+          `<tr><td>${esc(h.borrower_name)}</td><td>${esc(formatDateUS(h.checked_out_at))}</td><td>${esc(formatDateUS(h.checked_in_at))}</td></tr>`
       )
       .join("");
     const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><style>

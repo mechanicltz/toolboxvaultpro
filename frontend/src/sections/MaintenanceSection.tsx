@@ -17,6 +17,7 @@ import { theme } from "../theme";
 import { api } from "../api";
 import { DateField } from "../DateField";
 import { confirm } from "../confirm";
+import { formatDateUS } from "../dateUtil";
 
 const TYPES = ["Calibration", "Service", "Inspection", "Cleaning", "Custom"];
 
@@ -104,8 +105,8 @@ export function MaintenanceSection({
                 </View>
                 <Text style={styles.rowMeta}>
                   Every {sch.interval_months} mo
-                  {sch.last_done_date ? `  ·  Last: ${sch.last_done_date}` : ""}
-                  {sch.next_due_date ? `  ·  Next: ${sch.next_due_date}` : ""}
+                  {sch.last_done_date ? `  ·  Last: ${formatDateUS(sch.last_done_date)}` : ""}
+                  {sch.next_due_date ? `  ·  Next: ${formatDateUS(sch.next_due_date)}` : ""}
                 </Text>
                 {!!sch.notes && <Text style={styles.rowNotes}>{sch.notes}</Text>}
                 <View style={{ flexDirection: "row", gap: 8, marginTop: 8 }}>

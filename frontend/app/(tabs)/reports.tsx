@@ -14,6 +14,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect, useRouter } from "expo-router";
+import { formatDateUS, formatDateTimeUS } from "../../src/dateUtil";
 import * as Print from "expo-print";
 import * as Sharing from "expo-sharing";
 import * as FileSystem from "expo-file-system";
@@ -51,7 +52,7 @@ const COLUMNS: ColDef[] = [
   { id: "location", label: "Location", get: (t) => t.location_name || "" },
   { id: "tags", label: "Tags", get: (t) => (t.tag_names || []).join(", ") },
   { id: "condition", label: "Condition", get: (t) => t.condition || "" },
-  { id: "purchase_date", label: "Purchased", get: (t) => t.purchase_date || "" },
+  { id: "purchase_date", label: "Purchased", get: (t) => formatDateUS(t.purchase_date) || "" },
   {
     id: "cost",
     label: "Cost",
@@ -71,7 +72,7 @@ const COLUMNS: ColDef[] = [
     label: "Warranty",
     get: (t) =>
       t.warranty?.has_warranty
-        ? `${t.warranty.provider || "Yes"}${t.warranty.expiry_date ? ` (until ${t.warranty.expiry_date})` : ""}`
+        ? `${t.warranty.provider || "Yes"}${t.warranty.expiry_date ? ` (until ${formatDateUS(t.warranty.expiry_date)})` : ""}`
         : "—",
   },
   {
@@ -163,7 +164,7 @@ const buildPdfHtml = (
   </style></head><body>
     <div class="header">
       <h1>${escapeHtml(title)}</h1>
-      <div class="sub">${escapeHtml(subtitle)} · Generated ${new Date().toLocaleString()}</div>
+      <div class="sub">${escapeHtml(subtitle)} · Generated ${formatDateTimeUS(new Date().toISOString())}</div>
     </div>
     <div class="summary">
       <div class="stat"><div class="v">${tools.length}</div><div class="l">Items</div></div>

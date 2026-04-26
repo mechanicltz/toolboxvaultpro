@@ -5,6 +5,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect, useRouter } from "expo-router";
 import { theme } from "../src/theme";
 import { api } from "../src/api";
+import { formatDateUS } from "../src/dateUtil";
 
 export default function WarrantyScreen() {
   const router = useRouter();
@@ -36,7 +37,7 @@ export default function WarrantyScreen() {
         <View style={{ flex: 1 }}>
           <Text style={styles.toolName}>{t.name}</Text>
           <Text style={styles.toolMeta}>
-            {kind === "expired" ? "EXPIRED" : "EXPIRING"} · {ex}
+            {kind === "expired" ? "EXPIRED" : "EXPIRING"} · {formatDateUS(ex)}
           </Text>
         </View>
         <Ionicons name="chevron-forward" size={18} color={theme.colors.textMuted} />
