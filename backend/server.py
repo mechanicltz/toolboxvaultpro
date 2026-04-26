@@ -136,9 +136,77 @@ class DealerUpdate(BaseModel):
 
 # Documents
 class Document(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     name: str
-    data: str
+    data: str  # base64
     mime_type: Optional[str] = "application/octet-stream"
+    size: Optional[int] = 0  # bytes
+    uploaded_at: str = Field(default_factory=now_iso)
+
+
+# Maintenance / Calibration tracking
+class ServiceEvent(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    date: str  # YYYY-MM-DD
+    cost: Optional[float] = 0.0
+    technician: Optional[str] = ""
+    notes: Optional[str] = ""
+    created_at: str = Field(default_factory=now_iso)
+
+
+class MaintenanceSchedule(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    type: str = "Service"  # "Calibration" / "Service" / "Inspection" / custom
+    interval_months: int = 12
+    last_done_date: Optional[str] = None  # YYYY-MM-DD
+    next_due_date: Optional[str] = None  # auto-calculated
+    notes: Optional[str] = ""
+    history: List[ServiceEvent] = []
+    created_at: str = Field(default_factory=now_iso)
+
+
+class MaintenanceScheduleCreate(BaseModel):
+    type: str = "Service"
+    interval_months: int = 12
+    last_done_date: Optional[str] = None
+    notes: Optional[str] = ""
+
+
+class MaintenanceScheduleUpdate(BaseModel):
+    type: Optional[str] = None
+    interval_months: Optional[int] = None
+    last_done_date: Optional[str] = None
+    notes: Optional[str] = None
+
+
+class ServiceEventCreate(BaseModel):
+    date: Optional[str] = None  # default today
+    cost: Optional[float] = 0.0
+    technician: Optional[str] = ""
+    notes: Optional[str] = ""
+
+
+# Theft / Loss reporting
+class LostStatus(BaseModel):
+    is_lost: bool = False
+    type: str = "lost"  # "lost" or "stolen"
+    reported_date: Optional[str] = None  # YYYY-MM-DD
+    police_report_number: Optional[str] = ""
+    insurance_company: Optional[str] = ""
+    insurance_claim_number: Optional[str] = ""
+    notes: Optional[str] = ""
+    reported_by: Optional[str] = ""
+    recovered_at: Optional[str] = None  # if recovered, set to ISO
+
+
+class ReportLostRequest(BaseModel):
+    type: str = "lost"  # lost or stolen
+    reported_date: Optional[str] = None
+    police_report_number: Optional[str] = ""
+    insurance_company: Optional[str] = ""
+    insurance_claim_number: Optional[str] = ""
+    notes: Optional[str] = ""
+    reported_by: Optional[str] = ""
 
 
 # Warranty
@@ -283,6 +351,8 @@ class Tool(BaseModel):
     is_checked_out: bool = False
     current_checkout: Optional[CheckoutRecord] = None
     checkout_history: List[CheckoutRecord] = []
+    maintenance: List[MaintenanceSchedule] = []
+    lost_status: Optional[LostStatus] = None
     created_at: str = Field(default_factory=now_iso)
     updated_at: str = Field(default_factory=now_iso)
 
@@ -1015,6 +1085,304 @@ async def checkin_tool(tool_id: str):
     )
     new_doc = await db.tools.find_one({"id": tool_id}, {"_id": 0})
     return Tool(**new_doc)
+
+
+# ---------- Documents (per tool) ----------
+@api_router.post("/tools/{tool_id}/documents", response_model=Tool)
+async def add_tool_document(tool_id: str, payload: Document):
+    tool = await db.tools.find_one({"id": tool_id}, {"_id": 0})
+    if not tool:
+        raise HTTPException(404, "Tool not found")
+    docs = tool.get("documents") or []
+    new_doc = payload.model_dump()
+    if not new_doc.get("id"):
+        new_doc["id"] = str(uuid.uuid4())
+    if not new_doc.get("uploaded_at"):
+        new_doc["uploaded_at"] = now_iso()
+    if not new_doc.get("size") and new_doc.get("data"):
+        # Estimate size in bytes from base64 length
+        new_doc["size"] = int(len(new_doc["data"]) * 3 / 4)
+    docs.append(new_doc)
+    await db.tools.update_one({"id": tool_id}, {"$set": {"documents": docs, "updated_at": now_iso()}})
+    return Tool(**(await db.tools.find_one({"id": tool_id}, {"_id": 0})))
+
+
+@api_router.delete("/tools/{tool_id}/documents/{doc_id}", response_model=Tool)
+async def delete_tool_document(tool_id: str, doc_id: str):
+    tool = await db.tools.find_one({"id": tool_id}, {"_id": 0})
+    if not tool:
+        raise HTTPException(404, "Tool not found")
+    docs = [d for d in (tool.get("documents") or []) if d.get("id") != doc_id]
+    await db.tools.update_one({"id": tool_id}, {"$set": {"documents": docs, "updated_at": now_iso()}})
+    return Tool(**(await db.tools.find_one({"id": tool_id}, {"_id": 0})))
+
+
+# ---------- Maintenance Schedules ----------
+def _calc_next_due(last: Optional[str], months: int) -> Optional[str]:
+    if not last or not months:
+        return None
+    try:
+        d = datetime.strptime(last, "%Y-%m-%d")
+        # Approximate by adding months * 30.4 days; simpler than dateutil
+        new_month = d.month + months
+        new_year = d.year + (new_month - 1) // 12
+        new_month = ((new_month - 1) % 12) + 1
+        # Clamp day
+        try:
+            nd = d.replace(year=new_year, month=new_month)
+        except ValueError:
+            # Day overflow (e.g., Feb 30) — back off
+            nd = d.replace(year=new_year, month=new_month, day=28)
+        return nd.strftime("%Y-%m-%d")
+    except Exception:
+        return None
+
+
+@api_router.post("/tools/{tool_id}/maintenance", response_model=Tool)
+async def add_maintenance(tool_id: str, payload: MaintenanceScheduleCreate):
+    tool = await db.tools.find_one({"id": tool_id}, {"_id": 0})
+    if not tool:
+        raise HTTPException(404, "Tool not found")
+    schedules = tool.get("maintenance") or []
+    new_sch = MaintenanceSchedule(
+        type=payload.type or "Service",
+        interval_months=payload.interval_months or 12,
+        last_done_date=payload.last_done_date,
+        next_due_date=_calc_next_due(payload.last_done_date, payload.interval_months or 12),
+        notes=payload.notes or "",
+    ).model_dump()
+    schedules.append(new_sch)
+    await db.tools.update_one({"id": tool_id}, {"$set": {"maintenance": schedules, "updated_at": now_iso()}})
+    return Tool(**(await db.tools.find_one({"id": tool_id}, {"_id": 0})))
+
+
+@api_router.put("/tools/{tool_id}/maintenance/{sch_id}", response_model=Tool)
+async def update_maintenance(tool_id: str, sch_id: str, payload: MaintenanceScheduleUpdate):
+    tool = await db.tools.find_one({"id": tool_id}, {"_id": 0})
+    if not tool:
+        raise HTTPException(404, "Tool not found")
+    schedules = tool.get("maintenance") or []
+    found = False
+    for sch in schedules:
+        if sch.get("id") == sch_id:
+            found = True
+            if payload.type is not None:
+                sch["type"] = payload.type
+            if payload.interval_months is not None:
+                sch["interval_months"] = payload.interval_months
+            if payload.last_done_date is not None:
+                sch["last_done_date"] = payload.last_done_date
+            if payload.notes is not None:
+                sch["notes"] = payload.notes
+            sch["next_due_date"] = _calc_next_due(sch.get("last_done_date"), sch.get("interval_months", 12))
+            break
+    if not found:
+        raise HTTPException(404, "Schedule not found")
+    await db.tools.update_one({"id": tool_id}, {"$set": {"maintenance": schedules, "updated_at": now_iso()}})
+    return Tool(**(await db.tools.find_one({"id": tool_id}, {"_id": 0})))
+
+
+@api_router.delete("/tools/{tool_id}/maintenance/{sch_id}", response_model=Tool)
+async def delete_maintenance(tool_id: str, sch_id: str):
+    tool = await db.tools.find_one({"id": tool_id}, {"_id": 0})
+    if not tool:
+        raise HTTPException(404, "Tool not found")
+    schedules = [s for s in (tool.get("maintenance") or []) if s.get("id") != sch_id]
+    await db.tools.update_one({"id": tool_id}, {"$set": {"maintenance": schedules, "updated_at": now_iso()}})
+    return Tool(**(await db.tools.find_one({"id": tool_id}, {"_id": 0})))
+
+
+@api_router.post("/tools/{tool_id}/maintenance/{sch_id}/service", response_model=Tool)
+async def log_service_event(tool_id: str, sch_id: str, payload: ServiceEventCreate):
+    tool = await db.tools.find_one({"id": tool_id}, {"_id": 0})
+    if not tool:
+        raise HTTPException(404, "Tool not found")
+    schedules = tool.get("maintenance") or []
+    found = False
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    for sch in schedules:
+        if sch.get("id") == sch_id:
+            found = True
+            event = ServiceEvent(
+                date=payload.date or today,
+                cost=payload.cost or 0.0,
+                technician=payload.technician or "",
+                notes=payload.notes or "",
+            ).model_dump()
+            sch.setdefault("history", []).append(event)
+            sch["last_done_date"] = event["date"]
+            sch["next_due_date"] = _calc_next_due(sch["last_done_date"], sch.get("interval_months", 12))
+            break
+    if not found:
+        raise HTTPException(404, "Schedule not found")
+    await db.tools.update_one({"id": tool_id}, {"$set": {"maintenance": schedules, "updated_at": now_iso()}})
+    return Tool(**(await db.tools.find_one({"id": tool_id}, {"_id": 0})))
+
+
+@api_router.get("/maintenance/upcoming")
+async def upcoming_maintenance(days: int = 30):
+    """Return all maintenance schedules with next_due in [today, today+days] OR overdue."""
+    now = datetime.now(timezone.utc)
+    horizon = (now + timedelta(days=days)).strftime("%Y-%m-%d")
+    today = now.strftime("%Y-%m-%d")
+    out: List[Dict[str, Any]] = []
+    overdue_count = 0
+    due_soon_count = 0
+    async for tool in db.tools.find({}, {"_id": 0}):
+        for sch in (tool.get("maintenance") or []):
+            nd = sch.get("next_due_date") or ""
+            if not nd:
+                continue
+            if nd <= horizon:  # overdue or within horizon
+                is_overdue = nd < today
+                if is_overdue:
+                    overdue_count += 1
+                else:
+                    due_soon_count += 1
+                out.append({
+                    "tool_id": tool.get("id"),
+                    "tool_name": tool.get("name"),
+                    "tool_photo": (tool.get("photos") or [None])[0] if tool.get("photos") else None,
+                    "schedule_id": sch.get("id"),
+                    "type": sch.get("type"),
+                    "interval_months": sch.get("interval_months"),
+                    "last_done_date": sch.get("last_done_date"),
+                    "next_due_date": nd,
+                    "is_overdue": is_overdue,
+                    "notes": sch.get("notes", ""),
+                })
+    out.sort(key=lambda x: x["next_due_date"] or "9999-12-31")
+    return {
+        "items": out,
+        "total": len(out),
+        "overdue": overdue_count,
+        "due_soon": due_soon_count,
+    }
+
+
+# ---------- Theft / Loss Reporting ----------
+@api_router.post("/tools/{tool_id}/report-lost", response_model=Tool)
+async def report_lost(tool_id: str, payload: ReportLostRequest):
+    tool = await db.tools.find_one({"id": tool_id}, {"_id": 0})
+    if not tool:
+        raise HTTPException(404, "Tool not found")
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    lost_status = LostStatus(
+        is_lost=True,
+        type=payload.type if payload.type in ("lost", "stolen") else "lost",
+        reported_date=payload.reported_date or today,
+        police_report_number=payload.police_report_number or "",
+        insurance_company=payload.insurance_company or "",
+        insurance_claim_number=payload.insurance_claim_number or "",
+        notes=payload.notes or "",
+        reported_by=payload.reported_by or "",
+        recovered_at=None,
+    ).model_dump()
+    await db.tools.update_one({"id": tool_id}, {"$set": {"lost_status": lost_status, "updated_at": now_iso()}})
+    return Tool(**(await db.tools.find_one({"id": tool_id}, {"_id": 0})))
+
+
+@api_router.post("/tools/{tool_id}/recover", response_model=Tool)
+async def mark_recovered(tool_id: str):
+    tool = await db.tools.find_one({"id": tool_id}, {"_id": 0})
+    if not tool:
+        raise HTTPException(404, "Tool not found")
+    lost = tool.get("lost_status") or {}
+    lost["is_lost"] = False
+    lost["recovered_at"] = now_iso()
+    await db.tools.update_one({"id": tool_id}, {"$set": {"lost_status": lost, "updated_at": now_iso()}})
+    return Tool(**(await db.tools.find_one({"id": tool_id}, {"_id": 0})))
+
+
+# ---------- Bulk Operations ----------
+class BulkRequest(BaseModel):
+    tool_ids: List[str]
+    action: str  # "delete" | "move_location" | "add_tag" | "remove_tag" | "set_category" | "report_lost"
+    # Optional payload depending on action
+    location_id: Optional[str] = None
+    location_name: Optional[str] = None
+    tag_id: Optional[str] = None
+    tag_name: Optional[str] = None
+    category_id: Optional[str] = None
+    category_name: Optional[str] = None
+    lost_payload: Optional[ReportLostRequest] = None
+
+
+@api_router.post("/tools/bulk")
+async def bulk_tools(payload: BulkRequest):
+    if not payload.tool_ids:
+        return {"ok": True, "affected": 0}
+    affected = 0
+    if payload.action == "delete":
+        result = await db.tools.delete_many({"id": {"$in": payload.tool_ids}})
+        affected = result.deleted_count
+    elif payload.action == "move_location":
+        result = await db.tools.update_many(
+            {"id": {"$in": payload.tool_ids}},
+            {"$set": {
+                "location_id": payload.location_id,
+                "location_name": payload.location_name or "",
+                "updated_at": now_iso(),
+            }},
+        )
+        affected = result.modified_count
+    elif payload.action == "set_category":
+        result = await db.tools.update_many(
+            {"id": {"$in": payload.tool_ids}},
+            {"$set": {
+                "category_id": payload.category_id,
+                "category_name": payload.category_name or "",
+                "updated_at": now_iso(),
+            }},
+        )
+        affected = result.modified_count
+    elif payload.action == "add_tag":
+        if not payload.tag_id:
+            raise HTTPException(400, "tag_id required")
+        async for t in db.tools.find({"id": {"$in": payload.tool_ids}}, {"_id": 0}):
+            tag_ids = t.get("tag_ids") or []
+            tag_names = t.get("tag_names") or []
+            if payload.tag_id not in tag_ids:
+                tag_ids.append(payload.tag_id)
+                if payload.tag_name and payload.tag_name not in tag_names:
+                    tag_names.append(payload.tag_name)
+                await db.tools.update_one(
+                    {"id": t["id"]},
+                    {"$set": {"tag_ids": tag_ids, "tag_names": tag_names, "updated_at": now_iso()}},
+                )
+                affected += 1
+    elif payload.action == "remove_tag":
+        if not payload.tag_id:
+            raise HTTPException(400, "tag_id required")
+        async for t in db.tools.find({"id": {"$in": payload.tool_ids}}, {"_id": 0}):
+            tag_ids = [x for x in (t.get("tag_ids") or []) if x != payload.tag_id]
+            tag_names = [x for x in (t.get("tag_names") or []) if x != (payload.tag_name or "")] if payload.tag_name else (t.get("tag_names") or [])
+            await db.tools.update_one(
+                {"id": t["id"]},
+                {"$set": {"tag_ids": tag_ids, "tag_names": tag_names, "updated_at": now_iso()}},
+            )
+            affected += 1
+    elif payload.action == "report_lost":
+        lp = payload.lost_payload or ReportLostRequest()
+        today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        lost_status = LostStatus(
+            is_lost=True,
+            type=lp.type if lp.type in ("lost", "stolen") else "lost",
+            reported_date=lp.reported_date or today,
+            police_report_number=lp.police_report_number or "",
+            insurance_company=lp.insurance_company or "",
+            insurance_claim_number=lp.insurance_claim_number or "",
+            notes=lp.notes or "",
+            reported_by=lp.reported_by or "",
+        ).model_dump()
+        result = await db.tools.update_many(
+            {"id": {"$in": payload.tool_ids}},
+            {"$set": {"lost_status": lost_status, "updated_at": now_iso()}},
+        )
+        affected = result.modified_count
+    else:
+        raise HTTPException(400, f"Unknown action '{payload.action}'")
+    return {"ok": True, "affected": affected}
 
 
 # ---------- Aggregate / Stats ----------

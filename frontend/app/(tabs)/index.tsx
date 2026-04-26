@@ -9,6 +9,9 @@ import {
   Image,
   RefreshControl,
   ScrollView,
+  Alert,
+  Modal,
+  ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -18,8 +21,11 @@ import { theme } from "../../src/theme";
 import { api } from "../../src/api";
 import { usePrefs } from "../../src/prefs";
 import { SummaryHeader } from "../../src/SummaryHeader";
+import { confirm } from "../../src/confirm";
+import { ReportLostModal } from "../../src/sections/LostStatusSection";
+import { buildLocationTree, flattenLocationTree } from "../../src/locationTree";
 
-type Filter = "all" | "available" | "out" | "consumables";
+type Filter = "all" | "available" | "out" | "consumables" | "lost";
 
 export default function InventoryScreen() {
   const router = useRouter();
@@ -32,22 +38,117 @@ export default function InventoryScreen() {
   const [warningCount, setWarningCount] = useState(0);
   const [openClaims, setOpenClaims] = useState(0);
 
+  // Bulk select mode
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [bulkActionsOpen, setBulkActionsOpen] = useState(false);
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const [showBulkLocation, setShowBulkLocation] = useState(false);
+  const [showBulkTag, setShowBulkTag] = useState(false);
+  const [showBulkLost, setShowBulkLost] = useState(false);
+  const [allLocations, setAllLocations] = useState<any[]>([]);
+  const [allTags, setAllTags] = useState<any[]>([]);
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds((cur) =>
+      cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id]
+    );
+  };
+
+  const exitSelect = () => {
+    setSelectMode(false);
+    setSelectedIds([]);
+    setBulkActionsOpen(false);
+  };
+
+  const enterSelect = (initialId?: string) => {
+    setSelectMode(true);
+    if (initialId) setSelectedIds([initialId]);
+  };
+
+  const bulkDelete = async () => {
+    if (selectedIds.length === 0) return;
+    const ok = await confirm(
+      "Delete Tools",
+      `Delete ${selectedIds.length} tool${selectedIds.length === 1 ? "" : "s"}? This cannot be undone.`,
+      "Delete",
+      true
+    );
+    if (!ok) return;
+    setBulkBusy(true);
+    try {
+      await api.bulkTools({ tool_ids: selectedIds, action: "delete" });
+      exitSelect();
+      load();
+    } catch (e: any) {
+      Alert.alert("Error", e.message);
+    } finally {
+      setBulkBusy(false);
+    }
+  };
+
+  const bulkMoveLocation = async (locId: string | null, locName: string) => {
+    setBulkBusy(true);
+    try {
+      await api.bulkTools({
+        tool_ids: selectedIds,
+        action: "move_location",
+        location_id: locId,
+        location_name: locName,
+      });
+      setShowBulkLocation(false);
+      exitSelect();
+      load();
+    } catch (e: any) {
+      Alert.alert("Error", e.message);
+    } finally {
+      setBulkBusy(false);
+    }
+  };
+
+  const bulkAddTag = async (tagId: string, tagName: string) => {
+    setBulkBusy(true);
+    try {
+      await api.bulkTools({
+        tool_ids: selectedIds,
+        action: "add_tag",
+        tag_id: tagId,
+        tag_name: tagName,
+      });
+      setShowBulkTag(false);
+      exitSelect();
+      load();
+    } catch (e: any) {
+      Alert.alert("Error", e.message);
+    } finally {
+      setBulkBusy(false);
+    }
+  };
+
   const load = useCallback(async () => {
     const params: any = { search: search || undefined };
     if (filter === "available") params.checked_out = false;
     if (filter === "out") params.checked_out = true;
     if (filter === "consumables") params.is_consumable = true;
     try {
-      const [t, a, w, cs] = await Promise.all([
+      const [t, a, w, cs, locs, tags] = await Promise.all([
         api.listTools(params),
         api.aggregate(params),
         prefs.warranty_alerts ? api.warrantyAlerts(60) : Promise.resolve({ expiring: [], expired: [] }),
         api.warrantyClaimsSummary().catch(() => ({ totals: { open: 0 } })),
+        api.listLocations().catch(() => []),
+        api.listTags().catch(() => []),
       ]);
-      setTools(t);
+      // Client-side filter for "lost" since backend doesn't expose this
+      const filteredTools = filter === "lost"
+        ? t.filter((x: any) => x?.lost_status?.is_lost)
+        : t;
+      setTools(filteredTools);
       setAgg(a);
       setWarningCount((w.expiring?.length || 0) + (w.expired?.length || 0));
       setOpenClaims(cs?.totals?.open || 0);
+      setAllLocations(locs);
+      setAllTags(tags);
     } catch (e) {
       console.error(e);
     }
@@ -108,7 +209,7 @@ export default function InventoryScreen() {
       )}
 
       <View style={styles.searchRow}>
-        <View style={styles.searchBox}>
+        <View style={[styles.searchBox, { flex: 1 }]}>
           <Ionicons name="search" size={18} color={theme.colors.textMuted} />
           <TextInput
             testID="search-input"
@@ -124,6 +225,14 @@ export default function InventoryScreen() {
             </TouchableOpacity>
           )}
         </View>
+        <TouchableOpacity
+          testID="select-mode-btn"
+          style={styles.selectHeaderBtn}
+          onPress={() => setSelectMode(true)}
+          hitSlop={6}
+        >
+          <Ionicons name="checkmark-done" size={20} color={theme.colors.accent} />
+        </TouchableOpacity>
       </View>
 
       <View style={styles.filterWrap}>
@@ -147,6 +256,7 @@ export default function InventoryScreen() {
             { k: "available", label: "AVAILABLE" },
             { k: "out", label: "CHECKED OUT" },
             { k: "consumables", label: "CONSUMABLES" },
+            { k: "lost", label: "LOST/STOLEN" },
           ].map((f) => (
             <TouchableOpacity
               key={f.k}
@@ -182,86 +292,272 @@ export default function InventoryScreen() {
             </Text>
           </View>
         }
-        renderItem={({ item }) => (
-          <TouchableOpacity
-            testID={`tool-card-${item.id}`}
-            style={styles.row}
-            onPress={() => router.push(`/tool/${item.id}`)}
-            activeOpacity={0.7}
-          >
-            <LinearGradient
-              colors={["#1F1F1F", "#0E0E0E"]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 0, y: 1 }}
-              style={StyleSheet.absoluteFillObject}
-            />
-            <View style={styles.thumb}>
-              {item.photos?.[0] ? (
-                <Image source={{ uri: item.photos[0] }} style={styles.thumbImg} />
-              ) : (
-                <Ionicons name="construct" size={28} color={theme.colors.accent} />
-              )}
-              {item.is_consumable && (
-                <View style={styles.consumableBadge}>
-                  <Ionicons name="repeat" size={10} color="#000" />
-                </View>
-              )}
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.rowTitle} numberOfLines={1}>
-                {item.name}
-              </Text>
-              <Text style={styles.rowSub} numberOfLines={1}>
-                {item.location_name || "No location"}
-                {item.dealer_name ? `  ·  ${item.dealer_name}` : ""}
-                {prefs.show_prices && item.cost ? `  ·  $${Number(item.cost).toFixed(0)}` : ""}
-              </Text>
-              {item.tag_names?.length > 0 && (
-                <View style={styles.tagRow}>
-                  {item.tag_names.slice(0, 3).map((t: string) => (
-                    <View key={t} style={styles.tag}>
-                      <Text style={styles.tagText}>{t}</Text>
-                    </View>
-                  ))}
-                </View>
-              )}
-            </View>
-            <View style={styles.rowRight}>
-              {item.needs_repair ? (
-                <>
-                  <Ionicons name="build" size={16} color={theme.colors.danger} />
-                  <Text style={[styles.statusText, { color: theme.colors.danger }]}>REPAIR</Text>
-                </>
-              ) : (
-                <>
-                  <View
-                    style={[
-                      styles.statusDot,
-                      {
-                        backgroundColor: item.is_checked_out
-                          ? theme.colors.accentSecondary
-                          : theme.colors.success,
-                      },
-                    ]}
+        renderItem={({ item }) => {
+          const isSelected = selectedIds.includes(item.id);
+          const isLost = item?.lost_status?.is_lost;
+          const isStolen = isLost && item?.lost_status?.type === "stolen";
+          return (
+            <TouchableOpacity
+              testID={`tool-card-${item.id}`}
+              style={[styles.row, isSelected && styles.rowSelected]}
+              onPress={() => {
+                if (selectMode) {
+                  toggleSelect(item.id);
+                } else {
+                  router.push(`/tool/${item.id}`);
+                }
+              }}
+              onLongPress={() => {
+                if (!selectMode) enterSelect(item.id);
+              }}
+              activeOpacity={0.7}
+            >
+              <LinearGradient
+                colors={["#1F1F1F", "#0E0E0E"]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 0, y: 1 }}
+                style={StyleSheet.absoluteFillObject}
+              />
+              {selectMode && (
+                <View style={styles.checkbox}>
+                  <Ionicons
+                    name={isSelected ? "checkbox" : "square-outline"}
+                    size={22}
+                    color={isSelected ? theme.colors.accent : theme.colors.textMuted}
                   />
-                  <Text style={styles.statusText}>
-                    {item.is_checked_out ? "OUT" : "IN"}
-                  </Text>
-                </>
+                </View>
               )}
-            </View>
-          </TouchableOpacity>
-        )}
+              <View style={styles.thumb}>
+                {item.photos?.[0] ? (
+                  <Image source={{ uri: item.photos[0] }} style={styles.thumbImg} />
+                ) : (
+                  <Ionicons name="construct" size={28} color={theme.colors.accent} />
+                )}
+                {item.is_consumable && (
+                  <View style={styles.consumableBadge}>
+                    <Ionicons name="repeat" size={10} color="#000" />
+                  </View>
+                )}
+              </View>
+              <View style={{ flex: 1 }}>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                  <Text style={styles.rowTitle} numberOfLines={1}>
+                    {item.name}
+                  </Text>
+                  {isLost && (
+                    <View style={styles.lostBadge}>
+                      <Ionicons
+                        name={isStolen ? "warning" : "help-circle"}
+                        size={10}
+                        color="#fff"
+                      />
+                      <Text style={styles.lostBadgeText}>
+                        {isStolen ? "STOLEN" : "LOST"}
+                      </Text>
+                    </View>
+                  )}
+                </View>
+                <Text style={styles.rowSub} numberOfLines={1}>
+                  {item.location_name || "No location"}
+                  {item.dealer_name ? `  ·  ${item.dealer_name}` : ""}
+                  {prefs.show_prices && item.cost ? `  ·  $${Number(item.cost).toFixed(0)}` : ""}
+                </Text>
+                {item.tag_names?.length > 0 && (
+                  <View style={styles.tagRow}>
+                    {item.tag_names.slice(0, 3).map((t: string) => (
+                      <View key={t} style={styles.tag}>
+                        <Text style={styles.tagText}>{t}</Text>
+                      </View>
+                    ))}
+                  </View>
+                )}
+              </View>
+              {!selectMode && (
+                <View style={styles.rowRight}>
+                  {item.needs_repair ? (
+                    <>
+                      <Ionicons name="build" size={16} color={theme.colors.danger} />
+                      <Text style={[styles.statusText, { color: theme.colors.danger }]}>REPAIR</Text>
+                    </>
+                  ) : (
+                    <>
+                      <View
+                        style={[
+                          styles.statusDot,
+                          {
+                            backgroundColor: item.is_checked_out
+                              ? theme.colors.accentSecondary
+                              : theme.colors.success,
+                          },
+                        ]}
+                      />
+                      <Text style={styles.statusText}>
+                        {item.is_checked_out ? "OUT" : "IN"}
+                      </Text>
+                    </>
+                  )}
+                </View>
+              )}
+            </TouchableOpacity>
+          );
+        }}
       />
 
-      <TouchableOpacity
-        testID="add-tool-fab"
-        style={styles.fab}
-        onPress={() => router.push("/tool/edit")}
-        activeOpacity={0.85}
-      >
-        <Ionicons name="add" size={32} color="#000" />
-      </TouchableOpacity>
+      {selectMode ? (
+        <View style={styles.bulkBar}>
+          <View style={styles.bulkTopRow}>
+            <TouchableOpacity testID="exit-select" onPress={exitSelect} hitSlop={10} style={{ padding: 8 }}>
+              <Ionicons name="close" size={22} color={theme.colors.textPrimary} />
+            </TouchableOpacity>
+            <Text style={styles.bulkCount}>
+              {selectedIds.length} SELECTED
+            </Text>
+            <TouchableOpacity
+              testID="select-all"
+              onPress={() =>
+                setSelectedIds(
+                  selectedIds.length === tools.length ? [] : tools.map((t) => t.id)
+                )
+              }
+              style={styles.selectAllBtn}
+            >
+              <Text style={styles.selectAllText}>
+                {selectedIds.length === tools.length ? "NONE" : "ALL"}
+              </Text>
+            </TouchableOpacity>
+          </View>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.bulkActions}>
+            <TouchableOpacity
+              testID="bulk-move"
+              style={[styles.bulkBtn, selectedIds.length === 0 && { opacity: 0.4 }]}
+              onPress={() => setShowBulkLocation(true)}
+              disabled={selectedIds.length === 0 || bulkBusy}
+            >
+              <Ionicons name="location" size={16} color={theme.colors.accent} />
+              <Text style={styles.bulkBtnText}>MOVE</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              testID="bulk-tag"
+              style={[styles.bulkBtn, selectedIds.length === 0 && { opacity: 0.4 }]}
+              onPress={() => setShowBulkTag(true)}
+              disabled={selectedIds.length === 0 || bulkBusy}
+            >
+              <Ionicons name="pricetag" size={16} color={theme.colors.accent} />
+              <Text style={styles.bulkBtnText}>ADD TAG</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              testID="bulk-lost"
+              style={[styles.bulkBtn, selectedIds.length === 0 && { opacity: 0.4 }]}
+              onPress={() => setShowBulkLost(true)}
+              disabled={selectedIds.length === 0 || bulkBusy}
+            >
+              <Ionicons name="warning" size={16} color={theme.colors.danger} />
+              <Text style={[styles.bulkBtnText, { color: theme.colors.danger }]}>MARK LOST</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              testID="bulk-delete"
+              style={[styles.bulkBtn, selectedIds.length === 0 && { opacity: 0.4 }]}
+              onPress={bulkDelete}
+              disabled={selectedIds.length === 0 || bulkBusy}
+            >
+              {bulkBusy ? (
+                <ActivityIndicator color={theme.colors.danger} size="small" />
+              ) : (
+                <>
+                  <Ionicons name="trash" size={16} color={theme.colors.danger} />
+                  <Text style={[styles.bulkBtnText, { color: theme.colors.danger }]}>DELETE</Text>
+                </>
+              )}
+            </TouchableOpacity>
+          </ScrollView>
+        </View>
+      ) : (
+        <TouchableOpacity
+          testID="add-tool-fab"
+          style={styles.fab}
+          onPress={() => router.push("/tool/edit")}
+          activeOpacity={0.85}
+        >
+          <Ionicons name="add" size={32} color="#000" />
+        </TouchableOpacity>
+      )}
+
+      {/* Bulk: Move location modal */}
+      <Modal visible={showBulkLocation} transparent animationType="slide" onRequestClose={() => setShowBulkLocation(false)}>
+        <View style={styles.modalBg}>
+          <View style={styles.modalSheet}>
+            <Text style={styles.modalTitle}>MOVE {selectedIds.length} TOOLS TO...</Text>
+            <ScrollView style={{ maxHeight: 400 }}>
+              <TouchableOpacity
+                style={styles.locOption}
+                onPress={() => bulkMoveLocation(null, "")}
+              >
+                <Ionicons name="ban-outline" size={16} color={theme.colors.textMuted} />
+                <Text style={styles.locOptName}>NO LOCATION</Text>
+              </TouchableOpacity>
+              {flattenLocationTree(buildLocationTree(allLocations)).map((n) => (
+                <TouchableOpacity
+                  key={n.id}
+                  style={[styles.locOption, { paddingLeft: 16 + n.depth * 16 }]}
+                  onPress={() => bulkMoveLocation(n.id, n.name)}
+                >
+                  <Ionicons
+                    name={n.children.length > 0 ? "folder" : "location"}
+                    size={16}
+                    color={theme.colors.accent}
+                  />
+                  <Text style={styles.locOptName}>{n.name}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+            <TouchableOpacity style={styles.btnGhost} onPress={() => setShowBulkLocation(false)}>
+              <Text style={styles.btnGhostText}>CANCEL</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Bulk: Add tag modal */}
+      <Modal visible={showBulkTag} transparent animationType="slide" onRequestClose={() => setShowBulkTag(false)}>
+        <View style={styles.modalBg}>
+          <View style={styles.modalSheet}>
+            <Text style={styles.modalTitle}>ADD TAG TO {selectedIds.length} TOOLS</Text>
+            <ScrollView style={{ maxHeight: 400 }} contentContainerStyle={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+              {allTags.length === 0 ? (
+                <Text style={{ color: theme.colors.textMuted, padding: 12 }}>
+                  No tags exist. Create some first from a tool's edit screen.
+                </Text>
+              ) : (
+                allTags.map((t) => (
+                  <TouchableOpacity
+                    key={t.id}
+                    style={styles.bulkTagChip}
+                    onPress={() => bulkAddTag(t.id, t.name)}
+                  >
+                    <Text style={styles.bulkTagChipText}>#{t.name}</Text>
+                  </TouchableOpacity>
+                ))
+              )}
+            </ScrollView>
+            <TouchableOpacity style={styles.btnGhost} onPress={() => setShowBulkTag(false)}>
+              <Text style={styles.btnGhostText}>CANCEL</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Bulk: Report lost modal */}
+      <ReportLostModal
+        visible={showBulkLost}
+        toolIds={selectedIds}
+        bulk
+        onClose={() => setShowBulkLost(false)}
+        onSaved={() => {
+          setShowBulkLost(false);
+          exitSelect();
+          load();
+        }}
+      />
     </SafeAreaView>
   );
 }
@@ -320,7 +616,17 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     letterSpacing: 0.5,
   },
-  searchRow: { paddingHorizontal: 20, marginBottom: 8 },
+  searchRow: { paddingHorizontal: 20, marginBottom: 8, flexDirection: "row", alignItems: "center", gap: 8 },
+  selectHeaderBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 4,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: theme.colors.bgSecondary,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
   searchBox: {
     flexDirection: "row",
     alignItems: "center",
@@ -336,6 +642,166 @@ const styles = StyleSheet.create({
   searchInput: { flex: 1, color: theme.colors.textPrimary, fontSize: 15 },
   filterWrap: { maxHeight: 56, paddingVertical: 4 },
   filterRow: { paddingHorizontal: 20, paddingVertical: 8, gap: 8, alignItems: "center" },
+  rowSelected: {
+    borderWidth: 2,
+    borderColor: theme.colors.accent,
+  },
+  checkbox: {
+    width: 28,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 4,
+  },
+  lostBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 3,
+    backgroundColor: theme.colors.danger,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 3,
+  },
+  lostBadgeText: {
+    color: "#fff",
+    fontSize: 9,
+    fontWeight: "900",
+    letterSpacing: 0.5,
+  },
+  selectFab: {
+    position: "absolute",
+    right: 24,
+    bottom: 90,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: theme.colors.bgSecondary,
+    borderWidth: 1,
+    borderColor: theme.colors.accent,
+  },
+  bulkBar: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 64,
+    backgroundColor: theme.colors.bgSecondary,
+    borderTopWidth: 2,
+    borderTopColor: theme.colors.accent,
+    paddingTop: 8,
+    paddingBottom: 12,
+  },
+  bulkTopRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 12,
+    marginBottom: 6,
+  },
+  bulkCount: {
+    flex: 1,
+    color: theme.colors.textPrimary,
+    fontWeight: "900",
+    letterSpacing: 1.5,
+    fontSize: 13,
+    marginLeft: 6,
+  },
+  selectAllBtn: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: 4,
+  },
+  selectAllText: {
+    color: theme.colors.accent,
+    fontWeight: "900",
+    fontSize: 11,
+    letterSpacing: 1.5,
+  },
+  bulkActions: {
+    paddingHorizontal: 12,
+    gap: 8,
+  },
+  bulkBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: 4,
+    backgroundColor: theme.colors.bg,
+  },
+  bulkBtnText: {
+    color: theme.colors.accent,
+    fontWeight: "900",
+    fontSize: 11,
+    letterSpacing: 1.2,
+  },
+  modalBg: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.7)",
+    justifyContent: "flex-end",
+  },
+  modalSheet: {
+    backgroundColor: theme.colors.bgSecondary,
+    padding: 20,
+    borderTopWidth: 2,
+    borderTopColor: theme.colors.accent,
+    borderTopLeftRadius: 12,
+    borderTopRightRadius: 12,
+    maxHeight: "85%",
+  },
+  modalTitle: {
+    color: theme.colors.textPrimary,
+    fontSize: 14,
+    fontWeight: "900",
+    letterSpacing: 2,
+    marginBottom: 12,
+  },
+  locOption: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    paddingVertical: 12,
+    paddingRight: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.borderSubtle,
+  },
+  locOptName: {
+    color: theme.colors.textPrimary,
+    fontSize: 14,
+    fontWeight: "700",
+    flex: 1,
+  },
+  bulkTagChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderWidth: 1,
+    borderColor: theme.colors.accent,
+    borderRadius: theme.radii.pill,
+    backgroundColor: theme.colors.bg,
+  },
+  bulkTagChipText: {
+    color: theme.colors.accent,
+    fontWeight: "700",
+    fontSize: 13,
+  },
+  btnGhost: {
+    height: 44,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: theme.radii.sm,
+    marginTop: 12,
+  },
+  btnGhostText: {
+    color: theme.colors.textPrimary,
+    fontWeight: "800",
+    letterSpacing: 2,
+  },
   chip: {
     borderWidth: 1,
     borderColor: theme.colors.border,

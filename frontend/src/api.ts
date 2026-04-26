@@ -101,4 +101,32 @@ export const api = {
     request<any>(`/wishlist/${id}`, { method: "DELETE" }),
   convertWishlist: (id: string) =>
     request<any>(`/wishlist/${id}/convert`, { method: "POST" }),
+
+  // Documents
+  addDocument: (toolId: string, data: any) =>
+    request<any>(`/tools/${toolId}/documents`, { method: "POST", body: JSON.stringify(data) }),
+  deleteDocument: (toolId: string, docId: string) =>
+    request<any>(`/tools/${toolId}/documents/${docId}`, { method: "DELETE" }),
+
+  // Maintenance
+  addMaintenance: (toolId: string, data: any) =>
+    request<any>(`/tools/${toolId}/maintenance`, { method: "POST", body: JSON.stringify(data) }),
+  updateMaintenance: (toolId: string, schId: string, data: any) =>
+    request<any>(`/tools/${toolId}/maintenance/${schId}`, { method: "PUT", body: JSON.stringify(data) }),
+  deleteMaintenance: (toolId: string, schId: string) =>
+    request<any>(`/tools/${toolId}/maintenance/${schId}`, { method: "DELETE" }),
+  logService: (toolId: string, schId: string, data: any) =>
+    request<any>(`/tools/${toolId}/maintenance/${schId}/service`, { method: "POST", body: JSON.stringify(data) }),
+  upcomingMaintenance: (days = 30) =>
+    request<any>(`/maintenance/upcoming?days=${days}`),
+
+  // Theft / Loss
+  reportLost: (toolId: string, data: any) =>
+    request<any>(`/tools/${toolId}/report-lost`, { method: "POST", body: JSON.stringify(data) }),
+  recoverTool: (toolId: string) =>
+    request<any>(`/tools/${toolId}/recover`, { method: "POST" }),
+
+  // Bulk
+  bulkTools: (data: any) =>
+    request<any>(`/tools/bulk`, { method: "POST", body: JSON.stringify(data) }),
 };

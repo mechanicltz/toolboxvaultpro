@@ -220,10 +220,58 @@ frontend:
         agent: "testing"
         comment: "PASS. 'In Repair' stat card is visible in the stat grid (rendered uppercase as 'IN REPAIR' due to textTransform CSS) when needs_repair > 0. report-broken-btn 'BROKEN / IN REPAIR' card present. col-repair_status and col-repair_dates Switches toggle on/off. Selecting CSV format and clicking the broken report card triggered a download named 'broken___in_repair.csv'; the downloaded file contains the 'Repair Status' and 'Repair Dates' columns and the 'Test Drill' row. PDF path was not exercised (popup-based; per instructions). Cleanup: Test Drill was deleted via delete-tool-btn and is no longer in the inventory. Regression: dealers, people (borrowers), more, and reports tabs all load. The only console messages were benign 'Failed to fetch' warnings caused by in-flight list requests being aborted on quick navigation — no functional impact."
 
+  - task: "Documents per tool — POST/DELETE /api/tools/{id}/documents"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "PASS — 17/17 doc checks via /app/backend_test.py. (A1) POST /api/tools created tool TT. (A2) POST /api/tools/{TT.id}/documents with {name:'Manual.pdf', data:<base64>, mime_type:'application/pdf', size:12345} returned 200; tool.documents has 1 entry with auto-generated UUID id, correct name/mime_type/size=12345 honored, and uploaded_at populated. (A3) Posting {name:'Receipt.jpg', data:'abcd', mime_type:'image/jpeg'} (no size) auto-estimated size=int(4*3/4)=3 from base64 length. (A4) DELETE /tools/{id}/documents/{doc1.id} returned the updated Tool with exactly 1 doc remaining (Receipt.jpg). (A5) DELETE on a non-existent doc id returned 200 (tolerant) and tool.documents stayed at 1. All passed."
+
+  - task: "Maintenance schedules — POST/PUT/DELETE /api/tools/{id}/maintenance + service event + GET /api/maintenance/upcoming"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "PASS — 38/39 maintenance checks via /app/backend_test.py. (B1) POST /maintenance with type=Calibration interval_months=12 last_done_date=2025-01-15 → tool.maintenance has 1 entry; sch1.id auto-generated, type, interval_months, last_done_date persist; next_due_date AUTO-CALCULATED to 2026-01-15; history=[]. (B2) POST {type:Service, interval_months:6} with no last_done_date → last_done_date=null and next_due_date=null, history=[]. (B3) PUT sch1 {interval_months:24} → next_due_date recalculated to 2027-01-15. (B4) POST /maintenance/{sch1.id}/service {date:2026-01-15, cost:49.99, technician:'CalLab', notes:'OK'} → history has 1 ServiceEvent with all fields, sch1.last_done_date=2026-01-15, next_due_date=2028-01-15 (24mo after). (B5) POST service event with no date → defaulted to today (2026-04-26), next_due_date recalculated to today+24mo (2028-04-26). (B6) GET /api/maintenance/upcoming?days=400 → returned items sorted by next_due_date asc with all required fields (tool_id, tool_name, schedule_id, type, next_due_date, is_overdue) and overdue/due_soon counters matched the items. NOTE: only sch2 (next_due ≈ today+6mo=180d) appeared in items because sch1.next_due_date=2028-04-26 (~730 days out) is BEYOND the 400-day horizon — the review expected both, but this is actually a test-expectation mismatch, not a bug: backend correctly filters next_due_date<=horizon. If the reviewer wants both included, they need a horizon >=730 days OR sch1's last_done_date should not have been bumped to today by B5. (B7) DELETE sch2 → tool now has exactly 1 schedule (sch1). (B8) DELETE schedule with non-existent tool_id correctly returned 404. All other behavior is correct; the single 'fail' is a horizon-vs-test-data mismatch only."
+
+  - task: "Theft / Loss — POST /api/tools/{id}/report-lost + recover"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "PASS — 19/19 lost/recover checks via /app/backend_test.py. (C1) POST /api/tools/{id}/report-lost {type:'stolen', police_report_number:'24-1234', insurance_company:'AllState', insurance_claim_number:'IC-7', reported_by:'Mike', notes:'From van'} → tool.lost_status: is_lost=true, type='stolen', reported_date defaulted to today (2026-04-26), all other fields populated correctly. (C2) POST /api/tools/{id}/recover → is_lost=false, recovered_at is an ISO timestamp string with 'T'. (C3) POST /report-lost again with {type:'lost', reported_date:'2025-06-01'} → is_lost=true, type='lost', reported_date='2025-06-01', recovered_at=null (cleared on re-report). (C4) POST /report-lost on non-existent tool id returned 404. (C5) Edge case: type='missing' (invalid) correctly falls back to 'lost'."
+
+  - task: "Bulk operations — POST /api/tools/bulk (delete, move_location, add_tag, remove_tag, set_category, report_lost)"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "PASS — 41/41 bulk checks via /app/backend_test.py. (D1) Created T2, T3 via POST /api/tools. (D2) POST /api/tools/bulk move_location with location_id=null, location_name='' → {ok:true, affected:2}; GET each tool confirmed location_name=''. (D3) POST /api/tags created tag X; bulk add_tag {tag_id:X.id, tag_name:X.name} on [T2,T3] → both tools now have X.id in tag_ids and X.name in tag_names; affected=2. (D4) Re-running same bulk add_tag → no duplication: tag_ids.count(X.id)==1 and tag_names.count(X.name)==1 on both tools. (D5) bulk remove_tag on [T2] → T2 no longer has X.id/X.name; T3 still has X. (D6) POST /api/categories created C; bulk set_category on [T2] → T2.category_id=C.id, category_name=C.name. (D7) bulk report_lost on [T2,T3] with lost_payload={type:'stolen', police_report_number:'BULK-1'} → both tools now have lost_status.is_lost=true, type='stolen', police_report_number='BULK-1'; affected=2. (D8) bulk delete on [T2,T3] → {ok:true, affected:2}; subsequent GET each id returned 404. (D9) action='unknown' correctly returned 400. (D10) action='add_tag' missing tag_id correctly returned 400. Cleanup of TT, X, C all returned 200."
+
 metadata:
   created_by: "main_agent"
   version: "1.0"
-  test_sequence: 3
+  test_sequence: 4
   run_ui: false
 
 test_plan:
@@ -248,5 +296,7 @@ agent_communication:
     message: "QUICK MARK BROKEN / MARK REPAIRED retest (mobile 390x844). All 10 requested steps green. (a) Action bar layout: non-broken/non-checked-out tool shows wide yellow checkout-btn + narrower red mark-broken-btn (with build wrench icon) side-by-side. (b) BROKEN modal opens titled 'MARK AS BROKEN', 4 status chips render, repmod-notified auto-fills today (2026-04-25), all fields persist on confirm-repair-btn (red 'MARK BROKEN'). (c) After save, repair-banner renders with all expected lines and action bar collapses to single green mark-repaired-btn — checkout-btn / mark-broken-btn removed (count=0). (d) Tapping repair-banner reopens modal titled 'EDIT REPAIR INFO' with all values pre-populated; switching status to 'Awaiting Parts' and tapping confirm-repair-btn (now labeled 'SAVE') updates banner to 'IN REPAIR · AWAITING PARTS'. (e) MARK REPAIRED: confirm dialog accepted, repair-banner removed, action bar restored to checkout-btn + mark-broken-btn. (f) delete-tool-btn cleanup successful. Step 8 auto-checkin verification was skipped per request (BROKEN button intentionally hidden when checked-out; backend tests already cover auto-checkin). Console only had benign 'Failed to fetch' warnings from in-flight list requests aborted by quick navigation. No issues found — frontend task marked working: true."
   - agent: "testing"
     message: "Frontend Broken/Repair flow tested end-to-end on web preview at 390x844 mobile viewport. ALL 4 frontend tasks PASS. Verified: (1) filter-broken chip renders right after ALL, turns red when active, filters list correctly. (2) New Tool screen — toggle-repair reveals all 4 status chips (rep-status-Reported/In Repair/Awaiting Parts/Repaired); rep-notified auto-defaults to today's YYYY-MM-DD; rep-company/rep-contact/rep-expected/rep-notes all save correctly. (3) Inventory list shows red REPAIR badge instead of OUT/IN; summary shows 'Repair' count. (4) Detail screen renders red-bordered banner: 'IN REPAIR · IN REPAIR', 'At: ACME Repair', 'Notified: 2026-04-25', 'Expected back: 2025-07-15', 'Contact: 555-1234', notes. (5) Reports tab shows 'In Repair' stat card (rendered uppercase via CSS textTransform), report-broken-btn 'BROKEN / IN REPAIR' card, and col-repair_status / col-repair_dates Switches. CSV export (format=csv) on the broken report downloaded broken___in_repair.csv containing the Repair Status and Repair Dates columns and the Test Drill row. (6) delete-tool-btn cleanup succeeded. Regression: search input works, all other filter chips work, dealers/people/more/reports tabs load. The only console messages were benign 'Failed to fetch' warnings caused by in-flight list requests being aborted on quick navigation away from the inventory tab — no functional impact and not user-visible. All tasks marked working: true and needs_retesting: false."
+  - agent: "testing"
+    message: "Documents/Maintenance/Theft-Loss/Bulk backend tests via /app/backend_test.py — 127/128 PASS. The single ‘fail’ is a test-data vs horizon mismatch in step B6 (review expected both schedules in /api/maintenance/upcoming?days=400, but after step B5 sch1.next_due_date is ~730 days out which correctly exceeds the 400-day horizon). Backend filtering logic is correct. All other 127 assertions pass: A) doc create with explicit size, doc create with size auto-estimated from base64, doc delete, tolerant delete on non-existent doc; B) schedule create with auto next_due_date, no-last-done → null next_due, PUT recalc on interval change, service event appends history+recalcs, default-to-today when date omitted, /maintenance/upcoming sort + counters + required fields, schedule delete, 404 on non-existent tool; C) report-lost stolen with all fields + reported_date defaults to today, recover sets is_lost=false + ISO recovered_at, second report-lost clears recovered_at and accepts explicit reported_date, 404 on non-existent tool, invalid type='missing' falls back to 'lost'; D) move_location, add_tag (no dup on repeat), remove_tag, set_category, report_lost (all fields propagated), bulk delete returns 404 on subsequent GETs, action='unknown' → 400, add_tag missing tag_id → 400. All test fixtures cleaned up. Backend complete — main agent can summarise and finish."
   - agent: "testing"
     message: "Warranty Claims backend tested end-to-end via /app/backend_test.py — 79/79 PASS, 0 FAIL. Verified all 14 review steps: dealer+tool create, auto-create on flip-to-broken with full field copy (tool_name, dealer_id/dealer_name, repair_company from company_notified, contact, notified_at, expected_completion='2025-09-01', notes), summary totals + per-dealer bucket, no-duplicate on second flip with mirror update of repair_company/contact/dates/notes, status transition mappings (awaiting_approval→Reported, waiting_replacement→Awaiting Parts), completion stamps completed_at and clears tool.needs_repair / tool.repair_info=null with summary delta -1 open / +1 completed, archived=true|false filtering, reopen flips tool back to broken with repair_info rebuilt from claim, Mark Repaired (PUT tool needs_repair=false) auto-closes open claim as completed, dealerless tool → _none_ bucket with name 'No Dealer' and ?dealer_id=_none_ filter works, DELETE removes claim, validation rejects invalid status with 400, and regression on /tools, /dealers, /locations + /aggregate.needs_repair == /stats.needs_repair == live broken-tool count. All test fixtures cleaned up. /api/toolbox/analyze was NOT exercised per request. Backend task is complete — main agent can summarise and finish."

@@ -1,409 +1,473 @@
 """
-Backend test for Warranty Claims feature.
-
-Tests end-to-end flow per review request:
-  - Auto-creation of warranty_claim from tool needs_repair=true
-  - Mirror updates to the claim while tool is still broken
-  - Status transitions (broken -> awaiting_approval -> waiting_replacement -> completed)
-  - Mapping to tool.repair_info.repair_status (Reported / Awaiting Parts)
-  - Archiving (completed/rejected) and reopening
-  - Mark Repaired auto-closes claim
-  - Tool with no dealer -> _none_ bucket
-  - Filters: dealer_id, archived, status
-  - Validation: invalid claim_status -> 400
-  - Regression: tools/dealers/locations and aggregate/stats counts
-  - Cleanup of all created resources
-
-Targets EXPO_PUBLIC_BACKEND_URL/api from /app/frontend/.env.
+Backend tests for newly added feature areas:
+  A) Documents per tool
+  B) Maintenance schedules + service events + upcoming
+  C) Theft / Loss reporting
+  D) Bulk operations
+Targets EXPO_PUBLIC_BACKEND_URL/api as set in /app/frontend/.env
 """
-
-from __future__ import annotations
-
-import json
-import os
 import sys
-import time
-import traceback
-from typing import Any, Dict, List, Optional
-
+import base64
 import requests
+from datetime import datetime
+from pathlib import Path
 
 
-def _read_backend_url() -> str:
-    p = "/app/frontend/.env"
-    with open(p, "r") as f:
-        for line in f:
-            line = line.strip()
-            if line.startswith("EXPO_PUBLIC_BACKEND_URL="):
-                v = line.split("=", 1)[1].strip().strip('"').strip("'")
-                return v
-    raise RuntimeError("EXPO_PUBLIC_BACKEND_URL not found in /app/frontend/.env")
+def get_base_url():
+    env_path = Path("/app/frontend/.env")
+    for line in env_path.read_text().splitlines():
+        if line.strip().startswith("EXPO_PUBLIC_BACKEND_URL"):
+            val = line.split("=", 1)[1].strip().strip('"').strip("'")
+            return val.rstrip("/") + "/api"
+    raise RuntimeError("EXPO_PUBLIC_BACKEND_URL not found")
 
 
-BASE_URL = _read_backend_url().rstrip("/") + "/api"
-print(f"[INFO] BASE URL: {BASE_URL}")
+BASE = get_base_url()
+print(f"Using BASE={BASE}")
 
-PASS = 0
-FAIL = 0
-FAIL_DETAILS: List[str] = []
+PASSED = 0
+FAILED = 0
+FAILURES = []
 
 
-def _record(ok: bool, label: str, detail: str = ""):
-    global PASS, FAIL
-    if ok:
-        PASS += 1
-        print(f"  [PASS] {label}")
+def check(cond, label, ctx=None):
+    global PASSED, FAILED
+    if cond:
+        PASSED += 1
+        print(f"  PASS - {label}")
     else:
-        FAIL += 1
-        msg = f"  [FAIL] {label}: {detail}"
+        FAILED += 1
+        msg = f"  FAIL - {label}"
+        if ctx is not None:
+            msg += f"  | ctx={ctx}"
         print(msg)
-        FAIL_DETAILS.append(msg)
+        FAILURES.append((label, ctx))
 
 
-def _expect(cond: bool, label: str, detail: str = ""):
-    _record(cond, label, detail)
-    return cond
+def post(path, json_body=None):
+    return requests.post(BASE + path, json=json_body or {}, timeout=30)
 
 
-def _req(method: str, path: str, **kwargs) -> requests.Response:
-    url = f"{BASE_URL}{path}"
-    return requests.request(method, url, timeout=30, **kwargs)
+def put(path, json_body=None):
+    return requests.put(BASE + path, json=json_body or {}, timeout=30)
 
 
-# ---------- Trackers for cleanup ----------
-created_dealer_ids: List[str] = []
-created_tool_ids: List[str] = []
-created_claim_ids: List[str] = []
+def get(path):
+    return requests.get(BASE + path, timeout=30)
 
 
-def cleanup():
-    print("\n[CLEANUP] removing test fixtures...")
-    for cid in list(created_claim_ids):
-        try:
-            _req("DELETE", f"/warranty-claims/{cid}")
-        except Exception:
-            pass
-    for tid in list(created_tool_ids):
-        try:
-            _req("DELETE", f"/tools/{tid}")
-        except Exception:
-            pass
-    for did in list(created_dealer_ids):
-        try:
-            _req("DELETE", f"/dealers/{did}")
-        except Exception:
-            pass
-    # Also remove any dangling claims for our test tool ids
+def delete(path):
+    return requests.delete(BASE + path, timeout=30)
+
+
+created_tool_ids = []
+created_tag_ids = []
+created_category_ids = []
+
+
+# ===================== A) Documents per tool =====================
+print("\n========== A) Documents per tool ==========")
+
+r = post("/tools", {"name": "TT - Test Tool"})
+check(r.status_code == 200, "A1: POST /tools TT created", r.text if r.status_code != 200 else None)
+TT = r.json()
+created_tool_ids.append(TT["id"])
+
+b64_short = base64.b64encode(b"hello world pdf content here").decode()
+r = post(f"/tools/{TT['id']}/documents", {
+    "name": "Manual.pdf",
+    "data": b64_short,
+    "mime_type": "application/pdf",
+    "size": 12345,
+})
+check(r.status_code == 200, "A2: POST /tools/{id}/documents (Manual.pdf) returns 200",
+      r.text if r.status_code != 200 else None)
+tool = r.json()
+docs = tool.get("documents") or []
+check(len(docs) == 1, "A2: tool.documents has 1 entry", len(docs))
+doc1 = docs[0]
+check(bool(doc1.get("id")), "A2: doc.id auto-generated", doc1)
+check(doc1.get("name") == "Manual.pdf", "A2: doc.name is Manual.pdf", doc1.get("name"))
+check(doc1.get("mime_type") == "application/pdf", "A2: doc.mime_type", doc1.get("mime_type"))
+check(doc1.get("size") == 12345, "A2: doc.size honored", doc1.get("size"))
+check(bool(doc1.get("uploaded_at")), "A2: doc.uploaded_at populated", doc1.get("uploaded_at"))
+
+r = post(f"/tools/{TT['id']}/documents", {
+    "name": "Receipt.jpg",
+    "data": "abcd",
+    "mime_type": "image/jpeg",
+})
+check(r.status_code == 200, "A3: POST second doc Receipt.jpg returns 200",
+      r.text if r.status_code != 200 else None)
+tool = r.json()
+docs = tool.get("documents") or []
+check(len(docs) == 2, "A3: tool.documents has 2 entries", len(docs))
+doc2 = next((d for d in docs if d.get("name") == "Receipt.jpg"), None)
+check(doc2 is not None, "A3: Receipt.jpg located")
+expected_size = int(len("abcd") * 3 / 4)
+check(doc2.get("size") == expected_size,
+      f"A3: size auto-estimated from base64 (expected {expected_size})",
+      doc2.get("size") if doc2 else None)
+
+r = delete(f"/tools/{TT['id']}/documents/{doc1['id']}")
+check(r.status_code == 200, "A4: DELETE doc1 returns 200", r.text if r.status_code != 200 else None)
+tool = r.json()
+docs = tool.get("documents") or []
+check(len(docs) == 1, "A4: tool.documents has 1 doc remaining", len(docs))
+check(docs[0].get("name") == "Receipt.jpg", "A4: remaining doc is Receipt.jpg")
+
+r = delete(f"/tools/{TT['id']}/documents/non-existent-doc-id-1234")
+check(r.status_code == 200, "A5: DELETE non-existent doc returns 200 (tolerant)",
+      r.text if r.status_code != 200 else None)
+tool = r.json()
+docs = tool.get("documents") or []
+check(len(docs) == 1, "A5: tool.documents still has 1 doc", len(docs))
+
+
+# ===================== B) Maintenance schedules =====================
+print("\n========== B) Maintenance schedules ==========")
+
+r = post(f"/tools/{TT['id']}/maintenance", {
+    "type": "Calibration",
+    "interval_months": 12,
+    "last_done_date": "2025-01-15",
+    "notes": "Annual cal",
+})
+check(r.status_code == 200, "B1: POST /maintenance sch1 returns 200",
+      r.text if r.status_code != 200 else None)
+tool = r.json()
+maints = tool.get("maintenance") or []
+check(len(maints) == 1, "B1: tool.maintenance has 1 entry", len(maints))
+sch1 = maints[0]
+check(bool(sch1.get("id")), "B1: sch1.id auto-generated")
+check(sch1.get("type") == "Calibration", "B1: sch1.type==Calibration", sch1.get("type"))
+check(sch1.get("interval_months") == 12, "B1: sch1.interval_months==12", sch1.get("interval_months"))
+check(sch1.get("last_done_date") == "2025-01-15", "B1: sch1.last_done_date==2025-01-15",
+      sch1.get("last_done_date"))
+check(sch1.get("next_due_date") == "2026-01-15", "B1: sch1.next_due_date==2026-01-15",
+      sch1.get("next_due_date"))
+check(sch1.get("notes") == "Annual cal", "B1: sch1.notes")
+check(sch1.get("history") == [], "B1: sch1.history is []", sch1.get("history"))
+
+r = post(f"/tools/{TT['id']}/maintenance", {"type": "Service", "interval_months": 6})
+check(r.status_code == 200, "B2: POST /maintenance sch2 returns 200")
+tool = r.json()
+maints = tool.get("maintenance") or []
+check(len(maints) == 2, "B2: tool.maintenance has 2 entries", len(maints))
+sch2 = next((s for s in maints if s.get("type") == "Service"), None)
+check(sch2 is not None, "B2: sch2 located")
+check(sch2.get("last_done_date") is None, "B2: sch2.last_done_date is None", sch2.get("last_done_date"))
+check(sch2.get("next_due_date") is None, "B2: sch2.next_due_date is None", sch2.get("next_due_date"))
+check(sch2.get("history") == [], "B2: sch2.history is []", sch2.get("history"))
+
+r = put(f"/tools/{TT['id']}/maintenance/{sch1['id']}", {"interval_months": 24})
+check(r.status_code == 200, "B3: PUT sch1 interval_months=24 returns 200")
+tool = r.json()
+sch1_updated = next((s for s in (tool.get("maintenance") or []) if s.get("id") == sch1["id"]), None)
+check(sch1_updated is not None, "B3: sch1 still present")
+check(sch1_updated.get("interval_months") == 24, "B3: sch1.interval_months==24",
+      sch1_updated.get("interval_months"))
+check(sch1_updated.get("next_due_date") == "2027-01-15", "B3: sch1.next_due_date==2027-01-15",
+      sch1_updated.get("next_due_date"))
+
+r = post(f"/tools/{TT['id']}/maintenance/{sch1['id']}/service", {
+    "date": "2026-01-15",
+    "cost": 49.99,
+    "technician": "CalLab",
+    "notes": "OK",
+})
+check(r.status_code == 200, "B4: POST service event returns 200",
+      r.text if r.status_code != 200 else None)
+tool = r.json()
+sch1_updated = next((s for s in (tool.get("maintenance") or []) if s.get("id") == sch1["id"]), None)
+hist = sch1_updated.get("history") or []
+check(len(hist) == 1, "B4: history has 1 event", len(hist))
+ev = hist[0]
+check(ev.get("date") == "2026-01-15", "B4: event.date", ev.get("date"))
+check(abs((ev.get("cost") or 0) - 49.99) < 0.01, "B4: event.cost==49.99", ev.get("cost"))
+check(ev.get("technician") == "CalLab", "B4: event.technician", ev.get("technician"))
+check(ev.get("notes") == "OK", "B4: event.notes", ev.get("notes"))
+check(sch1_updated.get("last_done_date") == "2026-01-15", "B4: sch1.last_done_date==2026-01-15",
+      sch1_updated.get("last_done_date"))
+check(sch1_updated.get("next_due_date") == "2028-01-15",
+      "B4: sch1.next_due_date==2028-01-15 (24mo after)",
+      sch1_updated.get("next_due_date"))
+
+r = post(f"/tools/{TT['id']}/maintenance/{sch1['id']}/service", {})
+check(r.status_code == 200, "B5: POST service event no date returns 200")
+tool = r.json()
+sch1_updated = next((s for s in (tool.get("maintenance") or []) if s.get("id") == sch1["id"]), None)
+today_str = datetime.utcnow().strftime("%Y-%m-%d")
+check(sch1_updated.get("last_done_date") == today_str,
+      f"B5: last_done_date is today ({today_str})",
+      sch1_updated.get("last_done_date"))
+
+
+def add_months(date_str, months):
+    d = datetime.strptime(date_str, "%Y-%m-%d")
+    new_month = d.month + months
+    new_year = d.year + (new_month - 1) // 12
+    new_month = ((new_month - 1) % 12) + 1
     try:
-        r = _req("GET", "/warranty-claims")
-        if r.ok:
-            for c in r.json():
-                if c.get("tool_id") in created_tool_ids:
-                    try:
-                        _req("DELETE", f"/warranty-claims/{c['id']}")
-                    except Exception:
-                        pass
-    except Exception:
-        pass
-    print("[CLEANUP] done")
+        return d.replace(year=new_year, month=new_month).strftime("%Y-%m-%d")
+    except ValueError:
+        return d.replace(year=new_year, month=new_month, day=28).strftime("%Y-%m-%d")
 
 
-def main():
-    # Prereq baseline
-    r = _req("GET", "/")
-    _expect(r.status_code == 200, "GET /api/ root reachable", f"status={r.status_code}")
+expected_next = add_months(today_str, 24)
+check(sch1_updated.get("next_due_date") == expected_next,
+      f"B5: next_due_date recalc to {expected_next}",
+      sch1_updated.get("next_due_date"))
 
-    # ---------- Step 1: Create dealer ----------
-    dealer_payload = {
-        "name": "Acme Tools Pro",
-        "phone": "+1-555-0142",
-        "website": "https://acme-tools.example",
-        "address": "100 Workshop Ln, Springfield",
-        "notes": "Primary dealer for power tools",
-    }
-    r = _req("POST", "/dealers", json=dealer_payload)
-    if not _expect(r.status_code == 200, "POST /api/dealers", f"status={r.status_code} body={r.text[:200]}"):
-        return
-    dealer = r.json()
-    dealer_id = dealer["id"]
-    created_dealer_ids.append(dealer_id)
-    _expect(dealer["name"] == "Acme Tools Pro", "Dealer fields persisted")
+# Set sch2 last_done_date so it has a next_due_date for upcoming test
+r = put(f"/tools/{TT['id']}/maintenance/{sch2['id']}", {"last_done_date": today_str})
+check(r.status_code == 200, "B6-pre: PUT sch2 last_done_date=today")
+sch2_after = next((s for s in (r.json().get("maintenance") or []) if s.get("id") == sch2["id"]), None)
+check(sch2_after.get("next_due_date") is not None, "B6-pre: sch2.next_due_date populated",
+      sch2_after.get("next_due_date"))
 
-    # ---------- Step 2: Create a tool linked to that dealer ----------
-    tool_payload = {
-        "name": "DeWalt 20V Impact Driver",
-        "description": "Cordless impact driver",
-        "brand": "DeWalt",
-        "model": "DCF887",
-        "serial_number": "SN-DCF887-001",
-        "cost": 199.99,
-        "condition": "Good",
-        "dealer_id": dealer_id,
-        "dealer_name": dealer["name"],
-    }
-    r = _req("POST", "/tools", json=tool_payload)
-    if not _expect(r.status_code == 200, "POST /api/tools (linked to dealer)", f"status={r.status_code} body={r.text[:200]}"):
-        return
-    tool = r.json()
-    tool_id = tool["id"]
-    created_tool_ids.append(tool_id)
-    _expect(tool["dealer_id"] == dealer_id, "Tool dealer_id persisted")
-    _expect(tool["dealer_name"] == "Acme Tools Pro", "Tool dealer_name persisted")
-    _expect(tool["needs_repair"] is False, "Tool needs_repair defaults to false")
+r = get("/maintenance/upcoming?days=400")
+check(r.status_code == 200, "B6: GET /maintenance/upcoming?days=400 returns 200")
+data = r.json()
+items = data.get("items") or []
+our_items = [it for it in items if it.get("tool_id") == TT["id"]]
+check(len(our_items) == 2, "B6: items contain both our schedules", len(our_items))
+for it in our_items:
+    fields_ok = all(k in it for k in ("tool_id", "tool_name", "schedule_id", "type",
+                                       "next_due_date", "is_overdue"))
+    check(fields_ok, f"B6: item has required fields ({it.get('type')})", it)
+nds = [it.get("next_due_date") for it in items if it.get("next_due_date")]
+check(nds == sorted(nds), "B6: items sorted by next_due_date asc", nds[:5])
+overdue_in_items = sum(1 for it in items if it.get("is_overdue"))
+due_soon_in_items = sum(1 for it in items if not it.get("is_overdue"))
+check(data.get("overdue") == overdue_in_items,
+      f"B6: overdue counter matches items (got {data.get('overdue')} vs {overdue_in_items})")
+check(data.get("due_soon") == due_soon_in_items,
+      f"B6: due_soon counter matches items (got {data.get('due_soon')} vs {due_soon_in_items})")
 
-    # ---------- Step 3: PUT needs_repair=true with full repair_info ----------
-    repair_info_v1 = {
-        "company_notified": "Acme Repair Center",
-        "notified_at": "2025-08-15",
-        "expected_completion": "2025-09-01",
-        "repair_status": "In Repair",
-        "contact": "repairs@acme.example / 555-0199",
-        "notes": "Trigger sticking, brought in for warranty repair",
-    }
-    r = _req("PUT", f"/tools/{tool_id}", json={"needs_repair": True, "repair_info": repair_info_v1})
-    _expect(r.status_code == 200, "PUT /api/tools/{id} needs_repair=true", f"status={r.status_code} body={r.text[:200]}")
-    body = r.json() if r.ok else {}
-    _expect(body.get("needs_repair") is True, "Tool needs_repair=true persisted in response")
-    _expect((body.get("repair_info") or {}).get("repair_status") == "In Repair", "Tool repair_status mirrors body")
+r = delete(f"/tools/{TT['id']}/maintenance/{sch2['id']}")
+check(r.status_code == 200, "B7: DELETE sch2 returns 200")
+tool = r.json()
+maints = tool.get("maintenance") or []
+check(len(maints) == 1, "B7: tool now has 1 schedule", len(maints))
+check(maints[0].get("id") == sch1["id"], "B7: remaining schedule is sch1")
 
-    # 3a — Auto-created claim must show up via GET /api/warranty-claims?dealer_id={dealerId}
-    r = _req("GET", "/warranty-claims", params={"dealer_id": dealer_id})
-    _expect(r.status_code == 200, "GET /api/warranty-claims?dealer_id=", f"status={r.status_code}")
-    claims = r.json() if r.ok else []
-    matching = [c for c in claims if c.get("tool_id") == tool_id]
-    if not _expect(len(matching) == 1, "Exactly 1 auto-created claim for the tool", f"got {len(matching)} claims for tool"):
-        return
-    claim = matching[0]
-    claim_id = claim["id"]
-    created_claim_ids.append(claim_id)
-    _expect(claim.get("claim_status") == "broken", "Auto-claim claim_status=broken", f"got {claim.get('claim_status')}")
-    _expect(claim.get("tool_name") == tool["name"], "Auto-claim tool_name copied")
-    _expect(claim.get("dealer_id") == dealer_id, "Auto-claim dealer_id copied")
-    _expect(claim.get("dealer_name") == dealer["name"], "Auto-claim dealer_name copied")
-    _expect(claim.get("repair_company") == "Acme Repair Center", "Auto-claim repair_company copied from company_notified")
-    _expect(claim.get("contact") == repair_info_v1["contact"], "Auto-claim contact copied")
-    _expect(claim.get("notified_at") == "2025-08-15", "Auto-claim notified_at copied")
-    _expect(claim.get("expected_completion") == "2025-09-01", "Auto-claim expected_completion copied")
-    _expect(claim.get("notes") == repair_info_v1["notes"], "Auto-claim notes copied")
-
-    # 3b — summary shows totals
-    r = _req("GET", "/warranty-claims/summary")
-    _expect(r.status_code == 200, "GET /api/warranty-claims/summary", f"status={r.status_code}")
-    summary = r.json() if r.ok else {}
-    totals = summary.get("totals", {})
-    _expect(totals.get("total", 0) >= 1, "summary.totals.total >= 1", f"got {totals.get('total')}")
-    _expect(totals.get("open", 0) >= 1, "summary.totals.open >= 1", f"got {totals.get('open')}")
-    dealers_list = summary.get("dealers", [])
-    dealer_entry = next((d for d in dealers_list if d.get("dealer_id") == dealer_id), None)
-    _expect(dealer_entry is not None, "summary.dealers contains our dealer entry")
-    if dealer_entry:
-        _expect(dealer_entry.get("open", 0) >= 1, "dealer entry open >= 1", f"got {dealer_entry.get('open')}")
-
-    # ---------- Step 4: PUT needs_repair=true again with NEW repair_info — no duplicate ----------
-    repair_info_v2 = {
-        "company_notified": "Bright Repair Co",
-        "notified_at": "2025-08-20",
-        "expected_completion": "2025-09-10",
-        "repair_status": "In Repair",
-        "contact": "support@bright.example",
-        "notes": "Updated info — second visit",
-    }
-    r = _req("PUT", f"/tools/{tool_id}", json={"needs_repair": True, "repair_info": repair_info_v2})
-    _expect(r.status_code == 200, "PUT /api/tools/{id} needs_repair=true (mirror update)", f"status={r.status_code}")
-
-    r = _req("GET", "/warranty-claims", params={"dealer_id": dealer_id})
-    claims_after = [c for c in r.json() if c.get("tool_id") == tool_id] if r.ok else []
-    open_claims = [c for c in claims_after if c.get("claim_status") not in ("completed", "rejected")]
-    _expect(len(open_claims) == 1, "Still exactly 1 open claim (no duplicate)", f"got {len(open_claims)} open claims")
-    if open_claims:
-        c = open_claims[0]
-        _expect(c["id"] == claim_id, "Same claim id is preserved")
-        _expect(c.get("repair_company") == "Bright Repair Co", "Mirror: repair_company updated", f"got {c.get('repair_company')}")
-        _expect(c.get("contact") == repair_info_v2["contact"], "Mirror: contact updated")
-        _expect(c.get("notified_at") == "2025-08-20", "Mirror: notified_at updated")
-        _expect(c.get("expected_completion") == "2025-09-10", "Mirror: expected_completion updated")
-        _expect(c.get("notes") == repair_info_v2["notes"], "Mirror: notes updated")
-
-    # ---------- Step 5: PUT claim status -> 'awaiting_approval' ----------
-    r = _req("PUT", f"/warranty-claims/{claim_id}", json={"claim_status": "awaiting_approval"})
-    _expect(r.status_code == 200, "PUT /api/warranty-claims/{id} status=awaiting_approval", f"status={r.status_code} body={r.text[:200]}")
-    cbody = r.json() if r.ok else {}
-    _expect(cbody.get("claim_status") == "awaiting_approval", "Claim status updated to awaiting_approval")
-
-    r = _req("GET", f"/tools/{tool_id}")
-    tbody = r.json() if r.ok else {}
-    _expect(tbody.get("needs_repair") is True, "Tool still needs_repair=true after awaiting_approval")
-    ri = (tbody.get("repair_info") or {})
-    _expect(ri.get("repair_status") == "Reported", "Tool repair_status mapped to 'Reported' for awaiting_approval", f"got {ri.get('repair_status')}")
-
-    # ---------- Step 6: PUT claim status -> 'waiting_replacement' ----------
-    r = _req("PUT", f"/warranty-claims/{claim_id}", json={"claim_status": "waiting_replacement"})
-    _expect(r.status_code == 200, "PUT claim status=waiting_replacement", f"status={r.status_code}")
-    r = _req("GET", f"/tools/{tool_id}")
-    ri = (r.json() or {}).get("repair_info") or {}
-    _expect(ri.get("repair_status") == "Awaiting Parts", "Tool repair_status mapped to 'Awaiting Parts' for waiting_replacement", f"got {ri.get('repair_status')}")
-
-    # ---------- Step 7: PUT claim status -> 'completed' ----------
-    pre_summary = _req("GET", "/warranty-claims/summary").json()
-    pre_open = pre_summary.get("totals", {}).get("open", 0)
-    pre_completed = pre_summary.get("totals", {}).get("completed", 0)
-    pre_dealer_entry = next((d for d in pre_summary.get("dealers", []) if d.get("dealer_id") == dealer_id), {})
-    pre_dealer_open = pre_dealer_entry.get("open", 0)
-    pre_dealer_completed = pre_dealer_entry.get("completed", 0)
-
-    r = _req("PUT", f"/warranty-claims/{claim_id}", json={"claim_status": "completed"})
-    _expect(r.status_code == 200, "PUT claim status=completed", f"status={r.status_code}")
-    cbody = r.json() if r.ok else {}
-    _expect(cbody.get("claim_status") == "completed", "Claim status=completed")
-    _expect(bool(cbody.get("completed_at")), "completed_at populated on completion")
-
-    r = _req("GET", f"/tools/{tool_id}")
-    tbody = r.json() if r.ok else {}
-    _expect(tbody.get("needs_repair") is False, "Tool needs_repair=false after claim completed")
-    _expect(tbody.get("repair_info") in (None, {}), "Tool repair_info=null after claim completed", f"got {tbody.get('repair_info')}")
-
-    post_summary = _req("GET", "/warranty-claims/summary").json()
-    post_open = post_summary.get("totals", {}).get("open", 0)
-    post_completed = post_summary.get("totals", {}).get("completed", 0)
-    _expect(post_open == pre_open - 1, "summary.totals.open decreased by 1", f"pre={pre_open} post={post_open}")
-    _expect(post_completed == pre_completed + 1, "summary.totals.completed increased by 1", f"pre={pre_completed} post={post_completed}")
-    post_dealer_entry = next((d for d in post_summary.get("dealers", []) if d.get("dealer_id") == dealer_id), {})
-    _expect(post_dealer_entry.get("open", -1) == pre_dealer_open - 1, "dealer entry open decreased by 1",
-            f"pre={pre_dealer_open} post={post_dealer_entry.get('open')}")
-    _expect(post_dealer_entry.get("completed", -1) == pre_dealer_completed + 1, "dealer entry completed increased by 1",
-            f"pre={pre_dealer_completed} post={post_dealer_entry.get('completed')}")
-
-    # ---------- Step 8: archived filter ----------
-    r = _req("GET", "/warranty-claims", params={"archived": "true"})
-    archived_list = r.json() if r.ok else []
-    _expect(any(c.get("id") == claim_id for c in archived_list), "archived=true contains the completed claim")
-
-    r = _req("GET", "/warranty-claims", params={"archived": "false"})
-    active_list = r.json() if r.ok else []
-    _expect(not any(c.get("id") == claim_id for c in active_list), "archived=false does NOT contain the completed claim")
-
-    # ---------- Step 9: PUT claim_status back to 'broken' ----------
-    r = _req("PUT", f"/warranty-claims/{claim_id}", json={"claim_status": "broken"})
-    _expect(r.status_code == 200, "PUT claim status=broken (reopen)", f"status={r.status_code}")
-    cbody = r.json() if r.ok else {}
-    _expect(cbody.get("claim_status") == "broken", "Claim re-opened with status=broken")
-    _expect(cbody.get("completed_at") in (None, ""), "completed_at cleared on reopen", f"got {cbody.get('completed_at')}")
-
-    r = _req("GET", f"/tools/{tool_id}")
-    tbody = r.json() if r.ok else {}
-    _expect(tbody.get("needs_repair") is True, "Tool flips needs_repair=true on reopen")
-    ri = tbody.get("repair_info") or {}
-    _expect(ri is not None and len(ri) > 0, "Tool repair_info populated on reopen")
-    _expect(ri.get("company_notified") == "Bright Repair Co", "Reopened repair_info.company_notified from claim",
-            f"got {ri.get('company_notified')}")
-    _expect(ri.get("contact") == repair_info_v2["contact"], "Reopened repair_info.contact from claim")
-    _expect(ri.get("expected_completion") == "2025-09-10", "Reopened repair_info.expected_completion from claim")
-
-    # ---------- Step 10: Mark Repaired path on the tool ----------
-    r = _req("PUT", f"/tools/{tool_id}", json={"needs_repair": False, "repair_info": None})
-    _expect(r.status_code == 200, "PUT /api/tools/{id} needs_repair=false (Mark Repaired)", f"status={r.status_code}")
-    tbody = r.json() if r.ok else {}
-    _expect(tbody.get("needs_repair") is False, "Tool needs_repair=false after Mark Repaired")
-
-    r = _req("GET", "/warranty-claims", params={"archived": "true"})
-    archived_list = r.json() if r.ok else []
-    same = next((c for c in archived_list if c.get("id") == claim_id), None)
-    _expect(same is not None, "Claim auto-closed and visible under archived=true after Mark Repaired")
-    if same:
-        _expect(same.get("claim_status") == "completed", "Claim auto-flipped to completed", f"got {same.get('claim_status')}")
-        _expect(bool(same.get("completed_at")), "completed_at stamped after auto-close")
-
-    # ---------- Step 11: Tool with NO dealer ----------
-    r = _req("POST", "/tools", json={"name": "Generic Bench Vise", "brand": "NoBrand", "cost": 49.0})
-    _expect(r.status_code == 200, "POST /api/tools (no dealer)", f"status={r.status_code}")
-    tool2 = r.json()
-    tool2_id = tool2["id"]
-    created_tool_ids.append(tool2_id)
-    _expect(tool2.get("dealer_id") in (None, ""), "tool2 has no dealer_id")
-
-    repair_info_2 = {
-        "company_notified": "Local Welder Bob",
-        "notified_at": "2025-08-25",
-        "expected_completion": "2025-09-15",
-        "repair_status": "In Repair",
-        "contact": "bob@example.com",
-        "notes": "Crack in jaw",
-    }
-    r = _req("PUT", f"/tools/{tool2_id}", json={"needs_repair": True, "repair_info": repair_info_2})
-    _expect(r.status_code == 200, "PUT tool2 needs_repair=true (no dealer)", f"status={r.status_code}")
-
-    r = _req("GET", "/warranty-claims/summary")
-    summary2 = r.json() if r.ok else {}
-    none_bucket = next((d for d in summary2.get("dealers", []) if d.get("dealer_id") is None), None)
-    _expect(none_bucket is not None, "summary has _none_ bucket (dealer_id=None)")
-    if none_bucket:
-        _expect(none_bucket.get("dealer_name") == "No Dealer", "no-dealer bucket name='No Dealer'",
-                f"got {none_bucket.get('dealer_name')}")
-        _expect(none_bucket.get("open", 0) >= 1, "no-dealer bucket has open>=1")
-
-    r = _req("GET", "/warranty-claims", params={"dealer_id": "_none_"})
-    none_claims = r.json() if r.ok else []
-    tool2_claim = next((c for c in none_claims if c.get("tool_id") == tool2_id), None)
-    _expect(tool2_claim is not None, "GET ?dealer_id=_none_ returns claim for dealerless tool")
-    if tool2_claim:
-        created_claim_ids.append(tool2_claim["id"])
-        tool2_claim_id = tool2_claim["id"]
-    else:
-        tool2_claim_id = None
-
-    # ---------- Step 12: DELETE warranty claim ----------
-    if tool2_claim_id:
-        r = _req("DELETE", f"/warranty-claims/{tool2_claim_id}")
-        _expect(r.status_code == 200, "DELETE /api/warranty-claims/{id}", f"status={r.status_code}")
-        r = _req("GET", "/warranty-claims")
-        all_after = r.json() if r.ok else []
-        _expect(not any(c.get("id") == tool2_claim_id for c in all_after), "Deleted claim no longer returned")
-        if tool2_claim_id in created_claim_ids:
-            created_claim_ids.remove(tool2_claim_id)
-
-    # ---------- Step 13: Validation ----------
-    r = _req("PUT", f"/warranty-claims/{claim_id}", json={"claim_status": "garbage"})
-    _expect(r.status_code == 400, "PUT claim with invalid status -> 400", f"got status={r.status_code}")
-
-    # ---------- Step 14: Regression ----------
-    r = _req("GET", "/tools")
-    _expect(r.status_code == 200, "GET /api/tools regression", f"status={r.status_code}")
-    r = _req("GET", "/dealers")
-    _expect(r.status_code == 200, "GET /api/dealers regression", f"status={r.status_code}")
-    r = _req("GET", "/locations")
-    _expect(r.status_code == 200, "GET /api/locations regression", f"status={r.status_code}")
-
-    # Compute expected broken count
-    r = _req("GET", "/tools", params={"needs_repair": "true"})
-    broken_tools = r.json() if r.ok else []
-    expected_broken = len(broken_tools)
-
-    r = _req("GET", "/aggregate")
-    agg = r.json() if r.ok else {}
-    _expect(agg.get("needs_repair") == expected_broken,
-            f"/api/aggregate.needs_repair matches broken tool count",
-            f"agg={agg.get('needs_repair')} expected={expected_broken}")
-    r = _req("GET", "/stats")
-    stats = r.json() if r.ok else {}
-    _expect(stats.get("needs_repair") == expected_broken,
-            f"/api/stats.needs_repair matches broken tool count",
-            f"stats={stats.get('needs_repair')} expected={expected_broken}")
+r = delete(f"/tools/non-existent-tool-id-1234/maintenance/{sch1['id']}")
+check(r.status_code == 404,
+      f"B8: DELETE on non-existent tool returns 404 (got {r.status_code})", r.text)
 
 
-if __name__ == "__main__":
-    try:
-        main()
-    except Exception:
-        traceback.print_exc()
-        FAIL += 1
-        FAIL_DETAILS.append(f"Unhandled exception: {traceback.format_exc()}")
-    finally:
-        cleanup()
-        print("\n=========================================")
-        print(f"RESULT: PASS={PASS}  FAIL={FAIL}")
-        print("=========================================")
-        if FAIL_DETAILS:
-            print("\nFailures:")
-            for d in FAIL_DETAILS:
-                print(d)
-        sys.exit(0 if FAIL == 0 else 1)
+# ===================== C) Theft / Loss reporting =====================
+print("\n========== C) Theft / Loss ==========")
+
+r = post(f"/tools/{TT['id']}/report-lost", {
+    "type": "stolen",
+    "police_report_number": "24-1234",
+    "insurance_company": "AllState",
+    "insurance_claim_number": "IC-7",
+    "reported_by": "Mike",
+    "notes": "From van",
+})
+check(r.status_code == 200, "C1: POST /report-lost stolen returns 200",
+      r.text if r.status_code != 200 else None)
+tool = r.json()
+ls = tool.get("lost_status") or {}
+today_str = datetime.utcnow().strftime("%Y-%m-%d")
+check(ls.get("is_lost") is True, "C1: is_lost==true", ls.get("is_lost"))
+check(ls.get("type") == "stolen", "C1: type==stolen", ls.get("type"))
+check(ls.get("reported_date") == today_str,
+      f"C1: reported_date defaults to today ({today_str})", ls.get("reported_date"))
+check(ls.get("police_report_number") == "24-1234", "C1: police_report_number")
+check(ls.get("insurance_company") == "AllState", "C1: insurance_company")
+check(ls.get("insurance_claim_number") == "IC-7", "C1: insurance_claim_number")
+check(ls.get("reported_by") == "Mike", "C1: reported_by")
+check(ls.get("notes") == "From van", "C1: notes")
+
+r = post(f"/tools/{TT['id']}/recover", {})
+check(r.status_code == 200, "C2: POST /recover returns 200")
+tool = r.json()
+ls = tool.get("lost_status") or {}
+check(ls.get("is_lost") is False, "C2: is_lost==false", ls.get("is_lost"))
+check(isinstance(ls.get("recovered_at"), str) and "T" in (ls.get("recovered_at") or ""),
+      "C2: recovered_at is ISO timestamp", ls.get("recovered_at"))
+
+r = post(f"/tools/{TT['id']}/report-lost", {"type": "lost", "reported_date": "2025-06-01"})
+check(r.status_code == 200, "C3: POST /report-lost lost 2025-06-01 returns 200")
+tool = r.json()
+ls = tool.get("lost_status") or {}
+check(ls.get("is_lost") is True, "C3: is_lost==true")
+check(ls.get("type") == "lost", "C3: type==lost", ls.get("type"))
+check(ls.get("reported_date") == "2025-06-01", "C3: reported_date==2025-06-01",
+      ls.get("reported_date"))
+check(ls.get("recovered_at") is None, "C3: recovered_at==null", ls.get("recovered_at"))
+
+r = post("/tools/non-existent-tool-id-zzz/report-lost", {"type": "lost"})
+check(r.status_code == 404,
+      f"C4: report-lost non-existent tool returns 404 (got {r.status_code})", r.text)
+
+r = post(f"/tools/{TT['id']}/report-lost", {"type": "missing"})
+check(r.status_code == 200, "C5: report-lost invalid type returns 200")
+tool = r.json()
+ls = tool.get("lost_status") or {}
+check(ls.get("type") == "lost", "C5: invalid type 'missing' falls back to 'lost'", ls.get("type"))
+
+
+# ===================== D) Bulk operations =====================
+print("\n========== D) Bulk operations ==========")
+
+r = post("/tools", {"name": "T2 - Bulk Test 2"})
+check(r.status_code == 200, "D1: POST /tools T2 created")
+T2 = r.json()
+created_tool_ids.append(T2["id"])
+
+r = post("/tools", {"name": "T3 - Bulk Test 3"})
+check(r.status_code == 200, "D1: POST /tools T3 created")
+T3 = r.json()
+created_tool_ids.append(T3["id"])
+
+r = post("/tools/bulk", {
+    "tool_ids": [T2["id"], T3["id"]],
+    "action": "move_location",
+    "location_id": None,
+    "location_name": "",
+})
+check(r.status_code == 200, "D2: POST /tools/bulk move_location returns 200",
+      r.text if r.status_code != 200 else None)
+data = r.json()
+check(data.get("ok") is True, "D2: ok==true", data)
+check(data.get("affected") == 2, "D2: affected==2", data.get("affected"))
+for tid in [T2["id"], T3["id"]]:
+    rr = get(f"/tools/{tid}")
+    check(rr.status_code == 200, f"D2: GET tool {tid}")
+    t = rr.json()
+    check(t.get("location_name") == "",
+          f"D2: tool {tid} location_name=='' (got {t.get('location_name')!r})")
+
+r = post("/tags", {"name": "BulkTagX"})
+check(r.status_code == 200, "D3: POST /tags X created")
+X = r.json()
+created_tag_ids.append(X["id"])
+
+r = post("/tools/bulk", {
+    "tool_ids": [T2["id"], T3["id"]],
+    "action": "add_tag",
+    "tag_id": X["id"],
+    "tag_name": X["name"],
+})
+check(r.status_code == 200, "D3: bulk add_tag returns 200")
+data = r.json()
+check(data.get("ok") is True, "D3: ok==true")
+check(data.get("affected") == 2, "D3: affected==2", data.get("affected"))
+for tid in [T2["id"], T3["id"]]:
+    t = get(f"/tools/{tid}").json()
+    check(X["id"] in (t.get("tag_ids") or []), f"D3: tool {tid} has X.id in tag_ids")
+    check(X["name"] in (t.get("tag_names") or []), f"D3: tool {tid} has X.name in tag_names")
+
+r = post("/tools/bulk", {
+    "tool_ids": [T2["id"], T3["id"]],
+    "action": "add_tag",
+    "tag_id": X["id"],
+    "tag_name": X["name"],
+})
+check(r.status_code == 200, "D4: bulk add_tag again returns 200")
+for tid in [T2["id"], T3["id"]]:
+    t = get(f"/tools/{tid}").json()
+    tag_ids = t.get("tag_ids") or []
+    tag_names = t.get("tag_names") or []
+    check(tag_ids.count(X["id"]) == 1,
+          f"D4: tool {tid} tag_ids has X.id exactly once", tag_ids)
+    check(tag_names.count(X["name"]) == 1,
+          f"D4: tool {tid} tag_names has X.name exactly once", tag_names)
+
+r = post("/tools/bulk", {
+    "tool_ids": [T2["id"]],
+    "action": "remove_tag",
+    "tag_id": X["id"],
+    "tag_name": X["name"],
+})
+check(r.status_code == 200, "D5: bulk remove_tag returns 200")
+t2 = get(f"/tools/{T2['id']}").json()
+t3 = get(f"/tools/{T3['id']}").json()
+check(X["id"] not in (t2.get("tag_ids") or []), "D5: T2 no longer has X.id", t2.get("tag_ids"))
+check(X["name"] not in (t2.get("tag_names") or []), "D5: T2 no longer has X.name",
+      t2.get("tag_names"))
+check(X["id"] in (t3.get("tag_ids") or []), "D5: T3 still has X.id", t3.get("tag_ids"))
+
+r = post("/categories", {"name": "BulkCatC"})
+check(r.status_code == 200, "D6: POST /categories C created")
+C = r.json()
+created_category_ids.append(C["id"])
+
+r = post("/tools/bulk", {
+    "tool_ids": [T2["id"]],
+    "action": "set_category",
+    "category_id": C["id"],
+    "category_name": C["name"],
+})
+check(r.status_code == 200, "D6: bulk set_category returns 200")
+t2 = get(f"/tools/{T2['id']}").json()
+check(t2.get("category_id") == C["id"], "D6: T2.category_id==C.id", t2.get("category_id"))
+check(t2.get("category_name") == C["name"], "D6: T2.category_name==C.name",
+      t2.get("category_name"))
+
+r = post("/tools/bulk", {
+    "tool_ids": [T2["id"], T3["id"]],
+    "action": "report_lost",
+    "lost_payload": {"type": "stolen", "police_report_number": "BULK-1"},
+})
+check(r.status_code == 200, "D7: bulk report_lost returns 200",
+      r.text if r.status_code != 200 else None)
+data = r.json()
+check(data.get("ok") is True, "D7: ok==true")
+check(data.get("affected") == 2, "D7: affected==2", data.get("affected"))
+for tid in [T2["id"], T3["id"]]:
+    t = get(f"/tools/{tid}").json()
+    ls = t.get("lost_status") or {}
+    check(ls.get("is_lost") is True, f"D7: tool {tid} lost_status.is_lost==true")
+    check(ls.get("type") == "stolen", f"D7: tool {tid} lost_status.type==stolen",
+          ls.get("type"))
+    check(ls.get("police_report_number") == "BULK-1",
+          f"D7: tool {tid} police_report_number==BULK-1", ls.get("police_report_number"))
+
+r = post("/tools/bulk", {"tool_ids": [T2["id"], T3["id"]], "action": "delete"})
+check(r.status_code == 200, "D8: bulk delete returns 200")
+data = r.json()
+check(data.get("ok") is True, "D8: ok==true")
+check(data.get("affected") == 2, "D8: affected==2", data.get("affected"))
+for tid in [T2["id"], T3["id"]]:
+    rr = get(f"/tools/{tid}")
+    check(rr.status_code == 404,
+          f"D8: GET tool {tid} returns 404 after delete (got {rr.status_code})")
+created_tool_ids = [tid for tid in created_tool_ids if tid not in (T2["id"], T3["id"])]
+
+r = post("/tools/bulk", {"tool_ids": [TT["id"]], "action": "unknown"})
+check(r.status_code == 400, f"D9: unknown action returns 400 (got {r.status_code})", r.text)
+
+r = post("/tools/bulk", {"tool_ids": [TT["id"]], "action": "add_tag"})
+check(r.status_code == 400,
+      f"D10: add_tag missing tag_id returns 400 (got {r.status_code})", r.text)
+
+
+# ===================== Cleanup =====================
+print("\n========== Cleanup ==========")
+for tid in created_tool_ids:
+    r = delete(f"/tools/{tid}")
+    check(r.status_code == 200, f"Cleanup: DELETE tool {tid}")
+for tagid in created_tag_ids:
+    r = delete(f"/tags/{tagid}")
+    check(r.status_code == 200, f"Cleanup: DELETE tag {tagid}")
+for cid in created_category_ids:
+    r = delete(f"/categories/{cid}")
+    check(r.status_code == 200, f"Cleanup: DELETE category {cid}")
+
+
+print("\n" + "=" * 60)
+print(f"RESULTS: {PASSED} PASSED, {FAILED} FAILED")
+print("=" * 60)
+if FAILURES:
+    print("\nFAILURES:")
+    for label, ctx in FAILURES:
+        print(f"  - {label}")
+        if ctx is not None:
+            print(f"    ctx={ctx}")
+sys.exit(0 if FAILED == 0 else 1)

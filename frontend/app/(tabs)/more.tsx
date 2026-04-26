@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -9,9 +9,10 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
+import { useRouter, useFocusEffect } from "expo-router";
 import { theme } from "../../src/theme";
 import { usePrefs } from "../../src/prefs";
+import { api } from "../../src/api";
 
 type RowProps = {
   icon: any;
@@ -19,9 +20,11 @@ type RowProps = {
   subtitle?: string;
   onPress?: () => void;
   testID?: string;
+  badge?: number;
+  badgeColor?: string;
 };
 
-const Row = ({ icon, title, subtitle, onPress, testID }: RowProps) => (
+const Row = ({ icon, title, subtitle, onPress, testID, badge, badgeColor }: RowProps) => (
   <TouchableOpacity testID={testID} style={styles.row} onPress={onPress} activeOpacity={0.7}>
     <View style={styles.iconBox}>
       <Ionicons name={icon} size={20} color={theme.colors.accent} />
@@ -30,6 +33,16 @@ const Row = ({ icon, title, subtitle, onPress, testID }: RowProps) => (
       <Text style={styles.rowTitle}>{title}</Text>
       {subtitle ? <Text style={styles.rowSub}>{subtitle}</Text> : null}
     </View>
+    {!!badge && badge > 0 && (
+      <View
+        style={[
+          styles.badge,
+          badgeColor ? { backgroundColor: badgeColor } : null,
+        ]}
+      >
+        <Text style={styles.badgeText}>{badge > 99 ? "99+" : String(badge)}</Text>
+      </View>
+    )}
     <Ionicons name="chevron-forward" size={18} color={theme.colors.textMuted} />
   </TouchableOpacity>
 );
@@ -37,6 +50,20 @@ const Row = ({ icon, title, subtitle, onPress, testID }: RowProps) => (
 export default function MoreScreen() {
   const router = useRouter();
   const { prefs, update } = usePrefs();
+  const [mntDue, setMntDue] = useState({ overdue: 0, due_soon: 0 });
+
+  useFocusEffect(
+    useCallback(() => {
+      api
+        .upcomingMaintenance(30)
+        .then((res) =>
+          setMntDue({ overdue: res.overdue || 0, due_soon: res.due_soon || 0 })
+        )
+        .catch(() => {});
+    }, [])
+  );
+
+  const totalDue = mntDue.overdue + mntDue.due_soon;
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
@@ -87,6 +114,19 @@ export default function MoreScreen() {
           subtitle="Track broken items by dealer"
           testID="more-claims"
           onPress={() => router.push("/warranty-claims")}
+        />
+        <Row
+          icon="settings"
+          title="Maintenance"
+          subtitle={
+            totalDue > 0
+              ? `${mntDue.overdue} overdue, ${mntDue.due_soon} due soon`
+              : "Calibration & service schedules"
+          }
+          testID="more-maintenance"
+          badge={totalDue}
+          badgeColor={mntDue.overdue > 0 ? theme.colors.danger : theme.colors.accent}
+          onPress={() => router.push("/maintenance")}
         />
         <Row
           icon="heart"
@@ -201,4 +241,20 @@ const styles = StyleSheet.create({
   },
   rowTitle: { color: theme.colors.textPrimary, fontWeight: "700", fontSize: 15 },
   rowSub: { color: theme.colors.textSecondary, fontSize: 12, marginTop: 2 },
+  badge: {
+    minWidth: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: theme.colors.accent,
+    paddingHorizontal: 7,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 8,
+  },
+  badgeText: {
+    color: "#000",
+    fontSize: 11,
+    fontWeight: "900",
+    letterSpacing: 0.5,
+  },
 });

@@ -20,6 +20,12 @@ import { theme } from "../../src/theme";
 import { api } from "../../src/api";
 import { confirm } from "../../src/confirm";
 import { formatDateTime } from "../../src/dt";
+import {
+  LostStatusBanner,
+  ReportLostButton,
+} from "../../src/sections/LostStatusSection";
+import { DocumentsSection } from "../../src/sections/DocumentsSection";
+import { MaintenanceSection } from "../../src/sections/MaintenanceSection";
 
 export default function ToolDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -311,6 +317,8 @@ export default function ToolDetail() {
             </View>
           </View>
 
+          <LostStatusBanner tool={tool} onChange={load} />
+
           {tool.needs_repair && (
             <TouchableOpacity
               testID="repair-banner"
@@ -371,17 +379,9 @@ export default function ToolDetail() {
               <Field label="Purchased" value={tool.purchase_date} />
             </View>
 
-            {(tool.documents || []).length > 0 && (
-              <>
-                <Text style={styles.sectionLabel}>DOCUMENTS</Text>
-                {tool.documents.map((d: any, i: number) => (
-                  <View key={i} style={styles.docRow}>
-                    <Ionicons name="document" size={20} color={theme.colors.accent} />
-                    <Text style={styles.docName} numberOfLines={1}>{d.name}</Text>
-                  </View>
-                ))}
-              </>
-            )}
+            <DocumentsSection tool={tool} onChange={load} />
+            <MaintenanceSection tool={tool} onChange={load} />
+            <ReportLostButton tool={tool} onChange={load} />
 
             {(tool.checkout_history || []).length > 0 && (
               <>
