@@ -14,6 +14,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter, useFocusEffect } from "expo-router";
 import { theme } from "../../src/theme";
 import { api } from "../../src/api";
+import { formatDateUS as fmtDate } from "../../src/dateUtil";
 
 type Mode = "dealers" | "all-open";
 
@@ -84,6 +85,13 @@ export default function ClaimsScreen() {
       <View style={styles.header}>
         <Text style={styles.title}>CLAIMS</Text>
         <Text style={styles.subtitle}>BROKEN ITEMS BY DEALER</Text>
+      </View>
+
+      <View style={styles.statRow}>
+        <Stat label="Total" value={summary?.totals?.total ?? 0} />
+        <Stat label="Open" value={summary?.totals?.open ?? 0} color={theme.colors.danger} />
+        <Stat label="Replacement" value={summary?.totals?.waiting_replacement ?? 0} color={theme.colors.accentSecondary} />
+        <Stat label="Done" value={summary?.totals?.completed ?? 0} color={theme.colors.success} />
       </View>
 
       <View style={styles.modeRow}>
@@ -256,6 +264,11 @@ export default function ClaimsScreen() {
                             <Text style={styles.itemName} numberOfLines={1}>
                               {t.name}
                             </Text>
+                            {!!t.repair_info?.notified_at && (
+                              <Text style={styles.notifiedLine}>
+                                Notified: {fmtDate(t.repair_info.notified_at)}
+                              </Text>
+                            )}
                             <View style={[styles.statusPill, { borderColor: statusColor }]}>
                               <Text style={[styles.statusText, { color: statusColor }]}>
                                 {status}
@@ -275,9 +288,53 @@ export default function ClaimsScreen() {
     </SafeAreaView>
   );
 }
+function Stat({ label, value, color }: { label: string; value: number; color?: string }) {
+  return (
+    <View style={styles.statBox}>
+      <Text style={[styles.statValue, color && { color }]}>{value}</Text>
+      <Text style={styles.statLabel}>{label.toUpperCase()}</Text>
+    </View>
+  );
+}
+
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.colors.bg },
+  statRow: {
+    flexDirection: "row",
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderBottomColor: theme.colors.border,
+    borderBottomWidth: 1,
+  },
+  statBox: {
+    flex: 1,
+    backgroundColor: theme.colors.bgSecondary,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    paddingVertical: 10,
+    alignItems: "center",
+    borderRadius: 4,
+  },
+  statValue: {
+    fontSize: 18,
+    fontWeight: "900",
+    color: theme.colors.textPrimary,
+  },
+  statLabel: {
+    fontSize: 9,
+    fontWeight: "800",
+    letterSpacing: 1,
+    color: theme.colors.textMuted,
+    marginTop: 2,
+  },
+  notifiedLine: {
+    color: theme.colors.accent,
+    fontSize: 11,
+    fontWeight: "800",
+    marginTop: 3,
+  },
   header: {
     paddingHorizontal: 20,
     paddingVertical: 16,

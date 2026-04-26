@@ -74,7 +74,7 @@ export const api = {
   warrantyAlerts: (days = 60) => request<any>(`/warranty-alerts?days=${days}`),
 
   // Warranty claims
-  listWarrantyClaims: (params?: { dealer_id?: string; status?: string; archived?: boolean }) =>
+  listWarrantyClaims: (params?: { dealer_id?: string; tool_id?: string; status?: string; archived?: boolean }) =>
     request<any[]>(`/warranty-claims${qs(params)}`),
   warrantyClaimsSummary: () => request<any>(`/warranty-claims/summary`),
   updateWarrantyClaim: (id: string, data: any) =>

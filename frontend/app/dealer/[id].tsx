@@ -146,14 +146,6 @@ export default function DealerDetail() {
           <Text style={styles.dealerName}>{dealer.name}</Text>
         </View>
 
-        <View style={styles.summaryGrid}>
-          <Cell label="Tools" value={String(tools.length)} />
-          {prefs.show_prices && <Cell label="Spent" value={`$${total.toFixed(0)}`} />}
-          <Cell label="Categories" value={String(cats.size)} />
-          <Cell label="Tags" value={String(tags.size)} />
-          <Cell label="Agents" value={String((dealer.agents || []).length)} />
-        </View>
-
         {/* AGENTS — placed at top per user preference */}
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionLabelStrong}>AGENTS ({(dealer.agents || []).length})</Text>

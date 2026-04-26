@@ -17,16 +17,19 @@ import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter, useFocusEffect } from "expo-router";
 import * as Print from "expo-print";
 import * as Sharing from "expo-sharing";
+import * as ImagePicker from "expo-image-picker";
 import { theme } from "../../src/theme";
 import { api } from "../../src/api";
 import { confirm } from "../../src/confirm";
 import { formatDateTime } from "../../src/dt";
+import { formatDateUS } from "../../src/dateUtil";
 import {
   LostStatusBanner,
   ReportLostButton,
 } from "../../src/sections/LostStatusSection";
 import { DocumentsSection } from "../../src/sections/DocumentsSection";
 import { MaintenanceSection } from "../../src/sections/MaintenanceSection";
+import { ClaimsHistorySection } from "../../src/sections/ClaimsHistorySection";
 
 export default function ToolDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -47,10 +50,31 @@ export default function ToolDetail() {
     company_notified: "",
     notified_at: "",
     expected_completion: "",
-    repair_status: "Reported",
+    repair_status: "Not Reported",
     contact: "",
     notes: "",
+    broken_photo: "",
   });
+
+  const pickBrokenPhoto = async () => {
+    try {
+      const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!perm.granted) return;
+      const res = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        quality: 0.6,
+        base64: true,
+      });
+      if (!res.canceled && res.assets?.[0]) {
+        const a = res.assets[0];
+        const data =
+          a.base64 ? `data:image/jpeg;base64,${a.base64}` : a.uri;
+        setRepairForm((f) => ({ ...f, broken_photo: data }));
+      }
+    } catch (e: any) {
+      Alert.alert("Error", e.message || "Could not pick photo");
+    }
+  };
 
   const load = useCallback(async () => {
     if (!id) return;
@@ -203,9 +227,10 @@ export default function ToolDetail() {
       company_notified: tool.repair_info?.company_notified || "",
       notified_at: tool.repair_info?.notified_at || todayStr(),
       expected_completion: tool.repair_info?.expected_completion || "",
-      repair_status: tool.repair_info?.repair_status || "Reported",
+      repair_status: tool.repair_info?.repair_status || "Not Reported",
       contact: tool.repair_info?.contact || "",
       notes: tool.repair_info?.notes || "",
+      broken_photo: tool.repair_info?.broken_photo || "",
     });
     setShowRepair(true);
   };
@@ -413,10 +438,10 @@ export default function ToolDetail() {
                     <Text style={styles.repairLine}>At: {tool.repair_info.company_notified}</Text>
                   )}
                   {!!tool.repair_info?.notified_at && (
-                    <Text style={styles.repairLine}>Notified: {tool.repair_info.notified_at}</Text>
+                    <Text style={styles.repairLine}>Notified: {formatDateUS(tool.repair_info.notified_at)}</Text>
                   )}
                   {!!tool.repair_info?.expected_completion && (
-                    <Text style={styles.repairLine}>Expected back: {tool.repair_info.expected_completion}</Text>
+                    <Text style={styles.repairLine}>Expected back: {formatDateUS(tool.repair_info.expected_completion)}</Text>
                   )}
                   {!!tool.repair_info?.contact && (
                     <Text style={styles.repairLine}>Contact: {tool.repair_info.contact}</Text>
@@ -483,11 +508,12 @@ export default function ToolDetail() {
               <Field label="Cost" value={`$${(tool.cost || 0).toFixed(2)}`} />
               <Field label="Location" value={tool.location_name} />
               <Field label="Condition" value={tool.condition} />
-              <Field label="Purchased" value={tool.purchase_date} />
+              <Field label="Purchased" value={formatDateUS(tool.purchase_date)} />
             </View>
 
             <DocumentsSection tool={tool} onChange={load} />
             <MaintenanceSection tool={tool} onChange={load} />
+            <ClaimsHistorySection toolId={tool.id} />
             <ReportLostButton tool={tool} onChange={load} />
 
             {(tool.checkout_history || []).length > 0 && (
@@ -664,7 +690,7 @@ export default function ToolDetail() {
             <ScrollView style={{ maxHeight: 460 }} keyboardShouldPersistTaps="handled">
               <Text style={styles.repairLabel}>STATUS</Text>
               <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6, marginBottom: 10 }}>
-                {["Reported", "In Repair", "Awaiting Parts", "Repaired"].map((s) => (
+                {["Not Reported", "Reported", "In Repair", "Awaiting Parts", "Sent in for Repairs", "Repaired"].map((s) => (
                   <TouchableOpacity
                     key={s}
                     testID={`repmod-status-${s}`}
@@ -737,6 +763,72 @@ export default function ToolDetail() {
                 multiline
                 onChangeText={(v) => setRepairForm({ ...repairForm, notes: v })}
               />
+
+              <Text style={styles.repairLabel}>PHOTO OF BROKEN PART</Text>
+              <Text style={{ color: theme.colors.textMuted, fontSize: 11, marginBottom: 6 }}>
+                Only shown in this claim — not added to the item's main photos.
+              </Text>
+              {repairForm.broken_photo ? (
+                <View style={{ position: "relative", marginBottom: 8 }}>
+                  <Image
+                    source={{ uri: repairForm.broken_photo }}
+                    style={{
+                      width: "100%",
+                      height: 180,
+                      borderRadius: 6,
+                      backgroundColor: theme.colors.bg,
+                    }}
+                    resizeMode="cover"
+                  />
+                  <TouchableOpacity
+                    testID="remove-broken-photo-btn"
+                    onPress={() =>
+                      setRepairForm({ ...repairForm, broken_photo: "" })
+                    }
+                    style={{
+                      position: "absolute",
+                      top: 6,
+                      right: 6,
+                      backgroundColor: "rgba(0,0,0,0.7)",
+                      width: 30,
+                      height: 30,
+                      borderRadius: 15,
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    <Ionicons name="trash" size={16} color="#fff" />
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <TouchableOpacity
+                  testID="pick-broken-photo-btn"
+                  onPress={pickBrokenPhoto}
+                  style={{
+                    height: 80,
+                    borderWidth: 1,
+                    borderStyle: "dashed",
+                    borderColor: theme.colors.accent,
+                    borderRadius: 6,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    flexDirection: "row",
+                    gap: 8,
+                    marginBottom: 8,
+                  }}
+                >
+                  <Ionicons name="camera" size={20} color={theme.colors.accent} />
+                  <Text
+                    style={{
+                      color: theme.colors.accent,
+                      fontWeight: "900",
+                      letterSpacing: 1.5,
+                    }}
+                  >
+                    ADD PHOTO
+                  </Text>
+                </TouchableOpacity>
+              )}
 
               {!tool.needs_repair && tool.is_checked_out && (
                 <Text style={{ color: theme.colors.warning, fontSize: 12, marginVertical: 6 }}>

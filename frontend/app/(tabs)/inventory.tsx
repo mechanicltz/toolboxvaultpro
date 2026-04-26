@@ -37,6 +37,7 @@ export default function InventoryScreen() {
   const [filter, setFilter] = useState<Filter>("all");
   const [warningCount, setWarningCount] = useState(0);
   const [openClaims, setOpenClaims] = useState(0);
+  const [maintDueCount, setMaintDueCount] = useState(0);
 
   // Bulk select mode
   const [selectMode, setSelectMode] = useState(false);
@@ -131,13 +132,14 @@ export default function InventoryScreen() {
     if (filter === "out") params.checked_out = true;
     if (filter === "consumables") params.is_consumable = true;
     try {
-      const [t, a, w, cs, locs, tags] = await Promise.all([
+      const [t, a, w, cs, locs, tags, mu] = await Promise.all([
         api.listTools(params),
         api.aggregate(params),
         prefs.warranty_alerts ? api.warrantyAlerts(60) : Promise.resolve({ expiring: [], expired: [] }),
         api.warrantyClaimsSummary().catch(() => ({ totals: { open: 0 } })),
         api.listLocations().catch(() => []),
         api.listTags().catch(() => []),
+        api.maintenanceUpcoming(60).catch(() => ({ overdue: [], due_soon: [] })),
       ]);
       // Client-side filter for "lost" since backend doesn't expose this
       const filteredTools = filter === "lost"
@@ -147,6 +149,7 @@ export default function InventoryScreen() {
       setAgg(a);
       setWarningCount((w.expiring?.length || 0) + (w.expired?.length || 0));
       setOpenClaims(cs?.totals?.open || 0);
+      setMaintDueCount((mu?.overdue?.length || 0) + (mu?.due_soon?.length || 0));
       setAllLocations(locs);
       setAllTags(tags);
     } catch (e) {
@@ -174,10 +177,42 @@ export default function InventoryScreen() {
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <View style={styles.header}>
-        <View>
+        <View style={{ flex: 1 }}>
           <Text style={styles.title}>TOOLBOX</Text>
           <Text style={styles.subtitle}>Inventory Tracker</Text>
         </View>
+        <TouchableOpacity
+          testID="header-maintenance-btn"
+          style={[
+            styles.headerBtn,
+            maintDueCount > 0 && {
+              borderColor: theme.colors.warning,
+              backgroundColor: "rgba(245,158,11,0.12)",
+            },
+          ]}
+          onPress={() => router.push("/maintenance")}
+        >
+          <Ionicons
+            name="settings"
+            size={18}
+            color={
+              maintDueCount > 0 ? theme.colors.warning : theme.colors.textPrimary
+            }
+          />
+          <Text
+            style={[
+              styles.headerBtnText,
+              maintDueCount > 0 && { color: theme.colors.warning },
+            ]}
+          >
+            MAINT
+          </Text>
+          {maintDueCount > 0 && (
+            <View style={styles.headerBadge}>
+              <Text style={styles.headerBadgeText}>{maintDueCount}</Text>
+            </View>
+          )}
+        </TouchableOpacity>
       </View>
 
       {prefs.warranty_alerts && warningCount > 0 && (
@@ -577,7 +612,45 @@ export default function InventoryScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.colors.bg },
-  header: { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 12 },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    paddingBottom: 12,
+    gap: 12,
+  },
+  headerBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.bgSecondary,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 6,
+  },
+  headerBtnText: {
+    color: theme.colors.textPrimary,
+    fontSize: 11,
+    fontWeight: "900",
+    letterSpacing: 1.5,
+  },
+  headerBadge: {
+    backgroundColor: theme.colors.warning,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 10,
+    marginLeft: 2,
+    minWidth: 22,
+    alignItems: "center",
+  },
+  headerBadgeText: {
+    color: "#000",
+    fontSize: 10,
+    fontWeight: "900",
+  },
   title: { color: theme.colors.textPrimary, fontSize: 28, fontWeight: "900", letterSpacing: 2 },
   subtitle: {
     color: theme.colors.accent,

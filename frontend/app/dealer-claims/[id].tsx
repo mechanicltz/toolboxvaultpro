@@ -10,6 +10,7 @@ import {
   Alert,
   Linking,
   Platform,
+  Modal,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -17,8 +18,18 @@ import { useLocalSearchParams, useRouter, useFocusEffect } from "expo-router";
 import { theme } from "../../src/theme";
 import { api } from "../../src/api";
 import { confirm } from "../../src/confirm";
+import { formatDateUS as fmtDate } from "../../src/dateUtil";
 
 type Tab = "open" | "completed";
+
+const REPAIR_STATUSES = [
+  "Not Reported",
+  "Reported",
+  "In Repair",
+  "Awaiting Parts",
+  "Sent in for Repairs",
+  "Repaired",
+];
 
 export default function DealerClaimsScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -28,6 +39,24 @@ export default function DealerClaimsScreen() {
   const [archivedClaims, setArchivedClaims] = useState<any[]>([]);
   const [tab, setTab] = useState<Tab>("open");
   const [refreshing, setRefreshing] = useState(false);
+  const [statusPickerFor, setStatusPickerFor] = useState<any | null>(null);
+
+  const updateStatus = async (t: any, newStatus: string) => {
+    try {
+      const next: any = {
+        repair_info: { ...(t.repair_info || {}), repair_status: newStatus },
+      };
+      if (newStatus.toLowerCase() === "repaired") {
+        next.needs_repair = false;
+        next.repair_info = null;
+      }
+      await api.updateTool(t.id, next);
+      setStatusPickerFor(null);
+      await load();
+    } catch (e: any) {
+      Alert.alert("Error", e.message || "Could not update status");
+    }
+  };
 
   const load = useCallback(async () => {
     if (!id) return;
@@ -266,16 +295,26 @@ export default function DealerClaimsScreen() {
                       <Text style={styles.itemMeta}>Contact: {t.repair_info.contact}</Text>
                     )}
                     {!!t.repair_info?.notified_at && (
-                      <Text style={styles.itemMeta}>Notified: {t.repair_info.notified_at}</Text>
+                      <Text style={styles.notifiedHighlight}>
+                        Notified: {fmtDate(t.repair_info.notified_at)}
+                      </Text>
                     )}
                     {!!t.repair_info?.expected_completion && (
                       <Text style={styles.itemMeta}>
-                        Expected back: {t.repair_info.expected_completion}
+                        Expected back: {fmtDate(t.repair_info.expected_completion)}
                       </Text>
                     )}
-                    <View style={[styles.statusPill, { borderColor: statusColor }]}>
+                    <TouchableOpacity
+                      testID={`status-pill-${t.id}`}
+                      style={[styles.statusPill, { borderColor: statusColor }]}
+                      onPress={() => tab === "open" && setStatusPickerFor(t)}
+                      disabled={tab !== "open"}
+                    >
                       <Text style={[styles.statusText, { color: statusColor }]}>{status}</Text>
-                    </View>
+                      {tab === "open" && (
+                        <Ionicons name="caret-down" size={11} color={statusColor} />
+                      )}
+                    </TouchableOpacity>
                   </View>
                   <Ionicons name="chevron-forward" size={18} color={theme.colors.textMuted} />
                 </TouchableOpacity>
@@ -315,12 +354,124 @@ export default function DealerClaimsScreen() {
           })
         )}
       </ScrollView>
+
+      {/* Status picker modal */}
+      <Modal
+        transparent
+        visible={!!statusPickerFor}
+        animationType="slide"
+        onRequestClose={() => setStatusPickerFor(null)}
+      >
+        <View style={styles.modalBg}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>CHANGE STATUS</Text>
+            <Text style={styles.modalSubtitle}>
+              {statusPickerFor?.name}
+            </Text>
+            {REPAIR_STATUSES.map((s) => {
+              const isCurrent =
+                (statusPickerFor?.repair_info?.repair_status || "Not Reported") === s;
+              return (
+                <TouchableOpacity
+                  key={s}
+                  testID={`pick-status-${s.replace(/\s/g, "-")}`}
+                  style={[styles.statusOption, isCurrent && styles.statusOptionActive]}
+                  onPress={() => updateStatus(statusPickerFor, s)}
+                >
+                  <Text
+                    style={[
+                      styles.statusOptionText,
+                      isCurrent && styles.statusOptionTextActive,
+                    ]}
+                  >
+                    {s}
+                  </Text>
+                  {isCurrent && (
+                    <Ionicons name="checkmark" size={18} color={theme.colors.accent} />
+                  )}
+                </TouchableOpacity>
+              );
+            })}
+            <TouchableOpacity
+              style={styles.cancelBtn}
+              onPress={() => setStatusPickerFor(null)}
+            >
+              <Text style={styles.cancelBtnText}>CANCEL</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.colors.bg },
+  notifiedHighlight: {
+    color: theme.colors.accent,
+    fontSize: 13,
+    fontWeight: "900",
+    marginTop: 4,
+    letterSpacing: 0.3,
+  },
+  modalBg: { flex: 1, backgroundColor: "rgba(0,0,0,0.7)", justifyContent: "flex-end" },
+  modalCard: {
+    backgroundColor: theme.colors.bgSecondary,
+    paddingHorizontal: 18,
+    paddingVertical: 22,
+    borderTopWidth: 2,
+    borderTopColor: theme.colors.accent,
+    borderTopLeftRadius: 14,
+    borderTopRightRadius: 14,
+  },
+  modalTitle: {
+    color: theme.colors.textPrimary,
+    fontSize: 16,
+    fontWeight: "900",
+    letterSpacing: 2,
+    marginBottom: 4,
+  },
+  modalSubtitle: {
+    color: theme.colors.accent,
+    fontSize: 12,
+    fontWeight: "700",
+    marginBottom: 14,
+  },
+  statusOption: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: 14,
+    paddingHorizontal: 14,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: 6,
+    marginBottom: 8,
+    backgroundColor: theme.colors.bg,
+  },
+  statusOptionActive: {
+    backgroundColor: "rgba(255,179,0,0.12)",
+    borderColor: theme.colors.accent,
+  },
+  statusOptionText: {
+    color: theme.colors.textPrimary,
+    fontWeight: "700",
+    fontSize: 14,
+  },
+  statusOptionTextActive: { color: theme.colors.accent, fontWeight: "900" },
+  cancelBtn: {
+    marginTop: 6,
+    paddingVertical: 14,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: 6,
+  },
+  cancelBtnText: {
+    color: theme.colors.textPrimary,
+    fontWeight: "900",
+    letterSpacing: 2,
+  },
   empty: { flex: 1, alignItems: "center", justifyContent: "center" },
   header: {
     flexDirection: "row",

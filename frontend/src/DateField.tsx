@@ -80,7 +80,7 @@ export function DateField({
             flex: 1,
           }}
         >
-          {display || placeholder || "MM/DD/YYYY"}
+          {display || placeholder || "DD/MM/YYYY"}
         </Text>
         {value ? (
           <TouchableOpacity onPress={() => onChange("")} hitSlop={8}>

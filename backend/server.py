@@ -1027,6 +1027,52 @@ async def update_tool(tool_id: str, payload: ToolUpdate):
             updates["current_checkout"] = None
             updates["checkout_history"] = history
 
+    # Auto-checkout to dealer when repair status becomes "Sent in for Repairs"
+    new_repair_status = ""
+    if updates.get("repair_info"):
+        new_repair_status = (updates.get("repair_info") or {}).get("repair_status", "") or ""
+    elif "repair_info" not in updates and doc.get("repair_info"):
+        new_repair_status = (doc.get("repair_info") or {}).get("repair_status", "") or ""
+    is_sent_for_repair = new_repair_status.lower().replace("-", " ").strip() in (
+        "sent in for repairs",
+        "sent for repairs",
+        "sent in for repair",
+    )
+    was_sent_for_repair = (
+        ((doc.get("repair_info") or {}).get("repair_status", "") or "")
+        .lower()
+        .replace("-", " ")
+        .strip()
+        in ("sent in for repairs", "sent for repairs", "sent in for repair")
+    )
+    if is_sent_for_repair and not was_sent_for_repair:
+        # Check out to the dealer (if dealer_id is set)
+        dealer_id = doc.get("dealer_id") or updates.get("dealer_id")
+        dealer_name = doc.get("dealer_name") or updates.get("dealer_name") or ""
+        if dealer_id and not doc.get("is_checked_out") and not updates.get("is_checked_out"):
+            checkout_rec = {
+                "id": str(uuid.uuid4()),
+                "borrower_id": f"dealer:{dealer_id}",
+                "borrower_name": dealer_name or "Dealer",
+                "checked_out_at": now_iso(),
+                "checked_in_at": None,
+                "notes": "Sent in for repairs",
+            }
+            updates["is_checked_out"] = True
+            updates["current_checkout"] = checkout_rec
+    elif was_sent_for_repair and not is_sent_for_repair:
+        # Status moved away from "Sent in for Repairs" → auto-check-in
+        record = doc.get("current_checkout") or {}
+        if record and (record.get("borrower_id") or "").startswith("dealer:"):
+            record = dict(record)
+            record["checked_in_at"] = now_iso()
+            record["notes"] = (record.get("notes") or "") + " [auto check-in: returned from repair]"
+            history = doc.get("checkout_history") or []
+            history.append(record)
+            updates["is_checked_out"] = False
+            updates["current_checkout"] = None
+            updates["checkout_history"] = history
+
     await db.tools.update_one({"id": tool_id}, {"$set": updates})
     new_doc = await db.tools.find_one({"id": tool_id}, {"_id": 0})
 
@@ -1544,10 +1590,13 @@ async def warranty_alerts(days: int = 60):
 @api_router.get("/warranty-claims", response_model=List[WarrantyClaim])
 async def list_warranty_claims(
     dealer_id: Optional[str] = None,
+    tool_id: Optional[str] = None,
     status: Optional[str] = None,
     archived: Optional[bool] = None,  # true -> completed/rejected only; false -> active only
 ):
     q: Dict[str, Any] = {}
+    if tool_id:
+        q["tool_id"] = tool_id
     if dealer_id:
         # Special token "_none_" matches claims without a dealer
         if dealer_id == "_none_":
