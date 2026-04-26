@@ -24,6 +24,35 @@ export default function BorrowersScreen() {
   const [showAdd, setShowAdd] = useState(false);
   const [name, setName] = useState("");
   const [contact, setContact] = useState("");
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editContact, setEditContact] = useState("");
+
+  const beginEdit = (b: any) => {
+    setEditingId(b.id);
+    setEditName(b.name);
+    setEditContact(b.contact || "");
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setEditName("");
+    setEditContact("");
+  };
+
+  const saveEdit = async () => {
+    if (!editingId || !editName.trim()) return;
+    try {
+      await api.updateBorrower(editingId, {
+        name: editName.trim(),
+        contact: editContact.trim(),
+      });
+      cancelEdit();
+      load();
+    } catch (e: any) {
+      Alert.alert("Error", e.message);
+    }
+  };
 
   const load = useCallback(async () => {
     const [b, t] = await Promise.all([
@@ -102,6 +131,53 @@ export default function BorrowersScreen() {
         }
         renderItem={({ item }) => {
           const active = toolsByBorrower(item.name);
+          const isEditing = editingId === item.id;
+          if (isEditing) {
+            return (
+              <View style={[styles.row, styles.editRow]}>
+                <View style={styles.avatar}>
+                  <Text style={styles.avatarText}>
+                    {(editName || item.name).charAt(0).toUpperCase()}
+                  </Text>
+                </View>
+                <View style={{ flex: 1, gap: 6 }}>
+                  <TextInput
+                    testID={`edit-borrower-name-${item.id}`}
+                    value={editName}
+                    onChangeText={setEditName}
+                    placeholder="Full name"
+                    placeholderTextColor={theme.colors.textMuted}
+                    style={styles.editInput}
+                    autoFocus
+                  />
+                  <TextInput
+                    testID={`edit-borrower-contact-${item.id}`}
+                    value={editContact}
+                    onChangeText={setEditContact}
+                    placeholder="Phone / email (optional)"
+                    placeholderTextColor={theme.colors.textMuted}
+                    style={styles.editInput}
+                  />
+                </View>
+                <TouchableOpacity
+                  testID={`save-edit-borrower-${item.id}`}
+                  onPress={saveEdit}
+                  hitSlop={10}
+                  style={styles.iconBtn}
+                >
+                  <Ionicons name="checkmark" size={22} color={theme.colors.success} />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  testID={`cancel-edit-borrower-${item.id}`}
+                  onPress={cancelEdit}
+                  hitSlop={10}
+                  style={styles.iconBtn}
+                >
+                  <Ionicons name="close" size={22} color={theme.colors.danger} />
+                </TouchableOpacity>
+              </View>
+            );
+          }
           return (
             <TouchableOpacity
               testID={`borrower-row-${item.id}`}
@@ -126,6 +202,18 @@ export default function BorrowersScreen() {
                 </Text>
               </View>
               <TouchableOpacity
+                testID={`edit-borrower-${item.id}`}
+                onPress={(e) => {
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                  (e as any)?.stopPropagation?.();
+                  beginEdit(item);
+                }}
+                hitSlop={10}
+                style={styles.iconBtn}
+              >
+                <Ionicons name="pencil" size={18} color={theme.colors.accent} />
+              </TouchableOpacity>
+              <TouchableOpacity
                 testID={`delete-borrower-${item.id}`}
                 onPress={(e) => {
                   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -133,6 +221,7 @@ export default function BorrowersScreen() {
                   remove(item.id, item.name);
                 }}
                 hitSlop={10}
+                style={styles.iconBtn}
               >
                 <Ionicons name="trash-outline" size={20} color={theme.colors.danger} />
               </TouchableOpacity>
@@ -240,6 +329,26 @@ const styles = StyleSheet.create({
     borderBottomColor: theme.colors.borderSubtle,
     borderBottomWidth: 1,
     gap: 12,
+  },
+  editRow: {
+    backgroundColor: "rgba(255,179,0,0.06)",
+    borderLeftWidth: 3,
+    borderLeftColor: theme.colors.accent,
+  },
+  editInput: {
+    backgroundColor: theme.colors.bg,
+    borderWidth: 1,
+    borderColor: theme.colors.accent,
+    color: theme.colors.textPrimary,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderRadius: 4,
+    fontSize: 14,
+    minHeight: 38,
+  },
+  iconBtn: {
+    paddingHorizontal: 4,
+    paddingVertical: 6,
   },
   avatar: {
     width: 44,

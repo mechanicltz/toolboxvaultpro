@@ -105,6 +105,21 @@
 user_problem_statement: "Track tools in toolboxes/garage with checkout, dealers, photos, nested locations, warranty, broken/repair tracking, AI-powered toolbox analysis, customizable PDF/Excel reports."
 
 backend:
+  - task: "Borrower update endpoint — PUT /api/borrowers/{id} with name/contact propagation"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Added PUT /api/borrowers/{borrower_id} that accepts {name, contact}. When the name changes, propagates the new name across tools.current_checkout (where borrower_id matches) and tools.checkout_history[el.borrower_id == id]. Also propagates legacy records that match by borrower_name (case-insensitive) where borrower_id is empty/null. Returns the updated Borrower."
+      - working: true
+        agent: "testing"
+        comment: "PASS — 20/20 checks green via /app/backend_test_borrower_update.py against EXPO_PUBLIC_BACKEND_URL/api. Verified all 10 review steps: (1) POST /api/borrowers created B1='OldNameTest' contact='old@example.com'. (2) POST /api/tools created test tool; POST /tools/{id}/checkout with borrower_name='OldNameTest' + borrower_id=B1.id correctly stamped current_checkout with both id+name. (3) POST /tools/{id}/checkin pushed it to checkout_history with borrower_id=B1.id. (4) Second checkout with same borrower set up an ACTIVE current_checkout AND a history entry both referencing B1.id. (5) PUT /api/borrowers/{B1.id} with {name:'NewNameTest', contact:'new@example.com'} returned 200; response Borrower.name='NewNameTest' and Borrower.contact='new@example.com'. (6) GET /api/borrowers showed B1 with new name+contact. (7) GET /api/tools/{id} confirmed current_checkout.borrower_name='NewNameTest' (and borrower_id still=B1.id). (8) checkout_history entry with borrower_id=B1.id now has borrower_name='NewNameTest' (history propagation works). (9) Edge case: created B2='LegacyOnly' contact='', not used on any tool; PUT /api/borrowers/{B2.id} {name:'LegacyRenamed', contact:''} returned 200 with name updated — propagation is safe with no matching tools. (10) Negative: PUT /api/borrowers/non-existent-id-1234 with {name:'X'} returned HTTP 404 with detail exactly 'Borrower not found'. All test fixtures (1 tool + 2 borrowers) cleaned up via DELETE /api/{tools|borrowers}/{id} after run. No regressions observed on touched endpoints."
+
   - task: "Warranty Claims — collection, CRUD, summary, auto-create from broken flag, mirror to tool"
     implemented: true
     working: true
@@ -212,7 +227,8 @@ metadata:
   run_ui: false
 
 test_plan:
-  current_focus: []
+  current_focus:
+    - "Borrower update endpoint — PUT /api/borrowers/{id} with name/contact propagation"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"

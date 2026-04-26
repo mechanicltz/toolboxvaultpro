@@ -13,6 +13,7 @@ import { theme } from "../../src/theme";
 import { api } from "../../src/api";
 import { TagInput, CategoryPicker } from "../../src/Pickers";
 import { buildLocationTree, flattenLocationTree } from "../../src/locationTree";
+import { DateField } from "../../src/DateField";
 
 export default function ToolEdit() {
   const { id } = useLocalSearchParams<{ id?: string }>();
@@ -27,7 +28,7 @@ export default function ToolEdit() {
   const [model, setModel] = useState("");
   const [serial, setSerial] = useState("");
   const [cost, setCost] = useState("");
-  const [purchaseDate, setPurchaseDate] = useState("");
+  const [purchaseDate, setPurchaseDate] = useState(isEdit ? "" : new Date().toISOString().substring(0, 10));
   const [condition, setCondition] = useState("Good");
   const [locationId, setLocationId] = useState<string | null>(null);
   const [locationName, setLocationName] = useState("");
@@ -63,6 +64,18 @@ export default function ToolEdit() {
   const [purchasedAgentId, setPurchasedAgentId] = useState<string | null>(null);
   const [purchasedAgentName, setPurchasedAgentName] = useState("");
   const [showDealerPicker, setShowDealerPicker] = useState(false);
+
+  // Inline dealer creation
+  const [showNewDealer, setShowNewDealer] = useState(false);
+  const [newDealer, setNewDealer] = useState({
+    name: "",
+    phone: "",
+    website: "",
+    agent_name: "",
+    agent_phone: "",
+    agent_email: "",
+  });
+  const [savingDealer, setSavingDealer] = useState(false);
 
   const [locations, setLocations] = useState<any[]>([]);
   const [dealers, setDealers] = useState<any[]>([]);
@@ -188,6 +201,50 @@ export default function ToolEdit() {
     setShowDealerPicker(false);
   };
 
+  const saveNewDealer = async () => {
+    if (!newDealer.name.trim()) {
+      Alert.alert("Required", "Please enter a dealer name.");
+      return;
+    }
+    setSavingDealer(true);
+    try {
+      const created = await api.createDealer({
+        name: newDealer.name.trim(),
+        phone: newDealer.phone.trim(),
+        website: newDealer.website.trim(),
+        notes: "",
+      });
+      // Add an agent if provided
+      if (newDealer.agent_name.trim()) {
+        await api.addAgent(created.id, {
+          name: newDealer.agent_name.trim(),
+          phone: newDealer.agent_phone.trim(),
+          email: newDealer.agent_email.trim(),
+          notes: "",
+        });
+      }
+      // Refresh dealers and auto-select the new one
+      const updatedDealers = await api.listDealers();
+      setDealers(updatedDealers);
+      const fresh = updatedDealers.find((d: any) => d.id === created.id);
+      if (fresh) pickDealer(fresh);
+      setShowNewDealer(false);
+      setShowDealerPicker(false);
+      setNewDealer({
+        name: "",
+        phone: "",
+        website: "",
+        agent_name: "",
+        agent_phone: "",
+        agent_email: "",
+      });
+    } catch (e: any) {
+      Alert.alert("Error", e.message);
+    } finally {
+      setSavingDealer(false);
+    }
+  };
+
   const save = useCallback(async () => {
     if (!name.trim()) { Alert.alert("Required", "Please enter a tool name."); return; }
     setSaving(true);
@@ -250,7 +307,7 @@ export default function ToolEdit() {
           </TouchableOpacity>
         </View>
 
-        <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 60 }} keyboardShouldPersistTaps="handled">
+        <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 120 }} keyboardShouldPersistTaps="handled">
           <Text style={styles.label}>NAME *</Text>
           <TextInput testID="name-input" placeholder="Cordless Drill" placeholderTextColor={theme.colors.textMuted}
             value={name} onChangeText={setName} style={styles.input} />
@@ -289,8 +346,12 @@ export default function ToolEdit() {
           <View style={styles.row2}>
             <View style={{ flex: 1 }}>
               <Text style={styles.label}>PURCHASED</Text>
-              <TextInput testID="purchase-input" placeholder="2024-05-15" placeholderTextColor={theme.colors.textMuted}
-                value={purchaseDate} onChangeText={setPurchaseDate} style={styles.input} />
+              <DateField
+                testID="purchase-input"
+                value={purchaseDate}
+                onChange={setPurchaseDate}
+                placeholder="MM/DD/YYYY"
+              />
             </View>
             <View style={{ flex: 1 }}>
               <Text style={styles.label}>CONDITION</Text>
@@ -437,15 +498,19 @@ export default function ToolEdit() {
               <View style={styles.row2}>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.label}>NOTIFIED ON</Text>
-                  <TextInput testID="rep-notified" placeholder="YYYY-MM-DD" placeholderTextColor={theme.colors.textMuted}
-                    value={repairInfo.notified_at} style={styles.input}
-                    onChangeText={(v) => setRepairInfo({ ...repairInfo, notified_at: v })} />
+                  <DateField
+                    testID="rep-notified"
+                    value={repairInfo.notified_at}
+                    onChange={(v) => setRepairInfo({ ...repairInfo, notified_at: v })}
+                  />
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.label}>EXPECTED BACK</Text>
-                  <TextInput testID="rep-expected" placeholder="YYYY-MM-DD" placeholderTextColor={theme.colors.textMuted}
-                    value={repairInfo.expected_completion} style={styles.input}
-                    onChangeText={(v) => setRepairInfo({ ...repairInfo, expected_completion: v })} />
+                  <DateField
+                    testID="rep-expected"
+                    value={repairInfo.expected_completion}
+                    onChange={(v) => setRepairInfo({ ...repairInfo, expected_completion: v })}
+                  />
                 </View>
               </View>
               <Text style={styles.label}>NOTES</Text>
@@ -478,9 +543,11 @@ export default function ToolEdit() {
               <View style={styles.row2}>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.label}>START DATE</Text>
-                  <TextInput testID="war-start" placeholder="YYYY-MM-DD" placeholderTextColor={theme.colors.textMuted}
-                    value={warranty.start_date} style={styles.input}
-                    onChangeText={(v) => onWarrantyChange("start_date", v)} />
+                  <DateField
+                    testID="war-start"
+                    value={warranty.start_date}
+                    onChange={(v) => onWarrantyChange("start_date", v)}
+                  />
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.label}>LENGTH (months)</Text>
@@ -490,9 +557,11 @@ export default function ToolEdit() {
                 </View>
               </View>
               <Text style={styles.label}>EXPIRY DATE (auto)</Text>
-              <TextInput testID="war-expiry" placeholder="YYYY-MM-DD" placeholderTextColor={theme.colors.textMuted}
-                value={warranty.expiry_date} style={styles.input}
-                onChangeText={(v) => onWarrantyChange("expiry_date", v)} />
+              <DateField
+                testID="war-expiry"
+                value={warranty.expiry_date}
+                onChange={(v) => onWarrantyChange("expiry_date", v)}
+              />
               <Text style={styles.label}>TERMS / NOTES</Text>
               <TextInput testID="war-terms" placeholder="Coverage details..." placeholderTextColor={theme.colors.textMuted}
                 value={warranty.terms} style={[styles.input, { height: 70, textAlignVertical: "top" }]} multiline
@@ -544,11 +613,21 @@ export default function ToolEdit() {
       <Modal visible={showDealerPicker} transparent animationType="slide">
         <View style={styles.modalBg}>
           <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>SELECT DEALER</Text>
+            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+              <Text style={styles.modalTitle}>SELECT DEALER</Text>
+              <TouchableOpacity
+                testID="open-new-dealer-btn"
+                style={styles.newInlineBtn}
+                onPress={() => setShowNewDealer(true)}
+              >
+                <Ionicons name="add" size={16} color="#000" />
+                <Text style={styles.newInlineBtnText}>NEW</Text>
+              </TouchableOpacity>
+            </View>
             <ScrollView style={{ maxHeight: 300 }}>
               {dealers.length === 0 ? (
                 <Text style={{ color: theme.colors.textMuted, padding: 16 }}>
-                  No dealers yet. Add one in the Dealers tab.
+                  No dealers yet. Tap NEW above to add one.
                 </Text>
               ) : (
                 dealers.map((d) => (
@@ -568,6 +647,128 @@ export default function ToolEdit() {
           </View>
         </View>
       </Modal>
+
+      {/* Inline new dealer modal */}
+      <Modal visible={showNewDealer} transparent animationType="slide" onRequestClose={() => setShowNewDealer(false)}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          style={{ flex: 1 }}
+        >
+          <View style={styles.modalBg}>
+            <View style={[styles.modalCard, { maxHeight: "92%" }]}>
+              <Text style={styles.modalTitle}>NEW DEALER</Text>
+              <ScrollView keyboardShouldPersistTaps="handled" style={{ maxHeight: 460 }}>
+                <Text style={styles.label}>NAME *</Text>
+                <TextInput
+                  testID="new-dealer-name"
+                  placeholder="e.g. Snap-on Tools"
+                  placeholderTextColor={theme.colors.textMuted}
+                  value={newDealer.name}
+                  onChangeText={(v) => setNewDealer({ ...newDealer, name: v })}
+                  style={styles.input}
+                />
+                <Text style={styles.label}>PHONE</Text>
+                <TextInput
+                  testID="new-dealer-phone"
+                  placeholder="800-555-1234"
+                  placeholderTextColor={theme.colors.textMuted}
+                  value={newDealer.phone}
+                  onChangeText={(v) => setNewDealer({ ...newDealer, phone: v })}
+                  style={styles.input}
+                  keyboardType="phone-pad"
+                />
+                <Text style={styles.label}>WEBSITE</Text>
+                <TextInput
+                  testID="new-dealer-website"
+                  placeholder="https://..."
+                  placeholderTextColor={theme.colors.textMuted}
+                  value={newDealer.website}
+                  onChangeText={(v) => setNewDealer({ ...newDealer, website: v })}
+                  style={styles.input}
+                  autoCapitalize="none"
+                />
+                <View style={[styles.subSection, { marginTop: 16 }]}>
+                  <Text style={[styles.label, { marginTop: 0 }]}>AGENT NAME (optional)</Text>
+                  <TextInput
+                    testID="new-dealer-agent-name"
+                    placeholder="Sales rep / contact person"
+                    placeholderTextColor={theme.colors.textMuted}
+                    value={newDealer.agent_name}
+                    onChangeText={(v) => setNewDealer({ ...newDealer, agent_name: v })}
+                    style={styles.input}
+                  />
+                  <Text style={styles.label}>AGENT PHONE</Text>
+                  <TextInput
+                    testID="new-dealer-agent-phone"
+                    placeholder="800-555-1234"
+                    placeholderTextColor={theme.colors.textMuted}
+                    value={newDealer.agent_phone}
+                    onChangeText={(v) => setNewDealer({ ...newDealer, agent_phone: v })}
+                    style={styles.input}
+                    keyboardType="phone-pad"
+                  />
+                  <Text style={styles.label}>AGENT EMAIL</Text>
+                  <TextInput
+                    testID="new-dealer-agent-email"
+                    placeholder="agent@example.com"
+                    placeholderTextColor={theme.colors.textMuted}
+                    value={newDealer.agent_email}
+                    onChangeText={(v) => setNewDealer({ ...newDealer, agent_email: v })}
+                    style={styles.input}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                  />
+                </View>
+              </ScrollView>
+              <View style={{ flexDirection: "row", gap: 10, marginTop: 12 }}>
+                <TouchableOpacity
+                  style={styles.btnGhost}
+                  onPress={() => setShowNewDealer(false)}
+                  disabled={savingDealer}
+                >
+                  <Text style={styles.btnGhostText}>CANCEL</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  testID="save-new-dealer-btn"
+                  style={[styles.btn, { backgroundColor: theme.colors.accent }]}
+                  onPress={saveNewDealer}
+                  disabled={savingDealer}
+                >
+                  {savingDealer ? (
+                    <ActivityIndicator color="#000" />
+                  ) : (
+                    <Text style={styles.btnText}>SAVE DEALER</Text>
+                  )}
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
+
+      {/* Sticky bottom Save Bar */}
+      <View style={styles.bottomBar}>
+        <TouchableOpacity
+          testID="cancel-bottom-btn"
+          style={styles.btnGhost}
+          onPress={() => router.back()}
+          disabled={saving}
+        >
+          <Text style={styles.btnGhostText}>CANCEL</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          testID="save-tool-bottom-btn"
+          style={[styles.btn, { flex: 2, backgroundColor: theme.colors.accent }]}
+          onPress={save}
+          disabled={saving}
+        >
+          {saving ? (
+            <ActivityIndicator color="#000" />
+          ) : (
+            <Text style={styles.btnText}>{isEdit ? "SAVE CHANGES" : "CREATE TOOL"}</Text>
+          )}
+        </TouchableOpacity>
+      </View>
     </SafeAreaView>
   );
 }
@@ -664,4 +865,33 @@ const styles = StyleSheet.create({
     alignItems: "center", justifyContent: "center", borderRadius: 4,
   },
   btnGhostText: { color: theme.colors.textPrimary, fontWeight: "800", letterSpacing: 2, fontSize: 14 },
+  newInlineBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: theme.colors.accent,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: theme.radii.sm,
+  },
+  newInlineBtnText: {
+    color: "#000",
+    fontWeight: "900",
+    letterSpacing: 1.5,
+    fontSize: 12,
+  },
+  bottomBar: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    flexDirection: "row",
+    gap: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: theme.colors.bg,
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.border,
+    ...(Platform.OS === "ios" ? { paddingBottom: 24 } : {}),
+  },
 });

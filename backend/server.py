@@ -605,6 +605,45 @@ async def list_borrowers():
     return [Borrower(**i) for i in items]
 
 
+@api_router.put("/borrowers/{borrower_id}", response_model=Borrower)
+async def update_borrower(borrower_id: str, payload: BorrowerCreate):
+    existing = await db.borrowers.find_one({"id": borrower_id}, {"_id": 0})
+    if not existing:
+        raise HTTPException(404, "Borrower not found")
+    new_name = payload.name.strip()
+    new_contact = (payload.contact or "").strip()
+    old_name = existing.get("name", "")
+    update_doc = {"name": new_name, "contact": new_contact}
+    await db.borrowers.update_one({"id": borrower_id}, {"$set": update_doc})
+
+    # Propagate name change across tools' checkout history & current_checkout
+    if new_name and new_name != old_name:
+        # Update by borrower_id (preferred) — covers any record referencing this borrower
+        await db.tools.update_many(
+            {"current_checkout.borrower_id": borrower_id},
+            {"$set": {"current_checkout.borrower_name": new_name}},
+        )
+        await db.tools.update_many(
+            {"checkout_history.borrower_id": borrower_id},
+            {"$set": {"checkout_history.$[el].borrower_name": new_name}},
+            array_filters=[{"el.borrower_id": borrower_id}],
+        )
+        # Also update legacy records that match by name (case-insensitive) but had no id
+        rx = {"$regex": f"^{re.escape(old_name)}$", "$options": "i"}
+        await db.tools.update_many(
+            {"current_checkout.borrower_name": rx, "current_checkout.borrower_id": {"$in": [None, ""]}},
+            {"$set": {"current_checkout.borrower_name": new_name}},
+        )
+        await db.tools.update_many(
+            {"checkout_history.borrower_name": rx},
+            {"$set": {"checkout_history.$[el].borrower_name": new_name}},
+            array_filters=[{"el.borrower_name": rx, "$or": [{"el.borrower_id": {"$in": [None, ""]}}, {"el.borrower_id": borrower_id}]}],
+        )
+
+    updated = await db.borrowers.find_one({"id": borrower_id}, {"_id": 0})
+    return Borrower(**updated)
+
+
 @api_router.delete("/borrowers/{borrower_id}")
 async def delete_borrower(borrower_id: str):
     await db.borrowers.delete_one({"id": borrower_id})

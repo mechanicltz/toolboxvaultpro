@@ -1,16 +1,24 @@
 import React, { useState } from "react";
-import { View, Text, TouchableOpacity, StyleSheet, Platform, Modal, TextInput } from "react-native";
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  Platform,
+  Modal,
+} from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { theme } from "./theme";
-import { formatDateUS, parseDateUS, todayISO } from "./dateUtil";
+import { formatDateUS, todayISO } from "./dateUtil";
 
 /**
  * Cross-platform date field.
- * - Web: uses native <input type="date"> for the scroll-wheel/calendar UI.
- * - Native: tap the field to open a centered date picker modal (3 wheels: month/day/year).
+ * - Web: uses native <input type="date"> for the OS calendar/scrollwheel UI.
+ * - Native: tap the field to open a centered modal with a spinner-style
+ *   DateTimePicker (scroll wheels for month/day/year on iOS).
  *
- * Stores YYYY-MM-DD ISO under the hood. Displays MM/DD/YYYY.
- * If `value` is empty, defaults the picker to today on first interaction.
+ * Stores values as YYYY-MM-DD ISO under the hood, displays as MM/DD/YYYY.
+ * Defaults the picker to today on first interaction when value is empty.
  */
 export function DateField({
   value,
@@ -27,7 +35,6 @@ export function DateField({
   const [pickerOpen, setPickerOpen] = useState(false);
 
   if (Platform.OS === "web") {
-    // Use native HTML input to get OS calendar/scrollwheel
     return (
       <View style={styles.input}>
         {/* @ts-ignore — using HTML element on web */}
@@ -41,18 +48,23 @@ export function DateField({
             border: "none",
             outline: "none",
             color: theme.colors.textPrimary,
-            fontSize: 14,
+            fontSize: 15,
             fontFamily: "inherit",
             width: "100%",
             colorScheme: "dark",
+            paddingTop: 2,
+            paddingBottom: 2,
           }}
         />
+        {value ? (
+          <TouchableOpacity onPress={() => onChange("")} hitSlop={8}>
+            <Ionicons name="close-circle" size={18} color={theme.colors.textMuted} />
+          </TouchableOpacity>
+        ) : null}
       </View>
     );
   }
 
-  // Native platform: simple modal picker (month/day/year wheels via plain TextInputs).
-  // Works without an extra dependency. Tapping opens the picker.
   return (
     <>
       <TouchableOpacity
@@ -61,10 +73,22 @@ export function DateField({
         onPress={() => setPickerOpen(true)}
         activeOpacity={0.7}
       >
-        <Text style={{ color: display ? theme.colors.textPrimary : theme.colors.textMuted, fontSize: 14 }}>
+        <Text
+          style={{
+            color: display ? theme.colors.textPrimary : theme.colors.textMuted,
+            fontSize: 15,
+            flex: 1,
+          }}
+        >
           {display || placeholder || "MM/DD/YYYY"}
         </Text>
-        <Ionicons name="calendar-outline" size={18} color={theme.colors.textSecondary} />
+        {value ? (
+          <TouchableOpacity onPress={() => onChange("")} hitSlop={8}>
+            <Ionicons name="close-circle" size={18} color={theme.colors.textMuted} />
+          </TouchableOpacity>
+        ) : (
+          <Ionicons name="calendar-outline" size={18} color={theme.colors.textSecondary} />
+        )}
       </TouchableOpacity>
       <NativePickerModal
         visible={pickerOpen}
@@ -90,33 +114,67 @@ function NativePickerModal({
   onCancel: () => void;
   onConfirm: (iso: string) => void;
 }) {
-  const us = formatDateUS(initial);
-  const [v, setV] = useState(us);
+  // Lazy import to avoid web bundle issues
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const DateTimePicker = require("@react-native-community/datetimepicker").default;
+
+  const initDate = (() => {
+    const d = new Date(initial);
+    if (isNaN(d.getTime())) return new Date();
+    return d;
+  })();
+  const [picked, setPicked] = useState<Date>(initDate);
+
+  const toISO = (d: Date) => {
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const dd = String(d.getDate()).padStart(2, "0");
+    return `${yyyy}-${mm}-${dd}`;
+  };
+
+  // Android shows a modal natively — so we render the picker inline only when visible
+  if (Platform.OS === "android") {
+    if (!visible) return null;
+    return (
+      <DateTimePicker
+        value={picked}
+        mode="date"
+        display="spinner"
+        onChange={(_event: any, date?: Date) => {
+          if (date) {
+            onConfirm(toISO(date));
+          } else {
+            onCancel();
+          }
+        }}
+      />
+    );
+  }
+
+  // iOS — wrap in our own themed modal
   return (
     <Modal visible={visible} transparent animationType="fade">
       <View style={styles.modalBg}>
         <View style={styles.modalCard}>
           <Text style={styles.modalTitle}>SELECT DATE</Text>
-          <TextInput
-            style={styles.dateInput}
-            value={v}
-            onChangeText={setV}
-            placeholder="MM/DD/YYYY"
-            placeholderTextColor={theme.colors.textMuted}
-            keyboardType="numeric"
-            autoFocus
+          <DateTimePicker
+            value={picked}
+            mode="date"
+            display="spinner"
+            themeVariant="dark"
+            textColor={theme.colors.textPrimary}
+            onChange={(_event: any, date?: Date) => {
+              if (date) setPicked(date);
+            }}
+            style={{ alignSelf: "stretch" }}
           />
-          <View style={{ flexDirection: "row", gap: 10 }}>
+          <View style={{ flexDirection: "row", gap: 10, marginTop: 8 }}>
             <TouchableOpacity style={styles.btnGhost} onPress={onCancel}>
               <Text style={styles.btnGhostText}>CANCEL</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.btn}
-              onPress={() => {
-                const iso = parseDateUS(v);
-                if (/^\d{4}-\d{2}-\d{2}$/.test(iso)) onConfirm(iso);
-                else onCancel();
-              }}
+              onPress={() => onConfirm(toISO(picked))}
             >
               <Text style={styles.btnText}>OK</Text>
             </TouchableOpacity>
@@ -129,18 +187,24 @@ function NativePickerModal({
 
 const styles = StyleSheet.create({
   input: {
-    backgroundColor: theme.colors.surfaceAlt,
+    backgroundColor: theme.colors.bgSecondary,
     borderWidth: 1,
     borderColor: theme.colors.border,
-    paddingHorizontal: 12,
+    paddingHorizontal: 14,
     paddingVertical: 12,
-    borderRadius: theme.radii.sm,
+    borderRadius: 4,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    minHeight: 44,
+    minHeight: 48,
+    gap: 8,
   },
-  modalBg: { flex: 1, backgroundColor: "rgba(0,0,0,0.7)", justifyContent: "center", padding: 24 },
+  modalBg: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.7)",
+    justifyContent: "center",
+    padding: 24,
+  },
   modalCard: {
     backgroundColor: theme.colors.bgSecondary,
     padding: 20,
@@ -155,25 +219,27 @@ const styles = StyleSheet.create({
     letterSpacing: 2,
     marginBottom: 12,
   },
-  dateInput: {
-    backgroundColor: theme.colors.surfaceAlt,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    color: theme.colors.textPrimary,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    borderRadius: theme.radii.sm,
-    fontSize: 16,
-    marginBottom: 14,
-  },
   btn: {
-    flex: 1, height: 44, alignItems: "center", justifyContent: "center",
-    backgroundColor: theme.colors.accent, borderRadius: theme.radii.sm,
+    flex: 1,
+    height: 44,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: theme.colors.accent,
+    borderRadius: theme.radii.sm,
   },
   btnText: { color: "#000", fontWeight: "800", letterSpacing: 2 },
   btnGhost: {
-    flex: 1, height: 44, alignItems: "center", justifyContent: "center",
-    borderWidth: 1, borderColor: theme.colors.border, borderRadius: theme.radii.sm,
+    flex: 1,
+    height: 44,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: theme.radii.sm,
   },
-  btnGhostText: { color: theme.colors.textPrimary, fontWeight: "800", letterSpacing: 2 },
+  btnGhostText: {
+    color: theme.colors.textPrimary,
+    fontWeight: "800",
+    letterSpacing: 2,
+  },
 });
