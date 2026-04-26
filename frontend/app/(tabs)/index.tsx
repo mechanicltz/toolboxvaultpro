@@ -109,38 +109,40 @@ export default function InventoryScreen() {
         </View>
       </View>
 
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.filterRow}
-      >
-        {[
-          { k: "all", label: "ALL" },
-          { k: "broken", label: "🔧 BROKEN" },
-          { k: "available", label: "AVAILABLE" },
-          { k: "out", label: "CHECKED OUT" },
-          { k: "consumables", label: "CONSUMABLES" },
-        ].map((f) => (
-          <TouchableOpacity
-            key={f.k}
-            testID={`filter-${f.k}`}
-            onPress={() => setFilter(f.k as any)}
-            style={[
-              styles.chip,
-              filter === f.k && styles.chipActive,
-              f.k === "broken" && filter === f.k && { backgroundColor: theme.colors.danger, borderColor: theme.colors.danger },
-            ]}
-          >
-            <Text style={[
-              styles.chipText,
-              filter === f.k && styles.chipTextActive,
-              f.k === "broken" && filter === f.k && { color: "#fff" },
-            ]}>
-              {f.label}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
+      <View style={styles.filterWrap}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.filterRow}
+        >
+          {[
+            { k: "all", label: "ALL" },
+            { k: "broken", label: "🔧 BROKEN" },
+            { k: "available", label: "AVAILABLE" },
+            { k: "out", label: "CHECKED OUT" },
+            { k: "consumables", label: "CONSUMABLES" },
+          ].map((f) => (
+            <TouchableOpacity
+              key={f.k}
+              testID={`filter-${f.k}`}
+              onPress={() => setFilter(f.k as any)}
+              style={[
+                styles.chip,
+                filter === f.k && styles.chipActive,
+                f.k === "broken" && filter === f.k && { backgroundColor: theme.colors.danger, borderColor: theme.colors.danger },
+              ]}
+            >
+              <Text style={[
+                styles.chipText,
+                filter === f.k && styles.chipTextActive,
+                f.k === "broken" && filter === f.k && { color: "#fff" },
+              ]}>
+                {f.label}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      </View>
 
       {prefs.show_details_summary && agg && (
         <SummaryHeader agg={agg} showPrices={prefs.show_prices} />
@@ -285,7 +287,8 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   searchInput: { flex: 1, color: "#fff", fontSize: 15 },
-  filterRow: { paddingHorizontal: 20, paddingVertical: 8, gap: 8 },
+  filterWrap: { maxHeight: 48 },
+  filterRow: { paddingHorizontal: 20, paddingVertical: 8, gap: 8, alignItems: "center" },
   chip: {
     borderWidth: 1,
     borderColor: theme.colors.border,
