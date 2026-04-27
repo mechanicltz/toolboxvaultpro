@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useState, useMemo } from "react";
 import {
   View,
   Text,
@@ -19,14 +19,30 @@ import { usePrefs } from "../../src/prefs";
 import { confirm } from "../../src/confirm";
 import { ROUTE_FREQUENCIES, DAY_NAMES, routeLabel, nextRouteText } from "../../src/route";
 import { getCached, setCached } from "../../src/cache";
+import { useAuth } from "../../src/AuthContext";
+import { useUpgradePrompt } from "../../src/UpgradePrompt";
+import { FREE_LIMITS, isPremium } from "../../src/subscription";
 
 export default function DealersScreen() {
   const router = useRouter();
   const { prefs } = usePrefs();
+  const { user } = useAuth();
+  const upgrade = useUpgradePrompt();
+  const tier = user?.subscription?.tier || "free";
   const [dealers, setDealers] = useState<any[]>(() => getCached("dealers", []));
   const [tools, setTools] = useState<any[]>(() => getCached("tools", []));
   const [showAdd, setShowAdd] = useState(false);
   const [form, setForm] = useState<any>({ name: "", phone: "", website: "", address: "", notes: "", route_frequency: "N/A", route_day_of_week: "", route_anchor_date: "" });
+
+  const lockedDealerIds = useMemo(() => {
+    if (isPremium(tier)) return new Set<string>();
+    const sorted = [...dealers].sort((a, b) =>
+      (a.created_at || "").localeCompare(b.created_at || "")
+    );
+    return new Set(sorted.slice(FREE_LIMITS.dealers).map((d) => d.id));
+  }, [dealers, tier]);
+
+  const atDealerLimit = !isPremium(tier) && dealers.length >= FREE_LIMITS.dealers;
 
   const load = useCallback(async () => {
     const [d, t] = await Promise.all([api.listDealers(), api.listTools()]);
@@ -85,11 +101,23 @@ export default function DealersScreen() {
           const s = summaryFor(item.id);
           const cur =
             (item.agents || []).find((a: any) => a.id === item.current_agent_id) || null;
+          const isLocked = lockedDealerIds.has(item.id);
           return (
             <TouchableOpacity
               testID={`dealer-card-${item.id}`}
-              style={styles.row}
-              onPress={() => router.push(`/dealer/${item.id}`)}
+              style={[styles.row, isLocked && styles.rowLocked]}
+              onPress={() => {
+                if (isLocked) {
+                  upgrade.show({
+                    title: "Dealer Locked",
+                    message:
+                      "This dealer is beyond the Free plan limit (1 dealer). Upgrade to access all your dealers.",
+                  });
+                  return;
+                }
+                router.push(`/dealer/${item.id}`);
+              }}
+              activeOpacity={isLocked ? 1 : 0.7}
             >
               <View style={styles.avatar}>
                 <Text style={styles.avatarText}>
@@ -128,10 +156,19 @@ export default function DealersScreen() {
 
       <TouchableOpacity
         testID="add-dealer-fab"
-        style={styles.fab}
-        onPress={() => setShowAdd(true)}
+        style={[styles.fab, atDealerLimit && styles.fabLocked]}
+        onPress={() => {
+          if (atDealerLimit) {
+            upgrade.show({
+              title: "Dealer Limit Reached",
+              message: `Free plan allows up to ${FREE_LIMITS.dealers} dealer. Upgrade for unlimited dealers and authorized agents.`,
+            });
+            return;
+          }
+          setShowAdd(true);
+        }}
       >
-        <Ionicons name="add" size={28} color="#000" />
+        <Ionicons name={atDealerLimit ? "lock-closed" : "add"} size={atDealerLimit ? 20 : 28} color="#000" />
       </TouchableOpacity>
 
       <Modal visible={showAdd} transparent animationType="slide">
@@ -255,6 +292,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     gap: 12,
   },
+  rowLocked: { opacity: 0.45 },
   avatar: {
     width: 48,
     height: 48,
@@ -314,6 +352,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     borderRadius: 4,
   },
+  fabLocked: { backgroundColor: theme.colors.warning },
   modalBg: { flex: 1, backgroundColor: "rgba(0,0,0,0.7)", justifyContent: "flex-end" },
   modalCard: {
     backgroundColor: theme.colors.bgSecondary,

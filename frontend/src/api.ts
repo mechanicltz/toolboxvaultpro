@@ -1,15 +1,70 @@
+import AsyncStorage from "@react-native-async-storage/async-storage";
+
 const BASE = process.env.EXPO_PUBLIC_BACKEND_URL;
+const TOKEN_KEY = "tt.auth.token";
+
+let memToken: string | null = null;
+
+export async function getToken(): Promise<string | null> {
+  if (memToken) return memToken;
+  try {
+    const t = await AsyncStorage.getItem(TOKEN_KEY);
+    if (t) memToken = t;
+    return t;
+  } catch {
+    return null;
+  }
+}
+
+export async function setToken(t: string | null) {
+  memToken = t;
+  try {
+    if (t) await AsyncStorage.setItem(TOKEN_KEY, t);
+    else await AsyncStorage.removeItem(TOKEN_KEY);
+  } catch {}
+}
+
+let onUnauthorized: (() => void) | null = null;
+export function setUnauthorizedHandler(fn: () => void) {
+  onUnauthorized = fn;
+}
+
+export class ApiError extends Error {
+  status: number;
+  detail: string;
+  constructor(status: number, detail: string) {
+    super(detail || `Request failed: ${status}`);
+    this.status = status;
+    this.detail = detail;
+  }
+}
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
-  const res = await fetch(`${BASE}/api${path}`, {
-    ...options,
-    headers: { "Content-Type": "application/json", ...(options.headers || {}) },
-  });
+  const token = await getToken();
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    ...((options.headers as Record<string, string>) || {}),
+  };
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+  const res = await fetch(`${BASE}/api${path}`, { ...options, headers });
   if (!res.ok) {
-    const text = await res.text();
-    throw new Error(text || `Request failed: ${res.status}`);
+    let detail = "";
+    try {
+      const t = await res.text();
+      try {
+        const j = JSON.parse(t);
+        detail = j.detail || t;
+      } catch {
+        detail = t;
+      }
+    } catch {}
+    if (res.status === 401 && onUnauthorized) onUnauthorized();
+    throw new ApiError(res.status, detail);
   }
-  return res.json();
+  // Some endpoints return no body
+  const text = await res.text();
+  if (!text) return {} as T;
+  return JSON.parse(text);
 }
 
 const qs = (params?: Record<string, any>) => {
@@ -23,6 +78,21 @@ const qs = (params?: Record<string, any>) => {
 };
 
 export const api = {
+  // Auth
+  register: (data: { email: string; password: string; name?: string }) =>
+    request<any>(`/auth/register`, { method: "POST", body: JSON.stringify(data) }),
+  login: (data: { email: string; password: string }) =>
+    request<any>(`/auth/login`, { method: "POST", body: JSON.stringify(data) }),
+  me: () => request<any>(`/auth/me`),
+  updateMe: (data: any) => request<any>(`/auth/me`, { method: "PUT", body: JSON.stringify(data) }),
+
+  // Subscription
+  getSubscription: () => request<any>(`/subscription`),
+  subscribe: (tier: string) =>
+    request<any>(`/subscription/subscribe`, { method: "POST", body: JSON.stringify({ tier }) }),
+  cancelSubscription: () => request<any>(`/subscription/cancel`, { method: "POST" }),
+  reactivateSubscription: () => request<any>(`/subscription/reactivate`, { method: "POST" }),
+
   // Tools
   listTools: (params?: any) => request<any[]>(`/tools${qs(params)}`),
   getTool: (id: string) => request<any>(`/tools/${id}`),

@@ -275,11 +275,28 @@ metadata:
   run_ui: false
 
 test_plan:
-  current_focus:
-    - "Claims history fix — warranty_claims integration in claims tab + dealer-claims drilldown"
+  current_focus: []
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
+
+backend_subscription:
+  - task: "Auth + Subscription + Per-user Data Isolation + Free-tier Limits"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py + /app/backend/auth.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "PASS — 75/75 checks via /app/backend_test_subscription.py against EXPO_PUBLIC_BACKEND_URL/api. Covers all 5 priority areas of the review request:
+          (1) AUTH FLOW: (a) POST /auth/register with new email returns 200 with token+user and user.subscription.tier=='free'. (b) Same-email re-register -> 400. (c) password<6 -> 400. (d) login wrong password -> 401. (e) login subtest@example.com/password123 -> 200 with token+user. (f) GET /auth/me w/o Authorization -> 401. (g) GET /auth/me w/ valid token -> 200 with email matching. (h) GET /tools w/o Authorization -> 401. (i) GET /tools w/ valid token -> 200 list (subtest has 6 legacy tools).
+          (2) PER-USER DATA ISOLATION (CRITICAL — DBProxy + ContextVar scoping verified): (a) Registered user2_<ts>@test.com -> 200. (b) GET /tools as user2 -> EMPTY array (cannot see subtest's tools). (c) GET /dealers as user2 -> EMPTY. (d) POST /tools as user2 -> 200 + GET returns length 1. (e) Login as subtest -> GET /tools is unchanged (count==legacy 6) and does NOT include user2's new tool id. Per-user scoping is fully working — no cross-tenant leakage observed.
+          (3) SUBSCRIPTION ENDPOINTS: (a) GET /subscription -> tier_prices={free:0, monthly:9.99, yearly:100, lifetime:499}, free_limits={tools:10, dealers:1, agents_per_dealer:1}, counts.tools/dealers numeric, plus subscription/is_premium/tiers keys. (b) POST /subscribe monthly -> tier='monthly', status='active', auto_renew=true, expires_at ~30 days out (verified 28-31 day window). (c) yearly -> ~365 days (363-366 window). (d) lifetime -> expires_at=null, auto_renew=false. (e) invalid tier -> 400. (f) cancel on lifetime -> 400. (g) subscribe monthly then cancel -> status='cancelled', auto_renew=false, tier still 'monthly'. (h) reactivate -> status='active', auto_renew=true. (i) subscribe free -> tier='free'. (j) cancel on free -> 400.
+          (4) FREE-TIER LIMITS (HTTP 402): Used a fresh user freelimits_<ts>@test.com confirmed on free tier. (a) Created 10 tools sequentially via POST /tools — all 200. (b) 11th POST /tools -> 402 with detail containing 'limit'/'free' (\"Free tier is limited to 10 inventory items. Upgrade for unlimited tools.\"). (c) After POST /subscription/subscribe {tier:monthly}, 11th tool succeeds with 200. (d) Downgrade to free, next POST /tools -> 402 again. (e) 1st POST /dealers -> 200. (f) 2nd POST /dealers -> 402. (g) 1st POST /dealers/{id}/agents -> 200. (h) 2nd agent -> 402. (i) Subscribe lifetime; 2nd dealer + 2nd agent both succeed.
+          (5) SANITY: GET /stats, /aggregate, /warranty-claims/summary, /personal-profile all 200 with valid JSON for the authenticated subtest user. Cleanup: user2's test tool deleted, subtest restored to free tier. No cross-user data leakage; auth middleware correctly enforces 401 on all /api/* except /api/auth/* and /api/health (verified). All 75 individual assertions pass; backend is production-ready for this iteration."
 
 backend_recent:
   - task: "GET /api/warranty-claims/{claim_id} (single) — for /claim/[id] detail screen"
@@ -452,3 +469,161 @@ agent_communication:
               "
   - agent: "main"
     message: "7-point UI/UX checklist completed in this session: (1) Global BottomBar (HOME/INVENTORY/DEALERS/CLAIMS/MORE) renders on every screen including stack screens; verified visually on inventory, dealers, claims, dealer detail, tool detail. (2) Email/SMS template in tool/[id].tsx and dealer-claims/[id].tsx now uses exact requested wording: 'Hello [dealer], I have a tool that needs repair / warranty. Tool: ... Serial: ... Purchased: ... [photo line if any] Please let me know when I can expect a repair/replacement. Thank you.' (3) Missing-contact prompt: instead of silent Alert, both screens now use confirm() and offer 'Open Dealer' to navigate to /dealer/{id} so user can add the missing email/phone. (4) Removed 'WARRANTY CLAIMS' chip and 'X open warranty claim' banner from inventory.tsx top row — bottom CLAIMS tab is sufficient. (5) Maintenance input UI verified: tool detail → MAINTENANCE section → SCHEDULE button → opens NEW MAINTENANCE SCHEDULE modal with TYPE chips, INTERVAL, LAST DONE date, NOTES. (6) Dealer screen restructured: removed 2-letter avatar; AGENTS section moved to top with bold/white sectionLabelStrong; TOOLS PURCHASED FROM [DEALER] right under agents with TOTAL SPENT pill; CONTACT section after; BalanceSection moved to bottom. (7) Claims history bug fixed: claims.tsx now fetches /api/warranty-claims/summary alongside live tools and uses summaryEntry.completed for the 'X DONE' count per dealer. Verified visually: Cornwell shows '0 OPEN, 1 DONE'. dealer-claims/[id].tsx now also fetches /api/warranty-claims?dealer_id=X&archived=true and renders archived claims as pseudo-tools in the COMPLETED tab. Awaiting user feedback / approval before next phase (QR labels, CSV import, kits)."
+
+  - agent: "main"
+    message: "SUBSCRIPTION SYSTEM ADDED. Major feature additions to the app:
+
+      1. AUTH SYSTEM (NEW): JWT auth with bcrypt password hashing.
+         - Backend: /app/backend/auth.py + auth-related endpoints in server.py.
+         - All /api/* routes (except /api/auth/*, /api/, /api/health) now require Authorization: Bearer <token>.
+         - Endpoints: POST /api/auth/register, POST /api/auth/login, GET/PUT /api/auth/me.
+         - Frontend: AuthContext (/app/frontend/src/AuthContext.tsx), login screen (/app/frontend/app/login.tsx).
+         - On registration, the FIRST user 'claims' all legacy unowned data (one-time migration).
+
+      2. PER-USER DATA SCOPING: Implemented via DBProxy + ContextVar.
+         - Each Motor collection access through `db.X` is auto-scoped to current_user.id by adding owner_id filter.
+         - All inserts auto-set owner_id = current user.
+         - Aggregate pipelines auto-prepend a $match stage on owner_id.
+         - Personal_profile schema changed: now per-user singleton via id='self' + owner_id (no longer global _id='self').
+
+      3. SUBSCRIPTION SYSTEM (MOCK PAYMENTS): 4 tiers — free, monthly ($9.99/mo), yearly ($100/yr), lifetime ($499 once).
+         - Backend endpoints: GET /api/subscription, POST /api/subscription/subscribe, POST /api/subscription/cancel, POST /api/subscription/reactivate.
+         - Frontend: /app/frontend/app/subscription.tsx with beautiful tier cards, savings badges (Save \$19.88/yr, Save hundreds over 5 years), MOST POPULAR/BEST VALUE banners.
+         - Subscription menu added at top of MORE tab (under new ACCOUNT section).
+         - Logout button added under SESSION section in MORE tab.
+         - Auto-renewal handled in evaluate_subscription_status() — if a paid sub expires and is cancelled, downgrade to free.
+
+      4. FREE-TIER LIMITS ENFORCED: 10 tools, 1 dealer, 1 agent per dealer.
+         - Backend: HTTP 402 returned when free user tries to exceed limits via _ensure_under_limit() in create_tool, create_dealer, add_agent, convert_wishlist_to_tool.
+         - Frontend: FAB shows lock icon + amber color when at limit; tap shows UpgradePrompt modal.
+         - Items beyond limits get GREYED OUT (45% opacity) on inventory and dealers list — visible but not clickable.
+         - Tap on locked item → UpgradePrompt modal with 4 perks + VIEW PLANS CTA → routes to /subscription.
+
+      5. NEW FILES:
+         - /app/backend/auth.py (auth utilities, models, JWT, password hashing, subscription helpers)
+         - /app/frontend/src/AuthContext.tsx
+         - /app/frontend/src/UpgradePrompt.tsx (global modal context)
+         - /app/frontend/src/subscription.ts (tier constants, FREE_LIMITS, savings math)
+         - /app/frontend/app/login.tsx
+         - /app/frontend/app/subscription.tsx
+
+      6. MODIFIED FILES:
+         - /app/backend/server.py (massive: auth middleware, DBProxy, scoped collections, subscription endpoints, _ensure_under_limit on create_tool/dealer/agent/wishlist convert)
+         - /app/frontend/src/api.ts (now attaches JWT token from AsyncStorage; ApiError class with .status/.detail; auto 401 → logout)
+         - /app/frontend/app/_layout.tsx (AuthProvider wrap, AuthGate, UpgradeProvider)
+         - /app/frontend/app/(tabs)/more.tsx (Subscription row, account email, logout)
+         - /app/frontend/app/(tabs)/inventory.tsx (lockedToolIds memo, locked-row UI, FAB lock state, upgrade prompt on tap)
+         - /app/frontend/app/(tabs)/dealers.tsx (lockedDealerIds, locked card style, FAB lock state, upgrade prompt)
+         - /app/frontend/app/dealer/[id].tsx (atAgentLimit guard on add agent button + 402 catch)
+
+      Tested manually via screenshots: ✓ login flow, ✓ register, ✓ MORE menu shows subscription with current tier, ✓ subscription page with all 4 tiers/savings/badges, ✓ downgrade confirm modal, ✓ free-tier locked dealers visually greyed out, ✓ tap on locked dealer shows UpgradePrompt modal correctly. Backend manually tested via httpx: ✓ 401 without token, ✓ register, ✓ /api/subscription returns correct tier+counts+free_limits, ✓ /api/subscription/subscribe changes tier.
+
+      Need backend testing for: complete auth flow + tier limit enforcement + subscription state transitions + per-user data isolation. Use credentials in /app/memory/test_credentials.md."
+  - agent: "testing"
+    message: "Auth + Subscription + Per-User Isolation + Free-Tier Limits backend tested via /app/backend_test_subscription.py — 75/75 PASS, 0 FAIL. Full coverage of all 5 priority areas: AUTH FLOW (register/login/me/protected routes returning 401 without auth and 200 with valid Bearer token; password<6 -> 400; duplicate email -> 400; wrong password -> 401), PER-USER DATA ISOLATION (user2 sees EMPTY tools/dealers; user2's POSTed tool is invisible to subtest@example.com; subtest tool count unchanged at 6 legacy items — DBProxy/ContextVar scoping is working correctly with NO cross-tenant leakage), SUBSCRIPTION ENDPOINTS (tier_prices/free_limits constants exact, monthly ~30d, yearly ~365d, lifetime expires_at=null/auto_renew=false, invalid tier -> 400, cancel-on-lifetime -> 400, cancel-on-free -> 400, cancel/reactivate state transitions correct, downgrade-to-free works), FREE TIER LIMITS HTTP 402 (10 tools succeed, 11th -> 402; subscribe monthly unlocks 11th; downgrade to free re-blocks; 1st dealer succeeds, 2nd -> 402; 1st agent succeeds, 2nd -> 402; subscribing to lifetime unlocks both), and SANITY (existing /stats, /aggregate, /warranty-claims/summary, /personal-profile all 200 with valid JSON for the authenticated user). Test artifacts cleaned up (user2's test tool deleted; subtest restored to free tier). The auth middleware correctly enforces the public-paths whitelist (/api/auth/*, /api/, /api/health). Backend is production-ready — main agent can summarise and finish.
+
+  - agent: "main"
+    task: "Subscription Tiers + Auth + Free Limits"
+    file: "/app/backend/server.py, /app/backend/auth.py, /app/frontend/app/subscription.tsx, /app/frontend/app/login.tsx, /app/frontend/src/AuthContext.tsx"
+
+backend:
+  - task: "Auth System (register, login, JWT, /me)"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/auth.py, /app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+        - working: "NA"
+          agent: "main"
+          comment: "Implemented JWT auth with bcrypt password hashing. POST /api/auth/register, POST /api/auth/login, GET/PUT /api/auth/me. 90-day token expiry. Auth middleware on /api/* paths (except /api/auth/*, /api/, /api/health) returns 401 if missing/invalid token. Manually verified: register works, login works, 401 returned without token, 200 with token."
+
+  - task: "Per-user data scoping via DBProxy + ContextVar"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+        - working: "NA"
+          agent: "main"
+          comment: "DBProxy wraps motor collections; auto-injects owner_id filter on find/find_one/update/delete/aggregate, auto-sets owner_id on insert. ContextVar populated from JWT in middleware. First-user registration claims all legacy data (owner_id None → first user). Personal_profile schema migrated to per-user (id='self' + owner_id)."
+
+  - task: "Subscription endpoints (mock payments)"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/server.py, /app/backend/auth.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+        - working: "NA"
+          agent: "main"
+          comment: "GET /api/subscription returns subscription + counts + free_limits + tier_prices. POST /api/subscription/subscribe with body {'tier': 'monthly|yearly|lifetime'} switches tier (mock — no real payment). POST /api/subscription/cancel sets auto_renew=false (active until expires_at). POST /api/subscription/reactivate re-enables auto_renew. Lifetime cannot be cancelled. evaluate_subscription_status() auto-downgrades expired+cancelled paid subs to free."
+
+  - task: "Free tier limits enforcement (HTTP 402)"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+        - working: "NA"
+          agent: "main"
+          comment: "_ensure_under_limit() called from POST /api/tools, POST /api/dealers, POST /api/dealers/{id}/agents, POST /api/wishlist/{id}/convert. Returns HTTP 402 with descriptive message when free user is at limit (10 tools, 1 dealer, 1 agent per dealer). Premium tiers (monthly/yearly/lifetime) bypass via is_premium_tier()."
+
+frontend:
+  - task: "Auth UI (login/register screen + AuthGate)"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/app/login.tsx, /app/frontend/app/_layout.tsx, /app/frontend/src/AuthContext.tsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: "NA"
+          agent: "main"
+          comment: "Login/Register tabs in single screen. Email + password (with show/hide eye icon). Token stored in AsyncStorage. AuthGate redirects unauthenticated users to /login and authenticated users away from /login. Logout clears token + cache. Verified visually: login flow works, dashboard loads after login, MORE tab shows email + sign out."
+
+  - task: "Subscription screen with tier cards + savings"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/app/subscription.tsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: "NA"
+          agent: "main"
+          comment: "4 tier cards: Free (Up to 10 items, 1 dealer, 1 agent), Monthly Pro (\$9.99/mo), Yearly Pro (\$100/yr — BEST VALUE badge — Save \$19.88 banner), Lifetime Pro (\$499 once — MOST POPULAR badge — Save hundreds over 5 years banner). Current tier shows ACTIVE button (disabled). Subscribe/Downgrade modals with confirmation. Cancel flow on paid plans. Reactivate flow on cancelled subs. Verified visually."
+
+  - task: "Free-tier limits in UI (locked items + upgrade prompt)"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/app/(tabs)/inventory.tsx, /app/frontend/app/(tabs)/dealers.tsx, /app/frontend/app/dealer/[id].tsx, /app/frontend/src/UpgradePrompt.tsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: "NA"
+          agent: "main"
+          comment: "Locked items (those exceeding free-tier limit, sorted by oldest=unlocked) get 45% opacity + amber border. Tap on locked card shows UpgradePrompt modal with 4 perks + VIEW PLANS CTA. FAB shows lock icon + amber color when at limit. Verified visually: 5 dealers shown for free user with 4 greyed out, lock prompt modal appears correctly with proper messaging."
+
+metadata:
+  created_by: "main_agent"
+  version: "1.0"
+  test_sequence: 5
+  run_ui: false
+
+test_plan:
+  current_focus:
+    - "Auth System (register, login, JWT, /me)"
+    - "Per-user data scoping via DBProxy + ContextVar"
+    - "Subscription endpoints (mock payments)"
+    - "Free tier limits enforcement (HTTP 402)"
+  stuck_tasks: []
+  test_all: false
+  test_priority: "high_first"

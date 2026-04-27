@@ -1,4 +1,5 @@
-from fastapi import FastAPI, APIRouter, HTTPException
+from fastapi import FastAPI, APIRouter, HTTPException, Request, Depends
+from fastapi.responses import JSONResponse
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -10,18 +11,167 @@ from typing import List, Optional, Dict, Any
 import uuid
 import json
 import re
+from contextvars import ContextVar
 from datetime import datetime, timezone, timedelta
+
+from auth import (
+    User,
+    UserPublic,
+    Subscription,
+    RegisterRequest,
+    LoginRequest,
+    AuthResponse,
+    SubscribeRequest,
+    hash_password,
+    verify_password,
+    create_token,
+    decode_token,
+    make_subscription_for_tier,
+    evaluate_subscription_status,
+    is_premium_tier,
+    TIER_FREE,
+    TIER_LIFETIME,
+    FREE_LIMITS,
+    TIER_PRICES,
+    ALL_TIERS,
+)
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
 mongo_url = os.environ['MONGO_URL']
 client = AsyncIOMotorClient(mongo_url)
-db = client[os.environ['DB_NAME']]
+real_db = client[os.environ['DB_NAME']]
 
 EMERGENT_LLM_KEY = os.environ.get('EMERGENT_LLM_KEY', '')
 
+# ---------- Per-request user context ----------
+current_user_id_var: ContextVar[Optional[str]] = ContextVar("current_user_id", default=None)
+
+
+class _ScopedCollection:
+    """Wraps a Motor collection so all queries/inserts are auto-filtered by owner_id."""
+
+    def __init__(self, base, user_id: str):
+        self._base = base
+        self._uid = user_id
+
+    def _scope(self, q=None):
+        q = dict(q or {})
+        q["owner_id"] = self._uid
+        return q
+
+    def find(self, q=None, *args, **kw):
+        return self._base.find(self._scope(q), *args, **kw)
+
+    async def find_one(self, q, *args, **kw):
+        return await self._base.find_one(self._scope(q), *args, **kw)
+
+    async def insert_one(self, doc):
+        d = dict(doc)
+        d["owner_id"] = self._uid
+        return await self._base.insert_one(d)
+
+    async def insert_many(self, docs):
+        docs = [{**d, "owner_id": self._uid} for d in docs]
+        return await self._base.insert_many(docs)
+
+    async def update_one(self, q, *args, **kw):
+        return await self._base.update_one(self._scope(q), *args, **kw)
+
+    async def update_many(self, q, *args, **kw):
+        return await self._base.update_many(self._scope(q), *args, **kw)
+
+    async def delete_one(self, q):
+        return await self._base.delete_one(self._scope(q))
+
+    async def delete_many(self, q):
+        return await self._base.delete_many(self._scope(q))
+
+    async def count_documents(self, q):
+        return await self._base.count_documents(self._scope(q))
+
+    def aggregate(self, pipeline):
+        scoped = [{"$match": {"owner_id": self._uid}}, *list(pipeline)]
+        return self._base.aggregate(scoped)
+
+
+class _DBProxy:
+    """Drop-in replacement for `db` that auto-scopes by current user."""
+
+    def __getattr__(self, name):
+        coll = real_db[name]
+        uid = current_user_id_var.get()
+        if uid:
+            return _ScopedCollection(coll, uid)
+        return coll
+
+    def __getitem__(self, name):
+        return self.__getattr__(name)
+
+
+db = _DBProxy()
+
+
+# ---------- Auth dependency / helpers ----------
+async def get_current_user(request: Request) -> User:
+    auth = request.headers.get("Authorization", "")
+    if not auth.startswith("Bearer "):
+        raise HTTPException(401, "Not authenticated")
+    token = auth[7:].strip()
+    uid = decode_token(token)
+    udoc = await real_db.users.find_one({"id": uid}, {"_id": 0})
+    if not udoc:
+        raise HTTPException(401, "User not found")
+    user = User(**udoc)
+    # Refresh sub status (may downgrade to free if expired)
+    sub = evaluate_subscription_status(user.subscription.dict())
+    if sub != user.subscription.dict():
+        await real_db.users.update_one({"id": uid}, {"$set": {"subscription": sub, "updated_at": datetime.now(timezone.utc).isoformat()}})
+        user.subscription = Subscription(**sub)
+    return user
+
+
+def to_public(u: User) -> UserPublic:
+    return UserPublic(
+        id=u.id, email=u.email, name=u.name or "", subscription=u.subscription, created_at=u.created_at
+    )
+
+
+PUBLIC_PATHS = ("/api/auth/", "/api/health", "/api/")
+
+
 app = FastAPI()
+
+
+@app.middleware("http")
+async def attach_user_to_context(request: Request, call_next):
+    """Read JWT from Authorization header and set the current user id in context.
+    Also enforces auth on all /api/* routes except /api/auth/* and /api/health.
+    """
+    path = request.url.path
+    if not path.startswith("/api/"):
+        return await call_next(request)
+    # Public auth endpoints
+    if path.startswith("/api/auth/") or path == "/api/" or path == "/api/health":
+        return await call_next(request)
+    auth = request.headers.get("Authorization", "")
+    if not auth.startswith("Bearer "):
+        return JSONResponse({"detail": "Not authenticated"}, status_code=401)
+    token = auth[7:].strip()
+    try:
+        uid = decode_token(token)
+    except HTTPException as e:
+        return JSONResponse({"detail": e.detail}, status_code=e.status_code)
+    except Exception:
+        return JSONResponse({"detail": "Invalid token"}, status_code=401)
+    token_var = current_user_id_var.set(uid)
+    try:
+        return await call_next(request)
+    finally:
+        current_user_id_var.reset(token_var)
+
+
 api_router = APIRouter(prefix="/api")
 
 
@@ -806,7 +956,8 @@ async def borrower_history(borrower_id: str):
 
 # ---------- Dealers ----------
 @api_router.post("/dealers", response_model=Dealer)
-async def create_dealer(payload: DealerCreate):
+async def create_dealer(payload: DealerCreate, user: User = Depends(get_current_user)):
+    await _ensure_under_limit(user, "dealers")
     d = Dealer(**payload.dict())
     await db.dealers.insert_one(d.dict())
     return d
@@ -844,7 +995,8 @@ async def delete_dealer(dealer_id: str):
 
 
 @api_router.post("/dealers/{dealer_id}/agents", response_model=Dealer)
-async def add_agent(dealer_id: str, payload: AgentCreate):
+async def add_agent(dealer_id: str, payload: AgentCreate, user: User = Depends(get_current_user)):
+    await _ensure_under_limit(user, "agents", dealer_id=dealer_id)
     d = await db.dealers.find_one({"id": dealer_id}, {"_id": 0})
     if not d:
         raise HTTPException(404, "Dealer not found")
@@ -980,7 +1132,8 @@ async def delete_dealer_transaction(dealer_id: str, tx_id: str):
 
 # ---------- Tools ----------
 @api_router.post("/tools", response_model=Tool)
-async def create_tool(payload: ToolCreate):
+async def create_tool(payload: ToolCreate, user: User = Depends(get_current_user)):
+    await _ensure_under_limit(user, "tools")
     tool = Tool(**payload.dict())
     await db.tools.insert_one(tool.dict())
     # If created already broken, also create a warranty claim mirror with broken_photo
@@ -1771,8 +1924,9 @@ async def delete_wishlist(item_id: str):
 
 
 @api_router.post("/wishlist/{item_id}/convert", response_model=Tool)
-async def convert_wishlist_to_tool(item_id: str):
+async def convert_wishlist_to_tool(item_id: str, user: User = Depends(get_current_user)):
     """Convert a wishlist item into a real tool — marks as purchased."""
+    await _ensure_under_limit(user, "tools")
     item = await db.wishlist_items.find_one({"id": item_id}, {"_id": 0})
     if not item:
         raise HTTPException(404, "Wishlist item not found")
@@ -1814,7 +1968,8 @@ class PersonalProfile(BaseModel):
 
 @api_router.get("/personal-profile", response_model=PersonalProfile)
 async def get_personal_profile():
-    doc = await db.personal_profile.find_one({"_id": "self"}, {"_id": 0})
+    # Per-user singleton — owner_id auto-applied by the db proxy.
+    doc = await db.personal_profile.find_one({"id": "self"}, {"_id": 0})
     if not doc:
         return PersonalProfile()
     return PersonalProfile(**doc)
@@ -1823,16 +1978,205 @@ async def get_personal_profile():
 @api_router.put("/personal-profile", response_model=PersonalProfile)
 async def update_personal_profile(payload: PersonalProfile):
     data = payload.dict()
+    data["id"] = "self"
     data["updated_at"] = now_iso()
     await db.personal_profile.update_one(
-        {"_id": "self"},
+        {"id": "self"},
         {"$set": data},
         upsert=True,
     )
     return PersonalProfile(**data)
 
 
+# ============================================================================
+# Auth + Subscription
+# ============================================================================
+auth_router = APIRouter(prefix="/api/auth")
+
+
+async def _claim_orphan_data(user_id: str):
+    """When the very first user registers, claim all legacy data (docs without
+    an owner_id) for that user. Subsequent users get a clean slate.
+    """
+    user_count = await real_db.users.count_documents({})
+    if user_count != 1:
+        return
+    collections = [
+        "tools",
+        "dealers",
+        "borrowers",
+        "locations",
+        "tags",
+        "categories",
+        "wishlist_items",
+        "warranty_claims",
+        "personal_profile",
+    ]
+    for c in collections:
+        await real_db[c].update_many(
+            {"owner_id": {"$in": [None, ""]}},
+            {"$set": {"owner_id": user_id}},
+        )
+    # personal_profile docs that used _id: "self" — make sure they have id field too
+    await real_db.personal_profile.update_many(
+        {"_id": "self", "owner_id": user_id, "id": {"$in": [None, ""]}},
+        {"$set": {"id": "self"}},
+    )
+
+
+@auth_router.post("/register", response_model=AuthResponse)
+async def register(payload: RegisterRequest):
+    email = payload.email.strip().lower()
+    existing = await real_db.users.find_one({"email": email}, {"_id": 0})
+    if existing:
+        raise HTTPException(400, "Email already registered")
+    user = User(
+        email=email,
+        password_hash=hash_password(payload.password),
+        name=(payload.name or "").strip(),
+    )
+    await real_db.users.insert_one(user.dict())
+    # First-user migration
+    await _claim_orphan_data(user.id)
+    token = create_token(user.id)
+    return AuthResponse(token=token, user=to_public(user))
+
+
+@auth_router.post("/login", response_model=AuthResponse)
+async def login(payload: LoginRequest):
+    email = payload.email.strip().lower()
+    udoc = await real_db.users.find_one({"email": email}, {"_id": 0})
+    if not udoc:
+        raise HTTPException(401, "Invalid email or password")
+    if not verify_password(payload.password, udoc.get("password_hash", "")):
+        raise HTTPException(401, "Invalid email or password")
+    user = User(**udoc)
+    # Refresh subscription status
+    sub = evaluate_subscription_status(user.subscription.dict())
+    if sub != user.subscription.dict():
+        await real_db.users.update_one({"id": user.id}, {"$set": {"subscription": sub}})
+        user.subscription = Subscription(**sub)
+    token = create_token(user.id)
+    return AuthResponse(token=token, user=to_public(user))
+
+
+@auth_router.get("/me", response_model=UserPublic)
+async def me(user: User = Depends(get_current_user)):
+    return to_public(user)
+
+
+@auth_router.put("/me", response_model=UserPublic)
+async def update_me(payload: Dict[str, Any], user: User = Depends(get_current_user)):
+    updates: Dict[str, Any] = {}
+    if "name" in payload:
+        updates["name"] = (payload.get("name") or "").strip()
+    if "password" in payload and payload["password"]:
+        updates["password_hash"] = hash_password(payload["password"])
+    if updates:
+        updates["updated_at"] = now_iso()
+        await real_db.users.update_one({"id": user.id}, {"$set": updates})
+        user_doc = await real_db.users.find_one({"id": user.id}, {"_id": 0})
+        user = User(**user_doc)
+    return to_public(user)
+
+
+# ---------- Subscription ----------
+sub_router = APIRouter(prefix="/api/subscription")
+
+
+@sub_router.get("")
+async def get_subscription(user: User = Depends(get_current_user)):
+    counts = {
+        "tools": await real_db.tools.count_documents({"owner_id": user.id}),
+        "dealers": await real_db.dealers.count_documents({"owner_id": user.id}),
+    }
+    return {
+        "subscription": user.subscription.dict(),
+        "is_premium": is_premium_tier(user.subscription.tier),
+        "tier_prices": TIER_PRICES,
+        "free_limits": FREE_LIMITS,
+        "tiers": ALL_TIERS,
+        "counts": counts,
+    }
+
+
+@sub_router.post("/subscribe")
+async def subscribe(payload: SubscribeRequest, user: User = Depends(get_current_user)):
+    """MOCK subscription change. No real payment. User can switch tiers freely."""
+    new_sub = make_subscription_for_tier(payload.tier)
+    await real_db.users.update_one(
+        {"id": user.id},
+        {"$set": {"subscription": new_sub.dict(), "updated_at": now_iso()}},
+    )
+    return {"ok": True, "subscription": new_sub.dict()}
+
+
+@sub_router.post("/cancel")
+async def cancel_subscription(user: User = Depends(get_current_user)):
+    """Cancel current subscription (auto_renew=False). Stays active until expires_at,
+    then downgrades to free. Lifetime cannot be cancelled."""
+    sub = user.subscription.dict()
+    if sub.get("tier") == TIER_FREE:
+        raise HTTPException(400, "No active paid subscription to cancel")
+    if sub.get("tier") == TIER_LIFETIME:
+        raise HTTPException(400, "Lifetime subscription cannot be cancelled")
+    sub["auto_renew"] = False
+    sub["status"] = "cancelled"
+    sub["cancelled_at"] = now_iso()
+    await real_db.users.update_one(
+        {"id": user.id},
+        {"$set": {"subscription": sub, "updated_at": now_iso()}},
+    )
+    return {"ok": True, "subscription": sub}
+
+
+@sub_router.post("/reactivate")
+async def reactivate(user: User = Depends(get_current_user)):
+    """Re-enable auto-renew on a cancelled (but still active) paid sub."""
+    sub = user.subscription.dict()
+    if sub.get("tier") == TIER_FREE:
+        raise HTTPException(400, "No paid subscription to reactivate")
+    sub["auto_renew"] = True
+    sub["status"] = "active"
+    sub["cancelled_at"] = None
+    await real_db.users.update_one(
+        {"id": user.id},
+        {"$set": {"subscription": sub, "updated_at": now_iso()}},
+    )
+    return {"ok": True, "subscription": sub}
+
+
+# ---------- Tier-limit guard helper ----------
+async def _ensure_under_limit(user: User, kind: str, dealer_id: Optional[str] = None):
+    """Raises 402 if creation would exceed free-tier limits."""
+    if is_premium_tier(user.subscription.tier):
+        return
+    if kind == "tools":
+        n = await real_db.tools.count_documents({"owner_id": user.id})
+        if n >= FREE_LIMITS["tools"]:
+            raise HTTPException(
+                402,
+                f"Free tier is limited to {FREE_LIMITS['tools']} inventory items. Upgrade for unlimited tools.",
+            )
+    elif kind == "dealers":
+        n = await real_db.dealers.count_documents({"owner_id": user.id})
+        if n >= FREE_LIMITS["dealers"]:
+            raise HTTPException(
+                402,
+                f"Free tier is limited to {FREE_LIMITS['dealers']} dealer. Upgrade for unlimited dealers.",
+            )
+    elif kind == "agents" and dealer_id:
+        d = await real_db.dealers.find_one({"id": dealer_id, "owner_id": user.id}, {"_id": 0, "agents": 1})
+        if d and len(d.get("agents") or []) >= FREE_LIMITS["agents_per_dealer"]:
+            raise HTTPException(
+                402,
+                f"Free tier is limited to {FREE_LIMITS['agents_per_dealer']} agent per dealer. Upgrade for unlimited agents.",
+            )
+
+
 app.include_router(api_router)
+app.include_router(auth_router)
+app.include_router(sub_router)
 
 app.add_middleware(
     CORSMiddleware,

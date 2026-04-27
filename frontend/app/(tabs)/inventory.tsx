@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import {
   View,
   Text,
@@ -25,12 +25,18 @@ import { SummaryHeader } from "../../src/SummaryHeader";
 import { confirm } from "../../src/confirm";
 import { ReportLostModal } from "../../src/sections/LostStatusSection";
 import { buildLocationTree, flattenLocationTree } from "../../src/locationTree";
+import { useAuth } from "../../src/AuthContext";
+import { useUpgradePrompt } from "../../src/UpgradePrompt";
+import { FREE_LIMITS, isPremium } from "../../src/subscription";
 
 type Filter = "all" | "available" | "out" | "consumables" | "lost" | "maintenance";
 
 export default function InventoryScreen() {
   const router = useRouter();
   const { prefs } = usePrefs();
+  const { user } = useAuth();
+  const upgrade = useUpgradePrompt();
+  const tier = user?.subscription?.tier || "free";
   const [tools, setTools] = useState<any[]>(() => getCached("inv_tools", []));
   const [agg, setAgg] = useState<any>(() => getCached("inv_agg", null));
   const [search, setSearch] = useState("");
@@ -51,6 +57,18 @@ export default function InventoryScreen() {
   const [showBulkLost, setShowBulkLost] = useState(false);
   const [allLocations, setAllLocations] = useState<any[]>([]);
   const [allTags, setAllTags] = useState<any[]>([]);
+
+  // Lock the IDs of tools that are over the free-tier limit. Free users keep
+  // their OLDEST `FREE_LIMITS.tools` tools accessible; the rest become read-only.
+  const lockedToolIds = useMemo(() => {
+    if (isPremium(tier)) return new Set<string>();
+    const sorted = [...tools].sort((a, b) =>
+      (a.created_at || "").localeCompare(b.created_at || "")
+    );
+    return new Set(sorted.slice(FREE_LIMITS.tools).map((t) => t.id));
+  }, [tools, tier]);
+
+  const atToolLimit = !isPremium(tier) && tools.length >= FREE_LIMITS.tools;
 
   const toggleSelect = (id: string) => {
     setSelectedIds((cur) =>
@@ -285,11 +303,24 @@ export default function InventoryScreen() {
           const isSelected = selectedIds.includes(item.id);
           const isLost = item?.lost_status?.is_lost;
           const isStolen = isLost && item?.lost_status?.type === "stolen";
+          const isLocked = lockedToolIds.has(item.id);
           return (
             <TouchableOpacity
               testID={`tool-card-${item.id}`}
-              style={[styles.row, isSelected && styles.rowSelected]}
+              style={[
+                styles.row,
+                isSelected && styles.rowSelected,
+                isLocked && styles.rowLocked,
+              ]}
               onPress={() => {
+                if (isLocked) {
+                  upgrade.show({
+                    title: "Item Locked",
+                    message:
+                      "This item is beyond the Free plan limit (10 tools). Upgrade to access all your inventory.",
+                  });
+                  return;
+                }
                 if (selectMode) {
                   toggleSelect(item.id);
                 } else {
@@ -297,9 +328,9 @@ export default function InventoryScreen() {
                 }
               }}
               onLongPress={() => {
-                if (!selectMode) enterSelect(item.id);
+                if (!isLocked && !selectMode) enterSelect(item.id);
               }}
-              activeOpacity={0.7}
+              activeOpacity={isLocked ? 1 : 0.7}
             >
               <LinearGradient
                 colors={["#1F1F1F", "#0E0E0E"]}
@@ -500,11 +531,20 @@ export default function InventoryScreen() {
       ) : (
         <TouchableOpacity
           testID="add-tool-fab"
-          style={styles.fab}
-          onPress={() => router.push("/tool/edit")}
+          style={[styles.fab, atToolLimit && styles.fabLocked]}
+          onPress={() => {
+            if (atToolLimit) {
+              upgrade.show({
+                title: "Inventory Limit Reached",
+                message: `Free plan allows up to ${FREE_LIMITS.tools} inventory items. Upgrade for unlimited tools, dealers, and agents.`,
+              });
+              return;
+            }
+            router.push("/tool/edit");
+          }}
           activeOpacity={0.85}
         >
-          <Ionicons name="add" size={32} color="#000" />
+          <Ionicons name={atToolLimit ? "lock-closed" : "add"} size={atToolLimit ? 22 : 32} color="#000" />
         </TouchableOpacity>
       )}
 
@@ -932,6 +972,10 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     ...(theme.elevation.md as object),
   },
+  rowLocked: {
+    opacity: 0.45,
+    borderColor: theme.colors.warning,
+  },
   thumb: {
     width: 56,
     height: 56,
@@ -1006,5 +1050,8 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     borderRadius: theme.radii.lg,
     ...(theme.elevation.accent as object),
+  },
+  fabLocked: {
+    backgroundColor: theme.colors.warning,
   },
 });

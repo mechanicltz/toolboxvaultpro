@@ -13,6 +13,8 @@ import { useRouter, useFocusEffect } from "expo-router";
 import { theme } from "../../src/theme";
 import { usePrefs } from "../../src/prefs";
 import { api } from "../../src/api";
+import { useAuth } from "../../src/AuthContext";
+import { TIER_LABELS, isPremium } from "../../src/subscription";
 
 type RowProps = {
   icon: any;
@@ -50,6 +52,7 @@ const Row = ({ icon, title, subtitle, onPress, testID, badge, badgeColor }: RowP
 export default function MoreScreen() {
   const router = useRouter();
   const { prefs, update } = usePrefs();
+  const { user, logout } = useAuth();
   const [mntDue, setMntDue] = useState({ overdue: 0, due_soon: 0 });
 
   useFocusEffect(
@@ -64,14 +67,50 @@ export default function MoreScreen() {
   );
 
   const totalDue = mntDue.overdue + mntDue.due_soon;
+  const tier = (user?.subscription?.tier || "free") as "free" | "monthly" | "yearly" | "lifetime";
+  const isPaid = isPremium(tier);
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <View style={styles.header}>
         <Text style={styles.title}>MORE</Text>
-        <Text style={styles.subtitle}>Manage everything</Text>
+        <Text style={styles.subtitle}>{user?.email || "Manage everything"}</Text>
       </View>
       <ScrollView contentContainerStyle={{ paddingBottom: 100 }}>
+        <Text style={styles.sectionLabel}>ACCOUNT</Text>
+        <TouchableOpacity
+          style={[styles.row, styles.subscriptionRow]}
+          onPress={() => router.push("/subscription")}
+          activeOpacity={0.7}
+          testID="more-subscription"
+        >
+          <View
+            style={[
+              styles.iconBox,
+              { backgroundColor: isPaid ? "rgba(255,179,0,0.15)" : theme.colors.surface },
+            ]}
+          >
+            <Ionicons
+              name={isPaid ? (tier === "lifetime" ? "diamond" : "shield-checkmark") : "leaf"}
+              size={20}
+              color={isPaid ? theme.colors.accent : theme.colors.textSecondary}
+            />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.rowTitle}>Subscription</Text>
+            <Text style={styles.rowSub}>
+              {TIER_LABELS[tier]}
+              {!isPaid ? " — Tap to upgrade for unlimited access" : ""}
+            </Text>
+          </View>
+          {!isPaid && (
+            <View style={styles.upgradePill}>
+              <Text style={styles.upgradePillText}>UPGRADE</Text>
+            </View>
+          )}
+          <Ionicons name="chevron-forward" size={18} color={theme.colors.textMuted} />
+        </TouchableOpacity>
+
         <Text style={styles.sectionLabel}>OWNER</Text>
         <Row
           icon="person-circle"
@@ -203,6 +242,23 @@ export default function MoreScreen() {
             thumbColor="#fff"
           />
         </View>
+
+        <Text style={styles.sectionLabel}>SESSION</Text>
+        <TouchableOpacity
+          style={styles.row}
+          onPress={() => logout()}
+          activeOpacity={0.7}
+          testID="more-logout"
+        >
+          <View style={styles.iconBox}>
+            <Ionicons name="log-out" size={20} color={theme.colors.danger} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.rowTitle, { color: theme.colors.danger }]}>Sign Out</Text>
+            <Text style={styles.rowSub}>{user?.email || ""}</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color={theme.colors.textMuted} />
+        </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
   );
@@ -273,4 +329,15 @@ const styles = StyleSheet.create({
     fontWeight: "900",
     letterSpacing: 0.5,
   },
+  subscriptionRow: {
+    backgroundColor: theme.colors.glass,
+  },
+  upgradePill: {
+    backgroundColor: theme.colors.accent,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 4,
+    marginRight: 6,
+  },
+  upgradePillText: { color: "#000", fontSize: 10, fontWeight: "900", letterSpacing: 1 },
 });
