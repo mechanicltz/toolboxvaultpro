@@ -65,8 +65,7 @@ function TierCard({ tier, current, onSelect }: TierCardProps) {
     savings = `Save ${fmtMoney(yearlySavings())} vs monthly`;
   } else if (isLifetime) {
     subtitle = "One-time payment";
-    const fiveYr = lifetimeSavingsAfterYears(5);
-    savings = `Save ${fmtMoney(Math.max(0, fiveYr))} over 5 years!`;
+    savings = "Save hundreds and never pay again!";
   }
 
   let priceUnit = "";
