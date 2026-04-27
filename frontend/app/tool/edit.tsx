@@ -14,11 +14,17 @@ import { api } from "../../src/api";
 import { TagInput, CategoryPicker } from "../../src/Pickers";
 import { buildLocationTree, flattenLocationTree } from "../../src/locationTree";
 import { DateField } from "../../src/DateField";
+import { useUpgradePrompt } from "../../src/UpgradePrompt";
+import { useAuth } from "../../src/AuthContext";
+import { FREE_LIMITS, isPremium } from "../../src/subscription";
 
 export default function ToolEdit() {
   const { id } = useLocalSearchParams<{ id?: string }>();
   const router = useRouter();
   const isEdit = !!id;
+  const upgrade = useUpgradePrompt();
+  const { user } = useAuth();
+  const tier = user?.subscription?.tier || "free";
 
   const [loading, setLoading] = useState(isEdit);
   const [saving, setSaving] = useState(false);
@@ -857,7 +863,7 @@ export default function ToolEdit() {
               </ScrollView>
               <View style={{ flexDirection: "row", gap: 10, marginTop: 12 }}>
                 <TouchableOpacity
-                  style={styles.btnGhost}
+                  style={[styles.btnGhost, { flex: 1, marginTop: 0 }]}
                   onPress={() => setShowNewDealer(false)}
                   disabled={savingDealer}
                 >
@@ -865,14 +871,14 @@ export default function ToolEdit() {
                 </TouchableOpacity>
                 <TouchableOpacity
                   testID="save-new-dealer-btn"
-                  style={[styles.btn, { backgroundColor: theme.colors.accent }]}
+                  style={styles.btnPrimary}
                   onPress={saveNewDealer}
                   disabled={savingDealer}
                 >
                   {savingDealer ? (
                     <ActivityIndicator color="#000" />
                   ) : (
-                    <Text style={styles.btnText}>SAVE DEALER</Text>
+                    <Text style={styles.btnPrimaryText}>SAVE DEALER</Text>
                   )}
                 </TouchableOpacity>
               </View>
@@ -1011,6 +1017,15 @@ const styles = StyleSheet.create({
     alignItems: "center", justifyContent: "center", borderRadius: 4,
   },
   btnGhostText: { color: theme.colors.textPrimary, fontWeight: "800", letterSpacing: 2, fontSize: 14 },
+  btnPrimary: {
+    flex: 1,
+    height: 48,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 4,
+    backgroundColor: theme.colors.accent,
+  },
+  btnPrimaryText: { color: "#000", fontWeight: "900", letterSpacing: 2, fontSize: 14 },
   newInlineBtn: {
     flexDirection: "row",
     alignItems: "center",
@@ -1167,5 +1182,32 @@ const styles = StyleSheet.create({
     fontWeight: "900",
     fontSize: 12,
     letterSpacing: 1.5,
+  },
+  dealerInfo: {
+    fontWeight: "800",
+    marginTop: 3,
+  },
+  dealerInfoSub: {
+    color: theme.colors.accent,
+    fontSize: 11,
+    fontWeight: "700",
+    marginTop: 2,
+  },
+  brokenPhotoBox: {
+    marginTop: 6,
+    position: "relative",
+  },
+  brokenPhoto: {
+    width: "100%",
+    height: 200,
+    borderRadius: 6,
+    backgroundColor: theme.colors.bgSecondary,
+  },
+  brokenRemove: {
+    position: "absolute",
+    top: 6,
+    right: 6,
+    backgroundColor: "rgba(0,0,0,0.6)",
+    borderRadius: 13,
   },
 });
