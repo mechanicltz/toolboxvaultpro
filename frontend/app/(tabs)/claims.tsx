@@ -27,17 +27,20 @@ export default function ClaimsScreen() {
   const [summary, setSummary] = useState<any>(() => getCached("claims_summary", { totals: {}, dealers: [] }));
   const [refreshing, setRefreshing] = useState(false);
   const [search, setSearch] = useState("");
+  const [archivedClaims, setArchivedClaims] = useState<any[]>(() => getCached("claims_archived", []));
 
   const load = useCallback(async () => {
     try {
-      const [d, t, s] = await Promise.all([
+      const [d, t, s, archived] = await Promise.all([
         api.listDealers(),
         api.listTools({ needs_repair: true }),
         api.warrantyClaimsSummary().catch(() => ({ totals: {}, dealers: [] })),
+        api.listWarrantyClaims({ archived: true }).catch(() => []),
       ]);
       setDealers(setCached("dealers", d || []));
       setTools(setCached("claims_tools", t || []));
       setSummary(setCached("claims_summary", s || { totals: {}, dealers: [] }));
+      setArchivedClaims(setCached("claims_archived", archived || []));
     } catch {
       /* ignore */
     }
@@ -80,6 +83,40 @@ export default function ClaimsScreen() {
   const filteredDealers = search
     ? dealers.filter((d) => d.name.toLowerCase().includes(search.toLowerCase()))
     : dealers;
+
+  // Search across CURRENT (broken tools) + HISTORY (archived warranty claims).
+  // Active when there's any search text.
+  const searchActive = !!search.trim();
+  const searchLower = search.trim().toLowerCase();
+  const matchesText = (s: any) => (s || "").toString().toLowerCase().includes(searchLower);
+  const dealerName = (id?: string) =>
+    (dealers.find((d) => d.id === id)?.name || "").toString();
+
+  // Current claims (open + repaired) that match search
+  const matchedCurrent = searchActive
+    ? tools.filter(
+        (t) =>
+          matchesText(t.name) ||
+          matchesText(t.brand) ||
+          matchesText(t.model) ||
+          matchesText(t.serial_number) ||
+          matchesText(t.dealer_name) ||
+          matchesText(dealerName(t.dealer_id))
+      )
+    : [];
+
+  // Archived (history) claims that match search
+  const matchedArchived = searchActive
+    ? archivedClaims.filter(
+        (c) =>
+          matchesText(c.tool_name) ||
+          matchesText(c.brand) ||
+          matchesText(c.model) ||
+          matchesText(c.serial_number) ||
+          matchesText(c.dealer_name) ||
+          matchesText(dealerName(c.dealer_id))
+      )
+    : [];
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
@@ -126,18 +163,23 @@ export default function ClaimsScreen() {
         </TouchableOpacity>
       </View>
 
-      {mode === "dealers" && (
-        <View style={styles.searchBox}>
-          <Ionicons name="search" size={16} color={theme.colors.textMuted} />
-          <TextInput
-            placeholder="Search dealers..."
-            placeholderTextColor={theme.colors.textMuted}
-            value={search}
-            onChangeText={setSearch}
-            style={styles.searchInput}
-          />
-        </View>
-      )}
+      {/* Search bar — visible in BOTH modes; searches current + history claims */}
+      <View style={styles.searchBox}>
+        <Ionicons name="search" size={16} color={theme.colors.textMuted} />
+        <TextInput
+          placeholder="Search current & history claims..."
+          placeholderTextColor={theme.colors.textMuted}
+          value={search}
+          onChangeText={setSearch}
+          style={styles.searchInput}
+          testID="claims-search"
+        />
+        {!!search && (
+          <TouchableOpacity onPress={() => setSearch("")} hitSlop={8}>
+            <Ionicons name="close-circle" size={16} color={theme.colors.textMuted} />
+          </TouchableOpacity>
+        )}
+      </View>
 
       <ScrollView
         contentContainerStyle={{ padding: 16, paddingBottom: 100 }}
@@ -145,7 +187,101 @@ export default function ClaimsScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.colors.accent} />
         }
       >
-        {mode === "dealers" ? (
+        {searchActive ? (
+          // Unified search results across current + history
+          <>
+            <View style={styles.groupHeader}>
+              <Ionicons name="alert-circle" size={14} color={theme.colors.danger} />
+              <Text style={styles.groupTitle}>CURRENT</Text>
+              <View style={styles.groupCount}>
+                <Text style={styles.groupCountText}>{matchedCurrent.length}</Text>
+              </View>
+            </View>
+            {matchedCurrent.length === 0 ? (
+              <Text style={[styles.empty, { paddingVertical: 12 }]}>No current matches.</Text>
+            ) : (
+              matchedCurrent.map((t: any) => {
+                const status = (t.repair_info?.repair_status || "Not Reported").toUpperCase();
+                const statusColor =
+                  status === "NOT REPORTED"
+                    ? theme.colors.textMuted
+                    : status === "REPORTED"
+                    ? theme.colors.accent
+                    : status === "REPAIRED"
+                    ? theme.colors.success
+                    : theme.colors.accentSecondary;
+                return (
+                  <TouchableOpacity
+                    key={`cur-${t.id}`}
+                    style={styles.itemRow}
+                    onPress={() => router.push(`/tool/${t.id}`)}
+                  >
+                    <View style={styles.itemThumb}>
+                      {t.photos?.[0] ? (
+                        <Image source={{ uri: t.photos[0] }} style={styles.itemImg} />
+                      ) : (
+                        <Ionicons name="build" size={18} color={theme.colors.danger} />
+                      )}
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.itemName} numberOfLines={1}>{t.name}</Text>
+                      <Text style={styles.notifiedLine} numberOfLines={1}>
+                        {t.dealer_name || dealerName(t.dealer_id) || "No dealer"}
+                        {t.brand ? ` · ${t.brand}` : ""}
+                      </Text>
+                      <View style={[styles.statusPill, { borderColor: statusColor }]}>
+                        <Text style={[styles.statusText, { color: statusColor }]}>{status}</Text>
+                      </View>
+                    </View>
+                    <Ionicons name="chevron-forward" size={16} color={theme.colors.textMuted} />
+                  </TouchableOpacity>
+                );
+              })
+            )}
+
+            <View style={[styles.groupHeader, { marginTop: 18 }]}>
+              <Ionicons name="archive" size={14} color={theme.colors.success} />
+              <Text style={styles.groupTitle}>HISTORY</Text>
+              <View style={styles.groupCount}>
+                <Text style={styles.groupCountText}>{matchedArchived.length}</Text>
+              </View>
+            </View>
+            {matchedArchived.length === 0 ? (
+              <Text style={[styles.empty, { paddingVertical: 12 }]}>No history matches.</Text>
+            ) : (
+              matchedArchived.map((c: any) => (
+                <TouchableOpacity
+                  key={`arch-${c.id}`}
+                  style={styles.itemRow}
+                  onPress={() => router.push(`/claim/${c.id}`)}
+                >
+                  <View style={styles.itemThumb}>
+                    {c.broken_photo ? (
+                      <Image source={{ uri: c.broken_photo }} style={styles.itemImg} />
+                    ) : (
+                      <Ionicons name="checkmark-done" size={18} color={theme.colors.success} />
+                    )}
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.itemName} numberOfLines={1}>
+                      {c.tool_name || "Tool"}
+                    </Text>
+                    <Text style={styles.notifiedLine} numberOfLines={1}>
+                      {c.dealer_name || dealerName(c.dealer_id) || "No dealer"}
+                      {c.completed_at ? ` · ${fmtDate(c.completed_at)}` : ""}
+                    </Text>
+                    <View style={[styles.statusPill, { borderColor: theme.colors.success }]}>
+                      <Text style={[styles.statusText, { color: theme.colors.success }]}>
+                        {(c.status || "REPAIRED").toUpperCase()}
+                      </Text>
+                    </View>
+                  </View>
+                  <Ionicons name="chevron-forward" size={16} color={theme.colors.textMuted} />
+                </TouchableOpacity>
+              ))
+            )}
+          </>
+        ) : mode === "dealers" ? (
           <>
             {filteredDealers.length === 0 ? (
               <Text style={styles.empty}>No dealers yet.</Text>

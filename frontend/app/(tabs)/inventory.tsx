@@ -58,6 +58,35 @@ export default function InventoryScreen() {
   const [allLocations, setAllLocations] = useState<any[]>([]);
   const [allTags, setAllTags] = useState<any[]>([]);
 
+  // Location filter
+  const [locationFilter, setLocationFilter] = useState<string | null>(null);
+  const [showLocationPicker, setShowLocationPicker] = useState(false);
+
+  // Selected location + all its descendants
+  const locationFilterIds = useMemo(() => {
+    if (!locationFilter) return null;
+    const ids = new Set<string>([locationFilter]);
+    const queue = [locationFilter];
+    while (queue.length) {
+      const cur = queue.shift()!;
+      allLocations
+        .filter((l) => l.parent_id === cur)
+        .forEach((l) => {
+          if (!ids.has(l.id)) {
+            ids.add(l.id);
+            queue.push(l.id);
+          }
+        });
+    }
+    return ids;
+  }, [locationFilter, allLocations]);
+
+  const selectedLocationName = useMemo(() => {
+    if (!locationFilter) return null;
+    const found = allLocations.find((l) => l.id === locationFilter);
+    return found?.name || null;
+  }, [locationFilter, allLocations]);
+
   // Lock the IDs of tools that are over the free-tier limit. Free users keep
   // their OLDEST `FREE_LIMITS.tools` tools accessible; the rest become read-only.
   const lockedToolIds = useMemo(() => {
@@ -166,12 +195,30 @@ export default function InventoryScreen() {
       const mIds = new Set<string>(mItems.map((x: any) => x.tool_id));
       setMaintToolIds(mIds);
       // Client-side filter for "lost" / "maintenance" since backend doesn't expose these as params
-      const filteredTools =
+      let filteredTools =
         filter === "lost"
           ? t.filter((x: any) => x?.lost_status?.is_lost)
           : filter === "maintenance"
           ? t.filter((x: any) => mIds.has(x.id))
           : t;
+      // Apply location filter (selected location + all descendants)
+      if (locationFilter) {
+        const ids = new Set<string>([locationFilter]);
+        const queue = [locationFilter];
+        const allLocs = locs || [];
+        while (queue.length) {
+          const cur = queue.shift()!;
+          allLocs
+            .filter((l: any) => l.parent_id === cur)
+            .forEach((l: any) => {
+              if (!ids.has(l.id)) {
+                ids.add(l.id);
+                queue.push(l.id);
+              }
+            });
+        }
+        filteredTools = filteredTools.filter((x: any) => x.location_id && ids.has(x.location_id));
+      }
       setTools(setCached("inv_tools", filteredTools));
       setAgg(setCached("inv_agg", a));
       setWarningCount((w.expiring?.length || 0) + (w.expired?.length || 0));
@@ -182,7 +229,7 @@ export default function InventoryScreen() {
     } catch (e) {
       console.error(e);
     }
-  }, [search, filter, prefs.warranty_alerts]);
+  }, [search, filter, prefs.warranty_alerts, locationFilter]);
 
   useFocusEffect(
     useCallback(() => {
@@ -193,7 +240,7 @@ export default function InventoryScreen() {
   useEffect(() => {
     const t = setTimeout(load, 250);
     return () => clearTimeout(t);
-  }, [search, filter, load]);
+  }, [search, filter, locationFilter, load]);
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -277,6 +324,45 @@ export default function InventoryScreen() {
             </TouchableOpacity>
           ))}
         </ScrollView>
+      </View>
+
+      {/* Location filter row */}
+      <View style={styles.locationFilterRow}>
+        <TouchableOpacity
+          testID="location-filter-btn"
+          style={[styles.locationFilterBtn, locationFilter && styles.locationFilterBtnActive]}
+          onPress={() => setShowLocationPicker(true)}
+          activeOpacity={0.7}
+        >
+          <Ionicons
+            name="location"
+            size={14}
+            color={locationFilter ? theme.colors.accent : theme.colors.textMuted}
+          />
+          <Text
+            style={[
+              styles.locationFilterText,
+              locationFilter && styles.locationFilterTextActive,
+            ]}
+            numberOfLines={1}
+          >
+            {selectedLocationName || "All Locations"}
+          </Text>
+          {locationFilter ? (
+            <TouchableOpacity
+              testID="location-filter-clear"
+              onPress={(e) => {
+                e.stopPropagation();
+                setLocationFilter(null);
+              }}
+              hitSlop={8}
+            >
+              <Ionicons name="close-circle" size={16} color={theme.colors.accent} />
+            </TouchableOpacity>
+          ) : (
+            <Ionicons name="chevron-down" size={14} color={theme.colors.textMuted} />
+          )}
+        </TouchableOpacity>
       </View>
 
       {prefs.show_details_summary && agg && (
@@ -548,6 +634,70 @@ export default function InventoryScreen() {
         </TouchableOpacity>
       )}
 
+      {/* Filter: Location picker modal */}
+      <Modal visible={showLocationPicker} transparent animationType="slide" onRequestClose={() => setShowLocationPicker(false)}>
+        <View style={styles.modalBg}>
+          <View style={styles.modalSheet}>
+            <Text style={styles.modalTitle}>FILTER BY LOCATION</Text>
+            <ScrollView style={{ maxHeight: 460 }}>
+              <TouchableOpacity
+                testID="location-filter-all"
+                style={[styles.locOption, !locationFilter && styles.locOptionActive]}
+                onPress={() => {
+                  setLocationFilter(null);
+                  setShowLocationPicker(false);
+                }}
+              >
+                <Ionicons
+                  name="apps"
+                  size={16}
+                  color={!locationFilter ? theme.colors.accent : theme.colors.textMuted}
+                />
+                <Text style={[styles.locOptName, !locationFilter && { color: theme.colors.accent }]}>
+                  ALL LOCATIONS
+                </Text>
+              </TouchableOpacity>
+              {flattenLocationTree(buildLocationTree(allLocations)).map((n) => {
+                const isActive = locationFilter === n.id;
+                return (
+                  <TouchableOpacity
+                    key={n.id}
+                    testID={`location-filter-${n.id}`}
+                    style={[
+                      styles.locOption,
+                      { paddingLeft: 16 + n.depth * 16 },
+                      isActive && styles.locOptionActive,
+                    ]}
+                    onPress={() => {
+                      setLocationFilter(n.id);
+                      setShowLocationPicker(false);
+                    }}
+                  >
+                    <Ionicons
+                      name={n.children.length > 0 ? "folder" : "location"}
+                      size={16}
+                      color={isActive ? theme.colors.accent : theme.colors.accent}
+                    />
+                    <Text style={[styles.locOptName, isActive && { color: theme.colors.accent }]}>
+                      {n.name}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+              {allLocations.length === 0 && (
+                <Text style={{ color: theme.colors.textMuted, padding: 16, textAlign: "center" }}>
+                  No locations yet. Create some from a tool's edit screen.
+                </Text>
+              )}
+            </ScrollView>
+            <TouchableOpacity style={styles.btnGhost} onPress={() => setShowLocationPicker(false)}>
+              <Text style={styles.btnGhostText}>CLOSE</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+
       {/* Bulk: Move location modal */}
       <Modal visible={showBulkLocation} transparent animationType="slide" onRequestClose={() => setShowBulkLocation(false)}>
         <View style={styles.modalBg}>
@@ -769,6 +919,36 @@ const styles = StyleSheet.create({
   searchInput: { flex: 1, color: theme.colors.textPrimary, fontSize: 15 },
   filterWrap: { maxHeight: 56, paddingVertical: 4 },
   filterRow: { paddingHorizontal: 20, paddingVertical: 8, gap: 8, alignItems: "center" },
+  locationFilterRow: {
+    paddingHorizontal: 20,
+    paddingTop: 0,
+    paddingBottom: 8,
+  },
+  locationFilterBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: theme.radii.sm,
+    backgroundColor: theme.colors.surface,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  locationFilterBtnActive: {
+    borderColor: theme.colors.accent,
+    backgroundColor: "rgba(255,179,0,0.08)",
+  },
+  locationFilterText: {
+    flex: 1,
+    color: theme.colors.textSecondary,
+    fontSize: 12,
+    fontWeight: "700",
+    letterSpacing: 1,
+  },
+  locationFilterTextActive: {
+    color: theme.colors.accent,
+  },
   rowSelected: {
     borderWidth: 2,
     borderColor: theme.colors.accent,
@@ -895,6 +1075,9 @@ const styles = StyleSheet.create({
     paddingRight: 12,
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.borderSubtle,
+  },
+  locOptionActive: {
+    backgroundColor: "rgba(255,179,0,0.1)",
   },
   locOptName: {
     color: theme.colors.textPrimary,
