@@ -62,7 +62,7 @@ function TierCard({ tier, current, onSelect }: TierCardProps) {
     subtitle = "Billed monthly";
   } else if (isYearly) {
     subtitle = "Billed once per year";
-    savings = `Save ${fmtMoney(yearlySavings())} vs monthly`;
+    savings = "Save hundreds and never pay again!";
   } else if (isLifetime) {
     subtitle = "One-time payment";
     savings = "Save hundreds and never pay again!";
@@ -99,11 +99,11 @@ function TierCard({ tier, current, onSelect }: TierCardProps) {
           <Text style={styles.badgeText}>{badge.text}</Text>
         </View>
       )}
-      {current && (
-        <View style={[styles.badge, styles.badgeCurrent]}>
-          <Text style={styles.badgeText}>CURRENT</Text>
-        </View>
-      )}
+          {current && (
+            <View style={[styles.badge, styles.badgeCurrent]}>
+              <Text style={styles.badgeTextCurrent}>CURRENT</Text>
+            </View>
+          )}
 
       <View style={styles.cardHeader}>
         <Ionicons
@@ -503,9 +503,10 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.surface,
     borderRadius: 14,
     padding: 18,
+    paddingTop: 22,
     borderWidth: 1,
     borderColor: theme.colors.border,
-    marginBottom: 12,
+    marginBottom: 20,
     position: "relative",
   },
   cardHighlight: {
@@ -523,18 +524,21 @@ const styles = StyleSheet.create({
   },
   badge: {
     position: "absolute",
-    top: -10,
-    right: 16,
+    top: 12,
+    right: 12,
     paddingHorizontal: 10,
-    paddingVertical: 4,
+    paddingVertical: 5,
     borderRadius: 6,
+    flexDirection: "row",
+    alignItems: "center",
   },
   badgeCurrent: {
-    backgroundColor: theme.colors.surface,
+    backgroundColor: "rgba(255,179,0,0.15)",
     borderWidth: 1,
     borderColor: theme.colors.accent,
   },
   badgeText: { color: "#000", fontSize: 10, fontWeight: "900", letterSpacing: 1.2 },
+  badgeTextCurrent: { color: theme.colors.accent, fontSize: 10, fontWeight: "900", letterSpacing: 1.2 },
   cardHeader: { flexDirection: "row", alignItems: "center", gap: 10 },
   cardTitle: {
     color: theme.colors.textPrimary,
