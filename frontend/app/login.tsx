@@ -292,11 +292,3 @@ const styles = StyleSheet.create({
     lineHeight: 16,
   },
 });
-{
-    color: theme.colors.textMuted,
-    fontSize: 11,
-    textAlign: "center",
-    marginTop: 14,
-    lineHeight: 16,
-  },
-});
