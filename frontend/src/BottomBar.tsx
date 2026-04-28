@@ -51,6 +51,8 @@ export function BottomBar() {
                 color={active ? theme.colors.accent : theme.colors.textMuted}
               />
               <Text
+                numberOfLines={1}
+                allowFontScaling={false}
                 style={[
                   styles.label,
                   !isPhone && { fontSize: 11 },
@@ -86,10 +88,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 4,
+    paddingHorizontal: 2,
   },
   label: {
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: "800",
-    letterSpacing: 1,
+    letterSpacing: 0.5,
   },
 });
