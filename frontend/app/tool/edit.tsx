@@ -85,6 +85,7 @@ export default function ToolEdit() {
   });
   const [savingDealer, setSavingDealer] = useState(false);
   const [newDealerErr, setNewDealerErr] = useState("");
+  const [newDealerLimitHit, setNewDealerLimitHit] = useState(false);
 
   const [locations, setLocations] = useState<any[]>([]);
   const [dealers, setDealers] = useState<any[]>([]);
@@ -214,22 +215,15 @@ export default function ToolEdit() {
 
   const saveNewDealer = async () => {
     setNewDealerErr("");
+    setNewDealerLimitHit(false);
     const name = newDealer.name.trim();
     if (!name) {
       setNewDealerErr("Please enter a dealer name.");
       return;
     }
-    // Pre-check the free-tier dealer limit so we show a friendly upgrade prompt
+    // Pre-check the free-tier dealer limit — show inline limit panel (no stacked modal)
     if (!isPremium(tier) && dealers.length >= FREE_LIMITS.dealers) {
-      // Close this modal first, then show upgrade after iOS finishes the dismiss animation
-      setShowNewDealer(false);
-      setShowDealerPicker(false);
-      setTimeout(() => {
-        upgrade.show({
-          title: "Dealer Limit Reached",
-          message: `Free plan allows up to ${FREE_LIMITS.dealers} dealer. Upgrade for unlimited dealers and authorized agents.`,
-        });
-      }, 350);
+      setNewDealerLimitHit(true);
       return;
     }
     setSavingDealer(true);
@@ -250,13 +244,11 @@ export default function ToolEdit() {
             notes: "",
           });
         } catch (agentErr: any) {
-          // Agent limit hit — dealer was still created, just skip the agent
           if (agentErr?.status !== 402) {
             console.warn("Add agent failed:", agentErr);
           }
         }
       }
-      // Refresh dealers and auto-select the new one
       const updatedDealers = await api.listDealers();
       setDealers(updatedDealers);
       const fresh = updatedDealers.find((d: any) => d.id === created.id);
@@ -273,16 +265,7 @@ export default function ToolEdit() {
       });
     } catch (e: any) {
       if (e?.status === 402) {
-        setShowNewDealer(false);
-        setShowDealerPicker(false);
-        setTimeout(() => {
-          upgrade.show({
-            title: "Dealer Limit Reached",
-            message:
-              e?.detail ||
-              `Free plan allows up to ${FREE_LIMITS.dealers} dealer. Upgrade for unlimited dealers.`,
-          });
-        }, 350);
+        setNewDealerLimitHit(true);
       } else {
         const msg =
           typeof e?.detail === "string"
@@ -295,6 +278,13 @@ export default function ToolEdit() {
     } finally {
       setSavingDealer(false);
     }
+  };
+
+  const goToSubscriptionFromDealer = () => {
+    setShowNewDealer(false);
+    setShowDealerPicker(false);
+    setNewDealerLimitHit(false);
+    setTimeout(() => router.push("/subscription"), 250);
   };
 
   const save = useCallback(async () => {
@@ -903,7 +893,50 @@ export default function ToolEdit() {
                   />
                 </View>
               </ScrollView>
-              {!!newDealerErr && (
+              {newDealerLimitHit ? (
+                <View
+                  style={{
+                    marginTop: 12,
+                    padding: 14,
+                    borderRadius: 10,
+                    borderWidth: 1,
+                    borderColor: theme.colors.accent,
+                    backgroundColor: "rgba(255,179,0,0.10)",
+                  }}
+                >
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                    <Ionicons name="lock-closed" size={16} color={theme.colors.accent} />
+                    <Text
+                      style={{
+                        color: theme.colors.accent,
+                        fontWeight: "900",
+                        fontSize: 13,
+                        letterSpacing: 1,
+                      }}
+                    >
+                      DEALER LIMIT REACHED
+                    </Text>
+                  </View>
+                  <Text
+                    style={{ color: theme.colors.textSecondary, fontSize: 12, lineHeight: 17, marginBottom: 10 }}
+                  >
+                    Free plan allows up to {FREE_LIMITS.dealers} dealer. Upgrade for unlimited dealers and authorized agents.
+                  </Text>
+                  <TouchableOpacity
+                    onPress={goToSubscriptionFromDealer}
+                    style={{
+                      backgroundColor: theme.colors.accent,
+                      paddingVertical: 10,
+                      borderRadius: 8,
+                      alignItems: "center",
+                    }}
+                  >
+                    <Text style={{ color: "#000", fontWeight: "900", fontSize: 12, letterSpacing: 1.5 }}>
+                      VIEW PLANS →
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              ) : !!newDealerErr ? (
                 <View
                   style={{
                     flexDirection: "row",
@@ -922,30 +955,33 @@ export default function ToolEdit() {
                     {newDealerErr}
                   </Text>
                 </View>
-              )}
+              ) : null}
               <View style={{ flexDirection: "row", gap: 10, marginTop: 12 }}>
                 <TouchableOpacity
                   style={[styles.btnGhost, { flex: 1, marginTop: 0 }]}
                   onPress={() => {
                     setNewDealerErr("");
+                    setNewDealerLimitHit(false);
                     setShowNewDealer(false);
                   }}
                   disabled={savingDealer}
                 >
-                  <Text style={styles.btnGhostText}>CANCEL</Text>
+                  <Text style={styles.btnGhostText}>{newDealerLimitHit ? "CLOSE" : "CANCEL"}</Text>
                 </TouchableOpacity>
-                <TouchableOpacity
-                  testID="save-new-dealer-btn"
-                  style={styles.btnPrimary}
-                  onPress={saveNewDealer}
-                  disabled={savingDealer}
-                >
-                  {savingDealer ? (
-                    <ActivityIndicator color="#000" />
-                  ) : (
-                    <Text style={styles.btnPrimaryText}>SAVE DEALER</Text>
-                  )}
-                </TouchableOpacity>
+                {!newDealerLimitHit && (
+                  <TouchableOpacity
+                    testID="save-new-dealer-btn"
+                    style={styles.btnPrimary}
+                    onPress={saveNewDealer}
+                    disabled={savingDealer}
+                  >
+                    {savingDealer ? (
+                      <ActivityIndicator color="#000" />
+                    ) : (
+                      <Text style={styles.btnPrimaryText}>SAVE DEALER</Text>
+                    )}
+                  </TouchableOpacity>
+                )}
               </View>
             </View>
           </View>

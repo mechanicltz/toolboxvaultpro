@@ -192,16 +192,19 @@ export default function InventoryScreen() {
         api.listTags().catch(() => []),
         api.upcomingMaintenance(60).catch(() => ({ overdue: [], due_soon: [] })),
       ]);
-      // Build maintenance tool id set (overdue + due_soon)
+      // Build maintenance tool id set (overdue + due_soon) — used for the badge count only
       const mItems: any[] = (mu as any)?.items || [];
       const mIds = new Set<string>(mItems.map((x: any) => x.tool_id));
       setMaintToolIds(mIds);
-      // Client-side filter for "lost" / "maintenance" since backend doesn't expose these as params
+      // Client-side filter for "lost" / "maintenance"
+      // - "maintenance" filter = ALL items that have ANY maintenance schedule (not just due ones)
       let filteredTools =
         filter === "lost"
           ? t.filter((x: any) => x?.lost_status?.is_lost)
           : filter === "maintenance"
-          ? t.filter((x: any) => mIds.has(x.id))
+          ? t.filter(
+              (x: any) => Array.isArray(x?.maintenance) && x.maintenance.length > 0
+            )
           : t;
       // Apply location filter (selected location + all descendants)
       if (locationFilter) {
