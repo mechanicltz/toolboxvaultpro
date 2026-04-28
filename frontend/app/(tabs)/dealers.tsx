@@ -22,6 +22,7 @@ import { getCached, setCached } from "../../src/cache";
 import { useAuth } from "../../src/AuthContext";
 import { useUpgradePrompt } from "../../src/UpgradePrompt";
 import { FREE_LIMITS, isPremium } from "../../src/subscription";
+import { useResponsive } from "../../src/responsive";
 
 export default function DealersScreen() {
   const router = useRouter();
@@ -29,6 +30,7 @@ export default function DealersScreen() {
   const { user } = useAuth();
   const upgrade = useUpgradePrompt();
   const tier = user?.subscription?.tier || "free";
+  const { gridCols } = useResponsive();
   const [dealers, setDealers] = useState<any[]>(() => getCached("dealers", []));
   const [tools, setTools] = useState<any[]>(() => getCached("tools", []));
   const [showAdd, setShowAdd] = useState(false);
@@ -87,6 +89,9 @@ export default function DealersScreen() {
       <FlatList
         data={dealers}
         keyExtractor={(i) => i.id}
+        key={`dealers-grid-${gridCols}`}
+        numColumns={gridCols}
+        columnWrapperStyle={gridCols > 1 ? { gap: 12, paddingHorizontal: 16, paddingTop: 8 } : undefined}
         contentContainerStyle={{ paddingBottom: 100 }}
         ListEmptyComponent={
           <View style={styles.empty}>
@@ -105,7 +110,11 @@ export default function DealersScreen() {
           return (
             <TouchableOpacity
               testID={`dealer-card-${item.id}`}
-              style={[styles.row, isLocked && styles.rowLocked]}
+              style={[
+                styles.row,
+                gridCols > 1 && styles.rowGrid,
+                isLocked && styles.rowLocked,
+              ]}
               onPress={() => {
                 if (isLocked) {
                   upgrade.show({
@@ -293,6 +302,15 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   rowLocked: { opacity: 0.45 },
+  rowGrid: {
+    flex: 1,
+    borderBottomWidth: 0,
+    borderWidth: 1,
+    borderColor: theme.colors.borderSubtle,
+    borderRadius: theme.radii.md,
+    backgroundColor: theme.colors.surface,
+    marginBottom: 12,
+  },
   avatar: {
     width: 48,
     height: 48,

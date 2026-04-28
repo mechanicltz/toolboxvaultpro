@@ -28,6 +28,7 @@ import { buildLocationTree, flattenLocationTree } from "../../src/locationTree";
 import { useAuth } from "../../src/AuthContext";
 import { useUpgradePrompt } from "../../src/UpgradePrompt";
 import { FREE_LIMITS, isPremium } from "../../src/subscription";
+import { useResponsive } from "../../src/responsive";
 
 type Filter = "all" | "available" | "out" | "consumables" | "lost" | "maintenance";
 
@@ -37,6 +38,7 @@ export default function InventoryScreen() {
   const { user } = useAuth();
   const upgrade = useUpgradePrompt();
   const tier = user?.subscription?.tier || "free";
+  const { gridCols, isPhone } = useResponsive();
   const [tools, setTools] = useState<any[]>(() => getCached("inv_tools", []));
   const [agg, setAgg] = useState<any>(() => getCached("inv_agg", null));
   const [search, setSearch] = useState("");
@@ -372,7 +374,10 @@ export default function InventoryScreen() {
       <FlatList
         data={tools}
         keyExtractor={(i) => i.id}
-        contentContainerStyle={{ paddingBottom: 120 }}
+        key={`grid-${gridCols}`}
+        numColumns={gridCols}
+        columnWrapperStyle={gridCols > 1 ? { gap: 12, paddingHorizontal: 16 } : undefined}
+        contentContainerStyle={{ paddingBottom: 120, paddingTop: gridCols > 1 ? 0 : 0 }}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.colors.accent} />
         }
@@ -395,6 +400,7 @@ export default function InventoryScreen() {
               testID={`tool-card-${item.id}`}
               style={[
                 styles.row,
+                gridCols > 1 && { flex: 1, marginHorizontal: 0 },
                 isSelected && styles.rowSelected,
                 isLocked && styles.rowLocked,
               ]}
