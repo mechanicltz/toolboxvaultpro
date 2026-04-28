@@ -2,6 +2,7 @@ import { View, Text, TouchableOpacity, StyleSheet, Platform } from "react-native
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter, usePathname } from "expo-router";
 import { theme } from "./theme";
+import { useResponsive, CONTENT_MAX_WIDTH_WIDE } from "./responsive";
 
 const TABS = [
   { name: "home", label: "HOME", icon: "home" as const, route: "/" },
@@ -14,6 +15,7 @@ const TABS = [
 export function BottomBar() {
   const router = useRouter();
   const pathname = usePathname() || "/";
+  const { isPhone, isTablet } = useResponsive();
 
   const isActive = (route: string) => {
     if (route === "/") return pathname === "/" || pathname === "/index";
@@ -22,32 +24,45 @@ export function BottomBar() {
 
   return (
     <View style={styles.bar}>
-      {TABS.map((t) => {
-        const active = isActive(t.route);
-        return (
-          <TouchableOpacity
-            key={t.name}
-            testID={`tab-${t.name}`}
-            style={styles.btn}
-            onPress={() => router.push(t.route as any)}
-            activeOpacity={0.7}
-          >
-            <Ionicons
-              name={t.icon}
-              size={22}
-              color={active ? theme.colors.accent : theme.colors.textMuted}
-            />
-            <Text
-              style={[
-                styles.label,
-                { color: active ? theme.colors.accent : theme.colors.textMuted },
-              ]}
+      <View
+        style={[
+          styles.inner,
+          !isPhone && {
+            maxWidth: CONTENT_MAX_WIDTH_WIDE,
+            width: "100%",
+            alignSelf: "center",
+            paddingHorizontal: isTablet ? 24 : 32,
+          },
+        ]}
+      >
+        {TABS.map((t) => {
+          const active = isActive(t.route);
+          return (
+            <TouchableOpacity
+              key={t.name}
+              testID={`tab-${t.name}`}
+              style={styles.btn}
+              onPress={() => router.push(t.route as any)}
+              activeOpacity={0.7}
             >
-              {t.label}
-            </Text>
-          </TouchableOpacity>
-        );
-      })}
+              <Ionicons
+                name={t.icon}
+                size={isPhone ? 22 : 26}
+                color={active ? theme.colors.accent : theme.colors.textMuted}
+              />
+              <Text
+                style={[
+                  styles.label,
+                  !isPhone && { fontSize: 11 },
+                  { color: active ? theme.colors.accent : theme.colors.textMuted },
+                ]}
+              >
+                {t.label}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
     </View>
   );
 }
@@ -61,6 +76,10 @@ const styles = StyleSheet.create({
     height: Platform.OS === "ios" ? 80 : 64,
     paddingTop: 8,
     paddingBottom: Platform.OS === "ios" ? 24 : 10,
+  },
+  inner: {
+    flex: 1,
+    flexDirection: "row",
   },
   btn: {
     flex: 1,

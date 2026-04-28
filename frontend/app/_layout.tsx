@@ -8,6 +8,7 @@ import { BottomBar } from "../src/BottomBar";
 import { ReportsFab } from "../src/ReportsFab";
 import { AuthProvider, useAuth } from "../src/AuthContext";
 import { UpgradeProvider } from "../src/UpgradePrompt";
+import { ResponsiveContainer } from "../src/ResponsiveContainer";
 import { theme } from "../src/theme";
 
 function AuthGate({ children }: { children: React.ReactNode }) {
@@ -41,19 +42,21 @@ function ShellNav() {
   return (
     <View style={{ flex: 1 }}>
       <View style={{ flex: 1 }}>
-        <Stack
-          screenOptions={{
-            headerShown: false,
-            contentStyle: { backgroundColor: "transparent" },
-            animation: "slide_from_right",
-          }}
-        >
-          <Stack.Screen name="login" options={{ animation: "fade" }} />
-          <Stack.Screen name="(tabs)" />
-          <Stack.Screen name="tool/[id]" />
-          <Stack.Screen name="tool/edit" />
-          <Stack.Screen name="subscription" />
-        </Stack>
+        <ResponsiveContainer variant="wide">
+          <Stack
+            screenOptions={{
+              headerShown: false,
+              contentStyle: { backgroundColor: "transparent" },
+              animation: "slide_from_right",
+            }}
+          >
+            <Stack.Screen name="login" options={{ animation: "fade" }} />
+            <Stack.Screen name="(tabs)" />
+            <Stack.Screen name="tool/[id]" />
+            <Stack.Screen name="tool/edit" />
+            <Stack.Screen name="subscription" />
+          </Stack>
+        </ResponsiveContainer>
         {showShell && <ReportsFab />}
       </View>
       {showShell && <BottomBar />}
