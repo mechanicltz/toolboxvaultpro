@@ -65,7 +65,7 @@ function TierCard({ tier, current, discountPct, onSelect }: TierCardProps) {
     subtitle = "Billed monthly";
   } else if (isYearly) {
     subtitle = "Billed once per year";
-    savings = "Save hundreds and never pay again!";
+    savings = "Get 2 months FREE — pay yearly!";
   } else if (isLifetime) {
     subtitle = "One-time payment";
     savings = "Save hundreds and never pay again!";
