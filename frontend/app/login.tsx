@@ -147,7 +147,7 @@ export default function LoginScreen() {
             {err ? (
               <View style={styles.errBox}>
                 <Ionicons name="alert-circle" size={16} color={theme.colors.danger} />
-                <Text style={styles.errText}>{err}</Text>
+                <Text style={styles.errText}>{String(err)}</Text>
               </View>
             ) : null}
 
@@ -285,6 +285,14 @@ const styles = StyleSheet.create({
   },
   submitText: { color: "#000", fontWeight: "900", fontSize: 14, letterSpacing: 1.5 },
   hint: {
+    color: theme.colors.textMuted,
+    fontSize: 11,
+    textAlign: "center",
+    marginTop: 14,
+    lineHeight: 16,
+  },
+});
+{
     color: theme.colors.textMuted,
     fontSize: 11,
     textAlign: "center",

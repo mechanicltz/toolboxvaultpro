@@ -53,11 +53,31 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
       const t = await res.text();
       try {
         const j = JSON.parse(t);
-        detail = j.detail || t;
+        // FastAPI/Pydantic 422 returns detail as an array of error objects:
+        // [{type, loc, msg, input, ctx}, ...]. Flatten to a readable string.
+        if (Array.isArray(j?.detail)) {
+          detail = j.detail
+            .map((e: any) => {
+              const loc = Array.isArray(e?.loc)
+                ? e.loc.filter((p: any) => p !== "body").join(".")
+                : "";
+              const msg = e?.msg || "Invalid value";
+              return loc ? `${loc}: ${msg}` : msg;
+            })
+            .join("; ");
+        } else if (typeof j?.detail === "string") {
+          detail = j.detail;
+        } else if (j?.detail && typeof j.detail === "object") {
+          // Single error object form
+          detail = j.detail.msg || JSON.stringify(j.detail);
+        } else {
+          detail = t;
+        }
       } catch {
         detail = t;
       }
     } catch {}
+    if (!detail) detail = `Request failed: ${res.status}`;
     if (res.status === 401 && onUnauthorized) onUnauthorized();
     throw new ApiError(res.status, detail);
   }
