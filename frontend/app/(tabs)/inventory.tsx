@@ -386,10 +386,50 @@ export default function InventoryScreen() {
         }
         ListEmptyComponent={
           <View style={styles.empty}>
-            <Ionicons name="construct-outline" size={64} color={theme.colors.textMuted} />
-            <Text style={styles.emptyTitle}>NO TOOLS YET</Text>
+            <Ionicons
+              name={
+                filter === "maintenance"
+                  ? "build-outline"
+                  : filter === "lost"
+                    ? "search-outline"
+                    : filter === "consumables"
+                      ? "flask-outline"
+                      : filter === "out"
+                        ? "swap-horizontal-outline"
+                        : "construct-outline"
+              }
+              size={64}
+              color={theme.colors.textMuted}
+            />
+            <Text style={styles.emptyTitle}>
+              {filter === "maintenance"
+                ? "NO MAINTENANCE ITEMS"
+                : filter === "lost"
+                  ? "NO LOST/STOLEN ITEMS"
+                  : filter === "out"
+                    ? "NOTHING CHECKED OUT"
+                    : filter === "consumables"
+                      ? "NO CONSUMABLES"
+                      : filter === "available"
+                        ? "NO AVAILABLE TOOLS"
+                        : tools.length === 0 && !search
+                          ? "NO TOOLS YET"
+                          : "NO RESULTS"}
+            </Text>
             <Text style={styles.emptyText}>
-              Tap the yellow button to add your first tool.
+              {filter === "maintenance"
+                ? "No tools have a maintenance schedule yet. Open any tool, scroll to MAINTENANCE, and tap + ADD SCHEDULE."
+                : filter === "lost"
+                  ? "All your tools are accounted for. Mark one as lost from its detail page."
+                  : filter === "consumables"
+                    ? "Mark a tool as consumable from its edit screen to track it here."
+                    : filter === "out"
+                      ? "Tools that are checked out will appear here."
+                      : !!search
+                        ? `No tools match \"${search}\". Try a different search.`
+                        : locationFilter
+                          ? "No tools in the selected location. Try clearing the location filter."
+                          : "Tap the yellow button to add your first tool."}
             </Text>
           </View>
         }
