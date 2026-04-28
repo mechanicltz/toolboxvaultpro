@@ -84,6 +84,7 @@ export default function ToolEdit() {
     agent_email: "",
   });
   const [savingDealer, setSavingDealer] = useState(false);
+  const [newDealerErr, setNewDealerErr] = useState("");
 
   const [locations, setLocations] = useState<any[]>([]);
   const [dealers, setDealers] = useState<any[]>([]);
@@ -212,26 +213,48 @@ export default function ToolEdit() {
   };
 
   const saveNewDealer = async () => {
-    if (!newDealer.name.trim()) {
-      Alert.alert("Required", "Please enter a dealer name.");
+    setNewDealerErr("");
+    const name = newDealer.name.trim();
+    if (!name) {
+      setNewDealerErr("Please enter a dealer name.");
+      return;
+    }
+    // Pre-check the free-tier dealer limit so we show a friendly upgrade prompt
+    if (!isPremium(tier) && dealers.length >= FREE_LIMITS.dealers) {
+      // Close this modal first, then show upgrade after iOS finishes the dismiss animation
+      setShowNewDealer(false);
+      setShowDealerPicker(false);
+      setTimeout(() => {
+        upgrade.show({
+          title: "Dealer Limit Reached",
+          message: `Free plan allows up to ${FREE_LIMITS.dealers} dealer. Upgrade for unlimited dealers and authorized agents.`,
+        });
+      }, 350);
       return;
     }
     setSavingDealer(true);
     try {
       const created = await api.createDealer({
-        name: newDealer.name.trim(),
+        name,
         phone: newDealer.phone.trim(),
         website: newDealer.website.trim(),
         notes: "",
       });
       // Add an agent if provided
       if (newDealer.agent_name.trim()) {
-        await api.addAgent(created.id, {
-          name: newDealer.agent_name.trim(),
-          phone: newDealer.agent_phone.trim(),
-          email: newDealer.agent_email.trim(),
-          notes: "",
-        });
+        try {
+          await api.addAgent(created.id, {
+            name: newDealer.agent_name.trim(),
+            phone: newDealer.agent_phone.trim(),
+            email: newDealer.agent_email.trim(),
+            notes: "",
+          });
+        } catch (agentErr: any) {
+          // Agent limit hit — dealer was still created, just skip the agent
+          if (agentErr?.status !== 402) {
+            console.warn("Add agent failed:", agentErr);
+          }
+        }
       }
       // Refresh dealers and auto-select the new one
       const updatedDealers = await api.listDealers();
@@ -249,7 +272,26 @@ export default function ToolEdit() {
         agent_email: "",
       });
     } catch (e: any) {
-      Alert.alert("Error", e.message);
+      if (e?.status === 402) {
+        setShowNewDealer(false);
+        setShowDealerPicker(false);
+        setTimeout(() => {
+          upgrade.show({
+            title: "Dealer Limit Reached",
+            message:
+              e?.detail ||
+              `Free plan allows up to ${FREE_LIMITS.dealers} dealer. Upgrade for unlimited dealers.`,
+          });
+        }, 350);
+      } else {
+        const msg =
+          typeof e?.detail === "string"
+            ? e.detail
+            : typeof e?.message === "string"
+              ? e.message
+              : "Could not save dealer. Please try again.";
+        setNewDealerErr(msg);
+      }
     } finally {
       setSavingDealer(false);
     }
@@ -861,10 +903,33 @@ export default function ToolEdit() {
                   />
                 </View>
               </ScrollView>
+              {!!newDealerErr && (
+                <View
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 6,
+                    padding: 10,
+                    marginTop: 8,
+                    borderRadius: 6,
+                    backgroundColor: "rgba(239,68,68,0.12)",
+                    borderWidth: 1,
+                    borderColor: "rgba(239,68,68,0.4)",
+                  }}
+                >
+                  <Ionicons name="alert-circle" size={14} color={theme.colors.danger} />
+                  <Text style={{ color: theme.colors.danger, fontSize: 12, flex: 1 }}>
+                    {newDealerErr}
+                  </Text>
+                </View>
+              )}
               <View style={{ flexDirection: "row", gap: 10, marginTop: 12 }}>
                 <TouchableOpacity
                   style={[styles.btnGhost, { flex: 1, marginTop: 0 }]}
-                  onPress={() => setShowNewDealer(false)}
+                  onPress={() => {
+                    setNewDealerErr("");
+                    setShowNewDealer(false);
+                  }}
                   disabled={savingDealer}
                 >
                   <Text style={styles.btnGhostText}>CANCEL</Text>
