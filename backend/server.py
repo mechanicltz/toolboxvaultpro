@@ -22,6 +22,8 @@ from auth import (
     LoginRequest,
     AuthResponse,
     SubscribeRequest,
+    PromoCodeRequest,
+    PROMO_CODES,
     hash_password,
     verify_password,
     create_token,
@@ -134,7 +136,13 @@ async def get_current_user(request: Request) -> User:
 
 def to_public(u: User) -> UserPublic:
     return UserPublic(
-        id=u.id, email=u.email, name=u.name or "", subscription=u.subscription, created_at=u.created_at
+        id=u.id,
+        email=u.email,
+        name=u.name or "",
+        subscription=u.subscription,
+        discount_pct=getattr(u, "discount_pct", 0) or 0,
+        promo_codes_used=getattr(u, "promo_codes_used", []) or [],
+        created_at=u.created_at,
     )
 
 
@@ -2090,13 +2098,66 @@ async def get_subscription(user: User = Depends(get_current_user)):
         "tools": await real_db.tools.count_documents({"owner_id": user.id}),
         "dealers": await real_db.dealers.count_documents({"owner_id": user.id}),
     }
+    discount_pct = int(getattr(user, "discount_pct", 0) or 0)
+    # Apply discount to displayed prices
+    discounted_prices = {
+        k: round(v * (1 - discount_pct / 100), 2) for k, v in TIER_PRICES.items()
+    }
     return {
         "subscription": user.subscription.dict(),
         "is_premium": is_premium_tier(user.subscription.tier),
         "tier_prices": TIER_PRICES,
+        "discounted_prices": discounted_prices,
+        "discount_pct": discount_pct,
+        "promo_codes_used": getattr(user, "promo_codes_used", []) or [],
         "free_limits": FREE_LIMITS,
         "tiers": ALL_TIERS,
         "counts": counts,
+    }
+
+
+@sub_router.post("/redeem-code")
+async def redeem_code(payload: PromoCodeRequest, user: User = Depends(get_current_user)):
+    """Redeem a universal promo code. Currently supported codes:
+    - MechanicUnlimited007 → grants lifetime tier (free forever)
+    - Mechanic50off333     → 50% discount on all subscription prices
+    """
+    raw = (payload.code or "").strip()
+    if not raw:
+        raise HTTPException(400, "Please enter a code")
+    code_key = raw.lower()
+    promo = PROMO_CODES.get(code_key)
+    if not promo:
+        raise HTTPException(400, "Invalid code. Please double-check and try again.")
+    used = list(getattr(user, "promo_codes_used", []) or [])
+    if code_key in used:
+        raise HTTPException(400, "You've already redeemed this code.")
+
+    update: Dict[str, Any] = {}
+    message = promo.get("description", "")
+
+    if promo["kind"] == "lifetime":
+        new_sub = make_subscription_for_tier(TIER_LIFETIME)
+        update["subscription"] = new_sub.dict()
+    elif promo["kind"] == "discount":
+        pct = int(promo.get("discount_pct", 0))
+        # Stack the higher of existing or new discount (so user always benefits)
+        existing = int(getattr(user, "discount_pct", 0) or 0)
+        update["discount_pct"] = max(existing, pct)
+
+    used.append(code_key)
+    update["promo_codes_used"] = used
+    update["updated_at"] = now_iso()
+    await real_db.users.update_one({"id": user.id}, {"$set": update})
+
+    # Return refreshed user state
+    udoc = await real_db.users.find_one({"id": user.id}, {"_id": 0})
+    fresh = User(**udoc)
+    return {
+        "ok": True,
+        "label": promo.get("label"),
+        "message": message,
+        "user": to_public(fresh).dict(),
     }
 
 

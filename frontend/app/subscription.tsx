@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   Modal,
   Pressable,
+  TextInput,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -29,6 +30,7 @@ import {
 type TierCardProps = {
   tier: Tier;
   current: boolean;
+  discountPct: number;
   onSelect: () => void;
 };
 
@@ -42,8 +44,9 @@ function fmtDate(iso?: string | null) {
   }
 }
 
-function TierCard({ tier, current, onSelect }: TierCardProps) {
-  const price = TIER_PRICES[tier];
+function TierCard({ tier, current, discountPct, onSelect }: TierCardProps) {
+  const baseRaw = TIER_PRICES[tier];
+  const price = discountPct > 0 ? Math.round(baseRaw * (1 - discountPct / 100) * 100) / 100 : baseRaw;
   const label = TIER_LABELS[tier];
   const isPaid = tier !== "free";
   const isYearly = tier === "yearly";
@@ -129,8 +132,16 @@ function TierCard({ tier, current, onSelect }: TierCardProps) {
       </View>
 
       <View style={styles.priceRow}>
+        {discountPct > 0 && isPaid && (
+          <Text style={styles.priceOriginal}>{fmtMoney(baseRaw)}</Text>
+        )}
         <Text style={styles.priceMain}>{isPaid ? fmtMoney(price) : "FREE"}</Text>
         {!!priceUnit && <Text style={styles.priceUnit}>{priceUnit}</Text>}
+        {discountPct > 0 && isPaid && (
+          <View style={styles.discountChip}>
+            <Text style={styles.discountChipText}>-{discountPct}%</Text>
+          </View>
+        )}
       </View>
       <Text style={styles.cardSub}>{subtitle}</Text>
       {!!savings && (
@@ -193,6 +204,14 @@ export default function SubscriptionScreen() {
 
   const currentTier = (user?.subscription?.tier || "free") as Tier;
   const sub = user?.subscription;
+  const discountPct = user?.discount_pct || 0;
+  const promoUsed = user?.promo_codes_used || [];
+
+  // Promo code state
+  const [promoCode, setPromoCode] = useState("");
+  const [promoBusy, setPromoBusy] = useState(false);
+  const [promoErr, setPromoErr] = useState("");
+  const [promoSuccess, setPromoSuccess] = useState<{ label: string; message: string } | null>(null);
 
   const handleSelect = (tier: Tier) => {
     if (tier === currentTier) return;
@@ -242,6 +261,23 @@ export default function SubscriptionScreen() {
       console.warn(e);
     } finally {
       setBusy(false);
+    }
+  };
+
+  const redeemCode = async () => {
+    if (!promoCode.trim() || promoBusy) return;
+    setPromoErr("");
+    setPromoBusy(true);
+    try {
+      const res = await api.redeemPromoCode(promoCode.trim());
+      setPromoCode("");
+      setPromoSuccess({ label: res.label || "Code redeemed!", message: res.message || "" });
+      await refresh();
+      await load();
+    } catch (e: any) {
+      setPromoErr(e?.detail || e?.message || "Could not redeem code");
+    } finally {
+      setPromoBusy(false);
     }
   };
 
@@ -323,23 +359,92 @@ export default function SubscriptionScreen() {
           <TierCard
             tier="free"
             current={currentTier === "free"}
+            discountPct={discountPct}
             onSelect={() => handleSelect("free")}
           />
           <TierCard
             tier="monthly"
             current={currentTier === "monthly"}
+            discountPct={discountPct}
             onSelect={() => handleSelect("monthly")}
           />
           <TierCard
             tier="yearly"
             current={currentTier === "yearly"}
+            discountPct={discountPct}
             onSelect={() => handleSelect("yearly")}
           />
           <TierCard
             tier="lifetime"
             current={currentTier === "lifetime"}
+            discountPct={discountPct}
             onSelect={() => handleSelect("lifetime")}
           />
+
+          {/* Promo code redeem section */}
+          <View style={styles.promoCard}>
+            <View style={styles.promoHeader}>
+              <Ionicons name="pricetag" size={18} color={theme.colors.accent} />
+              <Text style={styles.promoTitle}>HAVE A PROMO CODE?</Text>
+            </View>
+            <Text style={styles.promoSub}>
+              Enter your code below to unlock a discount or free upgrade.
+            </Text>
+            {discountPct > 0 && (
+              <View style={styles.promoActiveBox}>
+                <Ionicons name="checkmark-circle" size={14} color={theme.colors.success} />
+                <Text style={styles.promoActiveText}>
+                  {discountPct}% discount active on all plans
+                </Text>
+              </View>
+            )}
+            {promoUsed.length > 0 && (
+              <View style={styles.promoUsedRow}>
+                {promoUsed.map((code) => (
+                  <View key={code} style={styles.promoUsedChip}>
+                    <Ionicons name="checkmark" size={11} color={theme.colors.success} />
+                    <Text style={styles.promoUsedChipText} numberOfLines={1}>
+                      {code}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            )}
+            <View style={styles.promoInputRow}>
+              <TextInput
+                value={promoCode}
+                onChangeText={(t) => {
+                  setPromoCode(t);
+                  setPromoErr("");
+                }}
+                placeholder="Enter promo code"
+                placeholderTextColor={theme.colors.textMuted}
+                style={styles.promoInput}
+                autoCapitalize="none"
+                autoCorrect={false}
+                editable={!promoBusy}
+                testID="promo-code-input"
+              />
+              <TouchableOpacity
+                onPress={redeemCode}
+                disabled={promoBusy || !promoCode.trim()}
+                style={[styles.promoBtn, (!promoCode.trim() || promoBusy) && { opacity: 0.5 }]}
+                testID="promo-code-redeem"
+              >
+                {promoBusy ? (
+                  <ActivityIndicator color="#000" size="small" />
+                ) : (
+                  <Text style={styles.promoBtnText}>REDEEM</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+            {!!promoErr && (
+              <View style={styles.promoErrBox}>
+                <Ionicons name="alert-circle" size={14} color={theme.colors.danger} />
+                <Text style={styles.promoErrText}>{promoErr}</Text>
+              </View>
+            )}
+          </View>
 
           {/* Cancel button if on a paid plan */}
           {isPremium(currentTier) && currentTier !== "lifetime" && sub?.status !== "cancelled" && (
@@ -407,6 +512,38 @@ export default function SubscriptionScreen() {
                 {busy ? <ActivityIndicator color="#fff" size="small" /> : <Text style={[styles.btnPrimaryText, { color: "#fff" }]}>Cancel Plan</Text>}
               </TouchableOpacity>
             </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
+
+      {/* Promo redeem success modal */}
+      <Modal transparent animationType="fade" visible={!!promoSuccess} onRequestClose={() => setPromoSuccess(null)}>
+        <Pressable style={styles.overlay} onPress={() => setPromoSuccess(null)}>
+          <Pressable style={styles.confirmModal} onPress={(e) => e.stopPropagation()}>
+            <View style={{ alignItems: "center", marginBottom: 8 }}>
+              <View
+                style={{
+                  width: 64,
+                  height: 64,
+                  borderRadius: 32,
+                  backgroundColor: "rgba(16,185,129,0.15)",
+                  borderWidth: 2,
+                  borderColor: theme.colors.success,
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <Ionicons name="gift" size={28} color={theme.colors.success} />
+              </View>
+            </View>
+            <Text style={styles.confirmTitle}>{promoSuccess?.label || "Code Redeemed!"}</Text>
+            <Text style={styles.confirmMsg}>{promoSuccess?.message}</Text>
+            <TouchableOpacity
+              onPress={() => setPromoSuccess(null)}
+              style={[styles.btnPrimary, { backgroundColor: theme.colors.success }]}
+            >
+              <Text style={[styles.btnPrimaryText, { color: "#fff" }]}>AWESOME</Text>
+            </TouchableOpacity>
           </Pressable>
         </Pressable>
       </Modal>
@@ -549,6 +686,23 @@ const styles = StyleSheet.create({
   priceRow: { flexDirection: "row", alignItems: "flex-end", gap: 4, marginTop: 12 },
   priceMain: { color: theme.colors.textPrimary, fontSize: 32, fontWeight: "900" },
   priceUnit: { color: theme.colors.textMuted, fontSize: 14, fontWeight: "700", paddingBottom: 6 },
+  priceOriginal: {
+    color: theme.colors.textMuted,
+    fontSize: 16,
+    fontWeight: "700",
+    textDecorationLine: "line-through",
+    paddingBottom: 8,
+    marginRight: 6,
+  },
+  discountChip: {
+    backgroundColor: theme.colors.success,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    marginLeft: 6,
+    marginBottom: 8,
+  },
+  discountChipText: { color: "#000", fontSize: 10, fontWeight: "900", letterSpacing: 0.5 },
   cardSub: { color: theme.colors.textMuted, fontSize: 12, marginTop: 2 },
   savingsBox: {
     flexDirection: "row",
@@ -584,6 +738,101 @@ const styles = StyleSheet.create({
     fontSize: 13,
     textDecorationLine: "underline",
   },
+  promoCard: {
+    backgroundColor: theme.colors.surface,
+    borderRadius: 14,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  promoHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 6,
+  },
+  promoTitle: {
+    color: theme.colors.textPrimary,
+    fontSize: 13,
+    fontWeight: "900",
+    letterSpacing: 1.5,
+  },
+  promoSub: {
+    color: theme.colors.textMuted,
+    fontSize: 12,
+    marginBottom: 12,
+  },
+  promoActiveBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: "rgba(16,185,129,0.12)",
+    borderColor: theme.colors.success,
+    borderWidth: 1,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderRadius: 6,
+    marginBottom: 10,
+  },
+  promoActiveText: { color: theme.colors.success, fontSize: 12, fontWeight: "800" },
+  promoUsedRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 6,
+    marginBottom: 10,
+  },
+  promoUsedChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: theme.colors.bgSecondary,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: theme.colors.borderSubtle,
+  },
+  promoUsedChipText: {
+    color: theme.colors.textSecondary,
+    fontSize: 10,
+    fontWeight: "700",
+    letterSpacing: 0.5,
+  },
+  promoInputRow: { flexDirection: "row", gap: 8 },
+  promoInput: {
+    flex: 1,
+    backgroundColor: theme.colors.bgSecondary,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    color: theme.colors.textPrimary,
+    fontSize: 14,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  promoBtn: {
+    paddingHorizontal: 18,
+    backgroundColor: theme.colors.accent,
+    borderRadius: 8,
+    alignItems: "center",
+    justifyContent: "center",
+    minWidth: 90,
+  },
+  promoBtnText: { color: "#000", fontWeight: "900", fontSize: 12, letterSpacing: 1.5 },
+  promoErrBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginTop: 8,
+    padding: 8,
+    borderRadius: 6,
+    backgroundColor: "rgba(239,68,68,0.1)",
+    borderWidth: 1,
+    borderColor: "rgba(239,68,68,0.3)",
+  },
+  promoErrText: { color: theme.colors.danger, fontSize: 12, flex: 1 },
   disclaimer: {
     color: theme.colors.textMuted,
     fontSize: 11,

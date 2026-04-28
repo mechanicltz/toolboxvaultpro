@@ -92,6 +92,8 @@ export const api = {
     request<any>(`/subscription/subscribe`, { method: "POST", body: JSON.stringify({ tier }) }),
   cancelSubscription: () => request<any>(`/subscription/cancel`, { method: "POST" }),
   reactivateSubscription: () => request<any>(`/subscription/reactivate`, { method: "POST" }),
+  redeemPromoCode: (code: string) =>
+    request<any>(`/subscription/redeem-code`, { method: "POST", body: JSON.stringify({ code }) }),
 
   // Tools
   listTools: (params?: any) => request<any[]>(`/tools${qs(params)}`),

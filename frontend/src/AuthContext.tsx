@@ -15,6 +15,8 @@ export type AuthUser = {
   email: string;
   name?: string;
   subscription: Subscription;
+  discount_pct?: number;
+  promo_codes_used?: string[];
   created_at: string;
 };
 

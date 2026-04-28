@@ -14,7 +14,7 @@ from __future__ import annotations
 import os
 import uuid
 from datetime import datetime, timezone, timedelta
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 
 import bcrypt
 import jwt
@@ -74,6 +74,8 @@ class User(BaseModel):
     password_hash: str
     name: Optional[str] = ""
     subscription: Subscription = Field(default_factory=Subscription)
+    discount_pct: int = 0  # 0-100; applied to displayed prices
+    promo_codes_used: List[str] = Field(default_factory=list)
     created_at: str = Field(default_factory=now_iso)
     updated_at: str = Field(default_factory=now_iso)
 
@@ -83,6 +85,8 @@ class UserPublic(BaseModel):
     email: str
     name: Optional[str] = ""
     subscription: Subscription
+    discount_pct: int = 0
+    promo_codes_used: List[str] = Field(default_factory=list)
     created_at: str
 
 
@@ -104,6 +108,27 @@ class AuthResponse(BaseModel):
 
 class SubscribeRequest(BaseModel):
     tier: str  # monthly | yearly | lifetime
+
+
+class PromoCodeRequest(BaseModel):
+    code: str
+
+
+# ---------- Promo codes ----------
+# Hard-coded universal codes that any user can redeem (once each).
+PROMO_CODES = {
+    "mechanicunlimited007": {
+        "kind": "lifetime",
+        "label": "Lifetime Unlock",
+        "description": "You now have lifetime access — no payment ever required.",
+    },
+    "mechanic50off333": {
+        "kind": "discount",
+        "discount_pct": 50,
+        "label": "50% Off Forever",
+        "description": "All subscription prices are now 50% off for your account.",
+    },
+}
 
 
 # ---------- Password Hashing ----------
