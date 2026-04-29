@@ -526,21 +526,17 @@ export default function InventoryScreen() {
                     ? `  ·  $${(Number(item.cost) * Math.max(1, Number(item.quantity) || 1)).toFixed(0)}`
                     : ""}
                 </Text>
-                {(!!item.dealer_name || (Number(item.quantity) || 1) > 1) && (
-                  <View style={styles.rowDealerLine}>
-                    {!!item.dealer_name && (
-                      <Text style={styles.rowDealer} numberOfLines={1}>
-                        <Ionicons name="briefcase" size={11} color={theme.colors.textMuted} />{" "}
-                        {item.dealer_name}
-                      </Text>
-                    )}
-                    {(Number(item.quantity) || 1) > 1 && (
-                      <View style={styles.rowQtyPill}>
-                        <Text style={styles.rowQtyPillText}>×{Number(item.quantity)}</Text>
-                      </View>
-                    )}
+                <View style={styles.rowDealerLine}>
+                  {!!item.dealer_name && (
+                    <Text style={styles.rowDealer} numberOfLines={1}>
+                      <Ionicons name="briefcase" size={11} color={theme.colors.textMuted} />{" "}
+                      {item.dealer_name}
+                    </Text>
+                  )}
+                  <View style={styles.rowQtyPill}>
+                    <Text style={styles.rowQtyPillText}>×{Math.max(1, Number(item.quantity) || 1)}</Text>
                   </View>
-                )}
+                </View>
                 {(() => {
                   // Compute soonest maintenance due date
                   const schedules: any[] = item.maintenance || [];
