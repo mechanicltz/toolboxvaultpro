@@ -23,6 +23,7 @@ import { api } from "../../src/api";
 import { confirm } from "../../src/confirm";
 import { formatDateTime } from "../../src/dt";
 import { formatDateUS } from "../../src/dateUtil";
+import { DateField } from "../../src/DateField";
 import {
   LostStatusBanner,
   ReportLostButton,
@@ -780,24 +781,18 @@ export default function ToolDetail() {
               <View style={{ flexDirection: "row", gap: 10 }}>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.repairLabel}>NOTIFIED ON</Text>
-                  <TextInput
+                  <DateField
                     testID="repmod-notified"
-                    placeholder="YYYY-MM-DD"
-                    placeholderTextColor={theme.colors.textMuted}
                     value={repairForm.notified_at}
-                    style={styles.input}
-                    onChangeText={(v) => setRepairForm({ ...repairForm, notified_at: v })}
+                    onChange={(v) => setRepairForm({ ...repairForm, notified_at: v })}
                   />
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.repairLabel}>EXPECTED BACK</Text>
-                  <TextInput
+                  <DateField
                     testID="repmod-expected"
-                    placeholder="YYYY-MM-DD"
-                    placeholderTextColor={theme.colors.textMuted}
                     value={repairForm.expected_completion}
-                    style={styles.input}
-                    onChangeText={(v) => setRepairForm({ ...repairForm, expected_completion: v })}
+                    onChange={(v) => setRepairForm({ ...repairForm, expected_completion: v })}
                   />
                 </View>
               </View>

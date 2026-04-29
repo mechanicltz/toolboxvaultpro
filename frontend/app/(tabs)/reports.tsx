@@ -93,7 +93,7 @@ const COLUMNS: ColDef[] = [
     label: "Repair Dates",
     get: (t) =>
       t.needs_repair
-        ? `Notified ${t.repair_info?.notified_at || "—"} · Back ${t.repair_info?.expected_completion || "—"}`
+        ? `Notified ${formatDateUS(t.repair_info?.notified_at) || "—"} · Back ${formatDateUS(t.repair_info?.expected_completion) || "—"}`
         : "—",
   },
   { id: "description", label: "Description", get: (t) => t.description || "" },

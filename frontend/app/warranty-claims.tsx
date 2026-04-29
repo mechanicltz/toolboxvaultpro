@@ -23,6 +23,7 @@ import { theme } from "../src/theme";
 import { api } from "../src/api";
 import { confirm } from "../src/confirm";
 import { formatDateUS } from "../src/dateUtil";
+import { DateField } from "../src/DateField";
 
 const STATUS_LIST = [
   { key: "broken", label: "Broken", color: theme.colors.danger, icon: "alert-circle" as const },
@@ -574,24 +575,18 @@ export default function WarrantyClaimsScreen() {
             <View style={{ flexDirection: "row", gap: 10, marginBottom: 12 }}>
               <View style={{ flex: 1 }}>
                 <Text style={styles.fSubLabel}>FROM</Text>
-                <TextInput
+                <DateField
                   testID="fdate-from"
-                  placeholder="YYYY-MM-DD"
-                  placeholderTextColor={theme.colors.textMuted}
-                  style={styles.dateInput}
                   value={filterFrom}
-                  onChangeText={setFilterFrom}
+                  onChange={setFilterFrom}
                 />
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={styles.fSubLabel}>TO</Text>
-                <TextInput
+                <DateField
                   testID="fdate-to"
-                  placeholder="YYYY-MM-DD"
-                  placeholderTextColor={theme.colors.textMuted}
-                  style={styles.dateInput}
                   value={filterTo}
-                  onChangeText={setFilterTo}
+                  onChange={setFilterTo}
                 />
               </View>
             </View>

@@ -707,3 +707,17 @@ test_plan:
 - Verified by main agent: only the linked Snap-on dealer appears, Matco is
   no longer present, text is white on dark (readable), CONTACT auto-filled
   with the dealer's agent name.
+
+## 2026-04-29 — Comprehensive Date Cleanup
+User feedback: Several date fields were still text inputs, and a few raw
+date values were rendered without MM/DD/YYYY formatting.
+- Converted to DateField (native date picker):
+    - app/tool/[id].tsx — Edit Repair Info modal: NOTIFIED ON, EXPECTED BACK
+    - app/warranty-claims.tsx — Filter: NOTIFIED DATE RANGE (FROM, TO)
+- Wrapped raw values with formatDateUS:
+    - app/(tabs)/reports.tsx — Repair Dates column (Notified / Back)
+- DateField placeholder fix: corrected fallback hint from "DD/MM/YYYY" to
+  "MM/DD/YYYY" (US convention) and updated docstring.
+- Verified by main agent: all date inputs are now `<input type="date">`
+  pickers on web and the OS modal calendar on native.  All date displays
+  consistent at MM/DD/YYYY.

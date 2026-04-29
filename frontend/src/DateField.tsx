@@ -13,7 +13,7 @@ import { theme } from "./theme";
 import { formatDateUS, parseDateUS, todayISO } from "./dateUtil";
 
 /**
- * Cross-platform date field. Always displays/inputs in DD/MM/YYYY.
+ * Cross-platform date field. Always displays/inputs in MM/DD/YYYY (US).
  * Stored value is YYYY-MM-DD ISO under the hood.
  */
 export function DateField({
@@ -109,7 +109,7 @@ export function DateField({
             flex: 1,
           }}
         >
-          {display || placeholder || "DD/MM/YYYY"}
+          {display || placeholder || "MM/DD/YYYY"}
         </Text>
         {value ? (
           <TouchableOpacity onPress={() => onChange("")} hitSlop={8}>
