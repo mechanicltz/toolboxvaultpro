@@ -67,14 +67,22 @@ export async function openEmail(addr: string) {
 }
 
 export async function openPhone(num: string) {
-  // Strip non-dial characters except leading +.
-  const cleaned = num
+  const url = `tel:${cleanDialString(num)}`;
+  await openUrl(url, num);
+}
+
+export async function openSms(num: string) {
+  const url = `sms:${cleanDialString(num)}`;
+  await openUrl(url, num);
+}
+
+function cleanDialString(num: string): string {
+  // Strip non-dial characters except a leading +.
+  return num
     .trim()
     .replace(/^[+]/, "PLUS_PLACEHOLDER")
     .replace(/[^\d]/g, "")
     .replace(/^PLUS_PLACEHOLDER/, "+");
-  const url = `tel:${cleaned}`;
-  await openUrl(url, num);
 }
 
 async function openUrl(url: string, label: string) {

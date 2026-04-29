@@ -6,7 +6,7 @@ import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { theme } from "../../src/theme";
 import { api } from "../../src/api";
 import { formatDateTime } from "../../src/dt";
-import { parseContacts, openEmail, openPhone } from "../../src/contactLinks";
+import { parseContacts, openEmail, openPhone, openSms } from "../../src/contactLinks";
 
 export default function BorrowerHistory() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -165,16 +165,26 @@ function ContactActions({ raw }: { raw?: string | null }) {
   return (
     <View style={styles.actionsWrap}>
       {phones.map((p) => (
-        <TouchableOpacity
-          key={`p-${p}`}
-          testID={`contact-call-${p}`}
-          style={styles.actionBtn}
-          onPress={() => openPhone(p)}
-          activeOpacity={0.7}
-        >
-          <Ionicons name="call" size={16} color={theme.colors.accent} />
-          <Text style={styles.actionText} numberOfLines={1}>{p}</Text>
-        </TouchableOpacity>
+        <View key={`pgrp-${p}`} style={styles.actionGroup}>
+          <TouchableOpacity
+            testID={`contact-call-${p}`}
+            style={styles.actionBtn}
+            onPress={() => openPhone(p)}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="call" size={16} color={theme.colors.accent} />
+            <Text style={styles.actionText} numberOfLines={1}>{p}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            testID={`contact-text-${p}`}
+            style={[styles.actionBtn, styles.actionBtnSmall]}
+            onPress={() => openSms(p)}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="chatbubble-ellipses" size={15} color={theme.colors.accent} />
+            <Text style={styles.actionText}>Text</Text>
+          </TouchableOpacity>
+        </View>
       ))}
       {emails.map((e) => (
         <TouchableOpacity
@@ -221,6 +231,11 @@ const styles = StyleSheet.create({
     marginTop: 10,
     paddingHorizontal: 14,
   },
+  actionGroup: {
+    flexDirection: "row",
+    gap: 4,
+    flexWrap: "wrap",
+  },
   actionBtn: {
     flexDirection: "row",
     alignItems: "center",
@@ -231,6 +246,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: theme.colors.accent,
     backgroundColor: theme.colors.surface,
+  },
+  actionBtnSmall: {
+    paddingHorizontal: 10,
   },
   actionText: {
     color: theme.colors.textPrimary,

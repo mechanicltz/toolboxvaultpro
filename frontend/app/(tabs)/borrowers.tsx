@@ -16,7 +16,7 @@ import { theme } from "../../src/theme";
 import { api } from "../../src/api";
 import { confirm } from "../../src/confirm";
 import { formatDateTime } from "../../src/dt";
-import { parseContacts, openEmail, openPhone } from "../../src/contactLinks";
+import { parseContacts, openEmail, openPhone, openSms } from "../../src/contactLinks";
 
 export default function BorrowersScreen() {
   const router = useRouter();
@@ -292,20 +292,33 @@ function RowContactChips({ raw }: { raw?: string | null }) {
   return (
     <View style={styles.rowChipsWrap}>
       {phones.map((p) => (
-        <TouchableOpacity
-          key={`p-${p}`}
-          testID={`row-call-${p}`}
-          style={styles.rowChip}
-          onPress={(e: any) => {
-            e?.stopPropagation?.();
-            openPhone(p);
-          }}
-          activeOpacity={0.7}
-          hitSlop={6}
-        >
-          <Ionicons name="call" size={12} color={theme.colors.accent} />
-          <Text style={styles.rowChipText} numberOfLines={1}>{p}</Text>
-        </TouchableOpacity>
+        <View key={`pgrp-${p}`} style={styles.rowChipPair}>
+          <TouchableOpacity
+            testID={`row-call-${p}`}
+            style={styles.rowChip}
+            onPress={(e: any) => {
+              e?.stopPropagation?.();
+              openPhone(p);
+            }}
+            activeOpacity={0.7}
+            hitSlop={6}
+          >
+            <Ionicons name="call" size={12} color={theme.colors.accent} />
+            <Text style={styles.rowChipText} numberOfLines={1}>{p}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            testID={`row-text-${p}`}
+            style={[styles.rowChip, styles.rowChipIcon]}
+            onPress={(e: any) => {
+              e?.stopPropagation?.();
+              openSms(p);
+            }}
+            activeOpacity={0.7}
+            hitSlop={6}
+          >
+            <Ionicons name="chatbubble-ellipses" size={12} color={theme.colors.accent} />
+          </TouchableOpacity>
+        </View>
       ))}
       {emails.map((em) => (
         <TouchableOpacity
@@ -370,6 +383,10 @@ const styles = StyleSheet.create({
     gap: 6,
     marginTop: 4,
   },
+  rowChipPair: {
+    flexDirection: "row",
+    gap: 3,
+  },
   rowChip: {
     flexDirection: "row",
     alignItems: "center",
@@ -381,6 +398,9 @@ const styles = StyleSheet.create({
     borderColor: theme.colors.accent,
     backgroundColor: theme.colors.surface,
     maxWidth: "100%",
+  },
+  rowChipIcon: {
+    paddingHorizontal: 6,
   },
   rowChipText: {
     color: theme.colors.textPrimary,
