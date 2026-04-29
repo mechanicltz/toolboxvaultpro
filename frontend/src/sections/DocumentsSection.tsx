@@ -7,6 +7,8 @@ import {
   Alert,
   Platform,
   ActivityIndicator,
+  Modal,
+  Image,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import * as DocumentPicker from "expo-document-picker";
@@ -42,6 +44,8 @@ export function DocumentsSection({
   onChange: () => void;
 }) {
   const [busy, setBusy] = useState(false);
+  const [viewerDoc, setViewerDoc] = useState<any>(null);
+  const [viewerUrl, setViewerUrl] = useState<string>("");
   const docs: any[] = tool?.documents || [];
 
   const pickAndUpload = async () => {
@@ -106,43 +110,75 @@ export function DocumentsSection({
     }
   };
 
+  const buildBlobUrl = (doc: any): string | null => {
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const w: any = (globalThis as any).window;
+      const byteChars = w.atob(doc.data);
+      const len = byteChars.length;
+      const byteArray = new Uint8Array(len);
+      for (let i = 0; i < len; i++) byteArray[i] = byteChars.charCodeAt(i);
+      const blob = new Blob([byteArray], {
+        type: doc.mime_type || "application/octet-stream",
+      });
+      return w.URL.createObjectURL(blob);
+    } catch (e) {
+      console.warn("buildBlobUrl failed:", e);
+      return null;
+    }
+  };
+
+  const downloadDoc = (doc: any) => {
+    // Web only: forces a file download to the Downloads folder
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const w: any = (globalThis as any).window;
+      const url = buildBlobUrl(doc);
+      if (!url) {
+        Alert.alert("Error", "Could not prepare document.");
+        return;
+      }
+      const a = w.document.createElement("a");
+      a.href = url;
+      a.download = doc.name || "document";
+      w.document.body.appendChild(a);
+      a.click();
+      w.document.body.removeChild(a);
+      setTimeout(() => w.URL.revokeObjectURL(url), 60_000);
+    } catch (e: any) {
+      Alert.alert("Error", e?.message || "Download failed");
+    }
+  };
+
+  const closeViewer = () => {
+    if (viewerUrl) {
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const w: any = (globalThis as any).window;
+        w.URL.revokeObjectURL(viewerUrl);
+      } catch {
+        /* ignore */
+      }
+    }
+    setViewerUrl("");
+    setViewerDoc(null);
+  };
+
   const openDoc = async (doc: any) => {
     try {
       if (Platform.OS === "web") {
-        // Modern browsers block opening large data: URIs in new tabs.
-        // Convert to a Blob URL and open that — the standard pattern.
-        try {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const w: any = (globalThis as any).window;
-          const byteChars = w.atob(doc.data);
-          const byteNumbers = new Array(byteChars.length);
-          for (let i = 0; i < byteChars.length; i++) {
-            byteNumbers[i] = byteChars.charCodeAt(i);
-          }
-          const byteArray = new Uint8Array(byteNumbers);
-          const blob = new Blob([byteArray], { type: doc.mime_type || "application/octet-stream" });
-          const url = w.URL.createObjectURL(blob);
-
-          // Try to open in a new tab. If the browser blocks the popup,
-          // fall back to triggering a download.
-          const newWin = w.open(url, "_blank");
-          if (!newWin || newWin.closed || typeof newWin.closed === "undefined") {
-            // Popup blocked — trigger a download instead
-            const a = w.document.createElement("a");
-            a.href = url;
-            a.download = doc.name || "document";
-            w.document.body.appendChild(a);
-            a.click();
-            w.document.body.removeChild(a);
-          }
-          // Revoke after a delay so the new tab/download can finish loading
-          setTimeout(() => w.URL.revokeObjectURL(url), 60_000);
-        } catch (err) {
-          Alert.alert("Error", "Could not open document. Please try downloading it again.");
+        // Open INLINE in our own modal (iframe / image) — no popup blockers,
+        // no iframe sandbox issues, works inside Expo web preview.
+        const url = buildBlobUrl(doc);
+        if (!url) {
+          Alert.alert("Error", "Could not load document.");
+          return;
         }
+        setViewerUrl(url);
+        setViewerDoc(doc);
         return;
       }
-      // Native — write to cache and share
+      // Native — write to cache and use the iOS/Android share sheet
       const safeName = (doc.name || "document").replace(/[^a-zA-Z0-9._-]/g, "_");
       const dest = `${FileSystem.cacheDirectory}${safeName}`;
       await FileSystem.writeAsStringAsync(dest, doc.data, {
@@ -220,9 +256,110 @@ export function DocumentsSection({
           );
         })
       )}
+
+      {/* Inline document viewer modal (web only) */}
+      {Platform.OS === "web" && (
+        <Modal visible={!!viewerDoc} transparent animationType="fade" onRequestClose={closeViewer}>
+          <View style={vstyles.overlay}>
+            <View style={vstyles.bar}>
+              <Ionicons name="document-text" size={18} color={theme.colors.accent} />
+              <Text style={vstyles.title} numberOfLines={1}>
+                {viewerDoc?.name || "Document"}
+              </Text>
+              <TouchableOpacity
+                onPress={() => viewerDoc && downloadDoc(viewerDoc)}
+                style={vstyles.actionBtn}
+                testID="doc-download-btn"
+              >
+                <Ionicons name="download" size={16} color="#000" />
+                <Text style={vstyles.actionText}>DOWNLOAD</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={closeViewer}
+                style={vstyles.closeBtn}
+                testID="doc-viewer-close"
+              >
+                <Ionicons name="close" size={22} color={theme.colors.textPrimary} />
+              </TouchableOpacity>
+            </View>
+            <View style={vstyles.frameWrap}>
+              {viewerUrl ? (
+                viewerDoc?.mime_type?.startsWith("image/") ? (
+                  <Image
+                    source={{ uri: viewerUrl }}
+                    style={{ flex: 1, width: "100%", height: "100%" }}
+                    resizeMode="contain"
+                  />
+                ) : (
+                  /* @ts-expect-error iframe is web-only and we're guarded by Platform.OS check */
+                  <iframe
+                    src={viewerUrl}
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      border: "none",
+                      backgroundColor: "#fff",
+                    }}
+                    title={viewerDoc?.name || "Document viewer"}
+                  />
+                )
+              ) : (
+                <ActivityIndicator color={theme.colors.accent} />
+              )}
+            </View>
+          </View>
+        </Modal>
+      )}
     </View>
   );
 }
+
+const vstyles = StyleSheet.create({
+  overlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.92)",
+  },
+  bar: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: theme.colors.surface,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    gap: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
+  },
+  title: {
+    flex: 1,
+    color: theme.colors.textPrimary,
+    fontSize: 14,
+    fontWeight: "700",
+  },
+  actionBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: theme.colors.accent,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+  },
+  actionText: { color: "#000", fontWeight: "900", fontSize: 11, letterSpacing: 1 },
+  closeBtn: {
+    width: 36,
+    height: 36,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 6,
+    backgroundColor: theme.colors.bgSecondary,
+  },
+  frameWrap: {
+    flex: 1,
+    backgroundColor: "#1a1a1a",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+});
 
 const styles = StyleSheet.create({
   section: { marginTop: 18 },
