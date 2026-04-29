@@ -223,12 +223,27 @@ export default function ToolDetail() {
   };
 
   const openRepair = () => {
+    // Auto-fill the repair company from the tool's already-assigned dealer.
+    // The repair always goes to the dealer the tool was bought from — this
+    // shouldn't be a separate choice inside the repair flow.
+    const linkedDealer = dealers.find((d: any) => d.id === tool?.dealer_id);
+    const linkedAgent = linkedDealer?.agents?.find(
+      (a: any) => a.id === linkedDealer?.current_agent_id,
+    );
+    const dealerName =
+      tool?.repair_info?.company_notified || linkedDealer?.name || "";
+    const contact =
+      tool?.repair_info?.contact ||
+      linkedAgent?.name ||
+      linkedAgent?.phone ||
+      linkedDealer?.phone ||
+      "";
     setRepairForm({
-      company_notified: tool.repair_info?.company_notified || "",
+      company_notified: dealerName,
       notified_at: tool.repair_info?.notified_at || todayStr(),
       expected_completion: tool.repair_info?.expected_completion || "",
       repair_status: tool.repair_info?.repair_status || "Not Reported",
-      contact: tool.repair_info?.contact || "",
+      contact,
       notes: tool.repair_info?.notes || "",
       broken_photo: tool.repair_info?.broken_photo || "",
     });
@@ -710,43 +725,47 @@ export default function ToolDetail() {
               </View>
 
               <Text style={styles.repairLabel}>REPAIR COMPANY (DEALER)</Text>
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={{ flexDirection: "row", gap: 8, paddingVertical: 4 }}
-              >
-                {dealers.length === 0 ? (
-                  <Text style={{ color: theme.colors.textMuted, fontSize: 12, paddingVertical: 8 }}>
-                    No dealers yet. Add one in the Dealers tab.
-                  </Text>
-                ) : (
-                  dealers.map((d) => {
-                    const sel = repairForm.company_notified === d.name;
-                    return (
-                      <TouchableOpacity
-                        key={d.id}
-                        testID={`repmod-dealer-${d.id}`}
-                        onPress={() =>
-                          setRepairForm({ ...repairForm, company_notified: d.name })
-                        }
-                        style={[
-                          styles.repChip,
-                          sel && styles.repChipActive,
-                        ]}
-                      >
-                        <Text
-                          style={[
-                            styles.repChipText,
-                            sel && styles.repChipTextActive,
-                          ]}
-                        >
-                          {d.name}
-                        </Text>
-                      </TouchableOpacity>
-                    );
-                  })
-                )}
-              </ScrollView>
+              {(() => {
+                const linkedDealer = dealers.find(
+                  (d: any) => d.id === tool?.dealer_id,
+                );
+                const displayName =
+                  repairForm.company_notified ||
+                  linkedDealer?.name ||
+                  "";
+                if (!displayName) {
+                  return (
+                    <View style={styles.dealerLockBox}>
+                      <Ionicons
+                        name="alert-circle"
+                        size={16}
+                        color={theme.colors.warning}
+                      />
+                      <Text style={styles.dealerLockMissing}>
+                        No dealer assigned to this tool. Edit the tool to
+                        select one.
+                      </Text>
+                    </View>
+                  );
+                }
+                return (
+                  <View style={styles.dealerLockBox}>
+                    <Ionicons
+                      name="briefcase"
+                      size={16}
+                      color={theme.colors.accent}
+                    />
+                    <Text style={styles.dealerLockName} numberOfLines={1}>
+                      {displayName}
+                    </Text>
+                    <Ionicons
+                      name="lock-closed"
+                      size={13}
+                      color={theme.colors.textMuted}
+                    />
+                  </View>
+                );
+              })()}
 
               <Text style={styles.repairLabel}>CONTACT</Text>
               <TextInput
@@ -1109,6 +1128,30 @@ const styles = StyleSheet.create({
     letterSpacing: 1.5,
     marginTop: 8,
     marginBottom: 4,
+  },
+  dealerLockBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: theme.colors.surface,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginBottom: 8,
+  },
+  dealerLockName: {
+    flex: 1,
+    color: theme.colors.textPrimary,
+    fontSize: 14,
+    fontWeight: "700",
+  },
+  dealerLockMissing: {
+    flex: 1,
+    color: theme.colors.warning,
+    fontSize: 12,
+    fontStyle: "italic",
   },
   repChip: {
     paddingHorizontal: 12,

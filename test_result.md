@@ -692,3 +692,18 @@ test_plan:
 - Verified by main agent via screenshot tool: unselected chips render with
   light text + subtle border; selected chip renders with red bg + white
   text — clearly distinguishable.
+
+## 2026-04-29 — Repair modal: dealer is now read-only (auto-pulled from tool)
+- Per user feedback, the REPAIR COMPANY (DEALER) field in the Edit Repair
+  Info modal should NOT be a list of all dealers to choose from.  The
+  repair always goes to the dealer the tool was bought from (tool.dealer_id),
+  so the modal now shows that dealer as a locked, read-only field.
+- openRepair() now pre-fills:
+    - company_notified ← linked dealer's name
+    - contact ← linked dealer's current agent name (or phone) when blank
+- Display: briefcase icon + dealer name + lock icon (clearly read-only).
+- Empty state: shows an amber warning telling the user to edit the tool to
+  assign a dealer.
+- Verified by main agent: only the linked Snap-on dealer appears, Matco is
+  no longer present, text is white on dark (readable), CONTACT auto-filled
+  with the dealer's agent name.
