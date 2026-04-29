@@ -16,6 +16,7 @@ import { theme } from "../../src/theme";
 import { api } from "../../src/api";
 import { formatDateUS as fmtDate } from "../../src/dateUtil";
 import { getCached, setCached } from "../../src/cache";
+import { formatPhone } from "../../src/contactLinks";
 
 type Mode = "dealers" | "all-open";
 
@@ -307,7 +308,7 @@ export default function ClaimsScreen() {
                       <Text style={styles.dealerName}>{d.name}</Text>
                       <Text style={styles.dealerSub}>
                         {d.agents?.length || 0} agent{d.agents?.length === 1 ? "" : "s"}
-                        {d.phone ? `  ·  ${d.phone}` : ""}
+                        {d.phone ? `  ·  ${formatPhone(d.phone)}` : ""}
                       </Text>
                     </View>
                     <View style={{ alignItems: "flex-end" }}>

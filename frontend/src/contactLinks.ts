@@ -1,5 +1,53 @@
 import { Linking, Alert, Platform } from "react-native";
 
+/**
+ * Format a phone-number-like string into the canonical 111-222-3333 shape.
+ * - 10-digit numbers → "AAA-BBB-CCCC"
+ * - 11-digit numbers starting with a 1 → "1-AAA-BBB-CCCC"
+ * - 7-digit numbers → "BBB-CCCC"
+ * - anything else → returned trimmed, untouched (international / short
+ *   codes / weirdly-shaped inputs stay readable).
+ */
+export function formatPhone(raw?: string | null): string {
+  if (raw == null) return "";
+  const s = String(raw).trim();
+  if (!s) return "";
+  const digits = s.replace(/\D/g, "");
+  const hasPlus = s.trim().startsWith("+");
+  if (digits.length === 10) {
+    return `${digits.slice(0, 3)}-${digits.slice(3, 6)}-${digits.slice(6)}`;
+  }
+  if (digits.length === 11 && digits.startsWith("1")) {
+    return `1-${digits.slice(1, 4)}-${digits.slice(4, 7)}-${digits.slice(7)}`;
+  }
+  if (digits.length === 7) {
+    return `${digits.slice(0, 3)}-${digits.slice(3)}`;
+  }
+  if (hasPlus && digits.length >= 8) {
+    // Preserve international "+" prefix then group the rest.
+    return `+${digits}`;
+  }
+  return s;
+}
+
+/**
+ * Walk a free-form string and reformat every phone-like token in it
+ * (leaving emails, names, separators, etc. untouched). Used for display
+ * of legacy "contact" fields that users may have typed as
+ * "555-867-5309 / ryan@example.com".
+ */
+export function formatPhonesInText(raw?: string | null): string {
+  if (raw == null) return "";
+  const s = String(raw);
+  if (!s) return "";
+  // Split on whitespace AND common separators but keep the separators so
+  // the output still reads the same.
+  return s.replace(
+    /(\+?\d[\d\s().\-]{5,}\d)/g,
+    (match) => formatPhone(match) || match,
+  );
+}
+
 export type ContactKind = "email" | "phone" | "unknown";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -46,8 +94,8 @@ export function parseContacts(raw?: string | null): {
     if (!t) continue;
     const digitsOnly = t.replace(/[^\d]/g, "");
     if (digitsOnly.length >= 7 && digitsOnly.length <= 15 && PHONE_RE.test(t)) {
-      const norm = t.trim();
-      if (!phones.includes(norm)) phones.push(norm);
+      const formatted = formatPhone(t);
+      if (!phones.includes(formatted)) phones.push(formatted);
     }
   }
 

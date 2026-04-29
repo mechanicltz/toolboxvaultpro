@@ -18,6 +18,7 @@ import { api } from "../../src/api";
 import { usePrefs } from "../../src/prefs";
 import { confirm } from "../../src/confirm";
 import { formatDateUS } from "../../src/dateUtil";
+import { formatPhone, formatPhonesInText } from "../../src/contactLinks";
 import { BalanceSection } from "../../src/sections/BalanceSection";
 import { ROUTE_FREQUENCIES, DAY_NAMES, routeLabel, nextRouteText } from "../../src/route";
 import { useAuth } from "../../src/AuthContext";
@@ -240,7 +241,7 @@ export default function DealerDetail() {
               </View>
               {!!a.phone && (
                 <TouchableOpacity onPress={() => callOrEmail(a.phone)}>
-                  <Text style={styles.agentMeta}>📞 {a.phone}</Text>
+                  <Text style={styles.agentMeta}>📞 {formatPhone(a.phone)}</Text>
                 </TouchableOpacity>
               )}
               {!!a.email && (
@@ -329,7 +330,7 @@ export default function DealerDetail() {
         </TouchableOpacity>
 
         <Text style={styles.sectionLabel}>CONTACT</Text>
-        <ContactRow icon="call" label={dealer.phone} onPress={() => callOrEmail(dealer.phone)} />
+        <ContactRow icon="call" label={formatPhone(dealer.phone)} onPress={() => callOrEmail(dealer.phone)} />
         <ContactRow icon="globe" label={dealer.website} onPress={() => callOrEmail(dealer.website)} />
         <ContactRow icon="location" label={dealer.address} />
         {!!dealer.notes && (

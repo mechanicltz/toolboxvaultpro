@@ -15,6 +15,7 @@ import { useLocalSearchParams, useRouter, useFocusEffect } from "expo-router";
 import { theme } from "../../src/theme";
 import { api } from "../../src/api";
 import { formatDateUS, formatDateTimeUS } from "../../src/dateUtil";
+import { formatPhonesInText } from "../../src/contactLinks";
 
 const STATUS_COLORS: Record<string, string> = {
   broken: theme.colors.danger,
@@ -146,7 +147,7 @@ export default function ClaimDetailScreen() {
         )}
         {!!claim.contact && (
           <Section label="CONTACT">
-            <Text style={styles.value}>{claim.contact}</Text>
+            <Text style={styles.value}>{formatPhonesInText(claim.contact)}</Text>
           </Section>
         )}
 
