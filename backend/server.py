@@ -161,7 +161,7 @@ async def attach_user_to_context(request: Request, call_next):
     if not path.startswith("/api/"):
         return await call_next(request)
     # Public auth endpoints
-    if path.startswith("/api/auth/") or path == "/api/" or path == "/api/health":
+    if path.startswith("/api/auth/") or path == "/api/" or path == "/api/health" or path.startswith("/api/icon-concepts"):
         return await call_next(request)
     auth = request.headers.get("Authorization", "")
     if not auth.startswith("Bearer "):
@@ -2389,6 +2389,73 @@ async def _ensure_under_limit(user: User, kind: str, dealer_id: Optional[str] = 
 
 
 app.include_router(api_router)
+
+
+# ----- Icon concept gallery (temporary preview endpoints) -----
+from fastapi.responses import FileResponse, HTMLResponse  # noqa: E402
+
+_ICONS_DIR = Path(__file__).resolve().parent / "static" / "icons"
+
+
+@app.get("/api/icon-concepts/{name}.png")
+def _icon_concept(name: str):
+    p = _ICONS_DIR / f"{name}.png"
+    if not p.exists():
+        raise HTTPException(404, f"icon {name!r} not found")
+    return FileResponse(p, media_type="image/png")
+
+
+@app.get("/api/icon-concepts", response_class=HTMLResponse)
+def _icon_concept_gallery():
+    concepts = [
+        ("1_wrench_monogram", "1. Wrench Monogram",
+         "Single bold yellow wrench at 45°. Minimal, iconic, scales beautifully on a tiny home-screen tile."),
+        ("2_isometric_toolbox", "2. Isometric Toolbox",
+         "3D red toolbox cracked open with tools peeking out — playful, instantly recognizable as 'tools'."),
+        ("3_crossed_tools_crest", "3. Crossed Tools Crest",
+         "Hammer × Wrench in a workshop-emblem style, premium gold finish. Trade-mark feel."),
+        ("4_hex_grid_tools", "4. Hex Grid Tools",
+         "2×2 grid of wrench / hammer / screwdriver / drill — communicates 'inventory' as well as tools."),
+        ("5_glowing_hex_bolt", "5. Glowing Hex Bolt",
+         "A stylized hex-bolt head with a yellow rim glow. Industrial, modern, a bit mysterious."),
+    ]
+    cards = "".join(
+        f"""
+        <div class="card">
+          <img src="/api/icon-concepts/{cid}.png" alt="{title}"/>
+          <div class="meta">
+            <div class="title">{title}</div>
+            <div class="desc">{desc}</div>
+          </div>
+        </div>
+        """
+        for cid, title, desc in concepts
+    )
+    return f"""
+<!doctype html>
+<html><head><meta charset="utf-8"/>
+<title>Toolbox — App Icon Concepts</title>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<style>
+  body {{ background:#0a0a0a; color:#eee; font-family:-apple-system,system-ui,Segoe UI,Roboto,sans-serif;
+         margin:0; padding:24px; }}
+  h1 {{ color:#FFB300; letter-spacing:2px; font-size:14px; margin:0 0 4px; }}
+  h2 {{ color:#fff; font-size:24px; margin:0 0 24px; }}
+  .grid {{ display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr));
+          gap:16px; max-width:1100px; margin:0 auto; }}
+  .card {{ background:#161616; border:1px solid #2d2d2d; border-radius:14px; overflow:hidden;
+          display:flex; flex-direction:column; }}
+  .card img {{ width:100%; aspect-ratio:1/1; object-fit:cover; display:block; }}
+  .meta {{ padding:14px 16px; }}
+  .title {{ color:#FFB300; font-weight:800; font-size:14px; letter-spacing:1px; margin-bottom:6px; }}
+  .desc {{ color:#bbb; font-size:13px; line-height:1.4; }}
+</style>
+</head><body>
+  <h1>TOOLBOX APP</h1>
+  <h2>5 App Icon Concepts</h2>
+  <div class="grid">{cards}</div>
+</body></html>
+    """
 app.include_router(auth_router)
 app.include_router(sub_router)
 
