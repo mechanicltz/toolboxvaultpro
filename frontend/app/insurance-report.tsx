@@ -14,10 +14,9 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter, useFocusEffect } from "expo-router";
-import * as Print from "expo-print";
-import * as Sharing from "expo-sharing";
 import { theme } from "../src/theme";
 import { api } from "../src/api";
+import { printReportHtml } from "../src/printHtml";
 
 const esc = (s: any) =>
   String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -102,71 +101,7 @@ export default function InsuranceReportScreen() {
     }
 
     try {
-      if (Platform.OS === "web") {
-        // Strategy: inject a hidden iframe with srcdoc=html, then trigger
-        // its contentWindow.print(). This works inside parent sandboxed
-        // iframes (no popup needed), unlike window.open() which gets blocked.
-        const w: any = (globalThis as any).window;
-        const doc: any = w.document;
-        const iframe = doc.createElement("iframe");
-        iframe.style.position = "fixed";
-        iframe.style.right = "0";
-        iframe.style.bottom = "0";
-        iframe.style.width = "1px";
-        iframe.style.height = "1px";
-        iframe.style.border = "0";
-        iframe.style.opacity = "0";
-        iframe.setAttribute(
-          "sandbox",
-          "allow-same-origin allow-scripts allow-modals allow-popups",
-        );
-        doc.body.appendChild(iframe);
-
-        await new Promise<void>((resolve) => {
-          iframe.onload = () => {
-            try {
-              iframe.contentWindow?.focus();
-              iframe.contentWindow?.print();
-            } catch {
-              /* ignore */
-            }
-            // Keep iframe alive long enough for the print dialog to read it
-            setTimeout(() => {
-              try {
-                doc.body.removeChild(iframe);
-              } catch {
-                /* ignore */
-              }
-              resolve();
-            }, 30000);
-          };
-          iframe.srcdoc = html;
-        });
-
-        // Parallel fallback: download the HTML file too — guaranteed to work.
-        try {
-          const blob = new Blob([html], { type: "text/html;charset=utf-8" });
-          const url = w.URL.createObjectURL(blob);
-          const a = doc.createElement("a");
-          a.href = url;
-          a.download = `insurance-report-${Date.now()}.html`;
-          a.style.display = "none";
-          doc.body.appendChild(a);
-          a.click();
-          doc.body.removeChild(a);
-          setTimeout(() => w.URL.revokeObjectURL(url), 60_000);
-        } catch {
-          /* ignore */
-        }
-      } else {
-        const { uri } = await Print.printToFileAsync({ html });
-        if (await Sharing.isAvailableAsync()) {
-          await Sharing.shareAsync(uri, {
-            mimeType: "application/pdf",
-            dialogTitle: "Insurance Inventory Report",
-          });
-        }
-      }
+      await printReportHtml(html, `insurance-report-${Date.now()}`);
       setShowOpts(false);
     } catch (e: any) {
       Alert.alert("Error", e?.message || "Could not generate report.");

@@ -18,6 +18,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter, Stack } from "expo-router";
 import { theme } from "../src/theme";
 import { api } from "../src/api";
+import { printReportHtml } from "../src/printHtml";
 import { formatDateUS } from "../src/dateUtil";
 import { DateField } from "../src/DateField";
 import { ResponsiveContainer } from "../src/ResponsiveContainer";
@@ -136,78 +137,7 @@ export default function ForSaleScreen() {
     const filename = `${tab === "sold" ? "sold-items" : "for-sale"}-${mode}-${Date.now()}.pdf`;
 
     try {
-      if (Platform.OS === "web") {
-        // Strategy 1: open a print-ready iframe inside the current document.
-        // This works even when the page is itself inside a sandboxed iframe
-        // (the platform's preview), because we don't need a new window.
-        const w: any = (globalThis as any).window;
-        const doc: any = w.document;
-
-        const iframe = doc.createElement("iframe");
-        iframe.style.position = "fixed";
-        iframe.style.right = "0";
-        iframe.style.bottom = "0";
-        iframe.style.width = "1px";
-        iframe.style.height = "1px";
-        iframe.style.border = "0";
-        iframe.style.opacity = "0";
-        // Allow the iframe to run scripts (we add the print() call) and modals.
-        iframe.setAttribute(
-          "sandbox",
-          "allow-same-origin allow-scripts allow-modals allow-popups",
-        );
-        doc.body.appendChild(iframe);
-
-        await new Promise<void>((resolve) => {
-          iframe.onload = () => {
-            try {
-              iframe.contentWindow?.focus();
-              iframe.contentWindow?.print();
-            } catch {
-              /* ignore */
-            }
-            // Leave it briefly so the print dialog can read the document
-            setTimeout(() => {
-              try {
-                doc.body.removeChild(iframe);
-              } catch {
-                /* ignore */
-              }
-              resolve();
-            }, 30000);
-          };
-          // Use srcdoc so the iframe stays same-origin (allow-same-origin)
-          iframe.srcdoc = html;
-        });
-
-        // Strategy 2 (parallel fallback): also offer a downloadable HTML file
-        // — guaranteed to work even if the print dialog was dismissed/blocked.
-        try {
-          const blob = new Blob([html], { type: "text/html;charset=utf-8" });
-          const url = w.URL.createObjectURL(blob);
-          const a = doc.createElement("a");
-          a.href = url;
-          a.download = filename.replace(/\.pdf$/, ".html");
-          a.style.display = "none";
-          doc.body.appendChild(a);
-          a.click();
-          doc.body.removeChild(a);
-          setTimeout(() => w.URL.revokeObjectURL(url), 60_000);
-        } catch {
-          /* ignore download fallback errors */
-        }
-      } else {
-        // Native: use expo-print + share sheet
-        const Print = await import("expo-print");
-        const Sharing = await import("expo-sharing");
-        const result = await Print.printToFileAsync({ html });
-        if (await Sharing.isAvailableAsync()) {
-          await Sharing.shareAsync(result.uri, {
-            mimeType: "application/pdf",
-            dialogTitle: filename,
-          });
-        }
-      }
+      await printReportHtml(html, filename);
       setShowReportPicker(false);
     } catch (e: any) {
       Alert.alert("Error generating report", String(e?.message || e));
