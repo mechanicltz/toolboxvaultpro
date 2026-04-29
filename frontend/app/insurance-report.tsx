@@ -345,23 +345,29 @@ function buildHtml(
     return `${mm}/${dd}/${d.getFullYear()}`;
   })();
 
-  const profLines: string[] = [];
+  // Build a compact "mailing label" style block — left column is the
+  // postal address; right column is contact / insurance details.
+  const addrLines: string[] = [];
   if (profile.address) {
-    let line = profile.address;
-    if (profile.address2) line += `, ${profile.address2}`;
-    profLines.push(line);
+    let line = esc(profile.address);
+    if (profile.address2) line += `, ${esc(profile.address2)}`;
+    addrLines.push(line);
   }
-  const cityLine = [profile.city, profile.state, profile.zip_code]
+  const cityStateZip = [profile.city, profile.state, profile.zip_code]
     .filter(Boolean)
+    .map((v) => esc(v))
     .join(", ");
-  if (cityLine) profLines.push(cityLine);
-  if (profile.country) profLines.push(profile.country);
-  if (profile.phone) profLines.push(`Phone: ${profile.phone}`);
-  if (profile.email) profLines.push(`Email: ${profile.email}`);
+  if (cityStateZip) addrLines.push(cityStateZip);
+  if (profile.country) addrLines.push(esc(profile.country));
+
+  const contactLines: string[] = [];
+  if (profile.phone) contactLines.push(`☏ ${esc(profile.phone)}`);
+  if (profile.email) contactLines.push(`✉ ${esc(profile.email)}`);
   if (profile.insurance_company) {
-    let ins = `Insurance: ${profile.insurance_company}`;
-    if (profile.policy_number) ins += `  ·  Policy #${profile.policy_number}`;
-    profLines.push(ins);
+    contactLines.push(`Ins: ${esc(profile.insurance_company)}`);
+  }
+  if (profile.policy_number) {
+    contactLines.push(`Policy #${esc(profile.policy_number)}`);
   }
 
   const rows = tools
@@ -405,20 +411,31 @@ function buildHtml(
     .head h1 { font-size: 26px; letter-spacing: 3px; margin: 0 0 6px 0; text-transform: uppercase; }
     .head .date { color: #666; font-size: 12px; letter-spacing: 1px; }
     .pi {
-      background: #fff8e6;
-      border: 1px solid #FFB300;
-      border-radius: 4px;
-      padding: 14px 18px;
-      margin-bottom: 18px;
+      border: 1px solid #ccc;
+      border-left: 4px solid #FFB300;
+      padding: 8px 12px;
+      margin-bottom: 14px;
+      background: #fff;
     }
-    .pi .pi-name { font-size: 18px; font-weight: 800; letter-spacing: 0.5px; margin: 0; }
-    .pi .pi-line { font-size: 12px; margin-top: 4px; color: #333; }
-    .stats { display: flex; gap: 18px; margin-bottom: 14px; }
-    .stat { flex: 1; border: 1px solid #ddd; padding: 10px 14px; border-radius: 4px; background: #fafafa; }
-    .stat .stat-l { font-size: 9px; letter-spacing: 1.5px; color: #666; text-transform: uppercase; font-weight: 700; }
-    .stat .stat-v { font-size: 18px; font-weight: 800; margin-top: 2px; }
-    .stat.tot { background: #FFB300; color: #000; border-color: #FFB300; }
-    .stat.tot .stat-l { color: rgba(0,0,0,0.65); }
+    .pi-row { width: 100%; border-collapse: collapse; }
+    .pi-row td { vertical-align: top; padding: 0; }
+    .pi-name {
+      font-size: 13px;
+      font-weight: 800;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      margin: 0 0 2px;
+      color: #111;
+    }
+    .pi-line { font-size: 10.5px; line-height: 1.35; color: #333; margin: 0; }
+    .pi-right { text-align: right; }
+    .pi-right .pi-line { color: #555; }
+    .stats { width: 100%; border-collapse: separate; border-spacing: 8px 0; margin-bottom: 14px; }
+    .stats td { width: 50%; border: 1px solid #ddd; padding: 10px 14px; border-radius: 4px; background: #fafafa; vertical-align: top; }
+    .stats td.tot { background: #FFB300; color: #000; border-color: #FFB300; }
+    .stats .stat-l { font-size: 9px; letter-spacing: 1.5px; color: #666; text-transform: uppercase; font-weight: 700; }
+    .stats td.tot .stat-l { color: #4a3500; }
+    .stats .stat-v { font-size: 18px; font-weight: 800; margin-top: 2px; }
     table { width: 100%; border-collapse: collapse; font-size: 11px; }
     thead th {
       background: #111; color: #FFB300; text-align: left;
@@ -447,13 +464,21 @@ function buildHtml(
       <div class="date">Prepared ${esc(today)}</div>
     </div>
     <div class="pi">
-      <div class="pi-name">${esc(profile.name)}</div>
-      ${profLines.map((l) => `<div class="pi-line">${esc(l)}</div>`).join("")}
+      <table class="pi-row"><tr>
+        <td>
+          <div class="pi-name">${esc(profile.name)}</div>
+          ${addrLines.map((l) => `<div class="pi-line">${l}</div>`).join("")}
+        </td>
+        <td class="pi-right">
+          ${contactLines.map((l) => `<div class="pi-line">${l}</div>`).join("")}
+        </td>
+      </tr></table>
+      ${profile.notes ? `<div class="pi-line" style="margin-top:4px;color:#666;font-style:italic">${esc(profile.notes)}</div>` : ""}
     </div>
-    <div class="stats">
-      <div class="stat"><div class="stat-l">Total Items</div><div class="stat-v">${tools.length}</div></div>
-      <div class="stat tot"><div class="stat-l">Total Value</div><div class="stat-v">$${total.toFixed(2)}</div></div>
-    </div>
+    <table class="stats"><tr>
+      <td><div class="stat-l">Total Items</div><div class="stat-v">${tools.length}</div></td>
+      <td class="tot"><div class="stat-l">Total Value</div><div class="stat-v">$${total.toFixed(2)}</div></td>
+    </tr></table>
     <table>
       <thead><tr>
         <th>#</th>
@@ -472,7 +497,6 @@ function buildHtml(
         </tr>
       </tbody>
     </table>
-    ${profile.notes ? `<p style="margin-top:14px;font-size:11px;color:#444"><strong>Notes:</strong> ${esc(profile.notes)}</p>` : ""}
     <div class="footer">Generated by Toolbox · ${esc(today)}</div>
   </body></html>`;
 }
