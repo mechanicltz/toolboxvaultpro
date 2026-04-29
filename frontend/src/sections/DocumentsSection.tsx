@@ -109,17 +109,41 @@ export function DocumentsSection({
   const openDoc = async (doc: any) => {
     try {
       if (Platform.OS === "web") {
-        // Build data URL and open in new tab
-        const url = `data:${doc.mime_type};base64,${doc.data}`;
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        if (typeof (globalThis as any).window !== "undefined") {
+        // Modern browsers block opening large data: URIs in new tabs.
+        // Convert to a Blob URL and open that — the standard pattern.
+        try {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          (globalThis as any).window.open(url, "_blank");
+          const w: any = (globalThis as any).window;
+          const byteChars = w.atob(doc.data);
+          const byteNumbers = new Array(byteChars.length);
+          for (let i = 0; i < byteChars.length; i++) {
+            byteNumbers[i] = byteChars.charCodeAt(i);
+          }
+          const byteArray = new Uint8Array(byteNumbers);
+          const blob = new Blob([byteArray], { type: doc.mime_type || "application/octet-stream" });
+          const url = w.URL.createObjectURL(blob);
+
+          // Try to open in a new tab. If the browser blocks the popup,
+          // fall back to triggering a download.
+          const newWin = w.open(url, "_blank");
+          if (!newWin || newWin.closed || typeof newWin.closed === "undefined") {
+            // Popup blocked — trigger a download instead
+            const a = w.document.createElement("a");
+            a.href = url;
+            a.download = doc.name || "document";
+            w.document.body.appendChild(a);
+            a.click();
+            w.document.body.removeChild(a);
+          }
+          // Revoke after a delay so the new tab/download can finish loading
+          setTimeout(() => w.URL.revokeObjectURL(url), 60_000);
+        } catch (err) {
+          Alert.alert("Error", "Could not open document. Please try downloading it again.");
         }
         return;
       }
       // Native — write to cache and share
-      const safeName = doc.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+      const safeName = (doc.name || "document").replace(/[^a-zA-Z0-9._-]/g, "_");
       const dest = `${FileSystem.cacheDirectory}${safeName}`;
       await FileSystem.writeAsStringAsync(dest, doc.data, {
         encoding: FileSystem.EncodingType.Base64,
@@ -130,9 +154,11 @@ export function DocumentsSection({
           mimeType: doc.mime_type,
           UTI: doc.mime_type,
         });
+      } else {
+        Alert.alert("Unavailable", "Sharing is not available on this device.");
       }
     } catch (e: any) {
-      Alert.alert("Error", e.message || "Could not open document");
+      Alert.alert("Error", e?.message || "Could not open document");
     }
   };
 
