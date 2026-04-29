@@ -227,4 +227,20 @@ export const api = {
   getPersonalProfile: () => request<any>(`/personal-profile`),
   updatePersonalProfile: (data: any) =>
     request<any>(`/personal-profile`, { method: "PUT", body: JSON.stringify(data) }),
+
+  // Generic helpers — useful for new endpoints (Reports, etc.) without
+  // having to add a typed entry every time. `path` should NOT include the
+  // leading "/api"; pass "/reports/spec", "/locations", etc.
+  get: <T = any>(path: string) => request<T>(path),
+  post: <T = any>(path: string, data?: any) =>
+    request<T>(path, {
+      method: "POST",
+      body: data === undefined ? undefined : JSON.stringify(data),
+    }),
+  put: <T = any>(path: string, data?: any) =>
+    request<T>(path, {
+      method: "PUT",
+      body: data === undefined ? undefined : JSON.stringify(data),
+    }),
+  del: <T = any>(path: string) => request<T>(path, { method: "DELETE" }),
 };

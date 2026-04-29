@@ -226,13 +226,6 @@ export default function MoreScreen() {
           testID="more-reports"
           onPress={() => router.push("/reports")}
         />
-        <Row
-          icon="shield"
-          title="Insurance Report"
-          subtitle="Generate full-inventory PDF for your insurer"
-          testID="more-insurance-report"
-          onPress={() => router.push("/insurance-report")}
-        />
 
         <Text style={styles.sectionLabel}>ORGANIZATION</Text>
         <Row

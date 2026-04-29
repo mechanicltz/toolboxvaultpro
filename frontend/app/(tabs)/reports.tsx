@@ -1,4 +1,10 @@
-import { useState, useCallback } from "react";
+/**
+ * Reports Hub — wizard for picking a report type, configuring options /
+ * filters / fields, choosing a format, and dispatching the chosen action.
+ * Backed by /api/reports/spec + /api/reports/render — the wizard never
+ * has to know report internals.
+ */
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   View,
   Text,
@@ -6,1464 +12,968 @@ import {
   ScrollView,
   TouchableOpacity,
   TextInput,
+  ActivityIndicator,
   Alert,
   Platform,
-  Switch,
-  Modal,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import { useFocusEffect, useRouter } from "expo-router";
-import { formatDateUS, formatDateTimeUS } from "../../src/dateUtil";
-import * as Print from "expo-print";
-import * as Sharing from "expo-sharing";
-import * as FileSystem from "expo-file-system";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { theme } from "../../src/theme";
 import { api } from "../../src/api";
-import { buildLocationTree, flattenLocationTree } from "../../src/locationTree";
 import { DateField } from "../../src/DateField";
-import { printReportHtml } from "../../src/printHtml";
+import { runReport, ReportAction, ReportFormat } from "../../src/reportRunner";
 
-const PRESET_KEY = "@reports_presets_v1";
+// ---- Types --------------------------------------------------------------
 
-const escapeHtml = (s: any) =>
-  String(s ?? "")
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
-
-// Column definitions - id, label, accessor, isNumeric (sums), isPhoto
-type ColDef = {
+type ColumnSpec = {
   id: string;
   label: string;
-  get: (t: any) => string;
-  numeric?: boolean;
-  rawNum?: (t: any) => number;
-  photo?: boolean;
+  align: "left" | "right" | "center";
+  type: "text" | "money" | "number" | "date" | "image";
 };
-const COLUMNS: ColDef[] = [
-  { id: "name", label: "Name", get: (t) => t.name },
-  { id: "photo", label: "Photo", get: () => "", photo: true },
-  { id: "category", label: "Category", get: (t) => t.category_name || "" },
-  { id: "brand", label: "Brand", get: (t) => t.brand || "" },
-  { id: "model", label: "Model", get: (t) => t.model || "" },
-  { id: "serial", label: "Serial #", get: (t) => t.serial_number || "" },
-  { id: "location", label: "Location", get: (t) => t.location_name || "" },
-  { id: "tags", label: "Tags", get: (t) => (t.tag_names || []).join(", ") },
-  { id: "condition", label: "Condition", get: (t) => t.condition || "" },
-  { id: "purchase_date", label: "Purchased", get: (t) => formatDateUS(t.purchase_date) || "" },
-  {
-    id: "cost",
-    label: "Cost",
-    get: (t) => `$${(t.cost || 0).toFixed(2)}`,
-    numeric: true,
-    rawNum: (t) => t.cost || 0,
-  },
-  { id: "dealer", label: "Dealer", get: (t) => t.dealer_name || "" },
-  { id: "agent", label: "Agent", get: (t) => t.purchased_from_agent_name || "" },
-  {
-    id: "status",
-    label: "Status",
-    get: (t) => (t.is_checked_out ? `Out: ${t.current_checkout?.borrower_name || ""}` : "Available"),
-  },
-  {
-    id: "warranty",
-    label: "Warranty",
-    get: (t) =>
-      t.warranty?.has_warranty
-        ? `${t.warranty.provider || "Yes"}${t.warranty.expiry_date ? ` (until ${formatDateUS(t.warranty.expiry_date)})` : ""}`
-        : "—",
-  },
-  {
-    id: "consumable",
-    label: "Consumable",
-    get: (t) => (t.is_consumable ? "Yes" : "No"),
-  },
-  {
-    id: "repair_status",
-    label: "Repair Status",
-    get: (t) =>
-      t.needs_repair
-        ? `${t.repair_info?.repair_status || "Reported"}${t.repair_info?.company_notified ? ` @ ${t.repair_info.company_notified}` : ""}`
-        : "—",
-  },
-  {
-    id: "repair_dates",
-    label: "Repair Dates",
-    get: (t) =>
-      t.needs_repair
-        ? `Notified ${formatDateUS(t.repair_info?.notified_at) || "—"} · Back ${formatDateUS(t.repair_info?.expected_completion) || "—"}`
-        : "—",
-  },
-  { id: "description", label: "Description", get: (t) => t.description || "" },
-];
+type OptionField =
+  | { id: string; type: "toggle"; label: string; default?: boolean }
+  | { id: string; type: "text"; label: string }
+  | { id: string; type: "date"; label: string }
+  | { id: string; type: "select"; label: string; choices: string[] }
+  | { id: string; type: "location"; label: string }
+  | { id: string; type: "dealer_multi"; label: string }
+  | {
+      id: string;
+      type: "segmented";
+      label: string;
+      choices: { id: string; label: string }[];
+      default?: string;
+    };
 
-const DEFAULT_COLS = ["name", "category", "location", "tags", "cost", "dealer", "status"];
-
-const buildPdfHtml = (
-  title: string,
-  subtitle: string,
-  tools: any[],
-  selectedIds: string[],
-) => {
-  const cols = COLUMNS.filter((c) => selectedIds.includes(c.id));
-  const totalValue = tools.reduce((s, t) => s + (t.cost || 0), 0);
-  const checkedOutCount = tools.filter((t) => t.is_checked_out).length;
-  const photoCol = cols.find((c) => c.photo);
-
-  const headerCells = cols
-    .map(
-      (c) =>
-        `<th style="padding:8px;font-size:10px;letter-spacing:1px;text-align:${c.numeric ? "right" : "left"}">${escapeHtml(c.label.toUpperCase())}</th>`
-    )
-    .join("");
-
-  const rows = tools
-    .map((t, i) => {
-      const cells = cols
-        .map((c) => {
-          if (c.photo) {
-            const url = t.photos?.[0];
-            return `<td style="padding:6px;width:60px">${url ? `<img src="${url}" style="width:50px;height:50px;object-fit:cover;border:1px solid #ccc"/>` : "—"}</td>`;
-          }
-          const val = c.get(t);
-          return `<td style="padding:8px;border-bottom:1px solid #eee;font-size:12px;text-align:${c.numeric ? "right" : "left"};vertical-align:top">${escapeHtml(val) || "—"}</td>`;
-        })
-        .join("");
-      return `<tr>${cells}</tr>`;
-    })
-    .join("");
-
-  // Totals row
-  const totalCells = cols
-    .map((c, idx) => {
-      if (c.id === "cost") {
-        return `<td style="padding:8px;text-align:right;font-weight:900;border-top:2px solid #111">$${totalValue.toFixed(2)}</td>`;
-      }
-      if (idx === 0) {
-        return `<td style="padding:8px;font-weight:900;border-top:2px solid #111">TOTAL · ${tools.length} ITEM${tools.length === 1 ? "" : "S"}</td>`;
-      }
-      return `<td style="padding:8px;border-top:2px solid #111"></td>`;
-    })
-    .join("");
-
-  return `<!DOCTYPE html><html><head><meta charset="utf-8"><style>
-    body{font-family:-apple-system,Helvetica,Arial;margin:24px;color:#111}
-    .header{border-bottom:3px solid #FFB300;padding-bottom:12px;margin-bottom:16px}
-    h1{margin:0;font-size:22px;letter-spacing:2px;text-transform:uppercase}
-    .sub{color:#666;font-size:12px;margin-top:4px}
-    .summary{display:flex;gap:16px;margin:16px 0}
-    .stat{flex:1;border:1px solid #ddd;padding:10px}
-    .stat .v{font-size:18px;font-weight:900}
-    .stat .l{font-size:9px;color:#666;text-transform:uppercase;letter-spacing:1px}
-    table{width:100%;border-collapse:collapse;font-size:11px}
-    th{background:#111;color:#FFB300}
-    .footer{margin-top:20px;font-size:10px;color:#999;text-align:center}
-    @media print { @page { size: ${cols.length > 8 ? "landscape" : "portrait"}; margin: 12mm; } }
-  </style></head><body>
-    <div class="header">
-      <h1>${escapeHtml(title)}</h1>
-      <div class="sub">${escapeHtml(subtitle)} · Generated ${formatDateTimeUS(new Date().toISOString())}</div>
-    </div>
-    <div class="summary">
-      <div class="stat"><div class="v">${tools.length}</div><div class="l">Items</div></div>
-      <div class="stat"><div class="v">${checkedOutCount}</div><div class="l">Checked Out</div></div>
-      <div class="stat"><div class="v">$${totalValue.toFixed(2)}</div><div class="l">Total Value</div></div>
-    </div>
-    <table>
-      <thead><tr>${headerCells}</tr></thead>
-      <tbody>${rows || `<tr><td colspan="${cols.length}" style="text-align:center;color:#999;padding:20px">No items</td></tr>`}</tbody>
-      ${tools.length > 0 ? `<tfoot><tr>${totalCells}</tr></tfoot>` : ""}
-    </table>
-    <div class="footer">Toolbox Tracker · ${tools.length} item(s)</div>
-  </body></html>`;
+type ReportSpec = {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  accent: string;
+  columns: ColumnSpec[];
+  default_columns: string[];
+  options_schema: OptionField[];
 };
 
-const buildCsv = (tools: any[], selectedIds: string[]) => {
-  const cols = COLUMNS.filter((c) => selectedIds.includes(c.id) && !c.photo);
-  const escape = (v: any) => {
-    const s = String(v ?? "");
-    if (s.includes(",") || s.includes('"') || s.includes("\n")) {
-      return `"${s.replace(/"/g, '""')}"`;
-    }
-    return s;
-  };
-  const header = cols.map((c) => escape(c.label)).join(",");
-  const rows = tools.map((t) =>
-    cols
-      .map((c) => {
-        if (c.numeric && c.rawNum) return c.rawNum(t).toFixed(2);
-        return escape(c.get(t));
-      })
-      .join(",")
-  );
-  // Totals row
-  const totalsRow = cols
-    .map((c, idx) => {
-      if (c.id === "cost") {
-        const total = tools.reduce((s, t) => s + (t.cost || 0), 0);
-        return total.toFixed(2);
-      }
-      if (idx === 0) return escape(`TOTAL (${tools.length} items)`);
-      return "";
-    })
-    .join(",");
-  return [header, ...rows, totalsRow].join("\n");
-};
+type WizardStep = "type" | "options" | "fields" | "format" | "action";
 
-export default function ReportsScreen() {
+const MAX_PDF_COLUMNS = 6;
+
+// ---- Component ----------------------------------------------------------
+
+export default function ReportsHubScreen() {
   const router = useRouter();
-  const [stats, setStats] = useState<any>({});
-  const [busy, setBusy] = useState(false);
-  const [format, setFormat] = useState<"pdf" | "csv">("pdf");
-  const [selected, setSelected] = useState<string[]>(DEFAULT_COLS);
+  const params = useLocalSearchParams<{ preset?: string }>();
+  const [specs, setSpecs] = useState<ReportSpec[] | null>(null);
+  const [step, setStep] = useState<WizardStep>("type");
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [options, setOptions] = useState<Record<string, any>>({});
+  const [columns, setColumns] = useState<string[]>([]);
+  const [format, setFormat] = useState<ReportFormat>("pdf");
+  const [running, setRunning] = useState<ReportAction | null>(null);
+  const presetApplied = useRef(false);
 
-  // Filters
-  const [allTags, setAllTags] = useState<any[]>([]);
-  const [allCategories, setAllCategories] = useState<any[]>([]);
-  const [allLocations, setAllLocations] = useState<any[]>([]);
-  const [allDealers, setAllDealers] = useState<any[]>([]);
-  const [tagFilter, setTagFilter] = useState<string[]>([]);
-  const [categoryFilter, setCategoryFilter] = useState<string[]>([]);
-  const [locationFilter, setLocationFilter] = useState<string[]>([]);
-  const [dealerFilter, setDealerFilter] = useState<string[]>([]);
-  // Date range filters (ISO YYYY-MM-DD strings; "" = unset)
-  const [purchaseFrom, setPurchaseFrom] = useState("");
-  const [purchaseTo, setPurchaseTo] = useState("");
-  const [warrantyFrom, setWarrantyFrom] = useState("");
-  const [warrantyTo, setWarrantyTo] = useState("");
-
-  // Presets
-  const [presets, setPresets] = useState<any[]>([]);
-  const [showPresetsModal, setShowPresetsModal] = useState(false);
-  const [showSavePresetModal, setShowSavePresetModal] = useState(false);
-  const [presetName, setPresetName] = useState("");
-
-  const loadPresets = useCallback(async () => {
-    try {
-      const raw = await AsyncStorage.getItem(PRESET_KEY);
-      setPresets(raw ? JSON.parse(raw) : []);
-    } catch {
-      setPresets([]);
-    }
+  // Fetch report catalog once
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      try {
+        const res = await api.get("/reports/spec");
+        if (active) setSpecs((res.reports || []) as ReportSpec[]);
+      } catch (e: any) {
+        Alert.alert("Error", "Could not load report types: " + (e?.message || ""));
+      }
+    })();
+    return () => {
+      active = false;
+    };
   }, []);
 
+  // Reset to step 1 on focus (don't carry stale state if user navigates away
+  // and back). Apply preset (e.g. "sales" from the for-sale screen) once.
   useFocusEffect(
-    useCallback(() => {
-      api.getStats().then(setStats).catch(() => {});
-      api.listTags().then(setAllTags).catch(() => {});
-      api.listCategories().then(setAllCategories).catch(() => {});
-      api.listLocations().then(setAllLocations).catch(() => {});
-      api.listDealers().then(setAllDealers).catch(() => {});
-      loadPresets();
-    }, [loadPresets])
-  );
-
-  // Build set of effective location IDs (selected + all descendants)
-  const effectiveLocationIds = useCallback((): Set<string> => {
-    if (locationFilter.length === 0) return new Set();
-    const tree = buildLocationTree(allLocations);
-    const flat = flattenLocationTree(tree);
-    const byId: Record<string, any> = {};
-    flat.forEach((n) => (byId[n.id] = n));
-    const out = new Set<string>();
-    const collect = (id: string) => {
-      if (out.has(id)) return;
-      out.add(id);
-      const node = byId[id];
-      if (node) node.children.forEach((c: any) => collect(c.id));
-    };
-    locationFilter.forEach(collect);
-    return out;
-  }, [locationFilter, allLocations]);
-
-  // Apply filters to a tools array (client-side)
-  const applyFilters = useCallback(
-    (tools: any[]): any[] => {
-      const locIds = effectiveLocationIds();
-      return tools.filter((t) => {
-        if (categoryFilter.length > 0) {
-          if (!t.category_id || !categoryFilter.includes(t.category_id)) return false;
-        }
-        if (tagFilter.length > 0) {
-          const ids: string[] = t.tag_ids || [];
-          if (!ids.some((id) => tagFilter.includes(id))) return false;
-        }
-        if (locIds.size > 0) {
-          if (!t.location_id || !locIds.has(t.location_id)) return false;
-        }
-        if (dealerFilter.length > 0) {
-          if (!t.dealer_id || !dealerFilter.includes(t.dealer_id)) return false;
-        }
-        // Purchase date range
-        if (purchaseFrom || purchaseTo) {
-          const pd = (t.purchase_date || "").substring(0, 10);
-          if (!pd) return false;
-          if (purchaseFrom && pd < purchaseFrom) return false;
-          if (purchaseTo && pd > purchaseTo) return false;
-        }
-        // Warranty expiry date range
-        if (warrantyFrom || warrantyTo) {
-          const wd = (t.warranty?.expiry_date || "").substring(0, 10);
-          if (!wd) return false;
-          if (warrantyFrom && wd < warrantyFrom) return false;
-          if (warrantyTo && wd > warrantyTo) return false;
-        }
-        return true;
-      });
-    },
-    [
-      tagFilter,
-      categoryFilter,
-      effectiveLocationIds,
-      dealerFilter,
-      purchaseFrom,
-      purchaseTo,
-      warrantyFrom,
-      warrantyTo,
-    ]
-  );
-
-  const filterCount =
-    tagFilter.length +
-    categoryFilter.length +
-    locationFilter.length +
-    dealerFilter.length +
-    (purchaseFrom || purchaseTo ? 1 : 0) +
-    (warrantyFrom || warrantyTo ? 1 : 0);
-
-  const clearFilters = () => {
-    setTagFilter([]);
-    setCategoryFilter([]);
-    setLocationFilter([]);
-    setDealerFilter([]);
-    setPurchaseFrom("");
-    setPurchaseTo("");
-    setWarrantyFrom("");
-    setWarrantyTo("");
-  };
-
-  // Build a "filtered by ..." subtitle suffix
-  const filterSubtitle = (): string => {
-    const parts: string[] = [];
-    if (categoryFilter.length > 0) {
-      const names = allCategories
-        .filter((c) => categoryFilter.includes(c.id))
-        .map((c) => c.name);
-      parts.push(`Categories: ${names.join(", ")}`);
-    }
-    if (tagFilter.length > 0) {
-      const names = allTags
-        .filter((t) => tagFilter.includes(t.id))
-        .map((t) => t.name);
-      parts.push(`Tags: ${names.join(", ")}`);
-    }
-    if (locationFilter.length > 0) {
-      const tree = buildLocationTree(allLocations);
-      const flat = flattenLocationTree(tree);
-      const names = flat
-        .filter((n) => locationFilter.includes(n.id))
-        .map((n) => n.name);
-      parts.push(`Locations: ${names.join(", ")}`);
-    }
-    if (dealerFilter.length > 0) {
-      const names = allDealers
-        .filter((d) => dealerFilter.includes(d.id))
-        .map((d) => d.name);
-      parts.push(`Dealers: ${names.join(", ")}`);
-    }
-    if (purchaseFrom || purchaseTo) {
-      parts.push(`Purchased ${purchaseFrom || "—"} to ${purchaseTo || "—"}`);
-    }
-    if (warrantyFrom || warrantyTo) {
-      parts.push(`Warranty expires ${warrantyFrom || "—"} to ${warrantyTo || "—"}`);
-    }
-    return parts.length > 0 ? `  ·  Filtered by ${parts.join(" · ")}` : "";
-  };
-
-  // Presets — save, load, delete
-  const persistPresets = async (next: any[]) => {
-    setPresets(next);
-    try {
-      await AsyncStorage.setItem(PRESET_KEY, JSON.stringify(next));
-    } catch {
-      /* ignore */
-    }
-  };
-
-  const captureSnapshot = () => ({
-    format,
-    selected,
-    tagFilter,
-    categoryFilter,
-    locationFilter,
-    dealerFilter,
-    purchaseFrom,
-    purchaseTo,
-    warrantyFrom,
-    warrantyTo,
-  });
-
-  const applyPreset = (p: any) => {
-    if (!p) return;
-    setFormat(p.format ?? "pdf");
-    setSelected(p.selected ?? DEFAULT_COLS);
-    setTagFilter(p.tagFilter ?? []);
-    setCategoryFilter(p.categoryFilter ?? []);
-    setLocationFilter(p.locationFilter ?? []);
-    setDealerFilter(p.dealerFilter ?? []);
-    setPurchaseFrom(p.purchaseFrom ?? "");
-    setPurchaseTo(p.purchaseTo ?? "");
-    setWarrantyFrom(p.warrantyFrom ?? "");
-    setWarrantyTo(p.warrantyTo ?? "");
-    setShowPresetsModal(false);
-  };
-
-  const savePreset = async () => {
-    const name = presetName.trim();
-    if (!name) {
-      Alert.alert("Required", "Please enter a name for this preset.");
-      return;
-    }
-    const snap = captureSnapshot();
-    const existingIdx = presets.findIndex((p) => p.name.toLowerCase() === name.toLowerCase());
-    let next: any[];
-    if (existingIdx >= 0) {
-      next = [...presets];
-      next[existingIdx] = { ...snap, name, updated_at: new Date().toISOString() };
-    } else {
-      next = [
-        ...presets,
-        { ...snap, name, created_at: new Date().toISOString() },
-      ];
-    }
-    await persistPresets(next);
-    setShowSavePresetModal(false);
-    setPresetName("");
-  };
-
-  const deletePreset = async (name: string) => {
-    const next = presets.filter((p) => p.name !== name);
-    await persistPresets(next);
-  };
-
-  const toggleCol = (id: string) => {
-    setSelected((cur) =>
-      cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id]
-    );
-  };
-
-  const generate = async (kind: "all" | "out" | "in" | "broken") => {
-    if (busy) return;
-
-    let titleBase = "FULL INVENTORY";
-    let subtitle = "All tracked tools and equipment";
-    let filter: any = {};
-    if (kind === "out") {
-      titleBase = "CHECKED OUT";
-      subtitle = "Tools currently borrowed";
-      filter = { checked_out: true };
-    } else if (kind === "in") {
-      titleBase = "AVAILABLE TOOLS";
-      subtitle = "Tools currently in inventory";
-      filter = { checked_out: false };
-    } else if (kind === "broken") {
-      titleBase = "BROKEN / IN REPAIR";
-      subtitle = "Tools flagged for repair";
-      filter = { needs_repair: true };
-    }
-    const fmtSuffix = format === "pdf" ? "REPORT" : "EXPORT";
-    const title = `${titleBase} ${fmtSuffix}`;
-
-    if (selected.length === 0) {
-      Alert.alert("Pick at least one column", "Toggle some columns on first.");
-      return;
-    }
-
-    setBusy(true);
-    try {
-      let tools = await api.listTools(filter);
-      // Apply user-selected tag/category/location filters client-side
-      tools = applyFilters(tools);
-      // Append filter context to subtitle
-      const fSub = filterSubtitle();
-      const finalSubtitle = `${subtitle}${fSub}`;
-
-      if (format === "pdf") {
-        const html = buildPdfHtml(title, finalSubtitle, tools, selected);
-        await printReportHtml(html, title.replace(/\s+/g, "-").toLowerCase());
-      } else {
-        // CSV
-        const csv = buildCsv(tools, selected);
-        const filename = `${titleBase.toLowerCase().replace(/\s+/g, "_")}.csv`;
-        if (Platform.OS === "web") {
-          const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement("a");
-          a.href = url;
-          a.download = filename;
-          document.body.appendChild(a);
-          a.click();
-          document.body.removeChild(a);
-          setTimeout(() => URL.revokeObjectURL(url), 1000);
-        } else {
-          const path = `${FileSystem.cacheDirectory}${filename}`;
-          await FileSystem.writeAsStringAsync(path, csv);
-          if (await Sharing.isAvailableAsync()) {
-            await Sharing.shareAsync(path, {
-              mimeType: "text/csv",
-              dialogTitle: title,
-              UTI: "public.comma-separated-values-text",
-            });
+    useMemo(
+      () => () => {
+        if (!presetApplied.current && params.preset && specs) {
+          const sp = specs.find((s) => s.id === params.preset);
+          if (sp) {
+            applySpec(sp);
+            setStep("options");
+            presetApplied.current = true;
           }
         }
-      }
-    } catch (e: any) {
-      if (printWin) printWin.close();
-      Alert.alert("Error", e.message || "Could not generate report");
-    } finally {
-      setBusy(false);
+      },
+      [params.preset, specs],
+    ),
+  );
+
+  const selected = useMemo(
+    () => specs?.find((s) => s.id === selectedId) || null,
+    [specs, selectedId],
+  );
+
+  function applySpec(spec: ReportSpec) {
+    setSelectedId(spec.id);
+    // Initialise options from defaults
+    const initOpts: Record<string, any> = {};
+    for (const f of spec.options_schema || []) {
+      if (f.type === "toggle") initOpts[f.id] = (f as any).default ?? true;
+      else if (f.type === "segmented")
+        initOpts[f.id] = (f as any).default ?? (f as any).choices?.[0]?.id;
+      else if (f.type === "dealer_multi") initOpts[f.id] = [];
+      else initOpts[f.id] = "";
     }
-  };
+    setOptions(initOpts);
+    setColumns([...spec.default_columns]);
+  }
 
-  return (
-    <SafeAreaView style={styles.container} edges={["top"]}>
-      <View style={styles.header}>
-        <Text style={styles.title}>REPORTS</Text>
-        <Text style={styles.subtitle}>Customize columns · PDF or Excel CSV</Text>
-      </View>
+  function pickType(spec: ReportSpec) {
+    applySpec(spec);
+    setStep(spec.options_schema?.length ? "options" : "fields");
+  }
 
-      <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 100 }}>
-        {/* Presets bar */}
-        <View style={styles.presetBar}>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 6, flex: 1 }}>
-            <Ionicons name="bookmark" size={14} color={theme.colors.accent} />
-            <Text style={styles.presetBarLabel}>PRESETS</Text>
-            <Text style={styles.presetBarCount}>({presets.length})</Text>
-          </View>
-          <TouchableOpacity
-            testID="open-presets-btn"
-            style={styles.presetActionBtn}
-            onPress={() => setShowPresetsModal(true)}
-            disabled={presets.length === 0}
-          >
-            <Ionicons
-              name="folder-open"
-              size={14}
-              color={presets.length > 0 ? theme.colors.accent : theme.colors.textMuted}
-            />
-            <Text
-              style={[
-                styles.presetActionText,
-                presets.length === 0 && { color: theme.colors.textMuted },
-              ]}
+  async function execute(action: ReportAction) {
+    if (!selected) return;
+    setRunning(action);
+    try {
+      await runReport(
+        {
+          reportType: selected.id,
+          format,
+          columns,
+          options,
+        },
+        action,
+        {
+          subject: selected.title,
+          body: `Please find the attached ${selected.title}.`,
+        },
+      );
+    } catch (e: any) {
+      Alert.alert("Error", e?.message || "Could not generate the report.");
+    } finally {
+      setRunning(null);
+    }
+  }
+
+  if (!specs) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <Header title="REPORTS" onBack={() => router.back()} />
+        <View style={styles.center}>
+          <ActivityIndicator color={theme.colors.accent} />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  // ---- Render the active step --------------------------------------------
+
+  if (step === "type") {
+    return (
+      <SafeAreaView style={styles.container}>
+        <Header title="REPORTS" onBack={() => router.back()} />
+        <ScrollView contentContainerStyle={styles.body}>
+          <Text style={styles.intro}>
+            Pick a report. Each one walks you through filters, fields and
+            export options.
+          </Text>
+          {specs.map((s) => (
+            <TouchableOpacity
+              key={s.id}
+              style={styles.typeCard}
+              onPress={() => pickType(s)}
+              activeOpacity={0.85}
+              testID={`pick-${s.id}`}
             >
-              LOAD
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            testID="save-preset-btn"
-            style={styles.presetActionBtn}
-            onPress={() => setShowSavePresetModal(true)}
-          >
-            <Ionicons name="save" size={14} color={theme.colors.accent} />
-            <Text style={styles.presetActionText}>SAVE</Text>
-          </TouchableOpacity>
-        </View>
+              <View style={[styles.typeIcon, { backgroundColor: s.accent }]}>
+                <Ionicons name={s.icon as any} size={22} color="#000" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.typeTitle}>{s.title}</Text>
+                <Text style={styles.typeDesc}>{s.description}</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color={theme.colors.textSecondary} />
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      </SafeAreaView>
+    );
+  }
 
-        <View style={styles.statGrid}>
-          <View style={styles.statCard}>
-            <Text style={styles.statValue}>{stats.total_tools ?? 0}</Text>
-            <Text style={styles.statLabel}>Total Tools</Text>
-          </View>
-          <View style={styles.statCard}>
-            <Text style={[styles.statValue, { color: theme.colors.success }]}>
-              {stats.available ?? 0}
-            </Text>
-            <Text style={styles.statLabel}>Available</Text>
-          </View>
-          <View style={styles.statCard}>
-            <Text style={[styles.statValue, { color: theme.colors.accentSecondary }]}>
-              {stats.checked_out ?? 0}
-            </Text>
-            <Text style={styles.statLabel}>Checked Out</Text>
-          </View>
-          <View style={styles.statCard}>
-            <Text style={[styles.statValue, { color: theme.colors.accent }]}>
-              ${(stats.total_value ?? 0).toFixed(0)}
-            </Text>
-            <Text style={styles.statLabel}>Total Value</Text>
-          </View>
-          {(stats.needs_repair ?? 0) > 0 && (
-            <View style={styles.statCard}>
-              <Text style={[styles.statValue, { color: theme.colors.danger }]}>
-                {stats.needs_repair}
-              </Text>
-              <Text style={styles.statLabel}>In Repair</Text>
-            </View>
-          )}
-        </View>
-
-        <Text style={styles.sectionLabel}>FORMAT</Text>
-        <View style={styles.segment}>
-          <TouchableOpacity
-            testID="format-pdf"
-            style={[styles.segBtn, format === "pdf" && styles.segBtnActive]}
-            onPress={() => setFormat("pdf")}
-          >
-            <Ionicons
-              name="document-text"
-              size={18}
-              color={format === "pdf" ? "#000" : theme.colors.textSecondary}
+  if (step === "options" && selected) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <Header title={selected.title} onBack={() => setStep("type")} />
+        <Crumbs current={1} />
+        <ScrollView contentContainerStyle={styles.body}>
+          <Text style={styles.sectionLabel}>Filters</Text>
+          {(selected.options_schema || []).map((f) => (
+            <OptionRow
+              key={f.id}
+              field={f}
+              value={options[f.id]}
+              onChange={(v) => setOptions((o) => ({ ...o, [f.id]: v }))}
             />
-            <Text style={[styles.segText, format === "pdf" && styles.segTextActive]}>
-              PDF
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            testID="format-csv"
-            style={[styles.segBtn, format === "csv" && styles.segBtnActive]}
-            onPress={() => setFormat("csv")}
-          >
-            <Ionicons
-              name="grid"
-              size={18}
-              color={format === "csv" ? "#000" : theme.colors.textSecondary}
-            />
-            <Text style={[styles.segText, format === "csv" && styles.segTextActive]}>
-              EXCEL (CSV)
-            </Text>
-          </TouchableOpacity>
-        </View>
+          ))}
+        </ScrollView>
+        <FooterButtons
+          onBack={() => setStep("type")}
+          onNext={() => setStep("fields")}
+        />
+      </SafeAreaView>
+    );
+  }
 
-        <View style={styles.colsHeader}>
+  if (step === "fields" && selected) {
+    const max = format === "pdf" ? MAX_PDF_COLUMNS : 99;
+    const isFull = columns.length >= max;
+    return (
+      <SafeAreaView style={styles.container}>
+        <Header title={selected.title} onBack={() => setStep(selected.options_schema?.length ? "options" : "type")} />
+        <Crumbs current={2} />
+        <ScrollView contentContainerStyle={styles.body}>
           <Text style={styles.sectionLabel}>
-            FILTERS{filterCount > 0 ? ` (${filterCount})` : ""}
+            Choose columns
+            {format === "pdf" ? `  (max ${MAX_PDF_COLUMNS} for PDF)` : ""}
           </Text>
-          {filterCount > 0 && (
-            <TouchableOpacity
-              testID="clear-filters-btn"
-              style={styles.miniBtn}
-              onPress={clearFilters}
-            >
-              <Text style={[styles.miniBtnText, { color: theme.colors.danger }]}>CLEAR</Text>
-            </TouchableOpacity>
-          )}
-        </View>
-
-        {/* Categories filter */}
-        {allCategories.length > 0 && (
-          <View style={styles.filterBlock}>
-            <Text style={styles.filterTitle}>
-              <Ionicons name="folder" size={12} color={theme.colors.accent} /> CATEGORIES
-            </Text>
-            <View style={styles.chipWrap}>
-              {allCategories.map((c) => {
-                const on = categoryFilter.includes(c.id);
-                return (
-                  <TouchableOpacity
-                    key={c.id}
-                    testID={`filter-cat-${c.id}`}
-                    style={[styles.filterChip, on && styles.filterChipOn]}
-                    onPress={() =>
-                      setCategoryFilter((cur) =>
-                        on ? cur.filter((x) => x !== c.id) : [...cur, c.id]
-                      )
-                    }
-                  >
-                    <Text
-                      style={[
-                        styles.filterChipText,
-                        on && styles.filterChipTextOn,
-                      ]}
-                    >
-                      {c.name}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-          </View>
-        )}
-
-        {/* Tags filter */}
-        {allTags.length > 0 && (
-          <View style={styles.filterBlock}>
-            <Text style={styles.filterTitle}>
-              <Ionicons name="pricetag" size={12} color={theme.colors.accent} /> TAGS
-            </Text>
-            <View style={styles.chipWrap}>
-              {allTags.map((t) => {
-                const on = tagFilter.includes(t.id);
-                return (
-                  <TouchableOpacity
-                    key={t.id}
-                    testID={`filter-tag-${t.id}`}
-                    style={[styles.filterChip, on && styles.filterChipOn]}
-                    onPress={() =>
-                      setTagFilter((cur) =>
-                        on ? cur.filter((x) => x !== t.id) : [...cur, t.id]
-                      )
-                    }
-                  >
-                    <Text
-                      style={[
-                        styles.filterChipText,
-                        on && styles.filterChipTextOn,
-                      ]}
-                    >
-                      #{t.name}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-          </View>
-        )}
-
-        {/* Locations filter (nested with descendants auto-included) */}
-        {allLocations.length > 0 && (
-          <View style={styles.filterBlock}>
-            <Text style={styles.filterTitle}>
-              <Ionicons name="location" size={12} color={theme.colors.accent} /> LOCATIONS
-              <Text style={{ color: theme.colors.textMuted, fontSize: 9 }}>  ·  selecting a parent includes all sublocations</Text>
-            </Text>
-            <View style={{ borderWidth: 1, borderColor: theme.colors.border, borderRadius: 4, overflow: "hidden" }}>
-              {flattenLocationTree(buildLocationTree(allLocations)).map((n) => {
-                const on = locationFilter.includes(n.id);
-                return (
-                  <TouchableOpacity
-                    key={n.id}
-                    testID={`filter-loc-${n.id}`}
-                    style={[
-                      styles.locFilterRow,
-                      { paddingLeft: 12 + n.depth * 16 },
-                      on && { backgroundColor: theme.colors.accent },
-                    ]}
-                    onPress={() =>
-                      setLocationFilter((cur) =>
-                        on ? cur.filter((x) => x !== n.id) : [...cur, n.id]
-                      )
-                    }
-                  >
-                    <Ionicons
-                      name={on ? "checkbox" : "square-outline"}
-                      size={14}
-                      color={on ? "#000" : theme.colors.textMuted}
-                    />
-                    <Ionicons
-                      name={n.children.length > 0 ? "folder" : "location"}
-                      size={12}
-                      color={on ? "#000" : theme.colors.accent}
-                    />
-                    <Text
-                      style={[
-                        styles.locFilterText,
-                        on && { color: "#000", fontWeight: "800" },
-                      ]}
-                      numberOfLines={1}
-                    >
-                      {n.name}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-          </View>
-        )}
-
-        {/* Dealers filter */}
-        {allDealers.length > 0 && (
-          <View style={styles.filterBlock}>
-            <Text style={styles.filterTitle}>
-              <Ionicons name="briefcase" size={12} color={theme.colors.accent} /> DEALERS
-            </Text>
-            <View style={styles.chipWrap}>
-              {allDealers.map((d) => {
-                const on = dealerFilter.includes(d.id);
-                return (
-                  <TouchableOpacity
-                    key={d.id}
-                    testID={`filter-dealer-${d.id}`}
-                    style={[styles.filterChip, on && styles.filterChipOn]}
-                    onPress={() =>
-                      setDealerFilter((cur) =>
-                        on ? cur.filter((x) => x !== d.id) : [...cur, d.id]
-                      )
-                    }
-                  >
-                    <Text
-                      style={[
-                        styles.filterChipText,
-                        on && styles.filterChipTextOn,
-                      ]}
-                    >
-                      {d.name}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-          </View>
-        )}
-
-        {/* Purchase date range filter */}
-        <View style={styles.filterBlock}>
-          <Text style={styles.filterTitle}>
-            <Ionicons name="calendar" size={12} color={theme.colors.accent} /> PURCHASE DATE RANGE
+          <Text style={styles.helper}>
+            {columns.length} of {selected.columns.length} selected
           </Text>
-          <View style={styles.dateRow}>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.dateLabel}>FROM</Text>
-              <DateField
-                testID="filter-purchase-from"
-                value={purchaseFrom}
-                onChange={setPurchaseFrom}
-              />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.dateLabel}>TO</Text>
-              <DateField
-                testID="filter-purchase-to"
-                value={purchaseTo}
-                onChange={setPurchaseTo}
-              />
-            </View>
-          </View>
-        </View>
+          {selected.columns.map((c) => {
+            const checked = columns.includes(c.id);
+            const disabled = !checked && isFull;
+            return (
+              <TouchableOpacity
+                key={c.id}
+                style={[styles.fieldRow, disabled && { opacity: 0.4 }]}
+                disabled={disabled}
+                onPress={() =>
+                  setColumns((curr) =>
+                    checked ? curr.filter((x) => x !== c.id) : [...curr, c.id],
+                  )
+                }
+                activeOpacity={0.7}
+              >
+                <View style={[styles.checkbox, checked && styles.checkboxOn]}>
+                  {checked && <Ionicons name="checkmark" size={14} color="#000" />}
+                </View>
+                <Text style={styles.fieldLabel}>{c.label}</Text>
+                {c.type === "money" || c.type === "number" ? (
+                  <Text style={styles.fieldHint}>SUMMED</Text>
+                ) : c.type === "image" ? (
+                  <Text style={styles.fieldHint}>IMAGE</Text>
+                ) : null}
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+        <FooterButtons
+          onBack={() => setStep(selected.options_schema?.length ? "options" : "type")}
+          onNext={() => setStep("format")}
+          disabled={columns.length === 0}
+        />
+      </SafeAreaView>
+    );
+  }
 
-        {/* Warranty expiry date range filter */}
-        <View style={styles.filterBlock}>
-          <Text style={styles.filterTitle}>
-            <Ionicons name="shield-checkmark" size={12} color={theme.colors.accent} /> WARRANTY EXPIRY RANGE
-          </Text>
-          <View style={styles.dateRow}>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.dateLabel}>FROM</Text>
-              <DateField
-                testID="filter-warranty-from"
-                value={warrantyFrom}
-                onChange={setWarrantyFrom}
-              />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.dateLabel}>TO</Text>
-              <DateField
-                testID="filter-warranty-to"
-                value={warrantyTo}
-                onChange={setWarrantyTo}
-              />
-            </View>
-          </View>
-        </View>
-
-        <View style={styles.colsHeader}>
-          <View style={{ flexDirection: "row", gap: 8 }}>
+  if (step === "format" && selected) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <Header title={selected.title} onBack={() => setStep("fields")} />
+        <Crumbs current={3} />
+        <ScrollView contentContainerStyle={styles.body}>
+          <Text style={styles.sectionLabel}>Export format</Text>
+          <View style={styles.formatRow}>
             <TouchableOpacity
-              testID="cols-all"
-              style={styles.miniBtn}
-              onPress={() => setSelected(COLUMNS.map((c) => c.id))}
+              style={[styles.formatCard, format === "pdf" && styles.formatCardOn]}
+              onPress={() => setFormat("pdf")}
             >
-              <Text style={styles.miniBtnText}>ALL</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              testID="cols-default"
-              style={styles.miniBtn}
-              onPress={() => setSelected(DEFAULT_COLS)}
-            >
-              <Text style={styles.miniBtnText}>DEFAULT</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              testID="cols-none"
-              style={styles.miniBtn}
-              onPress={() => setSelected([])}
-            >
-              <Text style={styles.miniBtnText}>NONE</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {COLUMNS.map((c) => {
-          const on = selected.includes(c.id);
-          // CSV format hides photo option
-          if (format === "csv" && c.photo) return null;
-          return (
-            <View key={c.id} style={styles.colRow}>
-              <Ionicons
-                name={c.photo ? "image" : c.numeric ? "calculator" : "list"}
-                size={16}
-                color={on ? theme.colors.accent : theme.colors.textMuted}
-              />
-              <Text style={[styles.colLabel, on && { color: theme.colors.textPrimary }]}>
-                {c.label}
-                {c.numeric ? "  ·  totals" : ""}
+              <Ionicons name="document-text" size={28} color={format === "pdf" ? "#000" : theme.colors.textPrimary} />
+              <Text style={[styles.formatTitle, format === "pdf" && { color: "#000" }]}>PDF</Text>
+              <Text style={[styles.formatSub, format === "pdf" && { color: "#000" }]}>
+                Formatted report{"\n"}max {MAX_PDF_COLUMNS} columns
               </Text>
-              <Switch
-                testID={`col-${c.id}`}
-                value={on}
-                onValueChange={() => toggleCol(c.id)}
-                trackColor={{ true: theme.colors.accent, false: theme.colors.border }}
-                thumbColor="#fff"
-              />
-            </View>
-          );
-        })}
-
-        <Text style={[styles.sectionLabel, { marginTop: 24 }]}>EXPORT</Text>
-
-        {filterCount > 0 && (
-          <View style={styles.filterActiveBanner}>
-            <Ionicons name="funnel" size={14} color={theme.colors.accent} />
-            <Text style={styles.filterActiveText}>
-              {filterCount} FILTER{filterCount === 1 ? "" : "S"} APPLIED — REPORTS WILL ONLY INCLUDE MATCHING TOOLS
-            </Text>
-          </View>
-        )}
-
-        <TouchableOpacity
-          testID="report-full-btn"
-          style={styles.reportCard}
-          onPress={() => generate("all")}
-          disabled={busy}
-        >
-          <View style={styles.reportIcon}>
-            <Ionicons name="document-text" size={24} color={theme.colors.accent} />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.reportTitle}>FULL INVENTORY</Text>
-            <Text style={styles.reportDesc}>
-              Every tool with the columns you selected
-            </Text>
-          </View>
-          <Ionicons name="download-outline" size={22} color={theme.colors.textSecondary} />
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          testID="report-out-btn"
-          style={styles.reportCard}
-          onPress={() => generate("out")}
-          disabled={busy}
-        >
-          <View style={styles.reportIcon}>
-            <Ionicons name="alert-circle" size={24} color={theme.colors.accentSecondary} />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.reportTitle}>CHECKED OUT</Text>
-            <Text style={styles.reportDesc}>Borrowed tools and by whom</Text>
-          </View>
-          <Ionicons name="download-outline" size={22} color={theme.colors.textSecondary} />
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          testID="report-in-btn"
-          style={styles.reportCard}
-          onPress={() => generate("in")}
-          disabled={busy}
-        >
-          <View style={styles.reportIcon}>
-            <Ionicons name="checkmark-circle" size={24} color={theme.colors.success} />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.reportTitle}>AVAILABLE</Text>
-            <Text style={styles.reportDesc}>Tools currently in inventory</Text>
-          </View>
-          <Ionicons name="download-outline" size={22} color={theme.colors.textSecondary} />
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          testID="report-broken-btn"
-          style={styles.reportCard}
-          onPress={() => generate("broken")}
-          disabled={busy}
-        >
-          <View style={[styles.reportIcon, { backgroundColor: "rgba(239,68,68,0.12)" }]}>
-            <Ionicons name="build" size={24} color={theme.colors.danger} />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.reportTitle}>BROKEN / IN REPAIR</Text>
-            <Text style={styles.reportDesc}>Tools flagged for repair tracking</Text>
-          </View>
-          <Ionicons name="download-outline" size={22} color={theme.colors.textSecondary} />
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          testID="report-insurance-btn"
-          style={[styles.reportCard, { borderColor: theme.colors.accent }]}
-          onPress={() => router.push("/insurance-report")}
-          disabled={busy}
-        >
-          <View style={[styles.reportIcon, { backgroundColor: "rgba(255,179,0,0.15)" }]}>
-            <Ionicons name="shield" size={24} color={theme.colors.accent} />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.reportTitle}>INSURANCE REPORT</Text>
-            <Text style={styles.reportDesc}>
-              Full inventory PDF with your policyholder info & total value
-            </Text>
-          </View>
-          <Ionicons name="chevron-forward" size={20} color={theme.colors.accent} />
-        </TouchableOpacity>
-
-        {busy && (
-          <Text style={{ color: theme.colors.accent, textAlign: "center", marginTop: 16 }}>
-            Generating...
-          </Text>
-        )}
-
-        <Text style={styles.tip}>
-          TIP: Numeric columns (Cost) get a TOTAL row at the bottom. Photos are
-          PDF-only. To export filtered/search results, search on Inventory then
-          export from a tool's detail page.
-        </Text>
-      </ScrollView>
-
-      {/* Save preset modal */}
-      <Modal
-        visible={showSavePresetModal}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setShowSavePresetModal(false)}
-      >
-        <View style={styles.modalBg}>
-          <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>SAVE AS PRESET</Text>
-            <Text style={styles.modalHint}>
-              Saves current format, columns, and all filters under a name you can reload later.
-            </Text>
-            <TextInput
-              testID="preset-name-input"
-              placeholder="e.g. Tax 2025 - Power Tools"
-              placeholderTextColor={theme.colors.textMuted}
-              value={presetName}
-              onChangeText={setPresetName}
-              style={styles.input}
-              autoFocus
-            />
-            <View style={{ flexDirection: "row", gap: 10, marginTop: 12 }}>
-              <TouchableOpacity
-                style={styles.btnGhost}
-                onPress={() => {
-                  setShowSavePresetModal(false);
-                  setPresetName("");
-                }}
-              >
-                <Text style={styles.btnGhostText}>CANCEL</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                testID="confirm-save-preset"
-                style={styles.btnPrimary}
-                onPress={savePreset}
-              >
-                <Text style={styles.btnPrimaryText}>SAVE</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
-
-      {/* Load presets modal */}
-      <Modal
-        visible={showPresetsModal}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setShowPresetsModal(false)}
-      >
-        <View style={[styles.modalBg, { justifyContent: "flex-end" }]}>
-          <View style={styles.modalSheet}>
-            <Text style={styles.modalTitle}>LOAD PRESET</Text>
-            <ScrollView style={{ maxHeight: 400 }}>
-              {presets.length === 0 ? (
-                <Text style={{ color: theme.colors.textMuted, padding: 16, textAlign: "center" }}>
-                  No saved presets yet.
-                </Text>
-              ) : (
-                presets.map((p) => {
-                  const fcount =
-                    (p.tagFilter?.length || 0) +
-                    (p.categoryFilter?.length || 0) +
-                    (p.locationFilter?.length || 0) +
-                    (p.dealerFilter?.length || 0) +
-                    (p.purchaseFrom || p.purchaseTo ? 1 : 0) +
-                    (p.warrantyFrom || p.warrantyTo ? 1 : 0);
-                  return (
-                    <View key={p.name} style={styles.presetItem}>
-                      <TouchableOpacity
-                        testID={`load-preset-${p.name}`}
-                        style={{ flex: 1 }}
-                        onPress={() => applyPreset(p)}
-                      >
-                        <Text style={styles.presetItemName}>{p.name}</Text>
-                        <Text style={styles.presetItemMeta}>
-                          {(p.format || "pdf").toUpperCase()} · {p.selected?.length || 0} cols · {fcount} filter{fcount === 1 ? "" : "s"}
-                        </Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity
-                        testID={`delete-preset-${p.name}`}
-                        onPress={() => deletePreset(p.name)}
-                        hitSlop={10}
-                        style={{ padding: 8 }}
-                      >
-                        <Ionicons name="trash-outline" size={18} color={theme.colors.danger} />
-                      </TouchableOpacity>
-                    </View>
-                  );
-                })
-              )}
-            </ScrollView>
+            </TouchableOpacity>
             <TouchableOpacity
-              style={styles.btnGhost}
-              onPress={() => setShowPresetsModal(false)}
+              style={[styles.formatCard, format === "csv" && styles.formatCardOn]}
+              onPress={() => setFormat("csv")}
             >
-              <Text style={styles.btnGhostText}>CLOSE</Text>
+              <Ionicons name="grid" size={28} color={format === "csv" ? "#000" : theme.colors.textPrimary} />
+              <Text style={[styles.formatTitle, format === "csv" && { color: "#000" }]}>CSV</Text>
+              <Text style={[styles.formatSub, format === "csv" && { color: "#000" }]}>
+                Spreadsheet file{"\n"}all columns supported
+              </Text>
             </TouchableOpacity>
           </View>
-        </View>
-      </Modal>
-    </SafeAreaView>
+          {format === "pdf" && columns.length > MAX_PDF_COLUMNS ? (
+            <Text style={styles.warn}>
+              You have {columns.length} columns selected — PDF is capped at{" "}
+              {MAX_PDF_COLUMNS}. Switch to CSV to keep them all.
+            </Text>
+          ) : null}
+        </ScrollView>
+        <FooterButtons
+          onBack={() => setStep("fields")}
+          onNext={() => {
+            // Auto-trim columns when moving forward into action with PDF cap
+            if (format === "pdf" && columns.length > MAX_PDF_COLUMNS) {
+              setColumns(columns.slice(0, MAX_PDF_COLUMNS));
+            }
+            setStep("action");
+          }}
+        />
+      </SafeAreaView>
+    );
+  }
+
+  if (step === "action" && selected) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <Header title={selected.title} onBack={() => setStep("format")} />
+        <Crumbs current={4} />
+        <ScrollView contentContainerStyle={styles.body}>
+          <Text style={styles.sectionLabel}>What would you like to do?</Text>
+          <ActionCard
+            icon="eye"
+            title="View"
+            sub="Open the report on this device"
+            onPress={() => execute("view")}
+            busy={running === "view"}
+          />
+          <ActionCard
+            icon="mail"
+            title="Email"
+            sub={
+              Platform.OS === "web"
+                ? "Download then email — your mail app opens pre-filled"
+                : "Open your mail app with the report attached"
+            }
+            onPress={() => execute("email")}
+            busy={running === "email"}
+          />
+          <ActionCard
+            icon="download"
+            title="Save"
+            sub={
+              Platform.OS === "web"
+                ? "Download the file"
+                : "Save to Files / share to another app"
+            }
+            onPress={() => execute("save")}
+            busy={running === "save"}
+          />
+          <View style={styles.summaryBox}>
+            <Text style={styles.summaryHead}>Summary</Text>
+            <SummaryRow k="Type" v={selected.title} />
+            <SummaryRow k="Columns" v={`${columns.length} (${columns.join(", ")})`} />
+            <SummaryRow k="Format" v={format.toUpperCase()} />
+          </View>
+        </ScrollView>
+      </SafeAreaView>
+    );
+  }
+
+  return null;
+}
+
+// ---- Sub-components -----------------------------------------------------
+
+function Header({ title, onBack }: { title: string; onBack: () => void }) {
+  return (
+    <View style={styles.header}>
+      <TouchableOpacity onPress={onBack} hitSlop={10}>
+        <Ionicons name="chevron-back" size={24} color={theme.colors.textPrimary} />
+      </TouchableOpacity>
+      <Text style={styles.headerTitle} numberOfLines={1}>
+        {title}
+      </Text>
+      <View style={{ width: 24 }} />
+    </View>
   );
 }
 
+function Crumbs({ current }: { current: number }) {
+  const labels = ["Filters", "Fields", "Format", "Action"];
+  return (
+    <View style={styles.crumbs}>
+      {labels.map((l, i) => {
+        const active = i + 1 === current;
+        const done = i + 1 < current;
+        return (
+          <View key={l} style={styles.crumb}>
+            <View
+              style={[
+                styles.crumbDot,
+                active && { backgroundColor: theme.colors.accent },
+                done && { backgroundColor: "#16a34a" },
+              ]}
+            >
+              <Text style={[styles.crumbDotText, (active || done) && { color: "#000" }]}>
+                {i + 1}
+              </Text>
+            </View>
+            <Text style={[styles.crumbLabel, active && { color: theme.colors.textPrimary, fontWeight: "800" }]}>
+              {l}
+            </Text>
+            {i < labels.length - 1 && <View style={styles.crumbLine} />}
+          </View>
+        );
+      })}
+    </View>
+  );
+}
+
+function FooterButtons({
+  onBack,
+  onNext,
+  disabled,
+}: {
+  onBack: () => void;
+  onNext: () => void;
+  disabled?: boolean;
+}) {
+  return (
+    <View style={styles.footerBar}>
+      <TouchableOpacity style={styles.btnGhost} onPress={onBack}>
+        <Text style={styles.btnGhostText}>Back</Text>
+      </TouchableOpacity>
+      <TouchableOpacity
+        style={[styles.btnPrimary, disabled && { opacity: 0.4 }]}
+        onPress={onNext}
+        disabled={disabled}
+      >
+        <Text style={styles.btnPrimaryText}>Next</Text>
+        <Ionicons name="chevron-forward" size={18} color="#000" />
+      </TouchableOpacity>
+    </View>
+  );
+}
+
+function OptionRow({
+  field,
+  value,
+  onChange,
+}: {
+  field: OptionField;
+  value: any;
+  onChange: (v: any) => void;
+}) {
+  if (field.type === "toggle") {
+    return (
+      <TouchableOpacity
+        style={styles.optionRow}
+        onPress={() => onChange(!value)}
+        activeOpacity={0.7}
+      >
+        <View style={[styles.checkbox, !!value && styles.checkboxOn]}>
+          {!!value && <Ionicons name="checkmark" size={14} color="#000" />}
+        </View>
+        <Text style={styles.optionLabel}>{field.label}</Text>
+      </TouchableOpacity>
+    );
+  }
+  if (field.type === "text") {
+    return (
+      <View style={styles.optionField}>
+        <Text style={styles.optionLabel}>{field.label}</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="Optional"
+          placeholderTextColor={theme.colors.textSecondary}
+          value={value || ""}
+          onChangeText={onChange}
+        />
+      </View>
+    );
+  }
+  if (field.type === "date") {
+    return (
+      <View style={styles.optionField}>
+        <Text style={styles.optionLabel}>{field.label}</Text>
+        <DateField value={value || ""} onChange={onChange} />
+      </View>
+    );
+  }
+  if (field.type === "select") {
+    return (
+      <View style={styles.optionField}>
+        <Text style={styles.optionLabel}>{field.label}</Text>
+        <View style={styles.segmentedRow}>
+          {(field as any).choices.map((c: string) => {
+            const active = (value || "") === c;
+            return (
+              <TouchableOpacity
+                key={c || "_any"}
+                style={[styles.segmentedBtn, active && styles.segmentedBtnOn]}
+                onPress={() => onChange(c)}
+              >
+                <Text style={[styles.segmentedText, active && { color: "#000" }]}>
+                  {c || "Any"}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+      </View>
+    );
+  }
+  if (field.type === "segmented") {
+    return (
+      <View style={styles.optionField}>
+        <Text style={styles.optionLabel}>{field.label}</Text>
+        <View style={styles.segmentedRow}>
+          {(field as any).choices.map((c: { id: string; label: string }) => {
+            const active = value === c.id;
+            return (
+              <TouchableOpacity
+                key={c.id}
+                style={[styles.segmentedBtn, active && styles.segmentedBtnOn]}
+                onPress={() => onChange(c.id)}
+              >
+                <Text style={[styles.segmentedText, active && { color: "#000" }]}>
+                  {c.label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+      </View>
+    );
+  }
+  if (field.type === "location") {
+    return <LocationPicker value={value} onChange={onChange} label={field.label} />;
+  }
+  if (field.type === "dealer_multi") {
+    return <DealerMultiPicker value={value || []} onChange={onChange} label={field.label} />;
+  }
+  return null;
+}
+
+function LocationPicker({
+  value,
+  onChange,
+  label,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  label: string;
+}) {
+  const [locs, setLocs] = useState<{ id: string; name: string }[]>([]);
+  useEffect(() => {
+    api.get("/locations").then((r: any) =>
+      setLocs([{ id: "", name: "All locations" }, ...(r || [])]),
+    );
+  }, []);
+  return (
+    <View style={styles.optionField}>
+      <Text style={styles.optionLabel}>{label}</Text>
+      <View style={styles.chipWrap}>
+        {locs.map((l) => {
+          const active = (value || "") === l.id;
+          return (
+            <TouchableOpacity
+              key={l.id || "_any"}
+              style={[styles.chip, active && styles.chipOn]}
+              onPress={() => onChange(l.id)}
+            >
+              <Text style={[styles.chipText, active && { color: "#000" }]}>{l.name}</Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+    </View>
+  );
+}
+
+function DealerMultiPicker({
+  value,
+  onChange,
+  label,
+}: {
+  value: string[];
+  onChange: (v: string[]) => void;
+  label: string;
+}) {
+  const [dealers, setDealers] = useState<{ id: string; name: string }[]>([]);
+  useEffect(() => {
+    api.get("/dealers").then((r: any) => setDealers(r || []));
+  }, []);
+  const allSelected = dealers.length > 0 && value.length === 0;
+  return (
+    <View style={styles.optionField}>
+      <Text style={styles.optionLabel}>{label}</Text>
+      <View style={styles.chipWrap}>
+        <TouchableOpacity
+          style={[styles.chip, allSelected && styles.chipOn]}
+          onPress={() => onChange([])}
+        >
+          <Text style={[styles.chipText, allSelected && { color: "#000" }]}>All Dealers</Text>
+        </TouchableOpacity>
+        {dealers.map((d) => {
+          const active = value.includes(d.id);
+          return (
+            <TouchableOpacity
+              key={d.id}
+              style={[styles.chip, active && styles.chipOn]}
+              onPress={() => {
+                if (active) onChange(value.filter((x) => x !== d.id));
+                else onChange([...value, d.id]);
+              }}
+            >
+              <Text style={[styles.chipText, active && { color: "#000" }]}>{d.name}</Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+    </View>
+  );
+}
+
+function ActionCard({
+  icon,
+  title,
+  sub,
+  onPress,
+  busy,
+}: {
+  icon: string;
+  title: string;
+  sub: string;
+  onPress: () => void;
+  busy?: boolean;
+}) {
+  return (
+    <TouchableOpacity
+      style={styles.actionCard}
+      onPress={onPress}
+      disabled={busy}
+      activeOpacity={0.85}
+      testID={`action-${title.toLowerCase()}`}
+    >
+      <View style={styles.actionIcon}>
+        {busy ? (
+          <ActivityIndicator color="#000" />
+        ) : (
+          <Ionicons name={icon as any} size={22} color="#000" />
+        )}
+      </View>
+      <View style={{ flex: 1 }}>
+        <Text style={styles.actionTitle}>{title}</Text>
+        <Text style={styles.actionSub}>{sub}</Text>
+      </View>
+      <Ionicons name="chevron-forward" size={20} color={theme.colors.textSecondary} />
+    </TouchableOpacity>
+  );
+}
+
+function SummaryRow({ k, v }: { k: string; v: string }) {
+  return (
+    <View style={styles.summaryRow}>
+      <Text style={styles.summaryKey}>{k}</Text>
+      <Text style={styles.summaryVal} numberOfLines={2}>
+        {v}
+      </Text>
+    </View>
+  );
+}
+
+// ---- Styles -------------------------------------------------------------
+
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.colors.bg },
-  header: { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 8 },
-  title: { color: theme.colors.textPrimary, fontSize: 28, fontWeight: "900", letterSpacing: 2 },
-  subtitle: {
-    color: theme.colors.accent,
-    fontSize: 11,
-    fontWeight: "700",
-    letterSpacing: 2,
-    textTransform: "uppercase",
-    marginTop: 2,
-  },
-  statGrid: { flexDirection: "row", flexWrap: "wrap", gap: 10, marginBottom: 16 },
-  statCard: {
-    flexBasis: "48%",
-    flexGrow: 1,
-    backgroundColor: theme.colors.bgSecondary,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    padding: 14,
-    borderRadius: 4,
-  },
-  statValue: { color: theme.colors.textPrimary, fontWeight: "900", fontSize: 24 },
-  statLabel: {
-    color: theme.colors.textMuted,
-    fontSize: 10,
-    fontWeight: "800",
-    letterSpacing: 1.5,
-    marginTop: 4,
-    textTransform: "uppercase",
-  },
-  sectionLabel: {
-    color: theme.colors.textMuted,
-    fontSize: 11,
-    fontWeight: "800",
-    letterSpacing: 2,
-    marginBottom: 10,
-  },
-  segment: {
-    flexDirection: "row",
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: 4,
-    overflow: "hidden",
-    marginBottom: 16,
-  },
-  segBtn: {
-    flex: 1,
+  center: { flex: 1, alignItems: "center", justifyContent: "center" },
+  header: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
+    paddingHorizontal: 14,
     paddingVertical: 12,
-  },
-  segBtnActive: { backgroundColor: theme.colors.accent },
-  segText: {
-    color: theme.colors.textSecondary,
-    fontWeight: "800",
-    letterSpacing: 1,
-    fontSize: 12,
-  },
-  segTextActive: { color: "#000" },
-  colsHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 8,
-  },
-  miniBtn: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: 4,
-  },
-  miniBtnText: {
-    color: theme.colors.textSecondary,
-    fontSize: 10,
-    fontWeight: "800",
-    letterSpacing: 1,
-  },
-  colRow: {
-    flexDirection: "row",
-    alignItems: "center",
     gap: 12,
-    paddingVertical: 8,
-    paddingHorizontal: 10,
-    borderBottomColor: theme.colors.borderSubtle,
     borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
   },
-  colLabel: { color: theme.colors.textSecondary, fontSize: 14, flex: 1 },
-  filterBlock: {
-    marginBottom: 14,
-  },
-  filterTitle: {
-    color: theme.colors.textSecondary,
-    fontSize: 11,
-    fontWeight: "800",
-    letterSpacing: 1.5,
-    marginBottom: 8,
-  },
-  chipWrap: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 6,
-  },
-  filterChip: {
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: theme.radii.pill,
-    backgroundColor: theme.colors.bgSecondary,
-  },
-  filterChipOn: {
-    backgroundColor: theme.colors.accent,
-    borderColor: theme.colors.accent,
-  },
-  filterChipText: {
-    color: theme.colors.textSecondary,
-    fontSize: 12,
-    fontWeight: "700",
-  },
-  filterChipTextOn: { color: "#000", fontWeight: "900" },
-  locFilterRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    paddingVertical: 9,
-    paddingRight: 12,
-    borderBottomColor: theme.colors.borderSubtle,
-    borderBottomWidth: 1,
-    backgroundColor: theme.colors.bgSecondary,
-  },
-  locFilterText: {
-    color: theme.colors.textPrimary,
-    fontSize: 13,
-    fontWeight: "600",
+  headerTitle: {
     flex: 1,
-  },
-  filterActiveBanner: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    backgroundColor: "rgba(255,179,0,0.10)",
-    borderLeftWidth: 3,
-    borderLeftColor: theme.colors.accent,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    marginBottom: 8,
-    borderRadius: 4,
-  },
-  filterActiveText: {
-    color: theme.colors.accent,
-    fontSize: 11,
-    fontWeight: "800",
-    letterSpacing: 1,
-    flex: 1,
-  },
-  // Presets bar + items
-  presetBar: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    backgroundColor: theme.colors.bgSecondary,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    marginBottom: 14,
-    borderRadius: 4,
-  },
-  presetBarLabel: {
-    color: theme.colors.textPrimary,
-    fontSize: 11,
-    fontWeight: "900",
-    letterSpacing: 2,
-  },
-  presetBarCount: {
-    color: theme.colors.textMuted,
-    fontSize: 11,
-    fontWeight: "700",
-  },
-  presetActionBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: 4,
-  },
-  presetActionText: {
-    color: theme.colors.accent,
-    fontSize: 10,
-    fontWeight: "900",
-    letterSpacing: 1.5,
-  },
-  presetItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 12,
-    paddingHorizontal: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.borderSubtle,
-  },
-  presetItemName: {
     color: theme.colors.textPrimary,
     fontSize: 14,
-    fontWeight: "800",
+    fontWeight: "900",
+    letterSpacing: 2,
+    textAlign: "center",
   },
-  presetItemMeta: {
-    color: theme.colors.textMuted,
+  body: { padding: 16, paddingBottom: 100 },
+  intro: {
+    color: theme.colors.textSecondary,
+    fontSize: 13,
+    marginBottom: 16,
+    lineHeight: 19,
+  },
+  // ---- type cards ----
+  typeCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 14,
+    backgroundColor: theme.colors.cardBg,
+    borderRadius: 10,
+    padding: 14,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  typeIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  typeTitle: { color: theme.colors.textPrimary, fontSize: 15, fontWeight: "800" },
+  typeDesc: {
+    color: theme.colors.textSecondary,
     fontSize: 11,
-    fontWeight: "700",
     marginTop: 3,
-    letterSpacing: 0.5,
+    lineHeight: 15,
+  },
+  // ---- crumbs ----
+  crumbs: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    backgroundColor: theme.colors.cardBg,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
+  },
+  crumb: { flexDirection: "row", alignItems: "center" },
+  crumbDot: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: theme.colors.border,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  crumbDotText: { fontSize: 11, fontWeight: "800", color: theme.colors.textSecondary },
+  crumbLabel: {
+    fontSize: 11,
+    color: theme.colors.textSecondary,
+    marginLeft: 6,
+    letterSpacing: 1,
     textTransform: "uppercase",
   },
-  // Date row
-  dateRow: { flexDirection: "row", gap: 10 },
-  dateLabel: {
-    color: theme.colors.textMuted,
+  crumbLine: { width: 18, height: 1, backgroundColor: theme.colors.border, marginHorizontal: 8 },
+  // ---- options ----
+  sectionLabel: {
+    color: theme.colors.textPrimary,
+    fontSize: 11,
+    fontWeight: "800",
+    letterSpacing: 2,
+    marginTop: 6,
+    marginBottom: 10,
+  },
+  helper: {
+    color: theme.colors.textSecondary,
+    fontSize: 11,
+    marginBottom: 8,
+  },
+  optionRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
+  },
+  optionLabel: {
+    color: theme.colors.textPrimary,
+    fontSize: 13,
+    flex: 1,
+    marginLeft: 12,
+  },
+  optionField: {
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
+  },
+  input: {
+    marginTop: 6,
+    backgroundColor: theme.colors.cardBg,
+    color: theme.colors.textPrimary,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    fontSize: 13,
+  },
+  segmentedRow: {
+    flexDirection: "row",
+    marginTop: 6,
+    backgroundColor: theme.colors.cardBg,
+    borderRadius: 6,
+    padding: 3,
+    flexWrap: "wrap",
+  },
+  segmentedBtn: {
+    flex: 1,
+    minWidth: 80,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    borderRadius: 4,
+    alignItems: "center",
+  },
+  segmentedBtnOn: { backgroundColor: theme.colors.accent },
+  segmentedText: { color: theme.colors.textPrimary, fontSize: 12, fontWeight: "700" },
+  chipWrap: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 8 },
+  chip: {
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.cardBg,
+  },
+  chipOn: { backgroundColor: theme.colors.accent, borderColor: theme.colors.accent },
+  chipText: { color: theme.colors.textPrimary, fontSize: 11, fontWeight: "700" },
+  // ---- fields ----
+  fieldRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 11,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
+  },
+  checkbox: {
+    width: 22,
+    height: 22,
+    borderRadius: 4,
+    borderWidth: 2,
+    borderColor: theme.colors.border,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  checkboxOn: { backgroundColor: theme.colors.accent, borderColor: theme.colors.accent },
+  fieldLabel: {
+    color: theme.colors.textPrimary,
+    fontSize: 13,
+    flex: 1,
+    marginLeft: 12,
+  },
+  fieldHint: {
+    color: theme.colors.textSecondary,
     fontSize: 9,
     fontWeight: "800",
-    letterSpacing: 1.5,
-    marginBottom: 4,
+    letterSpacing: 1,
+    backgroundColor: theme.colors.cardBg,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 3,
   },
-  // Modals
-  modalBg: {
+  // ---- format ----
+  formatRow: { flexDirection: "row", gap: 12, marginTop: 4 },
+  formatCard: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.7)",
-    justifyContent: "center",
-    padding: 24,
+    paddingVertical: 22,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    alignItems: "center",
+    borderWidth: 2,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.cardBg,
   },
-  modalCard: {
-    backgroundColor: theme.colors.bgSecondary,
-    padding: 22,
-    borderRadius: theme.radii.md,
-    borderTopWidth: 2,
-    borderTopColor: theme.colors.accent,
-  },
-  modalSheet: {
-    backgroundColor: theme.colors.bgSecondary,
-    padding: 22,
-    borderTopWidth: 2,
-    borderTopColor: theme.colors.accent,
-    borderTopLeftRadius: theme.radii.md,
-    borderTopRightRadius: theme.radii.md,
-  },
-  modalTitle: {
+  formatCardOn: { backgroundColor: theme.colors.accent, borderColor: theme.colors.accent },
+  formatTitle: {
     color: theme.colors.textPrimary,
     fontSize: 16,
     fontWeight: "900",
     letterSpacing: 2,
-    marginBottom: 10,
+    marginTop: 8,
   },
-  modalHint: {
+  formatSub: {
     color: theme.colors.textSecondary,
-    fontSize: 12,
-    marginBottom: 12,
-    lineHeight: 16,
+    fontSize: 10,
+    marginTop: 4,
+    textAlign: "center",
+    lineHeight: 14,
   },
-  input: {
-    backgroundColor: theme.colors.bg,
+  warn: {
+    color: "#dc2626",
+    fontSize: 11,
+    marginTop: 12,
+    fontStyle: "italic",
+  },
+  // ---- action ----
+  actionCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    backgroundColor: theme.colors.cardBg,
+    borderRadius: 8,
+    padding: 14,
+    marginBottom: 10,
     borderWidth: 1,
     borderColor: theme.colors.border,
-    color: theme.colors.textPrimary,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    borderRadius: 4,
-    fontSize: 15,
   },
-  btnPrimary: {
-    flex: 1,
-    height: 44,
+  actionIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     backgroundColor: theme.colors.accent,
     alignItems: "center",
     justifyContent: "center",
-    borderRadius: theme.radii.sm,
   },
-  btnPrimaryText: {
-    color: "#000",
-    fontWeight: "900",
-    letterSpacing: 2,
-    fontSize: 14,
-  },
-  btnGhost: {
-    flex: 1,
-    height: 44,
+  actionTitle: { color: theme.colors.textPrimary, fontSize: 14, fontWeight: "800" },
+  actionSub: { color: theme.colors.textSecondary, fontSize: 11, marginTop: 2 },
+  summaryBox: {
+    marginTop: 18,
+    backgroundColor: theme.colors.cardBg,
+    padding: 14,
+    borderRadius: 8,
     borderWidth: 1,
     borderColor: theme.colors.border,
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: theme.radii.sm,
   },
-  btnGhostText: {
+  summaryHead: {
     color: theme.colors.textPrimary,
+    fontSize: 11,
     fontWeight: "800",
     letterSpacing: 2,
-    fontSize: 14,
+    marginBottom: 8,
   },
-  reportCard: {
+  summaryRow: { flexDirection: "row", paddingVertical: 4 },
+  summaryKey: {
+    width: 90,
+    color: theme.colors.textSecondary,
+    fontSize: 11,
+    fontWeight: "700",
+  },
+  summaryVal: { color: theme.colors.textPrimary, fontSize: 12, flex: 1 },
+  // ---- footer buttons ----
+  footerBar: {
     flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: theme.colors.bgSecondary,
+    padding: 14,
+    gap: 10,
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.border,
+    backgroundColor: theme.colors.bg,
+  },
+  btnGhost: {
+    paddingVertical: 12,
+    paddingHorizontal: 22,
+    borderRadius: 6,
     borderWidth: 1,
     borderColor: theme.colors.border,
-    padding: 14,
-    marginBottom: 8,
-    borderRadius: 4,
-    gap: 12,
   },
-  reportIcon: {
-    width: 44,
-    height: 44,
-    backgroundColor: theme.colors.surface,
-    borderRadius: 4,
+  btnGhostText: { color: theme.colors.textPrimary, fontWeight: "800", fontSize: 12, letterSpacing: 1 },
+  btnPrimary: {
+    flex: 1,
+    backgroundColor: theme.colors.accent,
+    paddingVertical: 12,
+    borderRadius: 6,
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
+    gap: 6,
   },
-  reportTitle: {
-    color: theme.colors.textPrimary,
-    fontWeight: "900",
-    fontSize: 13,
-    letterSpacing: 2,
-  },
-  reportDesc: {
-    color: theme.colors.textSecondary,
-    fontSize: 12,
-    marginTop: 4,
-  },
-  tip: {
-    color: theme.colors.textMuted,
-    fontSize: 11,
-    fontStyle: "italic",
-    marginTop: 20,
-    textAlign: "center",
-    lineHeight: 16,
-  },
+  btnPrimaryText: { color: "#000", fontWeight: "900", fontSize: 13, letterSpacing: 1 },
 });

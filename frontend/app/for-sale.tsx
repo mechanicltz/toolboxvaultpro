@@ -18,7 +18,6 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter, Stack } from "expo-router";
 import { theme } from "../src/theme";
 import { api } from "../src/api";
-import { printReportHtml } from "../src/printHtml";
 import { formatDateUS } from "../src/dateUtil";
 import { DateField } from "../src/DateField";
 import { ResponsiveContainer } from "../src/ResponsiveContainer";
@@ -47,10 +46,6 @@ export default function ForSaleScreen() {
   const [tags, setTags] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
   const [dealers, setDealers] = useState<any[]>([]);
-
-  // Reports
-  const [showReportPicker, setShowReportPicker] = useState(false);
-  const [reportBusy, setReportBusy] = useState(false);
 
   const loadFiltersData = useCallback(async () => {
     try {
@@ -128,24 +123,6 @@ export default function ForSaleScreen() {
     setFilterTo("");
   };
 
-  const generatePdf = async (mode: "bulk" | "perItem") => {
-    setReportBusy(true);
-
-    // Build HTML synchronously first, before any async work,
-    // so popup-blockers / sandboxed previews still allow the print window.
-    const html = buildHtml(filtered, mode, tab, { count: totals.count, value: totals.value });
-    const filename = `${tab === "sold" ? "sold-items" : "for-sale"}-${mode}-${Date.now()}.pdf`;
-
-    try {
-      await printReportHtml(html, filename);
-      setShowReportPicker(false);
-    } catch (e: any) {
-      Alert.alert("Error generating report", String(e?.message || e));
-    } finally {
-      setReportBusy(false);
-    }
-  };
-
   const renderCard = ({ item }: { item: Tool }) => {
     const photoRaw = (item.photos || [])[0];
     // Photos may be stored as a full data URI string OR as {data, mime_type}.
@@ -215,8 +192,12 @@ export default function ForSaleScreen() {
           <Ionicons name="chevron-back" size={26} color={theme.colors.textPrimary} />
         </TouchableOpacity>
         <Text style={styles.title}>INVENTORY FOR SALE</Text>
-        <TouchableOpacity onPress={() => setShowReportPicker(true)} testID="report-btn">
-          <Ionicons name="document-text" size={22} color={theme.colors.accent} />
+        <TouchableOpacity
+          onPress={() => router.push({ pathname: "/reports", params: { preset: "sales" } })}
+          testID="report-btn"
+          style={styles.reportsBtn}
+        >
+          <Text style={styles.reportsBtnText}>REPORTS</Text>
         </TouchableOpacity>
       </View>
 
@@ -349,54 +330,6 @@ export default function ForSaleScreen() {
           </View>
         </View>
       </Modal>
-
-      {/* Report picker modal */}
-      <Modal visible={showReportPicker} transparent animationType="fade" onRequestClose={() => setShowReportPicker(false)}>
-        <View style={styles.modalBackdrop}>
-          <View style={[styles.modalCard, { maxWidth: 460 }]}>
-            <View style={styles.modalHeader}>
-              <Ionicons name="document-text" size={20} color={theme.colors.accent} />
-              <Text style={styles.modalTitle}>{tab === "listed" ? "FOR-SALE REPORT" : "SOLD ITEMS REPORT"}</Text>
-              <TouchableOpacity onPress={() => setShowReportPicker(false)} hitSlop={10}>
-                <Ionicons name="close" size={22} color={theme.colors.textPrimary} />
-              </TouchableOpacity>
-            </View>
-            <Text style={{ color: theme.colors.textSecondary, fontSize: 13, marginBottom: 16, lineHeight: 19 }}>
-              {`How would you like to print ${filtered.length} ${tab === "sold" ? "sold item(s)" : "item(s) for sale"}?`}
-            </Text>
-            <TouchableOpacity
-              testID="report-bulk"
-              disabled={reportBusy}
-              onPress={() => generatePdf("bulk")}
-              style={[styles.reportOpt, { borderColor: theme.colors.accent }]}
-            >
-              <Ionicons name="grid" size={26} color={theme.colors.accent} />
-              <View style={{ flex: 1 }}>
-                <Text style={styles.reportOptTitle}>BULK SHEET</Text>
-                <Text style={styles.reportOptSub}>All items on the same paper, compact grid</Text>
-              </View>
-            </TouchableOpacity>
-            <TouchableOpacity
-              testID="report-per-item"
-              disabled={reportBusy}
-              onPress={() => generatePdf("perItem")}
-              style={[styles.reportOpt, { borderColor: "#27AE60" }]}
-            >
-              <Ionicons name="document" size={26} color="#27AE60" />
-              <View style={{ flex: 1 }}>
-                <Text style={styles.reportOptTitle}>ONE PAGE PER ITEM</Text>
-                <Text style={styles.reportOptSub}>Large photo + full details, one item per sheet</Text>
-              </View>
-            </TouchableOpacity>
-            {reportBusy && (
-              <View style={{ alignItems: "center", marginTop: 12 }}>
-                <ActivityIndicator color={theme.colors.accent} />
-                <Text style={{ color: theme.colors.textMuted, fontSize: 12, marginTop: 4 }}>Building PDF...</Text>
-              </View>
-            )}
-          </View>
-        </View>
-      </Modal>
     </SafeAreaView>
   );
 }
@@ -421,242 +354,6 @@ function ChipSelect({ items, value, onChange, testIDPrefix }: { items: any[]; va
   );
 }
 
-// =================== PDF HTML BUILDERS ===================
-function escapeHtml(s: any): string {
-  return String(s == null ? "" : s)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
-}
-
-function imgSrc(t: any): string {
-  const photo = (t.photos || [])[0];
-  if (!photo) return "";
-  // Photos may be a full data URI string OR an object with {data, mime_type}
-  if (typeof photo === "string") return photo;
-  if (photo.data) return `data:${photo.mime_type || "image/jpeg"};base64,${photo.data}`;
-  return "";
-}
-
-function buildHtml(items: any[], mode: "bulk" | "perItem", tab: "listed" | "sold", totals: { count: number; value: number }) {
-  const isSold = tab === "sold";
-  const titleWord = isSold ? "Sold Items Report" : "Items For Sale";
-  const accent = isSold ? "#27AE60" : "#FFB300";
-  const today = new Date().toLocaleDateString("en-US");
-  const totalLabel = isSold ? "Sold Total" : "Asking Total";
-
-  // Insurance-style: black title, yellow accent stripe under, then a compact
-  // 2-column "label" card with totals.
-  const headerHtml = `
-    <div class="head">
-      <h1>${escapeHtml(titleWord)}</h1>
-      <div class="date">Prepared ${today}</div>
-    </div>
-    <table class="stats"><tr>
-      <td><div class="stat-l">Total Items</div><div class="stat-v">${totals.count}</div></td>
-      <td class="tot"><div class="stat-l">${totalLabel}</div><div class="stat-v">$${totals.value.toFixed(2)}</div></td>
-    </tr></table>
-  `;
-
-  // Bulk: pair items into rows of 2 cards each, rendered as a real <table>
-  // (xhtml2pdf strips display:grid/flex, so we go old-school and reliable).
-  const bulkRows = (() => {
-    if (mode !== "bulk") return "";
-    const rowsArr: string[] = [];
-    for (let i = 0; i < items.length; i += 2) {
-      const left = bulkCard(items[i], isSold);
-      const right = items[i + 1] ? bulkCard(items[i + 1], isSold) : `<td class="card-cell empty"></td>`;
-      rowsArr.push(`<tr>${left}${right}</tr>`);
-    }
-    return `<table class="bulk-grid">${rowsArr.join("")}</table>`;
-  })();
-
-  const itemsBody =
-    mode === "bulk"
-      ? bulkRows
-      : `<pdf:nextpage/>` +
-        items.map((t, i) => perItemPage(t, isSold, i === 0)).join("");
-
-  return `<!doctype html><html><head><meta charset="utf-8"><style>
-    @page { size: Letter; margin: 0.55in 0.5in 0.55in 0.5in; }
-    body { font-family: Helvetica, Arial, sans-serif; color: #111; margin: 0; }
-
-    /* ===== HEAD (matches insurance report) ===== */
-    .head { text-align: center; border-bottom: 4px solid ${accent}; padding-bottom: 14px; margin-bottom: 14px; }
-    .head h1 { font-size: 26px; letter-spacing: 3px; margin: 0 0 6px; text-transform: uppercase; }
-    .head .date { color: #666; font-size: 12px; letter-spacing: 1px; }
-
-    /* ===== STATS ===== */
-    .stats { width: 100%; border-collapse: separate; border-spacing: 8px 0; margin-bottom: 16px; }
-    .stats td { width: 50%; border: 1px solid #ddd; padding: 10px 14px; border-radius: 4px; background: #fafafa; vertical-align: top; }
-    .stats td.tot { background: ${accent}; color: #000; border-color: ${accent}; }
-    .stats .stat-l { font-size: 9px; letter-spacing: 1.5px; color: #666; text-transform: uppercase; font-weight: 700; }
-    .stats td.tot .stat-l { color: #4a3500; }
-    .stats .stat-v { font-size: 18px; font-weight: 800; margin-top: 2px; }
-
-    /* ===== BULK GRID — table-based 2 columns ===== */
-    .bulk-grid { width: 100%; border-collapse: separate; border-spacing: 10px 10px; }
-    .card-cell { width: 50%; vertical-align: top; padding: 0; }
-    .card-cell.empty { border: 0; background: transparent; }
-    .card { border: 1px solid #ddd; border-left: 4px solid ${accent}; background: #fff; }
-    .card-inner { width: 100%; border-collapse: collapse; }
-    .card-inner td { vertical-align: top; padding: 0; }
-
-    /* Photo cell: fixed 1.4in × 1.05in box.  Image is sized via fixed
-       width attribute so xhtml2pdf doesn't stretch it. */
-    .card-photo {
-      width: 1.4in; height: 1.05in;
-      background: #f4f4f4; text-align: center;
-    }
-    .card-photo img { display: block; }
-    .card-photo .no { color: #999; font-size: 9px; padding-top: 0.45in; display: block; }
-
-    .card-body { padding: 8px 10px; }
-    .card-name { font-size: 12px; font-weight: 800; color: #111; margin: 0 0 1px; line-height: 1.2; }
-    .card-sub { font-size: 9.5px; color: #666; margin: 0 0 4px; }
-    .card-price { font-size: 16px; font-weight: 900; color: ${accent}; margin: 0 0 4px; }
-    .card-meta { font-size: 9px; color: #555; margin: 0; line-height: 1.35; }
-    .pill {
-      display: inline-block; padding: 2px 6px; font-size: 8px; font-weight: 800;
-      letter-spacing: 1.2px; background: ${accent}; color: ${isSold ? "#fff" : "#000"};
-      margin-top: 4px;
-    }
-
-    /* ===== PER-ITEM PAGE ===== */
-    .item-page { padding: 0; page-break-inside: avoid; }
-    .item-head { width: 100%; border-collapse: collapse; margin-bottom: 10px; padding-bottom: 6px; border-bottom: 2px solid ${accent}; }
-    .item-head td { vertical-align: top; padding: 0; }
-    .ribbon {
-      display: inline-block; background: ${accent}; color: ${isSold ? "#fff" : "#000"};
-      padding: 3px 10px; font-size: 9px; letter-spacing: 1.5px; font-weight: 900;
-    }
-    .big-name { font-size: 22px; font-weight: 900; color: #111; margin: 4px 0 0; line-height: 1.15; }
-    .big-price { font-size: 28px; font-weight: 900; color: ${accent}; margin: 0; white-space: nowrap; }
-
-    /* Photo: fixed 5in × 3.4in centered cell — image gets fixed width attr
-       below so xhtml2pdf preserves aspect ratio. */
-    .item-photo-wrap { width: 100%; text-align: center; margin: 0 0 12px; }
-    .item-photo {
-      width: 5in; height: 3.4in;
-      background: #f4f4f4; border: 1px solid #ddd;
-      text-align: center; margin: 0 auto;
-    }
-    .item-photo img { display: inline-block; }
-    .item-photo .no { color: #999; font-size: 12px; padding-top: 1.5in; display: block; }
-
-    .desc { font-size: 11px; color: #444; margin: 0 0 8px; line-height: 1.4; }
-    .desc em { color: #666; }
-
-    .specs { width: 100%; border-collapse: collapse; margin-top: 4px; }
-    .specs td { width: 50%; padding: 5px 10px 5px 0; vertical-align: top; border-bottom: 1px solid #eee; }
-    .spec-lbl { font-size: 8.5px; letter-spacing: 1.2px; color: #666; font-weight: 800; text-transform: uppercase; }
-    .spec-val { font-size: 12px; color: #111; font-weight: 700; line-height: 1.25; margin-top: 2px; }
-
-    .footer { text-align: center; color: #999; font-size: 10px; margin-top: 18px; letter-spacing: 1px; }
-  </style></head><body>
-    ${headerHtml}
-    ${itemsBody}
-    <div class="footer">Generated by Toolbox &middot; ${today}</div>
-  </body></html>`;
-}
-
-function bulkCard(t: any, isSold: boolean): string {
-  const src = imgSrc(t);
-  const price = isSold ? (t.sold_price || 0) : (t.sale_price || 0);
-  const dt = isSold ? t.sold_at : t.sale_listed_at;
-  // width="135" ≈ 1.4in @ 96dpi.  The fixed pixel attribute (NOT a CSS rule)
-  // is what xhtml2pdf actually honours for image sizing.  Aspect ratio is
-  // preserved when only ONE dimension is set.
-  const photoCell = src
-    ? `<img src="${src}" width="135" />`
-    : `<div class="no">No photo</div>`;
-  const subParts: string[] = [];
-  if (t.brand) subParts.push(escapeHtml(t.brand));
-  if (t.model) subParts.push(escapeHtml(t.model));
-  const subline = subParts.join(" &middot; ");
-  return `
-    <td class="card-cell">
-      <div class="card">
-        <table class="card-inner"><tr>
-          <td class="card-photo">${photoCell}</td>
-          <td class="card-body">
-            <div class="card-name">${escapeHtml(t.name)}</div>
-            ${subline ? `<div class="card-sub">${subline}</div>` : ""}
-            <div class="card-price">$${price.toFixed(2)}</div>
-            ${isSold && t.sold_to ? `<div class="card-meta">Sold to: ${escapeHtml(t.sold_to)}</div>` : ""}
-            ${t.dealer_name ? `<div class="card-meta">Dealer: ${escapeHtml(t.dealer_name)}</div>` : ""}
-            ${dt ? `<div class="card-meta">${isSold ? "Sold" : "Listed"}: ${formatDateUS(dt)}</div>` : ""}
-            <span class="pill">${isSold ? "SOLD" : "FOR SALE"}</span>
-          </td>
-        </tr></table>
-      </div>
-    </td>
-  `;
-}
-
-function perItemPage(t: any, isSold: boolean, isFirst: boolean): string {
-  const src = imgSrc(t);
-  const price = isSold ? (t.sold_price || 0) : (t.sale_price || 0);
-  const specs = [
-    ["Brand", t.brand],
-    ["Model", t.model],
-    ["Serial #", t.serial_number],
-    ["Condition", t.condition],
-    ["Original Cost", t.cost ? `$${(t.cost || 0).toFixed(2)}` : ""],
-    ["Purchased", formatDateUS(t.purchase_date)],
-    ["Dealer", t.dealer_name],
-    ["Location", t.location_name],
-    ...(isSold
-      ? [
-          ["Sold To", t.sold_to],
-          ["Sold On", formatDateUS(t.sold_at)],
-        ]
-      : [["Listed", formatDateUS(t.sale_listed_at)]]),
-  ];
-  const desc = t.description || "";
-  const noteField = isSold ? t.sold_notes : t.sale_notes;
-  // Hard page break before every item except the first.
-  const pageBreak = isFirst ? "" : `<pdf:nextpage/>`;
-  // Image height pinned at 326px (≈ 3.4in @ 96dpi). Width is auto so the
-  // aspect ratio is preserved (no more stretched photos).
-  const photoBlock = src
-    ? `<img src="${src}" height="326" />`
-    : `<div class="no">No photo</div>`;
-  // Render specs as a 2-column rows table — same look as insurance details.
-  const filteredSpecs = specs.filter(([_, v]) => !!v);
-  const specRows: string[] = [];
-  for (let i = 0; i < filteredSpecs.length; i += 2) {
-    const [l1, v1] = filteredSpecs[i];
-    const pair = filteredSpecs[i + 1];
-    const rightCell = pair
-      ? `<td><div class="spec-lbl">${pair[0]}</div><div class="spec-val">${escapeHtml(pair[1])}</div></td>`
-      : `<td></td>`;
-    specRows.push(
-      `<tr><td><div class="spec-lbl">${l1}</div><div class="spec-val">${escapeHtml(v1)}</div></td>${rightCell}</tr>`,
-    );
-  }
-  return `
-    ${pageBreak}
-    <div class="item-page">
-      <table class="item-head"><tr>
-        <td style="width:65%">
-          <span class="ribbon">${isSold ? "SOLD" : "FOR SALE"}</span>
-          <div class="big-name">${escapeHtml(t.name)}</div>
-        </td>
-        <td style="text-align:right;white-space:nowrap;vertical-align:bottom">
-          <div class="big-price">$${price.toFixed(2)}</div>
-        </td>
-      </tr></table>
-      <div class="item-photo-wrap">
-        <div class="item-photo">${photoBlock}</div>
-      </div>
-      ${desc ? `<div class="desc">${escapeHtml(desc)}</div>` : ""}
-      ${noteField ? `<div class="desc"><em>${escapeHtml(noteField)}</em></div>` : ""}
-      <table class="specs">${specRows.join("")}</table>
-    </div>
-  `;
-}
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.colors.bg },
@@ -673,6 +370,18 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "900",
     letterSpacing: 2,
+  },
+  reportsBtn: {
+    backgroundColor: theme.colors.accent,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 4,
+  },
+  reportsBtnText: {
+    color: "#000",
+    fontSize: 11,
+    fontWeight: "900",
+    letterSpacing: 1.5,
   },
   tabRow: {
     flexDirection: "row",
