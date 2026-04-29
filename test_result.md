@@ -733,3 +733,37 @@ date values were rendered without MM/DD/YYYY formatting.
     5. Existing details grid (Brand, Model, Serial, Cost, Condition, Purchased)
 - Both rows are conditional — only render if the tool has that data.
 - Verified by main agent via screenshot + DOM y-coord ordering check.
+
+## 2026-04-29 — INVENTORY FOR SALE feature shipped (full end-to-end)
+Backend (server.py):
+- Added Tool model fields: for_sale, sale_price, sale_listed_at, sale_notes,
+  is_sold, sold_at, sold_price, sold_to, sold_notes
+- ToolUpdate accepts these fields too
+- build_tool_query supports for_sale / is_sold filters; default tool listing
+  excludes sold items (they live in the sold archive)
+- New endpoints: POST /tools/{id}/mark-sold (with price/buyer/date/notes,
+  auto check-in if checked out) and POST /tools/{id}/unmark-sold
+
+Frontend:
+- Tool edit form (app/tool/edit.tsx): FOR SALE toggle that reveals SALE PRICE
+  ($) and SALE NOTES inputs; sale_listed_at auto-set to today on save
+- Tool detail (app/tool/[id].tsx): yellow FOR SALE banner with MARK SOLD
+  button; green SOLD banner; MARK AS SOLD modal (price/buyer/date/notes);
+  follow-up "KEEP IN SOLD ARCHIVE" vs "DELETE FROM SYSTEM" prompt
+- Inventory tab (app/(tabs)/inventory.tsx): added FOR SALE filter chip
+- More tab (app/(tabs)/more.tsx): "Inventory for Sale" row above Reports
+- NEW screen app/for-sale.tsx — the full hub:
+    - LISTED / SOLD tabs (yellow / green)
+    - Sale-only search bar
+    - Filters modal: Tag / Category / Dealer / date range
+    - Stats: count + asking total / sold total
+    - Reports modal with two PDF options:
+        BULK SHEET — multi-column compact grid, all items per page
+        ONE PAGE PER ITEM — large hero photo + full specs, ribbon header
+    - Tablet-responsive 2-column grid via useResponsive
+
+Verified end-to-end by main agent:
+- Backend: 10-step lifecycle test (create → list → mark sold → archive →
+  search by buyer → unmark sold) all pass
+- UI: edit toggle, inventory chip, More→For-Sale, MarkSold modal flow,
+  Sold tab in for-sale all confirmed via screenshot tests

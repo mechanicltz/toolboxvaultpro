@@ -45,6 +45,11 @@ export default function ToolEdit() {
   const [isConsumable, setIsConsumable] = useState(false);
   const [consumableInfo, setConsumableInfo] = useState({ store_name: "", website: "", sku: "", notes: "" });
 
+  // Sale tracking
+  const [forSale, setForSale] = useState(false);
+  const [salePrice, setSalePrice] = useState("");
+  const [saleNotes, setSaleNotes] = useState("");
+
   // Repair / Broken
   const todayStr = () => new Date().toISOString().substring(0, 10);
   const [needsRepair, setNeedsRepair] = useState(false);
@@ -137,6 +142,10 @@ export default function ToolEdit() {
         }
         setPurchasedAgentId(t.purchased_from_agent_id || null);
         setPurchasedAgentName(t.purchased_from_agent_name || "");
+        // Sale tracking
+        setForSale(!!t.for_sale);
+        setSalePrice(t.sale_price ? String(t.sale_price) : "");
+        setSaleNotes(t.sale_notes || "");
         setLoading(false);
       }
     })();
@@ -319,6 +328,11 @@ export default function ToolEdit() {
       dealer_id: dealerId, dealer_name: dealerName,
       purchased_from_agent_id: purchasedAgentId,
       purchased_from_agent_name: purchasedAgentName,
+      // Sale tracking
+      for_sale: forSale,
+      sale_price: forSale ? (parseFloat(salePrice) || 0) : 0,
+      sale_listed_at: forSale ? (new Date().toISOString().substring(0, 10)) : "",
+      sale_notes: forSale ? saleNotes : "",
     };
     try {
       if (isEdit && id) await api.updateTool(id, payload);
@@ -326,7 +340,7 @@ export default function ToolEdit() {
       router.back();
     } catch (e: any) { Alert.alert("Error", e.message); }
     finally { setSaving(false); }
-  }, [name, description, brand, model, serial, cost, purchaseDate, condition, locationId, locationName, category, tags, photos, documents, isConsumable, consumableInfo, needsRepair, repairInfo, hasWarranty, warranty, dealerId, dealerName, purchasedAgentId, purchasedAgentName, isEdit, id, router]);
+  }, [name, description, brand, model, serial, cost, purchaseDate, condition, locationId, locationName, category, tags, photos, documents, isConsumable, consumableInfo, needsRepair, repairInfo, hasWarranty, warranty, dealerId, dealerName, purchasedAgentId, purchasedAgentName, forSale, salePrice, saleNotes, isEdit, id, router]);
 
   if (loading) {
     return (
@@ -521,6 +535,38 @@ export default function ToolEdit() {
               <TextInput testID="cons-notes" placeholder="Replacement instructions..." placeholderTextColor={theme.colors.textMuted}
                 value={consumableInfo.notes} style={[styles.input, { height: 70, textAlignVertical: "top" }]}
                 multiline onChangeText={(v) => setConsumableInfo({ ...consumableInfo, notes: v })} />
+            </View>
+          )}
+
+          {/* For Sale */}
+          <View style={[styles.toggleRow, forSale && { backgroundColor: "rgba(255,179,0,0.10)" }]}>
+            <Ionicons name="pricetag" size={20} color={forSale ? theme.colors.accent : theme.colors.textSecondary} />
+            <Text style={styles.toggleText}>FOR SALE</Text>
+            <Switch testID="toggle-for-sale" value={forSale} onValueChange={setForSale}
+              trackColor={{ true: theme.colors.accent, false: theme.colors.border }} thumbColor="#fff" />
+          </View>
+          {forSale && (
+            <View style={[styles.subSection, { borderLeftColor: theme.colors.accent }]}>
+              <Text style={[styles.label, { marginTop: 0 }]}>SALE PRICE ($)</Text>
+              <TextInput
+                testID="sale-price-input"
+                placeholder="0.00"
+                placeholderTextColor={theme.colors.textMuted}
+                value={salePrice}
+                onChangeText={setSalePrice}
+                style={styles.input}
+                keyboardType="decimal-pad"
+              />
+              <Text style={styles.label}>SALE NOTES (optional)</Text>
+              <TextInput
+                testID="sale-notes-input"
+                placeholder="Reason for selling, condition notes..."
+                placeholderTextColor={theme.colors.textMuted}
+                value={saleNotes}
+                onChangeText={setSaleNotes}
+                style={[styles.input, { height: 70, textAlignVertical: "top" }]}
+                multiline
+              />
             </View>
           )}
 

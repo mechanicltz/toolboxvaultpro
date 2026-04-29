@@ -30,7 +30,7 @@ import { useUpgradePrompt } from "../../src/UpgradePrompt";
 import { FREE_LIMITS, isPremium } from "../../src/subscription";
 import { useResponsive } from "../../src/responsive";
 
-type Filter = "all" | "available" | "out" | "consumables" | "lost" | "maintenance";
+type Filter = "all" | "available" | "out" | "consumables" | "lost" | "maintenance" | "for_sale";
 
 export default function InventoryScreen() {
   const router = useRouter();
@@ -182,6 +182,7 @@ export default function InventoryScreen() {
     if (filter === "available") params.checked_out = false;
     if (filter === "out") params.checked_out = true;
     if (filter === "consumables") params.is_consumable = true;
+    if (filter === "for_sale") params.for_sale = true;
     try {
       const [t, a, w, cs, locs, tags, mu] = await Promise.all([
         api.listTools(params),
@@ -315,6 +316,7 @@ export default function InventoryScreen() {
             { k: "out", label: "CHECKED OUT" },
             { k: "maintenance", label: maintDueCount > 0 ? `MAINT (${maintDueCount})` : "MAINT" },
             { k: "consumables", label: "CONSUMABLES" },
+            { k: "for_sale", label: "FOR SALE" },
             { k: "lost", label: "LOST/STOLEN" },
           ].map((f) => (
             <TouchableOpacity

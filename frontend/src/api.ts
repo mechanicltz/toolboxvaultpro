@@ -123,6 +123,8 @@ export const api = {
   deleteTool: (id: string) => request<any>(`/tools/${id}`, { method: "DELETE" }),
   checkoutTool: (id: string, data: any) => request<any>(`/tools/${id}/checkout`, { method: "POST", body: JSON.stringify(data) }),
   checkinTool: (id: string) => request<any>(`/tools/${id}/checkin`, { method: "POST" }),
+  markToolSold: (id: string, data: any) => request<any>(`/tools/${id}/mark-sold`, { method: "POST", body: JSON.stringify(data) }),
+  unmarkToolSold: (id: string) => request<any>(`/tools/${id}/unmark-sold`, { method: "POST" }),
 
   // Locations
   listLocations: () => request<any[]>(`/locations`),

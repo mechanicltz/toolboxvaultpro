@@ -11,6 +11,8 @@ import {
   TextInput,
   Platform,
   Linking,
+  KeyboardAvoidingView,
+  ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -49,6 +51,15 @@ export default function ToolDetail() {
   // Repair modal
   const todayStr = () => new Date().toISOString().substring(0, 10);
   const [showRepair, setShowRepair] = useState(false);
+  const [showMarkSold, setShowMarkSold] = useState(false);
+  const [showSoldDelete, setShowSoldDelete] = useState(false);
+  const [markSoldForm, setMarkSoldForm] = useState({
+    sold_price: "",
+    sold_to: "",
+    sold_at: new Date().toISOString().substring(0, 10),
+    sold_notes: "",
+  });
+  const [markSoldBusy, setMarkSoldBusy] = useState(false);
   const [repairForm, setRepairForm] = useState({
     company_notified: "",
     notified_at: "",
@@ -441,6 +452,52 @@ export default function ToolDetail() {
           </View>
 
           <LostStatusBanner tool={tool} onChange={load} />
+
+          {/* For Sale banner */}
+          {tool.for_sale && !tool.is_sold && (
+            <View style={styles.saleBanner}>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+                <Ionicons name="pricetag" size={22} color="#000" />
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.saleBannerTitle}>
+                    FOR SALE
+                  </Text>
+                  <Text style={styles.saleBannerPrice}>
+                    {`$${(tool.sale_price || 0).toFixed(2)}`}
+                    {tool.sale_listed_at ? `  ·  Listed ${formatDateUS(tool.sale_listed_at)}` : ""}
+                  </Text>
+                  {!!tool.sale_notes && (
+                    <Text style={styles.saleBannerNotes}>{tool.sale_notes}</Text>
+                  )}
+                </View>
+                <TouchableOpacity
+                  testID="mark-sold-btn"
+                  style={styles.markSoldBtn}
+                  onPress={() => setShowMarkSold(true)}
+                >
+                  <Ionicons name="checkmark-circle" size={14} color="#fff" />
+                  <Text style={styles.markSoldText}>MARK SOLD</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
+
+          {/* Sold banner */}
+          {tool.is_sold && (
+            <View style={[styles.saleBanner, { backgroundColor: "#27AE60" }]}>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+                <Ionicons name="checkmark-done-circle" size={22} color="#fff" />
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.saleBannerTitle, { color: "#fff" }]}>SOLD</Text>
+                  <Text style={[styles.saleBannerPrice, { color: "#fff" }]}>
+                    {tool.sold_price ? `$${tool.sold_price.toFixed(2)}` : ""}
+                    {tool.sold_at ? `  ·  ${formatDateUS(tool.sold_at)}` : ""}
+                    {tool.sold_to ? `  ·  to ${tool.sold_to}` : ""}
+                  </Text>
+                </View>
+              </View>
+            </View>
+          )}
 
           {tool.needs_repair && (
             <View style={styles.repairBanner}>
@@ -950,6 +1007,139 @@ export default function ToolDetail() {
           </View>
         </View>
       </Modal>
+
+      {/* Mark Sold Modal */}
+      <Modal visible={showMarkSold} transparent animationType="slide" onRequestClose={() => setShowMarkSold(false)}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+          style={styles.modalBackdrop}
+        >
+          <View style={styles.modalCard}>
+            <View style={styles.modalHeader}>
+              <Ionicons name="checkmark-done-circle" size={20} color="#27AE60" />
+              <Text style={styles.modalTitle}>MARK AS SOLD</Text>
+              <TouchableOpacity onPress={() => setShowMarkSold(false)} hitSlop={10}>
+                <Ionicons name="close" size={22} color={theme.colors.textPrimary} />
+              </TouchableOpacity>
+            </View>
+            <ScrollView style={{ maxHeight: 480 }}>
+              <Text style={styles.repairLabel}>SOLD PRICE ($)</Text>
+              <TextInput
+                testID="sold-price"
+                placeholder="0.00"
+                placeholderTextColor={theme.colors.textMuted}
+                value={markSoldForm.sold_price}
+                onChangeText={(v) => setMarkSoldForm({ ...markSoldForm, sold_price: v })}
+                style={styles.input}
+                keyboardType="decimal-pad"
+              />
+              <Text style={styles.repairLabel}>SOLD TO (buyer name)</Text>
+              <TextInput
+                testID="sold-to"
+                placeholder="Buyer name / contact"
+                placeholderTextColor={theme.colors.textMuted}
+                value={markSoldForm.sold_to}
+                onChangeText={(v) => setMarkSoldForm({ ...markSoldForm, sold_to: v })}
+                style={styles.input}
+              />
+              <Text style={styles.repairLabel}>SOLD ON</Text>
+              <DateField
+                testID="sold-on"
+                value={markSoldForm.sold_at}
+                onChange={(v) => setMarkSoldForm({ ...markSoldForm, sold_at: v })}
+              />
+              <Text style={styles.repairLabel}>NOTES (optional)</Text>
+              <TextInput
+                testID="sold-notes"
+                placeholder="Any details about the sale..."
+                placeholderTextColor={theme.colors.textMuted}
+                value={markSoldForm.sold_notes}
+                onChangeText={(v) => setMarkSoldForm({ ...markSoldForm, sold_notes: v })}
+                style={[styles.input, { height: 70, textAlignVertical: "top" }]}
+                multiline
+              />
+            </ScrollView>
+            <View style={{ flexDirection: "row", gap: 10, marginTop: 16 }}>
+              <TouchableOpacity
+                onPress={() => setShowMarkSold(false)}
+                style={[styles.modalBtn, { flex: 1, backgroundColor: theme.colors.bgSecondary }]}
+              >
+                <Text style={[styles.modalBtnText, { color: theme.colors.textPrimary }]}>CANCEL</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                testID="confirm-mark-sold"
+                disabled={markSoldBusy}
+                onPress={async () => {
+                  setMarkSoldBusy(true);
+                  try {
+                    await api.markToolSold(tool.id, {
+                      sold_price: parseFloat(markSoldForm.sold_price) || 0,
+                      sold_to: markSoldForm.sold_to,
+                      sold_at: markSoldForm.sold_at,
+                      sold_notes: markSoldForm.sold_notes,
+                    });
+                    setShowMarkSold(false);
+                    setShowSoldDelete(true); // ask delete vs archive
+                  } catch (e: any) {
+                    Alert.alert("Error", String(e?.message || e));
+                  } finally {
+                    setMarkSoldBusy(false);
+                  }
+                }}
+                style={[styles.modalBtn, { flex: 1, backgroundColor: "#27AE60" }]}
+              >
+                {markSoldBusy ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <Text style={[styles.modalBtnText, { color: "#fff" }]}>MARK SOLD</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
+
+      {/* After-sold: delete or archive */}
+      <Modal visible={showSoldDelete} transparent animationType="fade" onRequestClose={() => setShowSoldDelete(false)}>
+        <View style={styles.modalBackdrop}>
+          <View style={[styles.modalCard, { maxWidth: 420 }]}>
+            <View style={styles.modalHeader}>
+              <Ionicons name="checkmark-done-circle" size={22} color="#27AE60" />
+              <Text style={styles.modalTitle}>SOLD!</Text>
+            </View>
+            <Text style={{ color: theme.colors.textSecondary, fontSize: 13, lineHeight: 19, marginBottom: 16 }}>
+              The item has been marked sold.  Would you like to keep it in your
+              SOLD archive (you can still report on it later) or remove it
+              from the system entirely?
+            </Text>
+            <TouchableOpacity
+              testID="sold-archive-btn"
+              onPress={() => {
+                setShowSoldDelete(false);
+                load();
+              }}
+              style={[styles.modalBtn, { backgroundColor: theme.colors.accent, marginBottom: 8 }]}
+            >
+              <Text style={[styles.modalBtnText, { color: "#000" }]}>KEEP IN SOLD ARCHIVE</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              testID="sold-delete-btn"
+              onPress={async () => {
+                try {
+                  await api.deleteTool(tool.id);
+                  setShowSoldDelete(false);
+                  router.replace("/for-sale");
+                } catch (e: any) {
+                  Alert.alert("Error", String(e?.message || e));
+                }
+              }}
+              style={[styles.modalBtn, { backgroundColor: theme.colors.danger }]}
+            >
+              <Text style={[styles.modalBtnText, { color: "#fff" }]}>DELETE FROM SYSTEM</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -1085,6 +1275,87 @@ const styles = StyleSheet.create({
     color: theme.colors.textPrimary,
     fontSize: 14,
     fontWeight: "700",
+  },
+  // Sale / Sold banner
+  saleBanner: {
+    backgroundColor: theme.colors.accent,
+    borderRadius: 10,
+    padding: 14,
+    marginTop: 12,
+    marginBottom: 6,
+  },
+  saleBannerTitle: {
+    color: "#000",
+    fontWeight: "900",
+    fontSize: 13,
+    letterSpacing: 2,
+  },
+  saleBannerPrice: {
+    color: "#000",
+    fontSize: 18,
+    fontWeight: "900",
+    marginTop: 4,
+  },
+  saleBannerNotes: {
+    color: "rgba(0,0,0,0.7)",
+    fontSize: 11,
+    marginTop: 4,
+    fontStyle: "italic",
+  },
+  markSoldBtn: {
+    flexDirection: "row",
+    gap: 6,
+    alignItems: "center",
+    backgroundColor: "#27AE60",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 6,
+  },
+  markSoldText: {
+    color: "#fff",
+    fontWeight: "900",
+    fontSize: 11,
+    letterSpacing: 1.5,
+  },
+  // Generic modal helpers
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.6)",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 16,
+  },
+  modalCard: {
+    width: "100%",
+    maxWidth: 460,
+    backgroundColor: theme.colors.bgSecondary,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: 12,
+    padding: 18,
+  },
+  modalHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    marginBottom: 12,
+  },
+  modalTitle: {
+    flex: 1,
+    color: theme.colors.textPrimary,
+    fontSize: 14,
+    fontWeight: "900",
+    letterSpacing: 1.5,
+  },
+  modalBtn: {
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: "center",
+  },
+  modalBtnText: {
+    fontWeight: "900",
+    fontSize: 12,
+    letterSpacing: 1.5,
   },
   tag: {
     paddingHorizontal: 10,

@@ -544,6 +544,16 @@ class Tool(BaseModel):
     checkout_history: List[CheckoutRecord] = []
     maintenance: List[MaintenanceSchedule] = []
     lost_status: Optional[LostStatus] = None
+    # Sale tracking
+    for_sale: bool = False
+    sale_price: Optional[float] = 0.0
+    sale_listed_at: Optional[str] = ""
+    sale_notes: Optional[str] = ""
+    is_sold: bool = False
+    sold_at: Optional[str] = ""
+    sold_price: Optional[float] = 0.0
+    sold_to: Optional[str] = ""
+    sold_notes: Optional[str] = ""
     created_at: str = Field(default_factory=now_iso)
     updated_at: str = Field(default_factory=now_iso)
 
@@ -602,6 +612,16 @@ class ToolUpdate(BaseModel):
     dealer_name: Optional[str] = None
     purchased_from_agent_id: Optional[str] = None
     purchased_from_agent_name: Optional[str] = None
+    # Sale tracking — included so PUT /tools/{id} can edit these fields
+    for_sale: Optional[bool] = None
+    sale_price: Optional[float] = None
+    sale_listed_at: Optional[str] = None
+    sale_notes: Optional[str] = None
+    is_sold: Optional[bool] = None
+    sold_at: Optional[str] = None
+    sold_price: Optional[float] = None
+    sold_to: Optional[str] = None
+    sold_notes: Optional[str] = None
 
 
 class CheckoutRequest(BaseModel):
@@ -620,6 +640,8 @@ def build_tool_query(
     checked_out: Optional[bool] = None,
     is_consumable: Optional[bool] = None,
     needs_repair: Optional[bool] = None,
+    for_sale: Optional[bool] = None,
+    is_sold: Optional[bool] = None,
 ):
     query: Dict[str, Any] = {}
     if search:
@@ -635,6 +657,7 @@ def build_tool_query(
             {"category_name": rx},
             {"dealer_name": rx},
             {"purchased_from_agent_name": rx},
+            {"sold_to": rx},
         ]
     if location_id:
         query["location_id"] = location_id
@@ -650,6 +673,14 @@ def build_tool_query(
         query["is_consumable"] = is_consumable
     if needs_repair is not None:
         query["needs_repair"] = needs_repair
+    if for_sale is not None:
+        query["for_sale"] = for_sale
+    if is_sold is not None:
+        query["is_sold"] = is_sold
+    # By default, exclude sold items from regular tool listings unless
+    # explicitly asked for them. They live in the "sold" archive instead.
+    if is_sold is None:
+        query["is_sold"] = {"$ne": True}
     return query
 
 
@@ -1176,8 +1207,13 @@ async def list_tools(
     checked_out: Optional[bool] = None,
     is_consumable: Optional[bool] = None,
     needs_repair: Optional[bool] = None,
+    for_sale: Optional[bool] = None,
+    is_sold: Optional[bool] = None,
 ):
-    query = build_tool_query(search, location_id, tag_id, category_id, dealer_id, checked_out, is_consumable, needs_repair)
+    query = build_tool_query(
+        search, location_id, tag_id, category_id, dealer_id,
+        checked_out, is_consumable, needs_repair, for_sale, is_sold,
+    )
     items = await db.tools.find(query, {"_id": 0}).sort("created_at", -1).to_list(5000)
     return [Tool(**i) for i in items]
 
@@ -1290,6 +1326,78 @@ async def update_tool(tool_id: str, payload: ToolUpdate):
 async def delete_tool(tool_id: str):
     await db.tools.delete_one({"id": tool_id})
     return {"ok": True}
+
+
+# ---------- Sale / Sold ----------
+class MarkSoldRequest(BaseModel):
+    sold_price: Optional[float] = 0.0
+    sold_to: Optional[str] = ""
+    sold_at: Optional[str] = ""  # YYYY-MM-DD; defaults to today if empty
+    sold_notes: Optional[str] = ""
+
+
+@api_router.post("/tools/{tool_id}/mark-sold", response_model=Tool)
+async def mark_tool_sold(tool_id: str, payload: MarkSoldRequest):
+    """Mark a tool as sold (moves it out of regular inventory into the
+    sold archive). Optionally records sale price / buyer / date / notes."""
+    doc = await db.tools.find_one({"id": tool_id}, {"_id": 0})
+    if not doc:
+        raise HTTPException(status_code=404, detail="Tool not found")
+
+    sold_at = (payload.sold_at or "").strip()
+    if not sold_at:
+        # default to today as YYYY-MM-DD
+        from datetime import datetime as _dt
+        sold_at = _dt.utcnow().strftime("%Y-%m-%d")
+
+    updates = {
+        "is_sold": True,
+        "sold_at": sold_at,
+        "sold_price": float(payload.sold_price or 0.0),
+        "sold_to": (payload.sold_to or "").strip(),
+        "sold_notes": (payload.sold_notes or "").strip(),
+        "for_sale": False,  # no longer "listed"
+        "updated_at": now_iso(),
+    }
+    # Auto check-in if currently checked out
+    if doc.get("is_checked_out"):
+        record = doc.get("current_checkout") or {}
+        if record:
+            record = dict(record)
+            record["checked_in_at"] = now_iso()
+            record["notes"] = (record.get("notes") or "") + " [auto check-in: marked sold]"
+            history = doc.get("checkout_history") or []
+            history.append(record)
+            updates["is_checked_out"] = False
+            updates["current_checkout"] = None
+            updates["checkout_history"] = history
+
+    await db.tools.update_one({"id": tool_id}, {"$set": updates})
+    new_doc = await db.tools.find_one({"id": tool_id}, {"_id": 0})
+    return Tool(**new_doc)
+
+
+@api_router.post("/tools/{tool_id}/unmark-sold", response_model=Tool)
+async def unmark_tool_sold(tool_id: str):
+    """Restore a sold tool back into regular inventory (clears sold fields)."""
+    doc = await db.tools.find_one({"id": tool_id}, {"_id": 0})
+    if not doc:
+        raise HTTPException(status_code=404, detail="Tool not found")
+    await db.tools.update_one(
+        {"id": tool_id},
+        {
+            "$set": {
+                "is_sold": False,
+                "sold_at": "",
+                "sold_price": 0.0,
+                "sold_to": "",
+                "sold_notes": "",
+                "updated_at": now_iso(),
+            }
+        },
+    )
+    new_doc = await db.tools.find_one({"id": tool_id}, {"_id": 0})
+    return Tool(**new_doc)
 
 
 @api_router.post("/tools/{tool_id}/checkout", response_model=Tool)
