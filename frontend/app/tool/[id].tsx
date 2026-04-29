@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import {
   View,
   Text,
@@ -672,6 +672,8 @@ export default function ToolDetail() {
               <Field label="Purchased" value={formatDateUS(tool.purchase_date)} />
             </View>
 
+            <QuantityStepper tool={tool} onChange={load} />
+
             <DocumentsSection tool={tool} onChange={load} />
             <MaintenanceSection tool={tool} onChange={load} />
             <WarrantySection tool={tool} />
@@ -1291,6 +1293,177 @@ function Field({ label, value }: { label: string; value?: string }) {
     </View>
   );
 }
+
+function QuantityStepper({
+  tool,
+  onChange,
+}: {
+  tool: any;
+  onChange: () => void;
+}) {
+  const current = Math.max(1, Number(tool.quantity) || 1);
+  const [value, setValue] = useState<number>(current);
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState<string>(String(current));
+  const [busy, setBusy] = useState(false);
+
+  // Resync when the tool changes (e.g. after onChange triggers a reload).
+  useEffect(() => {
+    setValue(current);
+    if (!editing) setDraft(String(current));
+  }, [current, editing]);
+
+  const persist = useCallback(
+    async (nextRaw: number) => {
+      const next = Math.max(1, Math.floor(nextRaw));
+      if (next === current) return;
+      setBusy(true);
+      setValue(next); // optimistic
+      try {
+        await api.updateTool(tool.id, { quantity: next });
+        onChange();
+      } catch (e: any) {
+        setValue(current); // rollback
+        Alert.alert("Could not update quantity", String(e?.message || e));
+      } finally {
+        setBusy(false);
+      }
+    },
+    [current, tool.id, onChange],
+  );
+
+  const dec = () => persist(value - 1);
+  const inc = () => persist(value + 1);
+
+  const commitDraft = () => {
+    setEditing(false);
+    const n = parseInt(draft, 10);
+    if (!isFinite(n) || n < 1) {
+      setDraft(String(value));
+      return;
+    }
+    persist(n);
+  };
+
+  const ext = (Number(tool.cost) || 0) * value;
+
+  return (
+    <View style={qsStyles.box}>
+      <View style={{ flex: 1 }}>
+        <Text style={qsStyles.label}>QUANTITY IN STOCK</Text>
+        {tool.cost ? (
+          <Text style={qsStyles.sub}>
+            ${(Number(tool.cost) || 0).toFixed(2)} ea  ·  Total ${ext.toFixed(2)}
+          </Text>
+        ) : (
+          <Text style={qsStyles.sub}>Tap +/− to adjust</Text>
+        )}
+      </View>
+      <View style={qsStyles.row}>
+        <TouchableOpacity
+          testID="qty-dec"
+          style={[qsStyles.btn, value <= 1 && qsStyles.btnDisabled]}
+          onPress={dec}
+          disabled={value <= 1 || busy}
+          activeOpacity={0.7}
+        >
+          <Ionicons
+            name="remove"
+            size={22}
+            color={value <= 1 ? theme.colors.textMuted : "#000"}
+          />
+        </TouchableOpacity>
+
+        {editing ? (
+          <TextInput
+            testID="qty-input"
+            value={draft}
+            onChangeText={(t) => setDraft(t.replace(/[^0-9]/g, ""))}
+            onBlur={commitDraft}
+            onSubmitEditing={commitDraft}
+            autoFocus
+            keyboardType="number-pad"
+            style={qsStyles.value}
+            selectTextOnFocus
+          />
+        ) : (
+          <TouchableOpacity
+            testID="qty-value"
+            onPress={() => {
+              setDraft(String(value));
+              setEditing(true);
+            }}
+            activeOpacity={0.7}
+          >
+            <Text style={qsStyles.value}>{busy ? "…" : value}</Text>
+          </TouchableOpacity>
+        )}
+
+        <TouchableOpacity
+          testID="qty-inc"
+          style={qsStyles.btn}
+          onPress={inc}
+          disabled={busy}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="add" size={22} color="#000" />
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+}
+
+const qsStyles = StyleSheet.create({
+  box: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 14,
+    marginTop: 4,
+    marginBottom: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.surface,
+  },
+  label: {
+    color: theme.colors.textMuted,
+    fontSize: 10,
+    fontWeight: "800",
+    letterSpacing: 1.4,
+  },
+  sub: {
+    color: theme.colors.textSecondary,
+    fontSize: 12,
+    marginTop: 3,
+  },
+  row: { flexDirection: "row", alignItems: "center", gap: 6 },
+  btn: {
+    width: 36,
+    height: 36,
+    borderRadius: 8,
+    backgroundColor: theme.colors.accent,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  btnDisabled: {
+    backgroundColor: theme.colors.bg,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  value: {
+    minWidth: 48,
+    textAlign: "center",
+    color: theme.colors.textPrimary,
+    fontSize: 22,
+    fontWeight: "900",
+    paddingHorizontal: 6,
+    paddingVertical: 0,
+  },
+});
+
+
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.colors.bg },
