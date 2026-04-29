@@ -68,17 +68,18 @@ export default function HomeScreen() {
   const checkedOut = tools.filter((x) => x.is_checked_out).length;
   const broken = tools.filter((x) => x.needs_repair).length;
   const lost = tools.filter((x) => x?.lost_status?.is_lost).length;
-  // Prefer the backend's authoritative aggregate (which already multiplies
-  // cost × quantity); fall back to a client-side calc if the agg endpoint
-  // failed for any reason.
-  const totalInvested =
-    typeof agg?.total_value === "number"
-      ? agg.total_value
-      : tools.reduce(
-          (sum, x) =>
-            sum + (Number(x.cost) || 0) * Math.max(1, Number(x.quantity) || 1),
-          0,
-        );
+  // Always trust the backend-computed extended total. The same calculation
+  // powers the Inventory Report's "Total Cost" — they will always match.
+  // Falls back to client-side qty×cost only if the aggregate endpoint
+  // failed to return.
+  const aggTotal = Number(agg?.total_value);
+  const totalInvested = Number.isFinite(aggTotal)
+    ? aggTotal
+    : tools.reduce(
+        (sum, x) =>
+          sum + (Number(x.cost) || 0) * Math.max(1, Number(x.quantity) || 1),
+        0,
+      );
   const wishlistCount = wishlist.filter((w) => !w.is_purchased).length;
   const wishlistTotal = wishlist
     .filter((w) => !w.is_purchased)
