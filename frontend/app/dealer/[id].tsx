@@ -286,7 +286,7 @@ export default function DealerDetail() {
           );
         })}
 
-        {/* TOOLS PURCHASED — right under agents, with money total */}
+        {/* TOOLS PURCHASED — collapsed into a button that opens the full list */}
         <View style={styles.toolsHeader}>
           <Text style={styles.sectionLabelStrong}>
             TOOLS PURCHASED FROM {dealer.name.toUpperCase()}
@@ -298,29 +298,35 @@ export default function DealerDetail() {
             </View>
           )}
         </View>
-        {tools.length === 0 ? (
-          <Text style={styles.empty}>No tools assigned yet.</Text>
-        ) : (
-          tools.map((t) => (
-            <TouchableOpacity
-              key={t.id}
-              testID={`dealer-tool-${t.id}`}
-              style={styles.toolRow}
-              onPress={() => router.push(`/tool/${t.id}`)}
-            >
-              <View style={{ flex: 1 }}>
-                <Text style={styles.toolName}>{t.name}</Text>
-                <Text style={styles.toolMeta}>
-                  {t.purchased_from_agent_name
-                    ? `Bought from ${t.purchased_from_agent_name}`
-                    : "No agent recorded"}
-                  {prefs.show_prices && t.cost ? `  ·  $${t.cost.toFixed(2)}` : ""}
-                </Text>
-              </View>
-              <Ionicons name="chevron-forward" size={18} color={theme.colors.textMuted} />
-            </TouchableOpacity>
-          ))
-        )}
+        <TouchableOpacity
+          testID="view-dealer-tools-btn"
+          style={styles.viewToolsBtn}
+          onPress={() =>
+            router.push(`/dealer/${id}/tools?name=${encodeURIComponent(dealer.name)}`)
+          }
+          activeOpacity={0.85}
+        >
+          <View style={styles.viewToolsIcon}>
+            <Ionicons name="construct" size={20} color={theme.colors.accent} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.viewToolsTitle}>
+              {tools.length === 0
+                ? "No tools assigned yet"
+                : tools.length === 1
+                ? "View 1 purchased tool"
+                : `View ${tools.length} purchased tools`}
+            </Text>
+            <Text style={styles.viewToolsSub}>
+              {tools.length === 0
+                ? "Assign a dealer to a tool to see it here"
+                : `Tap to browse the full list${
+                    prefs.show_prices ? `  ·  Total $${total.toFixed(2)}` : ""
+                  }`}
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color={theme.colors.textMuted} />
+        </TouchableOpacity>
 
         <Text style={styles.sectionLabel}>CONTACT</Text>
         <ContactRow icon="call" label={dealer.phone} onPress={() => callOrEmail(dealer.phone)} />
@@ -612,8 +618,39 @@ const styles = StyleSheet.create({
     paddingBottom: 10,
     flexShrink: 1,
   },
-  toolsHeader: {
+  viewToolsBtn: {
     flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    padding: 14,
+    marginTop: 4,
+    marginBottom: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.surface,
+  },
+  viewToolsIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 8,
+    backgroundColor: theme.colors.bg,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  viewToolsTitle: {
+    color: theme.colors.textPrimary,
+    fontWeight: "800",
+    fontSize: 15,
+  },
+  viewToolsSub: {
+    color: theme.colors.textSecondary,
+    fontSize: 12,
+    marginTop: 3,
+  },
+  toolsHeader: {    flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     paddingRight: 20,
