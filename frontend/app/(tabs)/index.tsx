@@ -68,7 +68,11 @@ export default function HomeScreen() {
   const checkedOut = tools.filter((x) => x.is_checked_out).length;
   const broken = tools.filter((x) => x.needs_repair).length;
   const lost = tools.filter((x) => x?.lost_status?.is_lost).length;
-  const totalInvested = tools.reduce((sum, x) => sum + (Number(x.cost) || 0), 0);
+  const totalInvested = tools.reduce(
+    (sum, x) =>
+      sum + (Number(x.cost) || 0) * Math.max(1, Number(x.quantity) || 1),
+    0,
+  );
   const wishlistCount = wishlist.filter((w) => !w.is_purchased).length;
   const wishlistTotal = wishlist
     .filter((w) => !w.is_purchased)
