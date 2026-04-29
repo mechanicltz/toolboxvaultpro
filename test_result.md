@@ -842,3 +842,45 @@ Fix #2 — PDF reports actually generate now:
 - Verified: Direct iframe injection in the preview returns the rendered
   HTML body text (proves browser supports it). For-sale BULK SHEET click
   produces an iframe with 3463 chars of HTML content (full report).
+
+
+## 2026-04-29 — Reports engine rewritten with ReportLab Platypus
+- Issue: After the previous full migration to backend-rendered PDFs via
+  xhtml2pdf, the Inventory and Sales reports were unusable: text columns
+  (Name / Brand / Model) were squashed by the photo column, photos were
+  stretched (xhtml2pdf does not preserve aspect ratio reliably with `<img>`
+  inside table cells), and PDFs were enormous (66MB for 6 items because
+  base64 photos were embedded raw).
+- Fix: Completely rewrote `/app/backend/reports.py` to render PDFs via
+  pure ReportLab Platypus (already a dependency — it is xhtml2pdf's
+  underlying engine).  Key wins:
+    * Column widths are passed as `colWidths=[...]` to `Table` — strict
+      and reliable, no CSS battles.
+    * Photos are decoded with Pillow, downsampled to fit the cell
+      (max 240px for table cells, 720px for per-item flyers), and embedded
+      as JPEG.  Aspect ratio is preserved by computing `min(max_w/w, max_h/h)`
+      and applying it to both width and height of the Image flowable.
+    * Per-item Sales flyer uses ReportLab `KeepTogether` + `PageBreak` to
+      cleanly produce one page per item without falling over xhtml2pdf's
+      `<pdf:nextpage/>` quirks.
+    * Account report dealer / Credit / Truck sections built as nested
+      Tables with proper SPAN'd footer rows for the in-range totals.
+    * Insurance personal-info block rendered as a 2-column Table with a
+      coloured left border (matching the previous design intent).
+- Result (verified by rendering each report and converting to PNG):
+    * inventory.pdf: 66MB → 42KB (1500× smaller), columns properly sized,
+      photos crisp and proportional.
+    * sales.pdf: 12KB, totals row with Buy Price + Price.
+    * insurance.pdf: 43KB, personal info label + data table.
+    * account.pdf: 5KB (3 pages), proper Credit / Truck subsections with
+      transaction tables and in-range total footers.
+- Frontend default columns adjusted per user feedback ("location isn't a
+  priority"):
+    * Inventory: Photo · Name · Brand · Model · Condition · Cost
+    * Sales:     Photo · Name · Brand · Date · Buy Price · Price
+- Files changed:
+    * /app/backend/reports.py  (full rewrite — fetchers now return
+      structured `{rows, stats, stats2, personal_info, body_factory}`
+      instead of HTML strings; PDF rendering is pure ReportLab)
+- xhtml2pdf is no longer used; the `xhtml2pdf` package import is gone
+  from reports.py (it remains installed in the env but harmless).

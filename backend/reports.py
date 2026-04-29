@@ -1,57 +1,67 @@
 """
-Unified report engine.
+Unified report engine — ReportLab-backed.
 
 Architecture
 ------------
 A single registry of report definitions ("specs"). Each spec declares:
   - Available columns (id, label, alignment, type, accessor)
-  - Smart-preset (default-checked) column ids
-  - A `fetch_data` async function that returns the rows for the report
+  - Default-checked column ids
+  - A `fetch_data` async function returning structured data:
+      { rows, stats, stats2, personal_info, body_factory }
 
-A single PDF renderer + CSV renderer turn (rows + chosen columns) into the
-final file. Adding a new report type is a one-place change: drop a new
-ReportSpec into REPORTS.
+The renderer is pure ReportLab Platypus — that gives precise column
+widths, image aspect-ratio preservation and small output files
+(unlike xhtml2pdf which we previously fought with).
 
 Endpoints
 ---------
-GET  /api/reports/spec     → returns the spec catalog so the frontend wizard
-                             knows which columns each report exposes.
-POST /api/reports/render   → returns a real PDF or CSV file for the chosen
-                             report type + options + columns + format.
+GET  /api/reports/spec     → catalog for the frontend wizard
+POST /api/reports/render   → returns the PDF or CSV file
 
-Notes
------
-* Photos are emitted via <img width="80"/> (width attribute, NOT CSS width)
-  because xhtml2pdf only respects the HTML width attribute reliably. With
-  only width set, the aspect ratio is preserved → photos NEVER stretch.
-* Price / numeric columns automatically get totalled in a footer row when
-  present in the chosen column set.
-* Max 6 columns in a PDF (frontend enforces — backend silently truncates if
-  more are passed, just to be safe).
+Key implementation notes
+------------------------
+* Photos are passed in as base64 / data URIs. Before embedding we
+  decode + downsample with Pillow → reasonable byte-size & no
+  stretching.
+* Table column widths are computed in points and passed as `colWidths`
+  directly to ReportLab — no CSS battles.
+* Numeric / money columns get summed into a footer row automatically
+  when present in the chosen column set.
+* Max 6 columns enforced for the data-table reports.
 """
 
 from __future__ import annotations
 
+import base64
 import csv as _csv
 import io
 import re
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
-from typing import Any, Awaitable, Callable, Dict, List, Optional
+from typing import Any, Awaitable, Callable, Dict, List, Optional, Tuple
 
 from fastapi import APIRouter, Body, Depends, HTTPException
 from fastapi.responses import Response
 
-# xhtml2pdf is imported lazily — heavy import.
-_pisa = None
+from PIL import Image as PILImage  # noqa: E402
 
-
-def _get_pisa():
-    global _pisa
-    if _pisa is None:
-        from xhtml2pdf import pisa as _pisa_mod
-        _pisa = _pisa_mod
-    return _pisa
+from reportlab.lib import colors
+from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
+from reportlab.lib.pagesizes import letter
+from reportlab.lib.styles import ParagraphStyle
+from reportlab.lib.units import inch
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.pdfmetrics import stringWidth
+from reportlab.platypus import (
+    Image as RLImage,
+    KeepTogether,
+    PageBreak,
+    Paragraph,
+    SimpleDocTemplate,
+    Spacer,
+    Table,
+    TableStyle,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -64,7 +74,7 @@ class Column:
     label: str
     align: str = "left"           # "left" | "right" | "center"
     type: str = "text"            # "text" | "money" | "number" | "date" | "image"
-    width: Optional[str] = None   # CSS width like "1.2in" / "12%"
+    width: Optional[str] = None   # unused now (ReportLab computes)
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -80,13 +90,11 @@ class ReportSpec:
     id: str
     title: str
     description: str
-    icon: str                                    # Ionicons name (frontend hint)
-    accent: str                                  # hex color for header/stripe
+    icon: str
+    accent: str
     columns: List[Column]
     default_columns: List[str]
     fetch: Callable[[Any, Any, Dict[str, Any]], Awaitable[Dict[str, Any]]]
-    # optional render hooks
-    cover_builder: Optional[Callable[[Dict[str, Any], Dict[str, Any]], str]] = None
     options_schema: List[Dict[str, Any]] = field(default_factory=list)
 
     def to_dict(self) -> Dict[str, Any]:
@@ -103,10 +111,11 @@ class ReportSpec:
 
 
 # ---------------------------------------------------------------------------
-# Helpers
+# Formatting helpers
 # ---------------------------------------------------------------------------
 
 def esc(s: Any) -> str:
+    """Escape for ReportLab Paragraph (uses a tiny subset of HTML)."""
     if s is None:
         return ""
     return (
@@ -114,7 +123,6 @@ def esc(s: Any) -> str:
         .replace("&", "&amp;")
         .replace("<", "&lt;")
         .replace(">", "&gt;")
-        .replace('"', "&quot;")
     )
 
 
@@ -126,11 +134,9 @@ def fmt_money(v: Any) -> str:
 
 
 def fmt_date_us(s: Any) -> str:
-    """Convert any reasonable date string to MM/DD/YYYY."""
     if not s:
         return ""
     txt = str(s)
-    # Handle ISO formats and bare date strings
     m = re.match(r"^(\d{4})-(\d{2})-(\d{2})", txt)
     if m:
         return f"{m.group(2)}/{m.group(3)}/{m.group(1)}"
@@ -145,8 +151,6 @@ def fmt_date_us(s: Any) -> str:
 
 
 def in_range(date_str: Any, start: Optional[str], end: Optional[str]) -> bool:
-    """Return True if date_str (any common format) is within [start..end].
-    start/end may be empty meaning open-ended. Empty date_str → True (don't drop)."""
     if not date_str:
         return True
     txt = str(date_str)
@@ -189,234 +193,510 @@ def numeric_value(row: Dict[str, Any], key: str) -> float:
 
 
 # ---------------------------------------------------------------------------
-# CSS sanitisation for xhtml2pdf
+# Image utilities — base64 → ReportLab Image (downsampled, aspect kept)
 # ---------------------------------------------------------------------------
 
-_BAD_PROPS = [
-    "object-fit", "gap", "row-gap", "column-gap",
-    "grid-template-columns", "grid-template-rows", "grid-template-areas",
-    "grid-area", "grid-column", "grid-row", "grid-auto-flow",
-    "tab-size", "will-change", "backdrop-filter", "box-shadow",
-    "transform", "transition", "animation",
-    "-webkit-print-color-adjust", "print-color-adjust",
-    "flex", "flex-direction", "flex-wrap", "flex-flow",
-    "flex-shrink", "flex-grow", "flex-basis",
-    "justify-content", "justify-items", "justify-self",
-    "align-items", "align-content", "align-self",
-    "place-items", "place-content", "order", "filter",
-]
-_BAD_RE = re.compile(
-    rf"(?<![\w-])(?:{'|'.join(re.escape(p) for p in _BAD_PROPS)})\s*:[^;}}]*;?",
-    re.IGNORECASE,
-)
-
-
-def _sanitize_html(html: str) -> str:
-    return _BAD_RE.sub("", html)
-
-
-# ---------------------------------------------------------------------------
-# PDF rendering — single shared template
-# ---------------------------------------------------------------------------
-
-_BASE_CSS = """
-@page { size: Letter; margin: 0.55in 0.5in 0.55in 0.5in; }
-body { font-family: Helvetica, Arial, sans-serif; color: #111; margin: 0; }
-.head { text-align: center; border-bottom: 4px solid {accent}; padding-bottom: 14px; margin-bottom: 14px; }
-.head h1 { font-size: 24px; letter-spacing: 3px; margin: 0 0 6px; text-transform: uppercase; }
-.head .date { color: #666; font-size: 11px; letter-spacing: 1px; }
-.cover { margin-bottom: 14px; }
-
-/* Personal-info mailing label — used by Insurance only */
-.pi { border: 1px solid #ccc; border-left: 4px solid {accent}; padding: 8px 12px; margin-bottom: 14px; background: #fff; }
-.pi-row { width: 100%; border-collapse: collapse; }
-.pi-row td { vertical-align: top; padding: 0; }
-.pi-name { font-size: 13px; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase; margin: 0 0 2px; color: #111; }
-.pi-line { font-size: 10.5px; line-height: 1.35; color: #333; margin: 0; }
-.pi-right { text-align: right; }
-.pi-right .pi-line { color: #555; }
-
-/* Stat cards (table-based — xhtml2pdf strips flex) */
-.stats { width: 100%; border-collapse: separate; border-spacing: 8px 0; margin-bottom: 14px; }
-.stats td { width: 50%; border: 1px solid #ddd; padding: 10px 14px; border-radius: 4px; background: #fafafa; vertical-align: top; }
-.stats td.tot { background: {accent}; color: #000; border-color: {accent}; }
-.stats .stat-l { font-size: 9px; letter-spacing: 1.5px; color: #666; text-transform: uppercase; font-weight: 700; }
-.stats td.tot .stat-l { color: #4a3500; }
-.stats .stat-v { font-size: 18px; font-weight: 800; margin-top: 2px; }
-
-/* Data table */
-table.report { width: 100%; border-collapse: collapse; font-size: 10.5px; margin-top: 6px; table-layout: fixed; }
-table.report thead th { background: #111; color: {accent}; font-size: 9px; letter-spacing: 1.2px; text-align: left; padding: 7px 6px; text-transform: uppercase; }
-table.report tbody td { padding: 6px; border-bottom: 1px solid #eee; vertical-align: middle; word-wrap: break-word; }
-table.report tbody tr.alt td { background: #fafafa; }
-table.report .col-right { text-align: right; }
-table.report .col-center { text-align: center; }
-table.report tfoot td { padding: 8px 6px; font-weight: 800; border-top: 2px solid {accent}; background: #fff8e6; font-size: 11px; }
-table.report .tot-l { color: #555; font-size: 9px; letter-spacing: 1.5px; text-transform: uppercase; }
-table.report .photo-cell { padding: 3px; text-align: center; }
-table.report .photo-cell img { display: block; margin: 0 auto; }
-table.report .photo-cell .no { color: #bbb; font-size: 9px; }
-
-/* Section headers (used by Account report) */
-.sect { margin: 14px 0 6px; padding: 6px 10px; background: #111; color: {accent}; font-size: 11px; letter-spacing: 2px; font-weight: 800; text-transform: uppercase; }
-.subsect { margin: 8px 0 4px; padding: 4px 8px; background: #fff8e6; color: #111; font-size: 10px; letter-spacing: 1.5px; font-weight: 800; text-transform: uppercase; border-left: 3px solid {accent}; }
-.acct-summary { width: 100%; border-collapse: separate; border-spacing: 6px 0; margin-bottom: 6px; }
-.acct-summary td { border: 1px solid #ddd; padding: 6px 10px; background: #fff; }
-.acct-summary .lbl { font-size: 8px; color: #666; letter-spacing: 1.2px; font-weight: 700; text-transform: uppercase; }
-.acct-summary .val { font-size: 14px; font-weight: 800; }
-
-/* Per-item flyer (sales · 1 page per item) */
-.item-page { padding: 0; page-break-inside: avoid; }
-.item-head { width: 100%; border-collapse: collapse; margin-bottom: 10px; padding-bottom: 6px; border-bottom: 2px solid {accent}; }
-.item-head td { vertical-align: top; padding: 0; }
-.ribbon { display: inline-block; background: {accent}; color: #000; padding: 3px 10px; font-size: 9px; letter-spacing: 1.5px; font-weight: 900; }
-.big-name { font-size: 22px; font-weight: 900; color: #111; margin: 4px 0 0; line-height: 1.15; }
-.big-price { font-size: 28px; font-weight: 900; color: {accent}; margin: 0; white-space: nowrap; }
-.item-photo-wrap { width: 100%; text-align: center; margin: 0 0 12px; }
-.item-photo { width: 5in; height: 3.4in; background: #f4f4f4; border: 1px solid #ddd; text-align: center; margin: 0 auto; }
-.item-photo img { display: inline-block; }
-.item-photo .no { color: #999; font-size: 12px; padding-top: 1.5in; display: block; }
-.specs { width: 100%; border-collapse: collapse; margin-top: 4px; }
-.specs td { width: 50%; padding: 5px 10px 5px 0; vertical-align: top; border-bottom: 1px solid #eee; }
-.spec-lbl { font-size: 8.5px; letter-spacing: 1.2px; color: #666; font-weight: 800; text-transform: uppercase; }
-.spec-val { font-size: 12px; color: #111; font-weight: 700; line-height: 1.25; margin-top: 2px; }
-
-.footer { text-align: center; color: #999; font-size: 10px; margin-top: 18px; letter-spacing: 1px; }
-.muted { color: #999; font-style: italic; font-size: 11px; }
-"""
-
-
-def _row_html(cols: List[Column], row: Dict[str, Any], alt: bool) -> str:
-    cells = []
-    for c in cols:
-        cls = "col-right" if c.align == "right" else ("col-center" if c.align == "center" else "")
-        if c.type == "image":
-            src = row.get(c.id) or ""
-            if isinstance(src, list):
-                src = src[0] if src else ""
-            inner = (
-                f'<img src="{esc(src)}" width="80" />'
-                if src
-                else '<span class="no">—</span>'
-            )
-            cells.append(f'<td class="photo-cell">{inner}</td>')
+def _decode_b64(src: Any) -> Optional[bytes]:
+    """Accept a base64 data URI (or list of them); return raw bytes."""
+    if isinstance(src, list):
+        src = src[0] if src else ""
+    if not src or not isinstance(src, str):
+        return None
+    try:
+        if src.startswith("data:"):
+            _, b64 = src.split(",", 1)
         else:
-            v = cell_value(c, row)
-            cells.append(f'<td class="{cls}">{esc(v)}</td>')
-    cls = " class=\"alt\"" if alt else ""
-    return f"<tr{cls}>{''.join(cells)}</tr>"
+            b64 = src
+        return base64.b64decode(b64)
+    except Exception:
+        return None
 
 
-def _column_widths(cols: List[Column]) -> List[str]:
-    """Pre-compute column widths in POINTS that sum to the printable
-    page width (~540pt = 7.5in × 72pt/in). xhtml2pdf interprets bare
-    numbers in the `width` attribute as points, which it honours strictly."""
-    PAGE_PT = 540.0
+def _make_thumb(src: Any, max_px: int = 360, quality: int = 78) -> Optional[io.BytesIO]:
+    raw = _decode_b64(src)
+    if not raw:
+        return None
+    try:
+        img = PILImage.open(io.BytesIO(raw))
+        img.thumbnail((max_px, max_px))
+        if img.mode in ("RGBA", "LA", "P"):
+            img = img.convert("RGB")
+        out = io.BytesIO()
+        img.save(out, format="JPEG", quality=quality, optimize=True)
+        out.seek(0)
+        # also stash dimensions for caller
+        out._w, out._h = img.size  # type: ignore[attr-defined]
+        return out
+    except Exception:
+        return None
+
+
+def _fit_image(src: Any, max_w: float, max_h: float, max_px: int = 360) -> Optional[RLImage]:
+    """Build a ReportLab Image flowable that fits within (max_w, max_h) points
+    while preserving aspect ratio. Returns None if the image is invalid."""
+    buf = _make_thumb(src, max_px=max_px)
+    if buf is None:
+        return None
+    w, h = getattr(buf, "_w", 100), getattr(buf, "_h", 100)
+    ratio = min(max_w / w, max_h / h)
+    rw = w * ratio
+    rh = h * ratio
+    img = RLImage(buf, width=rw, height=rh)
+    img.hAlign = "CENTER"
+    return img
+
+
+# ---------------------------------------------------------------------------
+# Paragraph styles — re-used everywhere
+# ---------------------------------------------------------------------------
+
+def _styles(accent_hex: str) -> Dict[str, ParagraphStyle]:
+    accent = colors.HexColor(accent_hex)
+    base = "Helvetica"
+    bold = "Helvetica-Bold"
+    return {
+        "title": ParagraphStyle(
+            "title", fontName=bold, fontSize=22, leading=26,
+            alignment=TA_CENTER, textColor=colors.HexColor("#111"),
+            spaceAfter=2,
+        ),
+        "title_sub": ParagraphStyle(
+            "title_sub", fontName=base, fontSize=10, leading=12,
+            alignment=TA_CENTER, textColor=colors.HexColor("#666"),
+        ),
+        "section": ParagraphStyle(
+            "section", fontName=bold, fontSize=11, leading=14,
+            textColor=accent, backColor=colors.HexColor("#111"),
+            leftIndent=8, rightIndent=8, spaceBefore=10, spaceAfter=4,
+            borderPadding=(6, 8, 6, 8),
+        ),
+        "subsection": ParagraphStyle(
+            "subsection", fontName=bold, fontSize=10, leading=13,
+            textColor=colors.HexColor("#111"),
+            backColor=colors.HexColor("#fff8e6"),
+            leftIndent=6, borderPadding=(4, 6, 4, 6),
+            spaceBefore=6, spaceAfter=2,
+        ),
+        "muted": ParagraphStyle(
+            "muted", fontName=base, fontSize=9, leading=12,
+            textColor=colors.HexColor("#999"),
+        ),
+        "small": ParagraphStyle(
+            "small", fontName=base, fontSize=9, leading=11,
+            textColor=colors.HexColor("#222"),
+        ),
+        "small_right": ParagraphStyle(
+            "small_right", fontName=base, fontSize=9, leading=11,
+            alignment=TA_RIGHT, textColor=colors.HexColor("#222"),
+        ),
+        "small_bold_right": ParagraphStyle(
+            "small_bold_right", fontName=bold, fontSize=9, leading=11,
+            alignment=TA_RIGHT, textColor=colors.HexColor("#222"),
+        ),
+        "th": ParagraphStyle(
+            "th", fontName=bold, fontSize=8, leading=10,
+            textColor=accent,
+        ),
+        "th_right": ParagraphStyle(
+            "th_right", fontName=bold, fontSize=8, leading=10,
+            alignment=TA_RIGHT, textColor=accent,
+        ),
+        "stat_l": ParagraphStyle(
+            "stat_l", fontName=bold, fontSize=8, leading=10,
+            textColor=colors.HexColor("#666"),
+        ),
+        "stat_l_dark": ParagraphStyle(
+            "stat_l_dark", fontName=bold, fontSize=8, leading=10,
+            textColor=colors.HexColor("#4a3500"),
+        ),
+        "stat_v": ParagraphStyle(
+            "stat_v", fontName=bold, fontSize=18, leading=20,
+            textColor=colors.HexColor("#111"),
+        ),
+        "pi_name": ParagraphStyle(
+            "pi_name", fontName=bold, fontSize=12, leading=14,
+            textColor=colors.HexColor("#111"),
+            spaceAfter=2,
+        ),
+        "pi_line": ParagraphStyle(
+            "pi_line", fontName=base, fontSize=9.5, leading=12,
+            textColor=colors.HexColor("#333"),
+        ),
+        "pi_line_right": ParagraphStyle(
+            "pi_line_right", fontName=base, fontSize=9.5, leading=12,
+            alignment=TA_RIGHT, textColor=colors.HexColor("#555"),
+        ),
+        # Per-item flyer
+        "flyer_name": ParagraphStyle(
+            "flyer_name", fontName=bold, fontSize=22, leading=24,
+            textColor=colors.HexColor("#111"),
+        ),
+        "flyer_price": ParagraphStyle(
+            "flyer_price", fontName=bold, fontSize=28, leading=30,
+            alignment=TA_RIGHT, textColor=accent,
+        ),
+        "ribbon": ParagraphStyle(
+            "ribbon", fontName=bold, fontSize=9, leading=12,
+            textColor=colors.HexColor("#000"), backColor=accent,
+            borderPadding=(3, 8, 3, 8),
+        ),
+        "spec_l": ParagraphStyle(
+            "spec_l", fontName=bold, fontSize=8, leading=10,
+            textColor=colors.HexColor("#666"),
+        ),
+        "spec_v": ParagraphStyle(
+            "spec_v", fontName=bold, fontSize=11, leading=13,
+            textColor=colors.HexColor("#111"),
+        ),
+        "footer": ParagraphStyle(
+            "footer", fontName=base, fontSize=8, leading=10,
+            alignment=TA_CENTER, textColor=colors.HexColor("#999"),
+        ),
+    }
+
+
+# ---------------------------------------------------------------------------
+# Cover flowables (header, stats, personal info)
+# ---------------------------------------------------------------------------
+
+PAGE_W = 7.5 * inch  # printable width with our 0.5" side margins
+
+
+def _para(text: str, style: ParagraphStyle) -> Paragraph:
+    return Paragraph(text, style)
+
+
+def _title_block(spec: ReportSpec, st: Dict[str, ParagraphStyle]) -> List[Any]:
+    today = datetime.now(timezone.utc).strftime("%m/%d/%Y")
+    return [
+        _para(esc(spec.title.upper()), st["title"]),
+        _para(f"Prepared {today}", st["title_sub"]),
+        Spacer(1, 4),
+        _hr(spec.accent, 2.5),
+        Spacer(1, 8),
+    ]
+
+
+def _hr(hex_color: str, width: float = 1.0) -> Table:
+    """Horizontal rule the full printable width."""
+    t = Table([[" "]], colWidths=[PAGE_W], rowHeights=[width])
+    t.setStyle(TableStyle([
+        ("LINEABOVE", (0, 0), (-1, 0), width, colors.HexColor(hex_color)),
+        ("TOPPADDING", (0, 0), (-1, -1), 0),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
+    ]))
+    return t
+
+
+def _stats_row(stats: List[Tuple[str, str, bool]], accent_hex: str,
+               st: Dict[str, ParagraphStyle]) -> Table:
+    """A row of stat cards. `stats` = [(label, value, highlight)]."""
+    accent = colors.HexColor(accent_hex)
+    cells = []
+    for label, value, hi in stats:
+        l_style = st["stat_l_dark"] if hi else st["stat_l"]
+        cells.append([
+            _para(esc(label.upper()), l_style),
+            _para(esc(value), st["stat_v"]),
+        ])
+    n = len(cells)
+    col_w = (PAGE_W - 8 * (n - 1)) / n
+    # Build table with spacing columns
+    row = []
+    widths = []
+    for i, c in enumerate(cells):
+        if i > 0:
+            row.append("")
+            widths.append(8)
+        row.append(c)
+        widths.append(col_w)
+    inner_data = [row]
+
+    style_cmds = [
+        ("VALIGN", (0, 0), (-1, -1), "TOP"),
+        ("LEFTPADDING", (0, 0), (-1, -1), 0),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+        ("TOPPADDING", (0, 0), (-1, -1), 0),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
+    ]
+    # Apply card backgrounds — every other column (real card columns)
+    real_idx = []
+    j = 0
+    for i, _ in enumerate(cells):
+        real_idx.append(j)
+        j += 2  # skip spacer
+    for k, (_, _, hi) in zip(real_idx, stats):
+        if hi:
+            style_cmds += [
+                ("BACKGROUND", (k, 0), (k, 0), accent),
+                ("BOX", (k, 0), (k, 0), 0.5, accent),
+                ("LEFTPADDING", (k, 0), (k, 0), 12),
+                ("RIGHTPADDING", (k, 0), (k, 0), 12),
+                ("TOPPADDING", (k, 0), (k, 0), 10),
+                ("BOTTOMPADDING", (k, 0), (k, 0), 10),
+            ]
+        else:
+            style_cmds += [
+                ("BACKGROUND", (k, 0), (k, 0), colors.HexColor("#fafafa")),
+                ("BOX", (k, 0), (k, 0), 0.5, colors.HexColor("#dddddd")),
+                ("LEFTPADDING", (k, 0), (k, 0), 12),
+                ("RIGHTPADDING", (k, 0), (k, 0), 12),
+                ("TOPPADDING", (k, 0), (k, 0), 10),
+                ("BOTTOMPADDING", (k, 0), (k, 0), 10),
+            ]
+
+    t = Table(inner_data, colWidths=widths)
+    t.setStyle(TableStyle(style_cmds))
+    return t
+
+
+def _personal_info_block(pi: Dict[str, Any], accent_hex: str,
+                         st: Dict[str, ParagraphStyle]) -> Table:
+    """Compact mailing-label style block for the Insurance report."""
+    addr_lines: List[str] = []
+    if pi.get("address"):
+        line = pi["address"]
+        if pi.get("address2"):
+            line += f", {pi['address2']}"
+        addr_lines.append(line)
+    csz = ", ".join(filter(None, [pi.get("city"), pi.get("state"), pi.get("zip_code")]))
+    if csz:
+        addr_lines.append(csz)
+    if pi.get("country"):
+        addr_lines.append(pi["country"])
+
+    contact_lines: List[str] = []
+    if pi.get("phone"):
+        contact_lines.append(f"Phone: {pi['phone']}")
+    if pi.get("email"):
+        contact_lines.append(f"Email: {pi['email']}")
+    if pi.get("insurance_company"):
+        contact_lines.append(f"Insurer: {pi['insurance_company']}")
+    if pi.get("policy_number"):
+        contact_lines.append(f"Policy #{pi['policy_number']}")
+
+    left_flow: List[Any] = [_para(esc(pi.get("name", "")), st["pi_name"])]
+    for l in addr_lines:
+        left_flow.append(_para(esc(l), st["pi_line"]))
+    right_flow: List[Any] = [_para(esc(l), st["pi_line_right"]) for l in contact_lines]
+
+    t = Table(
+        [[left_flow, right_flow]],
+        colWidths=[PAGE_W * 0.55, PAGE_W * 0.45],
+    )
+    t.setStyle(TableStyle([
+        ("VALIGN", (0, 0), (-1, -1), "TOP"),
+        ("BOX", (0, 0), (-1, -1), 0.5, colors.HexColor("#cccccc")),
+        ("LINEBEFORE", (0, 0), (0, 0), 3, colors.HexColor(accent_hex)),
+        ("LEFTPADDING", (0, 0), (-1, -1), 12),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 12),
+        ("TOPPADDING", (0, 0), (-1, -1), 8),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
+    ]))
+    return t
+
+
+# ---------------------------------------------------------------------------
+# Data table — the main flowable
+# ---------------------------------------------------------------------------
+
+def _column_widths_pt(cols: List[Column]) -> List[float]:
+    """Allocate the printable width across columns by type."""
     fixed: Dict[int, float] = {}
     for i, c in enumerate(cols):
         if c.type == "image":
-            fixed[i] = 70.0
+            fixed[i] = 0.85 * inch
         elif c.type == "money":
-            fixed[i] = 60.0
+            fixed[i] = 0.85 * inch
         elif c.type == "number":
-            fixed[i] = 50.0
+            fixed[i] = 0.6 * inch
         elif c.type == "date":
-            fixed[i] = 60.0
+            fixed[i] = 0.85 * inch
     used = sum(fixed.values())
     text_idx = [i for i in range(len(cols)) if i not in fixed]
-    remaining = max(0.0, PAGE_PT - used)
+    remaining = max(0.0, PAGE_W - used)
     per_text = (remaining / len(text_idx)) if text_idx else 0.0
-    out = []
-    for i in range(len(cols)):
-        w = fixed.get(i, per_text)
-        out.append(f"{int(w)}")
-    return out
+    return [fixed.get(i, per_text) for i in range(len(cols))]
 
 
-def _table_html(cols: List[Column], rows: List[Dict[str, Any]]) -> str:
-    if not rows:
-        return '<p class="muted">No items match the selected filters.</p>'
-
-    widths = _column_widths(cols)
-    # xhtml2pdf needs BOTH a <colgroup> with widths AND inline width on
-    # <th>. Bare integer values are interpreted as POINTS by xhtml2pdf.
-    colgroup = "<colgroup>" + "".join(
-        f'<col width="{w}"/>' for w in widths
-    ) + "</colgroup>"
-
-    head_cells = []
-    for c, w in zip(cols, widths):
-        cls = "col-right" if c.align == "right" else ""
-        head_cells.append(
-            f'<th class="{cls}" width="{w}">{esc(c.label)}</th>'
-        )
-    head = "".join(head_cells)
-    body = "".join(_row_html(cols, r, i % 2 == 1) for i, r in enumerate(rows))
-
-    # Totals (sum money/number columns)
-    totals = []
-    has_total = False
-    for c in cols:
-        if c.type in ("money", "number"):
-            total = sum(numeric_value(r, c.id) for r in rows)
-            has_total = True
-            totals.append(
-                f'<td class="col-right">{fmt_money(total) if c.type == "money" else f"{total:,.0f}"}</td>'
-            )
+def _truncate_to_fit(text: str, font: str, size: float, max_w: float) -> str:
+    """Hard-truncate with ellipsis if a single token can't wrap and would
+    overflow. ReportLab's Paragraph wraps on whitespace, so very long
+    unbroken strings (URLs, model numbers) need help."""
+    if not text:
+        return ""
+    if stringWidth(text, font, size) <= max_w:
+        return text
+    # Insert zero-width-spaces between each char of any token > 14 chars
+    words = text.split(" ")
+    fixed = []
+    for w in words:
+        if len(w) > 14 and stringWidth(w, font, size) > max_w:
+            fixed.append(" ".join(w[i:i + 12] for i in range(0, len(w), 12)))
         else:
-            totals.append("<td></td>")
-    if has_total:
-        # First non-total cell shows the "TOTAL" label
+            fixed.append(w)
+    return " ".join(fixed)
+
+
+def _data_table(cols: List[Column], rows: List[Dict[str, Any]],
+                accent_hex: str, st: Dict[str, ParagraphStyle]) -> Any:
+    if not rows:
+        return _para("No items match the selected filters.", st["muted"])
+
+    accent = colors.HexColor(accent_hex)
+    col_w = _column_widths_pt(cols)
+
+    # Header row
+    header: List[Any] = []
+    for c in cols:
+        style = st["th_right"] if c.align == "right" else st["th"]
+        header.append(_para(esc(c.label.upper()), style))
+
+    # Data rows
+    data: List[List[Any]] = [header]
+    for r in rows:
+        cells: List[Any] = []
         for i, c in enumerate(cols):
-            if c.type not in ("money", "number"):
-                totals[i] = (
-                    f'<td><span class="tot-l">Total — {len(rows)} item{"s" if len(rows) != 1 else ""}</span></td>'
-                )
-                break
-        foot = f"<tfoot><tr>{''.join(totals)}</tr></tfoot>"
-    else:
-        foot = ""
+            if c.type == "image":
+                cell_w = col_w[i] - 6
+                cell_h = 0.55 * inch
+                src = r.get(c.id)
+                img = _fit_image(src, cell_w, cell_h, max_px=240)
+                if img is None:
+                    cells.append(_para("—", st["muted"]))
+                else:
+                    cells.append(img)
+            else:
+                v = str(cell_value(c, r))
+                # Wrap stubborn long tokens
+                v = _truncate_to_fit(v, "Helvetica", 9, col_w[i] - 6)
+                if c.align == "right":
+                    cells.append(_para(esc(v), st["small_right"]))
+                else:
+                    cells.append(_para(esc(v), st["small"]))
+        data.append(cells)
 
-    return f'<table class="report" width="540">{colgroup}<thead><tr>{head}</tr></thead><tbody>{body}</tbody>{foot}</table>'
+    # Footer / totals
+    has_total = any(c.type in ("money", "number") for c in cols)
+    if has_total:
+        foot: List[Any] = []
+        label_placed = False
+        total_label_style = ParagraphStyle(
+            "total_label", parent=st["small"],
+            fontName="Helvetica-Bold", fontSize=8.5,
+            textColor=colors.HexColor("#555"),
+        )
+        for c in cols:
+            if c.type == "money":
+                t = sum(numeric_value(r, c.id) for r in rows)
+                foot.append(_para(f"<b>{fmt_money(t)}</b>", st["small_bold_right"]))
+            elif c.type == "number":
+                t = sum(numeric_value(r, c.id) for r in rows)
+                foot.append(_para(f"<b>{t:,.0f}</b>", st["small_bold_right"]))
+            elif not label_placed:
+                label_placed = True
+                foot.append(_para(
+                    f"TOTAL — {len(rows)} ITEM{'S' if len(rows) != 1 else ''}",
+                    total_label_style,
+                ))
+            else:
+                foot.append("")
+        data.append(foot)
+
+    table = Table(
+        data,
+        colWidths=col_w,
+        repeatRows=1,
+    )
+
+    style_cmds: List[Any] = [
+        # Header
+        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#111111")),
+        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+        ("LEFTPADDING", (0, 0), (-1, -1), 4),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 4),
+        ("TOPPADDING", (0, 0), (-1, 0), 8),
+        ("BOTTOMPADDING", (0, 0), (-1, 0), 8),
+        ("TOPPADDING", (0, 1), (-1, -1), 5),
+        ("BOTTOMPADDING", (0, 1), (-1, -1), 5),
+        # Body grid
+        ("LINEBELOW", (0, 0), (-1, -1), 0.25, colors.HexColor("#eeeeee")),
+    ]
+    # Alternating row backgrounds
+    body_end = len(data) - (1 if has_total else 0)
+    for ri in range(1, body_end):
+        if ri % 2 == 0:
+            style_cmds.append(("BACKGROUND", (0, ri), (-1, ri), colors.HexColor("#fafafa")))
+    # Totals row
+    if has_total:
+        style_cmds += [
+            ("LINEABOVE", (0, -1), (-1, -1), 1.5, accent),
+            ("BACKGROUND", (0, -1), (-1, -1), colors.HexColor("#fff8e6")),
+            ("TOPPADDING", (0, -1), (-1, -1), 7),
+            ("BOTTOMPADDING", (0, -1), (-1, -1), 7),
+        ]
+
+    table.setStyle(TableStyle(style_cmds))
+    return table
 
 
-def _build_pdf_html(
-    spec: ReportSpec,
-    cols: List[Column],
-    rows: List[Dict[str, Any]],
-    cover_html: str = "",
-    body_override: Optional[str] = None,
-) -> str:
+# ---------------------------------------------------------------------------
+# Render — main entry point
+# ---------------------------------------------------------------------------
+
+def _footer_painter(canvas, doc):
+    canvas.saveState()
+    canvas.setFont("Helvetica", 8)
+    canvas.setFillColor(colors.HexColor("#999999"))
     today = datetime.now(timezone.utc).strftime("%m/%d/%Y")
-    css = _BASE_CSS.replace("{accent}", spec.accent)
-    body = body_override if body_override is not None else _table_html(cols, rows)
-    return f"""<!doctype html>
-<html><head><meta charset="utf-8"><style>{css}</style></head>
-<body>
-<div class="head">
-  <h1>{esc(spec.title)}</h1>
-  <div class="date">Prepared {today}</div>
-</div>
-{cover_html}
-{body}
-<div class="footer">Generated by Toolbox &middot; {today}</div>
-</body></html>"""
+    canvas.drawCentredString(
+        letter[0] / 2, 0.3 * inch,
+        f"Generated by Toolbox  ·  {today}  ·  Page {doc.page}",
+    )
+    canvas.restoreState()
 
 
-def render_pdf(
-    spec: ReportSpec,
-    cols: List[Column],
-    rows: List[Dict[str, Any]],
-    cover_html: str = "",
-    body_override: Optional[str] = None,
-) -> bytes:
-    html = _build_pdf_html(spec, cols, rows, cover_html=cover_html, body_override=body_override)
-    safe = _sanitize_html(html)
-    pisa = _get_pisa()
+def render_pdf(spec: ReportSpec, cols: List[Column],
+               fetch_result: Dict[str, Any]) -> bytes:
+    """Render a PDF for the given spec + chosen columns + fetch_result."""
+    rows = fetch_result.get("rows") or []
+    stats: List[Tuple[str, str, bool]] = fetch_result.get("stats") or []
+    stats2: List[Tuple[str, str, bool]] = fetch_result.get("stats2") or []
+    personal_info = fetch_result.get("personal_info")
+    body_factory: Optional[Callable[[Dict[str, ParagraphStyle]], List[Any]]] = (
+        fetch_result.get("body_factory")
+    )
+
+    st = _styles(spec.accent)
+    story: List[Any] = []
+    story.extend(_title_block(spec, st))
+
+    if personal_info:
+        story.append(_personal_info_block(personal_info, spec.accent, st))
+        story.append(Spacer(1, 8))
+
+    if stats:
+        story.append(_stats_row(stats, spec.accent, st))
+        story.append(Spacer(1, 6))
+    if stats2:
+        story.append(_stats_row(stats2, spec.accent, st))
+        story.append(Spacer(1, 8))
+    elif stats:
+        story.append(Spacer(1, 4))
+
+    if body_factory is not None:
+        story.extend(body_factory(st))
+    else:
+        story.append(_data_table(cols, rows, spec.accent, st))
+
     buf = io.BytesIO()
-    result = pisa.CreatePDF(safe, dest=buf, encoding="utf-8")
-    if result.err:
-        raise HTTPException(500, f"PDF generation failed (errors={result.err})")
+    doc = SimpleDocTemplate(
+        buf, pagesize=letter,
+        leftMargin=0.5 * inch, rightMargin=0.5 * inch,
+        topMargin=0.55 * inch, bottomMargin=0.55 * inch,
+        title=spec.title,
+    )
+    doc.build(story, onFirstPage=_footer_painter, onLaterPages=_footer_painter)
     return buf.getvalue()
 
 
@@ -424,10 +704,7 @@ def render_pdf(
 # CSV rendering
 # ---------------------------------------------------------------------------
 
-def render_csv(
-    cols: List[Column],
-    rows: List[Dict[str, Any]],
-) -> bytes:
+def render_csv(cols: List[Column], rows: List[Dict[str, Any]]) -> bytes:
     buf = io.StringIO()
     w = _csv.writer(buf)
     w.writerow([c.label for c in cols])
@@ -443,14 +720,13 @@ def render_csv(
             else:
                 out.append(str(r.get(c.id) or ""))
         w.writerow(out)
-    # Footer total
     has_total = any(c.type in ("money", "number") for c in cols)
     if has_total:
         foot = []
         for i, c in enumerate(cols):
             if c.type in ("money", "number"):
-                total = sum(numeric_value(r, c.id) for r in rows)
-                foot.append(f"{total:.2f}" if c.type == "money" else f"{total:.0f}")
+                tot = sum(numeric_value(r, c.id) for r in rows)
+                foot.append(f"{tot:.2f}" if c.type == "money" else f"{tot:.0f}")
             elif i == 0:
                 foot.append(f"TOTAL ({len(rows)} items)")
             else:
@@ -460,324 +736,7 @@ def render_csv(
 
 
 # ---------------------------------------------------------------------------
-# Per-report fetchers + cover/body customisation
-# ---------------------------------------------------------------------------
-
-# These functions are wired below in the REPORTS registry. Each receives:
-#   db        — the per-user wrapped Mongo db
-#   user      — the authed user object
-#   options   — the user's wizard choices (dict)
-# and returns:
-#   { "rows": [...row dicts...], "cover_html": "...", "body_override": "..." or None }
-
-
-# ---- INSURANCE -----------------------------------------------------------------
-
-async def _fetch_insurance(db, user, options: Dict[str, Any]) -> Dict[str, Any]:
-    tools = await db.tools.find({}, {"_id": 0}).to_list(10000)
-    rows = [_normalise_tool_row(t) for t in tools]
-    profile = await db.personal_profile.find_one({"id": "self"}, {"_id": 0}) or {}
-
-    addr_lines: List[str] = []
-    if profile.get("address"):
-        line = profile["address"]
-        if profile.get("address2"):
-            line += f", {profile['address2']}"
-        addr_lines.append(line)
-    csz = ", ".join(filter(None, [profile.get("city"), profile.get("state"), profile.get("zip_code")]))
-    if csz:
-        addr_lines.append(csz)
-    if profile.get("country"):
-        addr_lines.append(profile["country"])
-
-    contact_lines: List[str] = []
-    if profile.get("phone"):
-        contact_lines.append(f"☏ {profile['phone']}")
-    if profile.get("email"):
-        contact_lines.append(f"✉ {profile['email']}")
-    if profile.get("insurance_company"):
-        contact_lines.append(f"Ins: {profile['insurance_company']}")
-    if profile.get("policy_number"):
-        contact_lines.append(f"Policy #{profile['policy_number']}")
-
-    cover = ""
-    if options.get("include_personal", True) and profile.get("name"):
-        cover = f"""
-        <div class="pi">
-          <table class="pi-row"><tr>
-            <td>
-              <div class="pi-name">{esc(profile.get('name', ''))}</div>
-              {''.join(f'<div class="pi-line">{esc(l)}</div>' for l in addr_lines)}
-            </td>
-            <td class="pi-right">
-              {''.join(f'<div class="pi-line">{esc(l)}</div>' for l in contact_lines)}
-            </td>
-          </tr></table>
-        </div>
-        """
-
-    total_value = sum(numeric_value(r, "cost") for r in rows)
-    cover += f"""
-    <table class="stats"><tr>
-      <td><div class="stat-l">Total Items</div><div class="stat-v">{len(rows)}</div></td>
-      <td class="tot"><div class="stat-l">Total Value</div><div class="stat-v">{fmt_money(total_value)}</div></td>
-    </tr></table>
-    """
-    return {"rows": rows, "cover_html": cover, "body_override": None}
-
-
-# ---- INVENTORY -----------------------------------------------------------------
-
-async def _fetch_inventory(db, user, options: Dict[str, Any]) -> Dict[str, Any]:
-    q: Dict[str, Any] = {"is_sold": {"$ne": True}}
-    location_id = options.get("location_id") or ""
-    if location_id:
-        # Include sub-locations
-        all_ids = [location_id]
-        children = await db.locations.find({"parent_id": location_id}, {"_id": 0, "id": 1}).to_list(5000)
-        all_ids += [c["id"] for c in children]
-        q["location_id"] = {"$in": all_ids}
-
-    tag_ids = options.get("tag_ids") or []
-    if tag_ids:
-        q["tag_ids"] = {"$in": tag_ids}
-    brand = (options.get("brand") or "").strip()
-    if brand:
-        q["brand"] = {"$regex": f"^{re.escape(brand)}$", "$options": "i"}
-    condition = (options.get("condition") or "").strip()
-    if condition:
-        q["condition"] = condition
-
-    tools = await db.tools.find(q, {"_id": 0}).to_list(10000)
-    start = options.get("date_from") or ""
-    end = options.get("date_to") or ""
-    if start or end:
-        tools = [t for t in tools if in_range(t.get("purchase_date"), start, end)]
-
-    rows = [_normalise_tool_row(t) for t in tools]
-    total = sum(numeric_value(r, "cost") for r in rows)
-    cover = f"""
-    <table class="stats"><tr>
-      <td><div class="stat-l">Total Items</div><div class="stat-v">{len(rows)}</div></td>
-      <td class="tot"><div class="stat-l">Total Cost</div><div class="stat-v">{fmt_money(total)}</div></td>
-    </tr></table>
-    """
-    return {"rows": rows, "cover_html": cover, "body_override": None}
-
-
-# ---- SALES -----------------------------------------------------------------
-
-async def _fetch_sales(db, user, options: Dict[str, Any]) -> Dict[str, Any]:
-    mode = options.get("sales_mode") or "listed"  # "listed" | "sold"
-    if mode == "sold":
-        q = {"is_sold": True}
-        date_field = "sold_at"
-    else:
-        q = {"for_sale": True, "is_sold": {"$ne": True}}
-        date_field = "sale_listed_at"
-
-    tools = await db.tools.find(q, {"_id": 0}).to_list(10000)
-    start = options.get("date_from") or ""
-    end = options.get("date_to") or ""
-    if start or end:
-        tools = [t for t in tools if in_range(t.get(date_field), start, end)]
-
-    rows = []
-    for t in tools:
-        row = _normalise_tool_row(t)
-        # Sales-specific aliases
-        row["price"] = (t.get("sold_price") or 0) if mode == "sold" else (t.get("sale_price") or 0)
-        row["sale_date"] = t.get(date_field)
-        row["sold_to"] = t.get("sold_to") or ""
-        rows.append(row)
-
-    total = sum(numeric_value(r, "price") for r in rows)
-    title_word = "Sold Total" if mode == "sold" else "Asking Total"
-    cover = f"""
-    <table class="stats"><tr>
-      <td><div class="stat-l">{'Sold' if mode == 'sold' else 'Listed'} Items</div><div class="stat-v">{len(rows)}</div></td>
-      <td class="tot"><div class="stat-l">{title_word}</div><div class="stat-v">{fmt_money(total)}</div></td>
-    </tr></table>
-    """
-
-    body_override = None
-    layout = options.get("sales_layout") or "table"  # "table" | "per_item"
-    if layout == "per_item":
-        body_override = _sales_per_item_html(rows, mode)
-
-    return {"rows": rows, "cover_html": cover, "body_override": body_override}
-
-
-def _sales_per_item_html(rows: List[Dict[str, Any]], mode: str) -> str:
-    if not rows:
-        return '<p class="muted">No items.</p>'
-    accent_label = "SOLD" if mode == "sold" else "FOR SALE"
-    parts: List[str] = []
-    for i, r in enumerate(rows):
-        pb = "" if i == 0 else "<pdf:nextpage/>"
-        photo = r.get("photo") or ""
-        photo_html = (
-            f'<img src="{esc(photo)}" height="326" />'
-            if photo
-            else '<div class="no">No photo</div>'
-        )
-        spec_pairs = [
-            ("Brand", r.get("brand")),
-            ("Model", r.get("model")),
-            ("Serial #", r.get("serial")),
-            ("Condition", r.get("condition")),
-            ("Original Cost", fmt_money(r.get("cost")) if r.get("cost") else ""),
-            ("Purchased", fmt_date_us(r.get("purchase_date"))),
-            ("Dealer", r.get("dealer")),
-            ("Location", r.get("location")),
-        ]
-        if mode == "sold":
-            spec_pairs.append(("Sold To", r.get("sold_to")))
-            spec_pairs.append(("Sold On", fmt_date_us(r.get("sale_date"))))
-        else:
-            spec_pairs.append(("Listed", fmt_date_us(r.get("sale_date"))))
-        spec_pairs = [(l, v) for l, v in spec_pairs if v]
-
-        spec_rows: List[str] = []
-        for j in range(0, len(spec_pairs), 2):
-            l1, v1 = spec_pairs[j]
-            right = (
-                f'<td><div class="spec-lbl">{esc(spec_pairs[j+1][0])}</div>'
-                f'<div class="spec-val">{esc(spec_pairs[j+1][1])}</div></td>'
-                if j + 1 < len(spec_pairs)
-                else "<td></td>"
-            )
-            spec_rows.append(
-                f'<tr><td><div class="spec-lbl">{esc(l1)}</div>'
-                f'<div class="spec-val">{esc(v1)}</div></td>{right}</tr>'
-            )
-        notes = r.get("notes") or ""
-        parts.append(f"""
-        {pb}
-        <div class="item-page">
-          <table class="item-head"><tr>
-            <td style="width:65%">
-              <span class="ribbon">{accent_label}</span>
-              <div class="big-name">{esc(r.get('name', ''))}</div>
-            </td>
-            <td style="text-align:right;white-space:nowrap;vertical-align:bottom">
-              <div class="big-price">{fmt_money(r.get('price'))}</div>
-            </td>
-          </tr></table>
-          <div class="item-photo-wrap"><div class="item-photo">{photo_html}</div></div>
-          {f'<div class="muted">{esc(notes)}</div>' if notes else ''}
-          <table class="specs">{''.join(spec_rows)}</table>
-        </div>
-        """)
-    return "".join(parts)
-
-
-# ---- ACCOUNT (DEALER) ---------------------------------------------------------
-
-async def _fetch_account(db, user, options: Dict[str, Any]) -> Dict[str, Any]:
-    dealer_ids = options.get("dealer_ids") or []
-    start = options.get("date_from") or ""
-    end = options.get("date_to") or ""
-
-    if dealer_ids:
-        q = {"id": {"$in": dealer_ids}}
-    else:
-        q = {}
-    dealers = await db.dealers.find(q, {"_id": 0}).sort("name", 1).to_list(1000)
-
-    sections: List[str] = []
-    grand_credit_open = 0.0
-    grand_truck_open = 0.0
-    grand_payments = 0.0
-    grand_charges = 0.0
-
-    for d in dealers:
-        all_tx = list(d.get("transactions") or [])
-        tx_in_range = [t for t in all_tx if in_range(t.get("date"), start, end)]
-        tx_in_range.sort(key=lambda t: t.get("date") or "")
-
-        credit_tx = [t for t in tx_in_range if t.get("account") == "credit"]
-        truck_tx = [t for t in tx_in_range if t.get("account") == "personal"]
-
-        credit_balance = float(d.get("credit_balance") or 0)
-        truck_balance = float(d.get("personal_balance") or 0)
-        grand_credit_open += credit_balance
-        grand_truck_open += truck_balance
-
-        def _acct_html(label: str, balance: float, tx_list: List[Dict[str, Any]]) -> str:
-            payments = sum(float(t.get("amount") or 0) for t in tx_list if t.get("type") == "payment")
-            charges = sum(float(t.get("amount") or 0) for t in tx_list if t.get("type") == "charge")
-
-            if not tx_list:
-                tx_html = '<p class="muted" style="margin:6px 0">No transactions in this range.</p>'
-            else:
-                rows_html = []
-                for i, t in enumerate(tx_list):
-                    is_pay = t.get("type") == "payment"
-                    sign = "-" if is_pay else "+"
-                    color = "color:#16a34a;" if is_pay else "color:#dc2626;"
-                    cls = ' class="alt"' if i % 2 == 1 else ""
-                    rows_html.append(
-                        f'<tr{cls}>'
-                        f'<td>{esc(fmt_date_us(t.get("date")))}</td>'
-                        f'<td>{"Payment" if is_pay else "Charge"}</td>'
-                        f'<td>{esc(t.get("note") or "")}</td>'
-                        f'<td class="col-right" style="{color}font-weight:800">{sign}{fmt_money(t.get("amount"))}</td>'
-                        f"</tr>"
-                    )
-                tx_html = (
-                    '<table class="report" style="margin-top:4px">'
-                    '<colgroup><col style="width:14%"/><col style="width:14%"/>'
-                    '<col style="width:54%"/><col style="width:18%"/></colgroup>'
-                    '<thead><tr><th>Date</th><th>Type</th><th>Note</th>'
-                    '<th class="col-right">Amount</th></tr></thead>'
-                    f'<tbody>{"".join(rows_html)}</tbody>'
-                    f'<tfoot><tr><td colspan="3"><span class="tot-l">In-range Totals</span></td>'
-                    f'<td class="col-right">Pay {fmt_money(payments)} · Chg {fmt_money(charges)}</td></tr></tfoot>'
-                    '</table>'
-                )
-
-            return f"""
-            <div class="subsect">{esc(label)}</div>
-            <table class="acct-summary"><tr>
-              <td><div class="lbl">Open Balance</div><div class="val">{fmt_money(balance)}</div></td>
-              <td><div class="lbl">Payments (in range)</div><div class="val" style="color:#16a34a">{fmt_money(payments)}</div></td>
-              <td><div class="lbl">New Charges (in range)</div><div class="val" style="color:#dc2626">{fmt_money(charges)}</div></td>
-            </tr></table>
-            {tx_html}
-            """
-
-        # totals
-        c_payments = sum(float(t.get("amount") or 0) for t in credit_tx if t.get("type") == "payment")
-        c_charges = sum(float(t.get("amount") or 0) for t in credit_tx if t.get("type") == "charge")
-        t_payments = sum(float(t.get("amount") or 0) for t in truck_tx if t.get("type") == "payment")
-        t_charges = sum(float(t.get("amount") or 0) for t in truck_tx if t.get("type") == "charge")
-        grand_payments += c_payments + t_payments
-        grand_charges += c_charges + t_charges
-
-        sections.append(f"""
-        <div class="sect">{esc(d.get('name', ''))}</div>
-        {_acct_html("Credit Account", credit_balance, credit_tx)}
-        {_acct_html("Truck Account", truck_balance, truck_tx)}
-        """)
-
-    cover = f"""
-    <table class="stats"><tr>
-      <td><div class="stat-l">Dealers</div><div class="stat-v">{len(dealers)}</div></td>
-      <td class="tot"><div class="stat-l">Total Open Balance</div><div class="stat-v">{fmt_money(grand_credit_open + grand_truck_open)}</div></td>
-    </tr></table>
-    <table class="stats"><tr>
-      <td><div class="stat-l">Payments (in range)</div><div class="stat-v" style="color:#16a34a">{fmt_money(grand_payments)}</div></td>
-      <td><div class="stat-l">New Charges (in range)</div><div class="stat-v" style="color:#dc2626">{fmt_money(grand_charges)}</div></td>
-    </tr></table>
-    """
-
-    body = "".join(sections) if sections else '<p class="muted">No dealers selected.</p>'
-    return {"rows": [], "cover_html": cover, "body_override": body}
-
-
-# ---------------------------------------------------------------------------
-# Helpers shared by tool-based reports
+# Tool row normalisation
 # ---------------------------------------------------------------------------
 
 def _normalise_tool_row(t: Dict[str, Any]) -> Dict[str, Any]:
@@ -803,11 +762,444 @@ def _normalise_tool_row(t: Dict[str, Any]) -> Dict[str, Any]:
 
 
 # ---------------------------------------------------------------------------
-# Report registry — adding a new report = adding ONE entry below + a fetcher
+# Fetchers
+# ---------------------------------------------------------------------------
+
+# ---- INSURANCE -----------------------------------------------------------------
+
+async def _fetch_insurance(db, user, options: Dict[str, Any]) -> Dict[str, Any]:
+    tools = await db.tools.find({}, {"_id": 0}).to_list(10000)
+    rows = [_normalise_tool_row(t) for t in tools]
+    profile = await db.personal_profile.find_one({"id": "self"}, {"_id": 0}) or {}
+
+    pi = None
+    if options.get("include_personal", True) and profile.get("name"):
+        pi = profile
+
+    total_value = sum(numeric_value(r, "cost") for r in rows)
+    stats = [
+        ("Total Items", str(len(rows)), False),
+        ("Total Value", fmt_money(total_value), True),
+    ]
+    return {"rows": rows, "stats": stats, "personal_info": pi}
+
+
+# ---- INVENTORY ----------------------------------------------------------------
+
+async def _fetch_inventory(db, user, options: Dict[str, Any]) -> Dict[str, Any]:
+    q: Dict[str, Any] = {"is_sold": {"$ne": True}}
+    location_id = options.get("location_id") or ""
+    if location_id:
+        all_ids = [location_id]
+        children = await db.locations.find(
+            {"parent_id": location_id}, {"_id": 0, "id": 1}
+        ).to_list(5000)
+        all_ids += [c["id"] for c in children]
+        q["location_id"] = {"$in": all_ids}
+
+    tag_ids = options.get("tag_ids") or []
+    if tag_ids:
+        q["tag_ids"] = {"$in": tag_ids}
+    brand = (options.get("brand") or "").strip()
+    if brand:
+        q["brand"] = {"$regex": f"^{re.escape(brand)}$", "$options": "i"}
+    condition = (options.get("condition") or "").strip()
+    if condition:
+        q["condition"] = condition
+
+    tools = await db.tools.find(q, {"_id": 0}).to_list(10000)
+    start = options.get("date_from") or ""
+    end = options.get("date_to") or ""
+    if start or end:
+        tools = [t for t in tools if in_range(t.get("purchase_date"), start, end)]
+
+    rows = [_normalise_tool_row(t) for t in tools]
+    total = sum(numeric_value(r, "cost") for r in rows)
+    stats = [
+        ("Total Items", str(len(rows)), False),
+        ("Total Cost", fmt_money(total), True),
+    ]
+    return {"rows": rows, "stats": stats}
+
+
+# ---- SALES --------------------------------------------------------------------
+
+async def _fetch_sales(db, user, options: Dict[str, Any]) -> Dict[str, Any]:
+    mode = options.get("sales_mode") or "listed"
+    if mode == "sold":
+        q = {"is_sold": True}
+        date_field = "sold_at"
+    else:
+        q = {"for_sale": True, "is_sold": {"$ne": True}}
+        date_field = "sale_listed_at"
+
+    tools = await db.tools.find(q, {"_id": 0}).to_list(10000)
+    start = options.get("date_from") or ""
+    end = options.get("date_to") or ""
+    if start or end:
+        tools = [t for t in tools if in_range(t.get(date_field), start, end)]
+
+    rows = []
+    for t in tools:
+        row = _normalise_tool_row(t)
+        row["price"] = (t.get("sold_price") or 0) if mode == "sold" else (t.get("sale_price") or 0)
+        row["sale_date"] = t.get(date_field)
+        row["sold_to"] = t.get("sold_to") or ""
+        rows.append(row)
+
+    total = sum(numeric_value(r, "price") for r in rows)
+    stats = [
+        (
+            ("Sold Items" if mode == "sold" else "Listed Items"),
+            str(len(rows)),
+            False,
+        ),
+        (
+            ("Sold Total" if mode == "sold" else "Asking Total"),
+            fmt_money(total),
+            True,
+        ),
+    ]
+
+    layout = options.get("sales_layout") or "table"
+    body_factory = None
+    if layout == "per_item":
+        body_factory = _make_sales_per_item_factory(rows, mode, options)
+
+    return {"rows": rows, "stats": stats, "body_factory": body_factory}
+
+
+def _make_sales_per_item_factory(rows: List[Dict[str, Any]], mode: str,
+                                 options: Dict[str, Any]):
+    def build(st: Dict[str, ParagraphStyle]) -> List[Any]:
+        if not rows:
+            return [_para("No items.", st["muted"])]
+        out: List[Any] = []
+        accent_label = "SOLD" if mode == "sold" else "FOR SALE"
+        for i, r in enumerate(rows):
+            if i > 0:
+                out.append(PageBreak())
+            page_flow: List[Any] = []
+            # Header row: ribbon + name on left, price on right
+            head = Table([[
+                [
+                    _para(accent_label, st["ribbon"]),
+                    Spacer(1, 4),
+                    _para(esc(r.get("name") or ""), st["flyer_name"]),
+                ],
+                _para(fmt_money(r.get("price")), st["flyer_price"]),
+            ]], colWidths=[PAGE_W * 0.62, PAGE_W * 0.38])
+            head.setStyle(TableStyle([
+                ("VALIGN", (0, 0), (0, 0), "TOP"),
+                ("VALIGN", (1, 0), (1, 0), "BOTTOM"),
+                ("LEFTPADDING", (0, 0), (-1, -1), 0),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+            ]))
+            page_flow.append(head)
+            page_flow.append(Spacer(1, 6))
+            page_flow.append(_hr("#FFB300", 1.5))
+            page_flow.append(Spacer(1, 10))
+
+            # Photo
+            photo_box_w = 5.5 * inch
+            photo_box_h = 3.4 * inch
+            img = _fit_image(r.get("photo"), photo_box_w, photo_box_h, max_px=720)
+            if img is not None:
+                photo_t = Table([[img]], colWidths=[PAGE_W])
+                photo_t.setStyle(TableStyle([
+                    ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+                    ("LEFTPADDING", (0, 0), (-1, -1), 0),
+                    ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+                ]))
+                page_flow.append(photo_t)
+            else:
+                placeholder = Table([[_para("No photo", st["muted"])]],
+                                    colWidths=[PAGE_W],
+                                    rowHeights=[photo_box_h])
+                placeholder.setStyle(TableStyle([
+                    ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+                    ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                    ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#f4f4f4")),
+                    ("BOX", (0, 0), (-1, -1), 0.5, colors.HexColor("#dddddd")),
+                ]))
+                page_flow.append(placeholder)
+            page_flow.append(Spacer(1, 12))
+
+            # Notes (if any)
+            notes = r.get("notes") or ""
+            if notes:
+                page_flow.append(_para(esc(notes), st["muted"]))
+                page_flow.append(Spacer(1, 8))
+
+            # Specs grid (2-col)
+            pairs = [
+                ("Brand", r.get("brand")),
+                ("Model", r.get("model")),
+                ("Serial #", r.get("serial")),
+                ("Condition", r.get("condition")),
+                ("Original Cost", fmt_money(r.get("cost")) if r.get("cost") else ""),
+                ("Purchased", fmt_date_us(r.get("purchase_date"))),
+                ("Dealer", r.get("dealer")),
+                ("Location", r.get("location")),
+            ]
+            if mode == "sold":
+                pairs.append(("Sold To", r.get("sold_to")))
+                pairs.append(("Sold On", fmt_date_us(r.get("sale_date"))))
+            else:
+                pairs.append(("Listed", fmt_date_us(r.get("sale_date"))))
+            pairs = [(l, v) for l, v in pairs if v]
+
+            spec_rows: List[List[Any]] = []
+            for j in range(0, len(pairs), 2):
+                left_cell = [
+                    _para(esc(pairs[j][0].upper()), st["spec_l"]),
+                    _para(esc(str(pairs[j][1])), st["spec_v"]),
+                ]
+                if j + 1 < len(pairs):
+                    right_cell = [
+                        _para(esc(pairs[j + 1][0].upper()), st["spec_l"]),
+                        _para(esc(str(pairs[j + 1][1])), st["spec_v"]),
+                    ]
+                else:
+                    right_cell = ""
+                spec_rows.append([left_cell, right_cell])
+
+            specs_t = Table(spec_rows, colWidths=[PAGE_W / 2, PAGE_W / 2])
+            specs_t.setStyle(TableStyle([
+                ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                ("LINEBELOW", (0, 0), (-1, -1), 0.25, colors.HexColor("#eeeeee")),
+                ("LEFTPADDING", (0, 0), (-1, -1), 0),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 14),
+                ("TOPPADDING", (0, 0), (-1, -1), 6),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+            ]))
+            page_flow.append(specs_t)
+            out.append(KeepTogether(page_flow))
+        return out
+
+    return build
+
+
+# ---- ACCOUNT (DEALER) --------------------------------------------------------
+
+async def _fetch_account(db, user, options: Dict[str, Any]) -> Dict[str, Any]:
+    dealer_ids = options.get("dealer_ids") or []
+    start = options.get("date_from") or ""
+    end = options.get("date_to") or ""
+
+    q = {"id": {"$in": dealer_ids}} if dealer_ids else {}
+    dealers = await db.dealers.find(q, {"_id": 0}).sort("name", 1).to_list(1000)
+
+    grand_credit_open = 0.0
+    grand_truck_open = 0.0
+    grand_payments = 0.0
+    grand_charges = 0.0
+
+    # Pre-compute per-dealer data so we can build flowables AND stats
+    per_dealer = []
+    for d in dealers:
+        all_tx = list(d.get("transactions") or [])
+        tx_in_range = [t for t in all_tx if in_range(t.get("date"), start, end)]
+        tx_in_range.sort(key=lambda t: t.get("date") or "")
+        credit_tx = [t for t in tx_in_range if t.get("account") == "credit"]
+        truck_tx = [t for t in tx_in_range if t.get("account") == "personal"]
+        credit_balance = float(d.get("credit_balance") or 0)
+        truck_balance = float(d.get("personal_balance") or 0)
+        grand_credit_open += credit_balance
+        grand_truck_open += truck_balance
+        grand_payments += sum(float(t.get("amount") or 0) for t in tx_in_range
+                              if t.get("type") == "payment")
+        grand_charges += sum(float(t.get("amount") or 0) for t in tx_in_range
+                             if t.get("type") == "charge")
+        per_dealer.append({
+            "name": d.get("name", ""),
+            "credit_balance": credit_balance,
+            "truck_balance": truck_balance,
+            "credit_tx": credit_tx,
+            "truck_tx": truck_tx,
+        })
+
+    stats = [
+        ("Dealers", str(len(dealers)), False),
+        ("Total Open Balance", fmt_money(grand_credit_open + grand_truck_open), True),
+    ]
+    stats2 = [
+        ("Payments (in range)", fmt_money(grand_payments), False),
+        ("New Charges (in range)", fmt_money(grand_charges), False),
+    ]
+
+    body_factory = _make_account_factory(per_dealer)
+
+    return {
+        "rows": [],
+        "stats": stats,
+        "stats2": stats2,
+        "body_factory": body_factory,
+    }
+
+
+def _make_account_factory(per_dealer: List[Dict[str, Any]]):
+    def build(st: Dict[str, ParagraphStyle]) -> List[Any]:
+        if not per_dealer:
+            return [_para("No dealers selected.", st["muted"])]
+
+        out: List[Any] = []
+
+        green = colors.HexColor("#16a34a")
+        red = colors.HexColor("#dc2626")
+
+        green_v = ParagraphStyle("g", parent=st["stat_v"], textColor=green)
+        red_v = ParagraphStyle("r", parent=st["stat_v"], textColor=red)
+        green_amount = ParagraphStyle(
+            "gA", parent=st["small_bold_right"], textColor=green,
+        )
+        red_amount = ParagraphStyle(
+            "rA", parent=st["small_bold_right"], textColor=red,
+        )
+
+        for d in per_dealer:
+            out.append(Spacer(1, 4))
+            # Section header
+            sect = Table([[_para(esc(d["name"].upper()), ParagraphStyle(
+                "sect_inner", fontName="Helvetica-Bold", fontSize=11,
+                leading=13, textColor=colors.HexColor("#FFB300"),
+            ))]], colWidths=[PAGE_W])
+            sect.setStyle(TableStyle([
+                ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#111")),
+                ("LEFTPADDING", (0, 0), (-1, -1), 10),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 10),
+                ("TOPPADDING", (0, 0), (-1, -1), 6),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+            ]))
+            out.append(sect)
+
+            for label, balance, tx_list in [
+                ("Credit Account", d["credit_balance"], d["credit_tx"]),
+                ("Truck Account", d["truck_balance"], d["truck_tx"]),
+            ]:
+                # Subsection header
+                sub = Table([[_para(esc(label.upper()), ParagraphStyle(
+                    "sub_inner", fontName="Helvetica-Bold", fontSize=10,
+                    leading=12, textColor=colors.HexColor("#111"),
+                ))]], colWidths=[PAGE_W])
+                sub.setStyle(TableStyle([
+                    ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#fff8e6")),
+                    ("LINEBEFORE", (0, 0), (0, 0), 3, colors.HexColor("#FFB300")),
+                    ("LEFTPADDING", (0, 0), (-1, -1), 8),
+                    ("RIGHTPADDING", (0, 0), (-1, -1), 8),
+                    ("TOPPADDING", (0, 0), (-1, -1), 4),
+                    ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+                ]))
+                out.append(sub)
+                out.append(Spacer(1, 4))
+
+                payments = sum(float(t.get("amount") or 0) for t in tx_list
+                               if t.get("type") == "payment")
+                charges = sum(float(t.get("amount") or 0) for t in tx_list
+                              if t.get("type") == "charge")
+
+                # Mini summary (3 cards)
+                summary = Table([[
+                    [_para("OPEN BALANCE", st["stat_l"]),
+                     _para(fmt_money(balance), st["stat_v"])],
+                    [_para("PAYMENTS (IN RANGE)", st["stat_l"]),
+                     _para(fmt_money(payments), green_v)],
+                    [_para("NEW CHARGES (IN RANGE)", st["stat_l"]),
+                     _para(fmt_money(charges), red_v)],
+                ]], colWidths=[PAGE_W / 3, PAGE_W / 3, PAGE_W / 3])
+                summary.setStyle(TableStyle([
+                    ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                    ("BOX", (0, 0), (0, 0), 0.5, colors.HexColor("#dddddd")),
+                    ("BOX", (1, 0), (1, 0), 0.5, colors.HexColor("#dddddd")),
+                    ("BOX", (2, 0), (2, 0), 0.5, colors.HexColor("#dddddd")),
+                    ("BACKGROUND", (0, 0), (-1, -1), colors.white),
+                    ("LEFTPADDING", (0, 0), (-1, -1), 8),
+                    ("RIGHTPADDING", (0, 0), (-1, -1), 8),
+                    ("TOPPADDING", (0, 0), (-1, -1), 6),
+                    ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+                ]))
+                out.append(summary)
+                out.append(Spacer(1, 4))
+
+                # Transaction table
+                if not tx_list:
+                    out.append(_para("No transactions in this range.", st["muted"]))
+                    out.append(Spacer(1, 6))
+                    continue
+                col_w = [
+                    0.95 * inch,  # date
+                    0.85 * inch,  # type
+                    PAGE_W - 0.95 * inch - 0.85 * inch - 1.0 * inch,  # note
+                    1.0 * inch,   # amount
+                ]
+                data = [[
+                    _para("DATE", st["th"]),
+                    _para("TYPE", st["th"]),
+                    _para("NOTE", st["th"]),
+                    _para("AMOUNT", st["th_right"]),
+                ]]
+                for t in tx_list:
+                    is_pay = t.get("type") == "payment"
+                    sign = "-" if is_pay else "+"
+                    amt_style = green_amount if is_pay else red_amount
+                    data.append([
+                        _para(esc(fmt_date_us(t.get("date"))), st["small"]),
+                        _para("Payment" if is_pay else "Charge", st["small"]),
+                        _para(esc(t.get("note") or ""), st["small"]),
+                        _para(f"{sign}{fmt_money(t.get('amount'))}", amt_style),
+                    ])
+                # Footer row
+                data.append([
+                    _para("In-range Totals", ParagraphStyle(
+                        "_", parent=st["small"], fontName="Helvetica-Bold",
+                        textColor=colors.HexColor("#555"),
+                    )),
+                    "",
+                    "",
+                    _para(
+                        f"Pay {fmt_money(payments)} · Chg {fmt_money(charges)}",
+                        st["small_bold_right"],
+                    ),
+                ])
+
+                tx_table = Table(data, colWidths=col_w, repeatRows=1)
+                tx_style: List[Any] = [
+                    ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#111111")),
+                    ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                    ("LEFTPADDING", (0, 0), (-1, -1), 4),
+                    ("RIGHTPADDING", (0, 0), (-1, -1), 4),
+                    ("TOPPADDING", (0, 0), (-1, -1), 5),
+                    ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
+                    ("LINEBELOW", (0, 0), (-1, -1), 0.25, colors.HexColor("#eeeeee")),
+                ]
+                # alternating
+                for ri in range(1, len(data) - 1):
+                    if ri % 2 == 0:
+                        tx_style.append((
+                            "BACKGROUND", (0, ri), (-1, ri),
+                            colors.HexColor("#fafafa"),
+                        ))
+                # footer
+                tx_style += [
+                    ("LINEABOVE", (0, -1), (-1, -1), 1.2, colors.HexColor("#FFB300")),
+                    ("BACKGROUND", (0, -1), (-1, -1), colors.HexColor("#fff8e6")),
+                    ("SPAN", (0, -1), (2, -1)),
+                ]
+                tx_table.setStyle(TableStyle(tx_style))
+                out.append(tx_table)
+                out.append(Spacer(1, 8))
+
+        return out
+
+    return build
+
+
+# ---------------------------------------------------------------------------
+# Column catalogs + report registry
 # ---------------------------------------------------------------------------
 
 _TOOL_COLUMNS = [
-    Column("photo", "Photo", "center", "image", width="0.85in"),
+    Column("photo", "Photo", "center", "image"),
     Column("name", "Name", "left", "text"),
     Column("brand", "Brand", "left", "text"),
     Column("model", "Model", "left", "text"),
@@ -823,7 +1215,7 @@ _TOOL_COLUMNS = [
 ]
 
 _SALES_COLUMNS = [
-    Column("photo", "Photo", "center", "image", width="0.85in"),
+    Column("photo", "Photo", "center", "image"),
     Column("name", "Name", "left", "text"),
     Column("brand", "Brand", "left", "text"),
     Column("model", "Model", "left", "text"),
@@ -833,6 +1225,7 @@ _SALES_COLUMNS = [
     Column("condition", "Condition", "left", "text"),
     Column("sale_date", "Date", "left", "date"),
     Column("sold_to", "Sold To", "left", "text"),
+    Column("cost", "Buy Price", "right", "money"),
     Column("price", "Price", "right", "money"),
 ]
 
@@ -848,7 +1241,8 @@ REPORTS: Dict[str, ReportSpec] = {
         default_columns=["photo", "name", "brand", "model", "serial", "cost"],
         fetch=_fetch_insurance,
         options_schema=[
-            {"id": "include_personal", "type": "toggle", "label": "Include personal / address info", "default": True},
+            {"id": "include_personal", "type": "toggle",
+             "label": "Include personal / address info", "default": True},
         ],
     ),
     "inventory": ReportSpec(
@@ -858,7 +1252,7 @@ REPORTS: Dict[str, ReportSpec] = {
         icon="cube",
         accent="#FFB300",
         columns=_TOOL_COLUMNS,
-        default_columns=["photo", "name", "brand", "model", "location", "cost"],
+        default_columns=["photo", "name", "brand", "model", "condition", "cost"],
         fetch=_fetch_inventory,
         options_schema=[
             {"id": "location_id", "type": "location", "label": "Location"},
@@ -876,14 +1270,20 @@ REPORTS: Dict[str, ReportSpec] = {
         icon="pricetag",
         accent="#FFB300",
         columns=_SALES_COLUMNS,
-        default_columns=["photo", "name", "brand", "dealer", "sale_date", "price"],
+        default_columns=["photo", "name", "brand", "sale_date", "cost", "price"],
         fetch=_fetch_sales,
         options_schema=[
             {"id": "sales_mode", "type": "segmented", "label": "Mode",
-             "choices": [{"id": "listed", "label": "For Sale"}, {"id": "sold", "label": "Sold"}],
+             "choices": [
+                 {"id": "listed", "label": "For Sale"},
+                 {"id": "sold", "label": "Sold"},
+             ],
              "default": "listed"},
             {"id": "sales_layout", "type": "segmented", "label": "Layout",
-             "choices": [{"id": "table", "label": "Table"}, {"id": "per_item", "label": "1 Page Per Item"}],
+             "choices": [
+                 {"id": "table", "label": "Table"},
+                 {"id": "per_item", "label": "1 Page Per Item"},
+             ],
              "default": "table"},
             {"id": "date_from", "type": "date", "label": "From"},
             {"id": "date_to", "type": "date", "label": "To"},
@@ -917,18 +1317,13 @@ REPORTS: Dict[str, ReportSpec] = {
 # ---------------------------------------------------------------------------
 
 def make_reports_router(api_router: APIRouter, get_db, get_current_user) -> None:
-    """Register report routes onto the supplied api_router.
-
-    `get_db` is a zero-arg callable that returns the per-request, user-scoped
-    Mongo db. `get_current_user` is the existing dependency from server.py.
-    """
-
     @api_router.get("/reports/spec")
     async def reports_spec(user=Depends(get_current_user)):
         return {"reports": [spec.to_dict() for spec in REPORTS.values()]}
 
     @api_router.post("/reports/render")
-    async def reports_render(payload: Dict[str, Any] = Body(...), user=Depends(get_current_user)):
+    async def reports_render(payload: Dict[str, Any] = Body(...),
+                             user=Depends(get_current_user)):
         rt = payload.get("report_type") or ""
         spec = REPORTS.get(rt)
         if not spec:
@@ -939,7 +1334,6 @@ def make_reports_router(api_router: APIRouter, get_db, get_current_user) -> None
             raise HTTPException(400, "format must be 'pdf' or 'csv'")
 
         chosen_ids = payload.get("columns") or spec.default_columns
-        # Map to columns, drop unknowns, enforce 6-column max for PDF
         col_map = {c.id: c for c in spec.columns}
         cols = [col_map[i] for i in chosen_ids if i in col_map]
         if not cols:
@@ -953,26 +1347,21 @@ def make_reports_router(api_router: APIRouter, get_db, get_current_user) -> None
 
         filename_base = f"{spec.id}-report-{datetime.now().strftime('%Y%m%d-%H%M%S')}"
         if fmt == "csv":
-            data = render_csv(cols, result["rows"])
+            data = render_csv(cols, result.get("rows") or [])
             return Response(
-                content=data,
-                media_type="text/csv",
+                content=data, media_type="text/csv",
                 headers={
                     "Content-Disposition": f'attachment; filename="{filename_base}.csv"',
                     "Cache-Control": "no-store",
                 },
             )
 
-        pdf_bytes = render_pdf(
-            spec,
-            cols,
-            result["rows"],
-            cover_html=result.get("cover_html") or "",
-            body_override=result.get("body_override"),
-        )
+        try:
+            pdf_bytes = render_pdf(spec, cols, result)
+        except Exception as e:  # surface useful error to client
+            raise HTTPException(500, f"PDF generation failed: {e}")
         return Response(
-            content=pdf_bytes,
-            media_type="application/pdf",
+            content=pdf_bytes, media_type="application/pdf",
             headers={
                 "Content-Disposition": f'attachment; filename="{filename_base}.pdf"',
                 "Cache-Control": "no-store",
