@@ -319,14 +319,14 @@ export default function ReportsHubScreen() {
         </ScrollView>
         <View style={styles.footerBar}>
           <TouchableOpacity
-            style={[styles.footBtnGhost]}
+            style={styles.btnGhost}
             onPress={() => setStep("fields")}
             disabled={!!running}
           >
-            <Text style={styles.footBtnGhostText}>BACK</Text>
+            <Text style={styles.btnGhostText}>Back</Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.footBtn, running && { opacity: 0.6 }]}
+            style={[styles.btnPrimary, running && { opacity: 0.6 }]}
             disabled={!!running}
             onPress={() => {
               if (format === "pdf" && columns.length > MAX_PDF_COLUMNS) {
@@ -339,7 +339,10 @@ export default function ReportsHubScreen() {
             {running ? (
               <ActivityIndicator color="#000" />
             ) : (
-              <Text style={styles.footBtnText}>VIEW REPORT</Text>
+              <>
+                <Ionicons name="eye" size={18} color="#000" />
+                <Text style={styles.btnPrimaryText}>VIEW REPORT</Text>
+              </>
             )}
           </TouchableOpacity>
         </View>
