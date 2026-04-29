@@ -1199,8 +1199,8 @@ async def _fetch_account(db, user, options: Dict[str, Any]) -> Dict[str, Any]:
         ("Total Open Balance", fmt_money(grand_credit_open + grand_truck_open), True),
     ]
     stats2 = [
-        ("Payments (in range)", fmt_money(grand_payments), False),
-        ("New Charges (in range)", fmt_money(grand_charges), False),
+        ("Payments", fmt_money(grand_payments), False),
+        ("New Charges", fmt_money(grand_charges), False),
     ]
 
     body_factory = _make_account_factory(per_dealer)
@@ -1278,9 +1278,9 @@ def _make_account_factory(per_dealer: List[Dict[str, Any]]):
                 summary = Table([[
                     [_para("OPEN BALANCE", st["stat_l"]),
                      _para(fmt_money(balance), st["stat_v"])],
-                    [_para("PAYMENTS (IN RANGE)", st["stat_l"]),
+                    [_para("PAYMENTS", st["stat_l"]),
                      _para(fmt_money(payments), green_v)],
-                    [_para("NEW CHARGES (IN RANGE)", st["stat_l"]),
+                    [_para("NEW CHARGES", st["stat_l"]),
                      _para(fmt_money(charges), red_v)],
                 ]], colWidths=[PAGE_W / 3, PAGE_W / 3, PAGE_W / 3])
                 summary.setStyle(TableStyle([
@@ -1335,7 +1335,7 @@ def _make_account_factory(per_dealer: List[Dict[str, Any]]):
                 # Footer row
                 data.append([
                     "",
-                    _para("In-range Totals", ParagraphStyle(
+                    _para("Totals", ParagraphStyle(
                         "_", parent=st["small"], fontName="Helvetica-Bold",
                         textColor=colors.HexColor("#555"),
                     )),
