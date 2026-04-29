@@ -25,3 +25,12 @@ python-multipart>=0.0.9
 jq>=1.6.0
 typer>=0.9.0
 emergentintegrations==0.1.0
+arabic-reshaper==3.0.1
+asn1crypto==1.5.1
+html5lib==1.1
+pyHanko==0.34.1
+pyhanko-certvalidator==0.30.2
+python-bidi==0.6.7
+reportlab==3.6.13
+svglib==1.5.1
+xhtml2pdf==0.2.11

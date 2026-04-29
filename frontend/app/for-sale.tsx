@@ -459,7 +459,8 @@ function buildHtml(items: any[], mode: "bulk" | "perItem", tab: "listed" | "sold
   const itemsBody =
     mode === "bulk"
       ? `<div class="grid">${items.map((t) => bulkCard(t, isSold)).join("")}</div>`
-      : items.map((t) => perItemPage(t, isSold)).join("");
+      : `<pdf:nextpage/>` +
+        items.map((t, i) => perItemPage(t, isSold, i === 0)).join("");
 
   return `<!doctype html><html><head><meta charset="utf-8"><style>
     @page { size: Letter; margin: 0.5in; }
@@ -487,42 +488,28 @@ function buildHtml(items: any[], mode: "bulk" | "perItem", tab: "listed" | "sold
     .card.sold .pill { background: ${accent}; color: #fff; }
 
     /* PER-ITEM PAGE — sized to fit a single Letter page */
-    @page { size: Letter; margin: 0.4in; }
     .item-page {
-      page-break-after: always;
       page-break-inside: avoid;
-      height: 10.2in;
-      max-height: 10.2in;
-      overflow: hidden;
-      display: flex;
-      flex-direction: column;
       padding: 0;
     }
-    .item-page:last-child { page-break-after: auto; }
-    .item-page-head {
-      display: flex; align-items: center; justify-content: space-between;
-      gap: 12px; margin-bottom: 8px;
-    }
-    .item-page-head .left { flex: 1; min-width: 0; }
+    .item-page-head { width: 100%; }
     .item-photo {
       width: 100%;
-      flex: 1 1 auto;
-      max-height: 4.6in;
+      height: 3.6in;
+      max-height: 3.6in;
       background: #f4f4f4;
       border: 1px solid #ddd;
-      border-radius: 8px;
       overflow: hidden;
-      display: flex; align-items: center; justify-content: center;
-      margin-bottom: 12px;
+      text-align: center;
+      margin: 0 0 10px;
     }
-    .item-photo img { max-width: 100%; max-height: 100%; object-fit: contain; }
-    .item-photo .no { color: #999; font-size: 12px; }
-    .big-name { font-size: 22px; font-weight: 900; color: #111; margin: 0; line-height: 1.15; }
-    .big-price { font-size: 30px; font-weight: 900; color: ${accent}; margin: 0; white-space: nowrap; }
-    .desc { font-size: 11px; color: #444; margin: 0 0 8px; line-height: 15px; max-height: 1.1in; overflow: hidden; }
-    .specs { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 18px; margin-top: 4px; }
-    .spec .lbl { font-size: 8px; letter-spacing: 1.2px; color: #666; font-weight: 800; text-transform: uppercase; display: block; }
-    .spec .val { font-size: 12px; color: #111; font-weight: 700; line-height: 1.2; }
+    .item-photo img { max-width: 100%; max-height: 3.6in; }
+    .item-photo .no { color: #999; font-size: 12px; padding: 80px 0; display: block; }
+    .big-name { font-size: 22px; font-weight: 900; color: #111; margin: 4px 0 0; line-height: 1.15; }
+    .big-price { font-size: 28px; font-weight: 900; color: ${accent}; margin: 0; white-space: nowrap; }
+    .desc { font-size: 11px; color: #444; margin: 0 0 6px; line-height: 14px; }
+    .spec-lbl { font-size: 8px; letter-spacing: 1.2px; color: #666; font-weight: 800; text-transform: uppercase; }
+    .spec-val { font-size: 12px; color: #111; font-weight: 700; line-height: 1.2; margin-top: 1px; }
     .ribbon { display: inline-block; background: ${accent}; color: ${isSold ? "#fff" : "#000"}; padding: 3px 10px; font-size: 9px; letter-spacing: 1.5px; font-weight: 900; border-radius: 3px; margin-bottom: 4px; }
   </style></head><body>
     ${headerHtml}
@@ -550,7 +537,7 @@ function bulkCard(t: any, isSold: boolean): string {
   `;
 }
 
-function perItemPage(t: any, isSold: boolean): string {
+function perItemPage(t: any, isSold: boolean, isFirst: boolean): string {
   const src = imgSrc(t);
   const price = isSold ? (t.sold_price || 0) : (t.sale_price || 0);
   const specs = [
@@ -571,24 +558,37 @@ function perItemPage(t: any, isSold: boolean): string {
   ];
   const desc = t.description || "";
   const noteField = isSold ? t.sold_notes : t.sale_notes;
+  // Force a hard page break BEFORE every item except the first so each
+  // tool gets its own dedicated PDF page. xhtml2pdf's <pdf:nextpage/> tag
+  // is the only 100% reliable way to force a page break.
+  const pageBreak = isFirst ? "" : `<pdf:nextpage/>`;
   return `
+    ${pageBreak}
     <div class="item-page">
-      <div class="item-page-head">
-        <div class="left">
+      <table class="item-page-head" style="width:100%;border-collapse:collapse;margin-bottom:8px"><tr>
+        <td style="vertical-align:top">
           <span class="ribbon">${isSold ? "SOLD" : "FOR SALE"}</span>
           <div class="big-name">${escapeHtml(t.name)}</div>
-        </div>
-        <div class="big-price">$${price.toFixed(2)}</div>
-      </div>
+        </td>
+        <td style="vertical-align:top;text-align:right;white-space:nowrap">
+          <div class="big-price">$${price.toFixed(2)}</div>
+        </td>
+      </tr></table>
       <div class="item-photo">${src ? `<img src="${src}" />` : `<div class="no">No photo</div>`}</div>
       ${desc ? `<div class="desc">${escapeHtml(desc)}</div>` : ""}
       ${noteField ? `<div class="desc"><em>${escapeHtml(noteField)}</em></div>` : ""}
-      <div class="specs">
+      <table class="specs-table" style="width:100%;border-collapse:collapse;margin-top:6px"><tr>
         ${specs
           .filter(([_, v]) => !!v)
-          .map(([l, v]) => `<div class="spec"><span class="lbl">${l}</span><span class="val">${escapeHtml(v)}</span></div>`)
+          .map(([l, v], i) => {
+            const sep = i > 0 && i % 2 === 0 ? "</tr><tr>" : "";
+            return `${sep}<td style="width:50%;padding:4px 8px 4px 0;vertical-align:top">
+              <div class="spec-lbl">${l}</div>
+              <div class="spec-val">${escapeHtml(v)}</div>
+            </td>`;
+          })
           .join("")}
-      </div>
+      </tr></table>
     </div>
   `;
 }

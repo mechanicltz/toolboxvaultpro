@@ -17,6 +17,7 @@ import { useRouter, useFocusEffect } from "expo-router";
 import { theme } from "../src/theme";
 import { api } from "../src/api";
 import { printReportHtml } from "../src/printHtml";
+import { formatDateUS } from "../src/dateUtil";
 
 const esc = (s: any) =>
   String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");

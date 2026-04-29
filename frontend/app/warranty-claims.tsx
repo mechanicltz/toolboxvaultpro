@@ -21,6 +21,7 @@ import * as Sharing from "expo-sharing";
 import * as FileSystem from "expo-file-system";
 import { theme } from "../src/theme";
 import { api } from "../src/api";
+import { printReportHtml } from "../src/printHtml";
 import { confirm } from "../src/confirm";
 import { formatDateUS } from "../src/dateUtil";
 import { DateField } from "../src/DateField";
@@ -164,18 +165,6 @@ export default function WarrantyClaimsScreen() {
   const exportPdf = async () => {
     if (busy) return;
     setBusy(true);
-    let printWin: Window | null = null;
-    if (Platform.OS === "web") {
-      printWin = window.open("", "_blank");
-      if (!printWin) {
-        Alert.alert("Popup blocked", "Please allow popups for this site.");
-        setBusy(false);
-        return;
-      }
-      printWin.document.write(
-        "<!doctype html><title>Loading...</title><body style='font-family:Helvetica;padding:40px;color:#666'>Generating warranty claims report...</body>"
-      );
-    }
     try {
       const claims = await fetchAllForExport();
       const groups = groupByDealer(claims);
@@ -243,14 +232,12 @@ export default function WarrantyClaimsScreen() {
         body{font-family:Helvetica;margin:24px;color:#111}
         h1{font-size:24px;letter-spacing:2px;text-transform:uppercase;border-bottom:3px solid #FFB300;padding-bottom:8px;margin-bottom:8px}
         .meta{color:#666;font-size:11px;text-transform:uppercase;letter-spacing:1px;margin-bottom:16px}
-        .totals{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:24px}
-        .totalCard{flex:1;min-width:120px;border:1px solid #ddd;padding:10px;border-radius:4px}
+        .totalCard{display:inline-block;width:23%;border:1px solid #ddd;padding:10px;border-radius:4px;margin-right:1%;vertical-align:top}
         .totalLabel{font-size:9px;color:#666;text-transform:uppercase;letter-spacing:1.5px}
         .totalValue{font-size:22px;font-weight:900;margin-top:4px}
         h2{font-size:16px;letter-spacing:1px;text-transform:uppercase;margin:18px 0 6px;color:#FFB300}
         h3{font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:#666;margin:14px 0 6px}
-        .counts{display:flex;gap:8px;margin-bottom:8px}
-        .count{font-size:10px;font-weight:800;padding:3px 8px;border:1px solid;border-radius:2px;letter-spacing:1px}
+        .count{display:inline-block;font-size:10px;font-weight:800;padding:3px 8px;border:1px solid;border-radius:2px;letter-spacing:1px;margin-right:6px}
         .count.open{color:#dc2626;border-color:#dc2626}
         .count.done{color:#16a34a;border-color:#16a34a}
         .muted{color:#999;font-style:italic;font-size:12px}
@@ -261,8 +248,8 @@ export default function WarrantyClaimsScreen() {
         hr{border:none;border-top:1px solid #ddd;margin:18px 0}
       </style></head><body>
         <h1>Warranty Claims</h1>
-        <div class="meta">By Dealer · Generated ${today}</div>
-        <div class="totals">
+        <div class="meta">By Dealer &middot; Generated ${todayStr}</div>
+        <div>
           <div class="totalCard"><div class="totalLabel">Total</div><div class="totalValue">${totals.total || 0}</div></div>
           <div class="totalCard"><div class="totalLabel">Open</div><div class="totalValue" style="color:#dc2626">${totals.open || 0}</div></div>
           <div class="totalCard"><div class="totalLabel">Replacement</div><div class="totalValue" style="color:#f59e0b">${totals.waiting_replacement || 0}</div></div>
@@ -271,24 +258,9 @@ export default function WarrantyClaimsScreen() {
         ${groups.length === 0 ? `<p class="muted">No warranty claims yet.</p>` : groupHtml}
       </body></html>`;
 
-      if (Platform.OS === "web") {
-        if (!printWin) return;
-        const fullHtml = html.replace(
-          "</body>",
-          "<script>setTimeout(function(){window.print();},700);</script></body>"
-        );
-        printWin.document.open();
-        printWin.document.write(fullHtml);
-        printWin.document.close();
-        printWin.document.title = "Warranty Claims";
-      } else {
-        const { uri } = await Print.printToFileAsync({ html });
-        if (await Sharing.isAvailableAsync())
-          await Sharing.shareAsync(uri, { mimeType: "application/pdf" });
-      }
+      await printReportHtml(html, `warranty-claims-${Date.now()}`);
     } catch (e: any) {
-      if (printWin) printWin.close();
-      Alert.alert("Error", e.message || "Could not export PDF");
+      Alert.alert("Error", e?.message || "Could not export PDF");
     } finally {
       setBusy(false);
     }

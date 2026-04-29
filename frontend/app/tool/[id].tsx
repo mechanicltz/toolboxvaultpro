@@ -17,11 +17,10 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter, useFocusEffect } from "expo-router";
-import * as Print from "expo-print";
-import * as Sharing from "expo-sharing";
 import * as ImagePicker from "expo-image-picker";
 import { theme } from "../../src/theme";
 import { api } from "../../src/api";
+import { printReportHtml } from "../../src/printHtml";
 import { confirm } from "../../src/confirm";
 import { formatDateTime } from "../../src/dt";
 import { formatDateUS } from "../../src/dateUtil";
@@ -324,17 +323,6 @@ export default function ToolDetail() {
   };
 
   const exportPdf = async () => {
-    let printWin: Window | null = null;
-    if (Platform.OS === "web") {
-      printWin = window.open("", "_blank");
-      if (!printWin) {
-        Alert.alert("Popup blocked", "Please allow popups for this site.");
-        return;
-      }
-      printWin.document.write(
-        "<!doctype html><title>Loading...</title><body style='font-family:Helvetica;padding:40px;color:#666'>Generating report...</body>"
-      );
-    }
     const esc = (s: any) => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;");
     const photoTags = (tool.photos || [])
       .slice(0, 4)
@@ -349,10 +337,9 @@ export default function ToolDetail() {
     const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><style>
       body{font-family:Helvetica;margin:24px;color:#111}
       h1{font-size:22px;letter-spacing:2px;text-transform:uppercase;border-bottom:3px solid #FFB300;padding-bottom:8px}
-      .grid{display:flex;flex-wrap:wrap;margin-top:12px}
       .lab{font-size:10px;color:#666;text-transform:uppercase;letter-spacing:1px}
       .val{font-size:14px;font-weight:700;margin-bottom:8px}
-      .col{flex:1;min-width:50%;padding:6px 0}
+      .col{display:inline-block;width:48%;padding:6px 0;vertical-align:top}
       table{width:100%;border-collapse:collapse;font-size:12px;margin-top:12px}
       th{background:#111;color:#FFB300;text-align:left;padding:6px;font-size:10px}
       td{padding:6px;border-bottom:1px solid #eee}
@@ -361,38 +348,23 @@ export default function ToolDetail() {
     </style></head><body>
       <h1>${esc(tool.name)}</h1>
       <span class="status ${tool.is_checked_out ? "out" : "in"}">${tool.is_checked_out ? "CHECKED OUT" : "AVAILABLE"}</span>
-      <div class="grid">
+      <div>
         <div class="col"><div class="lab">Brand</div><div class="val">${esc(tool.brand) || "—"}</div></div>
         <div class="col"><div class="lab">Model</div><div class="val">${esc(tool.model) || "—"}</div></div>
         <div class="col"><div class="lab">Serial</div><div class="val">${esc(tool.serial_number) || "—"}</div></div>
         <div class="col"><div class="lab">Cost</div><div class="val">$${(tool.cost || 0).toFixed(2)}</div></div>
         <div class="col"><div class="lab">Location</div><div class="val">${esc(tool.location_name) || "—"}</div></div>
         <div class="col"><div class="lab">Condition</div><div class="val">${esc(tool.condition) || "—"}</div></div>
-        <div class="col" style="min-width:100%"><div class="lab">Description</div><div class="val" style="font-weight:400">${esc(tool.description) || "—"}</div></div>
-        <div class="col" style="min-width:100%"><div class="lab">Tags</div><div class="val" style="font-weight:400">${esc((tool.tag_names || []).join(", ")) || "—"}</div></div>
+        <div style="margin-top:8px"><div class="lab">Description</div><div style="font-size:14px">${esc(tool.description) || "—"}</div></div>
+        <div style="margin-top:8px"><div class="lab">Tags</div><div style="font-size:14px">${esc((tool.tag_names || []).join(", ")) || "—"}</div></div>
       </div>
-      ${photoTags ? `<h3 style="margin-top:20px">Photos</h3><div style="display:flex;flex-wrap:wrap">${photoTags}</div>` : ""}
+      ${photoTags ? `<h3 style="margin-top:20px">Photos</h3><div>${photoTags}</div>` : ""}
       ${history ? `<h3 style="margin-top:20px">Checkout History</h3><table><thead><tr><th>Borrower</th><th>Out</th><th>In</th></tr></thead><tbody>${history}</tbody></table>` : ""}
     </body></html>`;
     try {
-      if (Platform.OS === "web") {
-        if (!printWin) return;
-        const fullHtml = html.replace(
-          "</body>",
-          "<script>setTimeout(function(){window.print();},600);</script></body>"
-        );
-        printWin.document.open();
-        printWin.document.write(fullHtml);
-        printWin.document.close();
-        printWin.document.title = tool.name;
-      } else {
-        const { uri } = await Print.printToFileAsync({ html });
-        if (await Sharing.isAvailableAsync())
-          await Sharing.shareAsync(uri, { mimeType: "application/pdf" });
-      }
+      await printReportHtml(html, `${tool.name || "tool"}-${Date.now()}`);
     } catch (e: any) {
-      if (printWin) printWin.close();
-      Alert.alert("Error", e.message);
+      Alert.alert("Error", e?.message || "Could not generate PDF");
     }
   };
 

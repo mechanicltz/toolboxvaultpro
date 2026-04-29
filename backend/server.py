@@ -2347,6 +2347,125 @@ app.include_router(api_router)
 app.include_router(auth_router)
 app.include_router(sub_router)
 
+# ---------------------------------------------------------------------------
+# HTML → PDF rendering endpoint (uses xhtml2pdf, runs entirely server-side
+# so reports work reliably regardless of browser quirks / CSP restrictions).
+# ---------------------------------------------------------------------------
+from fastapi import Body
+from fastapi.responses import Response as FastAPIResponse
+from io import BytesIO
+import re as _re_html
+
+# xhtml2pdf is intentionally imported lazily (heavy import, ~1s).
+_pisa = None
+
+
+def _get_pisa():
+    global _pisa
+    if _pisa is None:
+        from xhtml2pdf import pisa as _pisa_mod  # noqa: WPS433
+        _pisa = _pisa_mod
+    return _pisa
+
+
+def _sanitize_html_for_pdf(html: str) -> str:
+    """xhtml2pdf is a strict, non-browser HTML parser. It chokes on
+    a handful of modern features that browsers tolerate. Sanitise so
+    the parser never errors on safe-to-ignore CSS / structures.
+
+    Note: word-boundary lookbehind/lookahead are crucial — without them,
+    `transform` would also strip the value of `text-transform`, leaving
+    malformed CSS like `text- display: block;`.
+    """
+    # The list of property NAMES (full names only — no prefix overlap).
+    # Note: page-break-* IS supported by xhtml2pdf and must NOT be stripped.
+    bad_props = [
+        "object-fit",
+        "gap",
+        "row-gap",
+        "column-gap",
+        "grid-template-columns",
+        "grid-template-rows",
+        "grid-template-areas",
+        "grid-area",
+        "grid-column",
+        "grid-row",
+        "grid-auto-flow",
+        "tab-size",
+        "will-change",
+        "backdrop-filter",
+        "box-shadow",
+        "transform",
+        "transition",
+        "animation",
+        "-webkit-print-color-adjust",
+        "print-color-adjust",
+        "flex",
+        "flex-direction",
+        "flex-wrap",
+        "flex-flow",
+        "flex-shrink",
+        "flex-grow",
+        "flex-basis",
+        "justify-content",
+        "justify-items",
+        "justify-self",
+        "align-items",
+        "align-content",
+        "align-self",
+        "place-items",
+        "place-content",
+        "order",
+        "filter",
+    ]
+    # `(?<![\w-])` — must NOT be preceded by a word char or '-'  (so `text-transform`
+    # won't match `transform`). `(?=\s*:)` — must be followed by a colon.
+    name_alt = "|".join(_re_html.escape(p) for p in bad_props)
+    bad_decl = _re_html.compile(
+        rf"(?<![\w-])(?:{name_alt})\s*:[^;}}]*;?",
+        _re_html.IGNORECASE,
+    )
+    return bad_decl.sub("", html)
+
+
+@app.post("/api/render-pdf")
+async def render_pdf(
+    payload: dict = Body(...),
+    user=Depends(get_current_user),
+):
+    """Convert an HTML report payload into a PDF binary.
+
+    Body: { "html": "<...>", "filename": "report.pdf" }
+    Returns: application/pdf with Content-Disposition attachment.
+    """
+    html = payload.get("html") or ""
+    filename = payload.get("filename") or "report.pdf"
+    if not html:
+        raise HTTPException(400, "Missing 'html'")
+    if not filename.lower().endswith(".pdf"):
+        filename = f"{filename}.pdf"
+
+    safe_html = _sanitize_html_for_pdf(html)
+    pisa = _get_pisa()
+    buf = BytesIO()
+    try:
+        result = pisa.CreatePDF(safe_html, dest=buf, encoding="utf-8")
+    except Exception as exc:  # pragma: no cover
+        raise HTTPException(500, f"PDF generation failed: {exc!s}") from exc
+
+    if result.err:
+        raise HTTPException(500, f"PDF generation failed (errors={result.err})")
+
+    return FastAPIResponse(
+        content=buf.getvalue(),
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"',
+            "Cache-Control": "no-store",
+        },
+    )
+
+
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
