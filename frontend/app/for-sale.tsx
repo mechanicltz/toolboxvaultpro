@@ -217,7 +217,14 @@ export default function ForSaleScreen() {
   };
 
   const renderCard = ({ item }: { item: Tool }) => {
-    const photo = (item.photos || [])[0];
+    const photoRaw = (item.photos || [])[0];
+    // Photos may be stored as a full data URI string OR as {data, mime_type}.
+    const photoUri =
+      typeof photoRaw === "string"
+        ? photoRaw
+        : photoRaw && photoRaw.data
+        ? `data:${photoRaw.mime_type || "image/jpeg"};base64,${photoRaw.data}`
+        : "";
     const isSold = tab === "sold";
     const price = isSold ? (item.sold_price || 0) : (item.sale_price || 0);
     return (
@@ -226,8 +233,8 @@ export default function ForSaleScreen() {
         style={[styles.card, { flex: numColumns > 1 ? 1 : undefined }]}
         onPress={() => router.push(`/tool/${item.id}`)}
       >
-        {photo ? (
-          <Image source={{ uri: `data:${photo.mime_type};base64,${photo.data}` }} style={styles.cardImg} />
+        {photoUri ? (
+          <Image source={{ uri: photoUri }} style={styles.cardImg} resizeMode="cover" />
         ) : (
           <View style={[styles.cardImg, { alignItems: "center", justifyContent: "center" }]}>
             <Ionicons name="cube" size={40} color={theme.colors.textMuted} />
@@ -496,7 +503,10 @@ function escapeHtml(s: any): string {
 function imgSrc(t: any): string {
   const photo = (t.photos || [])[0];
   if (!photo) return "";
-  return `data:${photo.mime_type};base64,${photo.data}`;
+  // Photos may be a full data URI string OR an object with {data, mime_type}
+  if (typeof photo === "string") return photo;
+  if (photo.data) return `data:${photo.mime_type || "image/jpeg"};base64,${photo.data}`;
+  return "";
 }
 
 function buildHtml(items: any[], mode: "bulk" | "perItem", tab: "listed" | "sold", totals: { count: number; value: number }) {

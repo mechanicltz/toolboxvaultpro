@@ -812,3 +812,15 @@ Fix #2 — PDF reports actually generate now:
 - Verified by main agent: iframe injected with full report content
   ("ITEMS FOR SALE / Items: 1 / Asking Total: $350.00 / Test 2 / FOR SALE"),
   no crash.
+
+## 2026-04-29 — Selling shortcut + photo thumbnails fixed
+1. SELLING shortcut: Added a second top-right global FAB button next to
+   REPORTS, on the 5 main tab screens. Tapping SELLING jumps directly to
+   /for-sale.  File: /app/frontend/src/ReportsFab.tsx (now contains both
+   buttons in a row layout).
+2. Photo thumbnails: The for-sale screen was rendering a black square
+   because it tried to read photos as {data, mime_type} objects, but the
+   real schema stores photos as full data URI strings (e.g.
+   "data:image/jpeg;base64,..."). Updated both the card thumbnail and the
+   PDF imgSrc() to handle both shapes.  Verified by main agent: card
+   image shows the actual photo (naturalWidth=3024, naturalHeight=4032).
