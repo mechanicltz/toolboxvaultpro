@@ -80,16 +80,25 @@ export default function InsuranceReportScreen() {
   };
 
   const generate = async () => {
+    console.log("[InsuranceReport] generate() called");
     setGenerating(true);
 
     // Build HTML synchronously first — no awaits before we touch the DOM.
     let html: string;
     try {
       html = buildHtml(profile, tools, total, includeThumbs, includeNotes);
+      console.log("[InsuranceReport] buildHtml ok, length=", html.length);
     } catch (e: any) {
+      console.error("[InsuranceReport] buildHtml threw:", e);
       setGenerating(false);
       Alert.alert("Error", e?.message || "Could not build report.");
       return;
+    }
+
+    // DEV: expose for direct testing
+    if (typeof globalThis !== "undefined") {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (globalThis as any).__irGenerate = generate;
     }
 
     try {
@@ -165,6 +174,14 @@ export default function InsuranceReportScreen() {
       setGenerating(false);
     }
   };
+
+  // Expose generate() globally for diagnostic invocation (web only, dev only)
+  useEffect(() => {
+    if (Platform.OS === "web") {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (globalThis as any).__irGenerate = generate;
+    }
+  }, [profile, tools, total, includeThumbs, includeNotes]);
 
   if (loading) {
     return (

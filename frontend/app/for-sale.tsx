@@ -556,19 +556,44 @@ function buildHtml(items: any[], mode: "bulk" | "perItem", tab: "listed" | "sold
     .card .pill { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 9px; font-weight: 800; letter-spacing: 1.5px; background: ${accent}; color: #000; margin-top: 4px; }
     .card.sold .pill { background: ${accent}; color: #fff; }
 
-    /* PER-ITEM PAGE */
-    .item-page { page-break-after: always; padding: 0; }
+    /* PER-ITEM PAGE — sized to fit a single Letter page */
+    @page { size: Letter; margin: 0.4in; }
+    .item-page {
+      page-break-after: always;
+      page-break-inside: avoid;
+      height: 10.2in;
+      max-height: 10.2in;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      padding: 0;
+    }
     .item-page:last-child { page-break-after: auto; }
-    .item-photo { width: 100%; height: 380px; background: #f4f4f4; border: 1px solid #ddd; border-radius: 10px; overflow: hidden; display: flex; align-items: center; justify-content: center; margin-bottom: 18px; }
+    .item-page-head {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 12px; margin-bottom: 8px;
+    }
+    .item-page-head .left { flex: 1; min-width: 0; }
+    .item-photo {
+      width: 100%;
+      flex: 1 1 auto;
+      max-height: 4.6in;
+      background: #f4f4f4;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      overflow: hidden;
+      display: flex; align-items: center; justify-content: center;
+      margin-bottom: 12px;
+    }
     .item-photo img { max-width: 100%; max-height: 100%; object-fit: contain; }
-    .item-photo .no { color: #999; }
-    .big-name { font-size: 28px; font-weight: 900; color: #111; margin: 4px 0; }
-    .big-price { font-size: 38px; font-weight: 900; color: ${accent}; margin: 6px 0 16px; }
-    .desc { font-size: 13px; color: #444; margin: 0 0 14px; line-height: 19px; }
-    .specs { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 24px; margin-top: 12px; }
-    .spec .lbl { font-size: 9px; letter-spacing: 1.5px; color: #666; font-weight: 800; text-transform: uppercase; display: block; }
-    .spec .val { font-size: 14px; color: #111; font-weight: 700; }
-    .ribbon { display: inline-block; background: ${accent}; color: ${isSold ? "#fff" : "#000"}; padding: 5px 14px; font-size: 11px; letter-spacing: 2px; font-weight: 900; border-radius: 4px; }
+    .item-photo .no { color: #999; font-size: 12px; }
+    .big-name { font-size: 22px; font-weight: 900; color: #111; margin: 0; line-height: 1.15; }
+    .big-price { font-size: 30px; font-weight: 900; color: ${accent}; margin: 0; white-space: nowrap; }
+    .desc { font-size: 11px; color: #444; margin: 0 0 8px; line-height: 15px; max-height: 1.1in; overflow: hidden; }
+    .specs { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 18px; margin-top: 4px; }
+    .spec .lbl { font-size: 8px; letter-spacing: 1.2px; color: #666; font-weight: 800; text-transform: uppercase; display: block; }
+    .spec .val { font-size: 12px; color: #111; font-weight: 700; line-height: 1.2; }
+    .ribbon { display: inline-block; background: ${accent}; color: ${isSold ? "#fff" : "#000"}; padding: 3px 10px; font-size: 9px; letter-spacing: 1.5px; font-weight: 900; border-radius: 3px; margin-bottom: 4px; }
   </style></head><body>
     ${headerHtml}
     ${itemsBody}
@@ -598,7 +623,6 @@ function bulkCard(t: any, isSold: boolean): string {
 function perItemPage(t: any, isSold: boolean): string {
   const src = imgSrc(t);
   const price = isSold ? (t.sold_price || 0) : (t.sale_price || 0);
-  const dt = isSold ? t.sold_at : t.sale_listed_at;
   const specs = [
     ["Brand", t.brand],
     ["Model", t.model],
@@ -615,14 +639,20 @@ function perItemPage(t: any, isSold: boolean): string {
         ]
       : [["Listed", formatDateUS(t.sale_listed_at)]]),
   ];
+  const desc = t.description || "";
+  const noteField = isSold ? t.sold_notes : t.sale_notes;
   return `
     <div class="item-page">
-      <span class="ribbon">${isSold ? "SOLD" : "FOR SALE"}</span>
-      <div class="big-name">${escapeHtml(t.name)}</div>
-      <div class="big-price">$${price.toFixed(2)}</div>
+      <div class="item-page-head">
+        <div class="left">
+          <span class="ribbon">${isSold ? "SOLD" : "FOR SALE"}</span>
+          <div class="big-name">${escapeHtml(t.name)}</div>
+        </div>
+        <div class="big-price">$${price.toFixed(2)}</div>
+      </div>
       <div class="item-photo">${src ? `<img src="${src}" />` : `<div class="no">No photo</div>`}</div>
-      ${t.description ? `<div class="desc">${escapeHtml(t.description)}</div>` : ""}
-      ${(isSold ? t.sold_notes : t.sale_notes) ? `<div class="desc"><em>${escapeHtml(isSold ? t.sold_notes : t.sale_notes)}</em></div>` : ""}
+      ${desc ? `<div class="desc">${escapeHtml(desc)}</div>` : ""}
+      ${noteField ? `<div class="desc"><em>${escapeHtml(noteField)}</em></div>` : ""}
       <div class="specs">
         ${specs
           .filter(([_, v]) => !!v)
