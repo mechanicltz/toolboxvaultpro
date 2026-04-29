@@ -675,3 +675,20 @@ test_plan:
   Alert.alert (per known iOS/Web stacking bugs).
 - Verified by main agent: row appears, modal opens, password actually changes
   (re-login with new password returns 200).
+
+## 2026-04-29 — Repair-modal dealer chip styling FIXED
+- Issue: When marking a tool broken, the "REPAIR COMPANY (DEALER)" chip
+  selector inside the Edit Repair Info modal had unreadable dark text and
+  no visible "selected" state.  User reported: "the item I clicked on's
+  dealer is Snapon but it shows matco & snapon" — both chips looked the
+  same so it appeared as if both were selected.
+- Root cause: chip styles referenced `styles.statusChip` / `statusChipText`
+  which were NEVER DEFINED in app/tool/[id].tsx.  Result: black text
+  (rgb(0,0,0)) on dark bg, no border, no active state — chips were
+  visually indistinguishable.
+- Fix: switched the dealer chips to use the already-defined
+  `repChip / repChipActive / repChipText / repChipTextActive` styles
+  (same ones used for the STATUS chips above).
+- Verified by main agent via screenshot tool: unselected chips render with
+  light text + subtle border; selected chip renders with red bg + white
+  text — clearly distinguishable.

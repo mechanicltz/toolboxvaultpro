@@ -730,14 +730,14 @@ export default function ToolDetail() {
                           setRepairForm({ ...repairForm, company_notified: d.name })
                         }
                         style={[
-                          styles.statusChip,
-                          sel && styles.statusChipActive,
+                          styles.repChip,
+                          sel && styles.repChipActive,
                         ]}
                       >
                         <Text
                           style={[
-                            styles.statusChipText,
-                            sel && styles.statusChipTextActive,
+                            styles.repChipText,
+                            sel && styles.repChipTextActive,
                           ]}
                         >
                           {d.name}
