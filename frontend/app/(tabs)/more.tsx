@@ -6,6 +6,11 @@ import {
   ScrollView,
   TouchableOpacity,
   Switch,
+  Modal,
+  TextInput,
+  ActivityIndicator,
+  Platform,
+  KeyboardAvoidingView,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -54,6 +59,40 @@ export default function MoreScreen() {
   const { prefs, update } = usePrefs();
   const { user, logout } = useAuth();
   const [mntDue, setMntDue] = useState({ overdue: 0, due_soon: 0 });
+  const [pwOpen, setPwOpen] = useState(false);
+  const [pwNew, setPwNew] = useState("");
+  const [pwConfirm, setPwConfirm] = useState("");
+  const [pwBusy, setPwBusy] = useState(false);
+  const [pwErr, setPwErr] = useState("");
+  const [pwOk, setPwOk] = useState("");
+
+  const submitPasswordChange = async () => {
+    setPwErr("");
+    setPwOk("");
+    if (!pwNew || pwNew.length < 6) {
+      setPwErr("Password must be at least 6 characters.");
+      return;
+    }
+    if (pwNew !== pwConfirm) {
+      setPwErr("New password and confirmation do not match.");
+      return;
+    }
+    setPwBusy(true);
+    try {
+      await api.updateMe({ password: pwNew });
+      setPwOk("Password changed.");
+      setPwNew("");
+      setPwConfirm("");
+      setTimeout(() => {
+        setPwOpen(false);
+        setPwOk("");
+      }, 1200);
+    } catch (e: any) {
+      setPwErr(String(e?.message || e));
+    } finally {
+      setPwBusy(false);
+    }
+  };
 
   useFocusEffect(
     useCallback(() => {
@@ -110,6 +149,20 @@ export default function MoreScreen() {
           )}
           <Ionicons name="chevron-forward" size={18} color={theme.colors.textMuted} />
         </TouchableOpacity>
+
+        <Row
+          icon="key"
+          title="Change Password"
+          subtitle="Update your account password"
+          testID="more-change-password"
+          onPress={() => {
+            setPwNew("");
+            setPwConfirm("");
+            setPwErr("");
+            setPwOk("");
+            setPwOpen(true);
+          }}
+        />
 
         <Text style={styles.sectionLabel}>OWNER</Text>
         <Row
@@ -260,9 +313,147 @@ export default function MoreScreen() {
           <Ionicons name="chevron-forward" size={18} color={theme.colors.textMuted} />
         </TouchableOpacity>
       </ScrollView>
+
+      {/* Change Password Modal */}
+      <Modal
+        visible={pwOpen}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setPwOpen(false)}
+      >
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+          style={pwStyles.backdrop}
+        >
+          <View style={pwStyles.card}>
+            <View style={pwStyles.header}>
+              <Ionicons name="key" size={20} color={theme.colors.accent} />
+              <Text style={pwStyles.title}>CHANGE PASSWORD</Text>
+              <TouchableOpacity
+                onPress={() => setPwOpen(false)}
+                hitSlop={10}
+                testID="pw-close"
+              >
+                <Ionicons name="close" size={22} color={theme.colors.textPrimary} />
+              </TouchableOpacity>
+            </View>
+            <Text style={pwStyles.label}>NEW PASSWORD</Text>
+            <TextInput
+              testID="pw-new"
+              value={pwNew}
+              onChangeText={setPwNew}
+              secureTextEntry
+              autoCapitalize="none"
+              autoCorrect={false}
+              placeholder="At least 6 characters"
+              placeholderTextColor={theme.colors.textMuted}
+              style={pwStyles.input}
+            />
+            <Text style={pwStyles.label}>CONFIRM NEW PASSWORD</Text>
+            <TextInput
+              testID="pw-confirm"
+              value={pwConfirm}
+              onChangeText={setPwConfirm}
+              secureTextEntry
+              autoCapitalize="none"
+              autoCorrect={false}
+              placeholder="Re-enter the new password"
+              placeholderTextColor={theme.colors.textMuted}
+              style={pwStyles.input}
+            />
+            {!!pwErr && <Text style={pwStyles.err}>{pwErr}</Text>}
+            {!!pwOk && <Text style={pwStyles.ok}>{pwOk}</Text>}
+            <TouchableOpacity
+              testID="pw-submit"
+              style={[pwStyles.primaryBtn, pwBusy && { opacity: 0.6 }]}
+              disabled={pwBusy}
+              onPress={submitPasswordChange}
+            >
+              {pwBusy ? (
+                <ActivityIndicator color="#000" />
+              ) : (
+                <Text style={pwStyles.primaryBtnText}>UPDATE PASSWORD</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </SafeAreaView>
   );
 }
+
+const pwStyles = StyleSheet.create({
+  backdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.6)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 16,
+  },
+  card: {
+    width: "100%",
+    maxWidth: 440,
+    backgroundColor: theme.colors.bgSecondary,
+    borderRadius: 12,
+    padding: 18,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    marginBottom: 16,
+  },
+  title: {
+    flex: 1,
+    color: theme.colors.textPrimary,
+    fontSize: 14,
+    fontWeight: "900",
+    letterSpacing: 1.5,
+  },
+  label: {
+    color: theme.colors.textSecondary,
+    fontSize: 11,
+    fontWeight: "800",
+    letterSpacing: 1.5,
+    marginTop: 8,
+    marginBottom: 6,
+  },
+  input: {
+    backgroundColor: theme.colors.surface,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    color: theme.colors.textPrimary,
+    fontSize: 14,
+  },
+  err: {
+    color: theme.colors.danger,
+    fontSize: 12,
+    marginTop: 10,
+  },
+  ok: {
+    color: "#27AE60",
+    fontSize: 12,
+    marginTop: 10,
+  },
+  primaryBtn: {
+    marginTop: 18,
+    backgroundColor: theme.colors.accent,
+    borderRadius: 8,
+    paddingVertical: 12,
+    alignItems: "center",
+  },
+  primaryBtnText: {
+    color: "#000",
+    fontWeight: "900",
+    letterSpacing: 1.5,
+    fontSize: 13,
+  },
+});
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.colors.bg },

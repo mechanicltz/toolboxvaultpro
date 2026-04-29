@@ -652,3 +652,26 @@ test_plan:
 ## Pending User Verification:
 - [ ] PDF viewer works on the user's mobile iOS Safari + Expo Go
 - [ ] PDF viewer works in user's main web browser (no more "blocked")
+
+## 2026-04-29 — PDF viewer fixed for LARGE multi-page PDFs (147+ pages)
+- Issue: First fix worked for small/medium PDFs but the user's actual 5.56 MB
+  / 147-page Bobcat T190 manual produced a black screen because rendering all
+  147 pages to in-memory PNG data URLs would consume ~150–300 MB and crash
+  the tab.
+- Fix: Rewrote PdfCanvasViewer to use a virtualized FlatList. Each page
+  renders on-demand as it scrolls into FlatList's window (initialNumToRender=3,
+  windowSize=5).  Pages are JPEG (quality 0.7) instead of PNG to keep each
+  page ~50–150 KB.  Render calls are serialized through a queue ref to avoid
+  clobbering pdf.js and to keep memory bounded.  Each PdfPageItem clears its
+  data URL on unmount so GC reclaims memory as pages scroll out of the window.
+- Verified by main agent on the user's actual 147-page PDF: parses, shows the
+  correct title page (Bobcat T190 Operation & Maintenance Manual), only ~4
+  pages held in memory at any time, no crashes.
+
+## 2026-04-29 — Added Change Password UI in More tab
+- Endpoint already existed (PUT /api/auth/me with {password}); only needed UI.
+- New "Change Password" row under Account section in app/(tabs)/more.tsx
+- Inline modal with new/confirm fields, validation, success state, no
+  Alert.alert (per known iOS/Web stacking bugs).
+- Verified by main agent: row appears, modal opens, password actually changes
+  (re-login with new password returns 200).

@@ -10,6 +10,7 @@ import {
   Modal,
   Image,
   ScrollView,
+  FlatList,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import * as DocumentPicker from "expo-document-picker";
@@ -47,35 +48,40 @@ function base64ToBytes(b64: string): Uint8Array {
   return bytes;
 }
 
-type RenderedPage = { src: string; w: number; h: number };
+type PageMeta = { pageNum: number; w: number; h: number };
 
 /**
  * Web-only PDF viewer.
  *
- * Renders each PDF page off-screen via pdf.js into a temporary <canvas>,
- * captures the result as a data URL, and then displays them as <Image>
- * components inside a ScrollView.  This avoids:
- *   - iframe + blob URL (blocked by parent CSP / sandbox)
- *   - imperative DOM mutation inside React's tree (caused removeChild crashes)
- *   - import.meta in Metro (bypassed via runtime dynamic import from CDN)
+ * Loads pdf.js from a CDN at runtime (via `new Function('u','return import(u)')`
+ * so Metro can't statically analyze + break it on `import.meta`) and uses a
+ * VIRTUALIZED FlatList to render pages on-demand.  This keeps memory usage
+ * bounded — only the small window of pages currently in / near the viewport
+ * is rasterized at any time, even for 100+ page documents.
+ *
+ * Each page is rendered to JPEG (quality 0.7) instead of PNG to keep each
+ * page's data URL small (typically ~50–150 KB vs ~500 KB–2 MB for PNG).
  */
 function PdfCanvasViewer({ doc }: { doc: any }) {
-  const [pages, setPages] = useState<RenderedPage[]>([]);
+  const [meta, setMeta] = useState<PageMeta[] | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadMsg, setLoadMsg] = useState("Loading PDF...");
   const [error, setError] = useState("");
-  const [progress, setProgress] = useState({ done: 0, total: 0 });
+  const pdfRef = useRef<any>(null);
+  // Serialize page rendering through a single chain to avoid clobbering the
+  // shared canvas context / overwhelming the worker on rapid scrolls.
+  const renderQueueRef = useRef<Promise<any>>(Promise.resolve());
 
   useEffect(() => {
     let cancelled = false;
-    setPages([]);
+    setMeta(null);
     setLoading(true);
     setError("");
-    setProgress({ done: 0, total: 0 });
+    setLoadMsg("Loading PDF...");
+    pdfRef.current = null;
 
     (async () => {
       try {
-        // Load pdf.js from CDN at runtime via `new Function` to evade Metro's
-        // static analysis (which otherwise breaks `import.meta` inside pdfjs-dist).
         const PDFJS_VERSION = "4.10.38";
         const dynImport = new Function("u", "return import(u)");
         const pdfjsLib: any = await dynImport(
@@ -84,118 +90,236 @@ function PdfCanvasViewer({ doc }: { doc: any }) {
         pdfjsLib.GlobalWorkerOptions.workerSrc =
           `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${PDFJS_VERSION}/pdf.worker.min.mjs`;
 
+        if (cancelled) return;
+        setLoadMsg("Parsing document...");
         const bytes = base64ToBytes(doc.data);
         const pdf = await pdfjsLib.getDocument({ data: bytes }).promise;
         if (cancelled) return;
-        setProgress({ done: 0, total: pdf.numPages });
+        pdfRef.current = pdf;
 
-        const w: any = (globalThis as any).window;
-        const dpr = Math.min(2, w.devicePixelRatio || 1);
-        const renderScale = 1.6 * dpr; // good readability on most screens
-
-        const out: RenderedPage[] = [];
+        setLoadMsg(`Indexing ${pdf.numPages} pages...`);
+        // Fetch every page's viewport (cheap — just metadata, no rasterization)
+        const m: PageMeta[] = [];
         for (let p = 1; p <= pdf.numPages; p++) {
           if (cancelled) return;
           const page = await pdf.getPage(p);
-          const viewport = page.getViewport({ scale: renderScale });
-          const offscreen = w.document.createElement("canvas");
-          offscreen.width = Math.floor(viewport.width);
-          offscreen.height = Math.floor(viewport.height);
-          const ctx = offscreen.getContext("2d");
-          await page.render({ canvasContext: ctx, viewport }).promise;
-          if (cancelled) return;
-          const src = offscreen.toDataURL("image/png");
-          out.push({ src, w: offscreen.width, h: offscreen.height });
-          setProgress({ done: p, total: pdf.numPages });
+          const vp = page.getViewport({ scale: 1 });
+          m.push({ pageNum: p, w: vp.width, h: vp.height });
         }
         if (cancelled) return;
-        // Single state update at the end avoids rapid React re-render churn.
-        setPages(out);
+        setMeta(m);
         setLoading(false);
       } catch (e: any) {
         if (cancelled) return;
-        console.error("PDF render error:", e);
-        setError(e?.message || "Failed to render PDF");
+        console.error("PDF load error:", e);
+        setError(e?.message || "Failed to load PDF");
         setLoading(false);
       }
     })();
     return () => {
       cancelled = true;
+      // Best-effort cleanup of pdf.js document
+      try {
+        pdfRef.current?.destroy?.();
+      } catch {
+        /* ignore */
+      }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [doc?.id]);
 
-  return (
-    <ScrollView
-      style={{ flex: 1, backgroundColor: "#1a1a1a" }}
-      contentContainerStyle={{ paddingVertical: 12, alignItems: "center" }}
-    >
-      {loading && (
-        <View style={{ padding: 24, alignItems: "center" }}>
-          <ActivityIndicator color={theme.colors.accent} size="large" />
-          <Text style={{ color: "#ccc", marginTop: 12, fontSize: 13 }}>
-            {progress.total > 0
-              ? `Rendering page ${progress.done} / ${progress.total}...`
-              : "Loading PDF..."}
-          </Text>
-        </View>
-      )}
-      {!!error && (
-        <View style={{ padding: 32, alignItems: "center" }}>
-          <Ionicons name="alert-circle" size={42} color={theme.colors.danger} />
-          <Text
-            style={{
-              color: "#E94E3F",
-              marginTop: 12,
-              fontSize: 13,
-              fontFamily: Platform.OS === "web" ? "monospace" : undefined,
-              textAlign: "center",
-            }}
-          >
-            {`Error: ${error}`}
-          </Text>
-        </View>
-      )}
-      {pages.map((pg, idx) => (
-        <View
-          key={`p${idx}`}
+  // Schedule a single page render against the shared queue.
+  const enqueueRender = (pageNum: number, scale: number): Promise<string | null> => {
+    const next = renderQueueRef.current.then(async () => {
+      const pdf = pdfRef.current;
+      if (!pdf) return null;
+      try {
+        const page = await pdf.getPage(pageNum);
+        const viewport = page.getViewport({ scale });
+        const w: any = (globalThis as any).window;
+        const canvas = w.document.createElement("canvas");
+        canvas.width = Math.floor(viewport.width);
+        canvas.height = Math.floor(viewport.height);
+        const ctx = canvas.getContext("2d");
+        await page.render({ canvasContext: ctx, viewport }).promise;
+        // JPEG keeps each page small (≈50–150 KB) vs PNG (≈500 KB–2 MB)
+        const url = canvas.toDataURL("image/jpeg", 0.7);
+        // Clear canvas to free memory ASAP
+        canvas.width = 0;
+        canvas.height = 0;
+        return url;
+      } catch (e) {
+        console.warn(`Page ${pageNum} render failed:`, e);
+        return null;
+      }
+    });
+    renderQueueRef.current = next.catch(() => undefined);
+    return next;
+  };
+
+  if (loading) {
+    return (
+      <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: "#1a1a1a" }}>
+        <ActivityIndicator color={theme.colors.accent} size="large" />
+        <Text style={{ color: "#ccc", marginTop: 14, fontSize: 13 }}>{loadMsg}</Text>
+      </View>
+    );
+  }
+  if (error) {
+    return (
+      <View style={{ flex: 1, padding: 32, alignItems: "center", justifyContent: "center", backgroundColor: "#1a1a1a" }}>
+        <Ionicons name="alert-circle" size={42} color={theme.colors.danger} />
+        <Text
           style={{
-            width: "95%",
-            maxWidth: 900,
-            aspectRatio: pg.h > 0 ? pg.w / pg.h : 0.77,
-            backgroundColor: "#fff",
-            marginVertical: 8,
-            borderRadius: 4,
-            overflow: "hidden",
-            ...Platform.select({
-              web: {
-                // @ts-expect-error web-only style
-                boxShadow: "0 2px 12px rgba(0,0,0,0.5)",
-              },
-              default: {},
-            }),
+            color: "#E94E3F",
+            marginTop: 12,
+            fontSize: 13,
+            fontFamily: Platform.OS === "web" ? "monospace" : undefined,
+            textAlign: "center",
           }}
         >
-          <Image
-            source={{ uri: pg.src }}
-            style={{ width: "100%", height: "100%" }}
-            resizeMode="contain"
-          />
-        </View>
-      ))}
-      {!loading && !error && pages.length > 0 && (
+          {`Error: ${error}`}
+        </Text>
+      </View>
+    );
+  }
+  if (!meta) return null;
+
+  return (
+    <FlatList
+      data={meta}
+      keyExtractor={(item) => `p${item.pageNum}`}
+      style={{ flex: 1, backgroundColor: "#1a1a1a" }}
+      contentContainerStyle={{ paddingVertical: 12, alignItems: "center" }}
+      // Virtualization knobs — keep rendered window small for big PDFs
+      initialNumToRender={3}
+      maxToRenderPerBatch={2}
+      windowSize={5}
+      // NOTE: removeClippedSubviews disabled because it doesn't behave on
+      // react-native-web for tall content — would leave blank gaps.
+      removeClippedSubviews={false}
+      renderItem={({ item }) => (
+        <PdfPageItem meta={item} requestRender={enqueueRender} />
+      )}
+      ListFooterComponent={
         <Text
           style={{
             color: "#999",
             fontSize: 11,
             letterSpacing: 1,
             marginVertical: 16,
+            textAlign: "center",
           }}
         >
-          {`${pages.length} PAGE${pages.length > 1 ? "S" : ""}`}
+          {`${meta.length} PAGE${meta.length > 1 ? "S" : ""}`}
         </Text>
+      }
+    />
+  );
+}
+
+/**
+ * Single PDF page in the FlatList. Renders itself lazily on mount
+ * (FlatList only mounts items near the viewport, so this is naturally
+ *  windowed) and clears its data URL on unmount so memory stays bounded.
+ */
+function PdfPageItem({
+  meta,
+  requestRender,
+}: {
+  meta: PageMeta;
+  requestRender: (pageNum: number, scale: number) => Promise<string | null>;
+}) {
+  const [src, setSrc] = useState<string>("");
+  const [busy, setBusy] = useState(true);
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    setBusy(true);
+    setFailed(false);
+    setSrc("");
+
+    // Pick a render scale based on screen DPR but capped to keep mem in check
+    const w: any = (globalThis as any).window;
+    const dpr = Math.min(2, w?.devicePixelRatio || 1);
+    const scale = 1.4 * dpr;
+
+    requestRender(meta.pageNum, scale)
+      .then((url) => {
+        if (cancelled) return;
+        if (url) {
+          setSrc(url);
+        } else {
+          setFailed(true);
+        }
+        setBusy(false);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setFailed(true);
+        setBusy(false);
+      });
+
+    return () => {
+      cancelled = true;
+      // Memory hint: drop the data URL so GC can reclaim the JPEG bytes
+      // when this page scrolls out of FlatList's window
+      setSrc("");
+    };
+  }, [meta.pageNum, requestRender]);
+
+  // Compute concrete pixel dimensions so the row height is stable in
+  // FlatList's virtualization layout (aspectRatio alone collapses inside
+  // FlatList on web in some cases).
+  const w: any = (globalThis as any).window;
+  const screenW = Math.max(320, Math.min(w?.innerWidth || 800, 1100));
+  const targetW = Math.min(900, Math.floor(screenW * 0.94));
+  const ratio = meta.h > 0 ? meta.h / meta.w : 1.3;
+  const targetH = Math.floor(targetW * ratio);
+
+  return (
+    <View
+      style={{
+        width: targetW,
+        height: targetH,
+        backgroundColor: "#fff",
+        marginVertical: 8,
+        borderRadius: 4,
+        overflow: "hidden",
+        alignItems: "center",
+        justifyContent: "center",
+        ...Platform.select({
+          web: {
+            // @ts-expect-error web-only style
+            boxShadow: "0 2px 12px rgba(0,0,0,0.5)",
+          },
+          default: {},
+        }),
+      }}
+    >
+      {src ? (
+        <Image
+          source={{ uri: src }}
+          style={{ width: "100%", height: "100%" }}
+          resizeMode="contain"
+        />
+      ) : (
+        <View style={{ alignItems: "center", justifyContent: "center" }}>
+          {busy && <ActivityIndicator color="#888" size="small" />}
+          {failed && (
+            <Text style={{ color: "#888", fontSize: 12, marginTop: 6 }}>
+              {`Page ${meta.pageNum} failed to render`}
+            </Text>
+          )}
+          {!failed && (
+            <Text style={{ color: "#bbb", fontSize: 11, marginTop: 8, letterSpacing: 1 }}>
+              {`PAGE ${meta.pageNum}`}
+            </Text>
+          )}
+        </View>
       )}
-    </ScrollView>
+    </View>
   );
 }
 
