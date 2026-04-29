@@ -627,3 +627,28 @@ test_plan:
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
+
+
+## 2026-04-29 — PDF/Document Inline Viewer FIXED (verified by main agent)
+- File: /app/frontend/src/sections/DocumentsSection.tsx
+- Issue: Tapping a PDF document showed a black screen on iOS and "blocked" in
+  the URL bar on web. Previous fix attempts (window.open, Blob URL into iframe,
+  static `import("pdfjs-dist")`) all failed: the parent platform's CSP/sandbox
+  blocks blob: iframes, and Metro can't bundle pdfjs-dist's ESM (`import.meta`).
+- Fix: Render PDFs entirely in JavaScript using pdf.js loaded from CDN at
+  runtime via `new Function('u','return import(u)')` (evades Metro's static
+  analysis).  Each page is rendered into an off-screen canvas, captured with
+  `toDataURL('image/png')`, and rendered as <Image> components inside a
+  ScrollView.  No iframe, no blob URL, no popup, no imperative DOM mutation
+  inside React's tree — fully reconciliation-safe.
+- Verified by main agent via screenshot tool: 1-page test PDF rendered
+  cleanly; real 12-page "30 Bin Rack DIY Plans" PDF rendered correctly with
+  scrolling, header bar, DOWNLOAD button, and close action.
+- Native (iOS/Android): now uses expo-sharing with surfaced error fallback
+  modal so a failure shows a clear message instead of a black screen.
+- Image previews still work via Image + blob URL (small enough to be safe).
+- Other formats (Word/Excel) trigger an immediate download instead of preview.
+
+## Pending User Verification:
+- [ ] PDF viewer works on the user's mobile iOS Safari + Expo Go
+- [ ] PDF viewer works in user's main web browser (no more "blocked")
