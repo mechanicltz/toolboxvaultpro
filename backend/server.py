@@ -1776,10 +1776,25 @@ async def aggregate(
 ):
     query = build_tool_query(search, location_id, tag_id, category_id, dealer_id, checked_out, is_consumable, needs_repair)
     items = await db.tools.find(query, {"_id": 0}).to_list(5000)
-    total_value = sum(
-        (i.get("cost") or 0) * max(1, int(i.get("quantity") or 1))
-        for i in items
-    )
+
+    def _num(v: Any, default: float = 0.0) -> float:
+        """Robust numeric coercion — handles ints, floats, strings like
+        "1,234.56", "$300", "  5  ", as well as None / missing values."""
+        if v is None:
+            return default
+        if isinstance(v, (int, float)):
+            return float(v)
+        try:
+            s = str(v).strip().replace(",", "").replace("$", "")
+            return float(s) if s else default
+        except Exception:
+            return default
+
+    def _qty(v: Any) -> int:
+        n = int(_num(v, 1) or 1)
+        return n if n >= 1 else 1
+
+    total_value = sum(_num(i.get("cost")) * _qty(i.get("quantity")) for i in items)
     checked_out_n = sum(1 for i in items if i.get("is_checked_out"))
     consumables_n = sum(1 for i in items if i.get("is_consumable"))
     needs_repair_n = sum(1 for i in items if i.get("needs_repair"))
