@@ -164,13 +164,67 @@ export default function MoreScreen() {
           }}
         />
 
-        <Text style={styles.sectionLabel}>OWNER</Text>
         <Row
           icon="person-circle"
           title="Personal Information"
           subtitle="Name, address, phone, insurance — used in reports"
           testID="more-personal-info"
           onPress={() => router.push("/personal-info")}
+        />
+
+        <Row
+          icon="heart"
+          title="Wish List"
+          subtitle="Saved links to tools you want"
+          testID="more-wishlist"
+          onPress={() => router.push("/wishlist")}
+        />
+
+        <Row
+          icon="people"
+          title="Borrowers"
+          subtitle="Who has your tools"
+          testID="more-borrowers"
+          onPress={() => router.push("/borrowers")}
+        />
+
+        <Row
+          icon="pricetag"
+          title="Inventory for Sale"
+          subtitle="List items, mark as sold, sale & sold reports"
+          testID="more-for-sale"
+          onPress={() => router.push("/for-sale")}
+        />
+
+        <Row
+          icon="shield-checkmark"
+          title="Warranty Alerts"
+          subtitle="Expiring & expired warranties"
+          testID="more-warranty"
+          onPress={() => router.push("/warranty")}
+        />
+
+        <Row
+          icon="settings"
+          title="Maintenance"
+          subtitle={
+            totalDue > 0
+              ? `${mntDue.overdue} overdue, ${mntDue.due_soon} due soon`
+              : "Calibration & service schedules"
+          }
+          testID="more-maintenance"
+          badge={totalDue}
+          badgeColor={mntDue.overdue > 0 ? theme.colors.danger : theme.colors.accent}
+          onPress={() => router.push("/maintenance")}
+        />
+
+        <Text style={styles.sectionLabel}>REPORTS</Text>
+        <Row
+          icon="document-text"
+          title="Reports"
+          subtitle="PDF / CSV exports & saved presets"
+          testID="more-reports"
+          onPress={() => router.push("/reports")}
         />
         <Row
           icon="shield"
@@ -201,54 +255,6 @@ export default function MoreScreen() {
           subtitle="Nested storage hierarchy"
           testID="more-locations"
           onPress={() => router.push("/locations")}
-        />
-        <Row
-          icon="shield-checkmark"
-          title="Warranty Alerts"
-          subtitle="Expiring & expired warranties"
-          testID="more-warranty"
-          onPress={() => router.push("/warranty")}
-        />
-        <Row
-          icon="settings"
-          title="Maintenance"
-          subtitle={
-            totalDue > 0
-              ? `${mntDue.overdue} overdue, ${mntDue.due_soon} due soon`
-              : "Calibration & service schedules"
-          }
-          testID="more-maintenance"
-          badge={totalDue}
-          badgeColor={mntDue.overdue > 0 ? theme.colors.danger : theme.colors.accent}
-          onPress={() => router.push("/maintenance")}
-        />
-        <Row
-          icon="heart"
-          title="Wish List"
-          subtitle="Saved links to tools you want"
-          testID="more-wishlist"
-          onPress={() => router.push("/wishlist")}
-        />
-        <Row
-          icon="document-text"
-          title="Reports"
-          subtitle="PDF / CSV exports & saved presets"
-          testID="more-reports"
-          onPress={() => router.push("/reports")}
-        />
-        <Row
-          icon="pricetag"
-          title="Inventory for Sale"
-          subtitle="List items, mark as sold, sale & sold reports"
-          testID="more-for-sale"
-          onPress={() => router.push("/for-sale")}
-        />
-        <Row
-          icon="people"
-          title="Borrowers"
-          subtitle="Who has your tools"
-          testID="more-borrowers"
-          onPress={() => router.push("/borrowers")}
         />
 
         <Text style={styles.sectionLabel}>DISPLAY</Text>

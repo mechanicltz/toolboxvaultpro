@@ -20,11 +20,10 @@ export function ReportsFab() {
     <View pointerEvents="box-none" style={styles.wrap}>
       <TouchableOpacity
         testID="global-selling-btn"
-        style={[styles.btn, styles.btnSelling]}
+        style={styles.btn}
         onPress={() => router.push("/for-sale")}
         accessibilityLabel="Inventory for Sale"
       >
-        <Ionicons name="pricetag" size={18} color={theme.colors.accent} />
         <Text style={styles.text}>SELLING</Text>
       </TouchableOpacity>
       <TouchableOpacity
@@ -33,7 +32,6 @@ export function ReportsFab() {
         onPress={() => router.push("/reports")}
         accessibilityLabel="Reports"
       >
-        <Ionicons name="document-text" size={18} color={theme.colors.accent} />
         <Text style={styles.text}>REPORTS</Text>
       </TouchableOpacity>
     </View>
@@ -44,34 +42,28 @@ const styles = StyleSheet.create({
   wrap: {
     position: "absolute",
     top: Platform.OS === "ios" ? 56 : 16,
-    right: 14,
+    right: 12,
     zIndex: 50,
     flexDirection: "row",
-    gap: 8,
+    gap: 6,
   },
   btn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
     backgroundColor: "rgba(15,15,15,0.9)",
     borderWidth: 1,
     borderColor: theme.colors.accent,
     paddingHorizontal: 10,
-    paddingVertical: 7,
-    borderRadius: 6,
+    paddingVertical: 5,
+    borderRadius: 5,
     shadowColor: "#000",
     shadowOpacity: 0.3,
     shadowRadius: 6,
     shadowOffset: { width: 0, height: 2 },
     elevation: 4,
   },
-  btnSelling: {
-    // Same look as REPORTS — keeps the pair visually balanced
-  },
   text: {
     color: theme.colors.accent,
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: "900",
-    letterSpacing: 1.5,
+    letterSpacing: 1.2,
   },
 });

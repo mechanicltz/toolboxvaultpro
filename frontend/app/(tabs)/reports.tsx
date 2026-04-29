@@ -23,6 +23,7 @@ import { theme } from "../../src/theme";
 import { api } from "../../src/api";
 import { buildLocationTree, flattenLocationTree } from "../../src/locationTree";
 import { DateField } from "../../src/DateField";
+import { printReportHtml } from "../../src/printHtml";
 
 const PRESET_KEY = "@reports_presets_v1";
 
@@ -481,19 +482,6 @@ export default function ReportsScreen() {
       return;
     }
 
-    // PDF on web: open popup synchronously to avoid blockers
-    let printWin: Window | null = null;
-    if (format === "pdf" && Platform.OS === "web") {
-      printWin = window.open("", "_blank");
-      if (!printWin) {
-        Alert.alert("Popup blocked", "Allow popups for this site to open the report.");
-        return;
-      }
-      printWin.document.write(
-        "<!doctype html><title>Loading...</title><body style='font-family:Helvetica;padding:40px;color:#666'>Generating report...</body>"
-      );
-    }
-
     setBusy(true);
     try {
       let tools = await api.listTools(filter);
@@ -505,25 +493,7 @@ export default function ReportsScreen() {
 
       if (format === "pdf") {
         const html = buildPdfHtml(title, finalSubtitle, tools, selected);
-        if (Platform.OS === "web") {
-          if (!printWin) return;
-          const fullHtml = html.replace(
-            "</body>",
-            "<script>setTimeout(function(){window.print();},700);</script></body>"
-          );
-          printWin.document.open();
-          printWin.document.write(fullHtml);
-          printWin.document.close();
-          printWin.document.title = title;
-        } else {
-          const { uri } = await Print.printToFileAsync({ html });
-          if (await Sharing.isAvailableAsync()) {
-            await Sharing.shareAsync(uri, {
-              mimeType: "application/pdf",
-              dialogTitle: title,
-            });
-          }
-        }
+        await printReportHtml(html, title.replace(/\s+/g, "-").toLowerCase());
       } else {
         // CSV
         const csv = buildCsv(tools, selected);

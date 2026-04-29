@@ -81,42 +81,86 @@ export default function InsuranceReportScreen() {
 
   const generate = async () => {
     setGenerating(true);
-    let printWin: Window | null = null;
+
+    // Build HTML synchronously first — no awaits before we touch the DOM.
+    let html: string;
+    try {
+      html = buildHtml(profile, tools, total, includeThumbs, includeNotes);
+    } catch (e: any) {
+      setGenerating(false);
+      Alert.alert("Error", e?.message || "Could not build report.");
+      return;
+    }
+
     try {
       if (Platform.OS === "web") {
-        printWin = window.open("", "_blank");
-        if (!printWin) {
-          Alert.alert("Popup blocked", "Please allow popups for this site.");
-          setGenerating(false);
-          return;
+        // Strategy: inject a hidden iframe with srcdoc=html, then trigger
+        // its contentWindow.print(). This works inside parent sandboxed
+        // iframes (no popup needed), unlike window.open() which gets blocked.
+        const w: any = (globalThis as any).window;
+        const doc: any = w.document;
+        const iframe = doc.createElement("iframe");
+        iframe.style.position = "fixed";
+        iframe.style.right = "0";
+        iframe.style.bottom = "0";
+        iframe.style.width = "1px";
+        iframe.style.height = "1px";
+        iframe.style.border = "0";
+        iframe.style.opacity = "0";
+        iframe.setAttribute(
+          "sandbox",
+          "allow-same-origin allow-scripts allow-modals allow-popups",
+        );
+        doc.body.appendChild(iframe);
+
+        await new Promise<void>((resolve) => {
+          iframe.onload = () => {
+            try {
+              iframe.contentWindow?.focus();
+              iframe.contentWindow?.print();
+            } catch {
+              /* ignore */
+            }
+            // Keep iframe alive long enough for the print dialog to read it
+            setTimeout(() => {
+              try {
+                doc.body.removeChild(iframe);
+              } catch {
+                /* ignore */
+              }
+              resolve();
+            }, 30000);
+          };
+          iframe.srcdoc = html;
+        });
+
+        // Parallel fallback: download the HTML file too — guaranteed to work.
+        try {
+          const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+          const url = w.URL.createObjectURL(blob);
+          const a = doc.createElement("a");
+          a.href = url;
+          a.download = `insurance-report-${Date.now()}.html`;
+          a.style.display = "none";
+          doc.body.appendChild(a);
+          a.click();
+          doc.body.removeChild(a);
+          setTimeout(() => w.URL.revokeObjectURL(url), 60_000);
+        } catch {
+          /* ignore */
         }
-        printWin.document.write(
-          "<!doctype html><title>Generating Insurance Report...</title><body style='font-family:Helvetica;padding:40px;color:#666'>Generating Insurance Report...</body>"
-        );
-      }
-
-      const html = buildHtml(profile, tools, total, includeThumbs, includeNotes);
-
-      if (Platform.OS === "web") {
-        if (!printWin) return;
-        const fullHtml = html.replace(
-          "</body>",
-          "<script>setTimeout(function(){window.print();},800);</script></body>"
-        );
-        printWin.document.open();
-        printWin.document.write(fullHtml);
-        printWin.document.close();
-        printWin.document.title = "Insurance Inventory Report";
       } else {
         const { uri } = await Print.printToFileAsync({ html });
         if (await Sharing.isAvailableAsync()) {
-          await Sharing.shareAsync(uri, { mimeType: "application/pdf" });
+          await Sharing.shareAsync(uri, {
+            mimeType: "application/pdf",
+            dialogTitle: "Insurance Inventory Report",
+          });
         }
       }
       setShowOpts(false);
     } catch (e: any) {
-      if (printWin) printWin.close();
-      Alert.alert("Error", e.message || "Could not generate report.");
+      Alert.alert("Error", e?.message || "Could not generate report.");
     } finally {
       setGenerating(false);
     }

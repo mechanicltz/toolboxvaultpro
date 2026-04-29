@@ -824,3 +824,21 @@ Fix #2 — PDF reports actually generate now:
    "data:image/jpeg;base64,..."). Updated both the card thumbnail and the
    PDF imgSrc() to handle both shapes.  Verified by main agent: card
    image shows the actual photo (naturalWidth=3024, naturalHeight=4032).
+
+## 2026-04-29 — Insurance Report + general Reports PDF generation fixed
+- Issue: User reported the Insurance Report did not work.  Root cause was
+  the same as the earlier for-sale PDF bug: window.open("", "_blank") is
+  blocked when running inside the platform's sandboxed preview iframe,
+  and Print.printToFileAsync on web is a no-op there.
+- Fix: Created /app/frontend/src/printHtml.ts as a shared helper that:
+    * On web: injects a hidden iframe with srcdoc=html and triggers
+      iframe.contentWindow.print() — works inside sandboxed parents.
+    * Parallel fallback: also kicks off a Blob → anchor download of the
+      same HTML so the user always has the file.
+    * On native: falls back to expo-print + expo-sharing.
+- Refactored both /app/frontend/app/insurance-report.tsx and
+  /app/frontend/app/(tabs)/reports.tsx to use the shared printReportHtml
+  helper; for-sale.tsx already used the same iframe pattern inline.
+- Verified: Direct iframe injection in the preview returns the rendered
+  HTML body text (proves browser supports it). For-sale BULK SHEET click
+  produces an iframe with 3463 chars of HTML content (full report).
