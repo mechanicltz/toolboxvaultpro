@@ -516,13 +516,24 @@ export default function InventoryScreen() {
                 </View>
                 <Text style={styles.rowSub} numberOfLines={1}>
                   {item.location_name || "No location"}
-                  {prefs.show_prices && item.cost ? `  ·  $${Number(item.cost).toFixed(0)}` : ""}
+                  {prefs.show_prices && item.cost
+                    ? `  ·  $${(Number(item.cost) * Math.max(1, Number(item.quantity) || 1)).toFixed(0)}`
+                    : ""}
                 </Text>
-                {!!item.dealer_name && (
-                  <Text style={styles.rowDealer} numberOfLines={1}>
-                    <Ionicons name="briefcase" size={11} color={theme.colors.textMuted} />{" "}
-                    {item.dealer_name}
-                  </Text>
+                {(!!item.dealer_name || (Number(item.quantity) || 1) > 1) && (
+                  <View style={styles.rowDealerLine}>
+                    {!!item.dealer_name && (
+                      <Text style={styles.rowDealer} numberOfLines={1}>
+                        <Ionicons name="briefcase" size={11} color={theme.colors.textMuted} />{" "}
+                        {item.dealer_name}
+                      </Text>
+                    )}
+                    {(Number(item.quantity) || 1) > 1 && (
+                      <View style={styles.rowQtyPill}>
+                        <Text style={styles.rowQtyPillText}>×{Number(item.quantity)}</Text>
+                      </View>
+                    )}
+                  </View>
                 )}
                 {(() => {
                   // Compute soonest maintenance due date
@@ -926,8 +937,27 @@ const styles = StyleSheet.create({
     color: theme.colors.textMuted,
     fontSize: 11,
     fontWeight: "700",
-    marginTop: 4,
     letterSpacing: 0.3,
+    flexShrink: 1,
+  },
+  rowDealerLine: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginTop: 4,
+    flexWrap: "wrap",
+  },
+  rowQtyPill: {
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 6,
+    backgroundColor: theme.colors.accent,
+  },
+  rowQtyPillText: {
+    color: "#000",
+    fontSize: 11,
+    fontWeight: "900",
+    letterSpacing: 0.5,
   },
   mntPill: {
     flexDirection: "row",
