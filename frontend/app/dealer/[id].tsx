@@ -68,7 +68,11 @@ export default function DealerDetail() {
     if (b.id === dealer.current_agent_id) return 1;
     return 0;
   });
-  const total = tools.reduce((s, t) => s + (t.cost || 0), 0);
+  const total = tools.reduce((s, t) => {
+    const cost = Number(t.cost) || 0;
+    const qty = Math.max(1, Number(t.quantity) || 1);
+    return s + cost * qty;
+  }, 0);
   const cats = new Set(tools.map((t) => t.category_name).filter(Boolean));
   const tags = new Set(tools.flatMap((t) => t.tag_names || []));
 
@@ -291,12 +295,10 @@ export default function DealerDetail() {
           <Text style={styles.sectionLabelStrong}>
             TOOLS PURCHASED FROM {dealer.name.toUpperCase()}
           </Text>
-          {prefs.show_prices && (
-            <View style={styles.totalPill}>
-              <Text style={styles.totalPillLabel}>TOTAL SPENT</Text>
-              <Text style={styles.totalPillValue}>${total.toFixed(2)}</Text>
-            </View>
-          )}
+          <View style={styles.totalPill}>
+            <Text style={styles.totalPillLabel}>TOTAL SPENT</Text>
+            <Text style={styles.totalPillValue}>${total.toFixed(2)}</Text>
+          </View>
         </View>
         <TouchableOpacity
           testID="view-dealer-tools-btn"
@@ -320,9 +322,7 @@ export default function DealerDetail() {
             <Text style={styles.viewToolsSub}>
               {tools.length === 0
                 ? "Assign a dealer to a tool to see it here"
-                : `Tap to browse the full list${
-                    prefs.show_prices ? `  ·  Total $${total.toFixed(2)}` : ""
-                  }`}
+                : `Tap to browse the full list  ·  Total $${total.toFixed(2)}`}
             </Text>
           </View>
           <Ionicons name="chevron-forward" size={20} color={theme.colors.textMuted} />
