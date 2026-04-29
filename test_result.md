@@ -777,3 +777,38 @@ Verified end-to-end by main agent:
   scroll above the panel and are fully reachable.
 - Verified by main agent: in select mode, all 4 cards are tappable, last
   card sits at y≈500 with bulk bar at y≈900 (canTapLast=true).
+
+## 2026-04-29 — Sale toggle moved to detail screen + PDF reports fixed
+User feedback:
+1. "marking of an item for sale or not for sale should be in the items
+   description not under the edit tab"
+2. "the pdf reports do not work"
+
+Fix #1 — Moved sale UI from edit form to tool detail page:
+- Removed FOR SALE Switch + price inputs from app/tool/edit.tsx (and the
+  associated state/payload).
+- On app/tool/[id].tsx, the sale UI is now a prominent inline action right
+  under the AVAILABLE status banner:
+    - When NOT for sale: dashed yellow "🏷️ LIST FOR SALE >" CTA
+    - When listed: yellow banner with price + listed date + sale notes,
+      plus 3 buttons: EDIT LISTING (black) / UNLIST (subtle) / MARK SOLD (green)
+    - When sold: green SOLD banner with price + date + buyer
+- New "List For Sale" modal captures SALE PRICE + NOTES, calls PUT /tools/{id}
+  with for_sale=true.
+
+Fix #2 — PDF reports actually generate now:
+- Old code used Print.printToFileAsync on web, which doesn't work the same
+  way as native and on the platform's sandboxed preview did nothing.
+- New approach (in app/for-sale.tsx generatePdf):
+    - Build HTML synchronously first (no awaits before opening the print
+      surface) so popup-blockers don't kill us.
+    - Web: inject a hidden iframe with srcdoc=html, then call
+      iframe.contentWindow.print() to open the browser's print dialog.
+      This works inside parent sandboxed iframes (no popup needed).
+    - PARALLEL fallback: also trigger a Blob → anchor download of the
+      same HTML (saves as .html), so even if the print dialog gets
+      dismissed, the user has the file.
+    - Native: still uses expo-print + expo-sharing.
+- Verified by main agent: iframe injected with full report content
+  ("ITEMS FOR SALE / Items: 1 / Asking Total: $350.00 / Test 2 / FOR SALE"),
+  no crash.

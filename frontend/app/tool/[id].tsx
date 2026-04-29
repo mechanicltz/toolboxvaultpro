@@ -53,6 +53,9 @@ export default function ToolDetail() {
   const [showRepair, setShowRepair] = useState(false);
   const [showMarkSold, setShowMarkSold] = useState(false);
   const [showSoldDelete, setShowSoldDelete] = useState(false);
+  const [showSaleListing, setShowSaleListing] = useState(false);
+  const [saleForm, setSaleForm] = useState({ price: "", notes: "" });
+  const [saleBusy, setSaleBusy] = useState(false);
   const [markSoldForm, setMarkSoldForm] = useState({
     sold_price: "",
     sold_to: "",
@@ -60,6 +63,39 @@ export default function ToolDetail() {
     sold_notes: "",
   });
   const [markSoldBusy, setMarkSoldBusy] = useState(false);
+
+  const openSaleModal = () => {
+    setSaleForm({
+      price: tool?.sale_price ? String(tool.sale_price) : "",
+      notes: tool?.sale_notes || "",
+    });
+    setShowSaleListing(true);
+  };
+
+  const submitSaleListing = async () => {
+    setSaleBusy(true);
+    try {
+      const price = parseFloat(saleForm.price);
+      if (isNaN(price) || price < 0) {
+        Alert.alert("Invalid price", "Please enter a valid sale price.");
+        setSaleBusy(false);
+        return;
+      }
+      await api.updateTool(tool.id, {
+        for_sale: true,
+        sale_price: price,
+        sale_listed_at:
+          tool?.sale_listed_at || new Date().toISOString().substring(0, 10),
+        sale_notes: saleForm.notes,
+      });
+      setShowSaleListing(false);
+      load();
+    } catch (e: any) {
+      Alert.alert("Error", String(e?.message || e));
+    } finally {
+      setSaleBusy(false);
+    }
+  };
   const [repairForm, setRepairForm] = useState({
     company_notified: "",
     notified_at: "",
@@ -453,37 +489,8 @@ export default function ToolDetail() {
 
           <LostStatusBanner tool={tool} onChange={load} />
 
-          {/* For Sale banner */}
-          {tool.for_sale && !tool.is_sold && (
-            <View style={styles.saleBanner}>
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-                <Ionicons name="pricetag" size={22} color="#000" />
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.saleBannerTitle}>
-                    FOR SALE
-                  </Text>
-                  <Text style={styles.saleBannerPrice}>
-                    {`$${(tool.sale_price || 0).toFixed(2)}`}
-                    {tool.sale_listed_at ? `  ·  Listed ${formatDateUS(tool.sale_listed_at)}` : ""}
-                  </Text>
-                  {!!tool.sale_notes && (
-                    <Text style={styles.saleBannerNotes}>{tool.sale_notes}</Text>
-                  )}
-                </View>
-                <TouchableOpacity
-                  testID="mark-sold-btn"
-                  style={styles.markSoldBtn}
-                  onPress={() => setShowMarkSold(true)}
-                >
-                  <Ionicons name="checkmark-circle" size={14} color="#fff" />
-                  <Text style={styles.markSoldText}>MARK SOLD</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          )}
-
-          {/* Sold banner */}
-          {tool.is_sold && (
+          {/* For Sale section — primary action on the item details */}
+          {tool.is_sold ? (
             <View style={[styles.saleBanner, { backgroundColor: "#27AE60" }]}>
               <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
                 <Ionicons name="checkmark-done-circle" size={22} color="#fff" />
@@ -497,6 +504,66 @@ export default function ToolDetail() {
                 </View>
               </View>
             </View>
+          ) : tool.for_sale ? (
+            <View style={styles.saleBanner}>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+                <Ionicons name="pricetag" size={22} color="#000" />
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.saleBannerTitle}>FOR SALE</Text>
+                  <Text style={styles.saleBannerPrice}>
+                    {`$${(tool.sale_price || 0).toFixed(2)}`}
+                    {tool.sale_listed_at ? `  ·  Listed ${formatDateUS(tool.sale_listed_at)}` : ""}
+                  </Text>
+                  {!!tool.sale_notes && (
+                    <Text style={styles.saleBannerNotes}>{tool.sale_notes}</Text>
+                  )}
+                </View>
+              </View>
+              <View style={{ flexDirection: "row", gap: 8, marginTop: 12 }}>
+                <TouchableOpacity
+                  testID="edit-listing-btn"
+                  style={[styles.markSoldBtn, { flex: 1, backgroundColor: "#000" }]}
+                  onPress={() => openSaleModal()}
+                >
+                  <Ionicons name="create-outline" size={14} color="#FFB300" />
+                  <Text style={[styles.markSoldText, { color: "#FFB300" }]}>EDIT LISTING</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  testID="unlist-btn"
+                  style={[styles.markSoldBtn, { flex: 1, backgroundColor: "rgba(0,0,0,0.15)" }]}
+                  onPress={async () => {
+                    try {
+                      await api.updateTool(tool.id, { for_sale: false, sale_price: 0, sale_notes: "" });
+                      load();
+                    } catch (e: any) {
+                      Alert.alert("Error", String(e?.message || e));
+                    }
+                  }}
+                >
+                  <Ionicons name="close-circle" size={14} color="#000" />
+                  <Text style={[styles.markSoldText, { color: "#000" }]}>UNLIST</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  testID="mark-sold-btn"
+                  style={[styles.markSoldBtn, { flex: 1.2 }]}
+                  onPress={() => setShowMarkSold(true)}
+                >
+                  <Ionicons name="checkmark-circle" size={14} color="#fff" />
+                  <Text style={styles.markSoldText}>MARK SOLD</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          ) : (
+            // Not for sale yet — show a compact CTA to list it
+            <TouchableOpacity
+              testID="list-for-sale-btn"
+              style={styles.listForSaleCta}
+              onPress={() => openSaleModal()}
+            >
+              <Ionicons name="pricetag-outline" size={18} color={theme.colors.accent} />
+              <Text style={styles.listForSaleCtaText}>LIST FOR SALE</Text>
+              <Ionicons name="chevron-forward" size={16} color={theme.colors.textMuted} />
+            </TouchableOpacity>
           )}
 
           {tool.needs_repair && (
@@ -1008,6 +1075,69 @@ export default function ToolDetail() {
         </View>
       </Modal>
 
+      {/* List For Sale Modal */}
+      <Modal visible={showSaleListing} transparent animationType="slide" onRequestClose={() => setShowSaleListing(false)}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+          style={styles.modalBackdrop}
+        >
+          <View style={styles.modalCard}>
+            <View style={styles.modalHeader}>
+              <Ionicons name="pricetag" size={20} color={theme.colors.accent} />
+              <Text style={styles.modalTitle}>
+                {tool?.for_sale ? "EDIT SALE LISTING" : "LIST FOR SALE"}
+              </Text>
+              <TouchableOpacity onPress={() => setShowSaleListing(false)} hitSlop={10}>
+                <Ionicons name="close" size={22} color={theme.colors.textPrimary} />
+              </TouchableOpacity>
+            </View>
+            <Text style={styles.repairLabel}>SALE PRICE ($)</Text>
+            <TextInput
+              testID="list-sale-price"
+              placeholder="0.00"
+              placeholderTextColor={theme.colors.textMuted}
+              value={saleForm.price}
+              onChangeText={(v) => setSaleForm({ ...saleForm, price: v })}
+              style={styles.input}
+              keyboardType="decimal-pad"
+              autoFocus
+            />
+            <Text style={styles.repairLabel}>NOTES (optional)</Text>
+            <TextInput
+              testID="list-sale-notes"
+              placeholder="Reason for selling, condition notes, contact info..."
+              placeholderTextColor={theme.colors.textMuted}
+              value={saleForm.notes}
+              onChangeText={(v) => setSaleForm({ ...saleForm, notes: v })}
+              style={[styles.input, { height: 80, textAlignVertical: "top" }]}
+              multiline
+            />
+            <View style={{ flexDirection: "row", gap: 10, marginTop: 16 }}>
+              <TouchableOpacity
+                onPress={() => setShowSaleListing(false)}
+                style={[styles.modalBtn, { flex: 1, backgroundColor: theme.colors.bgSecondary }]}
+              >
+                <Text style={[styles.modalBtnText, { color: theme.colors.textPrimary }]}>CANCEL</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                testID="confirm-list-sale"
+                disabled={saleBusy}
+                onPress={submitSaleListing}
+                style={[styles.modalBtn, { flex: 1, backgroundColor: theme.colors.accent }]}
+              >
+                {saleBusy ? (
+                  <ActivityIndicator color="#000" />
+                ) : (
+                  <Text style={[styles.modalBtnText, { color: "#000" }]}>
+                    {tool?.for_sale ? "UPDATE LISTING" : "LIST IT"}
+                  </Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
+
       {/* Mark Sold Modal */}
       <Modal visible={showMarkSold} transparent animationType="slide" onRequestClose={() => setShowMarkSold(false)}>
         <KeyboardAvoidingView
@@ -1283,6 +1413,27 @@ const styles = StyleSheet.create({
     padding: 14,
     marginTop: 12,
     marginBottom: 6,
+  },
+  listForSaleCta: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    backgroundColor: theme.colors.surface,
+    borderWidth: 1,
+    borderColor: theme.colors.accent,
+    borderStyle: "dashed",
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    marginTop: 12,
+    marginBottom: 6,
+  },
+  listForSaleCtaText: {
+    flex: 1,
+    color: theme.colors.accent,
+    fontWeight: "900",
+    fontSize: 13,
+    letterSpacing: 1.5,
   },
   saleBannerTitle: {
     color: "#000",

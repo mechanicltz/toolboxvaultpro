@@ -129,24 +129,88 @@ export default function ForSaleScreen() {
 
   const generatePdf = async (mode: "bulk" | "perItem") => {
     setReportBusy(true);
+
+    // Build HTML synchronously first, before any async work,
+    // so popup-blockers / sandboxed previews still allow the print window.
+    const html = buildHtml(filtered, mode, tab, { count: totals.count, value: totals.value });
+    const filename = `${tab === "sold" ? "sold-items" : "for-sale"}-${mode}-${Date.now()}.pdf`;
+
     try {
-      const Print = await import("expo-print");
-      const Sharing = await import("expo-sharing");
-      const html = buildHtml(filtered, mode, tab, { count: totals.count, value: totals.value });
-      const result = await Print.printToFileAsync({ html });
       if (Platform.OS === "web") {
-        const link = (globalThis as any).document.createElement("a");
-        link.href = result.uri;
-        link.download = `${tab === "sold" ? "sold" : "for-sale"}-${mode}-${Date.now()}.pdf`;
-        (globalThis as any).document.body.appendChild(link);
-        link.click();
-        (globalThis as any).document.body.removeChild(link);
-      } else if (await Sharing.isAvailableAsync()) {
-        await Sharing.shareAsync(result.uri, { mimeType: "application/pdf" });
+        // Strategy 1: open a print-ready iframe inside the current document.
+        // This works even when the page is itself inside a sandboxed iframe
+        // (the platform's preview), because we don't need a new window.
+        const w: any = (globalThis as any).window;
+        const doc: any = w.document;
+
+        const iframe = doc.createElement("iframe");
+        iframe.style.position = "fixed";
+        iframe.style.right = "0";
+        iframe.style.bottom = "0";
+        iframe.style.width = "1px";
+        iframe.style.height = "1px";
+        iframe.style.border = "0";
+        iframe.style.opacity = "0";
+        // Allow the iframe to run scripts (we add the print() call) and modals.
+        iframe.setAttribute(
+          "sandbox",
+          "allow-same-origin allow-scripts allow-modals allow-popups",
+        );
+        doc.body.appendChild(iframe);
+
+        await new Promise<void>((resolve) => {
+          iframe.onload = () => {
+            try {
+              iframe.contentWindow?.focus();
+              iframe.contentWindow?.print();
+            } catch {
+              /* ignore */
+            }
+            // Leave it briefly so the print dialog can read the document
+            setTimeout(() => {
+              try {
+                doc.body.removeChild(iframe);
+              } catch {
+                /* ignore */
+              }
+              resolve();
+            }, 30000);
+          };
+          // Use srcdoc so the iframe stays same-origin (allow-same-origin)
+          iframe.srcdoc = html;
+        });
+
+        // Strategy 2 (parallel fallback): also offer a downloadable HTML file
+        // — guaranteed to work even if the print dialog was dismissed/blocked.
+        try {
+          const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+          const url = w.URL.createObjectURL(blob);
+          const a = doc.createElement("a");
+          a.href = url;
+          a.download = filename.replace(/\.pdf$/, ".html");
+          a.style.display = "none";
+          doc.body.appendChild(a);
+          a.click();
+          doc.body.removeChild(a);
+          setTimeout(() => w.URL.revokeObjectURL(url), 60_000);
+        } catch {
+          /* ignore download fallback errors */
+        }
+      } else {
+        // Native: use expo-print + share sheet
+        const Print = await import("expo-print");
+        const Sharing = await import("expo-sharing");
+        const result = await Print.printToFileAsync({ html });
+        if (await Sharing.isAvailableAsync()) {
+          await Sharing.shareAsync(result.uri, {
+            mimeType: "application/pdf",
+            dialogTitle: filename,
+          });
+        }
       }
       setShowReportPicker(false);
     } catch (e: any) {
-      Alert.alert("Error", String(e?.message || e));
+      Alert.alert("Error generating report", String(e?.message || e));
     } finally {
       setReportBusy(false);
     }
