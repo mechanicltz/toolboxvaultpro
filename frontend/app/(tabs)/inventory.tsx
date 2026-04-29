@@ -513,6 +513,12 @@ export default function InventoryScreen() {
                       </Text>
                     </View>
                   )}
+                  {!isLost && item.is_checked_out && (
+                    <View style={styles.checkedOutBadge}>
+                      <Ionicons name="swap-horizontal" size={10} color="#fff" />
+                      <Text style={styles.lostBadgeText}>CHECKED OUT</Text>
+                    </View>
+                  )}
                 </View>
                 <Text style={styles.rowSub} numberOfLines={1}>
                   {item.location_name || "No location"}
@@ -1045,6 +1051,15 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 3,
     backgroundColor: theme.colors.danger,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 3,
+  },
+  checkedOutBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 3,
+    backgroundColor: theme.colors.accentSecondary,
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 3,
