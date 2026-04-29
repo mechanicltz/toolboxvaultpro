@@ -78,14 +78,12 @@ export default function DealerToolsScreen() {
       <View style={styles.summary}>
         <View style={styles.summaryCell}>
           <Text style={styles.summaryValue}>{tools.length}</Text>
-          <Text style={styles.summaryLabel}>{tools.length === 1 ? "TOOL" : "TOOLS"}</Text>
+          <Text style={styles.summaryLabel}>TOTAL TOOLS</Text>
         </View>
-        {prefs.show_prices && (
-          <View style={[styles.summaryCell, styles.summaryCellAccent]}>
-            <Text style={styles.summaryValueAccent}>${total.toFixed(2)}</Text>
-            <Text style={styles.summaryLabelAccent}>TOTAL SPENT</Text>
-          </View>
-        )}
+        <View style={[styles.summaryCell, styles.summaryCellAccent]}>
+          <Text style={styles.summaryValueAccent}>${total.toFixed(2)}</Text>
+          <Text style={styles.summaryLabelAccent}>TOTAL INVESTED</Text>
+        </View>
       </View>
 
       {loading ? (
