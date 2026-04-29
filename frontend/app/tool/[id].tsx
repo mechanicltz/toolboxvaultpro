@@ -517,12 +517,60 @@ export default function ToolDetail() {
               </View>
             )}
 
+            {/* Dealer / Agent — right under the tags */}
+            {(!!tool.dealer_name || !!tool.purchased_from_agent_name) && (
+              <TouchableOpacity
+                testID="detail-dealer-row"
+                activeOpacity={tool.dealer_id ? 0.7 : 1}
+                onPress={() => {
+                  if (tool.dealer_id) router.push(`/dealer/${tool.dealer_id}`);
+                }}
+                style={styles.detailRow}
+              >
+                <Ionicons
+                  name="briefcase"
+                  size={16}
+                  color={theme.colors.accent}
+                />
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.detailRowLabel}>DEALER</Text>
+                  <Text style={styles.detailRowValue}>
+                    {tool.dealer_name || "—"}
+                    {tool.purchased_from_agent_name
+                      ? `  ·  ${tool.purchased_from_agent_name}`
+                      : ""}
+                  </Text>
+                </View>
+                {tool.dealer_id && (
+                  <Ionicons
+                    name="chevron-forward"
+                    size={16}
+                    color={theme.colors.textMuted}
+                  />
+                )}
+              </TouchableOpacity>
+            )}
+
+            {/* Location — right under dealer/agent */}
+            {!!tool.location_name && (
+              <View style={styles.detailRow}>
+                <Ionicons
+                  name="location"
+                  size={16}
+                  color={theme.colors.accent}
+                />
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.detailRowLabel}>LOCATION</Text>
+                  <Text style={styles.detailRowValue}>{tool.location_name}</Text>
+                </View>
+              </View>
+            )}
+
             <View style={styles.grid}>
               <Field label="Brand" value={tool.brand} />
               <Field label="Model" value={tool.model} />
               <Field label="Serial #" value={tool.serial_number} />
               <Field label="Cost" value={`$${(tool.cost || 0).toFixed(2)}`} />
-              <Field label="Location" value={tool.location_name} />
               <Field label="Condition" value={tool.condition} />
               <Field label="Purchased" value={formatDateUS(tool.purchase_date)} />
             </View>
@@ -1014,6 +1062,30 @@ const styles = StyleSheet.create({
   title: { color: theme.colors.textPrimary, fontSize: 26, fontWeight: "900", letterSpacing: 1 },
   description: { color: theme.colors.textSecondary, fontSize: 15, marginTop: 8, lineHeight: 22 },
   tagWrap: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 16 },
+  detailRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    backgroundColor: theme.colors.surface,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    marginTop: 10,
+  },
+  detailRowLabel: {
+    color: theme.colors.textMuted,
+    fontSize: 10,
+    fontWeight: "800",
+    letterSpacing: 1.8,
+    marginBottom: 2,
+  },
+  detailRowValue: {
+    color: theme.colors.textPrimary,
+    fontSize: 14,
+    fontWeight: "700",
+  },
   tag: {
     paddingHorizontal: 10,
     paddingVertical: 4,

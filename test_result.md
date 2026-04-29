@@ -721,3 +721,15 @@ date values were rendered without MM/DD/YYYY formatting.
 - Verified by main agent: all date inputs are now `<input type="date">`
   pickers on web and the OS modal calendar on native.  All date displays
   consistent at MM/DD/YYYY.
+
+## 2026-04-29 — Tool detail layout: Dealer/Agent and Location promoted
+- Per user request, surfaced Dealer/Agent and Location to prominent rows
+  directly under Tags, before the Brand/Model/etc. grid.
+- New layout order on tool detail card:
+    1. Title + description
+    2. Tag pills
+    3. DEALER row (Snapon · Chris) — tappable, navigates to dealer detail
+    4. LOCATION row (Shop 1 → Green toolbox)
+    5. Existing details grid (Brand, Model, Serial, Cost, Condition, Purchased)
+- Both rows are conditional — only render if the tool has that data.
+- Verified by main agent via screenshot + DOM y-coord ordering check.
