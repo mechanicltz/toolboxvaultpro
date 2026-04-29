@@ -985,3 +985,52 @@ Fix #2 — PDF reports actually generate now:
   * New Claims report renders with status pills, photo, dealer, dates.
   * CSV exports retain the # gutter and 6-column inventory layout.
 
+
+## 2026-04-29 — Contacts hub: rename + bottom-bar chooser + tappable contact links
+- User requests:
+  1. Rename "Borrower" area UI to "Contacts" (keep routes/data names).
+  2. Bottom bar: replace DEALERS tab with CONTACTS (people icon) that
+     opens a chooser sheet → Dealers OR Contacts.
+  3. Remove the Borrowers row from the More menu.
+  4. On a contact's detail page, contact info (email/phone) must be
+     tappable to call or email.
+
+- Files changed:
+  * /app/frontend/src/BottomBar.tsx — full rewrite. Tabs are now
+    HOME · INVENTORY · CONTACTS · CLAIMS · MORE.  The CONTACTS tab is
+    declared with a `chooser` config; tapping it opens a Modal with a
+    bottom-sheet UI listing two cards (Dealers, Contacts) and a CANCEL
+    button. The active highlight uses `altRoutes` so the tab stays lit
+    when the user is on either /dealers or /borrowers.
+  * /app/frontend/app/(tabs)/more.tsx — removed the "Borrowers" Row
+    block; contacts is now reachable only from the bottom bar.
+  * /app/frontend/app/(tabs)/borrowers.tsx — header title changed
+    "PEOPLE" → "CONTACTS"; "SAVED PEOPLE" → "SAVED CONTACTS"; "NEW
+    PERSON" → "NEW CONTACT". Each list row now renders a new
+    `<RowContactChips>` component that detects email and phone strings
+    and renders them as tappable yellow pills (using `Linking.openURL`).
+  * /app/frontend/app/borrower/[id].tsx — large hero now renders
+    `<ContactActions>` instead of plain text — same parser produces
+    full-width call/email pills under the contact name.
+  * /app/frontend/src/contactLinks.ts — NEW. Exposes
+    `parseContacts(raw)` (returns `{emails, phones}`),
+    `openEmail(addr)` and `openPhone(num)`.  Phone parser strips
+    everything except digits and a leading `+` before the `tel:`
+    href; emails use `mailto:`. On web `window.location.href` is
+    used; on native `Linking.canOpenURL` + `openURL`. Falls back to
+    showing the raw text muted if it can't be parsed.
+
+- Verified end-to-end (mobile viewport):
+  * Bottom bar — CONTACTS icon now in the slot Dealers used to occupy.
+  * Tapping CONTACTS produces an animated bottom sheet titled "Open"
+    with two cards (Dealers / Contacts) and a CANCEL button.
+  * Tapping the Dealers card → /dealers.  Tapping Contacts → /borrowers
+    which now shows title "CONTACTS · BORROWERS & CHECKOUTS".
+  * The contacts list shows tappable yellow chips next to each row
+    (📞 555-867-5309  ·  ✉ ryan@example.com) which call `tel:` /
+    `mailto:` without triggering the row's outer onPress (stopPropagation).
+  * The contact detail page shows two larger tappable pills under the
+    name. Both work on web (mailto opens default client; tel: prompts
+    handler). The unparseable case still shows the raw text muted.
+  * Borrowers row no longer appears in the More menu.
+

@@ -6,6 +6,7 @@ import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { theme } from "../../src/theme";
 import { api } from "../../src/api";
 import { formatDateTime } from "../../src/dt";
+import { parseContacts, openEmail, openPhone } from "../../src/contactLinks";
 
 export default function BorrowerHistory() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -51,7 +52,7 @@ export default function BorrowerHistory() {
             </Text>
           </View>
           <Text style={styles.bigName}>{b.name}</Text>
-          {!!b.contact && <Text style={styles.contact}>{b.contact}</Text>}
+          <ContactActions raw={b.contact} />
         </View>
 
         <View style={styles.statGrid}>
@@ -154,6 +155,43 @@ function Cell({ label, value, highlight }: { label: string; value: string; highl
   );
 }
 
+function ContactActions({ raw }: { raw?: string | null }) {
+  if (!raw) return null;
+  const { emails, phones } = parseContacts(raw);
+  if (emails.length === 0 && phones.length === 0) {
+    // unparseable — still render the raw text muted but not tappable
+    return <Text style={styles.contact}>{raw}</Text>;
+  }
+  return (
+    <View style={styles.actionsWrap}>
+      {phones.map((p) => (
+        <TouchableOpacity
+          key={`p-${p}`}
+          testID={`contact-call-${p}`}
+          style={styles.actionBtn}
+          onPress={() => openPhone(p)}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="call" size={16} color={theme.colors.accent} />
+          <Text style={styles.actionText} numberOfLines={1}>{p}</Text>
+        </TouchableOpacity>
+      ))}
+      {emails.map((e) => (
+        <TouchableOpacity
+          key={`e-${e}`}
+          testID={`contact-email-${e}`}
+          style={styles.actionBtn}
+          onPress={() => openEmail(e)}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="mail" size={16} color={theme.colors.accent} />
+          <Text style={styles.actionText} numberOfLines={1}>{e}</Text>
+        </TouchableOpacity>
+      ))}
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.colors.bg },
   topBar: {
@@ -175,6 +213,30 @@ const styles = StyleSheet.create({
   bigAvatarText: { color: theme.colors.accent, fontWeight: "900", fontSize: 22, letterSpacing: 2 },
   bigName: { color: theme.colors.textPrimary, fontSize: 22, fontWeight: "900", letterSpacing: 1, marginTop: 12 },
   contact: { color: theme.colors.textSecondary, fontSize: 13, marginTop: 4 },
+  actionsWrap: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "center",
+    gap: 8,
+    marginTop: 10,
+    paddingHorizontal: 14,
+  },
+  actionBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: theme.colors.accent,
+    backgroundColor: theme.colors.surface,
+  },
+  actionText: {
+    color: theme.colors.textPrimary,
+    fontSize: 13,
+    fontWeight: "700",
+  },
   statGrid: { flexDirection: "row", flexWrap: "wrap", paddingHorizontal: 14, marginVertical: 12, gap: 8 },
   cell: {
     flex: 1, minWidth: 90, paddingVertical: 12,

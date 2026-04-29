@@ -181,14 +181,6 @@ export default function MoreScreen() {
         />
 
         <Row
-          icon="people"
-          title="Borrowers"
-          subtitle="Who has your tools"
-          testID="more-borrowers"
-          onPress={() => router.push("/borrowers")}
-        />
-
-        <Row
           icon="pricetag"
           title="Inventory for Sale"
           subtitle="List items, mark as sold, sale & sold reports"

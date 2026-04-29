@@ -16,6 +16,7 @@ import { theme } from "../../src/theme";
 import { api } from "../../src/api";
 import { confirm } from "../../src/confirm";
 import { formatDateTime } from "../../src/dt";
+import { parseContacts, openEmail, openPhone } from "../../src/contactLinks";
 
 export default function BorrowersScreen() {
   const router = useRouter();
@@ -94,7 +95,7 @@ export default function BorrowersScreen() {
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <View style={styles.header}>
-        <Text style={styles.title}>PEOPLE</Text>
+        <Text style={styles.title}>CONTACTS</Text>
         <Text style={styles.subtitle}>Borrowers & Checkouts</Text>
       </View>
 
@@ -116,7 +117,7 @@ export default function BorrowersScreen() {
       )}
 
       <View style={styles.section}>
-        <Text style={styles.sectionLabel}>SAVED PEOPLE ({borrowers.length})</Text>
+        <Text style={styles.sectionLabel}>SAVED CONTACTS ({borrowers.length})</Text>
       </View>
 
       <FlatList
@@ -126,7 +127,7 @@ export default function BorrowersScreen() {
         ListEmptyComponent={
           <View style={styles.empty}>
             <Ionicons name="people-outline" size={48} color={theme.colors.textMuted} />
-            <Text style={styles.emptyText}>No saved people. Add some to speed up checkout.</Text>
+            <Text style={styles.emptyText}>No saved contacts. Add some to speed up checkout.</Text>
           </View>
         }
         renderItem={({ item }) => {
@@ -192,9 +193,7 @@ export default function BorrowersScreen() {
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={styles.rowTitle}>{item.name}</Text>
-                {!!item.contact && (
-                  <Text style={styles.rowSub}>{item.contact}</Text>
-                )}
+                <RowContactChips raw={item.contact} />
                 <Text style={styles.rowMeta}>
                   {active.length > 0
                     ? `Has ${active.length} tool${active.length > 1 ? "s" : ""}  ·  Tap for full history`
@@ -241,7 +240,7 @@ export default function BorrowersScreen() {
       <Modal visible={showAdd} animationType="slide" transparent>
         <View style={styles.modalBg}>
           <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>NEW PERSON</Text>
+            <Text style={styles.modalTitle}>NEW CONTACT</Text>
             <TextInput
               testID="borrower-name-input"
               placeholder="Full name"
@@ -284,6 +283,50 @@ export default function BorrowersScreen() {
   );
 }
 
+function RowContactChips({ raw }: { raw?: string | null }) {
+  if (!raw) return null;
+  const { emails, phones } = parseContacts(raw);
+  if (emails.length === 0 && phones.length === 0) {
+    return <Text style={styles.rowSub}>{raw}</Text>;
+  }
+  return (
+    <View style={styles.rowChipsWrap}>
+      {phones.map((p) => (
+        <TouchableOpacity
+          key={`p-${p}`}
+          testID={`row-call-${p}`}
+          style={styles.rowChip}
+          onPress={(e: any) => {
+            e?.stopPropagation?.();
+            openPhone(p);
+          }}
+          activeOpacity={0.7}
+          hitSlop={6}
+        >
+          <Ionicons name="call" size={12} color={theme.colors.accent} />
+          <Text style={styles.rowChipText} numberOfLines={1}>{p}</Text>
+        </TouchableOpacity>
+      ))}
+      {emails.map((em) => (
+        <TouchableOpacity
+          key={`e-${em}`}
+          testID={`row-email-${em}`}
+          style={styles.rowChip}
+          onPress={(e: any) => {
+            e?.stopPropagation?.();
+            openEmail(em);
+          }}
+          activeOpacity={0.7}
+          hitSlop={6}
+        >
+          <Ionicons name="mail" size={12} color={theme.colors.accent} />
+          <Text style={styles.rowChipText} numberOfLines={1}>{em}</Text>
+        </TouchableOpacity>
+      ))}
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.colors.bg },
   header: { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 16 },
@@ -321,6 +364,30 @@ const styles = StyleSheet.create({
   },
   checkedOutTool: { color: theme.colors.textPrimary, fontWeight: "700", fontSize: 14 },
   checkedOutBy: { color: theme.colors.textSecondary, fontSize: 12, marginTop: 2 },
+  rowChipsWrap: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 6,
+    marginTop: 4,
+  },
+  rowChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: theme.colors.accent,
+    backgroundColor: theme.colors.surface,
+    maxWidth: "100%",
+  },
+  rowChipText: {
+    color: theme.colors.textPrimary,
+    fontSize: 11,
+    fontWeight: "700",
+    flexShrink: 1,
+  },
   row: {
     flexDirection: "row",
     alignItems: "center",
