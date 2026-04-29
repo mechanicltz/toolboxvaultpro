@@ -441,79 +441,123 @@ function imgSrc(t: any): string {
 
 function buildHtml(items: any[], mode: "bulk" | "perItem", tab: "listed" | "sold", totals: { count: number; value: number }) {
   const isSold = tab === "sold";
-  const titleWord = isSold ? "SOLD ITEMS" : "ITEMS FOR SALE";
+  const titleWord = isSold ? "Sold Items Report" : "Items For Sale";
   const accent = isSold ? "#27AE60" : "#FFB300";
   const today = new Date().toLocaleDateString("en-US");
+  const totalLabel = isSold ? "Sold Total" : "Asking Total";
 
+  // Insurance-style: black title, yellow accent stripe under, then a compact
+  // 2-column "label" card with totals.
   const headerHtml = `
-    <div class="cover">
-      <h1>${titleWord}</h1>
-      <div class="cover-meta">
-        <div><span class="lbl">Items</span> <span class="val">${totals.count}</span></div>
-        <div><span class="lbl">${isSold ? "Sold Total" : "Asking Total"}</span> <span class="val accent">$${totals.value.toFixed(2)}</span></div>
-        <div><span class="lbl">Generated</span> <span class="val">${today}</span></div>
-      </div>
+    <div class="head">
+      <h1>${escapeHtml(titleWord)}</h1>
+      <div class="date">Prepared ${today}</div>
     </div>
+    <table class="stats"><tr>
+      <td><div class="stat-l">Total Items</div><div class="stat-v">${totals.count}</div></td>
+      <td class="tot"><div class="stat-l">${totalLabel}</div><div class="stat-v">$${totals.value.toFixed(2)}</div></td>
+    </tr></table>
   `;
+
+  // Bulk: pair items into rows of 2 cards each, rendered as a real <table>
+  // (xhtml2pdf strips display:grid/flex, so we go old-school and reliable).
+  const bulkRows = (() => {
+    if (mode !== "bulk") return "";
+    const rowsArr: string[] = [];
+    for (let i = 0; i < items.length; i += 2) {
+      const left = bulkCard(items[i], isSold);
+      const right = items[i + 1] ? bulkCard(items[i + 1], isSold) : `<td class="card-cell empty"></td>`;
+      rowsArr.push(`<tr>${left}${right}</tr>`);
+    }
+    return `<table class="bulk-grid">${rowsArr.join("")}</table>`;
+  })();
 
   const itemsBody =
     mode === "bulk"
-      ? `<div class="grid">${items.map((t) => bulkCard(t, isSold)).join("")}</div>`
+      ? bulkRows
       : `<pdf:nextpage/>` +
         items.map((t, i) => perItemPage(t, isSold, i === 0)).join("");
 
   return `<!doctype html><html><head><meta charset="utf-8"><style>
-    @page { size: Letter; margin: 0.5in; }
-    * { box-sizing: border-box; }
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; color: #222; margin: 0; }
-    h1 { font-size: 32px; letter-spacing: 4px; color: #111; margin: 0 0 8px; }
-    .cover { padding: 20px 0 24px; border-bottom: 4px solid ${accent}; margin-bottom: 18px; }
-    .cover-meta { display: flex; gap: 32px; margin-top: 14px; flex-wrap: wrap; }
-    .cover-meta .lbl { font-size: 10px; letter-spacing: 1.5px; color: #666; font-weight: 800; text-transform: uppercase; display: block; }
-    .cover-meta .val { font-size: 18px; font-weight: 800; color: #111; }
-    .cover-meta .val.accent { color: ${accent}; }
+    @page { size: Letter; margin: 0.55in 0.5in 0.55in 0.5in; }
+    body { font-family: Helvetica, Arial, sans-serif; color: #111; margin: 0; }
 
-    /* BULK GRID */
-    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
-    .card { border: 1px solid #ddd; border-radius: 8px; overflow: hidden; page-break-inside: avoid; background: #fff; }
-    .card .img { width: 100%; height: 140px; background: #f4f4f4; display: flex; align-items: center; justify-content: center; }
-    .card .img img { width: 100%; height: 100%; object-fit: cover; }
-    .card .img .no { color: #999; font-size: 12px; }
-    .card .body { padding: 10px 12px; }
-    .card .name { font-size: 13px; font-weight: 800; color: #111; margin: 0 0 2px; }
-    .card .sub { font-size: 11px; color: #555; margin: 0 0 4px; }
-    .card .price { font-size: 18px; font-weight: 900; color: ${accent}; margin: 4px 0 6px; }
-    .card .meta { font-size: 10px; color: #777; margin: 1px 0; }
-    .card .pill { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 9px; font-weight: 800; letter-spacing: 1.5px; background: ${accent}; color: #000; margin-top: 4px; }
-    .card.sold .pill { background: ${accent}; color: #fff; }
+    /* ===== HEAD (matches insurance report) ===== */
+    .head { text-align: center; border-bottom: 4px solid ${accent}; padding-bottom: 14px; margin-bottom: 14px; }
+    .head h1 { font-size: 26px; letter-spacing: 3px; margin: 0 0 6px; text-transform: uppercase; }
+    .head .date { color: #666; font-size: 12px; letter-spacing: 1px; }
 
-    /* PER-ITEM PAGE — sized to fit a single Letter page */
-    .item-page {
-      page-break-inside: avoid;
-      padding: 0;
+    /* ===== STATS ===== */
+    .stats { width: 100%; border-collapse: separate; border-spacing: 8px 0; margin-bottom: 16px; }
+    .stats td { width: 50%; border: 1px solid #ddd; padding: 10px 14px; border-radius: 4px; background: #fafafa; vertical-align: top; }
+    .stats td.tot { background: ${accent}; color: #000; border-color: ${accent}; }
+    .stats .stat-l { font-size: 9px; letter-spacing: 1.5px; color: #666; text-transform: uppercase; font-weight: 700; }
+    .stats td.tot .stat-l { color: #4a3500; }
+    .stats .stat-v { font-size: 18px; font-weight: 800; margin-top: 2px; }
+
+    /* ===== BULK GRID — table-based 2 columns ===== */
+    .bulk-grid { width: 100%; border-collapse: separate; border-spacing: 10px 10px; }
+    .card-cell { width: 50%; vertical-align: top; padding: 0; }
+    .card-cell.empty { border: 0; background: transparent; }
+    .card { border: 1px solid #ddd; border-left: 4px solid ${accent}; background: #fff; }
+    .card-inner { width: 100%; border-collapse: collapse; }
+    .card-inner td { vertical-align: top; padding: 0; }
+
+    /* Photo cell: fixed 1.4in × 1.05in box.  Image is sized via fixed
+       width attribute so xhtml2pdf doesn't stretch it. */
+    .card-photo {
+      width: 1.4in; height: 1.05in;
+      background: #f4f4f4; text-align: center;
     }
-    .item-page-head { width: 100%; }
-    .item-photo {
-      width: 100%;
-      height: 3.6in;
-      max-height: 3.6in;
-      background: #f4f4f4;
-      border: 1px solid #ddd;
-      overflow: hidden;
-      text-align: center;
-      margin: 0 0 10px;
+    .card-photo img { display: block; }
+    .card-photo .no { color: #999; font-size: 9px; padding-top: 0.45in; display: block; }
+
+    .card-body { padding: 8px 10px; }
+    .card-name { font-size: 12px; font-weight: 800; color: #111; margin: 0 0 1px; line-height: 1.2; }
+    .card-sub { font-size: 9.5px; color: #666; margin: 0 0 4px; }
+    .card-price { font-size: 16px; font-weight: 900; color: ${accent}; margin: 0 0 4px; }
+    .card-meta { font-size: 9px; color: #555; margin: 0; line-height: 1.35; }
+    .pill {
+      display: inline-block; padding: 2px 6px; font-size: 8px; font-weight: 800;
+      letter-spacing: 1.2px; background: ${accent}; color: ${isSold ? "#fff" : "#000"};
+      margin-top: 4px;
     }
-    .item-photo img { max-width: 100%; max-height: 3.6in; }
-    .item-photo .no { color: #999; font-size: 12px; padding: 80px 0; display: block; }
+
+    /* ===== PER-ITEM PAGE ===== */
+    .item-page { padding: 0; page-break-inside: avoid; }
+    .item-head { width: 100%; border-collapse: collapse; margin-bottom: 10px; padding-bottom: 6px; border-bottom: 2px solid ${accent}; }
+    .item-head td { vertical-align: top; padding: 0; }
+    .ribbon {
+      display: inline-block; background: ${accent}; color: ${isSold ? "#fff" : "#000"};
+      padding: 3px 10px; font-size: 9px; letter-spacing: 1.5px; font-weight: 900;
+    }
     .big-name { font-size: 22px; font-weight: 900; color: #111; margin: 4px 0 0; line-height: 1.15; }
     .big-price { font-size: 28px; font-weight: 900; color: ${accent}; margin: 0; white-space: nowrap; }
-    .desc { font-size: 11px; color: #444; margin: 0 0 6px; line-height: 14px; }
-    .spec-lbl { font-size: 8px; letter-spacing: 1.2px; color: #666; font-weight: 800; text-transform: uppercase; }
-    .spec-val { font-size: 12px; color: #111; font-weight: 700; line-height: 1.2; margin-top: 1px; }
-    .ribbon { display: inline-block; background: ${accent}; color: ${isSold ? "#fff" : "#000"}; padding: 3px 10px; font-size: 9px; letter-spacing: 1.5px; font-weight: 900; border-radius: 3px; margin-bottom: 4px; }
+
+    /* Photo: fixed 5in × 3.4in centered cell — image gets fixed width attr
+       below so xhtml2pdf preserves aspect ratio. */
+    .item-photo-wrap { width: 100%; text-align: center; margin: 0 0 12px; }
+    .item-photo {
+      width: 5in; height: 3.4in;
+      background: #f4f4f4; border: 1px solid #ddd;
+      text-align: center; margin: 0 auto;
+    }
+    .item-photo img { display: inline-block; }
+    .item-photo .no { color: #999; font-size: 12px; padding-top: 1.5in; display: block; }
+
+    .desc { font-size: 11px; color: #444; margin: 0 0 8px; line-height: 1.4; }
+    .desc em { color: #666; }
+
+    .specs { width: 100%; border-collapse: collapse; margin-top: 4px; }
+    .specs td { width: 50%; padding: 5px 10px 5px 0; vertical-align: top; border-bottom: 1px solid #eee; }
+    .spec-lbl { font-size: 8.5px; letter-spacing: 1.2px; color: #666; font-weight: 800; text-transform: uppercase; }
+    .spec-val { font-size: 12px; color: #111; font-weight: 700; line-height: 1.25; margin-top: 2px; }
+
+    .footer { text-align: center; color: #999; font-size: 10px; margin-top: 18px; letter-spacing: 1px; }
   </style></head><body>
     ${headerHtml}
     ${itemsBody}
+    <div class="footer">Generated by Toolbox &middot; ${today}</div>
   </body></html>`;
 }
 
@@ -521,19 +565,33 @@ function bulkCard(t: any, isSold: boolean): string {
   const src = imgSrc(t);
   const price = isSold ? (t.sold_price || 0) : (t.sale_price || 0);
   const dt = isSold ? t.sold_at : t.sale_listed_at;
+  // width="135" ≈ 1.4in @ 96dpi.  The fixed pixel attribute (NOT a CSS rule)
+  // is what xhtml2pdf actually honours for image sizing.  Aspect ratio is
+  // preserved when only ONE dimension is set.
+  const photoCell = src
+    ? `<img src="${src}" width="135" />`
+    : `<div class="no">No photo</div>`;
+  const subParts: string[] = [];
+  if (t.brand) subParts.push(escapeHtml(t.brand));
+  if (t.model) subParts.push(escapeHtml(t.model));
+  const subline = subParts.join(" &middot; ");
   return `
-    <div class="card${isSold ? " sold" : ""}">
-      <div class="img">${src ? `<img src="${src}" />` : `<div class="no">No photo</div>`}</div>
-      <div class="body">
-        <div class="name">${escapeHtml(t.name)}</div>
-        <div class="sub">${escapeHtml((t.brand || "") + (t.model ? "  ·  " + t.model : ""))}</div>
-        <div class="price">$${price.toFixed(2)}</div>
-        ${isSold && t.sold_to ? `<div class="meta">Sold to: ${escapeHtml(t.sold_to)}</div>` : ""}
-        ${t.dealer_name ? `<div class="meta">Dealer: ${escapeHtml(t.dealer_name)}</div>` : ""}
-        ${dt ? `<div class="meta">${isSold ? "Sold" : "Listed"}: ${formatDateUS(dt)}</div>` : ""}
-        <span class="pill">${isSold ? "SOLD" : "FOR SALE"}</span>
+    <td class="card-cell">
+      <div class="card">
+        <table class="card-inner"><tr>
+          <td class="card-photo">${photoCell}</td>
+          <td class="card-body">
+            <div class="card-name">${escapeHtml(t.name)}</div>
+            ${subline ? `<div class="card-sub">${subline}</div>` : ""}
+            <div class="card-price">$${price.toFixed(2)}</div>
+            ${isSold && t.sold_to ? `<div class="card-meta">Sold to: ${escapeHtml(t.sold_to)}</div>` : ""}
+            ${t.dealer_name ? `<div class="card-meta">Dealer: ${escapeHtml(t.dealer_name)}</div>` : ""}
+            ${dt ? `<div class="card-meta">${isSold ? "Sold" : "Listed"}: ${formatDateUS(dt)}</div>` : ""}
+            <span class="pill">${isSold ? "SOLD" : "FOR SALE"}</span>
+          </td>
+        </tr></table>
       </div>
-    </div>
+    </td>
   `;
 }
 
@@ -558,37 +616,44 @@ function perItemPage(t: any, isSold: boolean, isFirst: boolean): string {
   ];
   const desc = t.description || "";
   const noteField = isSold ? t.sold_notes : t.sale_notes;
-  // Force a hard page break BEFORE every item except the first so each
-  // tool gets its own dedicated PDF page. xhtml2pdf's <pdf:nextpage/> tag
-  // is the only 100% reliable way to force a page break.
+  // Hard page break before every item except the first.
   const pageBreak = isFirst ? "" : `<pdf:nextpage/>`;
+  // Image height pinned at 326px (≈ 3.4in @ 96dpi). Width is auto so the
+  // aspect ratio is preserved (no more stretched photos).
+  const photoBlock = src
+    ? `<img src="${src}" height="326" />`
+    : `<div class="no">No photo</div>`;
+  // Render specs as a 2-column rows table — same look as insurance details.
+  const filteredSpecs = specs.filter(([_, v]) => !!v);
+  const specRows: string[] = [];
+  for (let i = 0; i < filteredSpecs.length; i += 2) {
+    const [l1, v1] = filteredSpecs[i];
+    const pair = filteredSpecs[i + 1];
+    const rightCell = pair
+      ? `<td><div class="spec-lbl">${pair[0]}</div><div class="spec-val">${escapeHtml(pair[1])}</div></td>`
+      : `<td></td>`;
+    specRows.push(
+      `<tr><td><div class="spec-lbl">${l1}</div><div class="spec-val">${escapeHtml(v1)}</div></td>${rightCell}</tr>`,
+    );
+  }
   return `
     ${pageBreak}
     <div class="item-page">
-      <table class="item-page-head" style="width:100%;border-collapse:collapse;margin-bottom:8px"><tr>
-        <td style="vertical-align:top">
+      <table class="item-head"><tr>
+        <td style="width:65%">
           <span class="ribbon">${isSold ? "SOLD" : "FOR SALE"}</span>
           <div class="big-name">${escapeHtml(t.name)}</div>
         </td>
-        <td style="vertical-align:top;text-align:right;white-space:nowrap">
+        <td style="text-align:right;white-space:nowrap;vertical-align:bottom">
           <div class="big-price">$${price.toFixed(2)}</div>
         </td>
       </tr></table>
-      <div class="item-photo">${src ? `<img src="${src}" />` : `<div class="no">No photo</div>`}</div>
+      <div class="item-photo-wrap">
+        <div class="item-photo">${photoBlock}</div>
+      </div>
       ${desc ? `<div class="desc">${escapeHtml(desc)}</div>` : ""}
       ${noteField ? `<div class="desc"><em>${escapeHtml(noteField)}</em></div>` : ""}
-      <table class="specs-table" style="width:100%;border-collapse:collapse;margin-top:6px"><tr>
-        ${specs
-          .filter(([_, v]) => !!v)
-          .map(([l, v], i) => {
-            const sep = i > 0 && i % 2 === 0 ? "</tr><tr>" : "";
-            return `${sep}<td style="width:50%;padding:4px 8px 4px 0;vertical-align:top">
-              <div class="spec-lbl">${l}</div>
-              <div class="spec-val">${escapeHtml(v)}</div>
-            </td>`;
-          })
-          .join("")}
-      </tr></table>
+      <table class="specs">${specRows.join("")}</table>
     </div>
   `;
 }
