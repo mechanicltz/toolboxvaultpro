@@ -60,6 +60,7 @@ export default function ToolDetail() {
     sold_to: "",
     sold_at: new Date().toISOString().substring(0, 10),
     sold_notes: "",
+    sold_quantity: "",
   });
   const [markSoldBusy, setMarkSoldBusy] = useState(false);
 
@@ -1125,7 +1126,7 @@ export default function ToolDetail() {
               </TouchableOpacity>
             </View>
             <ScrollView style={{ maxHeight: 480 }}>
-              <Text style={styles.repairLabel}>SOLD PRICE ($)</Text>
+              <Text style={styles.repairLabel}>SOLD PRICE ($) — per unit</Text>
               <TextInput
                 testID="sold-price"
                 placeholder="0.00"
@@ -1135,6 +1136,25 @@ export default function ToolDetail() {
                 style={styles.input}
                 keyboardType="decimal-pad"
               />
+              {tool.quantity && tool.quantity > 1 ? (
+                <>
+                  <Text style={styles.repairLabel}>SOLD QUANTITY (you have {tool.quantity})</Text>
+                  <TextInput
+                    testID="sold-quantity"
+                    placeholder={String(tool.quantity)}
+                    placeholderTextColor={theme.colors.textMuted}
+                    value={markSoldForm.sold_quantity}
+                    onChangeText={(v) =>
+                      setMarkSoldForm({ ...markSoldForm, sold_quantity: v.replace(/[^0-9]/g, "") })
+                    }
+                    style={styles.input}
+                    keyboardType="number-pad"
+                  />
+                  <Text style={[{ color: "#888", fontSize: 11, lineHeight: 14, marginTop: -4, marginBottom: 8 }]}>
+                    Leave blank to sell all {tool.quantity}. Enter a smaller number for a partial sale (stock decreases, item stays active).
+                  </Text>
+                </>
+              ) : null}
               <Text style={styles.repairLabel}>SOLD TO (buyer name)</Text>
               <TextInput
                 testID="sold-to"
@@ -1174,14 +1194,31 @@ export default function ToolDetail() {
                 onPress={async () => {
                   setMarkSoldBusy(true);
                   try {
+                    const soldQtyNum = parseInt(markSoldForm.sold_quantity, 10);
+                    const fullStock = Math.max(1, tool.quantity || 1);
+                    const soldQty =
+                      isFinite(soldQtyNum) && soldQtyNum > 0
+                        ? Math.min(soldQtyNum, fullStock)
+                        : fullStock;
+                    const partial = soldQty < fullStock;
                     await api.markToolSold(tool.id, {
                       sold_price: parseFloat(markSoldForm.sold_price) || 0,
                       sold_to: markSoldForm.sold_to,
                       sold_at: markSoldForm.sold_at,
                       sold_notes: markSoldForm.sold_notes,
+                      sold_quantity: soldQty,
                     });
                     setShowMarkSold(false);
-                    setShowSoldDelete(true); // ask delete vs archive
+                    if (partial) {
+                      // Stock decremented; tool still active, no archive prompt.
+                      Alert.alert(
+                        "Partial Sale Recorded",
+                        `Stock reduced by ${soldQty}. ${fullStock - soldQty} remaining in inventory.`,
+                      );
+                      load();
+                    } else {
+                      setShowSoldDelete(true); // ask delete vs archive
+                    }
                   } catch (e: any) {
                     Alert.alert("Error", String(e?.message || e));
                   } finally {

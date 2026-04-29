@@ -39,6 +39,7 @@ type OptionField =
   | { id: string; type: "select"; label: string; choices: string[] }
   | { id: string; type: "location"; label: string }
   | { id: string; type: "dealer_multi"; label: string }
+  | { id: string; type: "dealer_single"; label: string }
   | {
       id: string;
       type: "segmented";
@@ -58,7 +59,7 @@ type ReportSpec = {
   options_schema: OptionField[];
 };
 
-type WizardStep = "type" | "options" | "fields" | "format" | "action";
+type WizardStep = "type" | "options" | "fields" | "format";
 
 const MAX_PDF_COLUMNS = 6;
 
@@ -316,63 +317,32 @@ export default function ReportsHubScreen() {
             </Text>
           ) : null}
         </ScrollView>
-        <FooterButtons
-          onBack={() => setStep("fields")}
-          onNext={() => {
-            // Auto-trim columns when moving forward into action with PDF cap
-            if (format === "pdf" && columns.length > MAX_PDF_COLUMNS) {
-              setColumns(columns.slice(0, MAX_PDF_COLUMNS));
-            }
-            setStep("action");
-          }}
-        />
-      </SafeAreaView>
-    );
-  }
-
-  if (step === "action" && selected) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <Header title={selected.title} onBack={() => setStep("format")} />
-        <Crumbs current={4} />
-        <ScrollView contentContainerStyle={styles.body}>
-          <Text style={styles.sectionLabel}>What would you like to do?</Text>
-          <ActionCard
-            icon="eye"
-            title="View"
-            sub="Open the report on this device"
-            onPress={() => execute("view")}
-            busy={running === "view"}
-          />
-          <ActionCard
-            icon="mail"
-            title="Email"
-            sub={
-              Platform.OS === "web"
-                ? "Download then email — your mail app opens pre-filled"
-                : "Open your mail app with the report attached"
-            }
-            onPress={() => execute("email")}
-            busy={running === "email"}
-          />
-          <ActionCard
-            icon="download"
-            title="Save"
-            sub={
-              Platform.OS === "web"
-                ? "Download the file"
-                : "Save to Files / share to another app"
-            }
-            onPress={() => execute("save")}
-            busy={running === "save"}
-          />
-          <View style={styles.summaryBox}>
-            <Text style={styles.summaryHead}>Summary</Text>
-            <SummaryRow k="Type" v={selected.title} />
-            <SummaryRow k="Columns" v={`${columns.length} (${columns.join(", ")})`} />
-            <SummaryRow k="Format" v={format.toUpperCase()} />
-          </View>
-        </ScrollView>
+        <View style={styles.footerBar}>
+          <TouchableOpacity
+            style={[styles.footBtnGhost]}
+            onPress={() => setStep("fields")}
+            disabled={!!running}
+          >
+            <Text style={styles.footBtnGhostText}>BACK</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.footBtn, running && { opacity: 0.6 }]}
+            disabled={!!running}
+            onPress={() => {
+              if (format === "pdf" && columns.length > MAX_PDF_COLUMNS) {
+                setColumns(columns.slice(0, MAX_PDF_COLUMNS));
+              }
+              execute("view");
+            }}
+            testID="run-report-btn"
+          >
+            {running ? (
+              <ActivityIndicator color="#000" />
+            ) : (
+              <Text style={styles.footBtnText}>VIEW REPORT</Text>
+            )}
+          </TouchableOpacity>
+        </View>
       </SafeAreaView>
     );
   }
@@ -397,7 +367,7 @@ function Header({ title, onBack }: { title: string; onBack: () => void }) {
 }
 
 function Crumbs({ current }: { current: number }) {
-  const labels = ["Filters", "Fields", "Format", "Action"];
+  const labels = ["Filters", "Fields", "Format"];
   return (
     <View style={styles.crumbs}>
       {labels.map((l, i) => {
@@ -550,7 +520,51 @@ function OptionRow({
   if (field.type === "dealer_multi") {
     return <DealerMultiPicker value={value || []} onChange={onChange} label={field.label} />;
   }
+  if (field.type === "dealer_single") {
+    return <DealerSinglePicker value={value || ""} onChange={onChange} label={field.label} />;
+  }
   return null;
+}
+
+function DealerSinglePicker({
+  value,
+  onChange,
+  label,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  label: string;
+}) {
+  const [dealers, setDealers] = useState<{ id: string; name: string }[]>([]);
+  useEffect(() => {
+    api.get("/dealers").then((r: any) => setDealers(r || []));
+  }, []);
+  const allSelected = !value;
+  return (
+    <View style={styles.optionField}>
+      <Text style={styles.optionLabel}>{label}</Text>
+      <View style={styles.chipWrap}>
+        <TouchableOpacity
+          style={[styles.chip, allSelected && styles.chipOn]}
+          onPress={() => onChange("")}
+        >
+          <Text style={[styles.chipText, allSelected && { color: "#000" }]}>All Dealers</Text>
+        </TouchableOpacity>
+        {dealers.map((d) => {
+          const active = value === d.id;
+          return (
+            <TouchableOpacity
+              key={d.id}
+              style={[styles.chip, active && styles.chipOn]}
+              onPress={() => onChange(d.id)}
+            >
+              <Text style={[styles.chipText, active && { color: "#000" }]}>{d.name}</Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+    </View>
+  );
 }
 
 function LocationPicker({

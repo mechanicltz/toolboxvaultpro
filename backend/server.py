@@ -1337,29 +1337,51 @@ class MarkSoldRequest(BaseModel):
     sold_to: Optional[str] = ""
     sold_at: Optional[str] = ""  # YYYY-MM-DD; defaults to today if empty
     sold_notes: Optional[str] = ""
+    sold_quantity: Optional[int] = None  # None or >= current qty → mark fully sold;
+                                         # less than current qty → just decrement.
 
 
 @api_router.post("/tools/{tool_id}/mark-sold", response_model=Tool)
 async def mark_tool_sold(tool_id: str, payload: MarkSoldRequest):
-    """Mark a tool as sold (moves it out of regular inventory into the
-    sold archive). Optionally records sale price / buyer / date / notes."""
+    """Mark a tool as sold. If `sold_quantity` is supplied AND less than the
+    current `quantity`, the tool's quantity is simply decremented and the
+    tool stays in active inventory (partial sale). Otherwise the tool is
+    fully marked sold (existing behavior)."""
     doc = await db.tools.find_one({"id": tool_id}, {"_id": 0})
     if not doc:
         raise HTTPException(status_code=404, detail="Tool not found")
 
+    current_qty = max(1, int(doc.get("quantity") or 1))
+    sold_qty_raw = payload.sold_quantity
+    sold_qty = current_qty if sold_qty_raw in (None, 0) else max(1, int(sold_qty_raw))
+    if sold_qty > current_qty:
+        sold_qty = current_qty
+
     sold_at = (payload.sold_at or "").strip()
     if not sold_at:
-        # default to today as YYYY-MM-DD
         from datetime import datetime as _dt
         sold_at = _dt.utcnow().strftime("%Y-%m-%d")
 
+    # Partial sale: decrement quantity only — don't mark sold.
+    if sold_qty < current_qty:
+        await db.tools.update_one(
+            {"id": tool_id},
+            {"$set": {
+                "quantity": current_qty - sold_qty,
+                "updated_at": now_iso(),
+            }},
+        )
+        new_doc = await db.tools.find_one({"id": tool_id}, {"_id": 0})
+        return Tool(**new_doc)
+
+    # Full sale: mark the tool as sold.
     updates = {
         "is_sold": True,
         "sold_at": sold_at,
         "sold_price": float(payload.sold_price or 0.0),
         "sold_to": (payload.sold_to or "").strip(),
         "sold_notes": (payload.sold_notes or "").strip(),
-        "for_sale": False,  # no longer "listed"
+        "for_sale": False,
         "updated_at": now_iso(),
     }
     # Auto check-in if currently checked out
@@ -1754,7 +1776,10 @@ async def aggregate(
 ):
     query = build_tool_query(search, location_id, tag_id, category_id, dealer_id, checked_out, is_consumable, needs_repair)
     items = await db.tools.find(query, {"_id": 0}).to_list(5000)
-    total_value = sum((i.get("cost") or 0) for i in items)
+    total_value = sum(
+        (i.get("cost") or 0) * max(1, int(i.get("quantity") or 1))
+        for i in items
+    )
     checked_out_n = sum(1 for i in items if i.get("is_checked_out"))
     consumables_n = sum(1 for i in items if i.get("is_consumable"))
     needs_repair_n = sum(1 for i in items if i.get("needs_repair"))
@@ -1797,7 +1822,9 @@ async def get_stats():
     categories = await db.categories.count_documents({})
     borrowers = await db.borrowers.count_documents({})
     dealers = await db.dealers.count_documents({})
-    pipeline = [{"$group": {"_id": None, "total_value": {"$sum": "$cost"}}}]
+    pipeline = [{"$group": {"_id": None, "total_value": {
+        "$sum": {"$multiply": ["$cost", {"$ifNull": ["$quantity", 1]}]}
+    }}}]
     agg = await db.tools.aggregate(pipeline).to_list(1)
     total_value = agg[0]["total_value"] if agg else 0
     # Warranty expiring within 60 days

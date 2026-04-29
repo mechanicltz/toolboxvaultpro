@@ -910,3 +910,78 @@ Fix #2 — PDF reports actually generate now:
   Inventory shows 1..6, Qty column totals = 6, Cost totals = $4,136.
   Sales shows 1..2 with correct totals.  Account shows "#" column
   in CORNWELL Truck transactions.  CSV header is "#,Photo,Name,...".
+
+## 2026-04-29 — Reports overhaul: extended pricing, partial sales, claims report
+- User requests:
+  1. Quantity should multiply price everywhere (cost, sale price etc.)
+  2. Mark-as-sold should accept a "sold quantity" so partial stock can be
+     decremented instead of fully archiving the tool.
+  3. Remove the View / Email / Save action step from the wizard — just
+     show the report directly. Users can email/save from the viewer.
+  4. Add a new "Claims" report (current / history, filterable by dealer
+     and date range).
+  5. New default columns:
+     * Inventory:  Photo · Name · Qty · Brand · Serial # · Cost
+     * Insurance:  Photo · Name · Qty · Brand · Serial # · Cost
+     * Sales:      Date · Name · Qty · Brand · Cost · Price (+ a Profit
+       column option = Price − Cost extended).
+  6. Account report: show the chosen date range as a subtitle, or
+     "Complete History" when no dates were chosen.
+
+- Backend changes:
+  * /app/backend/server.py
+    - Tool aggregate `total_value` now multiplies cost × quantity.
+    - /api/stats Mongo pipeline: `$multiply: ['$cost', {'$ifNull':['$quantity',1]}]`.
+    - MarkSoldRequest gains `sold_quantity: Optional[int] = None`.
+    - mark_tool_sold:
+      • If `sold_quantity` is None or >= current qty → behave as before
+        (full archive flow with sold_at / sold_to / sold_price).
+      • If `sold_quantity` < current qty → decrement quantity only,
+        do NOT mark sold (item stays active in inventory).
+  * /app/backend/reports.py
+    - `_normalise_tool_row` keeps unit_cost separately and stores the
+      EXTENDED cost (cost × qty) under `cost`.
+    - Sales fetcher: extends both buy price and sale price by quantity
+      and computes `profit = ext_price - ext_buy`.
+    - New `unit_cost` column option in _TOOL_COLUMNS so the user can
+      bring back per-unit cost if needed.
+    - New `profit` column option in _SALES_COLUMNS.
+    - New `_date_range_subtitle()` helper returning "Complete History"
+      when both ends are blank, else "MM/DD/YYYY – MM/DD/YYYY" (or
+      "From …" / "Through …").
+    - `_title_block()` accepts an optional subtitle line that prints
+      under the date.
+    - Account fetcher returns `subtitle = _date_range_subtitle(start, end)`.
+    - Insurance/Inventory/Sales stats labels now include unit count
+      when any item has qty>1: "6 · 10 units".
+    - New report spec: "claims" with options for mode (current / history
+      / all), `dealer_single` filter and date range. Default columns:
+      Photo, Tool, Dealer, Status, Notified, Expected.
+    - Updated default_columns for inventory / insurance / sales per
+      user spec.
+
+- Frontend changes:
+  * /app/frontend/app/(tabs)/reports.tsx
+    - Removed the "action" step entirely. WizardStep is now
+      "type" | "options" | "fields" | "format" (Crumbs labels updated).
+    - Format step now ends with a single "VIEW REPORT" button that
+      directly calls execute("view") — no more action-card screen.
+    - Added a `dealer_single` option type + `DealerSinglePicker` chip
+      component (used by the Claims report's dealer filter).
+  * /app/frontend/app/tool/[id].tsx
+    - Mark-Sold modal now shows a SOLD QUANTITY input when the tool's
+      quantity is > 1, with a helper hint explaining partial sales.
+    - The mark-sold submit now sends `sold_quantity` and, on partial
+      sale, shows an "X remaining in inventory" alert instead of the
+      archive/delete prompt.
+
+- Verified end-to-end:
+  * Pry bar (cost 150, qty 3) renders cost = $450.00 in the report.
+  * Torque wrench (cost 386, qty 2) renders cost = $772.00.
+  * Inventory totals row sums Qty=10 / Cost=$4,822.00.
+  * /api/aggregate now returns total_value=4822.0 (was 4136.0).
+  * Account report subtitle: "Complete History" w/o dates,
+    "01/01/2025 – 12/31/2025" with dates.
+  * New Claims report renders with status pills, photo, dealer, dates.
+  * CSV exports retain the # gutter and 6-column inventory layout.
+

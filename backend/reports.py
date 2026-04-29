@@ -366,15 +366,21 @@ def _para(text: str, style: ParagraphStyle) -> Paragraph:
     return Paragraph(text, style)
 
 
-def _title_block(spec: ReportSpec, st: Dict[str, ParagraphStyle]) -> List[Any]:
+def _title_block(spec: ReportSpec, st: Dict[str, ParagraphStyle],
+                 subtitle: Optional[str] = None) -> List[Any]:
     today = datetime.now(timezone.utc).strftime("%m/%d/%Y")
-    return [
+    out: List[Any] = [
         _para(esc(spec.title.upper()), st["title"]),
         _para(f"Prepared {today}", st["title_sub"]),
+    ]
+    if subtitle:
+        out.append(_para(esc(subtitle), st["title_sub"]))
+    out += [
         Spacer(1, 4),
         _hr(spec.accent, 2.5),
         Spacer(1, 8),
     ]
+    return out
 
 
 def _hr(hex_color: str, width: float = 1.0) -> Table:
@@ -702,7 +708,7 @@ def render_pdf(spec: ReportSpec, cols: List[Column],
 
     st = _styles(spec.accent)
     story: List[Any] = []
-    story.extend(_title_block(spec, st))
+    story.extend(_title_block(spec, st, subtitle=fetch_result.get("subtitle")))
 
     if personal_info:
         story.append(_personal_info_block(personal_info, spec.accent, st))
@@ -784,6 +790,8 @@ def _normalise_tool_row(t: Dict[str, Any]) -> Dict[str, Any]:
         qty = int(qty_raw) if qty_raw not in (None, "") else 1
     except Exception:
         qty = 1
+    qty = max(1, qty)
+    unit_cost = float(t.get("cost") or 0)
     return {
         "id": t.get("id"),
         "name": t.get("name") or "",
@@ -798,8 +806,9 @@ def _normalise_tool_row(t: Dict[str, Any]) -> Dict[str, Any]:
         "warranty_until": t.get("warranty_expiry"),
         "tags": ", ".join(t.get("tag_names") or []),
         "notes": t.get("description") or "",
-        "cost": float(t.get("cost") or 0),
-        "quantity": max(1, qty),
+        "unit_cost": unit_cost,
+        "cost": round(unit_cost * qty, 2),  # EXTENDED cost (qty × unit)
+        "quantity": qty,
         "photo": photo,
     }
 
@@ -807,6 +816,97 @@ def _normalise_tool_row(t: Dict[str, Any]) -> Dict[str, Any]:
 # ---------------------------------------------------------------------------
 # Fetchers
 # ---------------------------------------------------------------------------
+
+def _date_range_subtitle(start: str, end: str) -> str:
+    """Returns a human-readable date-range string for a report subtitle.
+    'Complete History' when both ends are blank."""
+    if not start and not end:
+        return "Complete History"
+    if start and end:
+        return f"{fmt_date_us(start)} – {fmt_date_us(end)}"
+    if start:
+        return f"From {fmt_date_us(start)}"
+    return f"Through {fmt_date_us(end)}"
+
+
+# ---- CLAIMS (warranty / repair claims) -----------------------------------
+
+async def _fetch_claims(db, user, options: Dict[str, Any]) -> Dict[str, Any]:
+    mode = options.get("claims_mode") or "current"  # "current" | "history" | "all"
+    dealer_id = options.get("dealer_id") or ""
+    start = options.get("date_from") or ""
+    end = options.get("date_to") or ""
+
+    q: Dict[str, Any] = {}
+    if mode == "current":
+        q["claim_status"] = {"$nin": ["completed", "rejected"]}
+    elif mode == "history":
+        q["claim_status"] = {"$in": ["completed", "rejected"]}
+    if dealer_id:
+        if dealer_id == "_none_":
+            q["$or"] = [{"dealer_id": None}, {"dealer_id": ""}]
+        else:
+            q["dealer_id"] = dealer_id
+
+    items = await db.warranty_claims.find(q, {"_id": 0}).sort("created_at", -1).to_list(5000)
+    if start or end:
+        items = [
+            i for i in items
+            if in_range(i.get("created_at") or i.get("notified_at"), start, end)
+        ]
+
+    # Map status values → readable labels
+    label_map = {
+        "broken": "Broken",
+        "awaiting_approval": "Awaiting Approval",
+        "waiting_replacement": "Waiting Replacement",
+        "completed": "Completed",
+        "rejected": "Rejected",
+    }
+    rows = []
+    for it in items:
+        rows.append({
+            "id": it.get("id"),
+            "tool_name": it.get("tool_name") or "",
+            "tool_photo": it.get("tool_photo") or "",
+            "broken_photo": it.get("broken_photo") or "",
+            "dealer": it.get("dealer_name") or "",
+            "status": label_map.get(it.get("claim_status") or "broken",
+                                    it.get("claim_status") or "—"),
+            "repair_company": it.get("repair_company") or "",
+            "contact": it.get("contact") or "",
+            "notified_at": it.get("notified_at") or "",
+            "expected_completion": it.get("expected_completion") or "",
+            "completed_at": it.get("completed_at") or "",
+            "notes": it.get("notes") or "",
+            "created_at": (it.get("created_at") or "")[:10],
+        })
+
+    title_word = (
+        "Open Claims" if mode == "current"
+        else ("Past Claims" if mode == "history" else "All Claims")
+    )
+    stats = [
+        (title_word, str(len(rows)), False),
+        (
+            "Open" if mode != "history" else "Closed",
+            str(sum(
+                1 for r in rows
+                if (mode == "history" and r["status"] in ("Completed", "Rejected"))
+                or (mode != "history" and r["status"] not in ("Completed", "Rejected"))
+            )),
+            True,
+        ),
+    ]
+    sub = _date_range_subtitle(start, end)
+    if mode == "current":
+        sub = f"Open / Current  ·  {sub}"
+    elif mode == "history":
+        sub = f"History (Closed)  ·  {sub}"
+    else:
+        sub = f"All Claims  ·  {sub}"
+    return {"rows": rows, "stats": stats, "subtitle": sub}
+
 
 # ---- INSURANCE -----------------------------------------------------------------
 
@@ -820,8 +920,13 @@ async def _fetch_insurance(db, user, options: Dict[str, Any]) -> Dict[str, Any]:
         pi = profile
 
     total_value = sum(numeric_value(r, "cost") for r in rows)
+    total_units = sum(int(r.get("quantity") or 1) for r in rows)
+    items_label = (
+        f"{len(rows)}" if total_units == len(rows)
+        else f"{len(rows)} · {total_units} units"
+    )
     stats = [
-        ("Total Items", str(len(rows)), False),
+        ("Total Items", items_label, False),
         ("Total Value", fmt_money(total_value), True),
     ]
     return {"rows": rows, "stats": stats, "personal_info": pi}
@@ -858,8 +963,13 @@ async def _fetch_inventory(db, user, options: Dict[str, Any]) -> Dict[str, Any]:
 
     rows = [_normalise_tool_row(t) for t in tools]
     total = sum(numeric_value(r, "cost") for r in rows)
+    total_units = sum(int(r.get("quantity") or 1) for r in rows)
+    items_label = (
+        f"{len(rows)}" if total_units == len(rows)
+        else f"{len(rows)} · {total_units} units"
+    )
     stats = [
-        ("Total Items", str(len(rows)), False),
+        ("Total Items", items_label, False),
         ("Total Cost", fmt_money(total), True),
     ]
     return {"rows": rows, "stats": stats}
@@ -885,16 +995,27 @@ async def _fetch_sales(db, user, options: Dict[str, Any]) -> Dict[str, Any]:
     rows = []
     for t in tools:
         row = _normalise_tool_row(t)
-        row["price"] = (t.get("sold_price") or 0) if mode == "sold" else (t.get("sale_price") or 0)
+        unit_price = (t.get("sold_price") or 0) if mode == "sold" else (t.get("sale_price") or 0)
+        qty = row["quantity"]
+        ext_price = round(float(unit_price or 0) * qty, 2)
+        ext_buy = row["cost"]  # already extended by _normalise_tool_row
+        row["unit_price"] = float(unit_price or 0)
+        row["price"] = ext_price
+        row["profit"] = round(ext_price - ext_buy, 2)
         row["sale_date"] = t.get(date_field)
         row["sold_to"] = t.get("sold_to") or ""
         rows.append(row)
 
     total = sum(numeric_value(r, "price") for r in rows)
+    total_units = sum(int(r.get("quantity") or 1) for r in rows)
+    items_label = (
+        f"{len(rows)}" if total_units == len(rows)
+        else f"{len(rows)} · {total_units} units"
+    )
     stats = [
         (
             ("Sold Items" if mode == "sold" else "Listed Items"),
-            str(len(rows)),
+            items_label,
             False,
         ),
         (
@@ -1089,6 +1210,7 @@ async def _fetch_account(db, user, options: Dict[str, Any]) -> Dict[str, Any]:
         "stats": stats,
         "stats2": stats2,
         "body_factory": body_factory,
+        "subtitle": _date_range_subtitle(start, end),
     }
 
 
@@ -1276,6 +1398,7 @@ _TOOL_COLUMNS = [
     Column("warranty_until", "Warranty Until", "left", "date"),
     Column("tags", "Tags", "left", "text"),
     Column("quantity", "Qty", "right", "number"),
+    Column("unit_cost", "Unit Cost", "right", "money"),
     Column("cost", "Cost", "right", "money"),
 ]
 
@@ -1293,6 +1416,7 @@ _SALES_COLUMNS = [
     Column("quantity", "Qty", "right", "number"),
     Column("cost", "Buy Price", "right", "money"),
     Column("price", "Price", "right", "money"),
+    Column("profit", "Profit", "right", "money"),
 ]
 
 
@@ -1304,7 +1428,7 @@ REPORTS: Dict[str, ReportSpec] = {
         icon="shield-checkmark",
         accent="#FFB300",
         columns=_TOOL_COLUMNS,
-        default_columns=["photo", "name", "brand", "model", "serial", "cost"],
+        default_columns=["photo", "name", "quantity", "brand", "serial", "cost"],
         fetch=_fetch_insurance,
         options_schema=[
             {"id": "include_personal", "type": "toggle",
@@ -1318,7 +1442,7 @@ REPORTS: Dict[str, ReportSpec] = {
         icon="cube",
         accent="#FFB300",
         columns=_TOOL_COLUMNS,
-        default_columns=["photo", "name", "brand", "model", "condition", "cost"],
+        default_columns=["photo", "name", "quantity", "brand", "serial", "cost"],
         fetch=_fetch_inventory,
         options_schema=[
             {"id": "location_id", "type": "location", "label": "Location"},
@@ -1336,7 +1460,7 @@ REPORTS: Dict[str, ReportSpec] = {
         icon="pricetag",
         accent="#FFB300",
         columns=_SALES_COLUMNS,
-        default_columns=["photo", "name", "brand", "sale_date", "cost", "price"],
+        default_columns=["sale_date", "name", "quantity", "brand", "cost", "price"],
         fetch=_fetch_sales,
         options_schema=[
             {"id": "sales_mode", "type": "segmented", "label": "Mode",
@@ -1371,6 +1495,41 @@ REPORTS: Dict[str, ReportSpec] = {
         fetch=_fetch_account,
         options_schema=[
             {"id": "dealer_ids", "type": "dealer_multi", "label": "Dealers"},
+            {"id": "date_from", "type": "date", "label": "From"},
+            {"id": "date_to", "type": "date", "label": "To"},
+        ],
+    ),
+    "claims": ReportSpec(
+        id="claims",
+        title="Warranty Claims Report",
+        description="Open and historical warranty / repair claims, filterable by dealer and date range.",
+        icon="construct",
+        accent="#FFB300",
+        columns=[
+            Column("tool_photo", "Photo", "center", "image"),
+            Column("tool_name", "Tool", "left", "text"),
+            Column("dealer", "Dealer", "left", "text"),
+            Column("status", "Status", "left", "text"),
+            Column("repair_company", "Repair Co.", "left", "text"),
+            Column("contact", "Contact", "left", "text"),
+            Column("notified_at", "Notified", "left", "date"),
+            Column("expected_completion", "Expected", "left", "date"),
+            Column("completed_at", "Completed", "left", "date"),
+            Column("created_at", "Opened", "left", "date"),
+            Column("notes", "Notes", "left", "text"),
+        ],
+        default_columns=["tool_photo", "tool_name", "dealer", "status",
+                         "notified_at", "expected_completion"],
+        fetch=_fetch_claims,
+        options_schema=[
+            {"id": "claims_mode", "type": "segmented", "label": "Mode",
+             "choices": [
+                 {"id": "current", "label": "Current"},
+                 {"id": "history", "label": "History"},
+                 {"id": "all", "label": "All"},
+             ],
+             "default": "current"},
+            {"id": "dealer_id", "type": "dealer_single", "label": "Dealer"},
             {"id": "date_from", "type": "date", "label": "From"},
             {"id": "date_to", "type": "date", "label": "To"},
         ],
