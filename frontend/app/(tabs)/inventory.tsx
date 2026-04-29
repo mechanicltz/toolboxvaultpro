@@ -382,7 +382,7 @@ export default function InventoryScreen() {
         key={`grid-${gridCols}`}
         numColumns={gridCols}
         columnWrapperStyle={gridCols > 1 ? { gap: 12, paddingHorizontal: 16 } : undefined}
-        contentContainerStyle={{ paddingBottom: 120, paddingTop: gridCols > 1 ? 0 : 0 }}
+        contentContainerStyle={{ paddingBottom: selectMode ? 240 : 120, paddingTop: gridCols > 1 ? 0 : 0 }}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.colors.accent} />
         }

@@ -767,3 +767,13 @@ Verified end-to-end by main agent:
   search by buyer → unmark sold) all pass
 - UI: edit toggle, inventory chip, More→For-Sale, MarkSold modal flow,
   Sold tab in for-sale all confirmed via screenshot tests
+
+## 2026-04-29 — Bulk-action bar no longer covers items
+- Issue: When tapping the double-check toggle on inventory to enter bulk
+  select mode, the "MOVE / ADD TAG / MARK LOST / DELETE" panel pinned to
+  the bottom covered the lower inventory cards, making them un-tappable.
+- Fix: Inventory FlatList contentContainerStyle now uses paddingBottom
+  240 (vs 120 normally) when selectMode is active, so the bottom items
+  scroll above the panel and are fully reachable.
+- Verified by main agent: in select mode, all 4 cards are tappable, last
+  card sits at y≈500 with bulk bar at y≈900 (canTapLast=true).
