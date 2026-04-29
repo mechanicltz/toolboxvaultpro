@@ -884,3 +884,29 @@ Fix #2 — PDF reports actually generate now:
       instead of HTML strings; PDF rendering is pure ReportLab)
 - xhtml2pdf is no longer used; the `xhtml2pdf` package import is gone
   from reports.py (it remains installed in the env but harmless).
+
+
+## 2026-04-29 — Reports: line numbers + per-tool quantity field
+- User request: line numbers on multi-row reports + per-tool Quantity
+  field selectable as a column option in the wizard.
+- Backend (/app/backend/server.py): added `quantity: Optional[int] = 1`
+  to Tool, ToolCreate, ToolUpdate.  Backwards-compatible.
+- Backend (/app/backend/reports.py):
+    * `_TOOL_COLUMNS` & `_SALES_COLUMNS` now expose a `quantity` Column
+      (right-aligned, type=number → auto-totals at bottom).
+    * `_data_table()` auto-prepends a "#" gutter column (0.32 in,
+      faint grey background) whenever rows>1.  Header cell, index
+      cells, and a blank totals cell are all wired in.
+    * Account-report transaction tables also got a "#" column with
+      the in-range-totals SPAN adjusted (cols 1→3 instead of 0→2).
+    * Per-item Sales flyer shows a small "ITEM N OF M" pill above
+      the ribbon when there's more than one item.
+    * `render_csv()` adds a "#" column when rows>1.
+- Frontend (/app/frontend/app/tool/edit.tsx): new QTY input next to
+  COST (90px, number-pad, digits-only).  Hydrated from API,
+  defaults to "1", shipped in save payload as
+  `quantity: max(1, parseInt(quantity))`.
+- Verified by rendering all 4 reports + CSV and converting to PNG:
+  Inventory shows 1..6, Qty column totals = 6, Cost totals = $4,136.
+  Sales shows 1..2 with correct totals.  Account shows "#" column
+  in CORNWELL Truck transactions.  CSV header is "#,Photo,Name,...".

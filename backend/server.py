@@ -520,6 +520,7 @@ class Tool(BaseModel):
     model: Optional[str] = ""
     serial_number: Optional[str] = ""
     cost: Optional[float] = 0.0
+    quantity: Optional[int] = 1
     purchase_date: Optional[str] = ""
     condition: Optional[str] = "Good"
     location_id: Optional[str] = None
@@ -565,6 +566,7 @@ class ToolCreate(BaseModel):
     model: Optional[str] = ""
     serial_number: Optional[str] = ""
     cost: Optional[float] = 0.0
+    quantity: Optional[int] = 1
     purchase_date: Optional[str] = ""
     condition: Optional[str] = "Good"
     location_id: Optional[str] = None
@@ -593,6 +595,7 @@ class ToolUpdate(BaseModel):
     model: Optional[str] = None
     serial_number: Optional[str] = None
     cost: Optional[float] = None
+    quantity: Optional[int] = None
     purchase_date: Optional[str] = None
     condition: Optional[str] = None
     location_id: Optional[str] = None

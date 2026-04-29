@@ -34,6 +34,7 @@ export default function ToolEdit() {
   const [model, setModel] = useState("");
   const [serial, setSerial] = useState("");
   const [cost, setCost] = useState("");
+  const [quantity, setQuantity] = useState("1");
   const [purchaseDate, setPurchaseDate] = useState(isEdit ? "" : new Date().toISOString().substring(0, 10));
   const [condition, setCondition] = useState("Good");
   const [locationId, setLocationId] = useState<string | null>(null);
@@ -100,6 +101,7 @@ export default function ToolEdit() {
         setName(t.name); setDescription(t.description || ""); setBrand(t.brand || "");
         setModel(t.model || ""); setSerial(t.serial_number || "");
         setCost(t.cost ? String(t.cost) : ""); setPurchaseDate(t.purchase_date || "");
+        setQuantity(t.quantity != null ? String(t.quantity) : "1");
         setCondition(t.condition || "Good"); setLocationId(t.location_id);
         setLocationName(t.location_name || "");
         setCategory(t.category_id ? { id: t.category_id, name: t.category_name } : null);
@@ -293,6 +295,7 @@ export default function ToolEdit() {
     const payload: any = {
       name: name.trim(), description, brand, model, serial_number: serial,
       cost: parseFloat(cost) || 0, purchase_date: purchaseDate, condition,
+      quantity: Math.max(1, parseInt(quantity, 10) || 1),
       location_id: locationId, location_name: locationName,
       category_id: category?.id || null, category_name: category?.name || "",
       tag_ids: tags.map((t) => t.id), tag_names: tags.map((t) => t.name),
@@ -326,7 +329,7 @@ export default function ToolEdit() {
       router.back();
     } catch (e: any) { Alert.alert("Error", e.message); }
     finally { setSaving(false); }
-  }, [name, description, brand, model, serial, cost, purchaseDate, condition, locationId, locationName, category, tags, photos, documents, isConsumable, consumableInfo, needsRepair, repairInfo, hasWarranty, warranty, dealerId, dealerName, purchasedAgentId, purchasedAgentName, isEdit, id, router]);
+  }, [name, description, brand, model, serial, cost, quantity, purchaseDate, condition, locationId, locationName, category, tags, photos, documents, isConsumable, consumableInfo, needsRepair, repairInfo, hasWarranty, warranty, dealerId, dealerName, purchasedAgentId, purchasedAgentName, isEdit, id, router]);
 
   if (loading) {
     return (
@@ -401,6 +404,12 @@ export default function ToolEdit() {
               <Text style={styles.label}>COST ($)</Text>
               <TextInput testID="cost-input" placeholder="0.00" placeholderTextColor={theme.colors.textMuted}
                 value={cost} onChangeText={setCost} style={styles.input} keyboardType="decimal-pad" />
+            </View>
+            <View style={{ width: 90 }}>
+              <Text style={styles.label}>QTY</Text>
+              <TextInput testID="quantity-input" placeholder="1" placeholderTextColor={theme.colors.textMuted}
+                value={quantity} onChangeText={(v) => setQuantity(v.replace(/[^0-9]/g, ""))}
+                style={styles.input} keyboardType="number-pad" />
             </View>
           </View>
 

@@ -500,23 +500,29 @@ def _personal_info_block(pi: Dict[str, Any], accent_hex: str,
 # Data table — the main flowable
 # ---------------------------------------------------------------------------
 
-def _column_widths_pt(cols: List[Column]) -> List[float]:
-    """Allocate the printable width across columns by type."""
+def _column_widths_pt(cols: List[Column], with_index: bool = False) -> List[float]:
+    """Allocate the printable width across columns by type. When `with_index`
+    is true, the first slot is reserved for the auto-prepended row-number."""
     fixed: Dict[int, float] = {}
+    offset = 1 if with_index else 0
+    if with_index:
+        fixed[0] = 0.32 * inch  # narrow # column
     for i, c in enumerate(cols):
+        idx = i + offset
         if c.type == "image":
-            fixed[i] = 0.85 * inch
+            fixed[idx] = 0.85 * inch
         elif c.type == "money":
-            fixed[i] = 0.85 * inch
+            fixed[idx] = 0.85 * inch
         elif c.type == "number":
-            fixed[i] = 0.6 * inch
+            fixed[idx] = 0.55 * inch
         elif c.type == "date":
-            fixed[i] = 0.85 * inch
+            fixed[idx] = 0.85 * inch
+    total = len(cols) + offset
     used = sum(fixed.values())
-    text_idx = [i for i in range(len(cols)) if i not in fixed]
+    text_idx = [i for i in range(total) if i not in fixed]
     remaining = max(0.0, PAGE_W - used)
     per_text = (remaining / len(text_idx)) if text_idx else 0.0
-    return [fixed.get(i, per_text) for i in range(len(cols))]
+    return [fixed.get(i, per_text) for i in range(total)]
 
 
 def _truncate_to_fit(text: str, font: str, size: float, max_w: float) -> str:
@@ -544,21 +550,36 @@ def _data_table(cols: List[Column], rows: List[Dict[str, Any]],
         return _para("No items match the selected filters.", st["muted"])
 
     accent = colors.HexColor(accent_hex)
-    col_w = _column_widths_pt(cols)
+    # Auto-prepend a "#" line-number column when there's >1 row.
+    show_index = len(rows) > 1
+    col_w = _column_widths_pt(cols, with_index=show_index)
+    idx_off = 1 if show_index else 0
 
     # Header row
     header: List[Any] = []
+    if show_index:
+        header.append(_para("#", st["th_right"]))
     for c in cols:
         style = st["th_right"] if c.align == "right" else st["th"]
         header.append(_para(esc(c.label.upper()), style))
 
+    # Index style for body cells (small, muted, right-aligned)
+    idx_body_style = ParagraphStyle(
+        "idx_body", parent=st["small_right"],
+        fontName="Helvetica-Bold",
+        textColor=colors.HexColor("#888888"),
+    )
+
     # Data rows
     data: List[List[Any]] = [header]
-    for r in rows:
+    for r_i, r in enumerate(rows):
         cells: List[Any] = []
+        if show_index:
+            cells.append(_para(str(r_i + 1), idx_body_style))
         for i, c in enumerate(cols):
+            cell_idx = i + idx_off
             if c.type == "image":
-                cell_w = col_w[i] - 6
+                cell_w = col_w[cell_idx] - 6
                 cell_h = 0.55 * inch
                 src = r.get(c.id)
                 img = _fit_image(src, cell_w, cell_h, max_px=240)
@@ -568,8 +589,7 @@ def _data_table(cols: List[Column], rows: List[Dict[str, Any]],
                     cells.append(img)
             else:
                 v = str(cell_value(c, r))
-                # Wrap stubborn long tokens
-                v = _truncate_to_fit(v, "Helvetica", 9, col_w[i] - 6)
+                v = _truncate_to_fit(v, "Helvetica", 9, col_w[cell_idx] - 6)
                 if c.align == "right":
                     cells.append(_para(esc(v), st["small_right"]))
                 else:
@@ -580,6 +600,8 @@ def _data_table(cols: List[Column], rows: List[Dict[str, Any]],
     has_total = any(c.type in ("money", "number") for c in cols)
     if has_total:
         foot: List[Any] = []
+        if show_index:
+            foot.append("")
         label_placed = False
         total_label_style = ParagraphStyle(
             "total_label", parent=st["small"],
@@ -622,11 +644,19 @@ def _data_table(cols: List[Column], rows: List[Dict[str, Any]],
         # Body grid
         ("LINEBELOW", (0, 0), (-1, -1), 0.25, colors.HexColor("#eeeeee")),
     ]
-    # Alternating row backgrounds
+    if show_index:
+        # Faint background to visually separate the # column
+        style_cmds.append(("BACKGROUND", (0, 1), (0, -1 if not has_total else -2),
+                           colors.HexColor("#f3f3f3")))
+    # Alternating row backgrounds (skip the # column to keep its grey)
     body_end = len(data) - (1 if has_total else 0)
     for ri in range(1, body_end):
         if ri % 2 == 0:
-            style_cmds.append(("BACKGROUND", (0, ri), (-1, ri), colors.HexColor("#fafafa")))
+            style_cmds.append((
+                "BACKGROUND",
+                (idx_off, ri), (-1, ri),
+                colors.HexColor("#fafafa"),
+            ))
     # Totals row
     if has_total:
         style_cmds += [
@@ -635,6 +665,9 @@ def _data_table(cols: List[Column], rows: List[Dict[str, Any]],
             ("TOPPADDING", (0, -1), (-1, -1), 7),
             ("BOTTOMPADDING", (0, -1), (-1, -1), 7),
         ]
+        if show_index:
+            # span the # cell into the label cell visually (just keep blank)
+            pass
 
     table.setStyle(TableStyle(style_cmds))
     return table
@@ -707,9 +740,11 @@ def render_pdf(spec: ReportSpec, cols: List[Column],
 def render_csv(cols: List[Column], rows: List[Dict[str, Any]]) -> bytes:
     buf = io.StringIO()
     w = _csv.writer(buf)
-    w.writerow([c.label for c in cols])
-    for r in rows:
-        out: List[str] = []
+    show_idx = len(rows) > 1
+    header = (["#"] if show_idx else []) + [c.label for c in cols]
+    w.writerow(header)
+    for ri, r in enumerate(rows):
+        out: List[str] = [str(ri + 1)] if show_idx else []
         for c in cols:
             if c.type == "image":
                 out.append("")
@@ -722,12 +757,14 @@ def render_csv(cols: List[Column], rows: List[Dict[str, Any]]) -> bytes:
         w.writerow(out)
     has_total = any(c.type in ("money", "number") for c in cols)
     if has_total:
-        foot = []
-        for i, c in enumerate(cols):
+        foot: List[str] = [""] if show_idx else []
+        first_label_placed = False
+        for c in cols:
             if c.type in ("money", "number"):
                 tot = sum(numeric_value(r, c.id) for r in rows)
                 foot.append(f"{tot:.2f}" if c.type == "money" else f"{tot:.0f}")
-            elif i == 0:
+            elif not first_label_placed:
+                first_label_placed = True
                 foot.append(f"TOTAL ({len(rows)} items)")
             else:
                 foot.append("")
@@ -742,6 +779,11 @@ def render_csv(cols: List[Column], rows: List[Dict[str, Any]]) -> bytes:
 def _normalise_tool_row(t: Dict[str, Any]) -> Dict[str, Any]:
     photos = t.get("photos") or []
     photo = photos[0] if photos else ""
+    qty_raw = t.get("quantity")
+    try:
+        qty = int(qty_raw) if qty_raw not in (None, "") else 1
+    except Exception:
+        qty = 1
     return {
         "id": t.get("id"),
         "name": t.get("name") or "",
@@ -757,6 +799,7 @@ def _normalise_tool_row(t: Dict[str, Any]) -> Dict[str, Any]:
         "tags": ", ".join(t.get("tag_names") or []),
         "notes": t.get("description") or "",
         "cost": float(t.get("cost") or 0),
+        "quantity": max(1, qty),
         "photo": photo,
     }
 
@@ -876,10 +919,21 @@ def _make_sales_per_item_factory(rows: List[Dict[str, Any]], mode: str,
             return [_para("No items.", st["muted"])]
         out: List[Any] = []
         accent_label = "SOLD" if mode == "sold" else "FOR SALE"
+        total = len(rows)
         for i, r in enumerate(rows):
             if i > 0:
                 out.append(PageBreak())
             page_flow: List[Any] = []
+            # Tiny "Item N of M" pill above the ribbon
+            if total > 1:
+                page_flow.append(_para(
+                    f"ITEM {i + 1} OF {total}",
+                    ParagraphStyle(
+                        "item_n", fontName="Helvetica-Bold", fontSize=8,
+                        leading=10, textColor=colors.HexColor("#888888"),
+                    ),
+                ))
+                page_flow.append(Spacer(1, 4))
             # Header row: ribbon + name on left, price on right
             head = Table([[
                 [
@@ -1127,22 +1181,30 @@ def _make_account_factory(per_dealer: List[Dict[str, Any]]):
                     out.append(Spacer(1, 6))
                     continue
                 col_w = [
+                    0.32 * inch,  # #
                     0.95 * inch,  # date
                     0.85 * inch,  # type
-                    PAGE_W - 0.95 * inch - 0.85 * inch - 1.0 * inch,  # note
+                    PAGE_W - 0.32 * inch - 0.95 * inch - 0.85 * inch - 1.0 * inch,  # note
                     1.0 * inch,   # amount
                 ]
+                idx_body_style = ParagraphStyle(
+                    "idx_acct", parent=st["small_right"],
+                    fontName="Helvetica-Bold",
+                    textColor=colors.HexColor("#888888"),
+                )
                 data = [[
+                    _para("#", st["th_right"]),
                     _para("DATE", st["th"]),
                     _para("TYPE", st["th"]),
                     _para("NOTE", st["th"]),
                     _para("AMOUNT", st["th_right"]),
                 ]]
-                for t in tx_list:
+                for ti, t in enumerate(tx_list):
                     is_pay = t.get("type") == "payment"
                     sign = "-" if is_pay else "+"
                     amt_style = green_amount if is_pay else red_amount
                     data.append([
+                        _para(str(ti + 1), idx_body_style),
                         _para(esc(fmt_date_us(t.get("date"))), st["small"]),
                         _para("Payment" if is_pay else "Charge", st["small"]),
                         _para(esc(t.get("note") or ""), st["small"]),
@@ -1150,6 +1212,7 @@ def _make_account_factory(per_dealer: List[Dict[str, Any]]):
                     ])
                 # Footer row
                 data.append([
+                    "",
                     _para("In-range Totals", ParagraphStyle(
                         "_", parent=st["small"], fontName="Helvetica-Bold",
                         textColor=colors.HexColor("#555"),
@@ -1165,6 +1228,7 @@ def _make_account_factory(per_dealer: List[Dict[str, Any]]):
                 tx_table = Table(data, colWidths=col_w, repeatRows=1)
                 tx_style: List[Any] = [
                     ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#111111")),
+                    ("BACKGROUND", (0, 1), (0, -2), colors.HexColor("#f3f3f3")),
                     ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
                     ("LEFTPADDING", (0, 0), (-1, -1), 4),
                     ("RIGHTPADDING", (0, 0), (-1, -1), 4),
@@ -1176,14 +1240,14 @@ def _make_account_factory(per_dealer: List[Dict[str, Any]]):
                 for ri in range(1, len(data) - 1):
                     if ri % 2 == 0:
                         tx_style.append((
-                            "BACKGROUND", (0, ri), (-1, ri),
+                            "BACKGROUND", (1, ri), (-1, ri),
                             colors.HexColor("#fafafa"),
                         ))
                 # footer
                 tx_style += [
                     ("LINEABOVE", (0, -1), (-1, -1), 1.2, colors.HexColor("#FFB300")),
                     ("BACKGROUND", (0, -1), (-1, -1), colors.HexColor("#fff8e6")),
-                    ("SPAN", (0, -1), (2, -1)),
+                    ("SPAN", (1, -1), (3, -1)),
                 ]
                 tx_table.setStyle(TableStyle(tx_style))
                 out.append(tx_table)
@@ -1211,6 +1275,7 @@ _TOOL_COLUMNS = [
     Column("purchase_date", "Purchased", "left", "date"),
     Column("warranty_until", "Warranty Until", "left", "date"),
     Column("tags", "Tags", "left", "text"),
+    Column("quantity", "Qty", "right", "number"),
     Column("cost", "Cost", "right", "money"),
 ]
 
@@ -1225,6 +1290,7 @@ _SALES_COLUMNS = [
     Column("condition", "Condition", "left", "text"),
     Column("sale_date", "Date", "left", "date"),
     Column("sold_to", "Sold To", "left", "text"),
+    Column("quantity", "Qty", "right", "number"),
     Column("cost", "Buy Price", "right", "money"),
     Column("price", "Price", "right", "money"),
 ]
