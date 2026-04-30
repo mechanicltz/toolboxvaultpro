@@ -290,7 +290,7 @@ export default function DealerClaimsScreen() {
                       {t.name}
                     </Text>
                     {!!t.repair_info?.contact && (
-                      <Text style={styles.itemMeta}>Contact: {t.repair_info.contact}</Text>
+                      <Text style={styles.itemMeta}>Contact: {formatPhonesInText(t.repair_info.contact)}</Text>
                     )}
                     {!!t.repair_info?.notified_at && (
                       <Text style={styles.notifiedHighlight}>

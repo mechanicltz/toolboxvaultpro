@@ -1,33 +1,26 @@
 import { Linking, Alert, Platform } from "react-native";
 
 /**
- * Format a phone-number-like string into the canonical 111-222-3333 shape.
- * - 10-digit numbers → "AAA-BBB-CCCC"
- * - 11-digit numbers starting with a 1 → "1-AAA-BBB-CCCC"
- * - 7-digit numbers → "BBB-CCCC"
- * - anything else → returned trimmed, untouched (international / short
- *   codes / weirdly-shaped inputs stay readable).
+ * Format a phone-number-like string into the canonical 10-digit shape:
+ *   "AAA-BBB-CCCC"
+ *
+ * Implementation notes:
+ * - Strips ALL non-digit characters (parens, spaces, dots, dashes, "+", …).
+ * - If the resulting string has >10 digits (e.g. "+1 (555) 867-5309" → 11
+ *   digits), we keep the LAST 10 digits — that's the national subscriber
+ *   number.
+ * - If the result has <10 digits (7-digit local numbers, partially typed
+ *   numbers, extension junk, etc.) we return the original trimmed value
+ *   so nothing is silently hidden.
  */
 export function formatPhone(raw?: string | null): string {
   if (raw == null) return "";
   const s = String(raw).trim();
   if (!s) return "";
   const digits = s.replace(/\D/g, "");
-  const hasPlus = s.trim().startsWith("+");
-  if (digits.length === 10) {
-    return `${digits.slice(0, 3)}-${digits.slice(3, 6)}-${digits.slice(6)}`;
-  }
-  if (digits.length === 11 && digits.startsWith("1")) {
-    return `1-${digits.slice(1, 4)}-${digits.slice(4, 7)}-${digits.slice(7)}`;
-  }
-  if (digits.length === 7) {
-    return `${digits.slice(0, 3)}-${digits.slice(3)}`;
-  }
-  if (hasPlus && digits.length >= 8) {
-    // Preserve international "+" prefix then group the rest.
-    return `+${digits}`;
-  }
-  return s;
+  if (digits.length < 10) return s;
+  const d = digits.slice(-10);
+  return `${d.slice(0, 3)}-${d.slice(3, 6)}-${d.slice(6)}`;
 }
 
 /**

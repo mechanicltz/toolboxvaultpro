@@ -66,7 +66,7 @@ export default function HomeScreen() {
 
   const totalItems = tools.length;
   const checkedOut = tools.filter((x) => x.is_checked_out).length;
-  const broken = tools.filter((x) => x.needs_repair).length;
+  const forSaleCount = tools.filter((x) => x.for_sale && !x.is_sold).length;
   const lost = tools.filter((x) => x?.lost_status?.is_lost).length;
   // Always trust the backend-computed extended total. The same calculation
   // powers the Inventory Report's "Total Cost" — they will always match.
@@ -178,11 +178,11 @@ export default function HomeScreen() {
             onPress={() => router.push("/inventory?filter=out")}
           />
           <StatCard
-            icon="build"
-            label="BROKEN"
-            value={String(broken)}
-            color={theme.colors.danger}
-            onPress={() => router.push("/claims")}
+            icon="pricetag"
+            label="SELLING"
+            value={String(forSaleCount)}
+            color={theme.colors.accent}
+            onPress={() => router.push("/for-sale")}
           />
         </View>
 

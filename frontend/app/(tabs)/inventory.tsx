@@ -15,7 +15,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter, useFocusEffect } from "expo-router";
+import { useRouter, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import { theme } from "../../src/theme";
 import { api } from "../../src/api";
@@ -39,11 +39,33 @@ export default function InventoryScreen() {
   const upgrade = useUpgradePrompt();
   const tier = user?.subscription?.tier || "free";
   const { gridCols, isPhone } = useResponsive();
+  // Allow other screens to deep-link into a specific inventory filter,
+  // e.g. the Home dashboard's "CHECKED OUT" card sends ?filter=out.
+  const params = useLocalSearchParams<{ filter?: string }>();
+  const incomingFilter = typeof params?.filter === "string" ? params.filter : null;
   const [tools, setTools] = useState<any[]>(() => getCached("inv_tools", []));
   const [agg, setAgg] = useState<any>(() => getCached("inv_agg", null));
   const [search, setSearch] = useState("");
   const [refreshing, setRefreshing] = useState(false);
-  const [filter, setFilter] = useState<Filter>("all");
+  const VALID_FILTERS: Filter[] = ["all", "available", "out", "consumables", "lost", "maintenance", "for_sale"];
+  const [filter, setFilter] = useState<Filter>(
+    (incomingFilter && (VALID_FILTERS as string[]).includes(incomingFilter))
+      ? (incomingFilter as Filter)
+      : "all"
+  );
+
+  // When the URL param changes (e.g. user taps the home card again while
+  // Inventory is still mounted), sync it into local state.
+  useEffect(() => {
+    if (
+      incomingFilter &&
+      (VALID_FILTERS as string[]).includes(incomingFilter) &&
+      incomingFilter !== filter
+    ) {
+      setFilter(incomingFilter as Filter);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [incomingFilter]);
   const [warningCount, setWarningCount] = useState(0);
   const [openClaims, setOpenClaims] = useState(0);
   const [maintDueCount, setMaintDueCount] = useState(0);

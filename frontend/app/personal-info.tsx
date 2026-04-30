@@ -17,6 +17,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter, useFocusEffect } from "expo-router";
 import { theme } from "../src/theme";
 import { api } from "../src/api";
+import { formatPhone } from "../src/contactLinks";
 
 type Profile = {
   name: string;
@@ -217,11 +218,15 @@ export default function PersonalInfoScreen() {
 
           <Field
             label="Phone"
-            value={form.phone}
-            onChange={(v) => update("phone", v)}
+            value={formatPhone(form.phone)}
+            onChange={(v) => {
+              // Keep only digits (max 10) so the stored value is canonical.
+              const digits = String(v || "").replace(/\D/g, "").slice(0, 10);
+              update("phone", digits);
+            }}
             testID="pi-phone"
             keyboardType="phone-pad"
-            placeholder="(555) 555-5555"
+            placeholder="555-555-5555"
           />
 
           <Field

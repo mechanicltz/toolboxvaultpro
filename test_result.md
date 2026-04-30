@@ -1034,3 +1034,64 @@ Fix #2 — PDF reports actually generate now:
     handler). The unparseable case still shows the raw text muted.
   * Borrowers row no longer appears in the More menu.
 
+
+
+
+## 2026-04-30 — Phone Format / Selling Card / CHECKED OUT Filter
+
+agent: main
+session: continuation
+
+Implemented three small UX requests:
+
+### 1. Phone numbers — strict 10-digit format
+- `formatPhone()` in `/app/frontend/src/contactLinks.ts` now strips ALL
+  non-digit characters and keeps the **last 10 digits** (so a stored
+  `+1 (555) 867-5309` is rendered as `555-867-5309`).
+- Inputs shorter than 10 digits fall through unchanged so a user
+  mid-entry doesn't see their value mangled.
+- `parseContacts()` already routes through `formatPhone()` so all
+  contact chips, dealer cards, claim contacts, and borrower rows now
+  render as `AAA-BBB-CCCC`.
+- The Personal Info screen's Phone input (`/app/frontend/app/personal-info.tsx`)
+  now stores only digits (max 10) and displays a live formatted value
+  via `formatPhone(form.phone)`.
+- Added `formatPhonesInText()` to the dealer-claims contact line so the
+  "Contact: …" repair-info entry also reformats embedded numbers.
+
+### 2. Home → CHECKED OUT card lands on filtered inventory
+- The home dashboard already linked to `/inventory?filter=out`, but the
+  Inventory screen ignored the URL param. Wired
+  `useLocalSearchParams<{filter?: string}>` and seed initial `filter`
+  state from it (validated against the allowed Filter union). A
+  `useEffect` syncs new param values when the URL changes.
+- Verified: tapping CHECKED OUT on home navigates to
+  `/inventory?filter=out` and immediately renders the chip-filtered list
+  with only checked-out tools.
+
+### 3. Replaced BROKEN with SELLING on home + removed top-of-page Selling button
+- Home (`/app/frontend/app/(tabs)/index.tsx`): the BROKEN StatCard was
+  replaced with a SELLING card that shows the count of items where
+  `for_sale === true && !is_sold` and navigates to `/for-sale`.
+- ReportsFab (`/app/frontend/src/ReportsFab.tsx`): the global "SELLING"
+  shortcut at the top-right of every tab was removed; only the
+  REPORTS pill remains. The Selling Inventory hub is still reachable
+  via the home SELLING card and the More tab's "Inventory for Sale"
+  row.
+
+### Files touched
+- `/app/frontend/src/contactLinks.ts`
+- `/app/frontend/src/ReportsFab.tsx`
+- `/app/frontend/app/(tabs)/index.tsx`
+- `/app/frontend/app/(tabs)/inventory.tsx`
+- `/app/frontend/app/personal-info.tsx`
+- `/app/frontend/app/dealer-claims/[id].tsx`
+
+### Verification
+- Visual screenshots confirmed:
+  * Home page now displays SELLING card with count (showed "2") and
+    only REPORTS in top-right.
+  * Tapping CHECKED OUT on home navigates to
+    `/inventory?filter=out` and renders the filtered list (single
+    Pry bar with CHECKED OUT badge).
+- No backend changes required.

@@ -19,14 +19,6 @@ export function ReportsFab() {
   return (
     <View pointerEvents="box-none" style={styles.wrap}>
       <TouchableOpacity
-        testID="global-selling-btn"
-        style={styles.btn}
-        onPress={() => router.push("/for-sale")}
-        accessibilityLabel="Inventory for Sale"
-      >
-        <Text style={styles.text}>SELLING</Text>
-      </TouchableOpacity>
-      <TouchableOpacity
         testID="global-reports-btn"
         style={styles.btn}
         onPress={() => router.push("/reports")}
