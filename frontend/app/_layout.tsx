@@ -9,6 +9,7 @@ import { ReportsFab } from "../src/ReportsFab";
 import { AuthProvider, useAuth } from "../src/AuthContext";
 import { UpgradeProvider } from "../src/UpgradePrompt";
 import { ResponsiveContainer } from "../src/ResponsiveContainer";
+import { RevenueCatBridge } from "../src/RevenueCatBridge";
 import { theme } from "../src/theme";
 
 function AuthGate({ children }: { children: React.ReactNode }) {
@@ -71,6 +72,7 @@ export default function RootLayout() {
       <AuthProvider>
         <AuroraBackground>
           <UpgradeProvider>
+            <RevenueCatBridge />
             <AuthGate>
               <ShellNav />
             </AuthGate>

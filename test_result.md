@@ -275,7 +275,8 @@ metadata:
   run_ui: false
 
 test_plan:
-  current_focus: []
+  current_focus:
+    - "RevenueCat — POST /api/subscription/sync-revenuecat (auth) + POST /api/webhooks/revenuecat (public)"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
@@ -299,6 +300,25 @@ backend_subscription:
           (5) SANITY: GET /stats, /aggregate, /warranty-claims/summary, /personal-profile all 200 with valid JSON for the authenticated subtest user. Cleanup: user2's test tool deleted, subtest restored to free tier. No cross-user data leakage; auth middleware correctly enforces 401 on all /api/* except /api/auth/* and /api/health (verified). All 75 individual assertions pass; backend is production-ready for this iteration."
 
 backend_recent:
+  - task: "RevenueCat — POST /api/subscription/sync-revenuecat (auth) + POST /api/webhooks/revenuecat (public)"
+    implemented: true
+    working: false
+    file: "/app/backend/server.py + /app/backend/revenuecat_sync.py"
+    stuck_count: 1
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: false
+        agent: "testing"
+        comment: "PARTIAL PASS — 27/34 via /app/backend_test_revenuecat.py against EXPO_PUBLIC_BACKEND_URL/api. Logged in as subtest@example.com (uid=00f0002b-9afc-41c7-a4b3-8273156b04ed).
+          (1) POST /api/subscription/sync-revenuecat: ALL 20 checks PASS. (auth) no-token → 401 ✓. (1a) is_active=true product_identifier='rc_premium_monthly' expires_at='2099-01-01T00:00:00+00:00' will_renew=true → 200 with tier=monthly status=active auto_renew=true; GET /api/subscription confirms. (1b) 'rc_premium_yearly_50pct' → tier=yearly. (1c) 'lifetime_unlock_v1' will_renew=false → tier=lifetime, expires_at=null, auto_renew=false. (1d) 'some_random_id' → tier=monthly (fallback). (1e) is_active=false → tier=free status=expired, GET confirms. Product-id → tier mapping (_tier_from_product_id) works correctly, persistence to user.subscription works.
+          (2) POST /api/webhooks/revenuecat: ALL 7 test cases FAIL with HTTP 401 {\"detail\":\"Not authenticated\"}. ROOT CAUSE: The global auth middleware `attach_user_to_context` at /app/backend/server.py L155-180 only exempts paths starting with '/api/auth/' or '/api/health' or '/api/' (exact). The webhook path '/api/webhooks/revenuecat' is NOT on that allow-list, so every request is rejected with 401 BEFORE reaching the route handler. The handler's own shared-secret auth (WEBHOOK_AUTH) never runs. This completely breaks the RevenueCat → backend webhook integration — production RevenueCat events will all be rejected. FIX (one-line): add '/api/webhooks/' to the exemption list in attach_user_to_context (and/or update PUBLIC_PATHS at L149 and use it). Example:
+              if path.startswith('/api/auth/') or path.startswith('/api/webhooks/') or path == '/api/' or path == '/api/health':
+                  return await call_next(request)
+          After the fix, all 7 webhook cases should pass (2a INITIAL_PURCHASE→monthly, 2b RENEWAL→yearly, 2c CANCELLATION keeps tier+sets auto_renew=false+status=cancelled, 2d EXPIRATION→free/expired, 2e unknown event→{ok:true, ignored:'SOMETHING_NEW'} no-op, 2f missing app_user_id→{ok:true, skipped:true}, 2g unknown user→{ok:true, user_not_found:true}). The webhook handler logic in revenuecat_sync.py looks correct on code-review; only the routing is broken.
+          (3) Legacy endpoints still work: POST /api/subscription/subscribe (monthly/yearly/lifetime/free), /cancel, /reactivate, /redeem-code — all 7 checks PASS. No regression from the new RevenueCat additions on the mock endpoints.
+          Subtest user restored to free tier at end of run. RETEST NEEDED after middleware fix."
+
   - task: "GET /api/warranty-claims/{claim_id} (single) — for /claim/[id] detail screen"
     implemented: true
     working: true
@@ -1095,3 +1115,20 @@ Implemented three small UX requests:
     `/inventory?filter=out` and renders the filtered list (single
     Pry bar with CHECKED OUT badge).
 - No backend changes required.
+
+  - agent: "testing"
+    message: "RevenueCat endpoint testing via /app/backend_test_revenuecat.py against EXPO_PUBLIC_BACKEND_URL/api — 27/34 PASS, 7 FAIL.
+
+    ✅ POST /api/subscription/sync-revenuecat (20/20 PASS): auth required (no-token → 401); (1a) monthly product → tier=monthly/active/auto_renew=true; (1b) yearly → tier=yearly; (1c) lifetime → tier=lifetime, expires_at=null, auto_renew=false; (1d) unknown product → monthly (fallback); (1e) is_active=false → tier=free/status=expired. GET /api/subscription reflects every update correctly. The tier mapping in _tier_from_product_id() and _build_subscription() work as spec'd.
+
+    ❌ POST /api/webhooks/revenuecat (0/7 cases pass — CRITICAL ROUTING BUG): ALL 7 webhook POSTs return HTTP 401 {\"detail\":\"Not authenticated\"} from the global auth middleware BEFORE reaching the route handler. ROOT CAUSE: The `attach_user_to_context` middleware in /app/backend/server.py L155-180 exempts ONLY paths that start with '/api/auth/' OR equal '/api/' OR '/api/health'. '/api/webhooks/revenuecat' is not on the allow-list, so it requires a Bearer token even though RevenueCat authenticates via its own shared-secret 'Authorization: <WEBHOOK_AUTH>' header and will never send a JWT. Backend logs confirm: 'POST /api/webhooks/revenuecat HTTP/1.1 401 Unauthorized' x7.
+
+    FIX (one-line): In /app/backend/server.py L164, add '/api/webhooks/' to the exemption list — e.g.:
+        if path.startswith('/api/auth/') or path.startswith('/api/webhooks/') or path == '/api/' or path == '/api/health':
+            return await call_next(request)
+
+    The handler in /app/backend/revenuecat_sync.py looks correct on code review — it already has dev-open-mode fallback when REVENUECAT_WEBHOOK_AUTH is unset (line 180-189). After the one-line middleware fix, all 7 webhook cases should pass (INITIAL_PURCHASE→monthly, RENEWAL→yearly, CANCELLATION keeps tier+auto_renew=false+status=cancelled, EXPIRATION→free, unknown event→ignored, missing app_user_id→skipped, unknown user→user_not_found).
+
+    ✅ Legacy mock endpoints (7/7 PASS): /api/subscription/subscribe (monthly), /cancel, /reactivate, /redeem-code invalid-400 all work exactly as before. No regression from RevenueCat additions on these endpoints.
+
+    Subtest user restored to free tier at end of run. Please apply the middleware fix and re-run /app/backend_test_revenuecat.py."

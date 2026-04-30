@@ -9,6 +9,7 @@ import {
   Modal,
   Pressable,
   TextInput,
+  Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -26,6 +27,13 @@ import {
   fmtMoney,
   type Tier,
 } from "../src/subscription";
+import {
+  isRevenueCatAvailable,
+  presentPaywall,
+  presentCustomerCenter,
+  getCustomerInfo,
+  PREMIUM_ENTITLEMENT_ID,
+} from "../src/revenuecat";
 
 type TierCardProps = {
   tier: Tier;
@@ -222,10 +230,58 @@ export default function SubscriptionScreen() {
     }
   };
 
+  // True only on a real iOS/Android build that has the RevenueCat key
+  // configured. On web preview we keep the legacy mock flow visible so
+  // dev/QA can keep working without going to a phone.
+  const useRevenueCat = isRevenueCatAvailable();
+
   const doSubscribe = async () => {
     if (!confirm) return;
     setBusy(true);
     try {
+      if (confirm.mode === "downgrade") {
+        // Going to free — there's nothing for RevenueCat to do (you can't
+        // "buy" the free tier). Hand off to the existing endpoint which
+        // simply records the tier change. On native, the user can also
+        // open Customer Center to actually cancel auto-renew.
+        await api.subscribe("free");
+        await refresh();
+        await load();
+        setConfirm(null);
+        return;
+      }
+
+      if (useRevenueCat) {
+        // Close the in-app confirm modal so the native paywall sheet has
+        // the screen to itself, then present the RevenueCat-managed paywall.
+        setConfirm(null);
+        const result = await presentPaywall();
+        if (result === "PURCHASED" || result === "RESTORED") {
+          // The CustomerInfo listener in RevenueCatBridge will sync to
+          // the backend automatically — but force a refresh here too so
+          // the UI updates immediately.
+          try {
+            const info = await getCustomerInfo();
+            const ent = info?.entitlements?.active?.[PREMIUM_ENTITLEMENT_ID];
+            await api.syncRevenueCat({
+              is_active: !!ent,
+              product_identifier: ent?.productIdentifier ?? null,
+              expires_at: ent?.expirationDate ?? null,
+              will_renew: ent?.willRenew ?? null,
+              period_type: ent?.periodType ?? null,
+              store: ent?.store ?? null,
+            });
+          } catch (e) {
+            console.warn("Post-paywall sync failed:", e);
+          }
+          await refresh();
+          await load();
+        }
+        return;
+      }
+
+      // Web / dev fallback: keep the existing mock subscribe path so we can
+      // still test premium features in the browser.
       await api.subscribe(confirm.tier);
       await refresh();
       await load();
@@ -240,6 +296,31 @@ export default function SubscriptionScreen() {
   const doCancel = async () => {
     setBusy(true);
     try {
+      if (useRevenueCat) {
+        // RevenueCat / App Store / Play Store own the cancellation UX —
+        // we open Customer Center which deep-links into manage-subscription.
+        setCancelOpen(false);
+        await presentCustomerCenter();
+        // Sync immediately when the sheet closes so the UI reflects the
+        // willRenew=false toggle.
+        try {
+          const info = await getCustomerInfo();
+          const ent = info?.entitlements?.active?.[PREMIUM_ENTITLEMENT_ID];
+          await api.syncRevenueCat({
+            is_active: !!ent,
+            product_identifier: ent?.productIdentifier ?? null,
+            expires_at: ent?.expirationDate ?? null,
+            will_renew: ent?.willRenew ?? null,
+            period_type: ent?.periodType ?? null,
+            store: ent?.store ?? null,
+          });
+        } catch (e) {
+          console.warn("Post-cancel sync failed:", e);
+        }
+        await refresh();
+        await load();
+        return;
+      }
       await api.cancelSubscription();
       await refresh();
       await load();
@@ -254,6 +335,28 @@ export default function SubscriptionScreen() {
   const doReactivate = async () => {
     setBusy(true);
     try {
+      if (useRevenueCat) {
+        // Same idea as cancel — let the user re-enable auto-renew in
+        // Customer Center / their app store settings, then sync.
+        await presentCustomerCenter();
+        try {
+          const info = await getCustomerInfo();
+          const ent = info?.entitlements?.active?.[PREMIUM_ENTITLEMENT_ID];
+          await api.syncRevenueCat({
+            is_active: !!ent,
+            product_identifier: ent?.productIdentifier ?? null,
+            expires_at: ent?.expirationDate ?? null,
+            will_renew: ent?.willRenew ?? null,
+            period_type: ent?.periodType ?? null,
+            store: ent?.store ?? null,
+          });
+        } catch (e) {
+          console.warn("Post-reactivate sync failed:", e);
+        }
+        await refresh();
+        await load();
+        return;
+      }
       await api.reactivateSubscription();
       await refresh();
       await load();
@@ -457,8 +560,19 @@ export default function SubscriptionScreen() {
             All prices in USD. Subscriptions auto-renew at the end of each billing period — cancel
             anytime before then to avoid renewal. Lifetime is a one-time payment.
             {"\n\n"}
-            <Text style={{ fontWeight: "800" }}>* DEMO MODE:</Text> No real payments are processed.
-            You can change tiers freely for testing.
+            {useRevenueCat ? (
+              <Text>
+                <Text style={{ fontWeight: "800" }}>Secure billing</Text> handled by Apple App Store
+                / Google Play through RevenueCat. Manage or cancel any time from your device's
+                Subscriptions settings.
+              </Text>
+            ) : (
+              <Text>
+                <Text style={{ fontWeight: "800" }}>* WEB PREVIEW MODE:</Text> No real payments are
+                processed in the browser. Real billing kicks in on the iOS / Android app. You can
+                change tiers freely here for testing.
+              </Text>
+            )}
           </Text>
         </ScrollView>
       )}
@@ -479,9 +593,11 @@ export default function SubscriptionScreen() {
             <Text style={styles.confirmMsg}>
               {confirm?.mode === "downgrade"
                 ? "Items beyond the free limits (10 tools, 1 dealer, 1 agent) will be locked but stay visible. Re-subscribe anytime to unlock."
-                : `You will be charged ${fmtMoney(TIER_PRICES[confirm?.tier as Tier] || 0)}${
-                    confirm?.tier === "monthly" ? "/month" : confirm?.tier === "yearly" ? "/year" : " once"
-                  }.\n\nDEMO MODE — no real payment will be processed.`}
+                : useRevenueCat
+                  ? `You'll be taken to the secure ${Platform.OS === "ios" ? "App Store" : "Google Play"} payment sheet to complete your ${TIER_LABELS[confirm?.tier as Tier]} subscription. You can cancel any time before renewal.`
+                  : `You will be charged ${fmtMoney(TIER_PRICES[confirm?.tier as Tier] || 0)}${
+                      confirm?.tier === "monthly" ? "/month" : confirm?.tier === "yearly" ? "/year" : " once"
+                    }.\n\nWeb preview — no real payment will be processed.`}
             </Text>
             <View style={styles.confirmRow}>
               <TouchableOpacity onPress={() => setConfirm(null)} style={styles.btnSecondary} disabled={busy}>

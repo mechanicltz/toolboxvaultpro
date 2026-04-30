@@ -2402,6 +2402,15 @@ _make_reports_router(_reports_api_router, lambda: db, get_current_user)
 app.include_router(_reports_api_router)
 
 # ---------------------------------------------------------------------------
+# RevenueCat subscription sync (replaces the mocked /subscribe path on
+# native devices). Web preview / dev still uses the legacy mock route.
+# ---------------------------------------------------------------------------
+from revenuecat_sync import make_revenuecat_router as _make_rc_router  # noqa: E402
+
+_rc_router = _make_rc_router(lambda: real_db, get_current_user)
+app.include_router(_rc_router)
+
+# ---------------------------------------------------------------------------
 # HTML → PDF rendering endpoint (uses xhtml2pdf, runs entirely server-side
 # so reports work reliably regardless of browser quirks / CSP restrictions).
 # ---------------------------------------------------------------------------
