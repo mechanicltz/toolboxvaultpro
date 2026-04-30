@@ -1102,6 +1102,88 @@ Implemented three small UX requests:
   via the home SELLING card and the More tab's "Inventory for Sale"
   row.
 
+
+## 2026-04-30 — RevenueCat Real Payments Integration
+
+agent: main
+session: continuation
+
+Replaced the mocked subscription flow with real in-app-purchase billing
+via **RevenueCat** on iOS/Android, while keeping the existing mock as a
+dev-mode fallback in the web preview.
+
+### Frontend
+- Installed `react-native-purchases@10.0.1` and
+  `react-native-purchases-ui@10.0.1` (yarn). Not added as a config
+  plugin — v10 auto-links via CocoaPods / Gradle.
+- `src/revenuecat.ts` — new service that **lazy-imports** the SDK and
+  is a safe no-op on web. Exposes configure / getCustomerInfo / listen /
+  presentPaywall / presentPaywallIfNeeded / presentCustomerCenter.
+- `src/RevenueCatBridge.tsx` — component mounted inside `AuthProvider`
+  that calls `configurePurchases(user.id)` after login, hooks the
+  `addCustomerInfoUpdateListener`, and POSTs every entitlement change
+  to the backend so the user's tier stays in sync automatically.
+- `app/subscription.tsx` — "CHOOSE PLAN" now calls
+  `RevenueCatUI.presentPaywall()` on native, then syncs the resulting
+  entitlement to the backend. Cancel / Reactivate open the RevenueCat
+  **Customer Center**. Web continues to use the legacy mock subscribe.
+- `app/_layout.tsx` — mounts `<RevenueCatBridge />` at the top of the tree.
+- Public API key read from `EXPO_PUBLIC_REVENUECAT_API_KEY`
+  (added to `/app/frontend/.env` with the user's test_ key). Supports
+  platform-specific override form `ios=appl_xxx;android=goog_yyy` when
+  production keys are added.
+
+### Backend
+- `backend/revenuecat_sync.py` — new module exposing:
+  * `POST /api/subscription/sync-revenuecat` (authenticated) — receives
+    a projected CustomerInfo entitlement from the client after a
+    purchase / listener update and writes it onto `user.subscription`.
+  * `POST /api/webhooks/revenuecat` (public, authed via
+    `REVENUECAT_WEBHOOK_AUTH` bearer header; runs in dev-open mode when
+    unset) — receives RC server-to-server lifecycle events
+    (INITIAL_PURCHASE, RENEWAL, CANCELLATION, EXPIRATION, etc.) and
+    updates the user record. Unknown event types are acknowledged but
+    ignored; unknown `app_user_id` values are ack-skipped.
+- `server.py` middleware now exempts `/api/webhooks/*` from JWT auth so
+  RevenueCat's server-to-server webhooks can reach the handler.
+- Legacy mock endpoints (`/api/subscription/subscribe|cancel|reactivate|redeem-code`)
+  left in place — still used by the web preview.
+
+### Files touched / added
+- `/app/frontend/package.json`
+- `/app/frontend/.env`
+- `/app/frontend/src/revenuecat.ts` (NEW)
+- `/app/frontend/src/RevenueCatBridge.tsx` (NEW)
+- `/app/frontend/src/api.ts` (added `syncRevenueCat`)
+- `/app/frontend/app/_layout.tsx`
+- `/app/frontend/app/subscription.tsx`
+- `/app/backend/revenuecat_sync.py` (NEW)
+- `/app/backend/server.py` (middleware exemption + router include)
+
+### Backend testing
+Full deep-testing agent run:
+- ✅ `POST /api/subscription/sync-revenuecat` — 20/20 cases pass
+  (product→tier mapping covers monthly/yearly/lifetime/fallback,
+  is_active=false downgrades).
+- ✅ `POST /api/webhooks/revenuecat` — 29/29 cases pass
+  (INITIAL_PURCHASE, RENEWAL, CANCELLATION retains tier with
+  auto_renew=false, EXPIRATION downgrades, unknown event ignored,
+  missing/unknown app_user_id skipped).
+- ✅ Legacy mock endpoints still work unchanged (7/7 regression tests).
+
+### Known limitations / next steps for user
+- **Web preview can't run the real paywall** — `react-native-purchases`
+  is native-only. To test actual purchases the user must do
+  `eas build --profile development` and install the dev client on a
+  real iOS/Android device.
+- **App Store Connect / Google Play Console** products must be
+  configured and linked in RevenueCat before production launch. The
+  `test_…` key covers sandbox testing until then.
+- **Webhook secret**: set `REVENUECAT_WEBHOOK_AUTH` in `/app/backend/.env`
+  and paste the same value in the RevenueCat dashboard under
+  Integrations → Webhooks to authenticate server-to-server deliveries.
+
+
 ### Files touched
 - `/app/frontend/src/contactLinks.ts`
 - `/app/frontend/src/ReportsFab.tsx`
