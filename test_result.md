@@ -302,11 +302,11 @@ backend_subscription:
 backend_recent:
   - task: "RevenueCat — POST /api/subscription/sync-revenuecat (auth) + POST /api/webhooks/revenuecat (public)"
     implemented: true
-    working: false
+    working: true
     file: "/app/backend/server.py + /app/backend/revenuecat_sync.py"
-    stuck_count: 1
+    stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: false
         agent: "testing"
@@ -318,6 +318,9 @@ backend_recent:
           After the fix, all 7 webhook cases should pass (2a INITIAL_PURCHASE→monthly, 2b RENEWAL→yearly, 2c CANCELLATION keeps tier+sets auto_renew=false+status=cancelled, 2d EXPIRATION→free/expired, 2e unknown event→{ok:true, ignored:'SOMETHING_NEW'} no-op, 2f missing app_user_id→{ok:true, skipped:true}, 2g unknown user→{ok:true, user_not_found:true}). The webhook handler logic in revenuecat_sync.py looks correct on code-review; only the routing is broken.
           (3) Legacy endpoints still work: POST /api/subscription/subscribe (monthly/yearly/lifetime/free), /cancel, /reactivate, /redeem-code — all 7 checks PASS. No regression from the new RevenueCat additions on the mock endpoints.
           Subtest user restored to free tier at end of run. RETEST NEEDED after middleware fix."
+      - working: true
+        agent: "testing"
+        comment: "RETEST PASSED — 29/29 webhook checks via /app/backend_test_revenuecat_webhook.py against EXPO_PUBLIC_BACKEND_URL/api after main agent's middleware fix at server.py L166-172 added `/api/webhooks/` to the public-path allow-list. Logged in as subtest@example.com (uid via GET /api/auth/me = 00f0002b-9afc-41c7-a4b3-8273156b04ed). All 7 webhook scenarios from section 2 verified: (2a) INITIAL_PURCHASE with product_id='rc_premium_monthly' → 200 with body {ok:true, event:'INITIAL_PURCHASE', tier:'monthly'}; GET /api/subscription confirms tier=monthly, status=active. (2b) RENEWAL with product_id='rc_premium_yearly' → 200 body.tier='yearly'; GET confirms tier=yearly. (2c) CANCELLATION with future expiration_at_ms (4070908800000 = 2099-01-01) → 200; GET confirms tier KEPT as 'yearly', auto_renew=false, status='cancelled'. (2d) EXPIRATION → 200; GET confirms tier=free, status=expired. (2e) Unknown event_type 'SOMETHING_NEW' → 200 with body {ok:true, ignored:'SOMETHING_NEW'}; subscription state unchanged (deep-equal pre/post). (2f) Missing app_user_id → 200 with body {ok:true, skipped:true}. (2g) Unknown app_user_id 'does_not_exist_zzz' → 200 with body {ok:true, user_not_found:true}. Backend logs confirm webhook handler correctly executes on every request now (no more 401s — visible 200 OK responses on POST /api/webhooks/revenuecat in /var/log/supervisor/backend.out.log). NOTE: Logs also confirm webhook is in OPEN MODE (`[revenuecat] webhook running unauthenticated — set REVENUECAT_WEBHOOK_AUTH`), which is expected for this iteration since REVENUECAT_WEBHOOK_AUTH env var is not set yet — handler defers to RevenueCat's own Authorization-header secret check inside revenuecat_sync.py and waves it through when no secret is configured. Subtest user restored to free tier at end. Per request, did NOT re-run sync-revenuecat or legacy mock endpoints. Task is complete — main agent can summarise and finish."
 
   - task: "GET /api/warranty-claims/{claim_id} (single) — for /claim/[id] detail screen"
     implemented: true
@@ -1132,3 +1135,14 @@ Implemented three small UX requests:
     ✅ Legacy mock endpoints (7/7 PASS): /api/subscription/subscribe (monthly), /cancel, /reactivate, /redeem-code invalid-400 all work exactly as before. No regression from RevenueCat additions on these endpoints.
 
     Subtest user restored to free tier at end of run. Please apply the middleware fix and re-run /app/backend_test_revenuecat.py."
+
+  - agent: "testing"
+    message: "RevenueCat WEBHOOK retest after main agent's middleware fix — 29/29 PASS via /app/backend_test_revenuecat_webhook.py against EXPO_PUBLIC_BACKEND_URL/api. The fix at /app/backend/server.py L166-172 (added `path.startswith('/api/webhooks/')` to the public-path exemption) works correctly. Logged in as subtest@example.com; uid resolved via GET /api/auth/me = 00f0002b-9afc-41c7-a4b3-8273156b04ed.
+    ✅ 2a INITIAL_PURCHASE (product_id='rc_premium_monthly', expiration_at_ms=4070908800000) → 200 with body {ok:true, event:'INITIAL_PURCHASE', tier:'monthly'}; GET /api/subscription confirms tier=monthly, status=active.
+    ✅ 2b RENEWAL (product_id='rc_premium_yearly') → 200 body.tier='yearly'; GET confirms tier=yearly.
+    ✅ 2c CANCELLATION (future expiration_at_ms = 2099-01-01) → 200; GET confirms tier KEPT as 'yearly', auto_renew=false, status='cancelled'.
+    ✅ 2d EXPIRATION → 200; GET confirms tier=free, status=expired.
+    ✅ 2e Unknown event_type 'SOMETHING_NEW' → 200 with body {ok:true, ignored:'SOMETHING_NEW'}; subscription state unchanged (deep-equal pre/post snapshot).
+    ✅ 2f Missing app_user_id → 200 with body {ok:true, skipped:true}.
+    ✅ 2g Unknown app_user_id 'does_not_exist_zzz' → 200 with body {ok:true, user_not_found:true}.
+    Backend logs confirm the handler now executes on every request (200 OK on POST /api/webhooks/revenuecat — no more 401s). Logs also confirm webhook is in OPEN MODE per request: '[revenuecat] webhook running unauthenticated — set REVENUECAT_WEBHOOK_AUTH' on every call. Per request, did NOT re-run sync-revenuecat or legacy mock endpoints. Subtest user restored to free tier. Task complete — RevenueCat integration is now production-ready (modulo setting REVENUECAT_WEBHOOK_AUTH env var before going live)."

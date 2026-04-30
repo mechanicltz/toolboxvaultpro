@@ -160,8 +160,15 @@ async def attach_user_to_context(request: Request, call_next):
     path = request.url.path
     if not path.startswith("/api/"):
         return await call_next(request)
-    # Public auth endpoints
-    if path.startswith("/api/auth/") or path == "/api/" or path == "/api/health":
+    # Public auth endpoints and RevenueCat server-to-server webhook
+    # (authenticated instead via a shared header secret inside the
+    # /api/webhooks/revenuecat handler, see revenuecat_sync.py).
+    if (
+        path.startswith("/api/auth/")
+        or path.startswith("/api/webhooks/")
+        or path == "/api/"
+        or path == "/api/health"
+    ):
         return await call_next(request)
     auth = request.headers.get("Authorization", "")
     if not auth.startswith("Bearer "):
