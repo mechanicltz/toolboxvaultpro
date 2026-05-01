@@ -1705,29 +1705,27 @@ async def bulk_tools(payload: BulkRequest):
     elif payload.action == "add_tag":
         if not payload.tag_id:
             raise HTTPException(400, "tag_id required")
-        async for t in db.tools.find({"id": {"$in": payload.tool_ids}}, {"_id": 0}):
-            tag_ids = t.get("tag_ids") or []
-            tag_names = t.get("tag_names") or []
-            if payload.tag_id not in tag_ids:
-                tag_ids.append(payload.tag_id)
-                if payload.tag_name and payload.tag_name not in tag_names:
-                    tag_names.append(payload.tag_name)
-                await db.tools.update_one(
-                    {"id": t["id"]},
-                    {"$set": {"tag_ids": tag_ids, "tag_names": tag_names, "updated_at": now_iso()}},
-                )
-                affected += 1
+        # Bulk add tag using $addToSet — single round-trip
+        add_to_set: Dict[str, Any] = {"tag_ids": payload.tag_id}
+        if payload.tag_name:
+            add_to_set["tag_names"] = payload.tag_name
+        result = await db.tools.update_many(
+            {"id": {"$in": payload.tool_ids}, "tag_ids": {"$ne": payload.tag_id}},
+            {"$addToSet": add_to_set, "$set": {"updated_at": now_iso()}},
+        )
+        affected = result.modified_count
     elif payload.action == "remove_tag":
         if not payload.tag_id:
             raise HTTPException(400, "tag_id required")
-        async for t in db.tools.find({"id": {"$in": payload.tool_ids}}, {"_id": 0}):
-            tag_ids = [x for x in (t.get("tag_ids") or []) if x != payload.tag_id]
-            tag_names = [x for x in (t.get("tag_names") or []) if x != (payload.tag_name or "")] if payload.tag_name else (t.get("tag_names") or [])
-            await db.tools.update_one(
-                {"id": t["id"]},
-                {"$set": {"tag_ids": tag_ids, "tag_names": tag_names, "updated_at": now_iso()}},
-            )
-            affected += 1
+        # Bulk remove tag using $pull — single round-trip
+        pull_doc: Dict[str, Any] = {"tag_ids": payload.tag_id}
+        if payload.tag_name:
+            pull_doc["tag_names"] = payload.tag_name
+        result = await db.tools.update_many(
+            {"id": {"$in": payload.tool_ids}, "tag_ids": payload.tag_id},
+            {"$pull": pull_doc, "$set": {"updated_at": now_iso()}},
+        )
+        affected = result.modified_count
     elif payload.action == "report_lost":
         lp = payload.lost_payload or ReportLostRequest()
         today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
