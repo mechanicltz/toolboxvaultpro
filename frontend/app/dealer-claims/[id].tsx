@@ -19,6 +19,7 @@ import { theme } from "../../src/theme";
 import { api } from "../../src/api";
 import { confirm } from "../../src/confirm";
 import { formatDateUS as fmtDate } from "../../src/dateUtil";
+import { formatPhonesInText } from "../../src/contactLinks";
 
 type Tab = "open" | "completed";
 

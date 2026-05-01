@@ -1379,6 +1379,30 @@ mismatch with what `src/api.ts` expects. Use the account from
   so EAS cannot auto-upgrade them into the incompatible
   4.2.1 + 0.8.1 pair that was breaking iOS Pod Install.
 
+### 2026-05-01 — Native runtime bug fixes surfaced in Expo Go
+
+1. **`dealer-claims/[id].tsx`** — `formatPhonesInText` was used but
+   never imported; caused a React render-error "Property
+   'formatPhonesInText' doesn't exist" on the dealer-claims screen.
+   Added `import { formatPhonesInText } from "../../src/contactLinks";`.
+
+2. **`expo-file-system/legacy` migration (4 files)** — In
+   `expo-file-system@19.x` (SDK 54), the top-level
+   `writeAsStringAsync`, `readAsStringAsync`, and
+   `EncodingType` are deprecated and THROW at runtime on native,
+   producing the user-visible error
+   `Cannot read property 'Base64' of undefined` when rendering a
+   report PDF (and similar crashes when reading/writing photos &
+   documents). Switched 4 files to import from
+   `expo-file-system/legacy` instead:
+   - `/app/frontend/src/reportRunner.ts` (reports — PDF + CSV)
+   - `/app/frontend/src/sections/DocumentsSection.tsx` (tool
+     attachments)
+   - `/app/frontend/app/tool/edit.tsx` (tool photo base64 upload)
+   - `/app/frontend/app/warranty-claims.tsx` (CSV export)
+   The legacy subpath continues to work indefinitely per the Expo
+   team's deprecation plan; no behaviour change.
+
 ---
 
 ## 2026-05-01 — Pre-deployment Backend QA Run (testing sub-agent)
