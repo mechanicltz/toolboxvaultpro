@@ -9,6 +9,7 @@
     "userInterfaceStyle": "dark",
     "ios": {
       "supportsTablet": true,
+      "bundleIdentifier": "app.emergent.assetlocator128c92565d",
       "infoPlist": {
         "NSCameraUsageDescription": "Take photos of your tools",
         "NSPhotoLibraryUsageDescription": "Add photos of tools from your gallery",
@@ -16,6 +17,7 @@
       }
     },
     "android": {
+      "package": "app.emergent.assetlocator128c92565d",
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#0A0A0A"
