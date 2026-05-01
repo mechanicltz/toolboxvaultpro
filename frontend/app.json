@@ -52,9 +52,7 @@
       "@react-native-community/datetimepicker",
       "expo-web-browser",
       "expo-mail-composer",
-      "expo-font",
-      "expo-image",
-      "expo-sharing"
+      "expo-font"
     ],
     "experiments": {
       "typedRoutes": true
