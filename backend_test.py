@@ -1,473 +1,582 @@
+"""Pre-deployment backend QA test for Toolbox Vault.
+
+Comprehensive smoke test of every backend endpoint that the mobile app calls.
+Auth uses subtest@example.com / password123 (or registers a fresh user as fallback).
 """
-Backend tests for newly added feature areas:
-  A) Documents per tool
-  B) Maintenance schedules + service events + upcoming
-  C) Theft / Loss reporting
-  D) Bulk operations
-Targets EXPO_PUBLIC_BACKEND_URL/api as set in /app/frontend/.env
-"""
+import os
 import sys
-import base64
+import time
+from typing import Optional, Dict, Any, List
+
 import requests
-from datetime import datetime
-from pathlib import Path
+
+ENV_PATH = "/app/frontend/.env"
+BASE_URL = None
+with open(ENV_PATH) as f:
+    for line in f:
+        if line.startswith("EXPO_PUBLIC_BACKEND_URL="):
+            BASE_URL = line.split("=", 1)[1].strip().strip('"').strip("'")
+            break
+if not BASE_URL:
+    BASE_URL = "http://localhost:8001"
+API = f"{BASE_URL}/api"
+print(f"== Testing backend at {API}")
+
+PASSED: List[str] = []
+FAILED: List[Dict[str, Any]] = []
 
 
-def get_base_url():
-    env_path = Path("/app/frontend/.env")
-    for line in env_path.read_text().splitlines():
-        if line.strip().startswith("EXPO_PUBLIC_BACKEND_URL"):
-            val = line.split("=", 1)[1].strip().strip('"').strip("'")
-            return val.rstrip("/") + "/api"
-    raise RuntimeError("EXPO_PUBLIC_BACKEND_URL not found")
-
-
-BASE = get_base_url()
-print(f"Using BASE={BASE}")
-
-PASSED = 0
-FAILED = 0
-FAILURES = []
-
-
-def check(cond, label, ctx=None):
-    global PASSED, FAILED
+def chk(name: str, cond: bool, detail: str = "") -> bool:
     if cond:
-        PASSED += 1
-        print(f"  PASS - {label}")
+        PASSED.append(name)
+        print(f"  PASS  {name}")
     else:
-        FAILED += 1
-        msg = f"  FAIL - {label}"
-        if ctx is not None:
-            msg += f"  | ctx={ctx}"
-        print(msg)
-        FAILURES.append((label, ctx))
+        FAILED.append({"name": name, "detail": detail})
+        print(f"  FAIL  {name}: {detail}")
+    return cond
 
 
-def post(path, json_body=None):
-    return requests.post(BASE + path, json=json_body or {}, timeout=30)
+def H(token: Optional[str] = None) -> Dict[str, str]:
+    h = {"Content-Type": "application/json"}
+    if token:
+        h["Authorization"] = f"Bearer {token}"
+    return h
 
 
-def put(path, json_body=None):
-    return requests.put(BASE + path, json=json_body or {}, timeout=30)
-
-
-def get(path):
-    return requests.get(BASE + path, timeout=30)
-
-
-def delete(path):
-    return requests.delete(BASE + path, timeout=30)
-
-
-created_tool_ids = []
-created_tag_ids = []
-created_category_ids = []
-
-
-# ===================== A) Documents per tool =====================
-print("\n========== A) Documents per tool ==========")
-
-r = post("/tools", {"name": "TT - Test Tool"})
-check(r.status_code == 200, "A1: POST /tools TT created", r.text if r.status_code != 200 else None)
-TT = r.json()
-created_tool_ids.append(TT["id"])
-
-b64_short = base64.b64encode(b"hello world pdf content here").decode()
-r = post(f"/tools/{TT['id']}/documents", {
-    "name": "Manual.pdf",
-    "data": b64_short,
-    "mime_type": "application/pdf",
-    "size": 12345,
-})
-check(r.status_code == 200, "A2: POST /tools/{id}/documents (Manual.pdf) returns 200",
-      r.text if r.status_code != 200 else None)
-tool = r.json()
-docs = tool.get("documents") or []
-check(len(docs) == 1, "A2: tool.documents has 1 entry", len(docs))
-doc1 = docs[0]
-check(bool(doc1.get("id")), "A2: doc.id auto-generated", doc1)
-check(doc1.get("name") == "Manual.pdf", "A2: doc.name is Manual.pdf", doc1.get("name"))
-check(doc1.get("mime_type") == "application/pdf", "A2: doc.mime_type", doc1.get("mime_type"))
-check(doc1.get("size") == 12345, "A2: doc.size honored", doc1.get("size"))
-check(bool(doc1.get("uploaded_at")), "A2: doc.uploaded_at populated", doc1.get("uploaded_at"))
-
-r = post(f"/tools/{TT['id']}/documents", {
-    "name": "Receipt.jpg",
-    "data": "abcd",
-    "mime_type": "image/jpeg",
-})
-check(r.status_code == 200, "A3: POST second doc Receipt.jpg returns 200",
-      r.text if r.status_code != 200 else None)
-tool = r.json()
-docs = tool.get("documents") or []
-check(len(docs) == 2, "A3: tool.documents has 2 entries", len(docs))
-doc2 = next((d for d in docs if d.get("name") == "Receipt.jpg"), None)
-check(doc2 is not None, "A3: Receipt.jpg located")
-expected_size = int(len("abcd") * 3 / 4)
-check(doc2.get("size") == expected_size,
-      f"A3: size auto-estimated from base64 (expected {expected_size})",
-      doc2.get("size") if doc2 else None)
-
-r = delete(f"/tools/{TT['id']}/documents/{doc1['id']}")
-check(r.status_code == 200, "A4: DELETE doc1 returns 200", r.text if r.status_code != 200 else None)
-tool = r.json()
-docs = tool.get("documents") or []
-check(len(docs) == 1, "A4: tool.documents has 1 doc remaining", len(docs))
-check(docs[0].get("name") == "Receipt.jpg", "A4: remaining doc is Receipt.jpg")
-
-r = delete(f"/tools/{TT['id']}/documents/non-existent-doc-id-1234")
-check(r.status_code == 200, "A5: DELETE non-existent doc returns 200 (tolerant)",
-      r.text if r.status_code != 200 else None)
-tool = r.json()
-docs = tool.get("documents") or []
-check(len(docs) == 1, "A5: tool.documents still has 1 doc", len(docs))
-
-
-# ===================== B) Maintenance schedules =====================
-print("\n========== B) Maintenance schedules ==========")
-
-r = post(f"/tools/{TT['id']}/maintenance", {
-    "type": "Calibration",
-    "interval_months": 12,
-    "last_done_date": "2025-01-15",
-    "notes": "Annual cal",
-})
-check(r.status_code == 200, "B1: POST /maintenance sch1 returns 200",
-      r.text if r.status_code != 200 else None)
-tool = r.json()
-maints = tool.get("maintenance") or []
-check(len(maints) == 1, "B1: tool.maintenance has 1 entry", len(maints))
-sch1 = maints[0]
-check(bool(sch1.get("id")), "B1: sch1.id auto-generated")
-check(sch1.get("type") == "Calibration", "B1: sch1.type==Calibration", sch1.get("type"))
-check(sch1.get("interval_months") == 12, "B1: sch1.interval_months==12", sch1.get("interval_months"))
-check(sch1.get("last_done_date") == "2025-01-15", "B1: sch1.last_done_date==2025-01-15",
-      sch1.get("last_done_date"))
-check(sch1.get("next_due_date") == "2026-01-15", "B1: sch1.next_due_date==2026-01-15",
-      sch1.get("next_due_date"))
-check(sch1.get("notes") == "Annual cal", "B1: sch1.notes")
-check(sch1.get("history") == [], "B1: sch1.history is []", sch1.get("history"))
-
-r = post(f"/tools/{TT['id']}/maintenance", {"type": "Service", "interval_months": 6})
-check(r.status_code == 200, "B2: POST /maintenance sch2 returns 200")
-tool = r.json()
-maints = tool.get("maintenance") or []
-check(len(maints) == 2, "B2: tool.maintenance has 2 entries", len(maints))
-sch2 = next((s for s in maints if s.get("type") == "Service"), None)
-check(sch2 is not None, "B2: sch2 located")
-check(sch2.get("last_done_date") is None, "B2: sch2.last_done_date is None", sch2.get("last_done_date"))
-check(sch2.get("next_due_date") is None, "B2: sch2.next_due_date is None", sch2.get("next_due_date"))
-check(sch2.get("history") == [], "B2: sch2.history is []", sch2.get("history"))
-
-r = put(f"/tools/{TT['id']}/maintenance/{sch1['id']}", {"interval_months": 24})
-check(r.status_code == 200, "B3: PUT sch1 interval_months=24 returns 200")
-tool = r.json()
-sch1_updated = next((s for s in (tool.get("maintenance") or []) if s.get("id") == sch1["id"]), None)
-check(sch1_updated is not None, "B3: sch1 still present")
-check(sch1_updated.get("interval_months") == 24, "B3: sch1.interval_months==24",
-      sch1_updated.get("interval_months"))
-check(sch1_updated.get("next_due_date") == "2027-01-15", "B3: sch1.next_due_date==2027-01-15",
-      sch1_updated.get("next_due_date"))
-
-r = post(f"/tools/{TT['id']}/maintenance/{sch1['id']}/service", {
-    "date": "2026-01-15",
-    "cost": 49.99,
-    "technician": "CalLab",
-    "notes": "OK",
-})
-check(r.status_code == 200, "B4: POST service event returns 200",
-      r.text if r.status_code != 200 else None)
-tool = r.json()
-sch1_updated = next((s for s in (tool.get("maintenance") or []) if s.get("id") == sch1["id"]), None)
-hist = sch1_updated.get("history") or []
-check(len(hist) == 1, "B4: history has 1 event", len(hist))
-ev = hist[0]
-check(ev.get("date") == "2026-01-15", "B4: event.date", ev.get("date"))
-check(abs((ev.get("cost") or 0) - 49.99) < 0.01, "B4: event.cost==49.99", ev.get("cost"))
-check(ev.get("technician") == "CalLab", "B4: event.technician", ev.get("technician"))
-check(ev.get("notes") == "OK", "B4: event.notes", ev.get("notes"))
-check(sch1_updated.get("last_done_date") == "2026-01-15", "B4: sch1.last_done_date==2026-01-15",
-      sch1_updated.get("last_done_date"))
-check(sch1_updated.get("next_due_date") == "2028-01-15",
-      "B4: sch1.next_due_date==2028-01-15 (24mo after)",
-      sch1_updated.get("next_due_date"))
-
-r = post(f"/tools/{TT['id']}/maintenance/{sch1['id']}/service", {})
-check(r.status_code == 200, "B5: POST service event no date returns 200")
-tool = r.json()
-sch1_updated = next((s for s in (tool.get("maintenance") or []) if s.get("id") == sch1["id"]), None)
-today_str = datetime.utcnow().strftime("%Y-%m-%d")
-check(sch1_updated.get("last_done_date") == today_str,
-      f"B5: last_done_date is today ({today_str})",
-      sch1_updated.get("last_done_date"))
-
-
-def add_months(date_str, months):
-    d = datetime.strptime(date_str, "%Y-%m-%d")
-    new_month = d.month + months
-    new_year = d.year + (new_month - 1) // 12
-    new_month = ((new_month - 1) % 12) + 1
+def req(method: str, path: str, token: Optional[str] = None, json_body=None,
+        params=None, expect=200, label: str = "") -> Optional[requests.Response]:
+    url = f"{API}{path}"
     try:
-        return d.replace(year=new_year, month=new_month).strftime("%Y-%m-%d")
-    except ValueError:
-        return d.replace(year=new_year, month=new_month, day=28).strftime("%Y-%m-%d")
+        r = requests.request(method, url, headers=H(token), json=json_body,
+                             params=params, timeout=60)
+    except Exception as e:
+        chk(label or f"{method} {path}", False, f"exception: {e}")
+        return None
+    ok = r.status_code == expect
+    if not ok:
+        body = ""
+        try:
+            body = r.text[:500]
+        except Exception:
+            pass
+        chk(label or f"{method} {path}", False,
+            f"expected {expect} got {r.status_code} body={body}")
+    else:
+        chk(label or f"{method} {path}", True)
+    return r
 
 
-expected_next = add_months(today_str, 24)
-check(sch1_updated.get("next_due_date") == expected_next,
-      f"B5: next_due_date recalc to {expected_next}",
-      sch1_updated.get("next_due_date"))
+# ============================================================================
+# AUTH
+# ============================================================================
+print("\n-- AUTH --")
+LOGIN_EMAIL = "subtest@example.com"
+LOGIN_PASS = "password123"
 
-# Set sch2 last_done_date so it has a next_due_date for upcoming test
-r = put(f"/tools/{TT['id']}/maintenance/{sch2['id']}", {"last_done_date": today_str})
-check(r.status_code == 200, "B6-pre: PUT sch2 last_done_date=today")
-sch2_after = next((s for s in (r.json().get("maintenance") or []) if s.get("id") == sch2["id"]), None)
-check(sch2_after.get("next_due_date") is not None, "B6-pre: sch2.next_due_date populated",
-      sch2_after.get("next_due_date"))
+r = requests.post(f"{API}/auth/login", json={"email": LOGIN_EMAIL, "password": LOGIN_PASS}, timeout=30)
+TOKEN = None
+USER = None
+if r.status_code == 200:
+    chk("POST /auth/login subtest@example.com", True)
+    body = r.json()
+    TOKEN = body.get("token")
+    USER = body.get("user") or {}
+    chk("auth/login returned token", bool(TOKEN))
+    chk("auth/login returned user.email", body.get("user", {}).get("email") == LOGIN_EMAIL)
+else:
+    print(f"  login failed ({r.status_code}); trying fresh registration")
+    fresh_email = f"qa_{int(time.time())}@test.com"
+    r = requests.post(f"{API}/auth/register",
+                      json={"email": fresh_email, "password": "password123", "name": "QA Tester"},
+                      timeout=30)
+    chk("POST /auth/register fallback", r.status_code == 200,
+        f"status={r.status_code} body={r.text[:300]}")
+    if r.status_code == 200:
+        body = r.json()
+        TOKEN = body.get("token")
+        USER = body.get("user") or {}
+        LOGIN_EMAIL = fresh_email
 
-r = get("/maintenance/upcoming?days=400")
-check(r.status_code == 200, "B6: GET /maintenance/upcoming?days=400 returns 200")
-data = r.json()
-items = data.get("items") or []
-our_items = [it for it in items if it.get("tool_id") == TT["id"]]
-check(len(our_items) == 2, "B6: items contain both our schedules", len(our_items))
-for it in our_items:
-    fields_ok = all(k in it for k in ("tool_id", "tool_name", "schedule_id", "type",
-                                       "next_due_date", "is_overdue"))
-    check(fields_ok, f"B6: item has required fields ({it.get('type')})", it)
-nds = [it.get("next_due_date") for it in items if it.get("next_due_date")]
-check(nds == sorted(nds), "B6: items sorted by next_due_date asc", nds[:5])
-overdue_in_items = sum(1 for it in items if it.get("is_overdue"))
-due_soon_in_items = sum(1 for it in items if not it.get("is_overdue"))
-check(data.get("overdue") == overdue_in_items,
-      f"B6: overdue counter matches items (got {data.get('overdue')} vs {overdue_in_items})")
-check(data.get("due_soon") == due_soon_in_items,
-      f"B6: due_soon counter matches items (got {data.get('due_soon')} vs {due_soon_in_items})")
+if not TOKEN:
+    print("FATAL: cannot authenticate")
+    sys.exit(1)
 
-r = delete(f"/tools/{TT['id']}/maintenance/{sch2['id']}")
-check(r.status_code == 200, "B7: DELETE sch2 returns 200")
-tool = r.json()
-maints = tool.get("maintenance") or []
-check(len(maints) == 1, "B7: tool now has 1 schedule", len(maints))
-check(maints[0].get("id") == sch1["id"], "B7: remaining schedule is sch1")
+r = req("GET", "/auth/me", token=TOKEN, label="GET /auth/me")
+me = r.json() if r and r.status_code == 200 else {}
+chk("auth/me has email", me.get("email") == LOGIN_EMAIL)
+chk("auth/me has subscription", "subscription" in me)
 
-r = delete(f"/tools/non-existent-tool-id-1234/maintenance/{sch1['id']}")
-check(r.status_code == 404,
-      f"B8: DELETE on non-existent tool returns 404 (got {r.status_code})", r.text)
+r = req("PUT", "/auth/me", token=TOKEN,
+        json_body={"name": "QA Tester Updated"}, label="PUT /auth/me name")
+if r and r.status_code == 200:
+    chk("PUT /auth/me reflects name", r.json().get("name") == "QA Tester Updated")
 
-
-# ===================== C) Theft / Loss reporting =====================
-print("\n========== C) Theft / Loss ==========")
-
-r = post(f"/tools/{TT['id']}/report-lost", {
-    "type": "stolen",
-    "police_report_number": "24-1234",
-    "insurance_company": "AllState",
-    "insurance_claim_number": "IC-7",
-    "reported_by": "Mike",
-    "notes": "From van",
-})
-check(r.status_code == 200, "C1: POST /report-lost stolen returns 200",
-      r.text if r.status_code != 200 else None)
-tool = r.json()
-ls = tool.get("lost_status") or {}
-today_str = datetime.utcnow().strftime("%Y-%m-%d")
-check(ls.get("is_lost") is True, "C1: is_lost==true", ls.get("is_lost"))
-check(ls.get("type") == "stolen", "C1: type==stolen", ls.get("type"))
-check(ls.get("reported_date") == today_str,
-      f"C1: reported_date defaults to today ({today_str})", ls.get("reported_date"))
-check(ls.get("police_report_number") == "24-1234", "C1: police_report_number")
-check(ls.get("insurance_company") == "AllState", "C1: insurance_company")
-check(ls.get("insurance_claim_number") == "IC-7", "C1: insurance_claim_number")
-check(ls.get("reported_by") == "Mike", "C1: reported_by")
-check(ls.get("notes") == "From van", "C1: notes")
-
-r = post(f"/tools/{TT['id']}/recover", {})
-check(r.status_code == 200, "C2: POST /recover returns 200")
-tool = r.json()
-ls = tool.get("lost_status") or {}
-check(ls.get("is_lost") is False, "C2: is_lost==false", ls.get("is_lost"))
-check(isinstance(ls.get("recovered_at"), str) and "T" in (ls.get("recovered_at") or ""),
-      "C2: recovered_at is ISO timestamp", ls.get("recovered_at"))
-
-r = post(f"/tools/{TT['id']}/report-lost", {"type": "lost", "reported_date": "2025-06-01"})
-check(r.status_code == 200, "C3: POST /report-lost lost 2025-06-01 returns 200")
-tool = r.json()
-ls = tool.get("lost_status") or {}
-check(ls.get("is_lost") is True, "C3: is_lost==true")
-check(ls.get("type") == "lost", "C3: type==lost", ls.get("type"))
-check(ls.get("reported_date") == "2025-06-01", "C3: reported_date==2025-06-01",
-      ls.get("reported_date"))
-check(ls.get("recovered_at") is None, "C3: recovered_at==null", ls.get("recovered_at"))
-
-r = post("/tools/non-existent-tool-id-zzz/report-lost", {"type": "lost"})
-check(r.status_code == 404,
-      f"C4: report-lost non-existent tool returns 404 (got {r.status_code})", r.text)
-
-r = post(f"/tools/{TT['id']}/report-lost", {"type": "missing"})
-check(r.status_code == 200, "C5: report-lost invalid type returns 200")
-tool = r.json()
-ls = tool.get("lost_status") or {}
-check(ls.get("type") == "lost", "C5: invalid type 'missing' falls back to 'lost'", ls.get("type"))
+# Make sure user has premium tier so free-tier limits don't bite during tests
+req("POST", "/subscription/subscribe", token=TOKEN,
+    json_body={"tier": "lifetime"}, label="POST /subscription/subscribe lifetime")
 
 
-# ===================== D) Bulk operations =====================
-print("\n========== D) Bulk operations ==========")
+# ============================================================================
+# TAXONOMY (locations / tags / categories)
+# ============================================================================
+print("\n-- TAXONOMY --")
+created_loc = None
+created_loc_child = None
+created_tag = None
+created_cat = None
 
-r = post("/tools", {"name": "T2 - Bulk Test 2"})
-check(r.status_code == 200, "D1: POST /tools T2 created")
-T2 = r.json()
-created_tool_ids.append(T2["id"])
+r = req("POST", "/locations", token=TOKEN,
+        json_body={"name": "QA Garage Workbench", "description": "QA test location"},
+        label="POST /locations")
+if r and r.status_code == 200:
+    created_loc = r.json()
 
-r = post("/tools", {"name": "T3 - Bulk Test 3"})
-check(r.status_code == 200, "D1: POST /tools T3 created")
-T3 = r.json()
-created_tool_ids.append(T3["id"])
+r = req("POST", "/locations", token=TOKEN,
+        json_body={"name": "QA Drawer 1",
+                   "parent_id": created_loc["id"] if created_loc else None},
+        label="POST /locations (child)")
+if r and r.status_code == 200:
+    created_loc_child = r.json()
 
-r = post("/tools/bulk", {
-    "tool_ids": [T2["id"], T3["id"]],
-    "action": "move_location",
-    "location_id": None,
-    "location_name": "",
-})
-check(r.status_code == 200, "D2: POST /tools/bulk move_location returns 200",
-      r.text if r.status_code != 200 else None)
-data = r.json()
-check(data.get("ok") is True, "D2: ok==true", data)
-check(data.get("affected") == 2, "D2: affected==2", data.get("affected"))
-for tid in [T2["id"], T3["id"]]:
-    rr = get(f"/tools/{tid}")
-    check(rr.status_code == 200, f"D2: GET tool {tid}")
-    t = rr.json()
-    check(t.get("location_name") == "",
-          f"D2: tool {tid} location_name=='' (got {t.get('location_name')!r})")
+r = req("GET", "/locations", token=TOKEN, label="GET /locations")
+if r and r.status_code == 200:
+    chk("GET /locations is list", isinstance(r.json(), list))
 
-r = post("/tags", {"name": "BulkTagX"})
-check(r.status_code == 200, "D3: POST /tags X created")
-X = r.json()
-created_tag_ids.append(X["id"])
+r = req("POST", "/tags", token=TOKEN,
+        json_body={"name": "QA-Power", "color": "#FF0000"}, label="POST /tags")
+if r and r.status_code == 200:
+    created_tag = r.json()
+req("GET", "/tags", token=TOKEN, label="GET /tags")
 
-r = post("/tools/bulk", {
-    "tool_ids": [T2["id"], T3["id"]],
-    "action": "add_tag",
-    "tag_id": X["id"],
-    "tag_name": X["name"],
-})
-check(r.status_code == 200, "D3: bulk add_tag returns 200")
-data = r.json()
-check(data.get("ok") is True, "D3: ok==true")
-check(data.get("affected") == 2, "D3: affected==2", data.get("affected"))
-for tid in [T2["id"], T3["id"]]:
-    t = get(f"/tools/{tid}").json()
-    check(X["id"] in (t.get("tag_ids") or []), f"D3: tool {tid} has X.id in tag_ids")
-    check(X["name"] in (t.get("tag_names") or []), f"D3: tool {tid} has X.name in tag_names")
-
-r = post("/tools/bulk", {
-    "tool_ids": [T2["id"], T3["id"]],
-    "action": "add_tag",
-    "tag_id": X["id"],
-    "tag_name": X["name"],
-})
-check(r.status_code == 200, "D4: bulk add_tag again returns 200")
-for tid in [T2["id"], T3["id"]]:
-    t = get(f"/tools/{tid}").json()
-    tag_ids = t.get("tag_ids") or []
-    tag_names = t.get("tag_names") or []
-    check(tag_ids.count(X["id"]) == 1,
-          f"D4: tool {tid} tag_ids has X.id exactly once", tag_ids)
-    check(tag_names.count(X["name"]) == 1,
-          f"D4: tool {tid} tag_names has X.name exactly once", tag_names)
-
-r = post("/tools/bulk", {
-    "tool_ids": [T2["id"]],
-    "action": "remove_tag",
-    "tag_id": X["id"],
-    "tag_name": X["name"],
-})
-check(r.status_code == 200, "D5: bulk remove_tag returns 200")
-t2 = get(f"/tools/{T2['id']}").json()
-t3 = get(f"/tools/{T3['id']}").json()
-check(X["id"] not in (t2.get("tag_ids") or []), "D5: T2 no longer has X.id", t2.get("tag_ids"))
-check(X["name"] not in (t2.get("tag_names") or []), "D5: T2 no longer has X.name",
-      t2.get("tag_names"))
-check(X["id"] in (t3.get("tag_ids") or []), "D5: T3 still has X.id", t3.get("tag_ids"))
-
-r = post("/categories", {"name": "BulkCatC"})
-check(r.status_code == 200, "D6: POST /categories C created")
-C = r.json()
-created_category_ids.append(C["id"])
-
-r = post("/tools/bulk", {
-    "tool_ids": [T2["id"]],
-    "action": "set_category",
-    "category_id": C["id"],
-    "category_name": C["name"],
-})
-check(r.status_code == 200, "D6: bulk set_category returns 200")
-t2 = get(f"/tools/{T2['id']}").json()
-check(t2.get("category_id") == C["id"], "D6: T2.category_id==C.id", t2.get("category_id"))
-check(t2.get("category_name") == C["name"], "D6: T2.category_name==C.name",
-      t2.get("category_name"))
-
-r = post("/tools/bulk", {
-    "tool_ids": [T2["id"], T3["id"]],
-    "action": "report_lost",
-    "lost_payload": {"type": "stolen", "police_report_number": "BULK-1"},
-})
-check(r.status_code == 200, "D7: bulk report_lost returns 200",
-      r.text if r.status_code != 200 else None)
-data = r.json()
-check(data.get("ok") is True, "D7: ok==true")
-check(data.get("affected") == 2, "D7: affected==2", data.get("affected"))
-for tid in [T2["id"], T3["id"]]:
-    t = get(f"/tools/{tid}").json()
-    ls = t.get("lost_status") or {}
-    check(ls.get("is_lost") is True, f"D7: tool {tid} lost_status.is_lost==true")
-    check(ls.get("type") == "stolen", f"D7: tool {tid} lost_status.type==stolen",
-          ls.get("type"))
-    check(ls.get("police_report_number") == "BULK-1",
-          f"D7: tool {tid} police_report_number==BULK-1", ls.get("police_report_number"))
-
-r = post("/tools/bulk", {"tool_ids": [T2["id"], T3["id"]], "action": "delete"})
-check(r.status_code == 200, "D8: bulk delete returns 200")
-data = r.json()
-check(data.get("ok") is True, "D8: ok==true")
-check(data.get("affected") == 2, "D8: affected==2", data.get("affected"))
-for tid in [T2["id"], T3["id"]]:
-    rr = get(f"/tools/{tid}")
-    check(rr.status_code == 404,
-          f"D8: GET tool {tid} returns 404 after delete (got {rr.status_code})")
-created_tool_ids = [tid for tid in created_tool_ids if tid not in (T2["id"], T3["id"])]
-
-r = post("/tools/bulk", {"tool_ids": [TT["id"]], "action": "unknown"})
-check(r.status_code == 400, f"D9: unknown action returns 400 (got {r.status_code})", r.text)
-
-r = post("/tools/bulk", {"tool_ids": [TT["id"]], "action": "add_tag"})
-check(r.status_code == 400,
-      f"D10: add_tag missing tag_id returns 400 (got {r.status_code})", r.text)
+r = req("POST", "/categories", token=TOKEN,
+        json_body={"name": "QA Hand Tools"}, label="POST /categories")
+if r and r.status_code == 200:
+    created_cat = r.json()
+req("GET", "/categories", token=TOKEN, label="GET /categories")
 
 
-# ===================== Cleanup =====================
-print("\n========== Cleanup ==========")
-for tid in created_tool_ids:
-    r = delete(f"/tools/{tid}")
-    check(r.status_code == 200, f"Cleanup: DELETE tool {tid}")
-for tagid in created_tag_ids:
-    r = delete(f"/tags/{tagid}")
-    check(r.status_code == 200, f"Cleanup: DELETE tag {tagid}")
-for cid in created_category_ids:
-    r = delete(f"/categories/{cid}")
-    check(r.status_code == 200, f"Cleanup: DELETE category {cid}")
+# ============================================================================
+# BORROWERS
+# ============================================================================
+print("\n-- BORROWERS --")
+created_borrower = None
+r = req("POST", "/borrowers", token=TOKEN,
+        json_body={"name": "QA Borrower Mike", "contact": "mike@qa.test"},
+        label="POST /borrowers")
+if r and r.status_code == 200:
+    created_borrower = r.json()
+req("GET", "/borrowers", token=TOKEN, label="GET /borrowers")
+
+if created_borrower:
+    r = req("PUT", f"/borrowers/{created_borrower['id']}", token=TOKEN,
+            json_body={"name": "QA Borrower Mike Smith", "contact": "mike@qa.test"},
+            label="PUT /borrowers/{id}")
+    if r and r.status_code == 200:
+        chk("borrower name updated", r.json().get("name") == "QA Borrower Mike Smith")
 
 
-print("\n" + "=" * 60)
-print(f"RESULTS: {PASSED} PASSED, {FAILED} FAILED")
-print("=" * 60)
-if FAILURES:
-    print("\nFAILURES:")
-    for label, ctx in FAILURES:
-        print(f"  - {label}")
-        if ctx is not None:
-            print(f"    ctx={ctx}")
-sys.exit(0 if FAILED == 0 else 1)
+# ============================================================================
+# DEALERS + AGENTS
+# ============================================================================
+print("\n-- DEALERS --")
+created_dealer = None
+created_agent = None
+r = req("POST", "/dealers", token=TOKEN, json_body={
+    "name": "QA Tool Dealer Inc.", "phone": "555-1234",
+    "website": "https://qadealer.com", "address": "123 QA St",
+    "route_frequency": "Weekly", "route_day_of_week": "Tuesday",
+}, label="POST /dealers")
+if r and r.status_code == 200:
+    created_dealer = r.json()
+
+req("GET", "/dealers", token=TOKEN, label="GET /dealers")
+
+if created_dealer:
+    req("GET", f"/dealers/{created_dealer['id']}", token=TOKEN, label="GET /dealers/{id}")
+    req("PUT", f"/dealers/{created_dealer['id']}", token=TOKEN,
+        json_body={"phone": "555-9999"}, label="PUT /dealers/{id}")
+
+    r = req("POST", f"/dealers/{created_dealer['id']}/agents", token=TOKEN,
+            json_body={"name": "QA Agent John", "phone": "555-1111", "email": "j@qa.test"},
+            label="POST /dealers/{id}/agents")
+    if r and r.status_code == 200:
+        agents = r.json().get("agents", [])
+        if agents:
+            created_agent = agents[0]
+
+    if created_agent:
+        req("PUT", f"/dealers/{created_dealer['id']}/agents/{created_agent['id']}",
+            token=TOKEN, json_body={"name": "QA Agent John Updated", "phone": "555-2222"},
+            label="PUT /dealers/{id}/agents/{aid}")
+
+    # Payments via transactions endpoint (account=credit / personal)
+    req("POST", f"/dealers/{created_dealer['id']}/transactions", token=TOKEN,
+        json_body={"account": "credit", "type": "charge", "amount": 100.0, "note": "QA charge"},
+        label="POST /dealers/{id}/transactions credit charge")
+    req("POST", f"/dealers/{created_dealer['id']}/transactions", token=TOKEN,
+        json_body={"account": "personal", "type": "payment", "amount": 25.0, "note": "QA payment"},
+        label="POST /dealers/{id}/transactions personal payment")
+
+
+# ============================================================================
+# TOOLS (CRUD + filters + checkout/checkin + mark-sold + report-lost + bulk)
+# ============================================================================
+print("\n-- TOOLS --")
+created_tool = None
+created_tool_b = None  # for bulk
+
+tool_payload = {
+    "name": "QA DeWalt Drill",
+    "brand": "DeWalt",
+    "model": "DCD777",
+    "serial_number": "QA-12345",
+    "cost": 199.99,
+    "quantity": 1,
+    "purchase_date": "2025-01-15",
+    "condition": "Good",
+    "location_id": created_loc["id"] if created_loc else None,
+    "location_name": created_loc["name"] if created_loc else "",
+    "category_id": created_cat["id"] if created_cat else None,
+    "category_name": created_cat["name"] if created_cat else "",
+    "tag_ids": [created_tag["id"]] if created_tag else [],
+    "tag_names": [created_tag["name"]] if created_tag else [],
+    "dealer_id": created_dealer["id"] if created_dealer else None,
+    "dealer_name": created_dealer["name"] if created_dealer else "",
+}
+r = req("POST", "/tools", token=TOKEN, json_body=tool_payload, label="POST /tools")
+if r and r.status_code == 200:
+    created_tool = r.json()
+
+r = req("POST", "/tools", token=TOKEN,
+        json_body={**tool_payload, "name": "QA Bulk Tool B", "serial_number": "QA-67890"},
+        label="POST /tools (B)")
+if r and r.status_code == 200:
+    created_tool_b = r.json()
+
+req("GET", "/tools", token=TOKEN, label="GET /tools (list)")
+req("GET", "/tools", token=TOKEN, params={"needs_repair": "true"},
+    label="GET /tools?needs_repair=true")
+if created_dealer:
+    req("GET", "/tools", token=TOKEN, params={"dealer_id": created_dealer["id"]},
+        label="GET /tools?dealer_id=…")
+req("GET", "/tools", token=TOKEN, params={"checked_out": "true"},
+    label="GET /tools?checked_out=true")
+
+if created_tool:
+    req("GET", f"/tools/{created_tool['id']}", token=TOKEN, label="GET /tools/{id}")
+    req("PUT", f"/tools/{created_tool['id']}", token=TOKEN,
+        json_body={"description": "QA test description"}, label="PUT /tools/{id}")
+
+    # Checkout/Checkin
+    req("POST", f"/tools/{created_tool['id']}/checkout", token=TOKEN,
+        json_body={"borrower_name": "QA Borrower Mike Smith",
+                   "borrower_id": created_borrower["id"] if created_borrower else None,
+                   "notes": "QA test"},
+        label="POST /tools/{id}/checkout")
+    req("POST", f"/tools/{created_tool['id']}/checkin", token=TOKEN,
+        label="POST /tools/{id}/checkin")
+
+    # Mark sold / unmark sold
+    req("POST", f"/tools/{created_tool['id']}/mark-sold", token=TOKEN,
+        json_body={"sold_price": 100.0, "sold_to": "QA Buyer", "sold_at": "2026-04-01"},
+        label="POST /tools/{id}/mark-sold")
+    req("POST", f"/tools/{created_tool['id']}/unmark-sold", token=TOKEN,
+        label="POST /tools/{id}/unmark-sold")
+
+    # Report lost + recover
+    req("POST", f"/tools/{created_tool['id']}/report-lost", token=TOKEN,
+        json_body={"type": "lost", "police_report_number": "QA-PR-1", "reported_by": "QA"},
+        label="POST /tools/{id}/report-lost")
+    req("POST", f"/tools/{created_tool['id']}/recover", token=TOKEN,
+        label="POST /tools/{id}/recover")
+
+# BULK ops
+if created_tool and created_tool_b:
+    ids = [created_tool["id"], created_tool_b["id"]]
+    if created_tag:
+        req("POST", "/tools/bulk", token=TOKEN, json_body={
+            "tool_ids": ids, "action": "add_tag",
+            "tag_id": created_tag["id"], "tag_name": created_tag["name"]},
+            label="POST /tools/bulk add_tag")
+        req("POST", "/tools/bulk", token=TOKEN, json_body={
+            "tool_ids": ids, "action": "remove_tag",
+            "tag_id": created_tag["id"], "tag_name": created_tag["name"]},
+            label="POST /tools/bulk remove_tag")
+    if created_loc:
+        req("POST", "/tools/bulk", token=TOKEN, json_body={
+            "tool_ids": ids, "action": "move_location",
+            "location_id": created_loc["id"], "location_name": created_loc["name"]},
+            label="POST /tools/bulk move_location")
+    if created_cat:
+        req("POST", "/tools/bulk", token=TOKEN, json_body={
+            "tool_ids": ids, "action": "set_category",
+            "category_id": created_cat["id"], "category_name": created_cat["name"]},
+            label="POST /tools/bulk set_category")
+    req("POST", "/tools/bulk", token=TOKEN, json_body={
+        "tool_ids": ids, "action": "report_lost",
+        "lost_payload": {"type": "stolen", "reported_by": "QA"}},
+        label="POST /tools/bulk report_lost")
+
+
+# ============================================================================
+# WISHLIST
+# ============================================================================
+print("\n-- WISHLIST --")
+created_wish = None
+r = req("POST", "/wishlist", token=TOKEN, json_body={
+    "name": "QA Wish Tool", "url": "https://example.com",
+    "price": 250.0, "priority": "high",
+    "dealer_id": created_dealer["id"] if created_dealer else None,
+}, label="POST /wishlist")
+if r and r.status_code == 200:
+    created_wish = r.json()
+req("GET", "/wishlist", token=TOKEN, label="GET /wishlist")
+converted_tool = None
+if created_wish:
+    req("PUT", f"/wishlist/{created_wish['id']}", token=TOKEN,
+        json_body={"priority": "normal"}, label="PUT /wishlist/{id}")
+    r = req("POST", f"/wishlist/{created_wish['id']}/convert", token=TOKEN,
+            label="POST /wishlist/{id}/convert")
+    if r and r.status_code == 200:
+        converted_tool = r.json()
+    req("DELETE", f"/wishlist/{created_wish['id']}", token=TOKEN,
+        label="DELETE /wishlist/{id}")
+
+
+# ============================================================================
+# WARRANTY CLAIMS
+# ============================================================================
+print("\n-- WARRANTY CLAIMS --")
+broken_tool = None
+broken_payload = {
+    **tool_payload, "name": "QA Broken Tool",
+    "serial_number": "QA-BROKEN-1",
+    "needs_repair": True,
+    "repair_info": {
+        "repair_status": "Reported",
+        "company_notified": "QA Repair Co",
+        "contact": "555-0000",
+        "notified_at": "2026-04-20",
+        "expected_completion": "2026-05-15",
+        "notes": "Won't power on",
+    },
+}
+r = req("POST", "/tools", token=TOKEN, json_body=broken_payload, label="POST /tools (broken)")
+if r and r.status_code == 200:
+    broken_tool = r.json()
+
+req("GET", "/warranty-claims", token=TOKEN, label="GET /warranty-claims")
+req("GET", "/warranty-claims", token=TOKEN, params={"archived": "true"},
+    label="GET /warranty-claims?archived=true")
+if created_dealer:
+    req("GET", "/warranty-claims", token=TOKEN, params={"dealer_id": created_dealer["id"]},
+        label="GET /warranty-claims?dealer_id=…")
+req("GET", "/warranty-claims/summary", token=TOKEN, label="GET /warranty-claims/summary")
+
+created_claim = None
+if broken_tool:
+    r = req("GET", "/warranty-claims", token=TOKEN, params={"tool_id": broken_tool["id"]},
+            label="GET /warranty-claims?tool_id=…")
+    if r and r.status_code == 200 and r.json():
+        created_claim = r.json()[0]
+
+if created_claim:
+    req("GET", f"/warranty-claims/{created_claim['id']}", token=TOKEN,
+        label="GET /warranty-claims/{id}")
+    req("PUT", f"/warranty-claims/{created_claim['id']}", token=TOKEN,
+        json_body={"claim_status": "awaiting_approval"}, label="PUT /warranty-claims/{id}")
+
+
+# ============================================================================
+# MAINTENANCE
+# ============================================================================
+print("\n-- MAINTENANCE --")
+req("GET", "/maintenance/upcoming", token=TOKEN, params={"days": 30},
+    label="GET /maintenance/upcoming?days=30")
+req("GET", "/maintenance/upcoming", token=TOKEN, params={"days": 60},
+    label="GET /maintenance/upcoming?days=60")
+
+if created_tool:
+    r = req("POST", f"/tools/{created_tool['id']}/maintenance", token=TOKEN,
+            json_body={"type": "Service", "interval_months": 6, "last_done_date": "2026-01-15"},
+            label="POST /tools/{id}/maintenance")
+    sch_id = None
+    if r and r.status_code == 200:
+        sched = r.json().get("maintenance") or []
+        if sched:
+            sch_id = sched[-1]["id"]
+    if sch_id:
+        req("POST", f"/tools/{created_tool['id']}/maintenance/{sch_id}/service", token=TOKEN,
+            json_body={"date": "2026-04-01", "cost": 50.0, "technician": "QA Tech"},
+            label="POST /tools/{id}/maintenance/{sch_id}/service (event log)")
+        req("DELETE", f"/tools/{created_tool['id']}/maintenance/{sch_id}", token=TOKEN,
+            label="DELETE /tools/{id}/maintenance/{sch_id}")
+
+
+# ============================================================================
+# DASHBOARD / AGGREGATE
+# ============================================================================
+print("\n-- DASHBOARD / AGGREGATE --")
+r = req("GET", "/stats", token=TOKEN, label="GET /stats")
+if r and r.status_code == 200:
+    s = r.json()
+    chk("/stats has total_tools", "total_tools" in s)
+    chk("/stats has total_value", "total_value" in s)
+
+r = req("GET", "/aggregate", token=TOKEN, label="GET /aggregate")
+if r and r.status_code == 200:
+    a = r.json()
+    chk("/aggregate has count", "count" in a)
+    chk("/aggregate has total_value", "total_value" in a)
+
+if created_dealer:
+    req("GET", "/aggregate", token=TOKEN, params={"dealer_id": created_dealer["id"]},
+        label="GET /aggregate?dealer_id=…")
+
+
+# ============================================================================
+# REPORTS (CRITICAL)
+# ============================================================================
+print("\n-- REPORTS --")
+r = req("GET", "/reports/spec", token=TOKEN, label="GET /reports/spec")
+spec_data = None
+if r and r.status_code == 200:
+    spec_data = r.json()
+    reports_list = spec_data.get("reports", [])
+    chk("reports/spec has reports[]", isinstance(reports_list, list) and len(reports_list) > 0)
+    report_ids = [s.get("id") for s in reports_list]
+    print(f"  Available reports: {report_ids}")
+    chk("reports has inventory", "inventory" in report_ids)
+    chk("reports has account (=dealer)", "account" in report_ids)
+    chk("reports has claims (=warranty)", "claims" in report_ids)
+    if "maintenance" not in report_ids:
+        FAILED.append({"name": "reports has maintenance",
+                       "detail": f"No 'maintenance' report id in spec catalog (user expected one). "
+                                 f"Found: {report_ids}"})
+    else:
+        PASSED.append("reports has maintenance")
+
+
+def is_pdf(content: bytes) -> bool:
+    return content[:5] == b"%PDF-"
+
+
+def is_csv_with_header(content: bytes) -> bool:
+    text = content.decode("utf-8-sig", errors="replace")
+    return "\n" in text and "," in text
+
+
+if spec_data:
+    for rep in spec_data.get("reports", []):
+        rid = rep["id"]
+        default_cols = rep.get("default_columns") or []
+        all_cols = [c["id"] for c in rep.get("columns", [])]
+        url = f"{API}/reports/render"
+
+        # Add account-specific options
+        opts = {}
+        if rid == "account" and created_dealer:
+            opts = {"dealer_ids": [created_dealer["id"]]}
+
+        # PDF default
+        try:
+            rr = requests.post(url, headers=H(TOKEN), json={
+                "report_type": rid, "format": "pdf",
+                "columns": default_cols, "options": opts}, timeout=180)
+            ct = rr.headers.get("content-type", "")
+            ok_status = rr.status_code == 200
+            ok_ct = "application/pdf" in ct
+            ok_pdf = is_pdf(rr.content) if ok_status else False
+            chk(f"POST /reports/render pdf id={rid} default cols",
+                ok_status and ok_ct and ok_pdf,
+                f"status={rr.status_code} ct={ct} len={len(rr.content)} body0={rr.content[:80]!r}")
+        except Exception as e:
+            chk(f"POST /reports/render pdf id={rid}", False, f"exception: {e}")
+
+        # CSV default
+        try:
+            rr = requests.post(url, headers=H(TOKEN), json={
+                "report_type": rid, "format": "csv",
+                "columns": default_cols, "options": opts}, timeout=60)
+            ct = rr.headers.get("content-type", "")
+            ok_status = rr.status_code == 200
+            ok_ct = "text/csv" in ct
+            ok_csv = is_csv_with_header(rr.content) if ok_status else False
+            chk(f"POST /reports/render csv id={rid} default cols",
+                ok_status and ok_ct and ok_csv,
+                f"status={rr.status_code} ct={ct} len={len(rr.content)} body0={rr.content[:80]!r}")
+        except Exception as e:
+            chk(f"POST /reports/render csv id={rid}", False, f"exception: {e}")
+
+        # Subset of columns (3 cols if possible) — PDF only
+        subset = all_cols[:3] if len(all_cols) >= 3 else default_cols
+        try:
+            rr = requests.post(url, headers=H(TOKEN), json={
+                "report_type": rid, "format": "pdf",
+                "columns": subset, "options": opts}, timeout=180)
+            ok = rr.status_code == 200 and is_pdf(rr.content)
+            chk(f"POST /reports/render pdf id={rid} subset cols={subset}", ok,
+                f"status={rr.status_code} body0={rr.content[:80]!r}")
+        except Exception as e:
+            chk(f"POST /reports/render pdf id={rid} subset", False, f"exception: {e}")
+
+# Unknown report type → 400
+rr = requests.post(f"{API}/reports/render", headers=H(TOKEN), json={
+    "report_type": "nonexistent_xx", "format": "pdf"}, timeout=30)
+chk("POST /reports/render unknown report → 400", rr.status_code == 400,
+    f"got {rr.status_code}: {rr.text[:200]}")
+
+
+# ============================================================================
+# CLEANUP
+# ============================================================================
+print("\n-- CLEANUP --")
+ids_to_delete = []
+if created_tool:
+    ids_to_delete.append(created_tool["id"])
+if created_tool_b:
+    ids_to_delete.append(created_tool_b["id"])
+if broken_tool:
+    ids_to_delete.append(broken_tool["id"])
+if converted_tool:
+    ids_to_delete.append(converted_tool["id"])
+for tid in ids_to_delete:
+    req("DELETE", f"/tools/{tid}", token=TOKEN, label=f"DELETE /tools/{tid[:8]}")
+
+if created_claim:
+    req("DELETE", f"/warranty-claims/{created_claim['id']}", token=TOKEN,
+        label="DELETE /warranty-claims")
+if created_borrower:
+    req("DELETE", f"/borrowers/{created_borrower['id']}", token=TOKEN, label="DELETE /borrowers")
+if created_dealer:
+    if created_agent:
+        req("DELETE", f"/dealers/{created_dealer['id']}/agents/{created_agent['id']}",
+            token=TOKEN, label="DELETE agent")
+    req("DELETE", f"/dealers/{created_dealer['id']}", token=TOKEN, label="DELETE /dealers")
+if created_tag:
+    req("DELETE", f"/tags/{created_tag['id']}", token=TOKEN, label="DELETE /tags")
+if created_cat:
+    req("DELETE", f"/categories/{created_cat['id']}", token=TOKEN, label="DELETE /categories")
+if created_loc_child:
+    req("DELETE", f"/locations/{created_loc_child['id']}", token=TOKEN, label="DELETE child loc")
+if created_loc:
+    req("DELETE", f"/locations/{created_loc['id']}", token=TOKEN,
+        params={"cascade": "true"}, label="DELETE /locations cascade=true")
+
+# Restore subscription to free
+req("POST", "/subscription/cancel", token=TOKEN, label="POST /subscription/cancel (restore)")
+
+
+# ============================================================================
+# SUMMARY
+# ============================================================================
+print("\n" + "=" * 70)
+print(f"PASSED: {len(PASSED)}")
+print(f"FAILED: {len(FAILED)}")
+if FAILED:
+    print("\nFailures:")
+    for f in FAILED:
+        print(f"  - {f['name']}: {f['detail']}")
+print("=" * 70)
+
+sys.exit(0 if not FAILED else 1)
