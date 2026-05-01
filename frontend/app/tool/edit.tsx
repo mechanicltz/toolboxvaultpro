@@ -14,17 +14,13 @@ import { api } from "../../src/api";
 import { TagInput, CategoryPicker } from "../../src/Pickers";
 import { buildLocationTree, flattenLocationTree } from "../../src/locationTree";
 import { DateField } from "../../src/DateField";
-import { useUpgradePrompt } from "../../src/UpgradePrompt";
 import { useAuth } from "../../src/AuthContext";
-import { FREE_LIMITS, isPremium } from "../../src/subscription";
 
 export default function ToolEdit() {
   const { id } = useLocalSearchParams<{ id?: string }>();
   const router = useRouter();
   const isEdit = !!id;
-  const upgrade = useUpgradePrompt();
   const { user } = useAuth();
-  const tier = user?.subscription?.tier || "free";
 
   const [loading, setLoading] = useState(isEdit);
   const [saving, setSaving] = useState(false);
@@ -223,11 +219,6 @@ export default function ToolEdit() {
       setNewDealerErr("Please enter a dealer name.");
       return;
     }
-    // Pre-check the free-tier dealer limit — show inline limit panel (no stacked modal)
-    if (!isPremium(tier) && dealers.length >= FREE_LIMITS.dealers) {
-      setNewDealerLimitHit(true);
-      return;
-    }
     setSavingDealer(true);
     try {
       const created = await api.createDealer({
@@ -246,9 +237,7 @@ export default function ToolEdit() {
             notes: "",
           });
         } catch (agentErr: any) {
-          if (agentErr?.status !== 402) {
-            console.warn("Add agent failed:", agentErr);
-          }
+          console.warn("Add agent failed:", agentErr);
         }
       }
       const updatedDealers = await api.listDealers();
@@ -266,17 +255,13 @@ export default function ToolEdit() {
         agent_email: "",
       });
     } catch (e: any) {
-      if (e?.status === 402) {
-        setNewDealerLimitHit(true);
-      } else {
-        const msg =
-          typeof e?.detail === "string"
-            ? e.detail
-            : typeof e?.message === "string"
-              ? e.message
-              : "Could not save dealer. Please try again.";
-        setNewDealerErr(msg);
-      }
+      const msg =
+        typeof e?.detail === "string"
+          ? e.detail
+          : typeof e?.message === "string"
+            ? e.message
+            : "Could not save dealer. Please try again.";
+      setNewDealerErr(msg);
     } finally {
       setSavingDealer(false);
     }
@@ -286,7 +271,6 @@ export default function ToolEdit() {
     setShowNewDealer(false);
     setShowDealerPicker(false);
     setNewDealerLimitHit(false);
-    setTimeout(() => router.push("/subscription"), 250);
   };
 
   const save = useCallback(async () => {
@@ -902,50 +886,7 @@ export default function ToolEdit() {
                   />
                 </View>
               </ScrollView>
-              {newDealerLimitHit ? (
-                <View
-                  style={{
-                    marginTop: 12,
-                    padding: 14,
-                    borderRadius: 10,
-                    borderWidth: 1,
-                    borderColor: theme.colors.accent,
-                    backgroundColor: "rgba(255,179,0,0.10)",
-                  }}
-                >
-                  <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 6 }}>
-                    <Ionicons name="lock-closed" size={16} color={theme.colors.accent} />
-                    <Text
-                      style={{
-                        color: theme.colors.accent,
-                        fontWeight: "900",
-                        fontSize: 13,
-                        letterSpacing: 1,
-                      }}
-                    >
-                      DEALER LIMIT REACHED
-                    </Text>
-                  </View>
-                  <Text
-                    style={{ color: theme.colors.textSecondary, fontSize: 12, lineHeight: 17, marginBottom: 10 }}
-                  >
-                    Free plan allows up to {FREE_LIMITS.dealers} dealer. Upgrade for unlimited dealers and authorized agents.
-                  </Text>
-                  <TouchableOpacity
-                    onPress={goToSubscriptionFromDealer}
-                    style={{
-                      backgroundColor: theme.colors.accent,
-                      paddingVertical: 10,
-                      borderRadius: 8,
-                      alignItems: "center",
-                    }}
-                  >
-                    <Text style={{ color: "#000", fontWeight: "900", fontSize: 12, letterSpacing: 1.5 }}>
-                      VIEW PLANS →
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              ) : !!newDealerErr ? (
+              {!!newDealerErr ? (
                 <View
                   style={{
                     flexDirection: "row",

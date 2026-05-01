@@ -26,8 +26,6 @@ import { confirm } from "../../src/confirm";
 import { ReportLostModal } from "../../src/sections/LostStatusSection";
 import { buildLocationTree, flattenLocationTree } from "../../src/locationTree";
 import { useAuth } from "../../src/AuthContext";
-import { useUpgradePrompt } from "../../src/UpgradePrompt";
-import { FREE_LIMITS, isPremium } from "../../src/subscription";
 import { useResponsive } from "../../src/responsive";
 
 type Filter = "all" | "available" | "out" | "consumables" | "lost" | "maintenance" | "for_sale";
@@ -36,8 +34,6 @@ export default function InventoryScreen() {
   const router = useRouter();
   const { prefs } = usePrefs();
   const { user } = useAuth();
-  const upgrade = useUpgradePrompt();
-  const tier = user?.subscription?.tier || "free";
   const { gridCols, isPhone } = useResponsive();
   // Allow other screens to deep-link into a specific inventory filter,
   // e.g. the Home dashboard's "CHECKED OUT" card sends ?filter=out.
@@ -111,17 +107,10 @@ export default function InventoryScreen() {
     return found?.name || null;
   }, [locationFilter, allLocations]);
 
-  // Lock the IDs of tools that are over the free-tier limit. Free users keep
-  // their OLDEST `FREE_LIMITS.tools` tools accessible; the rest become read-only.
-  const lockedToolIds = useMemo(() => {
-    if (isPremium(tier)) return new Set<string>();
-    const sorted = [...tools].sort((a, b) =>
-      (a.created_at || "").localeCompare(b.created_at || "")
-    );
-    return new Set(sorted.slice(FREE_LIMITS.tools).map((t) => t.id));
-  }, [tools, tier]);
+  // No subscription tiers — every tool is fully editable for everyone.
+  const lockedToolIds = useMemo(() => new Set<string>(), []);
 
-  const atToolLimit = !isPremium(tier) && tools.length >= FREE_LIMITS.tools;
+  const atToolLimit = false;
 
   const toggleSelect = (id: string) => {
     setSelectedIds((cur) =>
@@ -703,20 +692,13 @@ export default function InventoryScreen() {
       ) : (
         <TouchableOpacity
           testID="add-tool-fab"
-          style={[styles.fab, atToolLimit && styles.fabLocked]}
+          style={styles.fab}
           onPress={() => {
-            if (atToolLimit) {
-              upgrade.show({
-                title: "Inventory Limit Reached",
-                message: `Free plan allows up to ${FREE_LIMITS.tools} inventory items. Upgrade for unlimited tools, dealers, and agents.`,
-              });
-              return;
-            }
             router.push("/tool/edit");
           }}
           activeOpacity={0.85}
         >
-          <Ionicons name={atToolLimit ? "lock-closed" : "add"} size={atToolLimit ? 22 : 32} color="#000" />
+          <Ionicons name="add" size={32} color="#000" />
         </TouchableOpacity>
       )}
 

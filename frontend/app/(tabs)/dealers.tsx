@@ -20,31 +20,21 @@ import { confirm } from "../../src/confirm";
 import { ROUTE_FREQUENCIES, DAY_NAMES, routeLabel, nextRouteText } from "../../src/route";
 import { getCached, setCached } from "../../src/cache";
 import { useAuth } from "../../src/AuthContext";
-import { useUpgradePrompt } from "../../src/UpgradePrompt";
-import { FREE_LIMITS, isPremium } from "../../src/subscription";
 import { useResponsive } from "../../src/responsive";
 
 export default function DealersScreen() {
   const router = useRouter();
   const { prefs } = usePrefs();
   const { user } = useAuth();
-  const upgrade = useUpgradePrompt();
-  const tier = user?.subscription?.tier || "free";
   const { gridCols } = useResponsive();
   const [dealers, setDealers] = useState<any[]>(() => getCached("dealers", []));
   const [tools, setTools] = useState<any[]>(() => getCached("tools", []));
   const [showAdd, setShowAdd] = useState(false);
   const [form, setForm] = useState<any>({ name: "", phone: "", website: "", address: "", notes: "", route_frequency: "N/A", route_day_of_week: "", route_anchor_date: "" });
 
-  const lockedDealerIds = useMemo(() => {
-    if (isPremium(tier)) return new Set<string>();
-    const sorted = [...dealers].sort((a, b) =>
-      (a.created_at || "").localeCompare(b.created_at || "")
-    );
-    return new Set(sorted.slice(FREE_LIMITS.dealers).map((d) => d.id));
-  }, [dealers, tier]);
+  const lockedDealerIds = useMemo(() => new Set<string>(), []);
 
-  const atDealerLimit = !isPremium(tier) && dealers.length >= FREE_LIMITS.dealers;
+  const atDealerLimit = false;
 
   const load = useCallback(async () => {
     const [d, t] = await Promise.all([api.listDealers(), api.listTools()]);
@@ -165,19 +155,12 @@ export default function DealersScreen() {
 
       <TouchableOpacity
         testID="add-dealer-fab"
-        style={[styles.fab, atDealerLimit && styles.fabLocked]}
+        style={styles.fab}
         onPress={() => {
-          if (atDealerLimit) {
-            upgrade.show({
-              title: "Dealer Limit Reached",
-              message: `Free plan allows up to ${FREE_LIMITS.dealers} dealer. Upgrade for unlimited dealers and authorized agents.`,
-            });
-            return;
-          }
           setShowAdd(true);
         }}
       >
-        <Ionicons name={atDealerLimit ? "lock-closed" : "add"} size={atDealerLimit ? 20 : 28} color="#000" />
+        <Ionicons name="add" size={28} color="#000" />
       </TouchableOpacity>
 
       <Modal visible={showAdd} transparent animationType="slide">

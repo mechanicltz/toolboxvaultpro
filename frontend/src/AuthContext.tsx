@@ -1,29 +1,16 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
 import { api, getToken, setToken, setUnauthorizedHandler } from "./api";
 
-export type Subscription = {
-  tier: "free" | "monthly" | "yearly" | "lifetime";
-  status: "active" | "cancelled" | "expired";
-  started_at?: string | null;
-  expires_at?: string | null;
-  cancelled_at?: string | null;
-  auto_renew: boolean;
-};
-
 export type AuthUser = {
   id: string;
   email: string;
   name?: string;
-  subscription: Subscription;
-  discount_pct?: number;
-  promo_codes_used?: string[];
   created_at: string;
 };
 
 type AuthContextType = {
   user: AuthUser | null;
   loading: boolean;
-  isPremium: boolean;
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string, name?: string) => Promise<void>;
   logout: () => Promise<void>;
@@ -32,9 +19,6 @@ type AuthContextType = {
 };
 
 const AuthContext = createContext<AuthContextType | null>(null);
-
-export const isPremiumTier = (tier?: string) =>
-  tier === "monthly" || tier === "yearly" || tier === "lifetime";
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
@@ -58,7 +42,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     setUnauthorizedHandler(() => {
-      setToken(null);
       setUser(null);
     });
     (async () => {
@@ -68,31 +51,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [refresh]);
 
   const login = useCallback(async (email: string, password: string) => {
-    const res = await api.login({ email: email.trim().toLowerCase(), password });
+    const res = await api.login({ email, password });
     await setToken(res.token);
-    setUser(res.user);
+    setUser(res.user as AuthUser);
   }, []);
 
   const register = useCallback(async (email: string, password: string, name?: string) => {
-    const res = await api.register({ email: email.trim().toLowerCase(), password, name });
+    const res = await api.register({ email, password, name });
     await setToken(res.token);
-    setUser(res.user);
+    setUser(res.user as AuthUser);
   }, []);
 
   const logout = useCallback(async () => {
     await setToken(null);
     setUser(null);
-    // Clear any cached data so next user doesn't see previous user's items
-    try {
-      const { clearCached } = await import("./cache");
-      clearCached();
-    } catch {}
   }, []);
 
-  const isPremium = isPremiumTier(user?.subscription?.tier);
-
   return (
-    <AuthContext.Provider value={{ user, loading, isPremium, login, register, logout, refresh, setUser }}>
+    <AuthContext.Provider value={{ user, loading, login, register, logout, refresh, setUser }}>
       {children}
     </AuthContext.Provider>
   );
@@ -100,6 +76,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
 export function useAuth() {
   const ctx = useContext(AuthContext);
-  if (!ctx) throw new Error("useAuth must be used within AuthProvider");
+  if (!ctx) throw new Error("useAuth must be inside <AuthProvider>");
   return ctx;
 }

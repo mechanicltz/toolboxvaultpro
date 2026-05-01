@@ -1228,3 +1228,67 @@ Full deep-testing agent run:
     ✅ 2f Missing app_user_id → 200 with body {ok:true, skipped:true}.
     ✅ 2g Unknown app_user_id 'does_not_exist_zzz' → 200 with body {ok:true, user_not_found:true}.
     Backend logs confirm the handler now executes on every request (200 OK on POST /api/webhooks/revenuecat — no more 401s). Logs also confirm webhook is in OPEN MODE per request: '[revenuecat] webhook running unauthenticated — set REVENUECAT_WEBHOOK_AUTH' on every call. Per request, did NOT re-run sync-revenuecat or legacy mock endpoints. Subtest user restored to free tier. Task complete — RevenueCat integration is now production-ready (modulo setting REVENUECAT_WEBHOOK_AUTH env var before going live)."
+
+
+
+## 2026-05-01 — Removed All Subscription / Payment Functionality
+
+agent: main
+session: continuation
+
+User requested complete rip-out of every subscription / paywall / IAP
+feature: app is now fully free with unlimited access for everyone.
+
+### Removed (frontend)
+- `app/subscription.tsx` — deleted (route now 404s as expected).
+- `src/revenuecat.ts` — deleted.
+- `src/RevenueCatBridge.tsx` — deleted.
+- `src/UpgradePrompt.tsx` — deleted.
+- `src/subscription.ts` — deleted.
+- `react-native-purchases` + `react-native-purchases-ui` — uninstalled.
+- `EXPO_PUBLIC_REVENUECAT_API_KEY` — removed from `.env`.
+- `_layout.tsx` — removed `<UpgradeProvider>` and `<RevenueCatBridge />`
+  and rewrote to a leaner shell.
+- `AuthContext.tsx` — rewritten without `Subscription`, `isPremium`,
+  `tier` plumbing. AuthUser is now `{ id, email, name?, created_at }`.
+- `api.ts` — removed `getSubscription`, `subscribe`,
+  `cancelSubscription`, `reactivateSubscription`, `redeemPromoCode`,
+  `syncRevenueCat`.
+- `(tabs)/more.tsx` — removed Subscription / Upgrade row + import of
+  `TIER_LABELS` / `isPremium`.
+- `(tabs)/inventory.tsx`, `(tabs)/dealers.tsx`, `dealer/[id].tsx`,
+  `tool/edit.tsx` — removed all FREE_LIMITS gating, lock icons, upgrade
+  modals, "DEALER LIMIT REACHED" panels, and 402 error catches.
+  Locked-id sets are now empty constants; FAB icons are always "+".
+
+### Removed (backend)
+- `revenuecat_sync.py` — deleted.
+- `server.py`:
+  * Removed `sub_router` (entire `/api/subscription/*` surface:
+    GET subscription, redeem-code, subscribe, cancel, reactivate).
+  * Removed `_ensure_under_limit` helper and all 4 of its call sites
+    (create_dealer, add_agent, create_tool, convert_wishlist_to_tool).
+  * Removed RC webhook router include + `/api/webhooks/*` middleware
+    exemption.
+  * Trimmed imports — no longer pulls `SubscribeRequest`,
+    `PromoCodeRequest`, `PROMO_CODES`, `is_premium_tier`, `TIER_LIFETIME`,
+    `FREE_LIMITS`, `TIER_PRICES`, `ALL_TIERS` from auth.py.
+- `auth.py` left untouched (still defines the Subscription model so
+  existing user records load cleanly; new users always default to
+  `tier=free` but nothing in the app reads that field anymore).
+
+### Verification
+- Backend: `/api/` returns `{message: "Tool Tracker API"}` cleanly,
+  no startup errors. `_ensure_under_limit`, `sub_router`, RC imports —
+  all 0 references in `server.py`.
+- Frontend: web bundle compiles, login still works, More tab no longer
+  shows Subscription row, `/subscription` route 404s as expected.
+- All inventory / dealer / agent / tool creation flows are now
+  unrestricted — no more 402 errors, no more locked FABs, no upgrade
+  prompts.
+
+### Net result
+The app is fully free with unlimited access to every feature. No mock
+payments, no real payments, no RevenueCat, no promo codes, no tier
+limits. Future re-introduction of monetization would be a clean greenfield
+addition.

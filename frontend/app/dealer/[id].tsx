@@ -22,16 +22,12 @@ import { formatPhone, formatPhonesInText } from "../../src/contactLinks";
 import { BalanceSection } from "../../src/sections/BalanceSection";
 import { ROUTE_FREQUENCIES, DAY_NAMES, routeLabel, nextRouteText } from "../../src/route";
 import { useAuth } from "../../src/AuthContext";
-import { useUpgradePrompt } from "../../src/UpgradePrompt";
-import { FREE_LIMITS, isPremium } from "../../src/subscription";
 
 export default function DealerDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { prefs } = usePrefs();
   const { user } = useAuth();
-  const upgrade = useUpgradePrompt();
-  const tier = user?.subscription?.tier || "free";
   const [dealer, setDealer] = useState<any>(null);
   const [tools, setTools] = useState<any[]>([]);
   const [editing, setEditing] = useState(false);
@@ -91,28 +87,13 @@ export default function DealerDetail() {
       const { id: agentId, ...rest } = agentForm;
       await api.updateAgent(id!, agentId, rest);
     } else {
-      try {
-        await api.addAgent(id!, agentForm);
-      } catch (e: any) {
-        if (e?.status === 402) {
-          setAgentForm(null);
-          upgrade.show({
-            title: "Agent Limit Reached",
-            message:
-              e?.detail ||
-              `Free plan allows up to ${FREE_LIMITS.agents_per_dealer} agent per dealer. Upgrade for unlimited agents.`,
-          });
-          return;
-        }
-        throw e;
-      }
+      await api.addAgent(id!, agentForm);
     }
     setAgentForm(null);
     load();
   };
 
-  const atAgentLimit =
-    !isPremium(tier) && (dealer?.agents?.length || 0) >= FREE_LIMITS.agents_per_dealer;
+  const atAgentLimit = false;
 
   const setCurrent = async (agentId: string) => {
     const ok = await confirm("Change current agent?", "Past agents are kept in history.", "Set as current");
@@ -198,25 +179,18 @@ export default function DealerDetail() {
           <Text style={styles.sectionLabelStrong}>AGENTS ({(dealer.agents || []).length})</Text>
           <TouchableOpacity
             testID="add-agent-btn"
-            style={[styles.addBtn, atAgentLimit && { borderColor: theme.colors.warning }]}
+            style={styles.addBtn}
             onPress={() => {
-              if (atAgentLimit) {
-                upgrade.show({
-                  title: "Agent Limit Reached",
-                  message: `Free plan allows up to ${FREE_LIMITS.agents_per_dealer} agent per dealer. Upgrade for unlimited authorized agents.`,
-                });
-                return;
-              }
               setAgentForm({ name: "", phone: "", email: "", notes: "" });
             }}
           >
             <Ionicons
-              name={atAgentLimit ? "lock-closed" : "add"}
+              name="add"
               size={16}
-              color={atAgentLimit ? theme.colors.warning : theme.colors.accent}
+              color={theme.colors.accent}
             />
-            <Text style={[styles.addBtnText, atAgentLimit && { color: theme.colors.warning }]}>
-              {atAgentLimit ? "LOCKED" : "ADD"}
+            <Text style={styles.addBtnText}>
+              ADD
             </Text>
           </TouchableOpacity>
         </View>

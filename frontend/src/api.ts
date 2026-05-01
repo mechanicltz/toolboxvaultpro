@@ -106,32 +106,6 @@ export const api = {
   me: () => request<any>(`/auth/me`),
   updateMe: (data: any) => request<any>(`/auth/me`, { method: "PUT", body: JSON.stringify(data) }),
 
-  // Subscription
-  getSubscription: () => request<any>(`/subscription`),
-  subscribe: (tier: string) =>
-    request<any>(`/subscription/subscribe`, { method: "POST", body: JSON.stringify({ tier }) }),
-  cancelSubscription: () => request<any>(`/subscription/cancel`, { method: "POST" }),
-  reactivateSubscription: () => request<any>(`/subscription/reactivate`, { method: "POST" }),
-  redeemPromoCode: (code: string) =>
-    request<any>(`/subscription/redeem-code`, { method: "POST", body: JSON.stringify({ code }) }),
-  // Push the user's current RevenueCat entitlement state to the backend
-  // so user.subscription stays in sync. Called after a paywall purchase
-  // and on every CustomerInfo update from the SDK.
-  syncRevenueCat: (entitlement: {
-    is_active: boolean;
-    product_identifier?: string | null;
-    expires_at?: string | null;
-    will_renew?: boolean | null;
-    period_type?: string | null;
-    store?: string | null;
-    original_app_user_id?: string | null;
-    revenuecat_app_user_id?: string | null;
-  }) =>
-    request<any>(`/subscription/sync-revenuecat`, {
-      method: "POST",
-      body: JSON.stringify(entitlement),
-    }),
-
   // Tools
   listTools: (params?: any) => request<any[]>(`/tools${qs(params)}`),
   getTool: (id: string) => request<any>(`/tools/${id}`),

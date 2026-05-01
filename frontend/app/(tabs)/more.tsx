@@ -19,7 +19,6 @@ import { theme } from "../../src/theme";
 import { usePrefs } from "../../src/prefs";
 import { api } from "../../src/api";
 import { useAuth } from "../../src/AuthContext";
-import { TIER_LABELS, isPremium } from "../../src/subscription";
 
 type RowProps = {
   icon: any;
@@ -106,8 +105,6 @@ export default function MoreScreen() {
   );
 
   const totalDue = mntDue.overdue + mntDue.due_soon;
-  const tier = (user?.subscription?.tier || "free") as "free" | "monthly" | "yearly" | "lifetime";
-  const isPaid = isPremium(tier);
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
@@ -117,38 +114,6 @@ export default function MoreScreen() {
       </View>
       <ScrollView contentContainerStyle={{ paddingBottom: 100 }}>
         <Text style={styles.sectionLabel}>ACCOUNT</Text>
-        <TouchableOpacity
-          style={[styles.row, styles.subscriptionRow]}
-          onPress={() => router.push("/subscription")}
-          activeOpacity={0.7}
-          testID="more-subscription"
-        >
-          <View
-            style={[
-              styles.iconBox,
-              { backgroundColor: isPaid ? "rgba(255,179,0,0.15)" : theme.colors.surface },
-            ]}
-          >
-            <Ionicons
-              name={isPaid ? (tier === "lifetime" ? "diamond" : "shield-checkmark") : "leaf"}
-              size={20}
-              color={isPaid ? theme.colors.accent : theme.colors.textSecondary}
-            />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.rowTitle}>Subscription</Text>
-            <Text style={styles.rowSub}>
-              {TIER_LABELS[tier]}
-              {!isPaid ? " — Tap to upgrade for unlimited access" : ""}
-            </Text>
-          </View>
-          {!isPaid && (
-            <View style={styles.upgradePill}>
-              <Text style={styles.upgradePillText}>UPGRADE</Text>
-            </View>
-          )}
-          <Ionicons name="chevron-forward" size={18} color={theme.colors.textMuted} />
-        </TouchableOpacity>
 
         <Row
           icon="key"

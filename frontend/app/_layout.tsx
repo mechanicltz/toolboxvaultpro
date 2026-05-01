@@ -7,9 +7,7 @@ import { AuroraBackground } from "../src/Aurora";
 import { BottomBar } from "../src/BottomBar";
 import { ReportsFab } from "../src/ReportsFab";
 import { AuthProvider, useAuth } from "../src/AuthContext";
-import { UpgradeProvider } from "../src/UpgradePrompt";
 import { ResponsiveContainer } from "../src/ResponsiveContainer";
-import { RevenueCatBridge } from "../src/RevenueCatBridge";
 import { theme } from "../src/theme";
 
 function AuthGate({ children }: { children: React.ReactNode }) {
@@ -55,7 +53,6 @@ function ShellNav() {
             <Stack.Screen name="(tabs)" />
             <Stack.Screen name="tool/[id]" />
             <Stack.Screen name="tool/edit" />
-            <Stack.Screen name="subscription" />
           </Stack>
         </ResponsiveContainer>
         {showShell && <ReportsFab />}
@@ -71,12 +68,9 @@ export default function RootLayout() {
       <StatusBar style="light" />
       <AuthProvider>
         <AuroraBackground>
-          <UpgradeProvider>
-            <RevenueCatBridge />
-            <AuthGate>
-              <ShellNav />
-            </AuthGate>
-          </UpgradeProvider>
+          <AuthGate>
+            <ShellNav />
+          </AuthGate>
         </AuroraBackground>
       </AuthProvider>
     </GestureHandlerRootView>

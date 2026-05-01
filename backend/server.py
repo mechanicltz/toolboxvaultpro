@@ -21,21 +21,13 @@ from auth import (
     RegisterRequest,
     LoginRequest,
     AuthResponse,
-    SubscribeRequest,
-    PromoCodeRequest,
-    PROMO_CODES,
     hash_password,
     verify_password,
     create_token,
     decode_token,
     make_subscription_for_tier,
     evaluate_subscription_status,
-    is_premium_tier,
     TIER_FREE,
-    TIER_LIFETIME,
-    FREE_LIMITS,
-    TIER_PRICES,
-    ALL_TIERS,
 )
 
 ROOT_DIR = Path(__file__).parent
@@ -160,15 +152,8 @@ async def attach_user_to_context(request: Request, call_next):
     path = request.url.path
     if not path.startswith("/api/"):
         return await call_next(request)
-    # Public auth endpoints and RevenueCat server-to-server webhook
-    # (authenticated instead via a shared header secret inside the
-    # /api/webhooks/revenuecat handler, see revenuecat_sync.py).
-    if (
-        path.startswith("/api/auth/")
-        or path.startswith("/api/webhooks/")
-        or path == "/api/"
-        or path == "/api/health"
-    ):
+    # Public auth endpoints
+    if path.startswith("/api/auth/") or path == "/api/" or path == "/api/health":
         return await call_next(request)
     auth = request.headers.get("Authorization", "")
     if not auth.startswith("Bearer "):
@@ -1006,7 +991,6 @@ async def borrower_history(borrower_id: str):
 # ---------- Dealers ----------
 @api_router.post("/dealers", response_model=Dealer)
 async def create_dealer(payload: DealerCreate, user: User = Depends(get_current_user)):
-    await _ensure_under_limit(user, "dealers")
     d = Dealer(**payload.dict())
     await db.dealers.insert_one(d.dict())
     return d
@@ -1045,7 +1029,6 @@ async def delete_dealer(dealer_id: str):
 
 @api_router.post("/dealers/{dealer_id}/agents", response_model=Dealer)
 async def add_agent(dealer_id: str, payload: AgentCreate, user: User = Depends(get_current_user)):
-    await _ensure_under_limit(user, "agents", dealer_id=dealer_id)
     d = await db.dealers.find_one({"id": dealer_id}, {"_id": 0})
     if not d:
         raise HTTPException(404, "Dealer not found")
@@ -1182,7 +1165,6 @@ async def delete_dealer_transaction(dealer_id: str, tx_id: str):
 # ---------- Tools ----------
 @api_router.post("/tools", response_model=Tool)
 async def create_tool(payload: ToolCreate, user: User = Depends(get_current_user)):
-    await _ensure_under_limit(user, "tools")
     tool = Tool(**payload.dict())
     await db.tools.insert_one(tool.dict())
     # If created already broken, also create a warranty claim mirror with broken_photo
@@ -2094,7 +2076,6 @@ async def delete_wishlist(item_id: str):
 @api_router.post("/wishlist/{item_id}/convert", response_model=Tool)
 async def convert_wishlist_to_tool(item_id: str, user: User = Depends(get_current_user)):
     """Convert a wishlist item into a real tool — marks as purchased."""
-    await _ensure_under_limit(user, "tools")
     item = await db.wishlist_items.find_one({"id": item_id}, {"_id": 0})
     if not item:
         raise HTTPException(404, "Wishlist item not found")
@@ -2248,156 +2229,8 @@ async def update_me(payload: Dict[str, Any], user: User = Depends(get_current_us
     return to_public(user)
 
 
-# ---------- Subscription ----------
-sub_router = APIRouter(prefix="/api/subscription")
-
-
-@sub_router.get("")
-async def get_subscription(user: User = Depends(get_current_user)):
-    counts = {
-        "tools": await real_db.tools.count_documents({"owner_id": user.id}),
-        "dealers": await real_db.dealers.count_documents({"owner_id": user.id}),
-    }
-    discount_pct = int(getattr(user, "discount_pct", 0) or 0)
-    # Apply discount to displayed prices
-    discounted_prices = {
-        k: round(v * (1 - discount_pct / 100), 2) for k, v in TIER_PRICES.items()
-    }
-    return {
-        "subscription": user.subscription.dict(),
-        "is_premium": is_premium_tier(user.subscription.tier),
-        "tier_prices": TIER_PRICES,
-        "discounted_prices": discounted_prices,
-        "discount_pct": discount_pct,
-        "promo_codes_used": getattr(user, "promo_codes_used", []) or [],
-        "free_limits": FREE_LIMITS,
-        "tiers": ALL_TIERS,
-        "counts": counts,
-    }
-
-
-@sub_router.post("/redeem-code")
-async def redeem_code(payload: PromoCodeRequest, user: User = Depends(get_current_user)):
-    """Redeem a universal promo code. Currently supported codes:
-    - MechanicUnlimited007 → grants lifetime tier (free forever)
-    - Mechanic50off333     → 50% discount on all subscription prices
-    """
-    raw = (payload.code or "").strip()
-    if not raw:
-        raise HTTPException(400, "Please enter a code")
-    code_key = raw.lower()
-    promo = PROMO_CODES.get(code_key)
-    if not promo:
-        raise HTTPException(400, "Invalid code. Please double-check and try again.")
-    used = list(getattr(user, "promo_codes_used", []) or [])
-    if code_key in used:
-        raise HTTPException(400, "You've already redeemed this code.")
-
-    update: Dict[str, Any] = {}
-    message = promo.get("description", "")
-
-    if promo["kind"] == "lifetime":
-        new_sub = make_subscription_for_tier(TIER_LIFETIME)
-        update["subscription"] = new_sub.dict()
-    elif promo["kind"] == "discount":
-        pct = int(promo.get("discount_pct", 0))
-        # Stack the higher of existing or new discount (so user always benefits)
-        existing = int(getattr(user, "discount_pct", 0) or 0)
-        update["discount_pct"] = max(existing, pct)
-
-    used.append(code_key)
-    update["promo_codes_used"] = used
-    update["updated_at"] = now_iso()
-    await real_db.users.update_one({"id": user.id}, {"$set": update})
-
-    # Return refreshed user state
-    udoc = await real_db.users.find_one({"id": user.id}, {"_id": 0})
-    fresh = User(**udoc)
-    return {
-        "ok": True,
-        "label": promo.get("label"),
-        "message": message,
-        "user": to_public(fresh).dict(),
-    }
-
-
-@sub_router.post("/subscribe")
-async def subscribe(payload: SubscribeRequest, user: User = Depends(get_current_user)):
-    """MOCK subscription change. No real payment. User can switch tiers freely."""
-    new_sub = make_subscription_for_tier(payload.tier)
-    await real_db.users.update_one(
-        {"id": user.id},
-        {"$set": {"subscription": new_sub.dict(), "updated_at": now_iso()}},
-    )
-    return {"ok": True, "subscription": new_sub.dict()}
-
-
-@sub_router.post("/cancel")
-async def cancel_subscription(user: User = Depends(get_current_user)):
-    """Cancel current subscription (auto_renew=False). Stays active until expires_at,
-    then downgrades to free. Lifetime cannot be cancelled."""
-    sub = user.subscription.dict()
-    if sub.get("tier") == TIER_FREE:
-        raise HTTPException(400, "No active paid subscription to cancel")
-    if sub.get("tier") == TIER_LIFETIME:
-        raise HTTPException(400, "Lifetime subscription cannot be cancelled")
-    sub["auto_renew"] = False
-    sub["status"] = "cancelled"
-    sub["cancelled_at"] = now_iso()
-    await real_db.users.update_one(
-        {"id": user.id},
-        {"$set": {"subscription": sub, "updated_at": now_iso()}},
-    )
-    return {"ok": True, "subscription": sub}
-
-
-@sub_router.post("/reactivate")
-async def reactivate(user: User = Depends(get_current_user)):
-    """Re-enable auto-renew on a cancelled (but still active) paid sub."""
-    sub = user.subscription.dict()
-    if sub.get("tier") == TIER_FREE:
-        raise HTTPException(400, "No paid subscription to reactivate")
-    sub["auto_renew"] = True
-    sub["status"] = "active"
-    sub["cancelled_at"] = None
-    await real_db.users.update_one(
-        {"id": user.id},
-        {"$set": {"subscription": sub, "updated_at": now_iso()}},
-    )
-    return {"ok": True, "subscription": sub}
-
-
-# ---------- Tier-limit guard helper ----------
-async def _ensure_under_limit(user: User, kind: str, dealer_id: Optional[str] = None):
-    """Raises 402 if creation would exceed free-tier limits."""
-    if is_premium_tier(user.subscription.tier):
-        return
-    if kind == "tools":
-        n = await real_db.tools.count_documents({"owner_id": user.id})
-        if n >= FREE_LIMITS["tools"]:
-            raise HTTPException(
-                402,
-                f"Free tier is limited to {FREE_LIMITS['tools']} inventory items. Upgrade for unlimited tools.",
-            )
-    elif kind == "dealers":
-        n = await real_db.dealers.count_documents({"owner_id": user.id})
-        if n >= FREE_LIMITS["dealers"]:
-            raise HTTPException(
-                402,
-                f"Free tier is limited to {FREE_LIMITS['dealers']} dealer. Upgrade for unlimited dealers.",
-            )
-    elif kind == "agents" and dealer_id:
-        d = await real_db.dealers.find_one({"id": dealer_id, "owner_id": user.id}, {"_id": 0, "agents": 1})
-        if d and len(d.get("agents") or []) >= FREE_LIMITS["agents_per_dealer"]:
-            raise HTTPException(
-                402,
-                f"Free tier is limited to {FREE_LIMITS['agents_per_dealer']} agent per dealer. Upgrade for unlimited agents.",
-            )
-
-
 app.include_router(api_router)
 app.include_router(auth_router)
-app.include_router(sub_router)
 
 # ---------------------------------------------------------------------------
 # Unified report engine (HTML→PDF + CSV) — see /app/backend/reports.py
@@ -2407,15 +2240,6 @@ from reports import make_reports_router as _make_reports_router  # noqa: E402
 _reports_api_router = APIRouter(prefix="/api")
 _make_reports_router(_reports_api_router, lambda: db, get_current_user)
 app.include_router(_reports_api_router)
-
-# ---------------------------------------------------------------------------
-# RevenueCat subscription sync (replaces the mocked /subscribe path on
-# native devices). Web preview / dev still uses the legacy mock route.
-# ---------------------------------------------------------------------------
-from revenuecat_sync import make_revenuecat_router as _make_rc_router  # noqa: E402
-
-_rc_router = _make_rc_router(lambda: real_db, get_current_user)
-app.include_router(_rc_router)
 
 # ---------------------------------------------------------------------------
 # HTML → PDF rendering endpoint (uses xhtml2pdf, runs entirely server-side
