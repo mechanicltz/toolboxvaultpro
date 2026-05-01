@@ -1,6 +1,7 @@
-import { TouchableOpacity, StyleSheet, Platform, View, Text } from "react-native";
+import { TouchableOpacity, StyleSheet, View, Text } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter, usePathname } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { theme } from "./theme";
 
 /**
@@ -10,6 +11,7 @@ import { theme } from "./theme";
 export function ReportsFab() {
   const router = useRouter();
   const path = usePathname();
+  const insets = useSafeAreaInsets();
 
   // Only show on the 5 main tab screens. Hide on detail/stack screens
   // where the top-right area is already used by edit/delete/back buttons.
@@ -17,7 +19,7 @@ export function ReportsFab() {
   if (!TAB_PATHS.has(path || "")) return null;
 
   return (
-    <View pointerEvents="box-none" style={styles.wrap}>
+    <View pointerEvents="box-none" style={[styles.wrap, { top: insets.top + 8 }]}>
       <TouchableOpacity
         testID="global-reports-btn"
         style={styles.btn}
@@ -33,7 +35,6 @@ export function ReportsFab() {
 const styles = StyleSheet.create({
   wrap: {
     position: "absolute",
-    top: Platform.OS === "ios" ? 56 : 16,
     right: 12,
     zIndex: 50,
     flexDirection: "row",
