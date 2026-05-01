@@ -25,7 +25,6 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import * as MailComposer from "expo-mail-composer";
 import * as ImagePicker from "expo-image-picker";
-import * as FileSystem from "expo-file-system/legacy";
 import { theme } from "../src/theme";
 import { useAuth } from "../src/AuthContext";
 
@@ -167,21 +166,9 @@ export default function FeedbackScreen() {
 
       const attachments: string[] = [];
       if (isBug && photoUri) {
-        // Copy the picked image into the cache dir with a stable name so
-        // MailComposer gets a valid file:// URI.
-        try {
-          const ext = photoUri.split(".").pop()?.split("?")[0] || "jpg";
-          const cacheDir =
-            (FileSystem as any).cacheDirectory ||
-            (FileSystem as any).documentDirectory ||
-            "";
-          const dest = `${cacheDir}feedback-${Date.now()}.${ext}`;
-          await FileSystem.copyAsync({ from: photoUri, to: dest });
-          attachments.push(dest);
-        } catch {
-          // Fall back to the raw uri
-          attachments.push(photoUri);
-        }
+        // expo-image-picker returns a file:// URI in the app's cache dir
+        // that MailComposer can attach directly. No need to copy.
+        attachments.push(photoUri);
       }
 
       const result = await MailComposer.composeAsync({
@@ -189,6 +176,7 @@ export default function FeedbackScreen() {
         subject: emailSubject,
         body,
         attachments: attachments.length ? attachments : undefined,
+        isHtml: false,
       });
 
       if (result.status === "sent" || result.status === "saved") {
