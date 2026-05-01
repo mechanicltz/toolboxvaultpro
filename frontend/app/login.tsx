@@ -60,7 +60,7 @@ export default function LoginScreen() {
             <View style={styles.logoBox}>
               <Ionicons name="construct" size={36} color={theme.colors.accent} />
             </View>
-            <Text style={styles.brandTitle}>TOOL VAULT</Text>
+            <Text style={styles.brandTitle}>TOOLBOX VAULT</Text>
             <Text style={styles.brandSub}>
               Inventory · Dealers · Warranties · Reports
             </Text>

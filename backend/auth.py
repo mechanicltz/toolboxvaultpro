@@ -1,4 +1,4 @@
-"""Auth utilities for Tool Vault.
+"""Auth utilities for Toolbox Vault.
 
 JWT-based auth with bcrypt password hashing. Subscriptions are MOCKED — no
 real payment is processed. Users can switch tiers freely.

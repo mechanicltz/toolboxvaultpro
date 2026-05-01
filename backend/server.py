@@ -682,7 +682,7 @@ def build_tool_query(
 # ---------- Root ----------
 @api_router.get("/")
 async def root():
-    return {"message": "Tool Vault API"}
+    return {"message": "Toolbox Vault API"}
 
 
 # ---------- Locations ----------
