@@ -69,7 +69,7 @@ export default function FeedbackScreen() {
         return;
       }
       const res = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        mediaTypes: ["images"],
         allowsEditing: false,
         quality: 0.7,
       });
@@ -305,11 +305,18 @@ export default function FeedbackScreen() {
             testID="feedback-subject"
           />
 
-          {/* Checkboxes */}
-          <Text style={styles.label}>TYPE</Text>
+          {/* Checkboxes (mutually exclusive — pick ONE) */}
+          <Text style={styles.label}>TYPE (pick one)</Text>
           <TouchableOpacity
             style={styles.checkRow}
-            onPress={() => setIsBug((b) => !b)}
+            onPress={() => {
+              if (isBug) {
+                setIsBug(false);
+              } else {
+                setIsBug(true);
+                setIsFeature(false);
+              }
+            }}
             activeOpacity={0.7}
             testID="feedback-bug-checkbox"
           >
@@ -329,7 +336,16 @@ export default function FeedbackScreen() {
 
           <TouchableOpacity
             style={styles.checkRow}
-            onPress={() => setIsFeature((f) => !f)}
+            onPress={() => {
+              if (isFeature) {
+                setIsFeature(false);
+              } else {
+                setIsFeature(true);
+                setIsBug(false);
+                // If switching from bug → feature, drop any attached photo
+                setPhotoUri(null);
+              }
+            }}
             activeOpacity={0.7}
             testID="feedback-feature-checkbox"
           >
