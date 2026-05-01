@@ -123,7 +123,7 @@ export default function HomeScreen() {
     <SafeAreaView style={styles.container} edges={["top"]}>
       <View style={styles.header}>
         <View>
-          <Text style={styles.title}>TOOLBOX</Text>
+          <Text style={styles.title}>TOOL VAULT</Text>
           <Text style={styles.subtitle}>SUMMARY</Text>
         </View>
       </View>
