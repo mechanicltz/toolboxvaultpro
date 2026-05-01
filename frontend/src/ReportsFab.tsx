@@ -19,7 +19,7 @@ export function ReportsFab() {
   if (!TAB_PATHS.has(path || "")) return null;
 
   return (
-    <View pointerEvents="box-none" style={[styles.wrap, { top: insets.top + 8 }]}>
+    <View pointerEvents="box-none" style={[styles.wrap, { top: insets.top + 18 }]}>
       <TouchableOpacity
         testID="global-reports-btn"
         style={styles.btn}

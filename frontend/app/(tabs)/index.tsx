@@ -152,6 +152,22 @@ export default function HomeScreen() {
           </TouchableOpacity>
         )}
 
+        <TouchableOpacity
+          testID="feedback-banner"
+          style={styles.feedbackBanner}
+          onPress={() => router.push("/feedback")}
+          activeOpacity={0.85}
+        >
+          <Ionicons name="chatbubble-ellipses" size={22} color={theme.colors.accent} />
+          <View style={{ flex: 1 }}>
+            <Text style={styles.routeBannerLabel}>CONTACT · REQUEST NEW FEATURE</Text>
+            <Text style={styles.routeBannerText}>
+              Report a bug or suggest an improvement
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color={theme.colors.textMuted} />
+        </TouchableOpacity>
+
         {/* Hero stats grid */}
         <View style={styles.gridRow}>
           <StatCard
@@ -403,6 +419,19 @@ const styles = StyleSheet.create({
     marginTop: 18,
   },
   routeBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    backgroundColor: theme.colors.bgSecondary,
+    borderWidth: 1,
+    borderColor: theme.colors.accent,
+    borderLeftWidth: 4,
+    borderRadius: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    marginBottom: 14,
+  },
+  feedbackBanner: {
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
