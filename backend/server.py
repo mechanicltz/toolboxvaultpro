@@ -1594,7 +1594,10 @@ async def upcoming_maintenance(days: int = 30):
     out: List[Dict[str, Any]] = []
     overdue_count = 0
     due_soon_count = 0
-    async for tool in db.tools.find({}, {"_id": 0}):
+    async for tool in db.tools.find(
+        {"maintenance": {"$exists": True, "$ne": []}},
+        {"_id": 0, "id": 1, "name": 1, "photos": 1, "maintenance": 1},
+    ):
         for sch in (tool.get("maintenance") or []):
             nd = sch.get("next_due_date") or ""
             if not nd:
