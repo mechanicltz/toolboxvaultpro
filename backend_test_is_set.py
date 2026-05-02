@@ -1,155 +1,259 @@
 """
-Verification test for new is_set + set_serials fields on the Tool model.
+Backend regression test — Tool is_set / set_serials fields.
+Verifies that Tool model persists is_set (bool) and set_serials (List[str])
+across POST/PUT/GET/DELETE + list + search.
 """
 import os
 import sys
-import json
+from pathlib import Path
+
 import requests
 
-BASE = os.environ.get("EXPO_PUBLIC_BACKEND_URL", "https://asset-locator-12.preview.emergentagent.com").rstrip("/") + "/api"
+FRONT_ENV = Path("/app/frontend/.env")
+BASE = None
+if FRONT_ENV.exists():
+    for line in FRONT_ENV.read_text().splitlines():
+        line = line.strip()
+        if not line or line.startswith("#"):
+            continue
+        if "=" in line:
+            k, v = line.split("=", 1)
+            k = k.strip()
+            v = v.strip().strip('"').strip("'")
+            if k in ("REACT_APP_BACKEND_URL", "EXPO_PUBLIC_BACKEND_URL") and v:
+                BASE = v.rstrip("/")
+                break
+
+if not BASE:
+    print("ERROR: REACT_APP_BACKEND_URL / EXPO_PUBLIC_BACKEND_URL not set in /app/frontend/.env")
+    sys.exit(1)
+
+API = BASE + "/api"
+
 EMAIL = "subtest@example.com"
 PASSWORD = "password123"
 
 passes = 0
-fails = []
+fails = 0
+errors = []
 
 
-def check(cond, label):
-    global passes
+def check(cond, msg):
+    global passes, fails
     if cond:
         passes += 1
-        print(f"  PASS  {label}")
+        print(f"  OK  {msg}")
     else:
-        fails.append(label)
-        print(f"  FAIL  {label}")
+        fails += 1
+        errors.append(msg)
+        print(f"  FAIL  {msg}")
 
 
-def login():
-    r = requests.post(f"{BASE}/auth/login", json={"email": EMAIL, "password": PASSWORD}, timeout=30)
-    r.raise_for_status()
-    return r.json()["token"]
+def h(token):
+    return {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
 
 
-def main():
-    token = login()
-    H = {"Authorization": f"Bearer {token}"}
+# Login
+print(f"=== Auth: login {EMAIL} at {API}")
+r = requests.post(f"{API}/auth/login", json={"email": EMAIL, "password": PASSWORD}, timeout=30)
+check(r.status_code == 200, f"POST /auth/login -> 200 (got {r.status_code})")
+if r.status_code != 200:
+    print(r.text)
+    sys.exit(1)
+token = r.json().get("token")
+check(bool(token), "login returned token")
+HDR = h(token)
 
-    # Step 1: single tool
-    print("\n[1] Create single tool (no set)")
-    r = requests.post(f"{BASE}/tools", headers=H, json={
-        "name": "Test Hammer Single",
-        "brand": "Acme",
-        "serial_number": "HAM-001",
-    }, timeout=30)
-    check(r.status_code == 200, f"POST /tools (single) -> 200 (got {r.status_code}: {r.text[:200]})")
-    t_single = r.json()
-    single_id = t_single.get("id")
-    check(t_single.get("is_set") is False, f"single.is_set == False (got {t_single.get('is_set')!r})")
-    check(t_single.get("set_serials") == [], f"single.set_serials == [] (got {t_single.get('set_serials')!r})")
-    check(t_single.get("serial_number") == "HAM-001", f"single.serial_number == 'HAM-001' (got {t_single.get('serial_number')!r})")
+created_ids = []
 
-    # Step 2: set tool with 3 serials
-    print("\n[2] Create tool marked as set with 3 serials")
-    r = requests.post(f"{BASE}/tools", headers=H, json={
-        "name": "Test Wrench Set",
-        "brand": "Acme",
-        "is_set": True,
-        "set_serials": ["WR-A-001", "WR-A-002", "WR-A-003"],
-    }, timeout=30)
-    check(r.status_code == 200, f"POST /tools (set) -> 200 (got {r.status_code}: {r.text[:200]})")
-    t_set = r.json()
-    set_id = t_set.get("id")
-    check(t_set.get("is_set") is True, f"set.is_set == True (got {t_set.get('is_set')!r})")
-    check(t_set.get("set_serials") == ["WR-A-001", "WR-A-002", "WR-A-003"],
-          f"set.set_serials == expected (got {t_set.get('set_serials')!r})")
+# ------------------------------------------------------------------
+# TEST 1: Create a single-item tool (not a set)
+# ------------------------------------------------------------------
+print("\n=== TEST 1: POST /api/tools -- single-item tool (is_set omitted)")
+payload1 = {
+    "name": "Wright Ratchet WR-B-100",
+    "brand": "Wright",
+    "model": "B-100",
+    "serial_number": "SN-SINGLE-001",
+    "cost": 39.99,
+}
+r = requests.post(f"{API}/tools", json=payload1, headers=HDR, timeout=30)
+check(r.status_code == 200, f"POST single tool -> 200 (got {r.status_code}) body={r.text[:300]}")
+if r.status_code == 200:
+    t1 = r.json()
+    created_ids.append(t1["id"])
+    check(t1.get("is_set") is False, f"single tool is_set == false (got {t1.get('is_set')!r})")
+    check(t1.get("set_serials") == [], f"single tool set_serials == [] (got {t1.get('set_serials')!r})")
+    check(t1.get("serial_number") == "SN-SINGLE-001", "single tool serial_number persisted")
+else:
+    t1 = None
 
-    # Step 3: GET each
-    print("\n[3] GET /api/tools/{id} for both")
-    r = requests.get(f"{BASE}/tools/{single_id}", headers=H, timeout=30)
-    check(r.status_code == 200, f"GET /tools/{single_id[:8]} -> 200")
-    s = r.json()
-    check(s.get("is_set") is False, "GET single.is_set == False")
-    check(s.get("set_serials") == [], "GET single.set_serials == []")
-    check(s.get("serial_number") == "HAM-001", "GET single.serial_number persists")
+# ------------------------------------------------------------------
+# TEST 2: Create a set tool with 3 serials
+# ------------------------------------------------------------------
+print("\n=== TEST 2: POST /api/tools -- set tool with 3 serials")
+payload2 = {
+    "name": "Wright 3pc Wrench Set",
+    "brand": "Wright",
+    "model": "SET-A",
+    "is_set": True,
+    "set_serials": ["WR-A-001", "WR-A-002", "WR-A-003"],
+    "cost": 199.50,
+}
+r = requests.post(f"{API}/tools", json=payload2, headers=HDR, timeout=30)
+check(r.status_code == 200, f"POST set tool -> 200 (got {r.status_code}) body={r.text[:300]}")
+if r.status_code == 200:
+    t2 = r.json()
+    created_ids.append(t2["id"])
+    check(t2.get("is_set") is True, f"set tool is_set == true (got {t2.get('is_set')!r})")
+    check(
+        t2.get("set_serials") == ["WR-A-001", "WR-A-002", "WR-A-003"],
+        f"set tool set_serials == 3 serials (got {t2.get('set_serials')!r})",
+    )
+else:
+    t2 = None
 
-    r = requests.get(f"{BASE}/tools/{set_id}", headers=H, timeout=30)
-    check(r.status_code == 200, f"GET /tools/{set_id[:8]} -> 200")
-    s = r.json()
-    check(s.get("is_set") is True, "GET set.is_set == True")
-    check(s.get("set_serials") == ["WR-A-001", "WR-A-002", "WR-A-003"], "GET set.set_serials persists")
+if not t1 or not t2:
+    print("\n!!! Aborting -- tool creation failed; cannot continue")
+    print(f"\nSummary: {passes} passed, {fails} failed")
+    sys.exit(1)
 
-    # Step 4: update single to become a set
-    print("\n[4] PUT single tool -> is_set=true + set_serials")
-    r = requests.put(f"{BASE}/tools/{single_id}", headers=H, json={
-        "is_set": True,
-        "set_serials": ["ABC-1", "ABC-2"],
-    }, timeout=30)
-    check(r.status_code == 200, f"PUT single -> 200 (got {r.status_code}: {r.text[:200]})")
-    u = r.json()
-    check(u.get("is_set") is True, f"PUT single.is_set == True (got {u.get('is_set')!r})")
-    check(u.get("set_serials") == ["ABC-1", "ABC-2"], f"PUT single.set_serials == expected (got {u.get('set_serials')!r})")
+# ------------------------------------------------------------------
+# TEST 3: GET both tools -- fields persist in Mongo
+# ------------------------------------------------------------------
+print("\n=== TEST 3: GET /api/tools/{id} -- fields persist from Mongo")
 
-    # Step 5: update set tool — new list
-    print("\n[5] PUT set tool — new set_serials list")
-    new_list = ["WR-A-001", "WR-A-003", "WR-A-004", "WR-A-005"]
-    r = requests.put(f"{BASE}/tools/{set_id}", headers=H, json={"set_serials": new_list}, timeout=30)
-    check(r.status_code == 200, f"PUT set -> 200 (got {r.status_code}: {r.text[:200]})")
-    u = r.json()
-    check(u.get("set_serials") == new_list, f"PUT set.set_serials == expected (got {u.get('set_serials')!r})")
-    check(u.get("is_set") is True, "PUT set.is_set still True")
+r = requests.get(f"{API}/tools/{t1['id']}", headers=HDR, timeout=30)
+check(r.status_code == 200, f"GET single tool -> 200 (got {r.status_code})")
+if r.status_code == 200:
+    body = r.json()
+    check(body.get("is_set") is False, f"GET single: is_set == false (got {body.get('is_set')!r})")
+    check(body.get("set_serials") == [], f"GET single: set_serials == [] (got {body.get('set_serials')!r})")
 
-    # Step 6: list endpoint
-    print("\n[6] GET /api/tools — list")
-    r = requests.get(f"{BASE}/tools", headers=H, timeout=30)
-    check(r.status_code == 200, f"GET /tools -> 200")
-    tools = r.json()
-    tool_by_id = {t["id"]: t for t in tools}
-    check(single_id in tool_by_id, "single tool present in list")
-    check(set_id in tool_by_id, "set tool present in list")
-    if single_id in tool_by_id:
-        ts = tool_by_id[single_id]
-        check(ts.get("is_set") is True, "list[single].is_set reflects update (True)")
-        check(ts.get("set_serials") == ["ABC-1", "ABC-2"], "list[single].set_serials correct")
-    if set_id in tool_by_id:
-        ts = tool_by_id[set_id]
-        check(ts.get("is_set") is True, "list[set].is_set == True")
-        check(ts.get("set_serials") == new_list, "list[set].set_serials correct")
+r = requests.get(f"{API}/tools/{t2['id']}", headers=HDR, timeout=30)
+check(r.status_code == 200, f"GET set tool -> 200 (got {r.status_code})")
+if r.status_code == 200:
+    body = r.json()
+    check(body.get("is_set") is True, f"GET set: is_set == true (got {body.get('is_set')!r})")
+    check(
+        body.get("set_serials") == ["WR-A-001", "WR-A-002", "WR-A-003"],
+        f"GET set: set_serials has 3 items (got {body.get('set_serials')!r})",
+    )
 
-    # Step 7: search by set serial
-    print("\n[7] GET /api/tools?search=WR-A-004 — should find the set")
-    r = requests.get(f"{BASE}/tools", headers=H, params={"search": "WR-A-004"}, timeout=30)
-    check(r.status_code == 200, "GET /tools?search=WR-A-004 -> 200")
-    results = r.json()
-    ids_found = [t["id"] for t in results]
-    check(set_id in ids_found, f"search WR-A-004 finds set tool (found {len(ids_found)} tools, ids: {[i[:8] for i in ids_found]})")
-    check(single_id not in ids_found, "search WR-A-004 does NOT match single tool (which has ABC-1/ABC-2)")
-
-    # bonus: search ABC-1 should find updated single
-    r2 = requests.get(f"{BASE}/tools", headers=H, params={"search": "ABC-1"}, timeout=30)
+# ------------------------------------------------------------------
+# TEST 4: PUT single tool to become a set with 2 serials
+# ------------------------------------------------------------------
+print("\n=== TEST 4: PUT /api/tools/{id} -- convert single into set with 2 serials")
+r = requests.put(
+    f"{API}/tools/{t1['id']}",
+    json={"is_set": True, "set_serials": ["CONV-X1", "CONV-X2"]},
+    headers=HDR,
+    timeout=30,
+)
+check(r.status_code == 200, f"PUT t1 to set -> 200 (got {r.status_code}) body={r.text[:300]}")
+if r.status_code == 200:
+    body = r.json()
+    check(body.get("is_set") is True, f"PUT t1: is_set flipped to true (got {body.get('is_set')!r})")
+    check(
+        body.get("set_serials") == ["CONV-X1", "CONV-X2"],
+        f"PUT t1: set_serials == 2 serials (got {body.get('set_serials')!r})",
+    )
+    r2 = requests.get(f"{API}/tools/{t1['id']}", headers=HDR, timeout=30)
     if r2.status_code == 200:
-        ids2 = [t["id"] for t in r2.json()]
-        check(single_id in ids2, "search ABC-1 finds updated single (now a set)")
+        b2 = r2.json()
+        check(b2.get("is_set") is True, "GET after PUT t1: is_set still true")
+        check(
+            b2.get("set_serials") == ["CONV-X1", "CONV-X2"],
+            f"GET after PUT t1: set_serials persisted (got {b2.get('set_serials')!r})",
+        )
 
-    # Step 8: cleanup
-    print("\n[8] DELETE both test tools")
-    r = requests.delete(f"{BASE}/tools/{single_id}", headers=H, timeout=30)
-    check(r.status_code == 200, f"DELETE single -> 200 (got {r.status_code})")
-    r = requests.delete(f"{BASE}/tools/{set_id}", headers=H, timeout=30)
-    check(r.status_code == 200, f"DELETE set -> 200 (got {r.status_code})")
+# ------------------------------------------------------------------
+# TEST 5: PUT set tool to replace its serials list
+# ------------------------------------------------------------------
+print("\n=== TEST 5: PUT /api/tools/{id} -- replace set_serials on existing set")
+new_serials = ["WR-A-004", "WR-A-005", "WR-A-006", "WR-A-007"]
+r = requests.put(
+    f"{API}/tools/{t2['id']}",
+    json={"set_serials": new_serials},
+    headers=HDR,
+    timeout=30,
+)
+check(r.status_code == 200, f"PUT t2 new serials -> 200 (got {r.status_code}) body={r.text[:300]}")
+if r.status_code == 200:
+    body = r.json()
+    check(body.get("is_set") is True, "PUT t2: is_set stays true")
+    check(
+        body.get("set_serials") == new_serials,
+        f"PUT t2: set_serials replaced (got {body.get('set_serials')!r})",
+    )
 
-    # verify 404
-    r = requests.get(f"{BASE}/tools/{single_id}", headers=H, timeout=30)
-    check(r.status_code == 404, f"GET deleted single -> 404 (got {r.status_code})")
-    r = requests.get(f"{BASE}/tools/{set_id}", headers=H, timeout=30)
-    check(r.status_code == 404, f"GET deleted set -> 404 (got {r.status_code})")
+# ------------------------------------------------------------------
+# TEST 6: GET /tools list includes both with is_set/set_serials
+# ------------------------------------------------------------------
+print("\n=== TEST 6: GET /api/tools (list) -- both tools visible with fields")
+r = requests.get(f"{API}/tools", headers=HDR, timeout=30)
+check(r.status_code == 200, f"GET /tools list -> 200 (got {r.status_code})")
+if r.status_code == 200:
+    arr = r.json()
+    check(isinstance(arr, list), "list response is an array")
+    row1 = next((x for x in arr if x.get("id") == t1["id"]), None)
+    row2 = next((x for x in arr if x.get("id") == t2["id"]), None)
+    check(row1 is not None, "list includes t1")
+    check(row2 is not None, "list includes t2")
+    if row1:
+        check(row1.get("is_set") is True, f"list t1 is_set == true (got {row1.get('is_set')!r})")
+        check(
+            row1.get("set_serials") == ["CONV-X1", "CONV-X2"],
+            f"list t1 set_serials persisted (got {row1.get('set_serials')!r})",
+        )
+    if row2:
+        check(row2.get("is_set") is True, f"list t2 is_set == true (got {row2.get('is_set')!r})")
+        check(
+            row2.get("set_serials") == new_serials,
+            f"list t2 set_serials has 4 items (got {row2.get('set_serials')!r})",
+        )
 
-    print(f"\n===== RESULT: {passes} PASS, {len(fails)} FAIL =====")
-    if fails:
-        print("\nFailures:")
-        for f in fails:
-            print(f"  - {f}")
-        sys.exit(1)
+# ------------------------------------------------------------------
+# TEST 7: Search by serial inside set_serials
+# ------------------------------------------------------------------
+print("\n=== TEST 7: GET /api/tools?search=WR-A-004 -- search finds set by inner serial")
+r = requests.get(f"{API}/tools", params={"search": "WR-A-004"}, headers=HDR, timeout=30)
+check(r.status_code == 200, f"GET /tools?search=WR-A-004 -> 200 (got {r.status_code})")
+if r.status_code == 200:
+    arr = r.json()
+    check(isinstance(arr, list), "search response is an array")
+    ids = [x.get("id") for x in arr]
+    check(t2["id"] in ids, f"search?=WR-A-004 returns t2 (got ids: {ids})")
+    check(
+        t1["id"] not in ids,
+        f"search?=WR-A-004 does NOT return t1 (got ids: {ids})",
+    )
 
+print("\n=== TEST 7b: search by CONV-X1 (should find t1)")
+r = requests.get(f"{API}/tools", params={"search": "CONV-X1"}, headers=HDR, timeout=30)
+check(r.status_code == 200, f"GET /tools?search=CONV-X1 -> 200 (got {r.status_code})")
+if r.status_code == 200:
+    arr = r.json()
+    ids = [x.get("id") for x in arr]
+    check(t1["id"] in ids, f"search?=CONV-X1 returns t1 (got ids: {ids})")
 
-if __name__ == "__main__":
-    main()
+# ------------------------------------------------------------------
+# TEST 8: DELETE both
+# ------------------------------------------------------------------
+print("\n=== TEST 8: DELETE both tools")
+for tid in [t1["id"], t2["id"]]:
+    r = requests.delete(f"{API}/tools/{tid}", headers=HDR, timeout=30)
+    check(r.status_code == 200, f"DELETE /tools/{tid[:8]}... -> 200 (got {r.status_code})")
+    g = requests.get(f"{API}/tools/{tid}", headers=HDR, timeout=30)
+    check(g.status_code == 404, f"GET /tools/{tid[:8]}... after DELETE -> 404 (got {g.status_code})")
+
+print(f"\n{'='*60}")
+print(f"SUMMARY: {passes} passed, {fails} failed")
+if fails:
+    print("\nFailures:")
+    for e in errors:
+        print(f"  - {e}")
+    sys.exit(1)
+else:
+    print("ALL CHECKS PASS")
+    sys.exit(0)

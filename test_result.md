@@ -1551,11 +1551,11 @@ agent_communication:
 backend_tool_is_set:
   - task: "Tool is_set + set_serials fields (create/read/update/list/search)"
     implemented: true
-    working: false
+    working: true
     file: "/app/backend/server.py"
     stuck_count: 1
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: false
         agent: "testing"
@@ -1584,6 +1584,18 @@ backend_tool_is_set:
           is_checked_out: bool = False
         These are inferred from ToolCreate + all previously-passing tests (broken/repair tracking, warranty claims, dealer auto-checkout, consumables, sale/sold, etc. ALL rely on these fields round-tripping through the Tool response model). After restoring, re-run /app/backend_test_is_set.py — should pass all 8 review steps.
         Evidence: /app/backend_test_is_set.py stopped at step 1 with 500. Backend log shows `AttributeError: 'Tool' object has no attribute 'needs_repair'` at server.py:1157. The broader regression also almost certainly breaks: needs_repair flag, repair_info banner, checkouts (no is_checked_out!), photos, documents, warranty, consumables, dealer linking, categories, tags, locations — because every GET /api/tools response will strip ALL those fields from the payload sent to the client."
+      - working: true
+        agent: "testing"
+        comment: "RETEST PASSED — 41/41 checks via /app/backend_test_is_set.py against EXPO_PUBLIC_BACKEND_URL/api after main agent restored the full Tool model (verified server.py L507-553 now includes all 20 previously-missing fields: quantity, purchase_date, condition, location_id/name, category_id/name, tag_ids/names, photos, documents, is_consumable, consumable_info, needs_repair, repair_info, warranty, dealer_id/name, purchased_from_agent_id/name, is_checked_out, current_checkout, checkout_history, maintenance, lost_status, for_sale/sale_*/is_sold/sold_*). Logged in as subtest@example.com. All 8 review steps green:
+          (1) POST /api/tools {name:'Wright Ratchet WR-B-100', brand:'Wright', model:'B-100', serial_number:'SN-SINGLE-001', cost:39.99} → 200; body.is_set=false, body.set_serials=[], serial_number='SN-SINGLE-001'.
+          (2) POST /api/tools {name:'Wright 3pc Wrench Set', is_set:true, set_serials:['WR-A-001','WR-A-002','WR-A-003'], cost:199.50} → 200; body.is_set=true, body.set_serials=['WR-A-001','WR-A-002','WR-A-003'].
+          (3) GET /api/tools/{t1.id} → is_set=false, set_serials=[]; GET /api/tools/{t2.id} → is_set=true, set_serials has 3 items — Mongo persistence verified.
+          (4) PUT /api/tools/{t1.id} {is_set:true, set_serials:['CONV-X1','CONV-X2']} → 200; response body AND re-GET both confirm is_set flipped to true and set_serials=['CONV-X1','CONV-X2'].
+          (5) PUT /api/tools/{t2.id} {set_serials:['WR-A-004','WR-A-005','WR-A-006','WR-A-007']} → 200; is_set stays true, set_serials list fully replaced with 4 items (no merge, no duplication).
+          (6) GET /api/tools (list) → 200; both tools appear with correct is_set and set_serials; list endpoint does NOT strip the fields.
+          (7) GET /api/tools?search=WR-A-004 → 200; returns exactly 1 result (t2) — the search query correctly walks into set_serials array (server.py L635 {'set_serials': rx}); t1 (no matching serial) is correctly excluded. Cross-check: GET ?search=CONV-X1 returns exactly t1.
+          (8) DELETE both tools → 200 each; subsequent GET returns 404 each.
+          NO 500 ERRORS during the test run (verified via /var/log/supervisor/backend.out.log — every POST/PUT/GET/DELETE /api/tools during my test returned 200 or the expected 404). The single stale 500 visible just before my run was from a pre-reload worker still in memory; `WatchFiles detected changes in 'server.py'. Reloading...` fired in backend.err.log and the fresh worker served all of my test requests cleanly. Backend task complete — safe to summarise and finish."
 
 agent_communication:
     - agent: "testing"
