@@ -530,6 +530,16 @@ export default function InventoryScreen() {
                       <Text style={styles.lostBadgeText}>CHECKED OUT</Text>
                     </View>
                   )}
+                  {item.is_set && (
+                    <View style={styles.setBadge}>
+                      <Ionicons name="cube" size={10} color="#000" />
+                      <Text style={styles.setBadgeText}>
+                        SET{Array.isArray(item.set_serials) && item.set_serials.length > 0
+                          ? ` · ${item.set_serials.length}`
+                          : ""}
+                      </Text>
+                    </View>
+                  )}
                 </View>
                 <Text style={styles.rowSub} numberOfLines={1}>
                   {item.location_name || "No location"}
@@ -1063,6 +1073,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 3,
+  },
+  setBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 3,
+    backgroundColor: theme.colors.accent,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 3,
+  },
+  setBadgeText: {
+    color: "#000",
+    fontSize: 9,
+    fontWeight: "900",
+    letterSpacing: 0.5,
   },
   lostBadgeText: {
     color: "#fff",

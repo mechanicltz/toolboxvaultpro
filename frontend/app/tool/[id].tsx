@@ -666,11 +666,54 @@ export default function ToolDetail() {
             <View style={styles.grid}>
               <Field label="Brand" value={tool.brand} />
               <Field label="Model" value={tool.model} />
-              <Field label="Serial #" value={tool.serial_number} />
+              {!tool.is_set && <Field label="Serial #" value={tool.serial_number} />}
               <Field label="Cost" value={`$${(tool.cost || 0).toFixed(2)}`} />
               <Field label="Condition" value={tool.condition} />
               <Field label="Purchased" value={formatDateUS(tool.purchase_date)} />
             </View>
+
+            {tool.is_set && (
+              <View style={{ marginTop: 8 }}>
+                <Text style={styles.sectionLabel}>
+                  SET SERIAL NUMBERS
+                  {Array.isArray(tool.set_serials) && tool.set_serials.length > 0
+                    ? ` (${tool.set_serials.length})`
+                    : ""}
+                </Text>
+                {(tool.set_serials && tool.set_serials.length > 0 ? tool.set_serials : []).map(
+                  (s: string, i: number) => (
+                    <View
+                      key={i}
+                      style={{
+                        flexDirection: "row",
+                        alignItems: "center",
+                        paddingVertical: 6,
+                        borderBottomWidth: 1,
+                        borderBottomColor: theme.colors.border,
+                      }}
+                    >
+                      <Text
+                        style={{
+                          color: theme.colors.textMuted,
+                          width: 28,
+                          fontWeight: "700",
+                        }}
+                      >
+                        {i + 1}.
+                      </Text>
+                      <Text style={{ color: theme.colors.textPrimary, fontSize: 15, flex: 1 }}>
+                        {s || "—"}
+                      </Text>
+                    </View>
+                  )
+                )}
+                {(!tool.set_serials || tool.set_serials.length === 0) && (
+                  <Text style={{ color: theme.colors.textMuted, fontStyle: "italic" }}>
+                    No serial numbers entered.
+                  </Text>
+                )}
+              </View>
+            )}
 
             <QuantityStepper tool={tool} onChange={load} />
 

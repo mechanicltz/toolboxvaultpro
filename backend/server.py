@@ -511,28 +511,9 @@ class Tool(BaseModel):
     brand: Optional[str] = ""
     model: Optional[str] = ""
     serial_number: Optional[str] = ""
+    is_set: bool = False
+    set_serials: List[str] = []
     cost: Optional[float] = 0.0
-    quantity: Optional[int] = 1
-    purchase_date: Optional[str] = ""
-    condition: Optional[str] = "Good"
-    location_id: Optional[str] = None
-    location_name: Optional[str] = ""
-    category_id: Optional[str] = None
-    category_name: Optional[str] = ""
-    tag_ids: List[str] = []
-    tag_names: List[str] = []
-    photos: List[str] = []
-    documents: List[Document] = []
-    is_consumable: bool = False
-    consumable_info: Optional[ConsumableInfo] = None
-    needs_repair: bool = False
-    repair_info: Optional[RepairInfo] = None
-    warranty: Optional[Warranty] = None
-    dealer_id: Optional[str] = None
-    dealer_name: Optional[str] = ""
-    purchased_from_agent_id: Optional[str] = None  # snapshot at purchase
-    purchased_from_agent_name: Optional[str] = ""
-    is_checked_out: bool = False
     current_checkout: Optional[CheckoutRecord] = None
     checkout_history: List[CheckoutRecord] = []
     maintenance: List[MaintenanceSchedule] = []
@@ -557,6 +538,8 @@ class ToolCreate(BaseModel):
     brand: Optional[str] = ""
     model: Optional[str] = ""
     serial_number: Optional[str] = ""
+    is_set: bool = False
+    set_serials: List[str] = []
     cost: Optional[float] = 0.0
     quantity: Optional[int] = 1
     purchase_date: Optional[str] = ""
@@ -586,6 +569,8 @@ class ToolUpdate(BaseModel):
     brand: Optional[str] = None
     model: Optional[str] = None
     serial_number: Optional[str] = None
+    is_set: Optional[bool] = None
+    set_serials: Optional[List[str]] = None
     cost: Optional[float] = None
     quantity: Optional[int] = None
     purchase_date: Optional[str] = None
@@ -647,6 +632,7 @@ def build_tool_query(
             {"brand": rx},
             {"model": rx},
             {"serial_number": rx},
+            {"set_serials": rx},
             {"tag_names": rx},
             {"location_name": rx},
             {"category_name": rx},

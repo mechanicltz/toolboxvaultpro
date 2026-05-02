@@ -1546,3 +1546,46 @@ agent_communication:
         submission as far as API behaviour is concerned; any remaining
         Expo Go errors the user is hitting can be safely isolated to
         frontend / Metro / cache / RN bundler issues.
+
+
+backend_tool_is_set:
+  - task: "Tool is_set + set_serials fields (create/read/update/list/search)"
+    implemented: true
+    working: false
+    file: "/app/backend/server.py"
+    stuck_count: 1
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: false
+        agent: "testing"
+        comment: "CRITICAL REGRESSION — POST /api/tools returns HTTP 500 for every payload (even the simplest {name, brand, serial_number}). Root cause: the Tool Pydantic RESPONSE model at /app/backend/server.py L507-532 has been drastically shrunk while adding `is_set`/`set_serials`. The following fields that ToolCreate still accepts (and the DB still persists) are NO LONGER declared on the Tool model: quantity, purchase_date, condition, location_id, location_name, category_id, category_name, tag_ids, tag_names, photos, documents, is_consumable, consumable_info, needs_repair, repair_info, warranty, dealer_id, dealer_name, purchased_from_agent_id, purchased_from_agent_name, is_checked_out. Because `create_tool` at L1154-1175 does `tool = Tool(**payload.dict())` and then reads `tool.needs_repair` at L1157, it now raises `AttributeError: 'Tool' object has no attribute 'needs_repair'` → FastAPI returns 500. Backend log confirms this traceback verbatim. Review request (is_set/set_serials) CANNOT be verified end-to-end because step 1 (POST /api/tools) already crashes. The is_set/set_serials fields themselves ARE correctly declared on Tool (L514-515), on ToolCreate (L541-542), on ToolUpdate (L572-573), and the search query already includes set_serials (L635), so the NEW fields are wired — but the collateral damage from removing the other Tool fields is a production-breaking bug.
+        FIX REQUIRED (main agent): restore the full Tool model field set. Based on the test history (see earlier tests that verified these fields round-trip), the Tool model should include:
+          quantity: Optional[int] = 1
+          purchase_date: Optional[str] = ''
+          condition: Optional[str] = 'Good'
+          location_id: Optional[str] = None
+          location_name: Optional[str] = ''
+          category_id: Optional[str] = None
+          category_name: Optional[str] = ''
+          tag_ids: List[str] = []
+          tag_names: List[str] = []
+          photos: List[str] = []
+          documents: List[Document] = []
+          is_consumable: bool = False
+          consumable_info: Optional[ConsumableInfo] = None
+          needs_repair: bool = False
+          repair_info: Optional[RepairInfo] = None
+          warranty: Optional[Warranty] = None
+          dealer_id: Optional[str] = None
+          dealer_name: Optional[str] = ''
+          purchased_from_agent_id: Optional[str] = None
+          purchased_from_agent_name: Optional[str] = ''
+          is_checked_out: bool = False
+        These are inferred from ToolCreate + all previously-passing tests (broken/repair tracking, warranty claims, dealer auto-checkout, consumables, sale/sold, etc. ALL rely on these fields round-tripping through the Tool response model). After restoring, re-run /app/backend_test_is_set.py — should pass all 8 review steps.
+        Evidence: /app/backend_test_is_set.py stopped at step 1 with 500. Backend log shows `AttributeError: 'Tool' object has no attribute 'needs_repair'` at server.py:1157. The broader regression also almost certainly breaks: needs_repair flag, repair_info banner, checkouts (no is_checked_out!), photos, documents, warranty, consumables, dealer linking, categories, tags, locations — because every GET /api/tools response will strip ALL those fields from the payload sent to the client."
+
+agent_communication:
+    - agent: "testing"
+      message: |
+        Quick is_set/set_serials verification test FAILED AT STEP 1 due to a CRITICAL REGRESSION in the Tool Pydantic model. The main agent appears to have re-typed the Tool model when adding `is_set`/`set_serials` and accidentally dropped ~20 previously-declared fields (quantity, purchase_date, condition, location_*, category_*, tag_*, photos, documents, is_consumable, consumable_info, needs_repair, repair_info, warranty, dealer_*, purchased_from_agent_*, is_checked_out). This breaks `create_tool` at server.py:1157 which references `tool.needs_repair` → AttributeError → HTTP 500 on every POST /api/tools. The is_set/set_serials additions themselves are correctly declared and the search query already includes set_serials, so the new feature is wired — but the model shrinkage is a production-breaking regression that also silently strips those fields from every GET/PUT /tools response (affecting checkout UI, repair banner, photos, documents, warranty, dealer linking, etc.). DO NOT MERGE until Tool model is restored. See backend_tool_is_set task above for the exact field list to add back.

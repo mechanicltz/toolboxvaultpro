@@ -29,6 +29,8 @@ export default function ToolEdit() {
   const [brand, setBrand] = useState("");
   const [model, setModel] = useState("");
   const [serial, setSerial] = useState("");
+  const [isSet, setIsSet] = useState(false);
+  const [setSerials, setSetSerials] = useState<string[]>([""]);
   const [cost, setCost] = useState("");
   const [quantity, setQuantity] = useState("1");
   const [purchaseDate, setPurchaseDate] = useState(isEdit ? "" : new Date().toISOString().substring(0, 10));
@@ -96,6 +98,12 @@ export default function ToolEdit() {
         const t = await api.getTool(id);
         setName(t.name); setDescription(t.description || ""); setBrand(t.brand || "");
         setModel(t.model || ""); setSerial(t.serial_number || "");
+        setIsSet(!!t.is_set);
+        setSetSerials(
+          Array.isArray(t.set_serials) && t.set_serials.length
+            ? t.set_serials
+            : [""]
+        );
         setCost(t.cost ? String(t.cost) : ""); setPurchaseDate(t.purchase_date || "");
         setQuantity(t.quantity != null ? String(t.quantity) : "1");
         setCondition(t.condition || "Good"); setLocationId(t.location_id);
@@ -276,8 +284,12 @@ export default function ToolEdit() {
   const save = useCallback(async () => {
     if (!name.trim()) { Alert.alert("Required", "Please enter a tool name."); return; }
     setSaving(true);
+    const cleanedSerials = setSerials.map((s) => s.trim()).filter((s) => s.length > 0);
     const payload: any = {
-      name: name.trim(), description, brand, model, serial_number: serial,
+      name: name.trim(), description, brand, model,
+      serial_number: isSet ? "" : serial,
+      is_set: isSet,
+      set_serials: isSet ? cleanedSerials : [],
       cost: parseFloat(cost) || 0, purchase_date: purchaseDate, condition,
       quantity: Math.max(1, parseInt(quantity, 10) || 1),
       location_id: locationId, location_name: locationName,
@@ -313,7 +325,7 @@ export default function ToolEdit() {
       router.back();
     } catch (e: any) { Alert.alert("Error", e.message); }
     finally { setSaving(false); }
-  }, [name, description, brand, model, serial, cost, quantity, purchaseDate, condition, locationId, locationName, category, tags, photos, documents, isConsumable, consumableInfo, needsRepair, repairInfo, hasWarranty, warranty, dealerId, dealerName, purchasedAgentId, purchasedAgentName, isEdit, id, router]);
+  }, [name, description, brand, model, serial, isSet, setSerials, cost, quantity, purchaseDate, condition, locationId, locationName, category, tags, photos, documents, isConsumable, consumableInfo, needsRepair, repairInfo, hasWarranty, warranty, dealerId, dealerName, purchasedAgentId, purchasedAgentName, isEdit, id, router]);
 
   if (loading) {
     return (
@@ -378,24 +390,121 @@ export default function ToolEdit() {
             </View>
           </View>
 
-          <View style={styles.row2}>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.label}>SERIAL #</Text>
-              <TextInput testID="serial-input" placeholder="ABC-1234" placeholderTextColor={theme.colors.textMuted}
-                value={serial} onChangeText={setSerial} style={styles.input} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.label}>COST ($)</Text>
-              <TextInput testID="cost-input" placeholder="0.00" placeholderTextColor={theme.colors.textMuted}
-                value={cost} onChangeText={setCost} style={styles.input} keyboardType="decimal-pad" />
-            </View>
-            <View style={{ width: 90 }}>
-              <Text style={styles.label}>QTY</Text>
-              <TextInput testID="quantity-input" placeholder="1" placeholderTextColor={theme.colors.textMuted}
-                value={quantity} onChangeText={(v) => setQuantity(v.replace(/[^0-9]/g, ""))}
-                style={styles.input} keyboardType="number-pad" />
-            </View>
+          {/* IS-A-SET toggle */}
+          <View style={styles.toggleRow}>
+            <Ionicons name="cube" size={20} color={theme.colors.accent} />
+            <Text style={styles.toggleText}>THIS IS A SET (multiple serial numbers)</Text>
+            <Switch
+              testID="toggle-is-set"
+              value={isSet}
+              onValueChange={(v) => {
+                setIsSet(v);
+                if (v && setSerials.length === 0) setSetSerials([""]);
+              }}
+              trackColor={{ true: theme.colors.accent, false: theme.colors.border }}
+              thumbColor="#fff"
+            />
           </View>
+
+          {!isSet ? (
+            <View style={styles.row2}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.label}>SERIAL #</Text>
+                <TextInput testID="serial-input" placeholder="ABC-1234" placeholderTextColor={theme.colors.textMuted}
+                  value={serial} onChangeText={setSerial} style={styles.input} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.label}>COST ($)</Text>
+                <TextInput testID="cost-input" placeholder="0.00" placeholderTextColor={theme.colors.textMuted}
+                  value={cost} onChangeText={setCost} style={styles.input} keyboardType="decimal-pad" />
+              </View>
+              <View style={{ width: 90 }}>
+                <Text style={styles.label}>QTY</Text>
+                <TextInput testID="quantity-input" placeholder="1" placeholderTextColor={theme.colors.textMuted}
+                  value={quantity} onChangeText={(v) => setQuantity(v.replace(/[^0-9]/g, ""))}
+                  style={styles.input} keyboardType="number-pad" />
+              </View>
+            </View>
+          ) : (
+            <>
+              <View style={styles.row2}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.label}>COST ($)</Text>
+                  <TextInput testID="cost-input" placeholder="0.00" placeholderTextColor={theme.colors.textMuted}
+                    value={cost} onChangeText={setCost} style={styles.input} keyboardType="decimal-pad" />
+                </View>
+                <View style={{ width: 90 }}>
+                  <Text style={styles.label}>QTY</Text>
+                  <TextInput testID="quantity-input" placeholder="1" placeholderTextColor={theme.colors.textMuted}
+                    value={quantity} onChangeText={(v) => setQuantity(v.replace(/[^0-9]/g, ""))}
+                    style={styles.input} keyboardType="number-pad" />
+                </View>
+              </View>
+              <View style={styles.subSection}>
+                <Text style={[styles.label, { marginTop: 0 }]}>SERIAL NUMBERS (one per item in the set)</Text>
+                {setSerials.map((s, idx) => (
+                  <View
+                    key={idx}
+                    style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 8 }}
+                  >
+                    <Text style={{ color: theme.colors.textMuted, width: 28, fontWeight: "700" }}>
+                      {idx + 1}.
+                    </Text>
+                    <TextInput
+                      testID={`set-serial-input-${idx}`}
+                      placeholder={`Serial # for item ${idx + 1}`}
+                      placeholderTextColor={theme.colors.textMuted}
+                      value={s}
+                      onChangeText={(v) => {
+                        const next = [...setSerials];
+                        next[idx] = v;
+                        setSetSerials(next);
+                      }}
+                      style={[styles.input, { flex: 1 }]}
+                    />
+                    {setSerials.length > 1 && (
+                      <TouchableOpacity
+                        testID={`set-serial-remove-${idx}`}
+                        onPress={() => {
+                          const next = setSerials.filter((_, i) => i !== idx);
+                          setSetSerials(next.length ? next : [""]);
+                        }}
+                        hitSlop={8}
+                        style={{
+                          padding: 6,
+                          borderRadius: 6,
+                          backgroundColor: "rgba(220,38,38,0.08)",
+                        }}
+                      >
+                        <Ionicons name="close" size={18} color={theme.colors.danger} />
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                ))}
+                <TouchableOpacity
+                  testID="add-set-serial"
+                  onPress={() => setSetSerials([...setSerials, ""])}
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: 6,
+                    borderWidth: 1,
+                    borderStyle: "dashed",
+                    borderColor: theme.colors.accent,
+                    borderRadius: 6,
+                    paddingVertical: 10,
+                    marginTop: 4,
+                  }}
+                >
+                  <Ionicons name="add" size={18} color={theme.colors.accent} />
+                  <Text style={{ color: theme.colors.accent, fontWeight: "800", letterSpacing: 1 }}>
+                    ADD SERIAL NUMBER
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </>
+          )}
 
           <View style={styles.row2}>
             <View style={{ flex: 1 }}>
