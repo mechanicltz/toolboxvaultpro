@@ -12,10 +12,12 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
 import { theme } from "../src/theme";
 import { useAuth } from "../src/AuthContext";
 
 export default function LoginScreen() {
+  const router = useRouter();
   const { login, register } = useAuth();
   const [mode, setMode] = useState<"login" | "register">("login");
   const [email, setEmail] = useState("");
@@ -173,10 +175,22 @@ export default function LoginScreen() {
               )}
             </TouchableOpacity>
 
+            {mode === "login" && (
+              <TouchableOpacity
+                onPress={() => router.push("/forgot-password")}
+                style={{ alignSelf: "center", marginTop: 14 }}
+                testID="forgot-password-link"
+              >
+                <Text style={{ color: theme.colors.accent, fontSize: 14, fontWeight: "700" }}>
+                  Forgot password?
+                </Text>
+              </TouchableOpacity>
+            )}
+
             <Text style={styles.hint}>
               {mode === "login"
                 ? "New user? Use Create Account to get started for free."
-                : "Free plan: 10 tools, 1 dealer. Upgrade anytime."}
+                : "Create an account to start tracking your tools."}
             </Text>
           </View>
         </ScrollView>

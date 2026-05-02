@@ -29,6 +29,7 @@ from auth import (
     evaluate_subscription_status,
     TIER_FREE,
 )
+from email_sender import send_password_reset_code
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -2235,6 +2236,143 @@ async def update_me(payload: Dict[str, Any], user: User = Depends(get_current_us
         user_doc = await real_db.users.find_one({"id": user.id}, {"_id": 0})
         user = User(**user_doc)
     return to_public(user)
+
+
+# ---------------------------------------------------------------------------
+# Password reset (Forgot Password) — 6-digit code via email
+# ---------------------------------------------------------------------------
+import secrets
+
+RESET_CODE_TTL_MINUTES = 15
+RESET_CODE_MAX_ATTEMPTS = 5
+
+
+class ForgotPasswordRequest(BaseModel):
+    email: str
+
+
+class ResetPasswordRequest(BaseModel):
+    email: str
+    code: str
+    new_password: str
+
+
+def _generate_reset_code() -> str:
+    # 6-digit numeric code
+    return f"{secrets.randbelow(1_000_000):06d}"
+
+
+@auth_router.post("/forgot-password")
+async def forgot_password(payload: ForgotPasswordRequest):
+    """Send a 6-digit password reset code to the user's email.
+
+    Always returns 200 with the same message regardless of whether the email
+    exists in our system. This prevents email-enumeration attacks. The
+    email is only sent when the user actually exists.
+    """
+    email = (payload.email or "").strip().lower()
+    generic_response = {
+        "ok": True,
+        "message": "If that email is registered, a 6-digit code has been sent.",
+    }
+    if not email or "@" not in email:
+        return generic_response
+
+    udoc = await real_db.users.find_one({"email": email}, {"_id": 0, "id": 1, "name": 1})
+    if not udoc:
+        # Silently pretend we sent it
+        return generic_response
+
+    code = _generate_reset_code()
+    code_hash = hash_password(code)  # store hash, never plaintext
+    expires_at = (datetime.now(timezone.utc) + timedelta(minutes=RESET_CODE_TTL_MINUTES)).isoformat()
+
+    # Upsert reset record (only one active reset per user at a time)
+    await real_db.password_resets.update_one(
+        {"user_id": udoc["id"]},
+        {
+            "$set": {
+                "user_id": udoc["id"],
+                "email": email,
+                "code_hash": code_hash,
+                "expires_at": expires_at,
+                "attempts": 0,
+                "created_at": now_iso(),
+            }
+        },
+        upsert=True,
+    )
+
+    # Fire-and-forget the email (never block the response on SMTP)
+    try:
+        send_password_reset_code(email, code, display_name=udoc.get("name") or "")
+    except Exception as e:
+        logging.error("Failed to send reset email to %s: %s", email, e)
+
+    return generic_response
+
+
+@auth_router.post("/reset-password", response_model=AuthResponse)
+async def reset_password(payload: ResetPasswordRequest):
+    """Verify the 6-digit code and set a new password. On success, returns a
+    fresh auth token so the user is logged in immediately.
+    """
+    email = (payload.email or "").strip().lower()
+    code = (payload.code or "").strip()
+    new_password = payload.new_password or ""
+
+    if not email or not code or not new_password:
+        raise HTTPException(400, "Email, code, and new password are required.")
+    if len(new_password) < 6:
+        raise HTTPException(400, "New password must be at least 6 characters.")
+
+    udoc = await real_db.users.find_one({"email": email}, {"_id": 0})
+    if not udoc:
+        # Don't leak whether the email exists — generic failure
+        raise HTTPException(400, "Invalid or expired code.")
+
+    reset_doc = await real_db.password_resets.find_one({"user_id": udoc["id"]}, {"_id": 0})
+    if not reset_doc:
+        raise HTTPException(400, "Invalid or expired code.")
+
+    # Check expiry
+    try:
+        expires_at = datetime.fromisoformat(reset_doc["expires_at"])
+        if expires_at.tzinfo is None:
+            expires_at = expires_at.replace(tzinfo=timezone.utc)
+    except Exception:
+        expires_at = None
+    if not expires_at or datetime.now(timezone.utc) > expires_at:
+        await real_db.password_resets.delete_one({"user_id": udoc["id"]})
+        raise HTTPException(400, "Invalid or expired code.")
+
+    # Check attempts
+    if (reset_doc.get("attempts", 0) or 0) >= RESET_CODE_MAX_ATTEMPTS:
+        await real_db.password_resets.delete_one({"user_id": udoc["id"]})
+        raise HTTPException(
+            429,
+            "Too many incorrect attempts. Please request a new code.",
+        )
+
+    # Verify the code
+    if not verify_password(code, reset_doc.get("code_hash", "")):
+        await real_db.password_resets.update_one(
+            {"user_id": udoc["id"]},
+            {"$inc": {"attempts": 1}},
+        )
+        raise HTTPException(400, "Invalid or expired code.")
+
+    # Success — update the password and burn the reset record
+    await real_db.users.update_one(
+        {"id": udoc["id"]},
+        {"$set": {"password_hash": hash_password(new_password), "updated_at": now_iso()}},
+    )
+    await real_db.password_resets.delete_one({"user_id": udoc["id"]})
+
+    user_doc = await real_db.users.find_one({"id": udoc["id"]}, {"_id": 0})
+    user = User(**user_doc)
+    token = create_token(user.id)
+    return AuthResponse(token=token, user=to_public(user))
 
 
 app.include_router(api_router)

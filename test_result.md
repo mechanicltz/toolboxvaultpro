@@ -307,10 +307,42 @@ metadata:
 
 test_plan:
   current_focus:
-    - "RevenueCat — POST /api/subscription/sync-revenuecat (auth) + POST /api/webhooks/revenuecat (public)"
+    - "Password reset — /api/auth/forgot-password + /api/auth/reset-password"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
+
+backend_password_reset:
+  - task: "Password reset — /api/auth/forgot-password + /api/auth/reset-password (bcrypt code, expiry, attempts, rate-limit, enumeration-safe)"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "PASS — 22/22 checks via /app/backend_test_password_reset.py against EXPO_PUBLIC_BACKEND_URL/api with direct MongoDB injection for the code. End-to-end flow verified:
+          (1) POST /api/auth/register {email:'pwreset_test@example.com', password:'originalpass123', name:'Reset Tester'} -> 200 with token+user.
+          (2) POST /api/auth/login with originalpass123 -> 200.
+          (3) POST /api/auth/forgot-password {email:'pwreset_test@example.com'} -> 200 with body {ok:true, message:'If that email is registered, a 6-digit code has been sent.'}.
+          (4a) password_resets doc for this email exists with fields user_id, email, code_hash, expires_at, attempts, created_at.
+          (4b) code_hash is a bcrypt hash (prefix '$2b$').
+          (4c) expires_at is 14m58s in the future (~15 min window honored).
+          (4d) attempts == 0 on fresh record.
+          (4e) Injected a known bcrypt hash of '123456' into the record (attempts reset to 0), verified persisted.
+          (5a) POST /api/auth/reset-password {code:'000000'} -> 400 with detail 'Invalid or expired code.'
+          (5b) password_resets.attempts incremented to 1.
+          (6) POST /api/auth/reset-password {code:'123456', new_password:'newpass123'} -> 200 with {token, user} keys present.
+          (7) password_resets doc for this email was deleted after successful reset.
+          (8) POST /api/auth/login with old 'originalpass123' -> 401.
+          (9) POST /api/auth/login with new 'newpass123' -> 200 with token.
+          (10a) After a fresh /forgot-password + inject, first 5 wrong-code calls each return 400 (statuses=[400,400,400,400,400]). (10b) The 6th wrong-code call returns 429 with detail 'Too many incorrect attempts. Please request a new code.' — rate limit fires exactly on attempt #6.
+          (11) POST /api/auth/forgot-password {email:'does-not-exist-asdfqwer@example.com'} -> 200 with the SAME generic body ({ok:true, message:'If that email is registered, a 6-digit code has been sent.'}) — no email enumeration leak.
+          (12) POST /api/auth/reset-password with new_password='abc' (<6 chars) -> 400 with detail 'New password must be at least 6 characters.'
+          SMOKE (subtest@example.com / password123 NOT altered): (S1) /auth/login -> 200, (S2) GET /api/tools with subtest token -> 200 list, (S3) GET /api/stats with subtest token -> 200. Nothing else broken.
+          CLEANUP: test user doc + any lingering password_resets docs for pwreset_test@example.com were deleted from MongoDB (deleted users=1, resets=1). Production subtest user untouched. All 22 assertions pass, no failures."
 
 backend_subscription:
   - task: "Auth + Subscription + Per-user Data Isolation + Free-tier Limits"
@@ -1601,3 +1633,25 @@ agent_communication:
     - agent: "testing"
       message: |
         Quick is_set/set_serials verification test FAILED AT STEP 1 due to a CRITICAL REGRESSION in the Tool Pydantic model. The main agent appears to have re-typed the Tool model when adding `is_set`/`set_serials` and accidentally dropped ~20 previously-declared fields (quantity, purchase_date, condition, location_*, category_*, tag_*, photos, documents, is_consumable, consumable_info, needs_repair, repair_info, warranty, dealer_*, purchased_from_agent_*, is_checked_out). This breaks `create_tool` at server.py:1157 which references `tool.needs_repair` → AttributeError → HTTP 500 on every POST /api/tools. The is_set/set_serials additions themselves are correctly declared and the search query already includes set_serials, so the new feature is wired — but the model shrinkage is a production-breaking regression that also silently strips those fields from every GET/PUT /tools response (affecting checkout UI, repair banner, photos, documents, warranty, dealer linking, etc.). DO NOT MERGE until Tool model is restored. See backend_tool_is_set task above for the exact field list to add back.
+
+    - agent: "testing"
+      message: |
+        Password-reset endpoints tested end-to-end via /app/backend_test_password_reset.py against EXPO_PUBLIC_BACKEND_URL/api with direct MongoDB injection (since Gmail inbox is not accessible from the agent). Result: 22/22 PASS, 0 FAIL.
+
+        Flow verified exactly as reviewed:
+          1) Register pwreset_test@example.com / originalpass123 → 200 with token+user.
+          2) Login with original password → 200.
+          3) POST /api/auth/forgot-password → 200 with generic body {ok:true, message:'If that email is registered, a 6-digit code has been sent.'}. Backend log confirms SMTP fired: "Email sent to pwreset_test@example.com (subject=Your Toolbox Vault password reset code)".
+          4) password_resets Mongo doc exists with bcrypt code_hash ($2b$...), expires_at ~14:58 ahead of now, attempts=0. Injected a bcrypt hash of '123456' and reset attempts to 0 for deterministic testing.
+          5) Wrong code '000000' → 400 'Invalid or expired code.'; attempts incremented to 1.
+          6) Correct code '123456' + new_password 'newpass123' → 200 with {token, user}.
+          7) password_resets doc deleted after success.
+          8) Login with old originalpass123 → 401.
+          9) Login with new newpass123 → 200.
+          10) Rate limit: after re-issuing a fresh code, first 5 wrong-code calls → 400, 6th → 429 'Too many incorrect attempts. Please request a new code.' (exact [400,400,400,400,400,429]).
+          11) forgot-password with unknown email → same generic 200 body (no enumeration leak).
+          12) reset-password with new_password='abc' → 400 'New password must be at least 6 characters.'
+          SMOKE on subtest@example.com / password123 (NOT modified): /auth/login 200, GET /api/tools 200, GET /api/stats 200 — nothing else broken.
+          13) Cleanup: DELETE of pwreset_test@example.com user doc + residual password_resets doc from Mongo succeeded (deleted users=1, resets=1). Production subtest account and its password were not touched.
+
+        Backend task is complete and production-ready. Main agent can summarise and finish — no further action needed on the password-reset endpoints.

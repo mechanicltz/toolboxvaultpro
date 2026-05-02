@@ -105,6 +105,16 @@ export const api = {
     request<any>(`/auth/login`, { method: "POST", body: JSON.stringify(data) }),
   me: () => request<any>(`/auth/me`),
   updateMe: (data: any) => request<any>(`/auth/me`, { method: "PUT", body: JSON.stringify(data) }),
+  forgotPassword: (data: { email: string }) =>
+    request<{ ok: boolean; message: string }>(`/auth/forgot-password`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+  resetPassword: (data: { email: string; code: string; new_password: string }) =>
+    request<any>(`/auth/reset-password`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
 
   // Tools
   listTools: (params?: any) => request<any[]>(`/tools${qs(params)}`),
