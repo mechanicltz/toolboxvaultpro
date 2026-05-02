@@ -2448,8 +2448,10 @@ async def submit_feedback(payload: FeedbackRequest, request: Request):
     if len(message) > 20000:
         raise HTTPException(400, "Message is too long.")
 
-    # Rate-limit by IP
-    client_ip = (request.client.host if request.client else "") or request.headers.get("x-forwarded-for", "unknown").split(",")[0].strip()
+    # Rate-limit by IP. Behind K8s ingress, request.client.host is always the
+    # ingress pod IP, so prefer X-Forwarded-For for the real client IP.
+    xff = (request.headers.get("x-forwarded-for") or "").split(",")[0].strip()
+    client_ip = xff or (request.client.host if request.client else "unknown")
     if not _feedback_rate_limit(client_ip):
         raise HTTPException(
             429,
