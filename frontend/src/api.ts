@@ -115,6 +115,21 @@ export const api = {
       method: "POST",
       body: JSON.stringify(data),
     }),
+  submitFeedback: (data: {
+    name: string;
+    email: string;
+    subject: string;
+    message: string;
+    platform?: string;
+    is_bug?: boolean;
+    is_feature?: boolean;
+    app_version?: string;
+    website?: string;
+  }) =>
+    request<{ ok: boolean; message: string }>(`/feedback`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
 
   // Tools
   listTools: (params?: any) => request<any[]>(`/tools${qs(params)}`),

@@ -307,10 +307,23 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Password reset — /api/auth/forgot-password + /api/auth/reset-password"
+    - "Feedback endpoint — POST /api/feedback (rate-limit IP-keying bug)"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
+
+backend_feedback:
+  - task: "POST /api/feedback (public, no auth) — happy paths, validation, honeypot, rate-limit, persistence"
+    implemented: true
+    working: false
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: false
+        agent: "testing"
+        comment: "PARTIAL PASS — 15/16 via /app/backend_test_feedback.py against EXPO_PUBLIC_BACKEND_URL/api. ONE CRITICAL ISSUE in the rate-limiter IP-keying that breaks rate limiting in production behind the K8s ingress.\n\nPASSED (15/16):\n  (1) Feature-request happy path → 200 with {ok:true, message:'Thanks — your message has been sent.'}\n  (2) Bug-report happy path (subject='Crash on save', is_bug=true) → 200\n  (3) name='' → 400 detail='Please provide your name.'\n  (4) email='not-an-email' → 400 detail='Please provide a valid email address.'\n  (5) subject='' → 400 detail='Please provide a subject.'\n  (6) message='' → 400 detail='Please provide a message.'\n  (7) message length 20001 → 400 detail='Message is too long.'\n  (8a) honeypot {website:'http://spam.com'} → 200 with body {ok:true, message:'Thanks!'} (NOTE: generic 'Thanks!' string, distinct from the long happy-path message — easy to tell apart). \n  (8b) honeypot record was NOT persisted to MongoDB feedback collection. \n  (8c) honeypot did NOT log an 'Email sent' line for that subject (verified by snapshotting backend.out.log offset before vs after).\n  (10a) Mongo feedback collection has the test-1 (Bob/feature) record with all required fields: name, email, subject, message, is_bug=false, is_feature=true, platform='Apple', app_version='1.0.0', created_at='2026-05-02T02:47:37.819154+00:00' (ISO8601). \n  (10b) Mongo feedback collection has the test-2 (Alice/bug) record with is_bug=true, is_feature=false, subject='Crash on save'. All required fields present.\n  (11a) Smoke GET /api/ → 200 body={'message':'Toolbox Vault API'}.\n  (11b) Smoke POST /api/auth/login {email:'subtest@example.com', password:'password123'} → 200 with token.\n  (11c) Smoke GET /api/stats with subtest token → 200 with all expected keys (total_tools, checked_out, available, consumables, needs_repair, total_value, locations, tags, categories, borrowers, dealers, warranty_expiring_soon, warranty_expired).\n\nFAILED (1/16):\n  (9) Rate limit — sent 6 valid requests in quick succession from same external IP, expected first 5 → 200 and 6th → 429. Got [200,200,200,200,200,200] — ALL six succeeded. Re-confirmed with a 12-request session: codes=[200,200,200,200,200,200,429,200,429,200,200,200] — non-deterministic.\n\nROOT CAUSE: server.py line 2452:\n    client_ip = (request.client.host if request.client else \"\") or request.headers.get(\"x-forwarded-for\", \"unknown\").split(\",\")[0].strip()\nThe `or` short-circuits on the FIRST truthy value. request.client.host is ALWAYS truthy because behind the K8s ingress it equals the IMMEDIATE hop (one of the ingress pods, e.g. 10.227.1.106 / 10.227.1.107), so X-Forwarded-For is NEVER read. Backend logs from the test run prove it — my 6 sequential requests came from `10.227.1.107` (3 hits) and `10.227.1.106` (3 hits) interleaved, which split the rate-limit bucket across two keys, neither of which reached 5.\n\nIMPACT IN PRODUCTION:\n  • Real client IPs are NEVER seen by the bucket — every request keys off the ingress-pod IP.\n  • Behind N ingress pods, the limit becomes ~5×N global (shared across ALL users), not 5 per real user.\n  • A single spammer can burn through the global bucket and DoS legitimate users from sending feedback.\n\nFIX (one-line, prefer X-Forwarded-For when present):\n    xff = (request.headers.get(\"x-forwarded-for\") or \"\").split(\",\")[0].strip()\n    client_ip = xff or (request.client.host if request.client else \"unknown\")\nAfter this change, the rate-limiter will correctly bucket per real-client IP. Then please retest test #9 — expected statuses=[200,200,200,200,200,429] and 429.detail starts with 'Too many'.\n\nCleanup: All test feedback records (Bob, Alice, honeypot, rate-limit probes — 8 docs total) were deleted from MongoDB feedback collection at the end of the run; backend was restarted twice to reset rate-limit state. subtest user untouched."
 
 backend_password_reset:
   - task: "Password reset — /api/auth/forgot-password + /api/auth/reset-password (bcrypt code, expiry, attempts, rate-limit, enumeration-safe)"

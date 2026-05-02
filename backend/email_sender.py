@@ -32,12 +32,17 @@ def send_email(
     subject: str,
     body_plain: str,
     body_html: Optional[str] = None,
+    reply_to: Optional[str] = None,
 ) -> bool:
     """Send an email via Gmail SMTP. Returns True on success, False otherwise.
 
     Never raises — caller should log the returned bool and continue. This is
     intentional so that password-reset endpoints never leak SMTP errors to
     clients.
+
+    If ``reply_to`` is provided, a ``Reply-To`` header is added so that when
+    the operator replies from Gmail the response goes to the end-user rather
+    than to the MechanicVault inbox itself.
     """
     pw, sender, name = _get_config()
     if not pw or not sender:
@@ -51,6 +56,8 @@ def send_email(
     msg["Subject"] = subject
     msg["From"] = f"{name} <{sender}>" if name else sender
     msg["To"] = to_address
+    if reply_to:
+        msg["Reply-To"] = reply_to
     msg.set_content(body_plain)
     if body_html:
         msg.add_alternative(body_html, subtype="html")
@@ -105,3 +112,76 @@ def send_password_reset_code(to_address: str, code: str, display_name: str = "")
 </html>
 """.strip()
     return send_email(to_address, subject, body_plain, body_html)
+
+
+def send_feedback_email(
+    to_address: str,
+    from_name: str,
+    from_email: str,
+    subject: str,
+    message: str,
+    is_bug: bool = False,
+    is_feature: bool = False,
+    platform: str = "",
+    app_version: str = "",
+) -> bool:
+    """Send a feedback / bug report / feature request email to the operator.
+
+    The ``from_email`` becomes the Reply-To so replies go back to the user.
+    Tags (BUG/FEATURE) are included at the top and in the subject line.
+    """
+    tag_parts = []
+    if is_bug:
+        tag_parts.append("BUG")
+    if is_feature:
+        tag_parts.append("FEATURE")
+    tag_prefix = f"[{' · '.join(tag_parts)}] " if tag_parts else ""
+    email_subject = f"{tag_prefix}{subject}".strip()
+
+    check_lines = []
+    check_lines.append("[x] BUG REPORT" if is_bug else "[ ] Bug report")
+    check_lines.append("[x] FEATURE REQUEST" if is_feature else "[ ] Feature request")
+    header_block = "\n".join(check_lines)
+
+    body_plain = (
+        f"{header_block}\n"
+        f"Platform: {platform or 'Unknown'}\n"
+        f"App version: {app_version or 'Unknown'}\n"
+        f"\n"
+        f"Subject: {subject}\n"
+        f"\n"
+        f"Message:\n{message}\n"
+        f"\n"
+        f"---\n"
+        f"Submitted by:\n"
+        f"{from_name.strip() or '(no name)'}\n"
+        f"{from_email.strip() or '(no email)'}\n"
+    )
+
+    bug_badge = '<span style="background:#DC2626;color:#fff;padding:3px 8px;border-radius:3px;font-size:11px;font-weight:900;letter-spacing:1px;margin-right:6px;">BUG</span>' if is_bug else ""
+    feat_badge = '<span style="background:#F59E0B;color:#000;padding:3px 8px;border-radius:3px;font-size:11px;font-weight:900;letter-spacing:1px;margin-right:6px;">FEATURE</span>' if is_feature else ""
+    body_html = f"""
+<!DOCTYPE html>
+<html>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; background:#f4f4f4; margin:0; padding:20px;">
+  <div style="max-width:600px; margin:0 auto; background:#ffffff; border-radius:8px; padding:28px; border:1px solid #e5e5e5;">
+    <div style="margin-bottom:12px;">{bug_badge}{feat_badge}</div>
+    <h1 style="color:#0A0A0A; font-size:20px; margin:0 0 4px 0;">Toolbox Vault — Feedback</h1>
+    <p style="color:#666; font-size:13px; margin:0 0 18px 0;">Platform: <strong>{platform or 'Unknown'}</strong> · App version: <strong>{app_version or 'Unknown'}</strong></p>
+    <h2 style="color:#0A0A0A; font-size:16px; margin:16px 0 6px 0; font-weight:700;">{subject}</h2>
+    <div style="color:#333; font-size:14px; line-height:1.6; white-space:pre-wrap; background:#fafafa; border-left:3px solid #F59E0B; padding:12px 14px; border-radius:4px;">{message}</div>
+    <hr style="border:none; border-top:1px solid #eee; margin:24px 0 14px 0;" />
+    <p style="color:#888; font-size:12px; margin:0;">Submitted by:<br/><strong style="color:#333;">{from_name.strip() or '(no name)'}</strong><br/>{from_email.strip() or '(no email)'}</p>
+    <p style="color:#aaa; font-size:11px; margin:16px 0 0 0;">Reply to this email to respond directly to the user.</p>
+  </div>
+</body>
+</html>
+""".strip()
+
+    return send_email(
+        to_address,
+        email_subject,
+        body_plain,
+        body_html,
+        reply_to=from_email.strip() or None,
+    )

@@ -29,7 +29,7 @@ from auth import (
     evaluate_subscription_status,
     TIER_FREE,
 )
-from email_sender import send_password_reset_code
+from email_sender import send_password_reset_code, send_feedback_email
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -139,7 +139,7 @@ def to_public(u: User) -> UserPublic:
     )
 
 
-PUBLIC_PATHS = ("/api/auth/", "/api/health", "/api/")
+PUBLIC_PATHS = ("/api/auth/", "/api/health", "/api/", "/api/feedback")
 
 
 app = FastAPI()
@@ -153,8 +153,13 @@ async def attach_user_to_context(request: Request, call_next):
     path = request.url.path
     if not path.startswith("/api/"):
         return await call_next(request)
-    # Public auth endpoints
-    if path.startswith("/api/auth/") or path == "/api/" or path == "/api/health":
+    # Public endpoints — no auth required
+    if (
+        path.startswith("/api/auth/")
+        or path == "/api/"
+        or path == "/api/health"
+        or path == "/api/feedback"
+    ):
         return await call_next(request)
     auth = request.headers.get("Authorization", "")
     if not auth.startswith("Bearer "):
@@ -2377,6 +2382,121 @@ async def reset_password(payload: ResetPasswordRequest):
 
 app.include_router(api_router)
 app.include_router(auth_router)
+
+
+# ---------------------------------------------------------------------------
+# Feedback endpoint — registered directly on app (api_router is already included above)
+# ---------------------------------------------------------------------------
+FEEDBACK_DEST_EMAIL = os.environ.get("GMAIL_FROM_ADDRESS", "MechanicVault@gmail.com")
+FEEDBACK_RATE_WINDOW_SECONDS = 600  # 10 minutes
+FEEDBACK_RATE_MAX = 5              # 5 submissions per IP per 10 min
+
+# In-memory rate-limit bucket: {ip: [timestamp, ...]}
+_feedback_rate_buckets: Dict[str, List[float]] = {}
+
+
+class FeedbackRequest(BaseModel):
+    name: str
+    email: str
+    subject: str
+    message: str
+    platform: Optional[str] = ""
+    is_bug: bool = False
+    is_feature: bool = False
+    app_version: Optional[str] = ""
+    # Honeypot — bots fill hidden fields; humans don't.
+    website: Optional[str] = ""
+
+
+def _feedback_rate_limit(ip: str) -> bool:
+    """Return True if the IP is *under* the limit (allowed), False if rate-limited."""
+    import time as _time
+    now = _time.time()
+    cutoff = now - FEEDBACK_RATE_WINDOW_SECONDS
+    bucket = [t for t in _feedback_rate_buckets.get(ip, []) if t > cutoff]
+    if len(bucket) >= FEEDBACK_RATE_MAX:
+        _feedback_rate_buckets[ip] = bucket
+        return False
+    bucket.append(now)
+    _feedback_rate_buckets[ip] = bucket
+    return True
+
+
+@app.post("/api/feedback")
+async def submit_feedback(payload: FeedbackRequest, request: Request):
+    """Receive feedback / bug report / feature request and email it to the
+    operator (MechanicVault@gmail.com). Reply-To is set to the user's email
+    so operator replies go straight to the user.
+    """
+    # Honeypot — silently drop bot traffic
+    if (payload.website or "").strip():
+        return {"ok": True, "message": "Thanks!"}
+
+    # Basic validation
+    name = (payload.name or "").strip()
+    email_addr = (payload.email or "").strip()
+    subject = (payload.subject or "").strip()
+    message = (payload.message or "").strip()
+    if not name:
+        raise HTTPException(400, "Please provide your name.")
+    if not email_addr or "@" not in email_addr or "." not in email_addr:
+        raise HTTPException(400, "Please provide a valid email address.")
+    if not subject:
+        raise HTTPException(400, "Please provide a subject.")
+    if not message:
+        raise HTTPException(400, "Please provide a message.")
+    if len(message) > 20000:
+        raise HTTPException(400, "Message is too long.")
+
+    # Rate-limit by IP
+    client_ip = (request.client.host if request.client else "") or request.headers.get("x-forwarded-for", "unknown").split(",")[0].strip()
+    if not _feedback_rate_limit(client_ip):
+        raise HTTPException(
+            429,
+            "Too many messages from this device. Please try again in a few minutes.",
+        )
+
+    # Persist a record (so operator has a searchable log even if email fails)
+    record = {
+        "id": str(uuid.uuid4()),
+        "name": name,
+        "email": email_addr,
+        "subject": subject,
+        "message": message,
+        "platform": (payload.platform or "").strip(),
+        "is_bug": bool(payload.is_bug),
+        "is_feature": bool(payload.is_feature),
+        "app_version": (payload.app_version or "").strip(),
+        "ip": client_ip,
+        "created_at": now_iso(),
+    }
+    try:
+        await real_db.feedback.insert_one(record)
+    except Exception as e:
+        logging.error("Failed to persist feedback record: %s", e)
+
+    # Send the email (non-blocking-style: log errors but return success)
+    sent = False
+    try:
+        sent = send_feedback_email(
+            to_address=FEEDBACK_DEST_EMAIL,
+            from_name=name,
+            from_email=email_addr,
+            subject=subject,
+            message=message,
+            is_bug=bool(payload.is_bug),
+            is_feature=bool(payload.is_feature),
+            platform=(payload.platform or ""),
+            app_version=(payload.app_version or ""),
+        )
+    except Exception as e:
+        logging.error("send_feedback_email raised: %s", e)
+
+    if not sent:
+        # Don't fail hard — the record is saved; operator can still see it.
+        logging.warning("Feedback record %s saved but email send failed.", record["id"])
+
+    return {"ok": True, "message": "Thanks — your message has been sent."}
 
 # ---------------------------------------------------------------------------
 # Unified report engine (HTML→PDF + CSV) — see /app/backend/reports.py

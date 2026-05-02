@@ -17,15 +17,14 @@ import {
   KeyboardAvoidingView,
   ActivityIndicator,
   Alert,
-  Linking,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import Constants from "expo-constants";
-import * as MailComposer from "expo-mail-composer";
 import { theme } from "../src/theme";
 import { useAuth } from "../src/AuthContext";
+import { api } from "../src/api";
 
 const DESTINATION_EMAIL = "MechanicVault@gmail.com";
 const APP_VERSION =
@@ -105,73 +104,37 @@ export default function FeedbackScreen() {
     }
     setSubmitting(true);
     try {
-      const body = buildEmailBody();
-      const prefixTag = isBug ? "[BUG] " : isFeature ? "[FEATURE] " : "";
-      const emailSubject = `${prefixTag}${subject.trim()}`;
-
-      if (Platform.OS === "web") {
-        // Web: use mailto:. Attachments not supported via mailto so just
-        // open the mail client with the body; user can attach the photo
-        // manually if needed.
-        const mailto =
-          `mailto:${DESTINATION_EMAIL}` +
-          `?subject=${encodeURIComponent(emailSubject)}` +
-          `&body=${encodeURIComponent(body)}`;
-        await Linking.openURL(mailto);
-        showSuccessAndExit();
-        return;
-      }
-
-      // Native: use MailComposer
-      const available = await MailComposer.isAvailableAsync();
-      if (!available) {
-        // Fall back to mailto on native too
-        const mailto =
-          `mailto:${DESTINATION_EMAIL}` +
-          `?subject=${encodeURIComponent(emailSubject)}` +
-          `&body=${encodeURIComponent(body)}`;
-        const supported = await Linking.canOpenURL(mailto);
-        if (supported) {
-          await Linking.openURL(mailto);
-          showSuccessAndExit();
-          return;
-        }
-        Alert.alert(
-          "No mail app",
-          "No email app is configured on this device. Please install or set up a mail app, then try again."
-        );
-        return;
-      }
-
-      const result = await MailComposer.composeAsync({
-        recipients: [DESTINATION_EMAIL],
-        subject: emailSubject,
-        body,
-        isHtml: false,
+      await api.submitFeedback({
+        name: name.trim(),
+        email: email.trim(),
+        subject: subject.trim(),
+        message: message.trim(),
+        platform,
+        is_bug: isBug,
+        is_feature: isFeature,
+        app_version: APP_VERSION,
       });
-
-      if (result.status === "sent" || result.status === "saved") {
-        showSuccessAndExit();
-      } else if (result.status === "cancelled") {
-        // User backed out — no popup, stay on screen
-        setSubmitting(false);
-        return;
-      } else {
-        showSuccessAndExit();
-      }
+      Alert.alert(
+        "Message sent",
+        "Thanks for your feedback! Your message has been sent and we'll get back to you as soon as possible.",
+        [{ text: "OK", onPress: () => router.back() }]
+      );
     } catch (e: any) {
-      Alert.alert("Error", e?.message || "Could not open your mail app.");
+      const msg = e?.message || "";
+      if (msg.toLowerCase().includes("too many")) {
+        Alert.alert(
+          "Slow down",
+          "You've sent several messages recently. Please wait a few minutes and try again.",
+        );
+      } else {
+        Alert.alert(
+          "Could not send",
+          msg || "There was a problem sending your message. Please try again.",
+        );
+      }
     } finally {
       setSubmitting(false);
     }
-  };
-
-  const showSuccessAndExit = () => {
-    Alert.alert(
-      "Message sent",
-      "Thanks for your feedback! Your message has been sent to MechanicVault@gmail.com.",
-      [{ text: "OK", onPress: () => router.back() }]
-    );
   };
 
   return (
