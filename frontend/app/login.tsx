@@ -9,6 +9,7 @@ import {
   Platform,
   ScrollView,
   ActivityIndicator,
+  Image,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -60,7 +61,11 @@ export default function LoginScreen() {
         >
           <View style={styles.brand}>
             <View style={styles.logoBox}>
-              <Ionicons name="construct" size={36} color={theme.colors.accent} />
+              <Image
+                source={require("../assets/images/icon.png")}
+                style={styles.logoImg}
+                resizeMode="contain"
+              />
             </View>
             <Text style={styles.brandTitle}>TOOLBOX VAULT</Text>
             <Text style={styles.brandSub}>
@@ -204,15 +209,17 @@ const styles = StyleSheet.create({
   scroll: { padding: 24, flexGrow: 1, justifyContent: "center" },
   brand: { alignItems: "center", marginBottom: 28 },
   logoBox: {
-    width: 72,
-    height: 72,
-    backgroundColor: theme.colors.surface,
-    borderColor: theme.colors.glassBorder,
-    borderWidth: 1,
-    borderRadius: 14,
+    width: 84,
+    height: 84,
+    backgroundColor: "transparent",
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 12,
+  },
+  logoImg: {
+    width: 84,
+    height: 84,
+    borderRadius: 18,
   },
   brandTitle: {
     color: theme.colors.textPrimary,
