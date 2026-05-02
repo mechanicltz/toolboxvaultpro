@@ -268,7 +268,10 @@ export default function DealerClaimsScreen() {
                 : theme.colors.accentSecondary;
             const photo = t.repair_info?.broken_photo || t.photos?.[0];
             return (
-              <View key={t.id} style={styles.card}>
+              <View
+                key={t._archivedClaim ? `claim-${t.claim_id || t.id}` : `tool-${t.id}`}
+                style={styles.card}
+              >
                 <TouchableOpacity
                   testID={`open-claim-${t.id}`}
                   style={styles.cardHead}
