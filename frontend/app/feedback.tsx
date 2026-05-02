@@ -1,9 +1,9 @@
 /**
  * Feedback / Bug Report / Feature Request form.
  * On submit, opens the user's mail client pre-filled to
- * MechanicVault@gmail.com with a formatted message and (if a bug photo
- * was attached) the image as an attachment. Falls back to a plain
- * `mailto:` link on web where expo-mail-composer is unavailable.
+ * MechanicVault@gmail.com with a formatted message including the app
+ * version. Falls back to a plain `mailto:` link on web where
+ * expo-mail-composer is unavailable.
  */
 import { useState, useEffect } from "react";
 import {
@@ -17,18 +17,21 @@ import {
   KeyboardAvoidingView,
   ActivityIndicator,
   Alert,
-  Image,
   Linking,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
+import Constants from "expo-constants";
 import * as MailComposer from "expo-mail-composer";
-import * as ImagePicker from "expo-image-picker";
 import { theme } from "../src/theme";
 import { useAuth } from "../src/AuthContext";
 
 const DESTINATION_EMAIL = "MechanicVault@gmail.com";
+const APP_VERSION =
+  (Constants.expoConfig as any)?.version ||
+  (Constants as any).manifest?.version ||
+  "1.0.0";
 
 type Platform_ = "Apple" | "Android";
 
@@ -45,7 +48,6 @@ export default function FeedbackScreen() {
   const [message, setMessage] = useState<string>("");
   const [isBug, setIsBug] = useState<boolean>(false);
   const [isFeature, setIsFeature] = useState<boolean>(false);
-  const [photoUri, setPhotoUri] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState<boolean>(false);
 
   // Prefill from logged-in user
@@ -56,31 +58,6 @@ export default function FeedbackScreen() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
-
-  const pickPhoto = async () => {
-    try {
-      const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (!perm.granted) {
-        Alert.alert(
-          "Permission needed",
-          "Please allow photo library access to attach a screenshot."
-        );
-        return;
-      }
-      const res = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ["images"],
-        allowsEditing: false,
-        quality: 0.7,
-      });
-      if (!res.canceled && res.assets && res.assets[0]) {
-        setPhotoUri(res.assets[0].uri);
-      }
-    } catch (e: any) {
-      Alert.alert("Error", e?.message || "Could not pick a photo.");
-    }
-  };
-
-  const clearPhoto = () => setPhotoUri(null);
 
   const validate = (): string | null => {
     if (!name.trim()) return "Please enter your name.";
@@ -102,10 +79,12 @@ export default function FeedbackScreen() {
 
     const header = tags.join("\n");
     const platformLine = `Platform: ${platform}`;
+    const versionLine = `App version: ${APP_VERSION}`;
 
     const body =
       `${header}\n` +
       `${platformLine}\n` +
+      `${versionLine}\n` +
       `\n` +
       `Subject: ${subject.trim()}\n` +
       `\n` +
@@ -164,18 +143,10 @@ export default function FeedbackScreen() {
         return;
       }
 
-      const attachments: string[] = [];
-      if (isBug && photoUri) {
-        // expo-image-picker returns a file:// URI in the app's cache dir
-        // that MailComposer can attach directly. No need to copy.
-        attachments.push(photoUri);
-      }
-
       const result = await MailComposer.composeAsync({
         recipients: [DESTINATION_EMAIL],
         subject: emailSubject,
         body,
-        attachments: attachments.length ? attachments : undefined,
         isHtml: false,
       });
 
@@ -330,8 +301,6 @@ export default function FeedbackScreen() {
               } else {
                 setIsFeature(true);
                 setIsBug(false);
-                // If switching from bug → feature, drop any attached photo
-                setPhotoUri(null);
               }
             }}
             activeOpacity={0.7}
@@ -367,43 +336,10 @@ export default function FeedbackScreen() {
             testID="feedback-message"
           />
 
-          {/* Photo attachment (only when bug is checked) */}
-          {isBug && (
-            <>
-              <Text style={styles.label}>ATTACH SCREENSHOT (optional)</Text>
-              {photoUri ? (
-                <View style={styles.photoWrap}>
-                  <Image
-                    source={{ uri: photoUri }}
-                    style={styles.photoPreview}
-                    resizeMode="cover"
-                  />
-                  <TouchableOpacity
-                    style={styles.photoRemove}
-                    onPress={clearPhoto}
-                    testID="feedback-remove-photo"
-                  >
-                    <Ionicons name="close" size={16} color="#000" />
-                  </TouchableOpacity>
-                </View>
-              ) : (
-                <TouchableOpacity
-                  style={styles.pickBtn}
-                  onPress={pickPhoto}
-                  testID="feedback-pick-photo"
-                >
-                  <Ionicons
-                    name="image"
-                    size={18}
-                    color={theme.colors.accent}
-                  />
-                  <Text style={styles.pickBtnText}>
-                    Add screenshot of the bug
-                  </Text>
-                </TouchableOpacity>
-              )}
-            </>
-          )}
+          {/* Version footer (informational) */}
+          <Text style={styles.versionNote}>
+            App version {APP_VERSION} will be included automatically.
+          </Text>
 
           <View style={{ height: 8 }} />
         </ScrollView>
@@ -544,26 +480,12 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     letterSpacing: 1,
   },
-  photoWrap: {
-    position: "relative",
-    borderRadius: 8,
-    overflow: "hidden",
-  },
-  photoPreview: {
-    width: "100%",
-    height: 180,
-    backgroundColor: theme.colors.bgSecondary,
-  },
-  photoRemove: {
-    position: "absolute",
-    top: 8,
-    right: 8,
-    backgroundColor: theme.colors.accent,
-    width: 26,
-    height: 26,
-    borderRadius: 13,
-    alignItems: "center",
-    justifyContent: "center",
+  versionNote: {
+    color: theme.colors.textMuted,
+    fontSize: 12,
+    fontStyle: "italic",
+    marginTop: 16,
+    textAlign: "center",
   },
   footer: {
     borderTopWidth: 1,
