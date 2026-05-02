@@ -17,10 +17,11 @@ function AuthGate({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (loading) return;
-    const inLogin = segments[0] === "login";
-    if (!user && !inLogin) {
+    const first = segments[0];
+    const publicRoute = first === "login" || first === "forgot-password";
+    if (!user && !publicRoute) {
       router.replace("/login");
-    } else if (user && inLogin) {
+    } else if (user && publicRoute) {
       router.replace("/");
     }
   }, [user, loading, segments, router]);
