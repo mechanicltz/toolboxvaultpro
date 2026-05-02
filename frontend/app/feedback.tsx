@@ -198,8 +198,8 @@ export default function FeedbackScreen() {
           keyboardShouldPersistTaps="handled"
         >
           <Text style={styles.intro}>
-            Report a bug or request a new feature. Your message will be sent
-            to {DESTINATION_EMAIL}.
+            Report a bug or request a new feature. We&apos;ll get back to you
+            as soon as possible.
           </Text>
 
           {/* Name */}
