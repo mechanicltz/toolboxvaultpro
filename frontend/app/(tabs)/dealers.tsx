@@ -9,6 +9,8 @@ import {
   TextInput,
   Modal,
   Alert,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -156,8 +158,11 @@ export default function DealersScreen() {
         <Ionicons name="add" size={28} color="#000" />
       </TouchableOpacity>
 
-      <Modal visible={showAdd} transparent animationType="slide">
-        <View style={styles.modalBg}>
+      <Modal visible={showAdd} transparent animationType="slide" onRequestClose={() => setShowAdd(false)}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          style={styles.modalBg}
+        >
           <ScrollView style={styles.modalCard} keyboardShouldPersistTaps="handled">
             <Text style={styles.modalTitle}>NEW DEALER</Text>
             {([
@@ -272,7 +277,7 @@ export default function DealersScreen() {
               </TouchableOpacity>
             </View>
           </ScrollView>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
     </SafeAreaView>
   );

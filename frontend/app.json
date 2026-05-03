@@ -13,7 +13,8 @@
       "infoPlist": {
         "NSCameraUsageDescription": "Take photos of your tools",
         "NSPhotoLibraryUsageDescription": "Add photos of tools from your gallery",
-        "NSPhotoLibraryAddUsageDescription": "Save tool photos to your library"
+        "NSPhotoLibraryAddUsageDescription": "Save tool photos to your library",
+        "NSContactsUsageDescription": "Import names and phone numbers from your contacts"
       }
     },
     "android": {
@@ -25,7 +26,8 @@
       "permissions": [
         "android.permission.CAMERA",
         "android.permission.READ_EXTERNAL_STORAGE",
-        "android.permission.WRITE_EXTERNAL_STORAGE"
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.READ_CONTACTS"
       ]
     },
     "web": {
@@ -54,7 +56,13 @@
       "@react-native-community/datetimepicker",
       "expo-web-browser",
       "expo-mail-composer",
-      "expo-font"
+      "expo-font",
+      [
+        "expo-contacts",
+        {
+          "contactsPermission": "Import names and phone numbers from your contacts"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

@@ -1709,3 +1709,21 @@ agent_communication:
       5. Cycle guard: POST /api/locations {name:"Drawer", parent_id: T} → D. PUT /api/locations/{G} {parent_id: D} → 400 "Cannot create a cycle in locations".
       6. Rename only: PUT /api/locations/{T} {name:"Toolbox A"} → 200; parent_id stays G (not clobbered).
       7. Cleanup: DELETE the 3 test locations.
+
+
+  - agent: "main"
+    message: |
+      Two more UX fixes shipped:
+
+      1) **Import from device Contacts** — added on both Contacts screen (`NEW CONTACT` modal in `app/(tabs)/borrowers.tsx`) and Dealer Agent screen (`NEW AGENT` modal in `app/dealer/[id].tsx`). Uses `expo-contacts@55` with a shared helper at `src/deviceContacts.ts`. Flow:
+         - On iOS/Android: tap "IMPORT FROM CONTACTS" → permission prompt → searchable list of device contacts → tap any entry to auto-fill name + phone + email.
+         - On web: button is hidden (unsupported), existing manual entry still works.
+         - Added NSContactsUsageDescription to iOS infoPlist, READ_CONTACTS to Android permissions, and the expo-contacts plugin to `app.json`.
+
+      2) **Keyboard hides text input** — fixed across all add/edit modals. Wrapped modal content in `KeyboardAvoidingView` (iOS padding / Android height) + ScrollView with `keyboardShouldPersistTaps="handled"`:
+         - `app/locations.tsx` (Add Location + Rename Location modals)
+         - `app/(tabs)/borrowers.tsx` (New Contact modal)
+         - `app/dealer/[id].tsx` (New/Edit Agent modal)
+         - `app/(tabs)/dealers.tsx` (New Dealer modal)
+
+      No backend changes this round. `npx tsc --noEmit` passes cleanly. No new backend testing needed — please confirm via user that web login / app launch still works after re-bundle.

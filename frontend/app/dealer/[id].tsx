@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -9,6 +9,9 @@ import {
   Modal,
   Alert,
   Linking,
+  KeyboardAvoidingView,
+  Platform,
+  FlatList,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -23,6 +26,11 @@ import { BalanceSection } from "../../src/sections/BalanceSection";
 import { ROUTE_FREQUENCIES, DAY_NAMES, routeLabel, nextRouteText } from "../../src/route";
 import { DateField } from "../../src/DateField";
 import { useAuth } from "../../src/AuthContext";
+import {
+  isDeviceContactsAvailable,
+  loadAllDeviceContacts,
+  PickedContact,
+} from "../../src/deviceContacts";
 
 export default function DealerDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -34,6 +42,46 @@ export default function DealerDetail() {
   const [editing, setEditing] = useState(false);
   const [agentForm, setAgentForm] = useState<any>(null);
   const [editForm, setEditForm] = useState<any>({});
+
+  // Device contacts picker for agents
+  const [showContactPicker, setShowContactPicker] = useState(false);
+  const [pickerLoading, setPickerLoading] = useState(false);
+  const [deviceContacts, setDeviceContacts] = useState<PickedContact[]>([]);
+  const [pickerFilter, setPickerFilter] = useState("");
+  const canImportContacts = isDeviceContactsAvailable();
+
+  const filteredDeviceContacts = useMemo(() => {
+    const q = pickerFilter.trim().toLowerCase();
+    if (!q) return deviceContacts;
+    return deviceContacts.filter((c) =>
+      (c.name + " " + (c.phone || "") + " " + (c.email || ""))
+        .toLowerCase()
+        .includes(q),
+    );
+  }, [deviceContacts, pickerFilter]);
+
+  const openContactPicker = async () => {
+    setShowContactPicker(true);
+    if (deviceContacts.length > 0) return;
+    setPickerLoading(true);
+    try {
+      const list = await loadAllDeviceContacts();
+      setDeviceContacts(list);
+    } finally {
+      setPickerLoading(false);
+    }
+  };
+
+  const pickContactForAgent = (c: PickedContact) => {
+    setAgentForm({
+      ...(agentForm || {}),
+      name: c.name,
+      phone: c.phone || agentForm?.phone || "",
+      email: c.email || agentForm?.email || "",
+    });
+    setShowContactPicker(false);
+    setPickerFilter("");
+  };
 
   const load = useCallback(async () => {
     if (!id) return;
@@ -427,10 +475,24 @@ export default function DealerDetail() {
       </Modal>
 
       {/* Add / edit agent modal */}
-      <Modal visible={!!agentForm} transparent animationType="slide">
-        <View style={styles.modalBg}>
+      <Modal visible={!!agentForm} transparent animationType="slide" onRequestClose={() => setAgentForm(null)}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          style={styles.modalBg}
+        >
           <ScrollView style={styles.modalCard} keyboardShouldPersistTaps="handled">
             <Text style={styles.modalTitle}>{agentForm?.id ? "EDIT AGENT" : "NEW AGENT"}</Text>
+            {canImportContacts && !agentForm?.id && (
+              <TouchableOpacity
+                testID="import-agent-contact-btn"
+                style={styles.importBtn}
+                onPress={openContactPicker}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="people" size={18} color={theme.colors.accent} />
+                <Text style={styles.importBtnText}>IMPORT FROM CONTACTS</Text>
+              </TouchableOpacity>
+            )}
             {(["name", "phone", "email", "notes"] as const).map((k) => (
               <TextInput
                 key={k}
@@ -452,6 +514,72 @@ export default function DealerDetail() {
               </TouchableOpacity>
             </View>
           </ScrollView>
+        </KeyboardAvoidingView>
+      </Modal>
+
+      {/* Device contacts picker */}
+      <Modal visible={showContactPicker} animationType="slide" transparent onRequestClose={() => setShowContactPicker(false)}>
+        <View style={styles.pickerBg}>
+          <SafeAreaView style={styles.pickerCard} edges={["top", "bottom"]}>
+            <View style={styles.pickerHeader}>
+              <TouchableOpacity onPress={() => { setShowContactPicker(false); setPickerFilter(""); }} hitSlop={10}>
+                <Ionicons name="close" size={26} color={theme.colors.textPrimary} />
+              </TouchableOpacity>
+              <Text style={styles.pickerTitle}>PICK A CONTACT</Text>
+              <View style={{ width: 26 }} />
+            </View>
+            <TextInput
+              testID="agent-contact-picker-search"
+              placeholder="Search..."
+              placeholderTextColor={theme.colors.textMuted}
+              value={pickerFilter}
+              onChangeText={setPickerFilter}
+              style={styles.pickerSearch}
+            />
+            {pickerLoading ? (
+              <View style={styles.pickerEmpty}>
+                <Text style={styles.pickerEmptyText}>Loading contacts…</Text>
+              </View>
+            ) : filteredDeviceContacts.length === 0 ? (
+              <View style={styles.pickerEmpty}>
+                <Ionicons name="people-outline" size={40} color={theme.colors.textMuted} />
+                <Text style={styles.pickerEmptyText}>
+                  {deviceContacts.length === 0
+                    ? "No device contacts available (or permission denied)."
+                    : "No matches for your search."}
+                </Text>
+              </View>
+            ) : (
+              <FlatList
+                data={filteredDeviceContacts}
+                keyExtractor={(c, i) => `${c.name}-${i}`}
+                keyboardShouldPersistTaps="handled"
+                renderItem={({ item }) => (
+                  <TouchableOpacity
+                    testID={`pick-agent-device-contact-${item.name}`}
+                    style={styles.pickerRow}
+                    onPress={() => pickContactForAgent(item)}
+                    activeOpacity={0.7}
+                  >
+                    <View style={styles.pickerAvatar}>
+                      <Text style={styles.pickerAvatarText}>
+                        {item.name.charAt(0).toUpperCase()}
+                      </Text>
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.pickerName}>{item.name}</Text>
+                      {!!(item.phone || item.email) && (
+                        <Text style={styles.pickerSub} numberOfLines={1}>
+                          {[item.phone, item.email].filter(Boolean).join("  ·  ")}
+                        </Text>
+                      )}
+                    </View>
+                    <Ionicons name="chevron-forward" size={20} color={theme.colors.textMuted} />
+                  </TouchableOpacity>
+                )}
+              />
+            )}
+          </SafeAreaView>
         </View>
       </Modal>
     </SafeAreaView>
@@ -830,4 +958,81 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   btnGhostText: { color: theme.colors.textPrimary, fontWeight: "800", letterSpacing: 2, fontSize: 14 },
+  importBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingVertical: 12,
+    borderWidth: 1,
+    borderStyle: "dashed",
+    borderColor: theme.colors.accent,
+    borderRadius: 6,
+    marginBottom: 12,
+  },
+  importBtnText: {
+    color: theme.colors.accent,
+    fontWeight: "900",
+    fontSize: 12,
+    letterSpacing: 1.5,
+  },
+  pickerBg: { flex: 1, backgroundColor: theme.colors.bg },
+  pickerCard: { flex: 1, backgroundColor: theme.colors.bg },
+  pickerHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
+  },
+  pickerTitle: {
+    color: theme.colors.textPrimary,
+    fontSize: 14,
+    fontWeight: "900",
+    letterSpacing: 2,
+  },
+  pickerSearch: {
+    backgroundColor: theme.colors.bgSecondary,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
+    color: theme.colors.textPrimary,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    fontSize: 15,
+  },
+  pickerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    gap: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.borderSubtle,
+  },
+  pickerAvatar: {
+    width: 36,
+    height: 36,
+    backgroundColor: theme.colors.surface,
+    borderWidth: 1,
+    borderColor: theme.colors.accent,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 4,
+  },
+  pickerAvatarText: { color: theme.colors.accent, fontWeight: "900", fontSize: 14 },
+  pickerName: { color: theme.colors.textPrimary, fontWeight: "700", fontSize: 15 },
+  pickerSub: { color: theme.colors.textSecondary, fontSize: 12, marginTop: 2 },
+  pickerEmpty: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 40,
+    gap: 10,
+  },
+  pickerEmptyText: {
+    color: theme.colors.textSecondary,
+    textAlign: "center",
+  },
 });

@@ -8,6 +8,8 @@ import {
   TouchableOpacity,
   Alert,
   Modal,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -237,76 +239,92 @@ export default function LocationsTreeScreen() {
         </Text>
       </ScrollView>
 
-      <Modal visible={!!adding} transparent animationType="slide">
-        <View style={styles.modalBg}>
-          <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>
-              {adding?.parentId ? "ADD SUB-LOCATION" : "NEW LOCATION"}
-            </Text>
-            {adding?.parentName ? (
-              <Text style={styles.modalParent}>under: {adding.parentName}</Text>
-            ) : null}
-            <TextInput
-              testID="new-loc-input"
-              placeholder="e.g. Green Toolbox, Top Drawer..."
-              placeholderTextColor={theme.colors.textMuted}
-              style={styles.input}
-              value={name}
-              onChangeText={setName}
-              onSubmitEditing={add}
-              autoFocus
-            />
-            <View style={{ flexDirection: "row", gap: 10 }}>
-              <TouchableOpacity
-                style={styles.btnGhost}
-                onPress={() => {
-                  setAdding(null);
-                  setName("");
-                }}
-              >
-                <Text style={styles.btnGhostText}>CANCEL</Text>
-              </TouchableOpacity>
-              <TouchableOpacity testID="save-loc-btn" style={styles.btn} onPress={add}>
-                <Text style={styles.btnText}>SAVE</Text>
-              </TouchableOpacity>
+      <Modal visible={!!adding} transparent animationType="slide" onRequestClose={() => setAdding(null)}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          style={styles.modalBg}
+        >
+          <ScrollView
+            contentContainerStyle={{ flexGrow: 1, justifyContent: "flex-end" }}
+            keyboardShouldPersistTaps="handled"
+          >
+            <View style={styles.modalCard}>
+              <Text style={styles.modalTitle}>
+                {adding?.parentId ? "ADD SUB-LOCATION" : "NEW LOCATION"}
+              </Text>
+              {adding?.parentName ? (
+                <Text style={styles.modalParent}>under: {adding.parentName}</Text>
+              ) : null}
+              <TextInput
+                testID="new-loc-input"
+                placeholder="e.g. Green Toolbox, Top Drawer..."
+                placeholderTextColor={theme.colors.textMuted}
+                style={styles.input}
+                value={name}
+                onChangeText={setName}
+                onSubmitEditing={add}
+                autoFocus
+              />
+              <View style={{ flexDirection: "row", gap: 10 }}>
+                <TouchableOpacity
+                  style={styles.btnGhost}
+                  onPress={() => {
+                    setAdding(null);
+                    setName("");
+                  }}
+                >
+                  <Text style={styles.btnGhostText}>CANCEL</Text>
+                </TouchableOpacity>
+                <TouchableOpacity testID="save-loc-btn" style={styles.btn} onPress={add}>
+                  <Text style={styles.btnText}>SAVE</Text>
+                </TouchableOpacity>
+              </View>
             </View>
-          </View>
-        </View>
+          </ScrollView>
+        </KeyboardAvoidingView>
       </Modal>
 
-      <Modal visible={!!editing} transparent animationType="slide">
-        <View style={styles.modalBg}>
-          <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>RENAME LOCATION</Text>
-            {editing?.currentName ? (
-              <Text style={styles.modalParent}>current: {editing.currentName}</Text>
-            ) : null}
-            <TextInput
-              testID="edit-loc-input"
-              placeholder="New name"
-              placeholderTextColor={theme.colors.textMuted}
-              style={styles.input}
-              value={name}
-              onChangeText={setName}
-              onSubmitEditing={saveRename}
-              autoFocus
-            />
-            <View style={{ flexDirection: "row", gap: 10 }}>
-              <TouchableOpacity
-                style={styles.btnGhost}
-                onPress={() => {
-                  setEditing(null);
-                  setName("");
-                }}
-              >
-                <Text style={styles.btnGhostText}>CANCEL</Text>
-              </TouchableOpacity>
-              <TouchableOpacity testID="save-rename-btn" style={styles.btn} onPress={saveRename}>
-                <Text style={styles.btnText}>SAVE</Text>
-              </TouchableOpacity>
+      <Modal visible={!!editing} transparent animationType="slide" onRequestClose={() => setEditing(null)}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          style={styles.modalBg}
+        >
+          <ScrollView
+            contentContainerStyle={{ flexGrow: 1, justifyContent: "flex-end" }}
+            keyboardShouldPersistTaps="handled"
+          >
+            <View style={styles.modalCard}>
+              <Text style={styles.modalTitle}>RENAME LOCATION</Text>
+              {editing?.currentName ? (
+                <Text style={styles.modalParent}>current: {editing.currentName}</Text>
+              ) : null}
+              <TextInput
+                testID="edit-loc-input"
+                placeholder="New name"
+                placeholderTextColor={theme.colors.textMuted}
+                style={styles.input}
+                value={name}
+                onChangeText={setName}
+                onSubmitEditing={saveRename}
+                autoFocus
+              />
+              <View style={{ flexDirection: "row", gap: 10 }}>
+                <TouchableOpacity
+                  style={styles.btnGhost}
+                  onPress={() => {
+                    setEditing(null);
+                    setName("");
+                  }}
+                >
+                  <Text style={styles.btnGhostText}>CANCEL</Text>
+                </TouchableOpacity>
+                <TouchableOpacity testID="save-rename-btn" style={styles.btn} onPress={saveRename}>
+                  <Text style={styles.btnText}>SAVE</Text>
+                </TouchableOpacity>
+              </View>
             </View>
-          </View>
-        </View>
+          </ScrollView>
+        </KeyboardAvoidingView>
       </Modal>
 
       <Modal visible={!!moving} transparent animationType="slide">
