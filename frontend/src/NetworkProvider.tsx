@@ -17,23 +17,25 @@ export function NetworkProvider({ children }: { children: React.ReactNode }) {
     return unsub;
   }, []);
 
-  return (
-    <NetContext.Provider value={{ online }}>
-      {children}
-      {!online && <OfflineBanner />}
-    </NetContext.Provider>
-  );
+  return <NetContext.Provider value={{ online }}>{children}</NetContext.Provider>;
 }
 
 export function useIsOnline(): boolean {
   return useContext(NetContext).online;
 }
 
-function OfflineBanner() {
+/**
+ * Inline offline banner — render this in the layout above the page Stack.
+ * When online it returns null (zero height). When offline it pushes the
+ * rest of the UI down so it can't cover header buttons like the Reports
+ * pill or the page title row.
+ */
+export function OfflineBanner() {
   const insets = useSafeAreaInsets();
+  const online = useIsOnline();
+  if (online) return null;
   return (
     <View
-      pointerEvents="none"
       style={[styles.banner, { paddingTop: 6 + insets.top }]}
       testID="offline-banner"
     >
@@ -45,10 +47,6 @@ function OfflineBanner() {
 
 const styles = StyleSheet.create({
   banner: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
     backgroundColor: theme.colors.danger,
     paddingBottom: 6,
     paddingHorizontal: 12,
@@ -56,7 +54,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 6,
-    zIndex: 9999,
   },
   bannerText: {
     color: "#000",

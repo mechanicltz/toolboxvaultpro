@@ -8,7 +8,7 @@ import { BottomBar } from "../src/BottomBar";
 import { ReportsFab } from "../src/ReportsFab";
 import { AuthProvider, useAuth } from "../src/AuthContext";
 import { ResponsiveContainer } from "../src/ResponsiveContainer";
-import { NetworkProvider } from "../src/NetworkProvider";
+import { NetworkProvider, OfflineBanner } from "../src/NetworkProvider";
 import { theme } from "../src/theme";
 
 function AuthGate({ children }: { children: React.ReactNode }) {
@@ -42,6 +42,7 @@ function ShellNav() {
   const showShell = !!user;
   return (
     <View style={{ flex: 1 }}>
+      <OfflineBanner />
       <View style={{ flex: 1 }}>
         <ResponsiveContainer variant="wide">
           <Stack
