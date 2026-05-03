@@ -526,18 +526,7 @@ export default function ToolDetail() {
                 </TouchableOpacity>
               </View>
             </View>
-          ) : (
-            // Not for sale yet — show a compact CTA to list it
-            <TouchableOpacity
-              testID="list-for-sale-btn"
-              style={styles.listForSaleCta}
-              onPress={() => openSaleModal()}
-            >
-              <Ionicons name="pricetag-outline" size={18} color={theme.colors.accent} />
-              <Text style={styles.listForSaleCtaText}>LIST FOR SALE</Text>
-              <Ionicons name="chevron-forward" size={16} color={theme.colors.textMuted} />
-            </TouchableOpacity>
-          )}
+          ) : null /* "LIST FOR SALE" CTA moved to bottom of page */}
 
           {tool.needs_repair && (
             <View style={styles.repairBanner}>
@@ -753,6 +742,18 @@ export default function ToolDetail() {
             </>
           )}
           </View>
+
+          {!tool.for_sale && !tool.sold && (
+            <TouchableOpacity
+              testID="list-for-sale-btn-bottom"
+              style={[styles.listForSaleCta, { marginTop: 24, marginBottom: 12 }]}
+              onPress={() => openSaleModal()}
+            >
+              <Ionicons name="pricetag-outline" size={18} color={theme.colors.accent} />
+              <Text style={styles.listForSaleCtaText}>LIST FOR SALE</Text>
+              <Ionicons name="chevron-forward" size={16} color={theme.colors.textMuted} />
+            </TouchableOpacity>
+          )}
         </View>
       </ScrollView>
 

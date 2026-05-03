@@ -21,6 +21,7 @@ import { formatDateUS } from "../../src/dateUtil";
 import { formatPhone, formatPhonesInText } from "../../src/contactLinks";
 import { BalanceSection } from "../../src/sections/BalanceSection";
 import { ROUTE_FREQUENCIES, DAY_NAMES, routeLabel, nextRouteText } from "../../src/route";
+import { DateField } from "../../src/DateField";
 import { useAuth } from "../../src/AuthContext";
 
 export default function DealerDetail() {
@@ -392,6 +393,27 @@ export default function DealerDetail() {
               </>
             )}
 
+            {(editForm.route_frequency === "Bi-weekly" || editForm.route_frequency === "Monthly") && (
+              <>
+                <Text style={styles.editFieldLabel}>
+                  {editForm.route_frequency === "Monthly"
+                    ? "NEXT VISIT DATE (sets day of month)"
+                    : "NEXT VISIT DATE (sets which week)"}
+                </Text>
+                <DateField
+                  value={editForm.route_anchor_date}
+                  onChange={(v) => setEditForm({ ...editForm, route_anchor_date: v || "" })}
+                  placeholder="Pick next visit date"
+                  testID="edit-route-anchor-date"
+                />
+                <Text style={[styles.editFieldHint, { marginTop: -2, marginBottom: 10 }] as any}>
+                  {editForm.route_frequency === "Monthly"
+                    ? "The day-of-month from this date will repeat every month."
+                    : "This date anchors the 2-week cycle — future visits fall every 14 days."}
+                </Text>
+              </>
+            )}
+
             <View style={{ flexDirection: "row", gap: 10 }}>
               <TouchableOpacity style={styles.btnGhost} onPress={() => setEditing(false)}>
                 <Text style={styles.btnGhostText}>CANCEL</Text>
@@ -518,6 +540,12 @@ const styles = StyleSheet.create({
     letterSpacing: 1.5,
     marginTop: 6,
     marginBottom: 6,
+  },
+  editFieldHint: {
+    color: theme.colors.textMuted,
+    fontSize: 11,
+    fontStyle: "italic",
+    marginBottom: 8,
   },
   editChip: {
     paddingHorizontal: 12,

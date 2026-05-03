@@ -18,6 +18,7 @@ import { api } from "../../src/api";
 import { usePrefs } from "../../src/prefs";
 import { confirm } from "../../src/confirm";
 import { ROUTE_FREQUENCIES, DAY_NAMES, routeLabel, nextRouteText } from "../../src/route";
+import { DateField } from "../../src/DateField";
 import { getCached, setCached } from "../../src/cache";
 import { useAuth } from "../../src/AuthContext";
 import { useResponsive } from "../../src/responsive";
@@ -242,6 +243,28 @@ export default function DealersScreen() {
                 </ScrollView>
               </>
             )}
+
+            {/* Anchor date — for Bi-weekly (even-week alignment) and Monthly (day of month) */}
+            {(form.route_frequency === "Bi-weekly" || form.route_frequency === "Monthly") && (
+              <>
+                <Text style={styles.fieldLabel}>
+                  {form.route_frequency === "Monthly"
+                    ? "NEXT VISIT DATE (sets day of month)"
+                    : "NEXT VISIT DATE (sets which week)"}
+                </Text>
+                <DateField
+                  value={form.route_anchor_date}
+                  onChange={(v) => setForm({ ...form, route_anchor_date: v || "" })}
+                  placeholder="Pick next visit date"
+                  testID="route-anchor-date"
+                />
+                <Text style={[styles.fieldHint, { marginTop: -4, marginBottom: 10 }]}>
+                  {form.route_frequency === "Monthly"
+                    ? "The day-of-month from this date will repeat every month."
+                    : "This date anchors the 2-week cycle — future visits fall every 14 days."}
+                </Text>
+              </>
+            )}
             <View style={{ flexDirection: "row", gap: 10, marginTop: 4 }}>
               <TouchableOpacity
                 style={styles.btnGhost}
@@ -406,6 +429,12 @@ const styles = StyleSheet.create({
     letterSpacing: 1.5,
     marginBottom: 6,
     marginTop: 4,
+  },
+  fieldHint: {
+    color: theme.colors.textMuted,
+    fontSize: 11,
+    fontStyle: "italic",
+    marginBottom: 8,
   },
   chip: {
     paddingHorizontal: 12,

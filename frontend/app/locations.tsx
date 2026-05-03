@@ -22,6 +22,8 @@ export default function LocationsTreeScreen() {
   const [nodes, setNodes] = useState<LocationNode[]>([]);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [adding, setAdding] = useState<{ parentId: string | null; parentName: string } | null>(null);
+  const [editing, setEditing] = useState<{ id: string; currentName: string } | null>(null);
+  const [moving, setMoving] = useState<LocationNode | null>(null);
   const [name, setName] = useState("");
 
   const load = useCallback(async () => {
@@ -67,6 +69,35 @@ export default function LocationsTreeScreen() {
     setName("");
     setAdding(null);
     load();
+  };
+
+  const saveRename = async () => {
+    if (!editing || !name.trim()) return;
+    await api.updateLocation(editing.id, { name: name.trim() });
+    setName("");
+    setEditing(null);
+    load();
+  };
+
+  const isDescendantOf = (candidateParent: LocationNode, nodeId: string): boolean => {
+    // Returns true if candidateParent is the node itself OR is in its subtree.
+    if (candidateParent.id === nodeId) return true;
+    for (const child of candidateParent.children) {
+      if (isDescendantOf(child, nodeId)) return true;
+    }
+    return false;
+  };
+
+  const moveTo = async (newParentId: string | null) => {
+    if (!moving) return;
+    try {
+      await api.updateLocation(moving.id, { parent_id: newParentId });
+      if (newParentId) setExpanded((cur) => new Set(cur).add(newParentId));
+      setMoving(null);
+      load();
+    } catch (e: any) {
+      Alert.alert("Cannot move", e?.message || "Could not move this location.");
+    }
   };
 
   const remove = async (n: LocationNode) => {
@@ -134,6 +165,22 @@ export default function LocationsTreeScreen() {
             style={styles.iconBtn}
           >
             <Ionicons name="add" size={18} color={theme.colors.accent} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            testID={`edit-loc-${n.id}`}
+            onPress={() => { setEditing({ id: n.id, currentName: n.name }); setName(n.name); }}
+            hitSlop={6}
+            style={styles.iconBtn}
+          >
+            <Ionicons name="pencil" size={16} color={theme.colors.textSecondary} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            testID={`move-loc-${n.id}`}
+            onPress={() => setMoving(n)}
+            hitSlop={6}
+            style={styles.iconBtn}
+          >
+            <Ionicons name="move" size={16} color={theme.colors.textSecondary} />
           </TouchableOpacity>
           <TouchableOpacity
             testID={`del-loc-${n.id}`}
@@ -226,6 +273,105 @@ export default function LocationsTreeScreen() {
           </View>
         </View>
       </Modal>
+
+      <Modal visible={!!editing} transparent animationType="slide">
+        <View style={styles.modalBg}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>RENAME LOCATION</Text>
+            {editing?.currentName ? (
+              <Text style={styles.modalParent}>current: {editing.currentName}</Text>
+            ) : null}
+            <TextInput
+              testID="edit-loc-input"
+              placeholder="New name"
+              placeholderTextColor={theme.colors.textMuted}
+              style={styles.input}
+              value={name}
+              onChangeText={setName}
+              onSubmitEditing={saveRename}
+              autoFocus
+            />
+            <View style={{ flexDirection: "row", gap: 10 }}>
+              <TouchableOpacity
+                style={styles.btnGhost}
+                onPress={() => {
+                  setEditing(null);
+                  setName("");
+                }}
+              >
+                <Text style={styles.btnGhostText}>CANCEL</Text>
+              </TouchableOpacity>
+              <TouchableOpacity testID="save-rename-btn" style={styles.btn} onPress={saveRename}>
+                <Text style={styles.btnText}>SAVE</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal visible={!!moving} transparent animationType="slide">
+        <View style={styles.modalBg}>
+          <View style={[styles.modalCard, { maxHeight: "80%" }]}>
+            <Text style={styles.modalTitle}>MOVE LOCATION</Text>
+            {moving ? (
+              <Text style={styles.modalParent}>
+                moving: <Text style={{ color: theme.colors.accent }}>{moving.name}</Text>
+              </Text>
+            ) : null}
+            <Text style={[styles.modalParent, { marginTop: 6 }]}>Pick new parent:</Text>
+            <ScrollView style={{ maxHeight: 340, marginTop: 8 }}>
+              <TouchableOpacity
+                testID="move-to-root"
+                style={styles.moveOption}
+                onPress={() => moveTo(null)}
+              >
+                <Ionicons name="home" size={16} color={theme.colors.accent} />
+                <Text style={styles.moveOptionText}>(Top level — no parent)</Text>
+              </TouchableOpacity>
+              {(function renderOption(list: LocationNode[]): any {
+                return list.map((n) => {
+                  if (!moving) return null;
+                  const disabled = isDescendantOf(n, moving.id) || n.id === moving.parent_id;
+                  return (
+                    <View key={`move-opt-${n.id}`}>
+                      <TouchableOpacity
+                        testID={`move-to-${n.id}`}
+                        style={[
+                          styles.moveOption,
+                          { paddingLeft: 12 + n.depth * 16 },
+                          disabled && { opacity: 0.35 },
+                        ]}
+                        disabled={disabled}
+                        onPress={() => moveTo(n.id)}
+                      >
+                        <Ionicons
+                          name={n.children.length > 0 ? "folder" : "location"}
+                          size={14}
+                          color={theme.colors.textSecondary}
+                        />
+                        <Text style={styles.moveOptionText}>
+                          {n.name}
+                          {n.id === moving.parent_id ? "  (current parent)" : ""}
+                          {isDescendantOf(n, moving.id) && n.id !== moving.parent_id ? "  (can't move into itself)" : ""}
+                        </Text>
+                      </TouchableOpacity>
+                      {renderOption(n.children)}
+                    </View>
+                  );
+                });
+              })(nodes)}
+            </ScrollView>
+            <View style={{ flexDirection: "row", gap: 10, marginTop: 10 }}>
+              <TouchableOpacity
+                style={[styles.btnGhost, { flex: 1 }]}
+                onPress={() => setMoving(null)}
+              >
+                <Text style={styles.btnGhostText}>CANCEL</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -242,6 +388,20 @@ const styles = StyleSheet.create({
     borderBottomColor: theme.colors.border,
   },
   title: { color: theme.colors.textPrimary, fontSize: 16, fontWeight: "900", letterSpacing: 2 },
+  moveOption: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
+  },
+  moveOptionText: {
+    color: theme.colors.textPrimary,
+    fontSize: 14,
+    flex: 1,
+  },
   row: {
     flexDirection: "row",
     alignItems: "center",

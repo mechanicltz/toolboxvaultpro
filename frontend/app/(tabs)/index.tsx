@@ -123,11 +123,6 @@ export default function HomeScreen() {
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <View style={styles.header}>
-        <Image
-          source={require("../../assets/images/icon.png")}
-          style={styles.headerLogo}
-          resizeMode="contain"
-        />
         <View>
           <Text style={styles.title}>TOOLBOX VAULT</Text>
           <Text style={styles.subtitle}>SUMMARY</Text>
@@ -366,18 +361,12 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.colors.bg },
   header: {
     flexDirection: "row",
-    justifyContent: "flex-start",
+    justifyContent: "space-between",
     alignItems: "center",
-    gap: 12,
     paddingHorizontal: 20,
     paddingVertical: 16,
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.border,
-  },
-  headerLogo: {
-    width: 40,
-    height: 40,
-    borderRadius: 8,
   },
   title: { color: theme.colors.textPrimary, fontSize: 22, fontWeight: "900", letterSpacing: 4 },
   subtitle: { color: theme.colors.accent, fontSize: 10, fontWeight: "700", letterSpacing: 2, marginTop: 4 },

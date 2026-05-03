@@ -531,7 +531,21 @@ export default function ToolEdit() {
 
           <Text style={styles.label}>LOCATION</Text>
           {locations.length === 0 ? (
-            <Text style={styles.helper}>No locations yet. Add some in More → Locations.</Text>
+            <TouchableOpacity
+              testID="go-to-locations"
+              onPress={() => router.push("/locations")}
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 6,
+                paddingVertical: 10,
+              }}
+            >
+              <Ionicons name="add-circle" size={16} color={theme.colors.accent} />
+              <Text style={[styles.helper, { color: theme.colors.accent, textDecorationLine: "underline" }]}>
+                No locations yet — tap here to add one
+              </Text>
+            </TouchableOpacity>
           ) : (
             <View>
               <TouchableOpacity
