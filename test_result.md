@@ -1727,3 +1727,32 @@ agent_communication:
          - `app/(tabs)/dealers.tsx` (New Dealer modal)
 
       No backend changes this round. `npx tsc --noEmit` passes cleanly. No new backend testing needed — please confirm via user that web login / app launch still works after re-bundle.
+
+
+  - agent: "main"
+    message: |
+      **Option A — Cache-first reads + offline awareness shipped (no backend changes)**
+
+      Frontend-only architectural addition. Existing screens unchanged; everything works through the same `api.*` calls.
+
+      New files:
+      - `src/network.ts` — non-React module that owns the global `online` boolean. Subscribes to `@react-native-community/netinfo`. Exposes `isOnline()`, `subscribeOnline()`, `OfflineError`, `startNetworkWatcher()`.
+      - `src/NetworkProvider.tsx` — wraps the app, exposes `useIsOnline()`, and renders a fixed-top red banner ("OFFLINE · SHOWING CACHED DATA") whenever offline.
+      - `src/offlineGuard.ts` — `requireOnline(label)` and `showOfflineAlert(label)` for explicit "this needs internet" prompts.
+
+      Modified files:
+      - `src/cache.ts` — upgraded from in-memory only to **persistent** cache. AsyncStorage backs every entry under prefix `tt.cache.`. `loadCacheFromDisk()` hydrates memory at app launch so screens render instantly on cold start. Same `getCached/setCached/clearCached/hasCached` API kept, so the existing screens that already use it (claims, dealers, index, inventory) inherit persistence for free.
+      - `src/api.ts` — `request<T>()` now:
+        - For GETs: caches every successful response under `api:<path>`. On network error, transparently falls back to cached data. Skips caching for `/auth/*` and `/feedback`.
+        - For POST/PUT/DELETE/PATCH: when `isOnline()` is false, fires the offline alert ("You're offline / This change needs an internet connection. Reconnect to Wi-Fi or mobile data and try again.") and throws `OfflineError` *without* hitting the network. Auth endpoints are exempted (login screen surfaces its own error).
+        - When connectivity drops mid-flight, mutations also surface the alert.
+      - `src/AuthContext.tsx` — caches the logged-in user to AsyncStorage (`tt.auth.user`). On launch, `refresh()` shows the cached user immediately, then validates against `/auth/me` in the background. Network errors (offline, 5xx) keep the cached session — the user is **only** logged out on an explicit 401 from the server. Also calls `loadCacheFromDisk()` and `startNetworkWatcher()` once at app start.
+      - `app/_layout.tsx` — wrapped tree in `<NetworkProvider>` so the offline banner renders globally.
+
+      Behaviour summary:
+      - Online: works exactly as before, but every list/detail GET is now persisted to disk → cold launches are instant.
+      - Offline: lists, tool details, dealer details, contacts, locations, tags, categories, claims, wishlist, dashboard stats, and reports (PDF/Excel are generated client-side) all keep working from cache. The red OFFLINE banner is shown.
+      - Offline write attempts: any add/edit/delete/checkout/checkin/etc. is intercepted before hitting the network and surfaces a clear native alert. No half-saved state, no confusing errors.
+      - Reconnect: flipping network back on automatically clears the banner. Next focus on any list re-fetches (existing stale-while-revalidate already in place per screen).
+
+      No backend API changes. Backend retest **not required** for this change (purely frontend), but no harm in a smoke check that auth + tool/dealer GETs still respond normally.

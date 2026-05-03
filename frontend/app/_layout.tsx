@@ -8,6 +8,7 @@ import { BottomBar } from "../src/BottomBar";
 import { ReportsFab } from "../src/ReportsFab";
 import { AuthProvider, useAuth } from "../src/AuthContext";
 import { ResponsiveContainer } from "../src/ResponsiveContainer";
+import { NetworkProvider } from "../src/NetworkProvider";
 import { theme } from "../src/theme";
 
 function AuthGate({ children }: { children: React.ReactNode }) {
@@ -68,11 +69,13 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1, backgroundColor: "#0A0A0A" }}>
       <StatusBar style="light" />
       <AuthProvider>
-        <AuroraBackground>
-          <AuthGate>
-            <ShellNav />
-          </AuthGate>
-        </AuroraBackground>
+        <NetworkProvider>
+          <AuroraBackground>
+            <AuthGate>
+              <ShellNav />
+            </AuthGate>
+          </AuroraBackground>
+        </NetworkProvider>
       </AuthProvider>
     </GestureHandlerRootView>
   );

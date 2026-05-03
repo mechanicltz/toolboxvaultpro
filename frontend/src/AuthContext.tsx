@@ -1,5 +1,10 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
-import { api, getToken, setToken, setUnauthorizedHandler } from "./api";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { api, ApiError, getToken, setToken, setUnauthorizedHandler } from "./api";
+import { loadCacheFromDisk } from "./cache";
+import { startNetworkWatcher } from "./network";
+
+const USER_CACHE_KEY = "tt.auth.user";
 
 export type AuthUser = {
   id: string;
@@ -20,31 +25,75 @@ type AuthContextType = {
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
+async function readCachedUser(): Promise<AuthUser | null> {
+  try {
+    const raw = await AsyncStorage.getItem(USER_CACHE_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw) as AuthUser;
+  } catch {
+    return null;
+  }
+}
+
+async function writeCachedUser(u: AuthUser | null) {
+  try {
+    if (u) await AsyncStorage.setItem(USER_CACHE_KEY, JSON.stringify(u));
+    else await AsyncStorage.removeItem(USER_CACHE_KEY);
+  } catch {}
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<AuthUser | null>(null);
+  const [user, setUserState] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const setUser = useCallback((u: AuthUser | null) => {
+    setUserState(u);
+    writeCachedUser(u);
+  }, []);
+
   const refresh = useCallback(async () => {
+    const tok = await getToken();
+    if (!tok) {
+      setUserState(null);
+      await writeCachedUser(null);
+      return;
+    }
+    // Show cached user immediately so screens don't flash to login while
+    // we revalidate in the background.
+    const cached = await readCachedUser();
+    if (cached) setUserState(cached);
+
     try {
-      const tok = await getToken();
-      if (!tok) {
-        setUser(null);
+      const me = await api.me();
+      setUserState(me as AuthUser);
+      await writeCachedUser(me as AuthUser);
+    } catch (e) {
+      // If the server explicitly says 401, the token is dead → log out.
+      if (e instanceof ApiError && e.status === 401) {
+        await setToken(null);
+        setUserState(null);
+        await writeCachedUser(null);
         return;
       }
-      const me = await api.me();
-      setUser(me as AuthUser);
-    } catch {
-      // Token invalid → clear
-      await setToken(null);
-      setUser(null);
+      // Network / offline / 5xx — keep the cached session alive so the
+      // app stays usable without internet.
+      if (cached) {
+        setUserState(cached);
+      }
     }
   }, []);
 
   useEffect(() => {
     setUnauthorizedHandler(() => {
-      setUser(null);
+      setUserState(null);
+      writeCachedUser(null);
     });
     (async () => {
+      // Hydrate the in-memory cache from disk BEFORE any screen renders so
+      // every list shows previously-fetched data instantly.
+      await loadCacheFromDisk();
+      // Kick off the global online/offline watcher.
+      startNetworkWatcher();
       await refresh();
       setLoading(false);
     })();
@@ -53,18 +102,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const login = useCallback(async (email: string, password: string) => {
     const res = await api.login({ email, password });
     await setToken(res.token);
-    setUser(res.user as AuthUser);
+    setUserState(res.user as AuthUser);
+    await writeCachedUser(res.user as AuthUser);
   }, []);
 
   const register = useCallback(async (email: string, password: string, name?: string) => {
     const res = await api.register({ email, password, name });
     await setToken(res.token);
-    setUser(res.user as AuthUser);
+    setUserState(res.user as AuthUser);
+    await writeCachedUser(res.user as AuthUser);
   }, []);
 
   const logout = useCallback(async () => {
     await setToken(null);
-    setUser(null);
+    setUserState(null);
+    await writeCachedUser(null);
   }, []);
 
   return (
