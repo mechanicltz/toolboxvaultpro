@@ -291,7 +291,7 @@ function PdfPageItem({
         justifyContent: "center",
         ...Platform.select({
           web: {
-            // @ts-expect-error web-only style
+            // @ts-ignore web-only style
             boxShadow: "0 2px 12px rgba(0,0,0,0.5)",
           },
           default: {},
@@ -398,7 +398,7 @@ export function DocumentsSection({
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const w: any = (globalThis as any).window;
       const bytes = base64ToBytes(doc.data);
-      const blob = new Blob([bytes], {
+      const blob = new Blob([bytes as BlobPart], {
         type: doc.mime_type || "application/octet-stream",
       });
       const url = w.URL.createObjectURL(blob);
@@ -436,7 +436,7 @@ export function DocumentsSection({
         if (mime.startsWith("image/")) {
           // Image: build blob URL for <Image>
           const bytes = base64ToBytes(doc.data);
-          const blob = new Blob([bytes], { type: mime });
+          const blob = new Blob([bytes as BlobPart], { type: mime });
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const w: any = (globalThis as any).window;
           setImageUri(w.URL.createObjectURL(blob));

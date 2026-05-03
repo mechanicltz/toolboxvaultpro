@@ -60,9 +60,6 @@ export default function LoginScreen() {
           keyboardShouldPersistTaps="handled"
         >
           <View style={styles.brand}>
-            <View style={styles.logoBox}>
-              <Ionicons name="construct" size={36} color={theme.colors.accent} />
-            </View>
             <Text style={styles.brandTitle}>TOOLBOX VAULT</Text>
             <Text style={styles.brandSub}>
               Inventory · Dealers · Warranties · Reports

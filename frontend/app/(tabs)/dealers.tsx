@@ -107,14 +107,6 @@ export default function DealersScreen() {
                 isLocked && styles.rowLocked,
               ]}
               onPress={() => {
-                if (isLocked) {
-                  upgrade.show({
-                    title: "Dealer Locked",
-                    message:
-                      "This dealer is beyond the Free plan limit (1 dealer). Upgrade to access all your dealers.",
-                  });
-                  return;
-                }
                 router.push(`/dealer/${item.id}`);
               }}
               activeOpacity={isLocked ? 1 : 0.7}
@@ -169,11 +161,11 @@ export default function DealersScreen() {
           <ScrollView style={styles.modalCard} keyboardShouldPersistTaps="handled">
             <Text style={styles.modalTitle}>NEW DEALER</Text>
             {([
-              { k: "name", placeholder: "Dealer name (e.g. Matco)*", focus: true },
-              { k: "phone", placeholder: "Phone" },
-              { k: "website", placeholder: "Website" },
-              { k: "address", placeholder: "Address" },
-              { k: "notes", placeholder: "Notes", multiline: true },
+              { k: "name", placeholder: "Dealer name (e.g. Matco)*", focus: true, multiline: false },
+              { k: "phone", placeholder: "Phone", focus: false, multiline: false },
+              { k: "website", placeholder: "Website", focus: false, multiline: false },
+              { k: "address", placeholder: "Address", focus: false, multiline: false },
+              { k: "notes", placeholder: "Notes", focus: false, multiline: true },
             ] as const).map((f) => (
               <TextInput
                 key={f.k}

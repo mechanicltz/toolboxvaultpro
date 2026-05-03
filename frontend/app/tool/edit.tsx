@@ -1357,31 +1357,4 @@ const styles = StyleSheet.create({
     fontSize: 12,
     letterSpacing: 1.5,
   },
-  dealerInfo: {
-    fontWeight: "800",
-    marginTop: 3,
-  },
-  dealerInfoSub: {
-    color: theme.colors.accent,
-    fontSize: 11,
-    fontWeight: "700",
-    marginTop: 2,
-  },
-  brokenPhotoBox: {
-    marginTop: 6,
-    position: "relative",
-  },
-  brokenPhoto: {
-    width: "100%",
-    height: 200,
-    borderRadius: 6,
-    backgroundColor: theme.colors.bgSecondary,
-  },
-  brokenRemove: {
-    position: "absolute",
-    top: 6,
-    right: 6,
-    backgroundColor: "rgba(0,0,0,0.6)",
-    borderRadius: 13,
-  },
 });

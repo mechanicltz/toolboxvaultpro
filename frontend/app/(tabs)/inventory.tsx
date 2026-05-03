@@ -450,7 +450,6 @@ export default function InventoryScreen() {
           const isSelected = selectedIds.includes(item.id);
           const isLost = item?.lost_status?.is_lost;
           const isStolen = isLost && item?.lost_status?.type === "stolen";
-          const isLocked = lockedToolIds.has(item.id);
           return (
             <TouchableOpacity
               testID={`tool-card-${item.id}`}
@@ -458,17 +457,8 @@ export default function InventoryScreen() {
                 styles.row,
                 gridCols > 1 && { flex: 1, marginHorizontal: 0 },
                 isSelected && styles.rowSelected,
-                isLocked && styles.rowLocked,
               ]}
               onPress={() => {
-                if (isLocked) {
-                  upgrade.show({
-                    title: "Item Locked",
-                    message:
-                      "This item is beyond the Free plan limit (10 tools). Upgrade to access all your inventory.",
-                  });
-                  return;
-                }
                 if (selectMode) {
                   toggleSelect(item.id);
                 } else {
@@ -476,9 +466,9 @@ export default function InventoryScreen() {
                 }
               }}
               onLongPress={() => {
-                if (!isLocked && !selectMode) enterSelect(item.id);
+                if (!selectMode) enterSelect(item.id);
               }}
-              activeOpacity={isLocked ? 1 : 0.7}
+              activeOpacity={0.7}
             >
               <LinearGradient
                 colors={["#1F1F1F", "#0E0E0E"]}
@@ -573,7 +563,8 @@ export default function InventoryScreen() {
                     }
                   });
                   if (!soonest) return null;
-                  const overdue = soonest.days < 0;
+                  const s0 = soonest as { days: number; type: string };
+                  const overdue = s0.days < 0;
                   return (
                     <View
                       style={[
@@ -593,8 +584,8 @@ export default function InventoryScreen() {
                         ]}
                       >
                         {overdue
-                          ? `${soonest.type.toUpperCase()} OVERDUE ${Math.abs(soonest.days)}D`
-                          : `${soonest.type.toUpperCase()} DUE IN ${soonest.days}D`}
+                          ? `${s0.type.toUpperCase()} OVERDUE ${Math.abs(s0.days)}D`
+                          : `${s0.type.toUpperCase()} DUE IN ${s0.days}D`}
                       </Text>
                     </View>
                   );

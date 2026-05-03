@@ -717,7 +717,14 @@ async def update_location(loc_id: str, payload: LocationUpdate):
     doc = await db.locations.find_one({"id": loc_id}, {"_id": 0})
     if not doc:
         raise HTTPException(404, "Location not found")
-    updates = {k: v for k, v in payload.dict().items() if v is not None}
+    # Build updates preserving explicit null for parent_id (to move to root)
+    raw = payload.dict(exclude_unset=True)
+    updates = {}
+    for k, v in raw.items():
+        if k == "parent_id":
+            updates[k] = v  # keep None for root move
+        elif v is not None:
+            updates[k] = v
     # Prevent cycles: ensure new parent isn't a descendant of this location
     if "parent_id" in updates and updates["parent_id"]:
         if updates["parent_id"] == loc_id:

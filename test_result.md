@@ -509,6 +509,18 @@ backend_recent:
         agent: "testing"
         comment: "PASS — all 13 checks via /app/backend_test_dealer_balance.py. (B1) POST /api/tools {name:'Test Tool', needs_repair:true, repair_info:{repair_status:'Not Reported', company_notified:'Some Dealer', broken_photo:'<92-char base64 PNG>'}} → 200; tool persists needs_repair=true, repair_info.repair_status='Not Reported', company_notified='Some Dealer', and the full broken_photo base64 string is preserved verbatim (92 chars in, 92 chars out). (B2) PUT /api/tools/{id} {repair_info:{repair_status:'Reported', company_notified:'Snap-on', contact:'John', broken_photo:'newbase64'}} → 200; all four fields updated correctly (broken_photo='bmV3YmFzZTY0ZGF0YQ=='). (B3) PUT to clear {needs_repair:false, repair_info:null} → 200; needs_repair=false (per review note, repair_info clearing not strictly verified). (B4) DELETE tool → 200. The RepairInfo Pydantic model on server.py L247-254 correctly includes broken_photo and round-trips it on every Tool response."
 
+  - task: "Locations PUT move-to-root (parent_id=null) + cycle guard + rename-only preserves parent"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "PASS — 21/21 checks via /app/backend_test_locations_move.py against EXPO_PUBLIC_BACKEND_URL/api. Verified every step of the review request: (1) Login subtest@example.com/password123 -> 200. (2) POST /api/locations {name:'TestGarage_MoveRoot'} -> 200 with id G. (3) POST /api/locations {name:'TestToolbox_MoveRoot', parent_id:G} -> 200 with parent_id==G. (4) GET /api/locations -> T.parent_id==G. (5) PUT /api/locations/T {parent_id:null} -> 200; response body has parent_id=None; subsequent GET confirms T.parent_id is None (move-to-root works). Implementation note: server.py L721-727 correctly uses `payload.dict(exclude_unset=True)` and preserves explicit None for parent_id, so clients sending {\"parent_id\": null} in JSON actually write null to Mongo and the Location response model serializes it back as None (not dropped). (6) PUT /api/locations/T {parent_id:G} -> 200 parent_id==G; GET confirms re-nest works. (7) Cycle guard: POST /api/locations {name:'TestDrawer_MoveRoot', parent_id:T} -> D; PUT /api/locations/G {parent_id:D} -> 400 with detail 'Cannot create a cycle in locations' (substring 'cycle' confirmed). (8) Rename-only does NOT clobber parent_id: PUT /api/locations/T {name:'TestToolbox_MoveRoot_Renamed'} -> 200; response body has name='TestToolbox_MoveRoot_Renamed' AND parent_id==G (preserved); subsequent GET confirms the same — because `exclude_unset=True` means an absent parent_id is never written. (9) Cleanup: DELETE /api/locations/T?cascade=true -> 200 {ok:true, deleted:2} (T and D cascaded); DELETE /api/locations/G -> 200; subsequent GET shows zero test locations remain. (10) Smoke: GET /api/tools, /api/stats, /api/dealers all 200. Backend logs during the run show ONLY the expected 200s plus the one intentional 400 for the cycle test — NO 5xx errors raised during this test. All test fixtures cleaned up."
+
   - task: "Toolbox / AI endpoint removal sanity check"
     implemented: true
     working: true
@@ -1680,3 +1692,20 @@ agent_communication:
       Result: statuses = [200, 200, 200, 200, 200, 429, 429] — exact match. First 5 returned {'ok':true,'message':'Thanks — your message has been sent.'}; req#6 and req#7 both returned {'detail':'Too many messages from this device. Please try again in a few minutes.'} ('Too many messages' substring confirmed). Backend logs confirm the route handler received all 7 hits with the correct verdict.
       Cleanup: db.feedback.delete_many({'subject':'rl'}) removed 15 docs (5 from this run + 10 leftovers); subsequent find returned 0. Restarted backend once more to clear the in-memory rate-limit bucket as advised — bucket is a module-level dict, no DB state to clean. Subtest user untouched.
       Rate-limit task is now WORKING. backend_feedback task flipped to working:true, needs_retesting:false.
+
+
+  - agent: "main"
+    message: |
+      Fixed TypeScript compilation errors that were introduced during last session's UI/UX tweaks (dealers.tsx `upgrade` undefined, dealers.tsx multiline/focus prop narrowing, inventory.tsx `lockedToolIds` leftover, inventory.tsx `soonest` narrowing, tool/[id].tsx duplicate style keys, tool/edit.tsx duplicate style keys, reports.tsx `cardBg` missing, DocumentsSection.tsx BlobPart type, missing printHtml.d.ts). `npx tsc --noEmit` now passes cleanly.
+
+      Also made ONE backend change that should be retested:
+      - **PUT /api/locations/{loc_id}**: updated payload filtering to preserve explicit `parent_id: null` (so moving a nested location to the top level / root now works). Previously `null` was being silently dropped by a `v is not None` filter, so the location stayed under its current parent. Added `exclude_unset=True` with a per-field rule that keeps `parent_id` even when None, while still stripping unset other fields.
+
+      Please verify (against EXPO_PUBLIC_BACKEND_URL/api, subtest@example.com / password123):
+      1. POST /api/locations {name:"Garage"} → capture id G.
+      2. POST /api/locations {name:"Toolbox", parent_id: G} → capture id T. GET /api/locations → T.parent_id == G.
+      3. PUT /api/locations/{T} {parent_id: null} → 200; GET /api/locations → T.parent_id is null/missing (moved to root).
+      4. Re-nest: PUT /api/locations/{T} {parent_id: G} → 200; GET confirms parent_id==G.
+      5. Cycle guard: POST /api/locations {name:"Drawer", parent_id: T} → D. PUT /api/locations/{G} {parent_id: D} → 400 "Cannot create a cycle in locations".
+      6. Rename only: PUT /api/locations/{T} {name:"Toolbox A"} → 200; parent_id stays G (not clobbered).
+      7. Cleanup: DELETE the 3 test locations.
