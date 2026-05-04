@@ -515,14 +515,16 @@ export default function ToolDetail() {
   /* === TOP RED BANNER ("FOR SALE") === */
   table.top-banner { width: 100%; }
   td.top-banner-cell {
-    background-color: #DC2626;
-    color: #FFFFFF;
+    background-color: #FFFFFF;
+    color: #DC2626;
     text-align: center;
     font-size: 56pt;
     font-weight: bold;
     letter-spacing: 4pt;
     padding: 10pt 0 12pt 0;
     line-height: 1;
+    border-top: 4pt solid #DC2626;
+    border-bottom: 4pt solid #DC2626;
   }
 
   /* === ITEM NAME === */
