@@ -451,18 +451,24 @@ export default function ToolDetail() {
     const askingPrice =
       tool?.sale_price != null ? Number(tool.sale_price).toFixed(2) : "0.00";
 
-    // Each spec row = optional [icon-label, value]
+    // Each spec row = optional [icon-label, value]. Like a classic missing-
+    // person poster, we ALWAYS show toggled-on labels (with blank values when
+    // the data is missing) so the layout stays consistent and looks like a
+    // proper template — never just "2 lines".
     const specRows: { label: string; value: string }[] = [];
-    if (F.brand && tool.brand) specRows.push({ label: "Brand", value: tool.brand });
-    if (F.model && tool.model) specRows.push({ label: "Model", value: tool.model });
-    if (F.serial && tool.serial_number)
-      specRows.push({ label: "Serial #", value: tool.serial_number });
-    if (F.condition && tool.condition)
-      specRows.push({ label: "Condition", value: tool.condition });
-    if (F.category && tool.category_name)
-      specRows.push({ label: "Category", value: tool.category_name });
-    if (F.purchase_date && tool.purchase_date)
-      specRows.push({ label: "Purchased", value: formatDateUS(tool.purchase_date) });
+    if (F.brand) specRows.push({ label: "Brand", value: tool.brand || "" });
+    if (F.model) specRows.push({ label: "Model", value: tool.model || "" });
+    if (F.serial)
+      specRows.push({ label: "Serial #", value: tool.serial_number || "" });
+    if (F.condition)
+      specRows.push({ label: "Condition", value: tool.condition || "" });
+    if (F.category)
+      specRows.push({ label: "Category", value: tool.category_name || "" });
+    if (F.purchase_date)
+      specRows.push({
+        label: "Purchased",
+        value: tool.purchase_date ? formatDateUS(tool.purchase_date) : "",
+      });
 
     // Contact lines as plain strings — no emojis (xhtml2pdf chokes on them).
     const contactLines: string[] = [];
@@ -635,13 +641,13 @@ export default function ToolDetail() {
     padding-bottom: 8pt;
   }
 
-  /* === FOOTER === */
-  .footer {
-    margin-top: 8pt;
+  /* === FOOTER (inlined into the red contact box) === */
+  .footer-inline {
     text-align: center;
-    color: #888888;
-    font-size: 7pt;
+    color: #ffcccc;
+    font-size: 6.5pt;
     letter-spacing: 2pt;
+    padding-top: 6pt;
   }
 </style>
 </head>
@@ -670,7 +676,7 @@ export default function ToolDetail() {
             (r) => `
               <tr>
                 <td class="spec-lab">${esc(r.label).toUpperCase()}:</td>
-                <td class="spec-val">${esc(r.value)}</td>
+                <td class="spec-val">${esc(r.value) || "&nbsp;"}</td>
               </tr>`,
           )
           .join("")}
@@ -708,11 +714,10 @@ export default function ToolDetail() {
                )
                .join("")}
            </table>
+           <div class="footer-inline">LISTED VIA TOOLBOX VAULT &nbsp;&middot;&nbsp; ${new Date().toLocaleDateString()}</div>
          </td></tr></table>`
-      : ""
+      : `<div class="footer-inline" style="color:#888; padding-top: 14pt;">LISTED VIA TOOLBOX VAULT &nbsp;&middot;&nbsp; ${new Date().toLocaleDateString()}</div>`
   }
-
-  <div class="footer">LISTED VIA TOOLBOX VAULT &nbsp;&middot;&nbsp; ${new Date().toLocaleDateString()}</div>
 
 </body>
 </html>`;
