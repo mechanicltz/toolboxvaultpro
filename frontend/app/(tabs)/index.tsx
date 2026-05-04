@@ -252,6 +252,7 @@ export default function HomeScreen() {
               <DealerBalanceRow
                 dealer={d}
                 onAdjust={() => openAdjustForDealer(d)}
+                onOpenDealer={() => router.push(`/dealer/${d.id}`)}
               />
             </View>
           ))
@@ -404,9 +405,11 @@ function SummaryRow({
 function DealerBalanceRow({
   dealer,
   onAdjust,
+  onOpenDealer,
 }: {
   dealer: any;
   onAdjust: () => void;
+  onOpenDealer: () => void;
 }) {
   const credit = Number(dealer.credit_balance) || 0;
   const truck = Number(dealer.personal_balance) || 0;
@@ -416,14 +419,21 @@ function DealerBalanceRow({
       <Text style={styles.dealerName} numberOfLines={1}>
         {dealer.name}
       </Text>
-      <Text
-        style={[
-          styles.dealerTotal,
-          total === 0 && { color: theme.colors.textMuted },
-        ]}
+      <TouchableOpacity
+        testID={`balance-${dealer.id}`}
+        style={styles.dealerBalancePill}
+        onPress={onOpenDealer}
+        activeOpacity={0.8}
       >
-        ${total.toFixed(2)}
-      </Text>
+        <Text
+          style={[
+            styles.dealerBalancePillText,
+            total === 0 && { color: theme.colors.textMuted },
+          ]}
+        >
+          ${total.toFixed(2)}
+        </Text>
+      </TouchableOpacity>
       <TouchableOpacity
         testID={`adjust-${dealer.id}`}
         style={styles.dealerAdjustPill}
@@ -580,6 +590,21 @@ const styles = StyleSheet.create({
     fontWeight: "900",
     minWidth: 64,
     textAlign: "right",
+  },
+  dealerBalancePill: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    backgroundColor: theme.colors.bg,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    minWidth: 76,
+    alignItems: "center",
+  },
+  dealerBalancePillText: {
+    color: theme.colors.textPrimary,
+    fontSize: 10,
+    fontWeight: "900",
   },
   dealerAdjustPill: {
     paddingHorizontal: 10,
