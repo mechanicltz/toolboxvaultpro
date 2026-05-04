@@ -405,13 +405,13 @@ export default function InventoryScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* Filter / sort dropdowns — Status · Location · Tag · Sort */}
+      {/* Filter / sort dropdowns — Status · Location · Tag · Sort (2 rows × 2) */}
       <View style={styles.filterDropdownRow}>
         <TouchableOpacity
           testID="status-filter-btn"
           style={[
             styles.locationFilterBtn,
-            { flex: 1, minWidth: 0 },
+            styles.filterHalf,
             filter !== "all" && styles.locationFilterBtnActive,
           ]}
           onPress={() => setShowStatusPicker(true)}
@@ -419,7 +419,7 @@ export default function InventoryScreen() {
         >
           <Ionicons
             name="filter"
-            size={12}
+            size={14}
             color={filter !== "all" ? theme.colors.accent : theme.colors.textMuted}
           />
           <Text
@@ -431,14 +431,14 @@ export default function InventoryScreen() {
           >
             {statusLabel}
           </Text>
-          <Ionicons name="chevron-down" size={12} color={theme.colors.textMuted} />
+          <Ionicons name="chevron-down" size={14} color={theme.colors.textMuted} />
         </TouchableOpacity>
 
         <TouchableOpacity
           testID="location-filter-btn"
           style={[
             styles.locationFilterBtn,
-            { flex: 1, minWidth: 0 },
+            styles.filterHalf,
             locationFilter && styles.locationFilterBtnActive,
           ]}
           onPress={() => setShowLocationPicker(true)}
@@ -446,7 +446,7 @@ export default function InventoryScreen() {
         >
           <Ionicons
             name="location"
-            size={12}
+            size={14}
             color={locationFilter ? theme.colors.accent : theme.colors.textMuted}
           />
           <Text
@@ -470,7 +470,7 @@ export default function InventoryScreen() {
               <Ionicons name="close-circle" size={14} color={theme.colors.accent} />
             </TouchableOpacity>
           ) : (
-            <Ionicons name="chevron-down" size={12} color={theme.colors.textMuted} />
+            <Ionicons name="chevron-down" size={14} color={theme.colors.textMuted} />
           )}
         </TouchableOpacity>
 
@@ -478,7 +478,7 @@ export default function InventoryScreen() {
           testID="tag-filter-btn"
           style={[
             styles.locationFilterBtn,
-            { flex: 1, minWidth: 0 },
+            styles.filterHalf,
             tagFilter.length > 0 && styles.locationFilterBtnActive,
           ]}
           onPress={() => setShowTagPicker(true)}
@@ -486,7 +486,7 @@ export default function InventoryScreen() {
         >
           <Ionicons
             name="pricetag"
-            size={12}
+            size={14}
             color={tagFilter.length ? theme.colors.accent : theme.colors.textMuted}
           />
           <Text
@@ -510,7 +510,7 @@ export default function InventoryScreen() {
               <Ionicons name="close-circle" size={14} color={theme.colors.accent} />
             </TouchableOpacity>
           ) : (
-            <Ionicons name="chevron-down" size={12} color={theme.colors.textMuted} />
+            <Ionicons name="chevron-down" size={14} color={theme.colors.textMuted} />
           )}
         </TouchableOpacity>
 
@@ -518,7 +518,7 @@ export default function InventoryScreen() {
           testID="sort-filter-btn"
           style={[
             styles.locationFilterBtn,
-            { flex: 1, minWidth: 0 },
+            styles.filterHalf,
             sortBy !== "date_desc" && styles.locationFilterBtnActive,
           ]}
           onPress={() => setShowSortPicker(true)}
@@ -526,7 +526,7 @@ export default function InventoryScreen() {
         >
           <Ionicons
             name="swap-vertical"
-            size={12}
+            size={14}
             color={sortBy !== "date_desc" ? theme.colors.accent : theme.colors.textMuted}
           />
           <Text
@@ -537,16 +537,16 @@ export default function InventoryScreen() {
             numberOfLines={1}
           >
             {sortBy === "date_desc"
-              ? "NEWEST"
+              ? "NEWEST FIRST"
               : sortBy === "date_asc"
-                ? "OLDEST"
+                ? "OLDEST FIRST"
                 : sortBy === "alpha"
                   ? "A → Z"
                   : sortBy === "price_high"
-                    ? "$ HIGH"
-                    : "$ LOW"}
+                    ? "PRICE: HIGH → LOW"
+                    : "PRICE: LOW → HIGH"}
           </Text>
-          <Ionicons name="chevron-down" size={12} color={theme.colors.textMuted} />
+          <Ionicons name="chevron-down" size={14} color={theme.colors.textMuted} />
         </TouchableOpacity>
       </View>
 
@@ -1350,10 +1350,12 @@ const styles = StyleSheet.create({
   filterRow: { paddingHorizontal: 20, paddingVertical: 8, gap: 8, alignItems: "center" },
   filterDropdownRow: {
     flexDirection: "row",
+    flexWrap: "wrap",
     paddingHorizontal: 16,
     paddingTop: 6,
     paddingBottom: 8,
-    gap: 6,
+    rowGap: 8,
+    columnGap: 8,
   },
   locationFilterRow: {
     paddingHorizontal: 20,
@@ -1363,13 +1365,17 @@ const styles = StyleSheet.create({
   locationFilterBtn: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 8,
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 10,
     borderRadius: theme.radii.sm,
     backgroundColor: theme.colors.surface,
     borderWidth: 1,
     borderColor: theme.colors.border,
+  },
+  filterHalf: {
+    width: "48.5%",
+    minWidth: 0,
   },
   locationFilterBtnActive: {
     borderColor: theme.colors.accent,
@@ -1378,9 +1384,9 @@ const styles = StyleSheet.create({
   locationFilterText: {
     flex: 1,
     color: theme.colors.textSecondary,
-    fontSize: 8,
+    fontSize: 9.5,
     fontWeight: "800",
-    letterSpacing: 0.8,
+    letterSpacing: 1,
   },
   locationFilterTextActive: {
     color: theme.colors.accent,
