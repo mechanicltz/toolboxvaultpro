@@ -837,12 +837,20 @@ def _normalise_tool_row(t: Dict[str, Any]) -> Dict[str, Any]:
         qty = 1
     qty = max(1, qty)
     unit_cost = float(t.get("cost") or 0)
+    # Multi-line serials for "Set" tools — every serial on its own line
+    # in the same Serial column. Falls back to the single serial otherwise.
+    if t.get("is_set") and (t.get("set_serials") or []):
+        serial_str = "\n".join(
+            [s for s in (t.get("set_serials") or []) if s]
+        )
+    else:
+        serial_str = t.get("serial_number") or ""
     return {
         "id": t.get("id"),
         "name": t.get("name") or "",
         "brand": t.get("brand") or "",
         "model": t.get("model") or "",
-        "serial": t.get("serial_number") or "",
+        "serial": serial_str,
         "category": t.get("category_name") or "",
         "location": t.get("location_name") or "",
         "dealer": t.get("dealer_name") or "",
@@ -916,7 +924,7 @@ async def _fetch_claims(db, user, options: Dict[str, Any]) -> Dict[str, Any]:
     if tool_ids:
         tools = await db.tools.find(
             {"id": {"$in": tool_ids}},
-            {"_id": 0, "id": 1, "serial": 1, "set_serials": 1, "is_set": 1},
+            {"_id": 0, "id": 1, "serial_number": 1, "set_serials": 1, "is_set": 1},
         ).to_list(len(tool_ids))
         tool_lookup = {t["id"]: t for t in tools}
 
@@ -936,7 +944,7 @@ async def _fetch_claims(db, user, options: Dict[str, Any]) -> Dict[str, Any]:
         if t.get("is_set") and (t.get("set_serials") or []):
             serial_str = "\n".join([s for s in (t.get("set_serials") or []) if s])
         else:
-            serial_str = t.get("serial") or ""
+            serial_str = t.get("serial_number") or ""
         rows.append({
             "id": it.get("id"),
             "tool_name": it.get("tool_name") or "",
