@@ -31,7 +31,7 @@ import { theme } from "../src/theme";
  *     bigger than the same fontSize on RN-web at the same logical
  *     viewport — bringing them visually in line.
  */
-const NATIVE_FONT_SCALE = Platform.select({ ios: 0.88, android: 0.92, default: 1 }) as number;
+const NATIVE_FONT_SCALE = Platform.select({ ios: 0.84, android: 0.88, default: 1 }) as number;
 
 // Disable iOS auto font scaling globally — must be set before any Text renders.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
