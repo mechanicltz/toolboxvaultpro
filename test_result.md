@@ -2005,6 +2005,13 @@ backend_ai_receipt_scan:
       - working: true
         agent: "testing"
         comment: "RETEST PASSED — 8/8 scenarios, 19/19 assertions green. Happy path now returns 200 with correct ReceiptScanResponse shape (all 10 keys, cost numeric, quantity int, raw dict-or-None). GPT-4o call succeeds end-to-end in ~1.5s. Unauthorized → 401; empty base64 → 400 'image_base64 is required'; invalid base64 → 400 'Invalid base64 image'. Regression GET /tools /dealers /auth/me all 200. Task complete."
+      - working: "NA"
+        agent: "main"
+        comment: |
+          MULTI-ITEM UPDATE: Added ReceiptItem model + items: List[ReceiptItem] + raw_text: str. Updated GPT-4o prompt to (a) request items array for multi-line receipts, (b) recognize "Part #" / "Item #" / "SKU" / "Catalog #" as serial_number, (c) include full raw_text OCR transcription so users can copy missing values. Top-level fields are mirrored from items[0] for backward-compat.
+      - working: true
+        agent: "testing"
+        comment: "MULTI-ITEM RETEST PASSED — 23/23 assertions green. Happy path returns full new shape: items: List[ReceiptItem], raw_text: str, dealer/purchase_date strings, top-level fields mirror items[0] (defaults '' / 0.0 / 1 when items empty), raw is dict. 400/401 error paths still correct. Backend log shows successful GPT-4o call with no tracebacks. Production-ready."
 
 agent_communication:
   - agent: "main"
