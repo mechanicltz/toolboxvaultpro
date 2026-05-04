@@ -1478,6 +1478,8 @@ class ImportPayload(BaseModel):
     rows: List[ImportRow]
     create_missing_categories: bool = True
     create_missing_tags: bool = True
+    create_missing_locations: bool = True
+    create_missing_dealers: bool = True
 
 
 def _norm(s: Optional[str]) -> str:
@@ -1552,6 +1554,12 @@ async def tools_import(payload: ImportPayload, user: User = Depends(get_current_
 
     created: List[Dict[str, Any]] = []
     errors: List[Dict[str, Any]] = []
+    auto_created = {
+        "categories": [],  # list of {id, name}
+        "tags": [],
+        "locations": [],
+        "dealers": [],
+    }
 
     for idx, raw in enumerate(payload.rows):
         try:
@@ -1575,8 +1583,9 @@ async def tools_import(payload: ImportPayload, user: User = Depends(get_current_
                     cats_by_name[key] = new_cat.dict()
                     category_id = new_cat.id
                     category_name = new_cat.name
+                    auto_created["categories"].append({"id": new_cat.id, "name": new_cat.name})
 
-            # Location — match existing only (don't auto-create — too rich)
+            # Location — match existing (case-insensitive) or auto-create
             location_id = None
             location_name = ""
             lname = _norm(raw.location)
@@ -1586,9 +1595,15 @@ async def tools_import(payload: ImportPayload, user: User = Depends(get_current_
                     l = locs_by_name[key]
                     location_id = l.get("id")
                     location_name = l.get("name") or lname
-                # else: silently leave unset (the row still imports)
+                elif payload.create_missing_locations:
+                    new_loc = Location(name=lname)
+                    await db.locations.insert_one(new_loc.dict())
+                    locs_by_name[key] = new_loc.dict()
+                    location_id = new_loc.id
+                    location_name = new_loc.name
+                    auto_created["locations"].append({"id": new_loc.id, "name": new_loc.name})
 
-            # Dealer — match existing only
+            # Dealer — match existing (case-insensitive) or auto-create
             dealer_id = None
             dealer_name = ""
             dname = _norm(raw.dealer)
@@ -1598,6 +1613,13 @@ async def tools_import(payload: ImportPayload, user: User = Depends(get_current_
                     d = dlrs_by_name[key]
                     dealer_id = d.get("id")
                     dealer_name = d.get("name") or dname
+                elif payload.create_missing_dealers:
+                    new_dlr = Dealer(name=dname)
+                    await db.dealers.insert_one(new_dlr.dict())
+                    dlrs_by_name[key] = new_dlr.dict()
+                    dealer_id = new_dlr.id
+                    dealer_name = new_dlr.name
+                    auto_created["dealers"].append({"id": new_dlr.id, "name": new_dlr.name})
 
             # Tags — comma-separated; auto-create if missing
             tag_ids: List[str] = []
@@ -1618,6 +1640,7 @@ async def tools_import(payload: ImportPayload, user: User = Depends(get_current_
                         tags_by_name[key] = new_tag.dict()
                         tag_ids.append(new_tag.id)
                         tag_names.append(new_tag.name)
+                        auto_created["tags"].append({"id": new_tag.id, "name": new_tag.name})
 
             qty = _to_int(raw.quantity, default=1)
             cost = _to_float(raw.cost)
@@ -1647,7 +1670,12 @@ async def tools_import(payload: ImportPayload, user: User = Depends(get_current_
         except Exception as e:
             errors.append({"row": idx + 1, "name": _norm(raw.name), "error": str(e)})
 
-    return {"created": len(created), "errors": errors, "ids": [c["id"] for c in created]}
+    return {
+        "created": len(created),
+        "errors": errors,
+        "ids": [c["id"] for c in created],
+        "auto_created": auto_created,
+    }
 
 
 # ---------------------------------------------------------------------------

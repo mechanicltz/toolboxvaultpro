@@ -506,9 +506,9 @@ export default function ImportExportScreen() {
           <Text style={styles.cardBody}>
             Import tools from any CSV or Excel (.xlsx) file — including exports from
             other inventory apps. Pick a file, then map each of its columns to a
-            Toolbox Vault field. Categories and Tags are auto-created if they don't
-            exist; Locations and Dealers are matched by name only (so create those
-            manually first for the cleanest result).
+            Toolbox Vault field. Missing Categories, Tags, Locations, and Dealers
+            are auto-created (matched case-insensitively by name, so duplicates
+            are skipped).
           </Text>
 
           <TouchableOpacity
@@ -723,6 +723,36 @@ export default function ImportExportScreen() {
                 ✅ Created {importResult.created} tool
                 {importResult.created === 1 ? "" : "s"}
               </Text>
+              {importResult.auto_created ? (() => {
+                const ac = importResult.auto_created;
+                const lines: { icon: keyof typeof Ionicons.glyphMap; label: string; items: any[] }[] = [
+                  { icon: "folder-outline", label: "categor", items: ac.categories || [] },
+                  { icon: "pricetag-outline", label: "tag", items: ac.tags || [] },
+                  { icon: "location-outline", label: "location", items: ac.locations || [] },
+                  { icon: "business-outline", label: "dealer", items: ac.dealers || [] },
+                ].filter((l) => l.items.length > 0);
+                if (!lines.length) return null;
+                return (
+                  <View style={{ marginTop: 8 }}>
+                    <Text style={styles.resultSub}>Auto-created (no duplicates):</Text>
+                    {lines.map((l, i) => (
+                      <View key={i} style={styles.autoCreatedRow}>
+                        <Ionicons name={l.icon} size={14} color={theme.colors.accent} />
+                        <Text style={styles.autoCreatedText} numberOfLines={2}>
+                          {l.items.length}{" "}
+                          {l.label === "categor"
+                            ? l.items.length === 1
+                              ? "category"
+                              : "categories"
+                            : `${l.label}${l.items.length === 1 ? "" : "s"}`}
+                          : {l.items.map((x: any) => x.name).slice(0, 6).join(", ")}
+                          {l.items.length > 6 ? `, …+${l.items.length - 6} more` : ""}
+                        </Text>
+                      </View>
+                    ))}
+                  </View>
+                );
+              })() : null}
               {importResult.errors?.length ? (
                 <View style={{ marginTop: 6 }}>
                   <Text style={styles.resultErr}>
@@ -994,6 +1024,24 @@ const styles = StyleSheet.create({
     color: theme.colors.textSecondary,
     fontSize: 11,
     marginTop: 2,
+  },
+  resultSub: {
+    color: theme.colors.textPrimary,
+    fontSize: 12,
+    fontWeight: "800",
+    letterSpacing: 0.5,
+    marginBottom: 4,
+  },
+  autoCreatedRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 6,
+    paddingVertical: 2,
+  },
+  autoCreatedText: {
+    color: theme.colors.textSecondary,
+    fontSize: 11,
+    flex: 1,
   },
   modalBg: {
     flex: 1,
