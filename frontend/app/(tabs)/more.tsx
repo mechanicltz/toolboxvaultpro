@@ -175,13 +175,20 @@ export default function MoreScreen() {
           onPress={() => router.push("/maintenance")}
         />
 
-        <Text style={styles.sectionLabel}>REPORTS</Text>
+        <Text style={styles.sectionLabel}>IMPORT / EXPORT</Text>
         <Row
           icon="document-text"
           title="Reports"
           subtitle="PDF / CSV exports & saved presets"
           testID="more-reports"
           onPress={() => router.push("/reports")}
+        />
+        <Row
+          icon="swap-horizontal"
+          title="Import / Export CSV"
+          subtitle="Bulk-upload tools or back up to a spreadsheet"
+          testID="more-import-export"
+          onPress={() => router.push("/import-export" as any)}
         />
 
         <Text style={styles.sectionLabel}>ORGANIZATION</Text>
@@ -205,13 +212,6 @@ export default function MoreScreen() {
           subtitle="Nested storage hierarchy"
           testID="more-locations"
           onPress={() => router.push("/locations")}
-        />
-        <Row
-          icon="swap-horizontal"
-          title="Import / Export CSV"
-          subtitle="Bulk-upload tools or back up to a spreadsheet"
-          testID="more-import-export"
-          onPress={() => router.push("/import-export" as any)}
         />
 
         <Text style={styles.sectionLabel}>DISPLAY</Text>
