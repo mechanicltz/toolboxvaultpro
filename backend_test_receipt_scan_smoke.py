@@ -1,183 +1,174 @@
-"""Smoke test for AI Receipt Scanner endpoint POST /api/ai/receipt-scan.
+"""Smoke test for POST /api/ai/receipt-scan after multi-item ReceiptItem update.
 
-Per review request:
-1. Happy path — valid small JPEG base64 → 200 with ReceiptScanResponse shape
-2. Empty input — 400 "image_base64 is required"
-3. Invalid base64 — 400 "Invalid base64 image" (or 500 with clear msg)
-4. Unauthorized — no Authorization header → 401
-5. Smoke regression — GET /api/tools, /api/dealers, /api/auth/me → 200
+Tests:
+1. Happy path — small JPEG → 200 ReceiptScanResponse with items[], raw_text, mirrored top-level fields.
+2. Empty input → 400 'image_base64 is required'.
+3. Invalid base64 → 400 'Invalid base64 image'.
+4. Unauthorized — no Auth header → 401.
+5. Smoke regression — GET /api/tools, /api/dealers, /api/auth/me → 200.
 """
 import os
-import base64
 import io
-import sys
+import base64
 import requests
 
-BASE = os.environ.get("BACKEND_URL") or "https://asset-locator-12.preview.emergentagent.com"
-API = f"{BASE.rstrip('/')}/api"
+BASE = os.environ.get("EXPO_PUBLIC_BACKEND_URL") or "https://asset-locator-12.preview.emergentagent.com"
+API = BASE.rstrip("/") + "/api"
+
 EMAIL = "subtest@example.com"
 PASSWORD = "password123"
 
-PASS = []
-FAIL = []
-
-
-def check(cond: bool, label: str, detail: str = ""):
-    if cond:
-        PASS.append(label)
-        print(f"  PASS: {label}")
-    else:
-        FAIL.append(f"{label} | {detail}")
-        print(f"  FAIL: {label} | {detail}")
-
+results = []
+def record(name, ok, detail=""):
+    results.append((name, ok, detail))
+    print(f"{'PASS' if ok else 'FAIL'}  {name}  {detail}")
 
 def login():
     r = requests.post(f"{API}/auth/login", json={"email": EMAIL, "password": PASSWORD}, timeout=30)
-    if r.status_code != 200:
-        print(f"FATAL: login {r.status_code} body={r.text[:300]}")
-        sys.exit(1)
+    r.raise_for_status()
     return r.json()["token"]
 
-
-def make_tiny_jpeg_b64() -> str:
-    """Return base64 of a real minimal 100x60 JPEG using Pillow."""
-    try:
-        from PIL import Image  # type: ignore
-
-        img = Image.new("RGB", (100, 60), color=(220, 220, 220))
-        # Draw something so the AI has any visual signal (still fine if it returns empty)
-        for y in range(60):
-            for x in range(100):
-                if (x + y) % 12 == 0:
-                    img.putpixel((x, y), (40, 40, 40))
-        buf = io.BytesIO()
-        img.save(buf, format="JPEG", quality=70)
-        return base64.b64encode(buf.getvalue()).decode("ascii")
-    except Exception:
-        # Fallback to a minimal valid JPEG byte sequence (1x1 white pixel)
-        # This is a known-good minimal JPEG.
-        hexdata = (
-            "ffd8ffe000104a46494600010100000100010000ffdb0043000806060706050806070707"
-            "09090808090b0c0a0b0a0a0a0c110d0d0d0d11181010100c1418181818141818181818181"
-            "8181818181818181818181818181818181818181818181818181818181818181818181818"
-            "18181818181818181818181818ffc00011080001000103011100021101031101ffc40015"
-            "00010100000000000000000000000000000007ffc4001411010000000000000000000000"
-            "00000000ffda000c03010002110311003f00b2c0ffd9"
-        )
-        return base64.b64encode(bytes.fromhex(hexdata)).decode("ascii")
-
+def make_jpeg_b64() -> str:
+    """Generate a small valid JPEG using Pillow."""
+    from PIL import Image
+    img = Image.new("RGB", (100, 60), (220, 220, 220))
+    for x in range(10, 90, 10):
+        for y in range(15, 50, 15):
+            for dx in range(5):
+                for dy in range(2):
+                    img.putpixel((x+dx, y+dy), (30, 30, 30))
+    buf = io.BytesIO()
+    img.save(buf, format="JPEG", quality=70)
+    return base64.b64encode(buf.getvalue()).decode("ascii")
 
 def main():
-    print(f"Testing against {API}")
     token = login()
-    auth = {"Authorization": f"Bearer {token}"}
-    print(f"Logged in as {EMAIL}")
+    H = {"Authorization": f"Bearer {token}"}
 
-    # ---- Test 4 first (cheap): unauthorized -------------------------------
-    print("\n[Test 4] Unauthorized — no Authorization header")
-    r = requests.post(f"{API}/ai/receipt-scan", json={"image_base64": "abc"}, timeout=20)
-    check(r.status_code == 401, "Test 4: POST /ai/receipt-scan without auth → 401",
-          f"got status={r.status_code} body={r.text[:200]}")
+    # TEST 4 — Unauthorized
+    r = requests.post(f"{API}/ai/receipt-scan", json={"image_base64": "x"}, timeout=30)
+    record("4. Unauthorized (no Auth header) -> 401", r.status_code == 401, f"status={r.status_code}")
 
-    # ---- Test 2: empty input ---------------------------------------------
-    print("\n[Test 2] Empty input")
-    r = requests.post(f"{API}/ai/receipt-scan", json={"image_base64": ""}, headers=auth, timeout=20)
-    check(r.status_code == 400, "Test 2: empty image_base64 → 400",
-          f"got status={r.status_code} body={r.text[:200]}")
-    if r.status_code == 400:
-        try:
-            detail = r.json().get("detail", "")
-        except Exception:
-            detail = ""
-        check(detail == "image_base64 is required",
-              "Test 2: detail == 'image_base64 is required'",
-              f"got detail={detail!r}")
+    # TEST 2 — Empty input
+    r = requests.post(f"{API}/ai/receipt-scan", json={"image_base64": ""}, headers=H, timeout=30)
+    try:
+        detail = r.json().get("detail", "")
+    except Exception:
+        detail = r.text
+    record("2. Empty image_base64 -> 400 'image_base64 is required'",
+           r.status_code == 400 and detail == "image_base64 is required",
+           f"status={r.status_code} detail={detail!r}")
 
-    # ---- Test 3: invalid base64 ------------------------------------------
-    print("\n[Test 3] Invalid base64 input")
-    r = requests.post(f"{API}/ai/receipt-scan", json={"image_base64": "not-base64!@#"},
-                      headers=auth, timeout=60)
-    # Acceptable: 400 with "Invalid base64 image" OR 500 with clear base64 decode error
-    if r.status_code == 400:
-        try:
-            detail = r.json().get("detail", "")
-        except Exception:
-            detail = ""
-        check(detail == "Invalid base64 image",
-              "Test 3: 400 with detail 'Invalid base64 image'",
-              f"got detail={detail!r}")
-    elif r.status_code == 500:
-        try:
-            detail = r.json().get("detail", "")
-        except Exception:
-            detail = r.text
-        # since b64decode validate=False is lenient, this branch may also accept
-        # if the AI step then chokes. Accept any 500 with non-empty detail.
-        check(bool(detail), "Test 3 (alt): 500 with non-empty detail",
-              f"got detail={detail!r}")
-        print(f"    note: 500 path accepted per review (detail={detail!r:.200})")
+    # TEST 3 — Invalid base64
+    r = requests.post(f"{API}/ai/receipt-scan", json={"image_base64": "not-base64!@#"}, headers=H, timeout=30)
+    try:
+        detail = r.json().get("detail", "")
+    except Exception:
+        detail = r.text
+    record("3. 'not-base64!@#' -> 400 'Invalid base64 image'",
+           r.status_code == 400 and detail == "Invalid base64 image",
+           f"status={r.status_code} detail={detail!r}")
+
+    # TEST 1 — Happy path with a real tiny JPEG
+    try:
+        img_b64 = make_jpeg_b64()
+        record("1a. JPEG generated (Pillow)", True, f"len={len(img_b64)} chars")
+    except Exception as e:
+        record("1a. JPEG generated", False, f"error: {e}")
+        return
+
+    r = requests.post(f"{API}/ai/receipt-scan", json={"image_base64": img_b64}, headers=H, timeout=120)
+    record("1b. Happy path -> 200", r.status_code == 200, f"status={r.status_code} body={r.text[:300]}")
+    if r.status_code != 200:
+        return
+
+    body = r.json()
+
+    # Required keys present
+    expected_keys = {
+        "dealer", "purchase_date", "raw_text", "items",
+        "name", "brand", "model", "serial_number", "cost", "quantity", "description", "raw",
+    }
+    missing = expected_keys - set(body.keys())
+    record("1c. Response has all expected keys (incl. items, raw_text)", not missing,
+           f"missing={missing}" if missing else f"keys={sorted(body.keys())}")
+
+    # items: list
+    items = body.get("items")
+    record("1d. items is a list", isinstance(items, list),
+           f"type={type(items).__name__} len={len(items) if isinstance(items,list) else 'N/A'}")
+
+    # items entries shape (if any)
+    if isinstance(items, list) and items:
+        it0 = items[0]
+        item_keys = {"name", "brand", "model", "serial_number", "cost", "quantity", "description"}
+        it_missing = item_keys - set(it0.keys())
+        record("1e. items[0] has all ReceiptItem fields", not it_missing,
+               f"missing={it_missing}" if it_missing else f"item0_keys={sorted(it0.keys())}")
+        record("1e2. items[0].cost is numeric", isinstance(it0.get("cost"), (int, float)),
+               f"cost={it0.get('cost')!r}")
+        record("1e3. items[0].quantity is int", isinstance(it0.get("quantity"), int),
+               f"quantity={it0.get('quantity')!r}")
+        record("1e4. items[0].name is str", isinstance(it0.get("name"), str), f"name={it0.get('name')!r}")
     else:
-        check(False, "Test 3: invalid base64 should return 400 or 500",
-              f"got status={r.status_code} body={r.text[:200]}")
+        record("1e. items is empty (acceptable for synthetic image)", True, "items=[]")
 
-    # ---- Test 1: happy path ----------------------------------------------
-    print("\n[Test 1] Happy path — tiny JPEG base64")
-    img_b64 = make_tiny_jpeg_b64()
-    print(f"    sending {len(img_b64)} chars of base64 JPEG")
-    r = requests.post(f"{API}/ai/receipt-scan", json={"image_base64": img_b64},
-                      headers=auth, timeout=120)
-    check(r.status_code == 200, "Test 1: POST /ai/receipt-scan → 200",
-          f"got status={r.status_code} body={r.text[:400]}")
-    if r.status_code == 200:
-        try:
-            data = r.json()
-        except Exception as e:
-            data = None
-            check(False, "Test 1: response is JSON", f"err={e}")
-        if isinstance(data, dict):
-            expected_keys = {"name", "brand", "model", "serial_number", "cost",
-                             "quantity", "purchase_date", "dealer", "description", "raw"}
-            missing = expected_keys - set(data.keys())
-            check(not missing,
-                  "Test 1: response has all ReceiptScanResponse keys",
-                  f"missing={missing} got={list(data.keys())}")
-            # Type checks
-            check(isinstance(data.get("name"), str), "Test 1: name is str")
-            check(isinstance(data.get("brand"), str), "Test 1: brand is str")
-            check(isinstance(data.get("model"), str), "Test 1: model is str")
-            check(isinstance(data.get("serial_number"), str), "Test 1: serial_number is str")
-            check(isinstance(data.get("cost"), (int, float)),
-                  "Test 1: cost is numeric (int|float)",
-                  f"type={type(data.get('cost')).__name__} val={data.get('cost')!r}")
-            check(isinstance(data.get("quantity"), int),
-                  "Test 1: quantity is int",
-                  f"type={type(data.get('quantity')).__name__} val={data.get('quantity')!r}")
-            check(isinstance(data.get("purchase_date"), str), "Test 1: purchase_date is str")
-            check(isinstance(data.get("dealer"), str), "Test 1: dealer is str")
-            check(isinstance(data.get("description"), str), "Test 1: description is str")
-            # raw can be dict or None
-            check(data.get("raw") is None or isinstance(data.get("raw"), dict),
-                  "Test 1: raw is dict or None")
-            print(f"    AI returned: name={data.get('name')!r} cost={data.get('cost')!r} "
-                  f"qty={data.get('quantity')!r} dealer={data.get('dealer')!r}")
+    # raw_text: string
+    rt = body.get("raw_text")
+    record("1f. raw_text is a string", isinstance(rt, str),
+           f"type={type(rt).__name__} len={len(rt) if isinstance(rt,str) else 'N/A'}")
 
-    # ---- Test 5: smoke regression ----------------------------------------
-    print("\n[Test 5] Smoke regression for authenticated GETs")
-    for path in ("/tools", "/dealers", "/auth/me"):
-        r = requests.get(f"{API}{path}", headers=auth, timeout=30)
-        check(r.status_code == 200, f"Test 5: GET {path} → 200",
-              f"got {r.status_code} body={r.text[:200]}")
+    # dealer / purchase_date strings
+    record("1g. dealer is str", isinstance(body.get("dealer"), str), f"dealer={body.get('dealer')!r}")
+    record("1h. purchase_date is str", isinstance(body.get("purchase_date"), str), f"purchase_date={body.get('purchase_date')!r}")
 
-    # ---- Summary ---------------------------------------------------------
-    print("\n" + "=" * 70)
-    print(f"PASSED: {len(PASS)}    FAILED: {len(FAIL)}")
-    if FAIL:
-        print("\nFAILURES:")
-        for f in FAIL:
-            print(f"  - {f}")
-        sys.exit(1)
-    print("\nAll smoke checks passed.")
+    # Top-level mirror logic
+    name = body.get("name"); brand = body.get("brand"); model = body.get("model")
+    sn = body.get("serial_number"); cost = body.get("cost"); qty = body.get("quantity"); desc = body.get("description")
+    record("1i. top-level name is str", isinstance(name, str), f"name={name!r}")
+    record("1j. top-level brand is str", isinstance(brand, str))
+    record("1k. top-level model is str", isinstance(model, str))
+    record("1l. top-level serial_number is str", isinstance(sn, str))
+    record("1m. top-level cost is numeric", isinstance(cost, (int, float)), f"cost={cost!r}")
+    record("1n. top-level quantity is int", isinstance(qty, int), f"qty={qty!r}")
+    record("1o. top-level description is str", isinstance(desc, str))
 
+    # Mirror correctness
+    if isinstance(items, list) and items:
+        it0 = items[0]
+        mirrors_ok = (
+            name == it0.get("name") and brand == it0.get("brand") and model == it0.get("model")
+            and sn == it0.get("serial_number") and cost == it0.get("cost")
+            and qty == it0.get("quantity") and desc == it0.get("description")
+        )
+        record("1p. top-level fields mirror items[0]", mirrors_ok,
+               f"items[0]={{name:{it0.get('name')!r}, cost:{it0.get('cost')!r}, qty:{it0.get('quantity')!r}}} top={{name:{name!r},cost:{cost!r},qty:{qty!r}}}")
+    else:
+        # Empty items → top-level should be empty/0 defaults
+        empty_ok = (name == "" and brand == "" and model == "" and sn == "" and (cost == 0 or cost == 0.0) and qty == 1 and desc == "")
+        record("1p. top-level empty/0 when items=[] (default ReceiptItem mirror)",
+               empty_ok,
+               f"name={name!r} brand={brand!r} sn={sn!r} cost={cost!r} qty={qty!r}")
+
+    # raw: dict or None
+    raw = body.get("raw")
+    record("1q. raw is dict or None", raw is None or isinstance(raw, dict), f"type={type(raw).__name__}")
+
+    # TEST 5 — Smoke regression
+    r = requests.get(f"{API}/tools", headers=H, timeout=30)
+    record("5a. GET /api/tools -> 200", r.status_code == 200, f"status={r.status_code}")
+    r = requests.get(f"{API}/dealers", headers=H, timeout=30)
+    record("5b. GET /api/dealers -> 200", r.status_code == 200, f"status={r.status_code}")
+    r = requests.get(f"{API}/auth/me", headers=H, timeout=30)
+    record("5c. GET /api/auth/me -> 200", r.status_code == 200, f"status={r.status_code}")
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    finally:
+        passed = sum(1 for _, ok, _ in results if ok)
+        total = len(results)
+        print(f"\n{'='*60}\n{passed}/{total} checks PASS, {total-passed} FAIL\n{'='*60}")
+        for n, ok, d in results:
+            if not ok:
+                print(f"FAIL: {n}  {d}")
