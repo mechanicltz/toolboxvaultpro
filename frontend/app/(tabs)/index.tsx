@@ -177,7 +177,7 @@ export default function HomeScreen() {
     invested: () => (
       <SummaryRow
         icon="cash"
-        label="INVESTED"
+        label="NET WORTH"
         value={`$${totalInvested.toFixed(2)}`}
         valueColor={theme.colors.success}
       />
@@ -202,7 +202,7 @@ export default function HomeScreen() {
       <SummaryRow
         icon="heart"
         label="WISH LIST"
-        value={`${wishlistCount} · $${wishlistTotal.toFixed(2)}`}
+        value={String(wishlistCount)}
         onPress={() => router.push("/wishlist")}
       />
     ),
