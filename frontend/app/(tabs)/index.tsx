@@ -350,7 +350,7 @@ function SummaryRow({
   return (
     <Wrapper style={styles.row} onPress={onPress} activeOpacity={0.65}>
       <View style={styles.rowIcon}>
-        <Ionicons name={icon} size={16} color={theme.colors.textPrimary} />
+        <Ionicons name={icon} size={18} color="#000" />
       </View>
       <View style={{ flex: 1, minWidth: 0 }}>
         <Text style={styles.rowLabel} numberOfLines={1}>
@@ -395,11 +395,7 @@ function DealerBalanceRow({
         activeOpacity={0.7}
       >
         <View style={styles.dealerIcon}>
-          <Ionicons
-            name="business"
-            size={14}
-            color={theme.colors.textPrimary}
-          />
+          <Ionicons name="business" size={18} color="#000" />
         </View>
         <Text style={styles.dealerName} numberOfLines={1}>
           {dealer.name} Accounts
@@ -520,13 +516,9 @@ const styles = StyleSheet.create({
     marginTop: 3,
   },
 
-  /* Main list */
+  /* Main list — claim-screen style: separate cards w/ rounded corners + small gap */
   list: {
-    backgroundColor: theme.colors.bgSecondary,
-    borderRadius: 10,
-    overflow: "hidden",
-    borderWidth: 1,
-    borderColor: theme.colors.border,
+    gap: 8,
   },
 
   row: {
@@ -535,29 +527,29 @@ const styles = StyleSheet.create({
     gap: 12,
     paddingHorizontal: 14,
     paddingVertical: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
+    backgroundColor: theme.colors.surface,
+    borderRadius: 10,
   },
   rowIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: theme.colors.accent,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: theme.colors.surface,
   },
   rowLabel: {
     color: theme.colors.textPrimary,
-    fontSize: 11,
-    fontWeight: "900",
-    letterSpacing: 1.4,
+    fontSize: 14,
+    fontWeight: "800",
+    letterSpacing: 0.3,
   },
   rowSub: {
     color: theme.colors.textMuted,
-    fontSize: 10,
-    fontWeight: "700",
-    marginTop: 2,
-    letterSpacing: 0.5,
+    fontSize: 11,
+    fontWeight: "600",
+    marginTop: 3,
+    letterSpacing: 0.3,
   },
   rowValue: {
     color: theme.colors.textPrimary,
@@ -566,43 +558,42 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
 
-  /* Dealer rows (two-line) */
+  /* Dealer rows (two-line) — same rounded card design */
   emptyInline: {
     color: theme.colors.textMuted,
     fontSize: 12,
     fontStyle: "italic",
     paddingHorizontal: 14,
-    paddingVertical: 10,
-    backgroundColor: theme.colors.bgSecondary,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
+    paddingVertical: 14,
+    backgroundColor: theme.colors.surface,
+    borderRadius: 10,
+    textAlign: "center",
   },
   dealerRow: {
     paddingHorizontal: 14,
     paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-    backgroundColor: theme.colors.bgSecondary,
+    backgroundColor: theme.colors.surface,
+    borderRadius: 10,
   },
   dealerHeader: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    gap: 12,
   },
   dealerIcon: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    backgroundColor: theme.colors.surface,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: theme.colors.accent,
     alignItems: "center",
     justifyContent: "center",
   },
   dealerName: {
     flex: 1,
     color: theme.colors.textPrimary,
-    fontSize: 11,
-    fontWeight: "900",
-    letterSpacing: 1.4,
+    fontSize: 14,
+    fontWeight: "800",
+    letterSpacing: 0.3,
   },
   dealerTotal: {
     color: theme.colors.textPrimary,
@@ -613,7 +604,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: 8,
     marginTop: 10,
-    marginLeft: 30,
+    marginLeft: 52,
   },
   dealerPill: {
     flex: 1,
@@ -625,7 +616,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: theme.colors.border,
     borderRadius: 999,
-    backgroundColor: theme.colors.surface,
+    backgroundColor: theme.colors.bg,
   },
   dealerPillLabel: {
     color: theme.colors.textPrimary,
