@@ -227,7 +227,7 @@ export default function ImportExportScreen() {
         <TouchableOpacity onPress={() => router.back()} hitSlop={10}>
           <Ionicons name="chevron-back" size={26} color={theme.colors.textPrimary} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>IMPORT / EXPORT CSV</Text>
+        <Text style={styles.headerTitle}>IMPORT / EXPORT DATABASE</Text>
         <View style={{ width: 26 }} />
       </View>
 

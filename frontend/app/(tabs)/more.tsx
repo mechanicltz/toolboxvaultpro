@@ -185,7 +185,7 @@ export default function MoreScreen() {
         />
         <Row
           icon="swap-horizontal"
-          title="Import / Export CSV"
+          title="Import / Export Database"
           subtitle="Bulk-upload tools or back up to a spreadsheet"
           testID="more-import-export"
           onPress={() => router.push("/import-export" as any)}
