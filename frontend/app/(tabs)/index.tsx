@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, ReactNode } from "react";
 import {
   View,
   Text,
@@ -6,7 +6,6 @@ import {
   ScrollView,
   TouchableOpacity,
   RefreshControl,
-  Image,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -17,18 +16,29 @@ import { PaymentModal } from "../../src/sections/PaymentModal";
 import { nextRouteDate, DAY_NAMES } from "../../src/route";
 import { formatDateUS } from "../../src/dateUtil";
 import { getCached, setCached } from "../../src/cache";
+import { usePrefs } from "../../src/prefs";
 
 export default function HomeScreen() {
   const router = useRouter();
+  const { prefs } = usePrefs();
   const [stats, setStats] = useState<any>(() => getCached("home_stats", {}));
   const [agg, setAgg] = useState<any>(() => getCached("home_agg", {}));
   const [tools, setTools] = useState<any[]>(() => getCached("tools", []));
   const [wishlist, setWishlist] = useState<any[]>(() => getCached("wishlist", []));
   const [dealers, setDealers] = useState<any[]>(() => getCached("dealers", []));
-  const [mnt, setMnt] = useState<any>(() => getCached("home_mnt", { overdue: 0, due_soon: 0, total: 0 }));
-  const [claims, setClaims] = useState<any>(() => getCached("claims_summary", { totals: { open: 0 } }));
+  const [mnt, setMnt] = useState<any>(() =>
+    getCached("home_mnt", { overdue: 0, due_soon: 0, total: 0 }),
+  );
+  const [claims, setClaims] = useState<any>(() =>
+    getCached("claims_summary", { totals: { open: 0 } }),
+  );
   const [refreshing, setRefreshing] = useState(false);
-  const [paymentTarget, setPaymentTarget] = useState<{ dealer: any; account: "credit" | "personal" } | null>(null);
+  const [paymentTarget, setPaymentTarget] = useState<{
+    dealer: any;
+    account: "credit" | "personal";
+  } | null>(null);
+
+  void stats;
 
   const load = useCallback(async () => {
     try {
@@ -38,8 +48,12 @@ export default function HomeScreen() {
         api.listTools({}).catch(() => []),
         api.listWishlist().catch(() => []),
         api.listDealers().catch(() => []),
-        api.upcomingMaintenance(30).catch(() => ({ overdue: 0, due_soon: 0, total: 0 })),
-        api.warrantyClaimsSummary().catch(() => ({ totals: { open: 0 } })),
+        api
+          .upcomingMaintenance(30)
+          .catch(() => ({ overdue: 0, due_soon: 0, total: 0 })),
+        api
+          .warrantyClaimsSummary()
+          .catch(() => ({ totals: { open: 0 } })),
       ]);
       setStats(setCached("home_stats", s));
       setAgg(setCached("home_agg", a));
@@ -56,7 +70,7 @@ export default function HomeScreen() {
   useFocusEffect(
     useCallback(() => {
       load();
-    }, [load])
+    }, [load]),
   );
 
   const onRefresh = async () => {
@@ -65,14 +79,11 @@ export default function HomeScreen() {
     setRefreshing(false);
   };
 
+  // ---------- Derived metrics ----------
   const totalItems = tools.length;
   const checkedOut = tools.filter((x) => x.is_checked_out).length;
   const forSaleCount = tools.filter((x) => x.for_sale && !x.is_sold).length;
   const lost = tools.filter((x) => x?.lost_status?.is_lost).length;
-  // Always trust the backend-computed extended total. The same calculation
-  // powers the Inventory Report's "Total Cost" — they will always match.
-  // Falls back to client-side qty×cost only if the aggregate endpoint
-  // failed to return.
   const aggTotal = Number(agg?.total_value);
   const totalInvested = Number.isFinite(aggTotal)
     ? aggTotal
@@ -89,17 +100,19 @@ export default function HomeScreen() {
   const dealersWithBalance = dealers
     .map((d) => ({
       ...d,
-      total: (Number(d.credit_balance) || 0) + (Number(d.personal_balance) || 0),
+      total:
+        (Number(d.credit_balance) || 0) + (Number(d.personal_balance) || 0),
     }))
     .filter((d) => d.total > 0)
     .sort((a, b) => b.total - a.total);
 
   const totalOwed = dealers.reduce(
-    (sum, d) => sum + (Number(d.credit_balance) || 0) + (Number(d.personal_balance) || 0),
-    0
+    (sum, d) =>
+      sum + (Number(d.credit_balance) || 0) + (Number(d.personal_balance) || 0),
+    0,
   );
 
-  // Compute the next dealer route across all dealers
+  // ---------- Next-route banner ----------
   const upcomingRoutes = dealers
     .map((d) => ({ dealer: d, when: nextRouteDate(d) }))
     .filter((x): x is { dealer: any; when: Date } => !!x.when);
@@ -108,17 +121,19 @@ export default function HomeScreen() {
     upcomingRoutes.sort((a, b) => a.when.getTime() - b.when.getTime());
     const earliest = upcomingRoutes[0].when.getTime();
     const sameDay = upcomingRoutes.filter(
-      (x) => x.when.getTime() === earliest
+      (x) => x.when.getTime() === earliest,
     );
     const dt = upcomingRoutes[0].when;
     const dateStr = `${DAY_NAMES[dt.getDay()]} ${formatDateUS(
-      dt.toISOString().slice(0, 10)
+      dt.toISOString().slice(0, 10),
     )}`;
     nextRouteBanner = {
       dateStr,
       dealers: sameDay.map((x) => x.dealer.name),
     };
   }
+
+  const visible = prefs.home_rows;
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
@@ -132,9 +147,14 @@ export default function HomeScreen() {
       <ScrollView
         contentContainerStyle={{ padding: 16, paddingBottom: 100 }}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.colors.accent} />
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={theme.colors.accent}
+          />
         }
       >
+        {/* Next dealer route — kept prominent and highlighted */}
         {nextRouteBanner && (
           <TouchableOpacity
             testID="next-route-banner"
@@ -142,174 +162,158 @@ export default function HomeScreen() {
             onPress={() => router.push("/dealers")}
             activeOpacity={0.85}
           >
-            <Ionicons name="map" size={22} color={theme.colors.accent} />
+            <View style={styles.routeIconWrap}>
+              <Ionicons name="map" size={22} color="#000" />
+            </View>
             <View style={{ flex: 1 }}>
               <Text style={styles.routeBannerLabel}>NEXT DEALER ROUTE</Text>
               <Text style={styles.routeBannerText}>
-                {nextRouteBanner.dealers.join(" & ")} on {nextRouteBanner.dateStr}
+                {nextRouteBanner.dealers.join(" & ")} · {nextRouteBanner.dateStr}
               </Text>
             </View>
-            <Ionicons name="chevron-forward" size={18} color={theme.colors.textMuted} />
+            <Ionicons name="chevron-forward" size={18} color={theme.colors.accent} />
           </TouchableOpacity>
         )}
 
-        <TouchableOpacity
-          testID="feedback-banner"
-          style={styles.feedbackBanner}
-          onPress={() => router.push("/feedback")}
-          activeOpacity={0.85}
-        >
-          <Ionicons name="chatbubble-ellipses" size={22} color={theme.colors.accent} />
-          <View style={{ flex: 1 }}>
-            <Text style={styles.routeBannerLabel}>CONTACT · REQUEST NEW FEATURE</Text>
-            <Text style={styles.routeBannerText}>
-              Report a bug or suggest an improvement
-            </Text>
-          </View>
-          <Ionicons name="chevron-forward" size={18} color={theme.colors.textMuted} />
-        </TouchableOpacity>
+        {/* The customizable scrollable list */}
+        <View style={styles.list}>
+          {visible.total_items && (
+            <SummaryRow
+              icon="cube"
+              label="TOTAL ITEMS"
+              value={String(totalItems)}
+              color={theme.colors.accent}
+              onPress={() => router.push("/inventory")}
+            />
+          )}
+          {visible.invested && (
+            <SummaryRow
+              icon="cash"
+              label="INVESTED"
+              value={`$${totalInvested.toFixed(2)}`}
+              color={theme.colors.success}
+            />
+          )}
+          {visible.checked_out && (
+            <SummaryRow
+              icon="swap-horizontal"
+              label="CHECKED OUT"
+              value={String(checkedOut)}
+              color={theme.colors.accentSecondary}
+              onPress={() => router.push("/inventory?filter=out")}
+            />
+          )}
+          {visible.selling && (
+            <SummaryRow
+              icon="pricetag"
+              label="SELLING"
+              value={String(forSaleCount)}
+              color={theme.colors.accent}
+              onPress={() => router.push("/for-sale")}
+            />
+          )}
+          {visible.wishlist && (
+            <SummaryRow
+              icon="heart"
+              label="WISH LIST"
+              value={`${wishlistCount} · $${wishlistTotal.toFixed(2)}`}
+              color={theme.colors.accent}
+              onPress={() => router.push("/wishlist")}
+            />
+          )}
+          {visible.lost && (
+            <SummaryRow
+              icon="warning"
+              label="LOST / STOLEN"
+              value={String(lost)}
+              color={theme.colors.danger}
+              onPress={() => router.push("/inventory?filter=lost")}
+            />
+          )}
+          {visible.maintenance && (
+            <SummaryRow
+              icon="settings"
+              label="MAINTENANCE DUE"
+              value={String(mnt.overdue + mnt.due_soon)}
+              sub={mnt.overdue > 0 ? `${mnt.overdue} OVERDUE` : "DUE 30D"}
+              color={mnt.overdue > 0 ? theme.colors.danger : theme.colors.accent}
+              onPress={() => router.push("/maintenance")}
+            />
+          )}
+          {visible.open_claims && (
+            <SummaryRow
+              icon="document-text"
+              label="OPEN CLAIMS"
+              value={String(claims?.totals?.open || 0)}
+              color={theme.colors.accent}
+              onPress={() => router.push("/claims")}
+            />
+          )}
 
-        {/* Hero stats grid */}
-        <View style={styles.gridRow}>
-          <StatCard
-            icon="cube"
-            label="TOTAL ITEMS"
-            value={String(totalItems)}
-            color={theme.colors.accent}
-            onPress={() => router.push("/inventory")}
-          />
-          <StatCard
-            icon="cash"
-            label="INVESTED"
-            value={`$${totalInvested.toFixed(0)}`}
-            color={theme.colors.success}
-          />
-        </View>
-
-        <View style={styles.gridRow}>
-          <StatCard
-            icon="swap-horizontal"
-            label="CHECKED OUT"
-            value={String(checkedOut)}
-            color={theme.colors.accentSecondary}
-            onPress={() => router.push("/inventory?filter=out")}
-          />
-          <StatCard
-            icon="pricetag"
-            label="SELLING"
-            value={String(forSaleCount)}
-            color={theme.colors.accent}
-            onPress={() => router.push("/for-sale")}
-          />
-        </View>
-
-        <View style={styles.gridRow}>
-          <StatCard
-            icon="heart"
-            label="WISH LIST"
-            value={`${wishlistCount}  ·  $${wishlistTotal.toFixed(0)}`}
-            color={theme.colors.accent}
-            onPress={() => router.push("/wishlist")}
-          />
-          <StatCard
-            icon="warning"
-            label="LOST/STOLEN"
-            value={String(lost)}
-            color={theme.colors.danger}
-            onPress={() => router.push("/inventory?filter=lost")}
-          />
-        </View>
-
-        <View style={styles.gridRow}>
-          <StatCard
-            icon="settings"
-            label="MAINTENANCE"
-            value={String(mnt.overdue + mnt.due_soon)}
-            color={mnt.overdue > 0 ? theme.colors.danger : theme.colors.accent}
-            sub={mnt.overdue > 0 ? `${mnt.overdue} OVERDUE` : "DUE 30D"}
-            onPress={() => router.push("/maintenance")}
-          />
-          <StatCard
-            icon="document-text"
-            label="OPEN CLAIMS"
-            value={String(claims?.totals?.open || 0)}
-            color={theme.colors.accent}
-            onPress={() => router.push("/claims")}
-          />
-        </View>
-
-        {/* Money owed to dealers */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionLabel}>OWED TO DEALERS</Text>
-            <Text style={styles.sectionTotal}>${totalOwed.toFixed(2)}</Text>
-          </View>
-          {dealersWithBalance.length === 0 ? (
-            <Text style={styles.empty}>No outstanding balances. 🎉</Text>
-          ) : (
-            dealersWithBalance.map((d) => (
-              <View key={d.id} style={styles.dealerCard}>
-                <TouchableOpacity
-                  style={{ flex: 1 }}
-                  onPress={() => router.push(`/dealer/${d.id}`)}
-                >
-                  <Text style={styles.dealerName}>{d.name}</Text>
-                  <View style={styles.balLine}>
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.balLabel}>CREDIT</Text>
-                      <Text
-                        style={[
-                          styles.balVal,
-                          d.credit_balance > 0
-                            ? { color: theme.colors.danger }
-                            : { color: theme.colors.success },
-                        ]}
-                      >
-                        ${(Number(d.credit_balance) || 0).toFixed(2)}
-                      </Text>
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.balLabel}>PERSONAL</Text>
-                      <Text
-                        style={[
-                          styles.balVal,
-                          d.personal_balance > 0
-                            ? { color: theme.colors.danger }
-                            : { color: theme.colors.success },
-                        ]}
-                      >
-                        ${(Number(d.personal_balance) || 0).toFixed(2)}
-                      </Text>
-                    </View>
-                  </View>
-                </TouchableOpacity>
-                <View style={{ flexDirection: "row", gap: 6 }}>
-                  {d.credit_balance > 0 && (
-                    <TouchableOpacity
-                      testID={`pay-credit-${d.id}`}
-                      style={styles.payBtn}
-                      onPress={() => setPaymentTarget({ dealer: d, account: "credit" })}
-                    >
-                      <Text style={styles.payBtnText}>PAY CREDIT</Text>
-                    </TouchableOpacity>
-                  )}
-                  {d.personal_balance > 0 && (
-                    <TouchableOpacity
-                      testID={`pay-personal-${d.id}`}
-                      style={styles.payBtn}
-                      onPress={() => setPaymentTarget({ dealer: d, account: "personal" })}
-                    >
-                      <Text style={styles.payBtnText}>PAY PERSONAL</Text>
-                    </TouchableOpacity>
-                  )}
-                </View>
-              </View>
-            ))
+          {/* Owed-to-dealers — this row is two-line because it expands into per-dealer rows with action buttons */}
+          {visible.owed_to_dealers && (
+            <>
+              <SummaryRow
+                icon="wallet"
+                label="OWED TO DEALERS"
+                value={`$${totalOwed.toFixed(2)}`}
+                color={
+                  totalOwed > 0 ? theme.colors.danger : theme.colors.success
+                }
+                onPress={() => router.push("/dealers")}
+              />
+              {dealersWithBalance.length === 0 ? (
+                <Text style={styles.emptyInline}>
+                  No outstanding balances. 🎉
+                </Text>
+              ) : (
+                dealersWithBalance.map((d) => (
+                  <DealerBalanceRow
+                    key={d.id}
+                    dealer={d}
+                    onOpenDealer={() => router.push(`/dealer/${d.id}`)}
+                    onPayCredit={() =>
+                      setPaymentTarget({ dealer: d, account: "credit" })
+                    }
+                    onPayPersonal={() =>
+                      setPaymentTarget({ dealer: d, account: "personal" })
+                    }
+                  />
+                ))
+              )}
+            </>
           )}
         </View>
 
+        {/* Feedback link at the bottom of the first page */}
+        <TouchableOpacity
+          testID="feedback-banner"
+          style={styles.feedbackRow}
+          onPress={() => router.push("/feedback")}
+          activeOpacity={0.85}
+        >
+          <Ionicons
+            name="chatbubble-ellipses"
+            size={18}
+            color={theme.colors.accent}
+          />
+          <View style={{ flex: 1 }}>
+            <Text style={styles.feedbackTitle}>
+              REPORT A BUG · REQUEST A FEATURE
+            </Text>
+            <Text style={styles.feedbackSub}>
+              Have an idea or hit a snag? Let us know.
+            </Text>
+          </View>
+          <Ionicons
+            name="chevron-forward"
+            size={18}
+            color={theme.colors.textMuted}
+          />
+        </TouchableOpacity>
+
         <Text style={styles.tip}>
-          Pull to refresh · Tap any card to drill in
+          Pull to refresh · Customize this list under MORE → DISPLAY
         </Text>
       </ScrollView>
 
@@ -329,13 +333,16 @@ export default function HomeScreen() {
   );
 }
 
-function StatCard({
+/* ---------------- Reusable row components ---------------- */
+
+function SummaryRow({
   icon,
   label,
   value,
   color,
   sub,
   onPress,
+  rightSlot,
 }: {
   icon: any;
   label: string;
@@ -343,17 +350,121 @@ function StatCard({
   color: string;
   sub?: string;
   onPress?: () => void;
+  rightSlot?: ReactNode;
 }) {
-  const Comp: any = onPress ? TouchableOpacity : View;
+  const Wrapper: any = onPress ? TouchableOpacity : View;
   return (
-    <Comp style={[styles.statCard, { borderLeftColor: color }]} onPress={onPress} activeOpacity={0.7}>
-      <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-        <Ionicons name={icon} size={14} color={color} />
-        <Text style={[styles.statLabel, { color }]}>{label}</Text>
+    <Wrapper
+      style={[styles.row, { borderLeftColor: color }]}
+      onPress={onPress}
+      activeOpacity={0.65}
+    >
+      <View style={[styles.rowIcon, { backgroundColor: `${color}22` }]}>
+        <Ionicons name={icon} size={16} color={color} />
       </View>
-      <Text style={styles.statValue}>{value}</Text>
-      {sub && <Text style={styles.statSub}>{sub}</Text>}
-    </Comp>
+      <View style={{ flex: 1, minWidth: 0 }}>
+        <Text style={[styles.rowLabel, { color }]} numberOfLines={1}>
+          {label}
+        </Text>
+        {sub ? <Text style={styles.rowSub}>{sub}</Text> : null}
+      </View>
+      <Text style={styles.rowValue} numberOfLines={1}>
+        {value}
+      </Text>
+      {rightSlot ? rightSlot : (onPress ? (
+        <Ionicons
+          name="chevron-forward"
+          size={16}
+          color={theme.colors.textMuted}
+          style={{ marginLeft: 8 }}
+        />
+      ) : null)}
+    </Wrapper>
+  );
+}
+
+function DealerBalanceRow({
+  dealer,
+  onOpenDealer,
+  onPayCredit,
+  onPayPersonal,
+}: {
+  dealer: any;
+  onOpenDealer: () => void;
+  onPayCredit: () => void;
+  onPayPersonal: () => void;
+}) {
+  const credit = Number(dealer.credit_balance) || 0;
+  const personal = Number(dealer.personal_balance) || 0;
+  const total = credit + personal;
+  return (
+    <View style={styles.dealerRow}>
+      <TouchableOpacity
+        style={styles.dealerHeader}
+        onPress={onOpenDealer}
+        activeOpacity={0.7}
+      >
+        <View style={styles.dealerIcon}>
+          <Ionicons name="business" size={14} color={theme.colors.accent} />
+        </View>
+        <Text style={styles.dealerName} numberOfLines={1}>
+          {dealer.name}
+        </Text>
+        <Text style={styles.dealerTotal}>${total.toFixed(2)}</Text>
+        <Ionicons
+          name="chevron-forward"
+          size={14}
+          color={theme.colors.textMuted}
+          style={{ marginLeft: 4 }}
+        />
+      </TouchableOpacity>
+      <View style={styles.dealerActionsRow}>
+        {credit > 0 && (
+          <TouchableOpacity
+            testID={`pay-credit-${dealer.id}`}
+            style={[styles.dealerPill, { borderColor: theme.colors.accent }]}
+            onPress={onPayCredit}
+          >
+            <Ionicons name="card" size={12} color={theme.colors.accent} />
+            <Text style={styles.dealerPillLabel}>CREDIT</Text>
+            <Text style={styles.dealerPillVal}>${credit.toFixed(2)}</Text>
+            <View style={styles.dealerPillCta}>
+              <Text style={styles.dealerPillCtaText}>PAY</Text>
+            </View>
+          </TouchableOpacity>
+        )}
+        {personal > 0 && (
+          <TouchableOpacity
+            testID={`pay-personal-${dealer.id}`}
+            style={[styles.dealerPill, { borderColor: theme.colors.accentSecondary }]}
+            onPress={onPayPersonal}
+          >
+            <Ionicons
+              name="person"
+              size={12}
+              color={theme.colors.accentSecondary}
+            />
+            <Text
+              style={[
+                styles.dealerPillLabel,
+                { color: theme.colors.accentSecondary },
+              ]}
+            >
+              PERSONAL
+            </Text>
+            <Text style={styles.dealerPillVal}>${personal.toFixed(2)}</Text>
+            <View
+              style={[
+                styles.dealerPillCta,
+                { backgroundColor: theme.colors.accentSecondary },
+              ]}
+            >
+              <Text style={styles.dealerPillCtaText}>PAY</Text>
+            </View>
+          </TouchableOpacity>
+        )}
+      </View>
+    </View>
   );
 }
 
@@ -368,82 +479,41 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.border,
   },
-  title: { color: theme.colors.textPrimary, fontSize: 22, fontWeight: "900", letterSpacing: 4 },
-  subtitle: { color: theme.colors.accent, fontSize: 10, fontWeight: "700", letterSpacing: 2, marginTop: 4 },
-  gridRow: { flexDirection: "row", gap: 10, marginBottom: 10 },
-  statCard: {
-    flex: 1,
-    backgroundColor: theme.colors.bgSecondary,
-    borderRadius: theme.radii.md,
-    padding: 14,
-    borderLeftWidth: 3,
-    minHeight: 80,
+  title: {
+    color: theme.colors.textPrimary,
+    fontSize: 22,
+    fontWeight: "900",
+    letterSpacing: 4,
   },
-  statLabel: { fontSize: 10, fontWeight: "900", letterSpacing: 1.5 },
-  statValue: { color: theme.colors.textPrimary, fontSize: 22, fontWeight: "900", marginTop: 6 },
-  statSub: { color: theme.colors.textMuted, fontSize: 10, fontWeight: "700", marginTop: 3 },
-  section: { marginTop: 14 },
-  sectionHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 10,
+  subtitle: {
+    color: theme.colors.accent,
+    fontSize: 10,
+    fontWeight: "700",
+    letterSpacing: 2,
+    marginTop: 4,
   },
-  sectionLabel: { color: theme.colors.textPrimary, fontSize: 12, fontWeight: "900", letterSpacing: 2 },
-  sectionTotal: { color: theme.colors.danger, fontSize: 16, fontWeight: "900" },
-  empty: { color: theme.colors.textMuted, fontSize: 12, fontStyle: "italic", paddingVertical: 16 },
-  dealerCard: {
-    backgroundColor: theme.colors.bgSecondary,
-    padding: 12,
-    borderRadius: theme.radii.sm,
-    borderLeftWidth: 3,
-    borderLeftColor: theme.colors.accent,
-    marginBottom: 8,
-  },
-  dealerName: { color: theme.colors.textPrimary, fontSize: 14, fontWeight: "900", letterSpacing: 1 },
-  balLine: { flexDirection: "row", marginTop: 8, gap: 16 },
-  balLabel: { color: theme.colors.textMuted, fontSize: 9, fontWeight: "800", letterSpacing: 1 },
-  balVal: { fontSize: 14, fontWeight: "900", marginTop: 2 },
-  payBtn: {
-    backgroundColor: theme.colors.accent,
-    paddingHorizontal: 10,
-    paddingVertical: 7,
-    borderRadius: 4,
-    marginTop: 10,
-  },
-  payBtnText: { color: "#000", fontWeight: "900", fontSize: 10, letterSpacing: 1 },
-  tip: {
-    color: theme.colors.textMuted,
-    fontSize: 11,
-    textAlign: "center",
-    fontStyle: "italic",
-    marginTop: 18,
-  },
+
+  /* Highlighted next-route banner */
   routeBanner: {
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
-    backgroundColor: theme.colors.bgSecondary,
+    backgroundColor: `${theme.colors.accent}15`,
     borderWidth: 1,
     borderColor: theme.colors.accent,
-    borderLeftWidth: 4,
-    borderRadius: 6,
+    borderLeftWidth: 5,
+    borderRadius: 10,
     paddingHorizontal: 14,
-    paddingVertical: 12,
-    marginBottom: 14,
+    paddingVertical: 14,
+    marginBottom: 16,
   },
-  feedbackBanner: {
-    flexDirection: "row",
+  routeIconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: theme.colors.accent,
     alignItems: "center",
-    gap: 12,
-    backgroundColor: theme.colors.bgSecondary,
-    borderWidth: 1,
-    borderColor: theme.colors.accent,
-    borderLeftWidth: 4,
-    borderRadius: 6,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    marginBottom: 14,
+    justifyContent: "center",
   },
   routeBannerLabel: {
     color: theme.colors.accent,
@@ -456,5 +526,169 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "800",
     marginTop: 3,
+  },
+
+  /* Main list */
+  list: {
+    backgroundColor: theme.colors.bgSecondary,
+    borderRadius: 10,
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+
+  row: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
+    borderLeftWidth: 3,
+    borderLeftColor: "transparent",
+  },
+  rowIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  rowLabel: {
+    fontSize: 11,
+    fontWeight: "900",
+    letterSpacing: 1.4,
+  },
+  rowSub: {
+    color: theme.colors.textMuted,
+    fontSize: 10,
+    fontWeight: "700",
+    marginTop: 2,
+    letterSpacing: 0.5,
+  },
+  rowValue: {
+    color: theme.colors.textPrimary,
+    fontSize: 16,
+    fontWeight: "900",
+    marginLeft: 8,
+  },
+
+  /* Dealer rows (two-line) */
+  emptyInline: {
+    color: theme.colors.textMuted,
+    fontSize: 12,
+    fontStyle: "italic",
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    backgroundColor: theme.colors.bgSecondary,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
+  },
+  dealerRow: {
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
+    backgroundColor: theme.colors.bg,
+  },
+  dealerHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  dealerIcon: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: `${theme.colors.accent}22`,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  dealerName: {
+    flex: 1,
+    color: theme.colors.textPrimary,
+    fontSize: 13,
+    fontWeight: "800",
+    letterSpacing: 0.5,
+  },
+  dealerTotal: {
+    color: theme.colors.danger,
+    fontSize: 13,
+    fontWeight: "900",
+  },
+  dealerActionsRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginTop: 8,
+    marginLeft: 30,
+  },
+  dealerPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+    borderWidth: 1,
+    borderRadius: 999,
+    backgroundColor: theme.colors.bgSecondary,
+  },
+  dealerPillLabel: {
+    color: theme.colors.accent,
+    fontSize: 9,
+    fontWeight: "900",
+    letterSpacing: 1,
+  },
+  dealerPillVal: {
+    color: theme.colors.textPrimary,
+    fontSize: 12,
+    fontWeight: "900",
+  },
+  dealerPillCta: {
+    backgroundColor: theme.colors.accent,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 999,
+    marginLeft: 4,
+  },
+  dealerPillCtaText: {
+    color: "#000",
+    fontSize: 10,
+    fontWeight: "900",
+    letterSpacing: 1,
+  },
+
+  /* Feedback */
+  feedbackRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+    marginTop: 18,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.bgSecondary,
+  },
+  feedbackTitle: {
+    color: theme.colors.textPrimary,
+    fontSize: 12,
+    fontWeight: "900",
+    letterSpacing: 1.2,
+  },
+  feedbackSub: {
+    color: theme.colors.textMuted,
+    fontSize: 11,
+    fontWeight: "600",
+    marginTop: 3,
+  },
+  tip: {
+    color: theme.colors.textMuted,
+    fontSize: 11,
+    textAlign: "center",
+    fontStyle: "italic",
+    marginTop: 14,
   },
 });

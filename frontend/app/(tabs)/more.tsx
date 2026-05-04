@@ -16,7 +16,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter, useFocusEffect } from "expo-router";
 import { theme } from "../../src/theme";
-import { usePrefs } from "../../src/prefs";
+import { usePrefs, HOME_ROW_LABELS, HomeRowKey } from "../../src/prefs";
 import { api } from "../../src/api";
 import { useAuth } from "../../src/AuthContext";
 
@@ -113,6 +113,14 @@ export default function MoreScreen() {
         <Text style={styles.subtitle}>{user?.email || "Manage everything"}</Text>
       </View>
       <ScrollView contentContainerStyle={{ paddingBottom: 100 }}>
+        <Row
+          icon="chatbubble-ellipses"
+          title="Report a Bug · Request a Feature"
+          subtitle="Send feedback directly to the developers"
+          testID="more-feedback"
+          onPress={() => router.push("/feedback")}
+        />
+
         <Text style={styles.sectionLabel}>ACCOUNT</Text>
 
         <Row
@@ -215,6 +223,29 @@ export default function MoreScreen() {
         />
 
         <Text style={styles.sectionLabel}>DISPLAY</Text>
+
+        {/* Home screen rows — pick which summary rows to show on Home */}
+        <View style={styles.homeRowsCard}>
+          <Text style={styles.homeRowsTitle}>HOME SCREEN ROWS</Text>
+          <Text style={styles.homeRowsHelp}>
+            Choose which summary rows appear on the Home tab.
+          </Text>
+          {(Object.keys(HOME_ROW_LABELS) as HomeRowKey[]).map((k) => (
+            <View key={k} style={styles.homeRowToggle}>
+              <Text style={styles.homeRowToggleLabel}>{HOME_ROW_LABELS[k]}</Text>
+              <Switch
+                testID={`home-row-${k}`}
+                value={prefs.home_rows[k]}
+                onValueChange={(v) =>
+                  update({ home_rows: { ...prefs.home_rows, [k]: v } })
+                }
+                trackColor={{ true: theme.colors.accent, false: theme.colors.border }}
+                thumbColor="#fff"
+              />
+            </View>
+          ))}
+        </View>
+
         <View style={styles.toggleRow}>
           <View style={styles.iconBox}>
             <Ionicons name="cash" size={20} color={theme.colors.accent} />
@@ -501,4 +532,41 @@ const styles = StyleSheet.create({
     marginRight: 6,
   },
   upgradePillText: { color: "#000", fontSize: 10, fontWeight: "900", letterSpacing: 1 },
+
+  homeRowsCard: {
+    marginHorizontal: 16,
+    marginBottom: 16,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    backgroundColor: theme.colors.surface,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: theme.colors.borderSubtle,
+  },
+  homeRowsTitle: {
+    color: theme.colors.accent,
+    fontSize: 11,
+    fontWeight: "900",
+    letterSpacing: 1.5,
+  },
+  homeRowsHelp: {
+    color: theme.colors.textSecondary,
+    fontSize: 11,
+    marginTop: 4,
+    marginBottom: 8,
+  },
+  homeRowToggle: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: 8,
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.borderSubtle,
+  },
+  homeRowToggleLabel: {
+    flex: 1,
+    color: theme.colors.textPrimary,
+    fontSize: 14,
+    fontWeight: "600",
+  },
 });
