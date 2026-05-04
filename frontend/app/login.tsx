@@ -60,6 +60,11 @@ export default function LoginScreen() {
           keyboardShouldPersistTaps="handled"
         >
           <View style={styles.brand}>
+            <Image
+              source={require("../assets/images/icon.png")}
+              style={styles.brandLogo}
+              resizeMode="contain"
+            />
             <Text style={styles.brandTitle}>TOOLBOX VAULT</Text>
             <Text style={styles.brandSub}>
               Inventory · Dealers · Warranties · Reports
@@ -201,6 +206,12 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.colors.bg },
   scroll: { padding: 24, flexGrow: 1, justifyContent: "center" },
   brand: { alignItems: "center", marginBottom: 28 },
+  brandLogo: {
+    width: 110,
+    height: 110,
+    marginBottom: 14,
+    borderRadius: 22,
+  },
   logoBox: {
     width: 72,
     height: 72,
