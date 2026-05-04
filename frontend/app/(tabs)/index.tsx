@@ -234,7 +234,7 @@ export default function HomeScreen() {
       <View style={styles.owedCluster}>
         <SummaryRow
           icon="wallet"
-          label="OWED TO DEALERS"
+          label="DEALER ACCOUNTS"
           value={`$${totalOwed.toFixed(2)}`}
           onPress={() => router.push("/dealers")}
         />
@@ -289,7 +289,7 @@ export default function HomeScreen() {
             activeOpacity={0.85}
           >
             <View style={styles.routeIconWrap}>
-              <Ionicons name="map" size={22} color="#000" />
+              <Ionicons name="map" size={22} color={theme.colors.accent} />
             </View>
             <View style={{ flex: 1 }}>
               <Text style={styles.routeBannerLabel}>NEXT DEALER ROUTE</Text>
@@ -387,9 +387,11 @@ function SummaryRow({
         </Text>
         {sub ? <Text style={styles.rowSub}>{sub}</Text> : null}
       </View>
-      <Text style={styles.rowValue} numberOfLines={1}>
-        {value}
-      </Text>
+      <View style={styles.rowValuePill}>
+        <Text style={styles.rowValue} numberOfLines={1}>
+          {value}
+        </Text>
+      </View>
       {rightSlot ? rightSlot : (onPress ? (
         <Ionicons
           name="chevron-forward"
@@ -491,9 +493,11 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: theme.colors.accent,
+    backgroundColor: theme.colors.bg,
     alignItems: "center",
     justifyContent: "center",
+    borderWidth: 1,
+    borderColor: theme.colors.accent,
   },
   routeBannerLabel: {
     color: theme.colors.accent,
@@ -545,11 +549,21 @@ const styles = StyleSheet.create({
     marginTop: 3,
     letterSpacing: 0.3,
   },
+  rowValuePill: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    backgroundColor: theme.colors.bg,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    minWidth: 76,
+    alignItems: "center",
+    marginLeft: 8,
+  },
   rowValue: {
     color: theme.colors.textPrimary,
-    fontSize: 12,
+    fontSize: 10,
     fontWeight: "900",
-    marginLeft: 8,
   },
 
   /* Dealer rows (two-line) — nested inside the OWED TO DEALERS card */

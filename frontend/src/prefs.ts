@@ -141,7 +141,7 @@ export const HOME_ROW_LABELS: Record<HomeRowKey, string> = {
   lost: "Lost / Stolen",
   maintenance: "Maintenance Due",
   open_claims: "Open Claims",
-  owed_to_dealers: "Owed to Dealers",
+  owed_to_dealers: "Dealer Accounts",
 };
 
 export const usePrefs = () => {
