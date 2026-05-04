@@ -134,6 +134,103 @@ export default function HomeScreen() {
   }
 
   const visible = prefs.home_rows;
+  const order = prefs.home_row_order;
+
+  // Lookup of how to render each row. We render in the user's chosen order
+  // and skip any rows the user has hidden.
+  const ROW_RENDERERS: Record<string, () => ReactNode> = {
+    total_items: () => (
+      <SummaryRow
+        icon="cube"
+        label="TOTAL ITEMS"
+        value={String(totalItems)}
+        onPress={() => router.push("/inventory")}
+      />
+    ),
+    invested: () => (
+      <SummaryRow
+        icon="cash"
+        label="INVESTED"
+        value={`$${totalInvested.toFixed(2)}`}
+      />
+    ),
+    checked_out: () => (
+      <SummaryRow
+        icon="swap-horizontal"
+        label="CHECKED OUT"
+        value={String(checkedOut)}
+        onPress={() => router.push("/inventory?filter=out")}
+      />
+    ),
+    selling: () => (
+      <SummaryRow
+        icon="pricetag"
+        label="SELLING"
+        value={String(forSaleCount)}
+        onPress={() => router.push("/for-sale")}
+      />
+    ),
+    wishlist: () => (
+      <SummaryRow
+        icon="heart"
+        label="WISH LIST"
+        value={`${wishlistCount} · $${wishlistTotal.toFixed(2)}`}
+        onPress={() => router.push("/wishlist")}
+      />
+    ),
+    lost: () => (
+      <SummaryRow
+        icon="warning"
+        label="LOST / STOLEN"
+        value={String(lost)}
+        onPress={() => router.push("/inventory?filter=lost")}
+      />
+    ),
+    maintenance: () => (
+      <SummaryRow
+        icon="settings"
+        label="MAINTENANCE DUE"
+        value={String(mnt.overdue + mnt.due_soon)}
+        sub={mnt.overdue > 0 ? `${mnt.overdue} OVERDUE` : "DUE 30D"}
+        onPress={() => router.push("/maintenance")}
+      />
+    ),
+    open_claims: () => (
+      <SummaryRow
+        icon="document-text"
+        label="OPEN CLAIMS"
+        value={String(claims?.totals?.open || 0)}
+        onPress={() => router.push("/claims")}
+      />
+    ),
+    owed_to_dealers: () => (
+      <>
+        <SummaryRow
+          icon="wallet"
+          label="OWED TO DEALERS"
+          value={`$${totalOwed.toFixed(2)}`}
+          onPress={() => router.push("/dealers")}
+        />
+        {dealersWithBalance.length === 0 ? (
+          <Text style={styles.emptyInline}>No outstanding balances. 🎉</Text>
+        ) : (
+          dealersWithBalance.map((d) => (
+            <DealerBalanceRow
+              key={d.id}
+              dealer={d}
+              onOpenDealer={() => router.push(`/dealer/${d.id}`)}
+              onPayCredit={() =>
+                setPaymentTarget({ dealer: d, account: "credit" })
+              }
+              onPayPersonal={() =>
+                setPaymentTarget({ dealer: d, account: "personal" })
+              }
+            />
+          ))
+        )}
+      </>
+    ),
+  };
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
@@ -177,100 +274,10 @@ export default function HomeScreen() {
 
         {/* The customizable scrollable list */}
         <View style={styles.list}>
-          {visible.total_items && (
-            <SummaryRow
-              icon="cube"
-              label="TOTAL ITEMS"
-              value={String(totalItems)}
-              onPress={() => router.push("/inventory")}
-            />
-          )}
-          {visible.invested && (
-            <SummaryRow
-              icon="cash"
-              label="INVESTED"
-              value={`$${totalInvested.toFixed(2)}`}
-            />
-          )}
-          {visible.checked_out && (
-            <SummaryRow
-              icon="swap-horizontal"
-              label="CHECKED OUT"
-              value={String(checkedOut)}
-              onPress={() => router.push("/inventory?filter=out")}
-            />
-          )}
-          {visible.selling && (
-            <SummaryRow
-              icon="pricetag"
-              label="SELLING"
-              value={String(forSaleCount)}
-              onPress={() => router.push("/for-sale")}
-            />
-          )}
-          {visible.wishlist && (
-            <SummaryRow
-              icon="heart"
-              label="WISH LIST"
-              value={`${wishlistCount} · $${wishlistTotal.toFixed(2)}`}
-              onPress={() => router.push("/wishlist")}
-            />
-          )}
-          {visible.lost && (
-            <SummaryRow
-              icon="warning"
-              label="LOST / STOLEN"
-              value={String(lost)}
-              onPress={() => router.push("/inventory?filter=lost")}
-            />
-          )}
-          {visible.maintenance && (
-            <SummaryRow
-              icon="settings"
-              label="MAINTENANCE DUE"
-              value={String(mnt.overdue + mnt.due_soon)}
-              sub={mnt.overdue > 0 ? `${mnt.overdue} OVERDUE` : "DUE 30D"}
-              onPress={() => router.push("/maintenance")}
-            />
-          )}
-          {visible.open_claims && (
-            <SummaryRow
-              icon="document-text"
-              label="OPEN CLAIMS"
-              value={String(claims?.totals?.open || 0)}
-              onPress={() => router.push("/claims")}
-            />
-          )}
-
-          {/* Owed-to-dealers — this row is two-line because it expands into per-dealer rows with action buttons */}
-          {visible.owed_to_dealers && (
-            <>
-              <SummaryRow
-                icon="wallet"
-                label="OWED TO DEALERS"
-                value={`$${totalOwed.toFixed(2)}`}
-                onPress={() => router.push("/dealers")}
-              />
-              {dealersWithBalance.length === 0 ? (
-                <Text style={styles.emptyInline}>
-                  No outstanding balances. 🎉
-                </Text>
-              ) : (
-                dealersWithBalance.map((d) => (
-                  <DealerBalanceRow
-                    key={d.id}
-                    dealer={d}
-                    onOpenDealer={() => router.push(`/dealer/${d.id}`)}
-                    onPayCredit={() =>
-                      setPaymentTarget({ dealer: d, account: "credit" })
-                    }
-                    onPayPersonal={() =>
-                      setPaymentTarget({ dealer: d, account: "personal" })
-                    }
-                  />
-                ))
-              )}
-            </>
+          {order.map((k) =>
+            visible[k] ? (
+              <View key={k}>{ROW_RENDERERS[k]?.()}</View>
+            ) : null,
           )}
         </View>
 

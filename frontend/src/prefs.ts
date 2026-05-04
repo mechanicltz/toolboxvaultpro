@@ -21,6 +21,7 @@ export type Prefs = {
   warranty_alerts: boolean;
   show_details_summary: boolean;
   home_rows: HomeRowVis;
+  home_row_order: HomeRowKey[];
 };
 
 const KEY = "toolbox_prefs_v2";
@@ -38,18 +39,53 @@ const DEFAULT_HOME_ROWS: HomeRowVis = {
   owed_to_dealers: true,
 };
 
+const DEFAULT_HOME_ROW_ORDER: HomeRowKey[] = [
+  "total_items",
+  "invested",
+  "checked_out",
+  "maintenance",
+  "open_claims",
+  "owed_to_dealers",
+  "selling",
+  "wishlist",
+  "lost",
+];
+
 const DEFAULTS: Prefs = {
   show_prices: true,
   warranty_alerts: true,
   show_details_summary: false,
   home_rows: DEFAULT_HOME_ROWS,
+  home_row_order: DEFAULT_HOME_ROW_ORDER,
 };
 
 export const loadPrefs = async (): Promise<Prefs> => {
+  // Ensure the saved order array always has every known row key exactly once
+  const normalizeOrder = (arr: any): HomeRowKey[] => {
+    const seen = new Set<string>();
+    const out: HomeRowKey[] = [];
+    if (Array.isArray(arr)) {
+      for (const k of arr) {
+        if (
+          typeof k === "string" &&
+          (DEFAULT_HOME_ROW_ORDER as string[]).includes(k) &&
+          !seen.has(k)
+        ) {
+          seen.add(k);
+          out.push(k as HomeRowKey);
+        }
+      }
+    }
+    // Append any keys that weren't in the saved order yet (so adding a new
+    // metric in a future version doesn't disappear).
+    for (const k of DEFAULT_HOME_ROW_ORDER) {
+      if (!seen.has(k)) out.push(k);
+    }
+    return out;
+  };
   try {
     const raw = await AsyncStorage.getItem(KEY);
     if (!raw) {
-      // Migrate legacy v1 prefs (which had no home_rows)
       const legacy = await AsyncStorage.getItem(LEGACY_KEY);
       if (legacy) {
         try {
@@ -58,6 +94,7 @@ export const loadPrefs = async (): Promise<Prefs> => {
             ...DEFAULTS,
             ...lp,
             home_rows: { ...DEFAULT_HOME_ROWS, ...(lp.home_rows || {}) },
+            home_row_order: normalizeOrder(lp.home_row_order),
           };
         } catch {
           return DEFAULTS;
@@ -70,6 +107,7 @@ export const loadPrefs = async (): Promise<Prefs> => {
       ...DEFAULTS,
       ...parsed,
       home_rows: { ...DEFAULT_HOME_ROWS, ...(parsed.home_rows || {}) },
+      home_row_order: normalizeOrder(parsed.home_row_order),
     };
   } catch {
     return DEFAULTS;
@@ -85,6 +123,10 @@ export const savePrefs = async (prefs: Partial<Prefs>) => {
       prefs.home_rows !== undefined
         ? { ...current.home_rows, ...prefs.home_rows }
         : current.home_rows,
+    home_row_order:
+      prefs.home_row_order !== undefined
+        ? prefs.home_row_order
+        : current.home_row_order,
   };
   await AsyncStorage.setItem(KEY, JSON.stringify(merged));
   return merged;

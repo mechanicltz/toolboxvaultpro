@@ -224,26 +224,62 @@ export default function MoreScreen() {
 
         <Text style={styles.sectionLabel}>DISPLAY</Text>
 
-        {/* Home screen rows — pick which summary rows to show on Home */}
+        {/* Home screen rows — pick which summary rows to show on Home and re-order them */}
         <View style={styles.homeRowsCard}>
           <Text style={styles.homeRowsTitle}>HOME SCREEN ROWS</Text>
           <Text style={styles.homeRowsHelp}>
-            Choose which summary rows appear on the Home tab.
+            Toggle visibility · use ↑↓ to reorder. Top of the list shows first on Home.
           </Text>
-          {(Object.keys(HOME_ROW_LABELS) as HomeRowKey[]).map((k) => (
-            <View key={k} style={styles.homeRowToggle}>
-              <Text style={styles.homeRowToggleLabel}>{HOME_ROW_LABELS[k]}</Text>
-              <Switch
-                testID={`home-row-${k}`}
-                value={prefs.home_rows[k]}
-                onValueChange={(v) =>
-                  update({ home_rows: { ...prefs.home_rows, [k]: v } })
-                }
-                trackColor={{ true: theme.colors.accent, false: theme.colors.border }}
-                thumbColor="#fff"
-              />
-            </View>
-          ))}
+          {prefs.home_row_order.map((k, idx) => {
+            const isFirst = idx === 0;
+            const isLast = idx === prefs.home_row_order.length - 1;
+            const moveUp = () => {
+              if (isFirst) return;
+              const next = [...prefs.home_row_order];
+              [next[idx - 1], next[idx]] = [next[idx], next[idx - 1]];
+              update({ home_row_order: next });
+            };
+            const moveDown = () => {
+              if (isLast) return;
+              const next = [...prefs.home_row_order];
+              [next[idx + 1], next[idx]] = [next[idx], next[idx + 1]];
+              update({ home_row_order: next });
+            };
+            return (
+              <View key={k} style={styles.homeRowToggle}>
+                <View style={styles.homeRowMoveCol}>
+                  <TouchableOpacity
+                    testID={`home-row-up-${k}`}
+                    onPress={moveUp}
+                    disabled={isFirst}
+                    style={[styles.homeRowMoveBtn, isFirst && { opacity: 0.25 }]}
+                    hitSlop={6}
+                  >
+                    <Ionicons name="chevron-up" size={16} color={theme.colors.accent} />
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    testID={`home-row-down-${k}`}
+                    onPress={moveDown}
+                    disabled={isLast}
+                    style={[styles.homeRowMoveBtn, isLast && { opacity: 0.25 }]}
+                    hitSlop={6}
+                  >
+                    <Ionicons name="chevron-down" size={16} color={theme.colors.accent} />
+                  </TouchableOpacity>
+                </View>
+                <Text style={styles.homeRowToggleLabel}>{HOME_ROW_LABELS[k]}</Text>
+                <Switch
+                  testID={`home-row-${k}`}
+                  value={prefs.home_rows[k]}
+                  onValueChange={(v) =>
+                    update({ home_rows: { ...prefs.home_rows, [k]: v } })
+                  }
+                  trackColor={{ true: theme.colors.accent, false: theme.colors.border }}
+                  thumbColor="#fff"
+                />
+              </View>
+            );
+          })}
         </View>
 
         <View style={styles.toggleRow}>
@@ -558,10 +594,24 @@ const styles = StyleSheet.create({
   homeRowToggle: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
+    gap: 10,
     paddingVertical: 8,
     borderTopWidth: 1,
     borderTopColor: theme.colors.borderSubtle,
+  },
+  homeRowMoveCol: {
+    flexDirection: "column",
+    gap: 2,
+  },
+  homeRowMoveBtn: {
+    width: 26,
+    height: 22,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: 4,
+    backgroundColor: theme.colors.bg,
   },
   homeRowToggleLabel: {
     flex: 1,
