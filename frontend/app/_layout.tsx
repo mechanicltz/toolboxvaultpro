@@ -1,7 +1,14 @@
 import { Stack, useRouter, useSegments } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
-import { View, ActivityIndicator } from "react-native";
+import {
+  View,
+  ActivityIndicator,
+  Text as RNText,
+  TextInput as RNTextInput,
+  StyleSheet,
+  Platform,
+} from "react-native";
 import { useEffect } from "react";
 import { AuroraBackground } from "../src/Aurora";
 import { BottomBar } from "../src/BottomBar";
@@ -10,6 +17,57 @@ import { AuthProvider, useAuth } from "../src/AuthContext";
 import { ResponsiveContainer } from "../src/ResponsiveContainer";
 import { NetworkProvider, OfflineBanner } from "../src/NetworkProvider";
 import { theme } from "../src/theme";
+
+/**
+ * Make native (iOS Expo Go / TestFlight) layouts visually match the web
+ * preview rendering.
+ *
+ *  1. Disable iOS Dynamic Type so a user's accessibility "larger text"
+ *     setting cannot inflate every font size and break tight tab/header
+ *     layouts.
+ *  2. On iOS / Android only, monkey-patch the Text component's render
+ *     so every Text gets its fontSize multiplied by NATIVE_FONT_SCALE.
+ *     We chose 0.88 because RN-iOS's default SF rendering looks ~12%
+ *     bigger than the same fontSize on RN-web at the same logical
+ *     viewport — bringing them visually in line.
+ */
+const NATIVE_FONT_SCALE = Platform.select({ ios: 0.88, android: 0.92, default: 1 }) as number;
+
+// Disable iOS auto font scaling globally — must be set before any Text renders.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const TextAny = RNText as any;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const TextInputAny = RNTextInput as any;
+
+TextAny.defaultProps = TextAny.defaultProps || {};
+TextAny.defaultProps.allowFontScaling = false;
+TextAny.defaultProps.maxFontSizeMultiplier = 1;
+TextInputAny.defaultProps = TextInputAny.defaultProps || {};
+TextInputAny.defaultProps.allowFontScaling = false;
+TextInputAny.defaultProps.maxFontSizeMultiplier = 1;
+
+// Monkey-patch render so every Text on native gets its fontSize scaled.
+// (Web is left untouched — its rendering is the target we're matching.)
+if (Platform.OS !== "web" && NATIVE_FONT_SCALE !== 1 && !TextAny.__tv_patched__) {
+  TextAny.__tv_patched__ = true;
+  const origRender = TextAny.render;
+  if (typeof origRender === "function") {
+    TextAny.render = function patchedTextRender(props: any, ref: any) {
+      let nextProps = props;
+      if (props && props.style) {
+        const flat = StyleSheet.flatten(props.style);
+        if (flat && typeof flat.fontSize === "number") {
+          const scaled = Math.round(flat.fontSize * NATIVE_FONT_SCALE);
+          nextProps = {
+            ...props,
+            style: [props.style, { fontSize: scaled }],
+          };
+        }
+      }
+      return origRender.call(this, nextProps, ref);
+    };
+  }
+}
 
 function AuthGate({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();

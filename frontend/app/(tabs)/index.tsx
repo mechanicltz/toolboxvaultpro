@@ -350,7 +350,7 @@ function SummaryRow({
   return (
     <Wrapper style={styles.row} onPress={onPress} activeOpacity={0.65}>
       <View style={styles.rowIcon}>
-        <Ionicons name={icon} size={18} color="#000" />
+        <Ionicons name={icon} size={18} color={theme.colors.accent} />
       </View>
       <View style={{ flex: 1, minWidth: 0 }}>
         <Text style={styles.rowLabel} numberOfLines={1}>
@@ -395,7 +395,7 @@ function DealerBalanceRow({
         activeOpacity={0.7}
       >
         <View style={styles.dealerIcon}>
-          <Ionicons name="business" size={18} color="#000" />
+          <Ionicons name="business" size={18} color={theme.colors.accent} />
         </View>
         <Text style={styles.dealerName} numberOfLines={1}>
           {dealer.name} Accounts
@@ -534,9 +534,11 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: theme.colors.accent,
+    backgroundColor: theme.colors.bg,
     alignItems: "center",
     justifyContent: "center",
+    borderWidth: 1,
+    borderColor: theme.colors.border,
   },
   rowLabel: {
     color: theme.colors.textPrimary,
@@ -584,9 +586,11 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: theme.colors.accent,
+    backgroundColor: theme.colors.bg,
     alignItems: "center",
     justifyContent: "center",
+    borderWidth: 1,
+    borderColor: theme.colors.border,
   },
   dealerName: {
     flex: 1,
