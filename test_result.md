@@ -334,10 +334,49 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Feedback endpoint — POST /api/feedback (rate-limit IP-keying bug)"
+    - "Import/Export Database — XLSX export + import end-to-end (format='xlsx')"
+    - "Import/Export Database — Column mapping UX for CSV/XLSX imports"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
+
+agent_communication:
+  - agent: "main"
+    message: "Enhanced Import/Export Database screen in /app/frontend/app/import-export.tsx:
+      (1) Added XLSX file support on the import path — file picker now accepts .xlsx, reads the file as base64 (native) or via fetch→ArrayBuffer→base64 (web), and dispatches to parseXlsx() from /app/frontend/src/csvIO.ts. CSV path unchanged.
+      (2) Added a CSV ↔ EXCEL (XLSX) format toggle on the export card (buttons testID 'fmt-csv' and 'fmt-xlsx'). Export button label reflects selection ('EXPORT N FIELDS AS CSV' / '… AS XLSX'). Backend POST /api/tools/export-csv already accepts {format:'xlsx'|'csv'} and returns {filename, base64, mime, rows, fields, format}.
+      (3) Added a live mapping status banner under the column-mapping section: shows whether the required 'Name' field is mapped (green ✓ / red !), how many columns are mapped out of total, and warns about duplicate mappings (same system field on multiple columns).
+      (4) Added 'AUTO-MAP' (re-runs the header guesser) and 'CLEAR' buttons in the mapping header.
+      (5) Required-field (Name) picker button gets an accent border + star icon; duplicate-mapped picker buttons get a warning border.
+      (6) Renamed cards to 'EXPORT TO SPREADSHEET' and 'IMPORT FROM SPREADSHEET' and updated button label to 'CHOOSE CSV OR EXCEL FILE'.
+      (7) Fixed a Metro fast-resolver crash by importing 'xlsx/xlsx.js' directly (the package's `main` field wasn't being resolved correctly by expo's fast resolver).
+      Backend untouched — existing POST /api/tools/export-csv already supports format='xlsx' via openpyxl and POST /api/tools/import accepts normalised rows. Please regression-test (a) POST /api/tools/export-csv with {format:'xlsx', fields:['name','brand','cost']} returns an openpyxl xlsx blob (base64 decodes to a valid zip starting with PK), and (b) POST /api/tools/import with sample rows still creates tools (unchanged contract). Frontend screenshot captured at /tmp/ie-top.png shows CSV/XLSX toggle + 17 fields + 'EXPORT 17 FIELDS AS CSV' button + new IMPORT FROM SPREADSHEET card with 'CHOOSE CSV OR EXCEL FILE' button. Test credentials: subtest@example.com / password123."
+
+backend_import_export:
+  - task: "Import/Export Database — XLSX export (openpyxl) + CSV/XLSX format branching"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "POST /api/tools/export-csv now accepts {fields:[...], format:'csv'|'xlsx'}. When format='xlsx', uses openpyxl to build an .xlsx workbook with bold+amber header row, frozen header, and auto-sized columns; returns {filename:'toolbox-vault-export-YYYY-MM-DD.xlsx', base64, mime:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', rows, fields, format:'xlsx'}. When format='csv' (or omitted), legacy CSV path returns text/csv base64. POST /api/tools/import unchanged — accepts normalised {rows:[{name, brand, ...}], create_missing_categories, create_missing_tags}. Frontend now sends XLSX parsed client-side into the same normalised-row payload, so backend import is format-agnostic. Need to verify: (a) xlsx export produces a valid zip (starts with 'PK\\x03\\x04') with the requested columns, (b) csv export unchanged, (c) import still creates tools correctly when given mapped rows, and (d) invalid format value silently falls back to csv."
+      - working: true
+        agent: "testing"
+        comment: "PASS — 66/66 checks via /app/backend_test_import_export_xlsx.py against EXPO_PUBLIC_BACKEND_URL/api with subtest@example.com/password123.
+          (1) GET /api/tools/export-fields → 200 with {fields:[{id,label},...]}. Exactly 17 fields, all expected ids present: name, brand, model, serial_number, quantity, cost, category, location, dealer, tags, condition, purchase_date, warranty_expiry, description, is_consumable, is_set, set_serials. Each entry has both id+label keys.
+          (2a) POST /api/tools/export-csv {fields:['name','brand','cost'], format:'csv'} → 200. filename='toolbox-vault-export-2026-05-04.csv' (ends .csv). mime='text/csv'. rows=8 (int). fields round-trip=['name','brand','cost']. base64 decodes to CSV text whose first line equals 'Name,Brand,Cost' exactly. format='csv'.
+          (2b) Same body with format:'xlsx' → 200. filename ends .xlsx. mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'. fields round-trip. format='xlsx'. base64 decodes to bytes starting with b'PK\\x03\\x04' (ZIP signature). openpyxl.load_workbook(BytesIO(decoded)) succeeds; ws[1] cell values == ['Name','Brand','Cost'] — verified the bold+amber header row + frozen-pane xlsx path in _do_export server.py L1393-1436.
+          (2c) POST with {fields:[], format:'xlsx'} → 200 with format='xlsx' and fields list length=17 (full fallback). base64 is a valid xlsx (PK zip, openpyxl opens). Confirms the `if not chosen: chosen = list(_EXPORT_FIELD_IDS)` fallback at L1332-1333 works for xlsx too.
+          (2d) POST with {fields:['name'], format:'garbage'} → 200 with format='csv' (silent fallback per L1335-1336), filename ends .csv.
+          (2e) POST with no Authorization header → 401 Unauthorized (auth middleware enforces as expected).
+          (3) POST /api/tools/import with 2 rows [{name:'IE Test Widget', brand:'Acme', cost:'12.50'}, {name:'IE Test Screwdriver', brand:'Acme', category:'TestCategoryIE', tags:'red,blue'}], create_missing_categories:true, create_missing_tags:true → 200 with created=2. GET /api/tools confirms both tools exist; widget.brand='Acme', widget.cost=12.5; screwdriver.category_name='TestCategoryIE' (auto-created), screwdriver.tag_names=['red','blue'] (auto-created). GET /api/categories confirms TestCategoryIE present. GET /api/tags confirms 'red' + 'blue' present.
+          (3b) Edge: POST /api/tools/import {rows:[{name:'', brand:'Foo'}]} → 200 with created=0, errors[0]={row:1, name:'', error:'Name is required'} — exact match.
+          CLEANUP: Deleted the 2 imported tools (widget + screwdriver), the auto-created TestCategoryIE category, and the auto-created red+blue tags (all pre-check confirmed none of them existed before the test). Also deleted the setup 'Pre-existing Tool' from step 2. All DELETEs returned 200. No orphan test data left in MongoDB.
+          CONCLUSION: XLSX export branch in /app/backend/server.py _do_export (L1393-1436) works end-to-end. CSV path unchanged. Format-param fallback behaves correctly (bad → csv, empty fields → all 17). Import/export unchanged contract verified — auto-create of categories+tags still works as expected. Ready to finish."
 
 backend_feedback:
   - task: "POST /api/feedback (public, no auth) — happy paths, validation, honeypot, rate-limit, persistence"

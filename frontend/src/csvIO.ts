@@ -10,7 +10,9 @@
 import { Platform } from "react-native";
 import * as FileSystem from "expo-file-system/legacy";
 import * as Sharing from "expo-sharing";
-import * as XLSX from "xlsx";
+// NOTE: xlsx resolves through SheetJS's `main` field (xlsx.js) which trips
+// Expo's fast resolver. Point directly at the CJS entry so Metro finds it.
+import * as XLSX from "xlsx/xlsx.js";
 
 /**
  * Parse RFC-4180-ish CSV. Supports:

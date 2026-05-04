@@ -134,6 +134,28 @@ export default function ImportExportScreen() {
     setSelectedExportFields(new Set(exportFields.map((f) => f.id)));
   const clearExportFields = () => setSelectedExportFields(new Set());
 
+  // Mapping summary — how many columns are actually mapped, which are duplicates,
+  // and whether the required "Name" field is wired up.
+  const mappingSummary = (() => {
+    const mappedIds: string[] = [];
+    headers.forEach((_, i) => {
+      const v = mapping[i];
+      if (v) mappedIds.push(v);
+    });
+    const counts: Record<string, number> = {};
+    mappedIds.forEach((id) => {
+      counts[id] = (counts[id] || 0) + 1;
+    });
+    const duplicates = Object.entries(counts)
+      .filter(([, n]) => n > 1)
+      .map(([id]) => id);
+    const mappedCount = mappedIds.length;
+    const totalCols = headers.length;
+    const skipped = totalCols - mappedCount;
+    const hasName = mappedIds.includes("name");
+    return { mappedCount, totalCols, skipped, hasName, duplicates, counts };
+  })();
+
   /* ---------------- EXPORT ---------------- */
   const doExport = useCallback(async () => {
     if (selectedExportFields.size === 0) {
@@ -179,7 +201,14 @@ export default function ImportExportScreen() {
     setBusy("pick");
     try {
       const res = await DocumentPicker.getDocumentAsync({
-        type: ["text/csv", "text/comma-separated-values", "application/csv", "*/*"],
+        type: [
+          "text/csv",
+          "text/comma-separated-values",
+          "application/csv",
+          "application/vnd.ms-excel",
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+          "*/*",
+        ],
         copyToCacheDirectory: true,
         multiple: false,
       });
@@ -188,26 +217,64 @@ export default function ImportExportScreen() {
         return;
       }
       const asset = res.assets[0];
-      let text = "";
-      if (Platform.OS === "web") {
-        // expo-document-picker on web returns a File-like blob via res.assets[0].file
-        // but in Expo SDK 54 it also exposes a uri (object URL). Use fetch().
-        const r = await fetch(asset.uri);
-        text = await r.text();
+      const name = asset.name || "import.csv";
+      const ext = name.toLowerCase().split(".").pop() || "";
+      const isXlsx =
+        ext === "xlsx" ||
+        ext === "xls" ||
+        (asset.mimeType || "").includes("sheet") ||
+        (asset.mimeType || "").includes("excel");
+
+      let parsed: string[][] = [];
+      if (isXlsx) {
+        // XLSX — must read as base64 and delegate to SheetJS
+        let b64 = "";
+        if (Platform.OS === "web") {
+          const r = await fetch(asset.uri);
+          const buf = await r.arrayBuffer();
+          const bytes = new Uint8Array(buf);
+          // Chunked conversion to base64 to avoid blowing the stack on large files
+          let bin = "";
+          const CHUNK = 0x8000;
+          for (let i = 0; i < bytes.length; i += CHUNK) {
+            bin += String.fromCharCode.apply(
+              null,
+              Array.from(bytes.subarray(i, i + CHUNK)),
+            );
+          }
+          const w: any = (globalThis as any).window;
+          b64 = w.btoa(bin);
+        } else {
+          b64 = await FileSystem.readAsStringAsync(asset.uri, {
+            encoding: FileSystem.EncodingType.Base64,
+          });
+        }
+        parsed = parseXlsx(b64);
       } else {
-        text = await FileSystem.readAsStringAsync(asset.uri, {
-          encoding: FileSystem.EncodingType.UTF8,
-        });
+        // CSV (or anything text-based)
+        let text = "";
+        if (Platform.OS === "web") {
+          const r = await fetch(asset.uri);
+          text = await r.text();
+        } else {
+          text = await FileSystem.readAsStringAsync(asset.uri, {
+            encoding: FileSystem.EncodingType.UTF8,
+          });
+        }
+        parsed = parseCsv(text);
       }
-      const parsed = parseCsv(text);
+
       if (!parsed.length) {
-        Alert.alert("Empty file", "We couldn't find any rows in that CSV.");
+        Alert.alert(
+          "Empty file",
+          `We couldn't find any rows in that ${isXlsx ? "Excel" : "CSV"} file.`,
+        );
         setBusy("");
         return;
       }
       const hdr = parsed[0].map((h) => (h || "").trim());
       const dataRows = parsed.slice(1);
-      setFileName(asset.name || "import.csv");
+      setFileName(name);
       setHeaders(hdr);
       setRows(dataRows);
       // Auto-guess mapping from headers
@@ -223,6 +290,25 @@ export default function ImportExportScreen() {
       setBusy("");
     }
   }, [importFields]);
+
+  /* ---------------- IMPORT — re-run auto-map ---------------- */
+  const runAutoMap = useCallback(() => {
+    if (!headers.length) return;
+    const auto: Mapping = {};
+    headers.forEach((h, i) => {
+      auto[i] = guessField(h, importFields);
+    });
+    setMapping(auto);
+  }, [headers, importFields]);
+
+  const clearMapping = useCallback(() => {
+    if (!headers.length) return;
+    const cleared: Mapping = {};
+    headers.forEach((_, i) => {
+      cleared[i] = "";
+    });
+    setMapping(cleared);
+  }, [headers]);
 
   /* ---------------- IMPORT — submit ---------------- */
   const doImport = useCallback(async () => {
@@ -283,12 +369,63 @@ export default function ImportExportScreen() {
         <View style={styles.card}>
           <View style={styles.cardHeader}>
             <Ionicons name="download-outline" size={22} color={theme.colors.accent} />
-            <Text style={styles.cardTitle}>EXPORT TO CSV</Text>
+            <Text style={styles.cardTitle}>EXPORT TO SPREADSHEET</Text>
           </View>
           <Text style={styles.cardBody}>
             Download a spreadsheet of every tool in your inventory. Pick which
             fields you want included — by default everything is selected.
           </Text>
+
+          {/* Format toggle */}
+          <Text style={styles.sectionLabel}>FILE FORMAT</Text>
+          <View style={styles.formatToggle}>
+            <TouchableOpacity
+              testID="fmt-csv"
+              style={[
+                styles.formatBtn,
+                exportFormat === "csv" && styles.formatBtnActive,
+              ]}
+              onPress={() => setExportFormat("csv")}
+              activeOpacity={0.8}
+            >
+              <Ionicons
+                name="document-text"
+                size={16}
+                color={exportFormat === "csv" ? "#000" : theme.colors.textSecondary}
+              />
+              <Text
+                style={[
+                  styles.formatBtnText,
+                  exportFormat === "csv" && styles.formatBtnTextActive,
+                ]}
+              >
+                CSV
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              testID="fmt-xlsx"
+              style={[
+                styles.formatBtn,
+                exportFormat === "xlsx" && styles.formatBtnActive,
+              ]}
+              onPress={() => setExportFormat("xlsx")}
+              activeOpacity={0.8}
+            >
+              <Ionicons
+                name="grid"
+                size={16}
+                color={exportFormat === "xlsx" ? "#000" : theme.colors.textSecondary}
+              />
+              <Text
+                style={[
+                  styles.formatBtnText,
+                  exportFormat === "xlsx" && styles.formatBtnTextActive,
+                ]}
+              >
+                EXCEL (XLSX)
+              </Text>
+            </TouchableOpacity>
+          </View>
 
           {/* Field selector */}
           <View style={styles.exportFieldsHeader}>
@@ -353,7 +490,7 @@ export default function ImportExportScreen() {
                 <Ionicons name="cloud-download" size={18} color="#000" />
                 <Text style={styles.btnPrimaryText}>
                   EXPORT {selectedExportFields.size} FIELD
-                  {selectedExportFields.size === 1 ? "" : "S"}
+                  {selectedExportFields.size === 1 ? "" : "S"} AS {exportFormat.toUpperCase()}
                 </Text>
               </>
             )}
@@ -364,14 +501,14 @@ export default function ImportExportScreen() {
         <View style={styles.card}>
           <View style={styles.cardHeader}>
             <Ionicons name="cloud-upload-outline" size={22} color={theme.colors.accent} />
-            <Text style={styles.cardTitle}>IMPORT FROM CSV</Text>
+            <Text style={styles.cardTitle}>IMPORT FROM SPREADSHEET</Text>
           </View>
           <Text style={styles.cardBody}>
-            Import tools from a spreadsheet exported from any other system. Pick
-            a CSV file, then map each of its columns to a Toolbox Vault field.
-            Categories and Tags are auto-created if they don't exist; Locations
-            and Dealers are matched by name only (so create those manually first
-            for the cleanest result).
+            Import tools from any CSV or Excel (.xlsx) file — including exports from
+            other inventory apps. Pick a file, then map each of its columns to a
+            Toolbox Vault field. Categories and Tags are auto-created if they don't
+            exist; Locations and Dealers are matched by name only (so create those
+            manually first for the cleanest result).
           </Text>
 
           <TouchableOpacity
@@ -387,7 +524,7 @@ export default function ImportExportScreen() {
               <>
                 <Ionicons name="folder-open" size={18} color={theme.colors.textPrimary} />
                 <Text style={styles.btnGhostText}>
-                  {fileName ? "CHOOSE A DIFFERENT FILE" : "CHOOSE CSV FILE"}
+                  {fileName ? "CHOOSE A DIFFERENT FILE" : "CHOOSE CSV OR EXCEL FILE"}
                 </Text>
               </>
             )}
@@ -402,15 +539,88 @@ export default function ImportExportScreen() {
           {/* MAPPING */}
           {headers.length > 0 ? (
             <>
-              <Text style={styles.sectionLabel}>COLUMN MAPPING</Text>
+              <View style={styles.mapHeaderRow}>
+                <Text style={styles.sectionLabel}>COLUMN MAPPING</Text>
+                <View style={{ flexDirection: "row", gap: 6 }}>
+                  <TouchableOpacity
+                    style={styles.smallBtn}
+                    onPress={runAutoMap}
+                    testID="auto-map-btn"
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons name="flash" size={12} color={theme.colors.accent} />
+                    <Text style={styles.smallBtnText}>AUTO-MAP</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.smallBtn}
+                    onPress={clearMapping}
+                    testID="clear-map-btn"
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons name="close" size={12} color={theme.colors.textSecondary} />
+                    <Text style={styles.smallBtnText}>CLEAR</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
               <Text style={styles.helper}>
                 Map each column from your file to a Toolbox Vault field. Leave any
                 column you don't need set to "Skip".
               </Text>
+
+              {/* MAPPING STATUS BANNER */}
+              <View
+                style={[
+                  styles.statusBanner,
+                  mappingSummary.hasName
+                    ? styles.statusBannerOk
+                    : styles.statusBannerBad,
+                ]}
+              >
+                <View style={styles.statusRow}>
+                  <Ionicons
+                    name={mappingSummary.hasName ? "checkmark-circle" : "alert-circle"}
+                    size={16}
+                    color={mappingSummary.hasName ? "#10b981" : theme.colors.danger}
+                  />
+                  <Text style={styles.statusText}>
+                    {mappingSummary.hasName
+                      ? "Name column mapped"
+                      : "Name column is required"}
+                  </Text>
+                </View>
+                <View style={styles.statusRow}>
+                  <Ionicons
+                    name="git-branch-outline"
+                    size={14}
+                    color={theme.colors.textSecondary}
+                  />
+                  <Text style={styles.statusSubText}>
+                    {mappingSummary.mappedCount} of {mappingSummary.totalCols} columns mapped
+                    {mappingSummary.skipped > 0 ? ` · ${mappingSummary.skipped} skipped` : ""}
+                  </Text>
+                </View>
+                {mappingSummary.duplicates.length > 0 ? (
+                  <View style={styles.statusRow}>
+                    <Ionicons
+                      name="warning-outline"
+                      size={14}
+                      color={theme.colors.warning || "#f59e0b"}
+                    />
+                    <Text style={[styles.statusSubText, { color: theme.colors.warning || "#f59e0b" }]}>
+                      {mappingSummary.duplicates.length} field
+                      {mappingSummary.duplicates.length === 1 ? "" : "s"} mapped to multiple columns — last non-empty value wins
+                    </Text>
+                  </View>
+                ) : null}
+              </View>
+
               {headers.map((h, i) => {
                 const sel = mapping[i] || "";
                 const selField = importFields.find((f) => f.id === sel);
                 const sample = (rows[0] && rows[0][i]) || "";
+                const isRequired = selField?.required;
+                const isDup =
+                  sel && (mappingSummary.counts[sel] || 0) > 1;
                 return (
                   <View key={i} style={styles.mapRow}>
                     <View style={{ flex: 1, minWidth: 0 }}>
@@ -428,10 +638,18 @@ export default function ImportExportScreen() {
                       style={{ marginHorizontal: 6 }}
                     />
                     <TouchableOpacity
-                      style={[styles.mapBtn, !sel && styles.mapBtnSkipped]}
+                      style={[
+                        styles.mapBtn,
+                        !sel && styles.mapBtnSkipped,
+                        isRequired && styles.mapBtnRequired,
+                        isDup && styles.mapBtnDup,
+                      ]}
                       onPress={() => setPickerForCol(i)}
                       testID={`map-col-${i}`}
                     >
+                      {isRequired ? (
+                        <Ionicons name="star" size={11} color={theme.colors.accent} />
+                      ) : null}
                       <Text style={[styles.mapBtnText, !sel && styles.mapBtnTextSkipped]} numberOfLines={1}>
                         {selField ? selField.label : "Skip"}
                       </Text>
@@ -883,5 +1101,100 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "700",
     flex: 1,
+  },
+  mapHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginTop: 18,
+    marginBottom: 8,
+    flexWrap: "wrap",
+    gap: 6,
+  },
+  smallBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.bg,
+  },
+  smallBtnText: {
+    color: theme.colors.textPrimary,
+    fontSize: 10,
+    fontWeight: "800",
+    letterSpacing: 1,
+  },
+  statusBanner: {
+    padding: 10,
+    borderRadius: 6,
+    borderWidth: 1,
+    marginBottom: 10,
+    gap: 4,
+  },
+  statusBannerOk: {
+    backgroundColor: "rgba(16,185,129,0.08)",
+    borderColor: "rgba(16,185,129,0.5)",
+  },
+  statusBannerBad: {
+    backgroundColor: "rgba(239,68,68,0.08)",
+    borderColor: "rgba(239,68,68,0.5)",
+  },
+  statusRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  statusText: {
+    color: theme.colors.textPrimary,
+    fontSize: 12,
+    fontWeight: "800",
+    letterSpacing: 0.5,
+  },
+  statusSubText: {
+    color: theme.colors.textSecondary,
+    fontSize: 11,
+    flex: 1,
+  },
+  mapBtnRequired: {
+    borderColor: theme.colors.accent,
+    borderWidth: 2,
+  },
+  mapBtnDup: {
+    borderColor: theme.colors.warning || "#f59e0b",
+  },
+  formatToggle: {
+    flexDirection: "row",
+    gap: 8,
+    marginBottom: 12,
+  },
+  formatBtn: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingVertical: 10,
+    paddingHorizontal: 8,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.bg,
+  },
+  formatBtnActive: {
+    backgroundColor: theme.colors.accent,
+    borderColor: theme.colors.accent,
+  },
+  formatBtnText: {
+    color: theme.colors.textSecondary,
+    fontSize: 11,
+    fontWeight: "900",
+    letterSpacing: 1.2,
+  },
+  formatBtnTextActive: {
+    color: "#000",
   },
 });
