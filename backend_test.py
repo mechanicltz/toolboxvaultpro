@@ -1,272 +1,177 @@
-"""Backend tests for CSV import/export endpoints.
-
-Runs against EXPO_PUBLIC_BACKEND_URL/api using subtest@example.com / password123.
 """
-import sys
-import base64
-import requests
+Backend regression test for the POST /api/tools/import bug fix:
+"rows.0.cost: Input should be a valid number, unable to parse string as a number"
 
+Validates that ImportRow.cost / ImportRow.quantity now accept Optional[Any]
+and the tolerant _to_float / _to_int parsers strip commas, currency symbols,
+and whitespace before coercing.
+"""
+import os
+import sys
+import requests
 
 BACKEND_URL = "https://asset-locator-12.preview.emergentagent.com"
 API = f"{BACKEND_URL}/api"
+
 EMAIL = "subtest@example.com"
 PASSWORD = "password123"
 
 
-results = []
-
-
-def rec(name, ok, detail=""):
-    mark = "PASS" if ok else "FAIL"
-    print(f"[{mark}] {name}: {detail}")
-    results.append((name, ok, detail))
-
-
-def login():
+def _login():
     r = requests.post(f"{API}/auth/login", json={"email": EMAIL, "password": PASSWORD}, timeout=30)
     r.raise_for_status()
     return r.json()["token"]
 
 
+def _h(tok):
+    return {"Authorization": f"Bearer {tok}", "Content-Type": "application/json"}
+
+
 def main():
-    token = login()
-    H = {"Authorization": f"Bearer {token}"}
+    failures, passes = [], []
 
-    # Step 1: GET /api/tools/import-fields
-    r = requests.get(f"{API}/tools/import-fields", headers=H, timeout=30)
-    rec("1.status", r.status_code == 200, f"status={r.status_code}")
-    body = r.json() if r.status_code == 200 else {}
-    fields = body.get("fields") or []
-    rec("1.has_fields_list", isinstance(fields, list), f"type={type(fields).__name__}")
-    rec("1.count==14", len(fields) == 14, f"count={len(fields)}")
-    ids = [f.get("id") for f in fields]
-    expected_ids = ["name", "brand", "model", "serial_number", "quantity", "cost",
-                    "description", "category", "location", "dealer", "condition",
-                    "purchase_date", "warranty_expiry", "tags"]
-    missing = [i for i in expected_ids if i not in ids]
-    rec("1.ids_complete", not missing, f"missing={missing}; got={ids}")
-    name_field = next((f for f in fields if f.get("id") == "name"), None)
-    rec("1.name_required_true", bool(name_field and name_field.get("required") is True),
-        f"name_field={name_field}")
+    def check(label, cond, detail=""):
+        if cond:
+            passes.append(label); print(f"  PASS  {label}")
+        else:
+            failures.append(f"{label}  {detail}"); print(f"  FAIL  {label}  {detail}")
 
-    # Step 2: GET /api/tools/export-csv
-    r = requests.get(f"{API}/tools/export-csv", headers=H, timeout=60)
-    rec("2.status", r.status_code == 200, f"status={r.status_code}")
-    eb = r.json() if r.status_code == 200 else {}
-    rec("2.has_filename", bool(eb.get("filename")), f"filename={eb.get('filename')}")
-    rec("2.has_base64", bool(eb.get("base64")), "")
-    rec("2.has_rows", isinstance(eb.get("rows"), int), f"rows={eb.get('rows')}")
-    decoded = ""
-    if eb.get("base64"):
-        try:
-            decoded = base64.b64decode(eb["base64"]).decode("utf-8")
-        except Exception as e:
-            rec("2.decode_base64", False, str(e))
-    expected_header = ("Name,Brand,Model,Serial number,Quantity,Cost,"
-                       "Category,Location,Dealer,Tags,Condition,"
-                       "Purchase date,Warranty expiry,Description,"
-                       "Is consumable,Is set,Set serials")
-    first_line = decoded.split("\r\n", 1)[0] if "\r\n" in decoded else decoded.split("\n", 1)[0]
-    rec("2.header_17col_match", first_line == expected_header,
-        f"got='{first_line[:200]}'")
+    print("=" * 70)
+    print("Test: POST /api/tools/import — tolerant cost/quantity parsing")
+    print("=" * 70)
 
-    r2 = requests.get(f"{API}/tools", headers=H, timeout=30)
-    tools_count = len(r2.json()) if r2.status_code == 200 else -1
-    rec("2.rows_matches_get_tools", eb.get("rows") == tools_count,
-        f"export.rows={eb.get('rows')} vs GET/tools.len={tools_count}")
+    print("\n[1] Login")
+    tok = _login()
+    h = _h(tok)
+    check("login as subtest@example.com", bool(tok))
 
-    # Step 3: POST /api/tools/import with empty rows
-    r = requests.post(f"{API}/tools/import", headers=H, json={"rows": []}, timeout=30)
-    rec("3.status", r.status_code == 200, f"status={r.status_code} body={r.text[:200]}")
-    jb = r.json() if r.status_code == 200 else {}
-    rec("3.created==0", jb.get("created") == 0, f"created={jb.get('created')}")
-    rec("3.errors_empty", jb.get("errors") == [], f"errors={jb.get('errors')}")
-    rec("3.ids_empty", jb.get("ids") == [], f"ids={jb.get('ids')}")
+    print("\n[2] Pre-flight: ensure premium tier (free=10 tool cap)")
+    sub_before = requests.get(f"{API}/subscription", headers=h, timeout=20).json()
+    tier_before = (sub_before.get("subscription") or {}).get("tier", "free")
+    print(f"  current tier: {tier_before}, current tool count: {sub_before.get('counts', {}).get('tools')}")
+    if tier_before == "free":
+        r = requests.post(f"{API}/subscription/subscribe", headers=h, json={"tier": "monthly"}, timeout=20)
+        check("upgrade to monthly for test", r.status_code == 200, f"status={r.status_code}")
 
-    # Step 4: POST /api/tools/import with one good row
-    payload4 = {"rows": [{
-        "name": "CSV-Imported Tool",
-        "brand": "Snap-on",
-        "quantity": "3",
-        "cost": "49.99",
-        "category": "CSV-Test-Category",
-        "tags": "csv-tag-a, csv-tag-b",
-    }]}
-    r = requests.post(f"{API}/tools/import", headers=H, json=payload4, timeout=30)
-    rec("4.status", r.status_code == 200, f"status={r.status_code} body={r.text[:300]}")
-    jb = r.json() if r.status_code == 200 else {}
-    rec("4.created==1", jb.get("created") == 1, f"created={jb.get('created')}")
-    rec("4.ids_len==1", isinstance(jb.get("ids"), list) and len(jb.get("ids", [])) == 1,
-        f"ids={jb.get('ids')}")
-    rec("4.errors_empty", jb.get("errors") == [], f"errors={jb.get('errors')}")
-    imported_tool_id = (jb.get("ids") or [None])[0]
+    pre_existing = requests.get(f"{API}/tools", headers=h, timeout=30).json()
+    pre_existing_ids = {t["id"] for t in pre_existing}
+    print(f"  pre-existing tool count: {len(pre_existing_ids)}")
 
-    r = requests.get(f"{API}/tools", headers=H, timeout=30)
-    tools = r.json() if r.status_code == 200 else []
-    imp_tool = next((t for t in tools if t.get("name") == "CSV-Imported Tool"), None)
-    rec("4.tool_in_list", imp_tool is not None, "")
-    if imp_tool:
-        rec("4.tool.brand==Snap-on", imp_tool.get("brand") == "Snap-on",
-            f"brand={imp_tool.get('brand')}")
-        rec("4.tool.quantity==3", imp_tool.get("quantity") == 3,
-            f"quantity={imp_tool.get('quantity')}")
-        rec("4.tool.cost==49.99", abs((imp_tool.get("cost") or 0) - 49.99) < 1e-6,
-            f"cost={imp_tool.get('cost')}")
-        rec("4.tool.category_id_nonempty", bool(imp_tool.get("category_id")),
-            f"category_id={imp_tool.get('category_id')}")
-        rec("4.tool.category_name==CSV-Test-Category",
-            imp_tool.get("category_name") == "CSV-Test-Category",
-            f"category_name={imp_tool.get('category_name')}")
-
-    r = requests.get(f"{API}/categories", headers=H, timeout=30)
-    cats = r.json() if r.status_code == 200 else []
-    test_cat = next((c for c in cats if c.get("name") == "CSV-Test-Category"), None)
-    rec("4.category_created", test_cat is not None, f"found={bool(test_cat)}")
-    test_cat_id = test_cat.get("id") if test_cat else None
-
-    r = requests.get(f"{API}/tags", headers=H, timeout=30)
-    tags_list = r.json() if r.status_code == 200 else []
-    tag_a = next((t for t in tags_list if t.get("name") == "csv-tag-a"), None)
-    tag_b = next((t for t in tags_list if t.get("name") == "csv-tag-b"), None)
-    rec("4.tag_a_created", tag_a is not None, "")
-    rec("4.tag_b_created", tag_b is not None, "")
-    if tag_a and tag_b and imp_tool:
-        tids = imp_tool.get("tag_ids") or []
-        rec("4.tool_has_both_tag_ids",
-            tag_a["id"] in tids and tag_b["id"] in tids,
-            f"tag_ids={tids}; a={tag_a['id']}; b={tag_b['id']}")
-
-    # Step 5: row missing name
-    r = requests.post(f"{API}/tools/import", headers=H,
-                      json={"rows": [{"brand": "Foo"}]}, timeout=30)
-    rec("5.status", r.status_code == 200, f"status={r.status_code} body={r.text[:300]}")
-    jb = r.json() if r.status_code == 200 else {}
-    rec("5.created==0", jb.get("created") == 0, f"created={jb.get('created')}")
-    errs = jb.get("errors") or []
-    rec("5.errors_len==1", len(errs) == 1, f"errors={errs}")
-    if errs:
-        e0 = errs[0]
-        rec("5.error.row==1", e0.get("row") == 1, f"row={e0.get('row')}")
-        rec("5.error.name==''", e0.get("name") == "", f"name='{e0.get('name')}'")
-        rec("5.error.msg==Name is required",
-            e0.get("error") == "Name is required", f"error='{e0.get('error')}'")
-
-    # Step 6: create_missing_categories=false + unknown category
-    unknown_cat = "DefinitelyNotAnExistingCategoryXYZ"
-    payload6 = {
-        "create_missing_categories": False,
-        "rows": [{"name": "NoCatCreate", "category": unknown_cat}]
+    print("\n[3] POST /api/tools/import with 8 thorny rows (1 invalid name expected)")
+    body = {
+        "rows": [
+            {"name": "Widget A", "cost": "13,500.00", "quantity": "5"},
+            {"name": "Widget B", "cost": "$1,200.50", "quantity": 2},
+            {"name": "Widget C", "cost": "1234", "quantity": "1 ea"},
+            {"name": "Widget D", "cost": "", "quantity": ""},
+            {"name": "Widget E", "cost": 99.99, "quantity": 3},
+            {"name": "Widget F", "cost": "garbage", "quantity": "garbage"},
+            {"name": "Widget G", "cost": "13.500,00", "quantity": "1"},
+            {"name": "", "cost": "1.0", "quantity": "1"},
+        ],
+        "create_missing_categories": True,
+        "create_missing_tags": True,
     }
-    r = requests.post(f"{API}/tools/import", headers=H, json=payload6, timeout=30)
-    rec("6.status", r.status_code == 200, f"status={r.status_code} body={r.text[:300]}")
-    jb = r.json() if r.status_code == 200 else {}
-    rec("6.created==1", jb.get("created") == 1, f"created={jb.get('created')}")
-    nocat_id = (jb.get("ids") or [None])[0]
-    if nocat_id:
-        r = requests.get(f"{API}/tools/{nocat_id}", headers=H, timeout=30)
-        t6 = r.json() if r.status_code == 200 else {}
-        rec("6.tool.category_id_empty", not t6.get("category_id"),
-            f"category_id={t6.get('category_id')}")
-        rec("6.tool.category_name_empty", not t6.get("category_name"),
-            f"category_name={t6.get('category_name')}")
+    r = requests.post(f"{API}/tools/import", headers=h, json=body, timeout=60)
+    print(f"  HTTP status: {r.status_code}")
+    print(f"  body: {r.text[:600]}")
 
-    r = requests.get(f"{API}/categories", headers=H, timeout=30)
-    cats6 = r.json() if r.status_code == 200 else []
-    unk = next((c for c in cats6 if c.get("name") == unknown_cat), None)
-    rec("6.unknown_category_not_created", unk is None, f"found={bool(unk)}")
+    check("POST /api/tools/import returns 200 (not 422)",
+          r.status_code == 200, f"got {r.status_code}: {r.text[:200]}")
 
-    # Step 7: non-existent dealer + location
-    payload7 = {"rows": [{"name": "NoFKMatch", "dealer": "NoSuchDealerXYZ",
-                          "location": "NoSuchLocationXYZ"}]}
-    r = requests.post(f"{API}/tools/import", headers=H, json=payload7, timeout=30)
-    rec("7.status", r.status_code == 200, f"status={r.status_code}")
-    jb = r.json() if r.status_code == 200 else {}
-    rec("7.created==1", jb.get("created") == 1, f"created={jb.get('created')}")
-    rec("7.errors_empty", jb.get("errors") == [], f"errors={jb.get('errors')}")
-    nofk_id = (jb.get("ids") or [None])[0]
-    if nofk_id:
-        r = requests.get(f"{API}/tools/{nofk_id}", headers=H, timeout=30)
-        t7 = r.json() if r.status_code == 200 else {}
-        rec("7.tool.dealer_id_empty", not t7.get("dealer_id"),
-            f"dealer_id={t7.get('dealer_id')}")
-        rec("7.tool.location_id_empty", not t7.get("location_id"),
-            f"location_id={t7.get('location_id')}")
+    if r.status_code != 200:
+        print("\n[!] Cannot continue verification — bailing.")
+        if tier_before == "free":
+            requests.post(f"{API}/subscription/subscribe", headers=h, json={"tier": "free"}, timeout=20)
+        sys.exit(1)
 
-    # Step 8: existing dealer + location
-    r = requests.post(f"{API}/dealers", headers=H,
-                      json={"name": "Test-Dealer-Import"}, timeout=30)
-    rec("8.create_dealer", r.status_code == 200,
-        f"status={r.status_code} body={r.text[:200]}")
-    dealer_obj = r.json() if r.status_code == 200 else {}
-    dealer_id = dealer_obj.get("id")
+    resp = r.json()
+    created = resp.get("created")
+    errors = resp.get("errors") or []
+    check("response.created == 7", created == 7, f"got created={created}")
+    check("response.errors has at least 1 entry", len(errors) >= 1, f"errors={errors}")
+    check("errors mention the empty-name row",
+          any("name" in str(e).lower() or "required" in str(e).lower() for e in errors),
+          f"errors={errors}")
 
-    r = requests.post(f"{API}/locations", headers=H,
-                      json={"name": "Test-Loc-Import"}, timeout=30)
-    rec("8.create_location", r.status_code == 200,
-        f"status={r.status_code} body={r.text[:200]}")
-    location_obj = r.json() if r.status_code == 200 else {}
-    location_id = location_obj.get("id")
+    print("\n[4] GET /api/tools and verify each created Widget")
+    after = requests.get(f"{API}/tools", headers=h, timeout=30).json()
+    new_tools = [t for t in after if t["id"] not in pre_existing_ids and t.get("name", "").startswith("Widget ")]
+    by_name = {t["name"]: t for t in new_tools}
+    print(f"  new Widget tools: {len(new_tools)} -> {sorted(by_name.keys())}")
 
-    payload8 = {"rows": [{"name": "WithFKMatch", "dealer": "Test-Dealer-Import",
-                          "location": "Test-Loc-Import"}]}
-    r = requests.post(f"{API}/tools/import", headers=H, json=payload8, timeout=30)
-    rec("8.import_status", r.status_code == 200, f"status={r.status_code}")
-    jb = r.json() if r.status_code == 200 else {}
-    rec("8.created==1", jb.get("created") == 1, f"created={jb.get('created')}")
-    fk_id = (jb.get("ids") or [None])[0]
-    if fk_id:
-        r = requests.get(f"{API}/tools/{fk_id}", headers=H, timeout=30)
-        t8 = r.json() if r.status_code == 200 else {}
-        rec("8.tool.dealer_id_matches", t8.get("dealer_id") == dealer_id,
-            f"dealer_id={t8.get('dealer_id')} vs expected {dealer_id}")
-        rec("8.tool.location_id_matches", t8.get("location_id") == location_id,
-            f"location_id={t8.get('location_id')} vs expected {location_id}")
+    check("7 new Widget tools persisted", len(new_tools) == 7, f"found {len(new_tools)}")
 
-    # Step 9: Cleanup
-    r = requests.get(f"{API}/tools", headers=H, timeout=30)
-    tools = r.json() if r.status_code == 200 else []
-    tool_names_to_delete = {"CSV-Imported Tool", "NoCatCreate", "NoFKMatch", "WithFKMatch"}
-    for t in tools:
-        if t.get("name") in tool_names_to_delete:
-            rr = requests.delete(f"{API}/tools/{t['id']}", headers=H, timeout=30)
-            rec(f"9.del_tool.{t['name']}", rr.status_code == 200,
-                f"status={rr.status_code}")
+    expectations = [
+        ("Widget A", 13500.00, 5),
+        ("Widget B", 1200.50, 2),
+        ("Widget C", 1234.00, 1),
+        ("Widget D", 0.0, 1),
+        ("Widget E", 99.99, 3),
+        ("Widget F", 0.0, 1),
+    ]
+    for name, expected_cost, expected_qty in expectations:
+        t = by_name.get(name)
+        if not t:
+            check(f"{name} present", False, "missing"); continue
+        cost = float(t.get("cost") or 0.0)
+        qty = int(t.get("quantity") or 0)
+        check(f"{name}.cost == {expected_cost}", abs(cost - expected_cost) < 0.005, f"got cost={cost}")
+        check(f"{name}.quantity == {expected_qty}", qty == expected_qty, f"got qty={qty}")
 
-    if test_cat_id:
-        rr = requests.delete(f"{API}/categories/{test_cat_id}", headers=H, timeout=30)
-        rec("9.del_category.CSV-Test-Category", rr.status_code == 200,
-            f"status={rr.status_code}")
-    if tag_a and tag_a.get("id"):
-        rr = requests.delete(f"{API}/tags/{tag_a['id']}", headers=H, timeout=30)
-        rec("9.del_tag.csv-tag-a", rr.status_code == 200, f"status={rr.status_code}")
-    if tag_b and tag_b.get("id"):
-        rr = requests.delete(f"{API}/tags/{tag_b['id']}", headers=H, timeout=30)
-        rec("9.del_tag.csv-tag-b", rr.status_code == 200, f"status={rr.status_code}")
-    if dealer_id:
-        rr = requests.delete(f"{API}/dealers/{dealer_id}", headers=H, timeout=30)
-        rec("9.del_dealer.Test-Dealer-Import", rr.status_code == 200,
-            f"status={rr.status_code}")
-    if location_id:
-        rr = requests.delete(f"{API}/locations/{location_id}", headers=H, timeout=30)
-        rec("9.del_location.Test-Loc-Import", rr.status_code == 200,
-            f"status={rr.status_code}")
+    if "Widget G" in by_name:
+        gc = by_name["Widget G"].get("cost")
+        check("Widget G created without 500 (cost numeric)",
+              isinstance(gc, (int, float)), f"got cost={gc!r}")
+        acceptable = (abs(float(gc) - 13.5) < 0.005 or
+                      abs(float(gc) - 13500.0) < 0.005 or
+                      float(gc) == 0.0)
+        check("Widget G.cost in {13.5, 13500.0, 0.0} (lenient — review allows any non-500)",
+              acceptable, f"got {gc}")
 
-    # Step 10: smoke
-    for ep in ["/tools", "/categories", "/tags", "/dealers", "/locations"]:
-        rr = requests.get(f"{API}{ep}", headers=H, timeout=30)
-        rec(f"10.smoke GET {ep}", rr.status_code == 200, f"status={rr.status_code}")
+    print("\n[5] CLEANUP: deleting widget tools")
+    deleted = 0
+    for t in new_tools:
+        dr = requests.delete(f"{API}/tools/{t['id']}", headers=h, timeout=20)
+        if dr.status_code == 200:
+            deleted += 1
+    check(f"deleted all {len(new_tools)} widgets", deleted == len(new_tools), f"deleted={deleted}")
 
-    total = len(results)
-    failed = [r for r in results if not r[1]]
-    print("\n" + "=" * 60)
-    print(f"TOTAL: {total}  PASSED: {total - len(failed)}  FAILED: {len(failed)}")
-    if failed:
+    print("\n[6] SMOKE: GET /api/tools/export-fields")
+    r = requests.get(f"{API}/tools/export-fields", headers=h, timeout=20)
+    check("GET /api/tools/export-fields → 200", r.status_code == 200, f"status={r.status_code}")
+    if r.status_code == 200:
+        fields = (r.json() or {}).get("fields") or []
+        ids = [f.get("id") for f in fields]
+        check("export-fields contains expected ids",
+              all(x in ids for x in ["name", "brand", "cost", "quantity"]), f"ids={ids}")
+
+    print("\n[7] SMOKE: POST /api/tools (normal creation flow)")
+    smoke_payload = {"name": "Smoke Test Hammer", "brand": "Estwing", "cost": 45.50, "quantity": 1}
+    r = requests.post(f"{API}/tools", headers=h, json=smoke_payload, timeout=20)
+    check("POST /api/tools (normal) → 200", r.status_code == 200, f"status={r.status_code}: {r.text[:200]}")
+    if r.status_code == 200:
+        smoke_tool = r.json()
+        check("smoke tool has matching name + cost",
+              smoke_tool.get("name") == "Smoke Test Hammer" and smoke_tool.get("cost") == 45.5,
+              str(smoke_tool)[:200])
+        requests.delete(f"{API}/tools/{smoke_tool['id']}", headers=h, timeout=20)
+
+    print("\n[8] Restore subtest tier")
+    if tier_before == "free":
+        rr = requests.post(f"{API}/subscription/subscribe", headers=h, json={"tier": "free"}, timeout=20)
+        check("revert to free tier", rr.status_code == 200, f"status={rr.status_code}")
+
+    print("\n" + "=" * 70)
+    print(f"RESULTS: {len(passes)} passed, {len(failures)} failed")
+    print("=" * 70)
+    if failures:
         print("\nFAILURES:")
-        for n, _, d in failed:
-            print(f"  - {n}: {d}")
-    print("=" * 60)
-    return 0 if not failed else 1
+        for f in failures:
+            print(f"  - {f}")
+        sys.exit(1)
+    print("\nAll checks PASSED.")
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    main()

@@ -1459,8 +1459,11 @@ class ImportRow(BaseModel):
     brand: Optional[str] = ""
     model: Optional[str] = ""
     serial_number: Optional[str] = ""
-    quantity: Optional[int] = 1
-    cost: Optional[float] = 0.0
+    # NOTE: quantity / cost accept Any so we can tolerate values from
+    # third-party CSVs like "13,500.00", "$1,200", "1.0", "1 ea", "" etc.
+    # The raw value is sanitised inside tools_import() via _to_int / _to_float.
+    quantity: Optional[Any] = 1
+    cost: Optional[Any] = 0.0
     description: Optional[str] = ""
     category: Optional[str] = ""        # name (case-insensitive lookup; auto-create if missing)
     location: Optional[str] = ""        # name match (existing only)
@@ -1478,7 +1481,53 @@ class ImportPayload(BaseModel):
 
 
 def _norm(s: Optional[str]) -> str:
-    return (s or "").strip()
+    return (s or "").strip() if isinstance(s, str) else (str(s).strip() if s is not None else "")
+
+
+def _to_float(v: Any) -> float:
+    """Tolerant float parser — handles strings with currency symbols,
+    thousand separators, percent signs, blanks, etc.
+    Returns 0.0 if the value cannot be coerced."""
+    if v is None or v == "":
+        return 0.0
+    if isinstance(v, (int, float)):
+        try:
+            return float(v)
+        except Exception:
+            return 0.0
+    s = str(v).strip()
+    if not s:
+        return 0.0
+    # Strip everything except digits, dot, minus, comma — then drop commas.
+    # Handles "$13,500.00", "13.500,00 €" (best-effort), "1,234", "1.0"
+    cleaned = "".join(ch for ch in s if ch.isdigit() or ch in ".-,")
+    # If both ',' and '.' present, assume ',' is thousand-sep (US/UK format)
+    if "," in cleaned and "." in cleaned:
+        cleaned = cleaned.replace(",", "")
+    elif "," in cleaned and "." not in cleaned:
+        # Could be European decimal (e.g. "13,50") OR a thousands-sep ("13,500").
+        # Heuristic: if there are exactly 3 digits after the comma and no other
+        # comma, treat as thousands (e.g. 13,500 → 13500). Otherwise treat
+        # the comma as a decimal point.
+        parts = cleaned.split(",")
+        if len(parts) == 2 and len(parts[1]) == 3:
+            cleaned = cleaned.replace(",", "")
+        else:
+            cleaned = cleaned.replace(",", ".")
+    try:
+        return float(cleaned) if cleaned not in ("", "-", ".") else 0.0
+    except Exception:
+        return 0.0
+
+
+def _to_int(v: Any, default: int = 1) -> int:
+    """Tolerant int parser. Falls back to `default` on failure (and clamps to >=1)."""
+    f = _to_float(v)
+    try:
+        n = int(f)
+    except Exception:
+        n = default
+    return max(1, n) if default >= 1 else n
 
 
 def _norm_lower(s: Optional[str]) -> str:
@@ -1570,15 +1619,8 @@ async def tools_import(payload: ImportPayload, user: User = Depends(get_current_
                         tag_ids.append(new_tag.id)
                         tag_names.append(new_tag.name)
 
-            qty = 1
-            try:
-                qty = max(1, int(float(raw.quantity or 1)))
-            except Exception:
-                qty = 1
-            try:
-                cost = float(raw.cost or 0)
-            except Exception:
-                cost = 0.0
+            qty = _to_int(raw.quantity, default=1)
+            cost = _to_float(raw.cost)
 
             tool = Tool(
                 name=name,
