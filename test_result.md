@@ -2119,3 +2119,32 @@ agent_communication:
       
       Please run the backend tests in the task block above. Frontend testing will be done by the user. Report when done.
 
+
+
+backend_reports_include_receipts:
+  - task: "Reports — include_receipts toggle appends receipt pages (inventory / insurance / sales)"
+    implemented: true
+    working: true
+    file: "/app/backend/reports.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Added include_receipts toggle to inventory/insurance/sales options_schema. New _build_receipts_meta() and _build_receipt_pages() flowable factory builds an appendix: 'RECEIPTS APPENDIX' cover then one page per receipt with header 'RECEIPT #N · Item #M — <Tool Name> · Serial: <serial>'. Receipts now flow on the normalized tool row."
+      - working: false
+        agent: "testing"
+        comment: "KeyError: 'normal' on L787 — _styles() has no 'normal' key. PDF render returns 500 whenever include_receipts:true + receipts exist."
+      - working: "NA"
+        agent: "main"
+        comment: "One-line fix: parent=st['normal'] → parent=st['small'] (L787)."
+      - working: true
+        agent: "testing"
+        comment: "RETEST PASSED — 15/15 green. Inventory L1=42932 → L2=44483 (+1551 bytes appendix); insurance + sales both 200 valid %PDF with receipts. Spec exposes the toggle on all 3 report types."
+
+agent_communication:
+  - agent: "main"
+    message: |
+      Receipts are now optionally appended to inventory / insurance / sales PDF reports via a new `include_receipts` toggle in each report's options. Each receipt becomes its own page with a header showing item-no, tool name, and serial. Frontend single-tool print also asks "Include receipts?" via Alert when the tool has any. 15/15 backend tests green.
+
