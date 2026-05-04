@@ -1311,7 +1311,7 @@ async def tools_export_csv(user: User = Depends(get_current_user)):
 
 
 class ImportRow(BaseModel):
-    name: str
+    name: Optional[str] = ""
     brand: Optional[str] = ""
     model: Optional[str] = ""
     serial_number: Optional[str] = ""
