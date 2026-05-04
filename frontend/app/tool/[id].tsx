@@ -68,6 +68,9 @@ export default function ToolDetail() {
 
   // For-Sale poster builder modal
   const [showPosterBuilder, setShowPosterBuilder] = useState(false);
+  // PDF type picker modal (replaces Alert.alert which is broken on RN Web)
+  const [showExportPicker, setShowExportPicker] = useState(false);
+  const [pdfBusy, setPdfBusy] = useState(false);
   type PosterFieldKey =
     | "photo"
     | "price"
@@ -397,38 +400,31 @@ export default function ToolDetail() {
     }
   };
 
-  const exportPdf = async () => {
-    // Always present a choice — the for-sale poster should be available even
-    // if the listing flag isn't strictly set (e.g. user wants to advertise an
-    // item they haven't formally listed yet).
+  const exportPdf = () => {
+    // Use an in-app Modal instead of Alert.alert — RN-Web's Alert.alert
+    // implementation does not render the buttons array, so on web users
+    // saw nothing. The modal works identically on web AND native.
+    setShowExportPicker(true);
+  };
+
+  const handlePickPoster = () => {
+    setShowExportPicker(false);
+    setShowPosterBuilder(true);
+  };
+
+  const handlePickStandard = async () => {
+    setShowExportPicker(false);
     const hasReceipts = Array.isArray(tool.receipts) && tool.receipts.length > 0;
-    const isListed = !!tool?.for_sale && !tool?.is_sold;
-    const posterButton = {
-      text: isListed ? "🪧 For-Sale Poster" : "🪧 For-Sale Poster…",
-      onPress: () => setShowPosterBuilder(true),
-    };
-    const standardButton = {
-      text: hasReceipts ? "📄 Standard PDF (with receipts?)" : "📄 Standard PDF",
-      onPress: () => {
-        if (hasReceipts) {
-          Alert.alert(
-            "Include receipts?",
-            `This item has ${tool.receipts.length} receipt${tool.receipts.length === 1 ? "" : "s"} attached. Include them in the printout (each on its own page)?`,
-            [
-              { text: "No", onPress: () => doExportPdf(false), style: "cancel" },
-              { text: "Yes, include", onPress: () => doExportPdf(true) },
-            ],
-          );
-        } else {
-          doExportPdf(false);
-        }
-      },
-    };
-    Alert.alert(
-      "Export PDF",
-      "Choose the type of PDF to generate for this item.",
-      [posterButton, standardButton, { text: "Cancel", style: "cancel" }],
-    );
+    if (hasReceipts) {
+      const yes = await confirm(
+        "Include receipts?",
+        `This item has ${tool.receipts.length} receipt${tool.receipts.length === 1 ? "" : "s"} attached. Append them to the report (each on its own page)?`,
+        "Yes, include",
+      );
+      await doExportPdf(yes);
+    } else {
+      await doExportPdf(false);
+    }
   };
 
   // Poster generator — produces a single-page "FOR SALE" flyer using the
@@ -680,11 +676,14 @@ export default function ToolDetail() {
 </html>`;
 
     setShowPosterBuilder(false);
+    setPdfBusy(true);
     try {
       await printReportHtml(html, `${tool.name || "for-sale"}-poster-${Date.now()}`);
     } catch (e: any) {
       console.error("[poster] generation failed:", e);
-      Alert.alert("Error", e?.message || "Could not generate poster");
+      Alert.alert("Could not generate poster", e?.message || String(e));
+    } finally {
+      setPdfBusy(false);
     }
   };
 
@@ -774,157 +773,249 @@ export default function ToolDetail() {
 <head>
 <meta charset="utf-8"/>
 <style>
-  @page { size: letter; margin: 0.5in; }
-  body { font-family: Helvetica, Arial, sans-serif; color: #111; font-size: 11pt; }
-  table { border-collapse: collapse; width: 100%; }
+  @page { size: letter; margin: 0.55in 0.55in 0.55in 0.55in; }
+  body { font-family: Helvetica, Arial, sans-serif; color: #1a1a1a; font-size: 10.5pt; }
+  table { border-collapse: collapse; }
+  p, div { margin: 0; padding: 0; }
 
-  .header {
-    border-bottom: 4pt solid #FFB300;
-    padding-bottom: 10pt;
-    margin-bottom: 16pt;
+  /* ============ TOP BRAND BAND ============ */
+  table.brand-band { width: 100%; margin-bottom: 22pt; }
+  table.brand-band td {
+    background-color: #111111;
+    padding: 10pt 16pt;
+    vertical-align: middle;
   }
-  .h-title {
-    font-size: 22pt;
+  td.brand-mark {
+    color: #FFB300;
+    font-size: 11pt;
     font-weight: bold;
-    color: #111;
-    text-transform: uppercase;
+    letter-spacing: 4pt;
+    text-align: left;
+    width: 60%;
   }
-  .h-status {
-    display: inline-block;
-    padding: 4pt 12pt;
-    margin-top: 6pt;
+  td.brand-meta {
+    color: #f5f5f5;
+    font-size: 8.5pt;
+    letter-spacing: 1.5pt;
+    text-align: right;
+    width: 40%;
+  }
+
+  /* ============ HERO HEADER (tool name + status) ============ */
+  table.hero { width: 100%; margin-bottom: 6pt; }
+  td.hero-name {
+    font-size: 24pt;
+    font-weight: bold;
+    color: #111111;
+    text-transform: uppercase;
+    letter-spacing: 1pt;
+    padding: 0 0 4pt 0;
+    width: 70%;
+    vertical-align: middle;
+  }
+  td.hero-status {
+    width: 30%;
+    vertical-align: middle;
+    text-align: right;
+    padding: 0;
+  }
+  table.status-pill {
+    margin-left: auto;
+    margin-right: 0;
+    border: 2pt solid ${statusColor};
+  }
+  table.status-pill td {
     background-color: ${statusBg};
     color: ${statusColor};
     font-size: 9pt;
     font-weight: bold;
-    letter-spacing: 1.5pt;
+    letter-spacing: 2pt;
+    padding: 6pt 14pt;
+    text-align: center;
+  }
+  .hero-rule {
+    border-bottom: 4pt solid #FFB300;
+    margin-top: 6pt;
+    margin-bottom: 18pt;
+    height: 1pt;
+    line-height: 1pt;
   }
 
-  .section-title {
+  /* ============ SECTION BAND ============ */
+  table.section-band {
+    width: 100%;
+    margin: 18pt 0 8pt 0;
+  }
+  table.section-band td {
+    background-color: #111111;
+    color: #FFB300;
+    padding: 5pt 12pt;
     font-size: 9pt;
     font-weight: bold;
-    color: #FFB300;
-    letter-spacing: 2pt;
-    margin: 18pt 0 8pt 0;
-    padding-bottom: 4pt;
-    border-bottom: 1pt solid #ddd;
+    letter-spacing: 3pt;
   }
 
+  /* ============ SPEC SHEET (2 col label/value × 2) ============ */
+  table.specs {
+    width: 100%;
+    margin-bottom: 8pt;
+  }
   table.specs td {
-    padding: 6pt 8pt;
+    padding: 7pt 10pt;
     vertical-align: top;
+    border-bottom: 0.75pt solid #e8e8e8;
+    font-size: 10pt;
   }
   table.specs td.lab {
-    color: #666;
+    color: #777777;
     font-weight: bold;
     font-size: 8pt;
-    width: 18%;
+    letter-spacing: 1pt;
+    width: 14%;
+    text-transform: uppercase;
   }
   table.specs td.val {
-    color: #111;
+    color: #111111;
     font-weight: bold;
-    font-size: 11pt;
-    width: 32%;
+    font-size: 10.5pt;
+    width: 36%;
   }
-  table.specs tr {
-    border-bottom: 1pt solid #f0f0f0;
+  table.specs td.div {
+    width: 0;
+    padding: 0;
+    border-bottom: 0.75pt solid #e8e8e8;
   }
 
-  .desc-box {
+  /* ============ DESCRIPTION ============ */
+  table.desc-box {
+    width: 100%;
+    margin-bottom: 8pt;
+  }
+  table.desc-box td.bar {
+    width: 4pt;
+    background-color: #FFB300;
+    padding: 0;
+  }
+  table.desc-box td.body {
     background-color: #fafafa;
-    border-left: 4pt solid #FFB300;
-    padding: 10pt 14pt;
-    font-size: 11pt;
+    padding: 12pt 16pt;
+    font-size: 10.5pt;
+    color: #2a2a2a;
     line-height: 1.5;
-    color: #222;
   }
 
+  /* ============ PHOTOS ============ */
+  table.photos { width: 100%; }
   table.photos td {
     width: 50%;
     padding: 4pt;
     text-align: center;
+    vertical-align: middle;
   }
   table.photos img {
-    max-width: 100%;
-    max-height: 250pt;
-    border: 2pt solid #111;
+    width: 100%;
+    max-height: 240pt;
+    border: 1.5pt solid #111111;
   }
 
+  /* ============ HISTORY TABLE ============ */
+  table.history { width: 100%; }
   table.history th {
-    background-color: #111;
+    background-color: #111111;
     color: #FFB300;
     text-align: left;
-    padding: 6pt 8pt;
-    font-size: 9pt;
-    letter-spacing: 1pt;
+    padding: 7pt 10pt;
+    font-size: 8.5pt;
+    font-weight: bold;
+    letter-spacing: 2pt;
   }
   table.history td {
-    padding: 5pt 8pt;
-    border-bottom: 1pt solid #eee;
+    padding: 6pt 10pt;
+    border-bottom: 0.75pt solid #eeeeee;
     font-size: 10pt;
+    color: #222222;
   }
+  table.history tr.alt td { background-color: #fafafa; }
 
-  .footer {
-    margin-top: 24pt;
+  /* ============ FOOTER ============ */
+  .footer-band {
+    margin-top: 22pt;
+    border-top: 1pt solid #dddddd;
     padding-top: 8pt;
-    border-top: 1pt solid #ddd;
     text-align: center;
-    color: #999;
+    color: #999999;
     font-size: 8pt;
-    letter-spacing: 1pt;
+    letter-spacing: 2pt;
   }
 
+  /* ============ RECEIPT PAGES ============ */
   .rcpt-header {
-    font-size: 18pt;
+    font-size: 16pt;
     font-weight: bold;
-    color: #111;
+    color: #111111;
     border-bottom: 3pt solid #FFB300;
     padding-bottom: 6pt;
-    margin-bottom: 6pt;
+    margin-bottom: 4pt;
+    letter-spacing: 1.5pt;
   }
   .rcpt-sub {
-    font-size: 10pt;
-    color: #666;
+    font-size: 9.5pt;
+    color: #666666;
     margin-bottom: 14pt;
   }
   .rcpt-img-wrap { text-align: center; }
   .rcpt-img {
     max-width: 100%;
     max-height: 8.5in;
-    border: 1pt solid #ddd;
+    border: 1pt solid #cccccc;
   }
 </style>
 </head>
 <body>
 
-  <div class="header">
-    <div class="h-title">${esc(tool.name) || "(unnamed)"}</div>
-    <div class="h-status">${statusLabel}</div>
-  </div>
+  <table class="brand-band">
+    <tr>
+      <td class="brand-mark">TOOLBOX VAULT</td>
+      <td class="brand-meta">ITEM REPORT &middot; ${new Date().toLocaleDateString()}</td>
+    </tr>
+  </table>
+
+  <table class="hero">
+    <tr>
+      <td class="hero-name">${esc(tool.name) || "(UNNAMED)"}</td>
+      <td class="hero-status">
+        <table class="status-pill"><tr><td>${statusLabel}</td></tr></table>
+      </td>
+    </tr>
+  </table>
+  <div class="hero-rule">&nbsp;</div>
 
   ${
     specRowHtml.length
-      ? `<div class="section-title">SPECIFICATIONS</div>
+      ? `<table class="section-band"><tr><td>SPECIFICATIONS</td></tr></table>
          <table class="specs">${specRowHtml.join("")}</table>`
       : ""
   }
 
   ${
     tool.description
-      ? `<div class="section-title">DESCRIPTION</div>
-         <div class="desc-box">${esc(tool.description)}</div>`
+      ? `<table class="section-band"><tr><td>DESCRIPTION</td></tr></table>
+         <table class="desc-box"><tr>
+           <td class="bar">&nbsp;</td>
+           <td class="body">${esc(tool.description)}</td>
+         </tr></table>`
       : ""
   }
 
   ${
     photosHtml
-      ? `<div class="section-title">PHOTOS</div>${photosHtml}`
+      ? `<table class="section-band"><tr><td>PHOTOS</td></tr></table>${photosHtml}`
       : ""
   }
 
   ${
     history
-      ? `<div class="section-title">CHECKOUT HISTORY</div>
+      ? `<table class="section-band"><tr><td>CHECKOUT HISTORY</td></tr></table>
          <table class="history">
            <thead><tr><th>BORROWER</th><th>CHECKED OUT</th><th>CHECKED IN</th></tr></thead>
            <tbody>${history}</tbody>
@@ -932,8 +1023,8 @@ export default function ToolDetail() {
       : ""
   }
 
-  <div class="footer">
-    Generated by TOOLBOX VAULT &middot; ${new Date().toLocaleDateString()}
+  <div class="footer-band">
+    GENERATED BY TOOLBOX VAULT &nbsp;&middot;&nbsp; ${new Date().toLocaleDateString()}
   </div>
 
   ${receiptPages}
@@ -942,9 +1033,13 @@ export default function ToolDetail() {
 </html>`;
 
     try {
+      setPdfBusy(true);
       await printReportHtml(html, `${tool.name || "tool"}-${Date.now()}`);
     } catch (e: any) {
-      Alert.alert("Error", e?.message || "Could not generate PDF");
+      console.error("[standard pdf] generation failed:", e);
+      Alert.alert("Could not generate PDF", e?.message || String(e));
+    } finally {
+      setPdfBusy(false);
     }
   };
 
@@ -1677,6 +1772,88 @@ export default function ToolDetail() {
                 </Text>
               </TouchableOpacity>
             </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* PDF Export Type Picker Modal — works on web AND native (replaces Alert.alert) */}
+      <Modal
+        visible={showExportPicker}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowExportPicker(false)}
+      >
+        <View style={styles.modalBackdrop}>
+          <View style={[styles.modalCard, { maxWidth: 420 }]}>
+            <View style={styles.modalHeader}>
+              <Ionicons name="document-text" size={20} color={theme.colors.accent} />
+              <Text style={styles.modalTitle}>EXPORT PDF</Text>
+              <TouchableOpacity onPress={() => setShowExportPicker(false)} hitSlop={10}>
+                <Ionicons name="close" size={22} color={theme.colors.textPrimary} />
+              </TouchableOpacity>
+            </View>
+            <Text style={[styles.helper, { marginBottom: 14 }]}>
+              Choose the type of PDF to generate for this item.
+            </Text>
+
+            <TouchableOpacity
+              testID="pick-pdf-poster"
+              style={pickerStyles.choice}
+              onPress={handlePickPoster}
+              activeOpacity={0.85}
+            >
+              <View style={pickerStyles.iconCircle}>
+                <Ionicons name="megaphone" size={22} color="#000" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={pickerStyles.choiceTitle}>For-Sale Poster</Text>
+                <Text style={pickerStyles.choiceSub}>
+                  Single-page flyer with FOR SALE banner, asking price, photo and contact info.
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color={theme.colors.textSecondary} />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              testID="pick-pdf-standard"
+              style={pickerStyles.choice}
+              onPress={handlePickStandard}
+              activeOpacity={0.85}
+            >
+              <View style={[pickerStyles.iconCircle, { backgroundColor: "#222" }]}>
+                <Ionicons name="document-text" size={20} color={theme.colors.accent} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={pickerStyles.choiceTitle}>Standard Report</Text>
+                <Text style={pickerStyles.choiceSub}>
+                  Branded item report with specs, photos, history{
+                    Array.isArray(tool.receipts) && tool.receipts.length > 0
+                      ? ` and ${tool.receipts.length} receipt${tool.receipts.length === 1 ? "" : "s"}`
+                      : ""
+                  }.
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color={theme.colors.textSecondary} />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              testID="pdf-picker-cancel"
+              style={[styles.btnGhost, { marginTop: 6 }]}
+              onPress={() => setShowExportPicker(false)}
+            >
+              <Text style={styles.btnGhostText}>CANCEL</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* PDF Generating overlay */}
+      <Modal visible={pdfBusy} transparent animationType="fade">
+        <View style={styles.modalBackdrop}>
+          <View style={pickerStyles.busyCard}>
+            <ActivityIndicator size="large" color={theme.colors.accent} />
+            <Text style={pickerStyles.busyText}>Generating PDF…</Text>
+            <Text style={pickerStyles.busySub}>This may take a moment for items with photos.</Text>
           </View>
         </View>
       </Modal>
@@ -2648,3 +2825,62 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
 });
+
+const pickerStyles = StyleSheet.create({
+  choice: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 14,
+    paddingVertical: 14,
+    paddingHorizontal: 14,
+    backgroundColor: theme.colors.surface,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: 12,
+    marginBottom: 10,
+  },
+  iconCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: theme.colors.accent,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  choiceTitle: {
+    color: theme.colors.textPrimary,
+    fontSize: 15,
+    fontWeight: "700",
+    letterSpacing: 0.3,
+    marginBottom: 2,
+  },
+  choiceSub: {
+    color: theme.colors.textSecondary,
+    fontSize: 12,
+    lineHeight: 16,
+  },
+  busyCard: {
+    backgroundColor: theme.colors.surface,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: 16,
+    paddingVertical: 28,
+    paddingHorizontal: 36,
+    alignItems: "center",
+    minWidth: 240,
+  },
+  busyText: {
+    color: theme.colors.textPrimary,
+    fontSize: 16,
+    fontWeight: "700",
+    letterSpacing: 1,
+    marginTop: 14,
+  },
+  busySub: {
+    color: theme.colors.textSecondary,
+    fontSize: 11,
+    marginTop: 4,
+    textAlign: "center",
+  },
+});
+

@@ -2148,3 +2148,28 @@ agent_communication:
     message: |
       Receipts are now optionally appended to inventory / insurance / sales PDF reports via a new `include_receipts` toggle in each report's options. Each receipt becomes its own page with a header showing item-no, tool name, and serial. Frontend single-tool print also asks "Include receipts?" via Alert when the tool has any. 15/15 backend tests green.
 
+
+
+  - agent: "main"
+    message: |
+      PDF UX overhaul (web + native):
+      1. **Replaced broken `Alert.alert(...)` picker** with an in-app Modal that
+         lets the user choose For-Sale Poster vs Standard Report. RN-Web's
+         Alert.alert ignores the buttons array, so the document button on web
+         was a complete no-op — the modal works identically on web and native.
+      2. **Native For-Sale Poster silent failure FIXED**: `printHtml.native.ts`
+         used to call `Sharing.shareAsync` only when `Sharing.isAvailableAsync()`
+         was true and silently exit otherwise. Now it (a) renames the temp PDF
+         to a friendly filename via expo-file-system, (b) tries Sharing, (c)
+         falls back to `Print.printAsync` (native iOS print preview), (d) as a
+         last resort surfaces an Alert telling the user where the file lives.
+      3. **Standard Item Report PDF redesigned** with strict xhtml2pdf-safe
+         patterns (no inline-block, no flex, all layout via tables). New look:
+         brand band header, hero with status pill on the right, black/yellow
+         section bands, 4-column spec sheet, accent-bar description, photo grid,
+         history table. Verified by direct xhtml2pdf render: 0 errors / 0 warnings.
+      4. Added a "Generating PDF…" busy overlay with spinner so users get
+         feedback while the backend or expo-print is working.
+      Files: app/tool/[id].tsx (picker modal + busy overlay + new PDF HTML),
+      src/printHtml.native.ts (rewritten with sharing fallbacks).
+
