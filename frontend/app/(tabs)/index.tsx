@@ -416,48 +416,42 @@ function DealerBalanceRow({
         />
       </TouchableOpacity>
       <View style={styles.dealerActionsRow}>
-        {credit > 0 && (
-          <TouchableOpacity
-            testID={`pay-credit-${dealer.id}`}
-            style={styles.dealerPill}
-            onPress={onPayCredit}
-            activeOpacity={0.8}
-          >
-            <Ionicons name="card" size={12} color={theme.colors.textPrimary} />
-            <Text style={styles.dealerPillLabel} numberOfLines={1}>
-              CREDIT
-            </Text>
-            <Text style={styles.dealerPillVal} numberOfLines={1}>
-              ${credit.toFixed(2)}
-            </Text>
-            <View style={styles.dealerPillCta}>
-              <Text style={styles.dealerPillCtaText}>PAY</Text>
-            </View>
-          </TouchableOpacity>
-        )}
-        {personal > 0 && (
-          <TouchableOpacity
-            testID={`pay-personal-${dealer.id}`}
-            style={styles.dealerPill}
-            onPress={onPayPersonal}
-            activeOpacity={0.8}
-          >
-            <Ionicons
-              name="person"
-              size={12}
-              color={theme.colors.textPrimary}
-            />
-            <Text style={styles.dealerPillLabel} numberOfLines={1}>
-              TRUCK
-            </Text>
-            <Text style={styles.dealerPillVal} numberOfLines={1}>
-              ${personal.toFixed(2)}
-            </Text>
-            <View style={styles.dealerPillCta}>
-              <Text style={styles.dealerPillCtaText}>PAY</Text>
-            </View>
-          </TouchableOpacity>
-        )}
+        <TouchableOpacity
+          testID={`pay-credit-${dealer.id}`}
+          style={[styles.dealerPill, credit <= 0 && { opacity: 0.5 }]}
+          onPress={onPayCredit}
+          disabled={credit <= 0}
+          activeOpacity={0.8}
+        >
+          <Ionicons name="card" size={12} color={theme.colors.textPrimary} />
+          <Text style={styles.dealerPillLabel} numberOfLines={1}>
+            CREDIT PYMT
+          </Text>
+          <Text style={styles.dealerPillVal} numberOfLines={1}>
+            ${credit.toFixed(2)}
+          </Text>
+          <View style={styles.dealerPillCta}>
+            <Text style={styles.dealerPillCtaText}>PAY</Text>
+          </View>
+        </TouchableOpacity>
+        <TouchableOpacity
+          testID={`pay-personal-${dealer.id}`}
+          style={[styles.dealerPill, personal <= 0 && { opacity: 0.5 }]}
+          onPress={onPayPersonal}
+          disabled={personal <= 0}
+          activeOpacity={0.8}
+        >
+          <Ionicons name="person" size={12} color={theme.colors.textPrimary} />
+          <Text style={styles.dealerPillLabel} numberOfLines={1}>
+            TRUCK PYMT
+          </Text>
+          <Text style={styles.dealerPillVal} numberOfLines={1}>
+            ${personal.toFixed(2)}
+          </Text>
+          <View style={styles.dealerPillCta}>
+            <Text style={styles.dealerPillCtaText}>PAY</Text>
+          </View>
+        </TouchableOpacity>
       </View>
     </View>
   );
