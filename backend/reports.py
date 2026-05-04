@@ -784,7 +784,7 @@ def _build_receipt_pages(
     # Header style for each receipt page
     header_style = ParagraphStyle(
         "ReceiptHeader",
-        parent=st["normal"],
+        parent=st["small"],
         fontSize=11,
         leading=14,
         textColor=colors.HexColor("#111111"),
