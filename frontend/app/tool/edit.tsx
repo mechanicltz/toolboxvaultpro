@@ -7,6 +7,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
+import * as ImageManipulator from "expo-image-manipulator";
 import * as DocumentPicker from "expo-document-picker";
 import * as FileSystem from "expo-file-system/legacy";
 import { theme } from "../../src/theme";
@@ -90,6 +91,17 @@ export default function ToolEdit() {
 
   const [locations, setLocations] = useState<any[]>([]);
   const [dealers, setDealers] = useState<any[]>([]);
+
+  // AI Receipt Scanner state
+  const [scanning, setScanning] = useState(false);
+  const [scanModalOpen, setScanModalOpen] = useState(false);
+  const [scanImage, setScanImage] = useState<string>(""); // base64 (no prefix) of the receipt
+  const [scanImageUri, setScanImageUri] = useState<string>(""); // data: uri used for preview
+  const [scanResult, setScanResult] = useState<any | null>(null);
+  // Per-field toggles (default ON for non-empty values)
+  const [scanApply, setScanApply] = useState<Record<string, boolean>>({});
+  // After APPLY: if not in edit mode, cost>0 and dealer matched, remember to prompt to charge the dealer
+  const [pendingDealerCharge, setPendingDealerCharge] = useState<{ dealerId: string; amount: number; note: string } | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -189,6 +201,187 @@ export default function ToolEdit() {
       }
     } catch (e: any) { Alert.alert("Error", e.message); }
   };
+
+  // ---- AI RECEIPT SCANNER ----
+  // Compress/resize an image URI to max-width 1600 @ JPEG q=0.6 to keep payload small.
+  const compressImage = async (uri: string): Promise<{ base64: string; uri: string }> => {
+    try {
+      const out = await ImageManipulator.manipulateAsync(
+        uri,
+        [{ resize: { width: 1600 } }],
+        { compress: 0.6, format: ImageManipulator.SaveFormat.JPEG, base64: true },
+      );
+      return { base64: out.base64 || "", uri: out.uri || uri };
+    } catch {
+      return { base64: "", uri };
+    }
+  };
+
+  const runReceiptScan = async (src: "camera" | "library") => {
+    try {
+      const perm =
+        src === "camera"
+          ? await ImagePicker.requestCameraPermissionsAsync()
+          : await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!perm.granted) {
+        Alert.alert("Permission needed", `Please grant ${src === "camera" ? "camera" : "photo library"} access.`);
+        return;
+      }
+      const opts: any = { quality: 0.8, allowsEditing: false, base64: false };
+      const res =
+        src === "camera"
+          ? await ImagePicker.launchCameraAsync(opts)
+          : await ImagePicker.launchImageLibraryAsync({
+              ...opts,
+              mediaTypes: ImagePicker.MediaTypeOptions.Images,
+            });
+      if (res.canceled || !res.assets?.[0]?.uri) return;
+
+      setScanning(true);
+      const { base64, uri } = await compressImage(res.assets[0].uri);
+      if (!base64) {
+        setScanning(false);
+        Alert.alert("Error", "Could not process image.");
+        return;
+      }
+      const dataUri = `data:image/jpeg;base64,${base64}`;
+      setScanImage(base64);
+      setScanImageUri(dataUri);
+
+      try {
+        const r = await api.post<any>(`/ai/receipt-scan`, { image_base64: base64 });
+        setScanResult(r || {});
+        // Default per-field toggle: ON when non-empty/non-zero
+        const toggles: Record<string, boolean> = {
+          name: !!(r?.name && String(r.name).trim()),
+          brand: !!(r?.brand && String(r.brand).trim()),
+          model: !!(r?.model && String(r.model).trim()),
+          serial_number: !!(r?.serial_number && String(r.serial_number).trim()),
+          cost: !!(r?.cost && Number(r.cost) > 0),
+          quantity: !!(r?.quantity && Number(r.quantity) > 1),
+          purchase_date: !!(r?.purchase_date && String(r.purchase_date).trim()),
+          dealer: !!(r?.dealer && String(r.dealer).trim()),
+          description: !!(r?.description && String(r.description).trim()),
+        };
+        setScanApply(toggles);
+        setScanModalOpen(true);
+      } catch (e: any) {
+        Alert.alert(
+          "Scan failed",
+          e?.message || e?.detail || "Unable to read receipt. Please try a clearer photo or enter details manually.",
+        );
+      } finally {
+        setScanning(false);
+      }
+    } catch (e: any) {
+      setScanning(false);
+      Alert.alert("Error", e.message || "Could not start receipt scan.");
+    }
+  };
+
+  const chooseReceiptSource = () => {
+    Alert.alert(
+      "Scan Receipt",
+      "Choose how to provide the receipt photo. Our AI will read it and auto-fill the fields.",
+      [
+        { text: "Take Photo", onPress: () => runReceiptScan("camera") },
+        { text: "Choose from Library", onPress: () => runReceiptScan("library") },
+        { text: "Cancel", style: "cancel" },
+      ],
+    );
+  };
+
+  const applyScanResult = () => {
+    if (!scanResult) return;
+    const r = scanResult;
+    if (scanApply.name && r.name) setName(r.name);
+    if (scanApply.brand && r.brand) setBrand(r.brand);
+    if (scanApply.model && r.model) setModel(r.model);
+    if (scanApply.serial_number && r.serial_number) setSerial(r.serial_number);
+    if (scanApply.cost && r.cost != null) setCost(String(Number(r.cost).toFixed(2)));
+    if (scanApply.quantity && r.quantity != null) setQuantity(String(Math.max(1, parseInt(String(r.quantity), 10) || 1)));
+    if (scanApply.purchase_date && r.purchase_date) setPurchaseDate(r.purchase_date);
+    if (scanApply.description && r.description) setDescription(r.description);
+
+    // Dealer auto-match by name (case-insensitive)
+    let matchedDealer: any = null;
+    if (scanApply.dealer && r.dealer) {
+      const dname = String(r.dealer).trim().toLowerCase();
+      matchedDealer = dealers.find((d) => String(d.name || "").trim().toLowerCase() === dname) || null;
+      if (matchedDealer) {
+        setDealerId(matchedDealer.id);
+        setDealerName(matchedDealer.name);
+      }
+    }
+
+    // Save the receipt image to receipts[]
+    if (scanImageUri) setReceipts((arr) => [...arr, scanImageUri]);
+
+    setScanModalOpen(false);
+
+    // Dealer-charge prompt (only on new tools, with cost > 0 and matched dealer)
+    const chargeAmount = scanApply.cost ? Number(r.cost) || 0 : parseFloat(cost) || 0;
+    if (!isEdit && matchedDealer && chargeAmount > 0) {
+      setTimeout(() => {
+        Alert.alert(
+          "Charge to dealer account?",
+          `Add a $${chargeAmount.toFixed(2)} charge to ${matchedDealer.name}'s balance for this purchase?`,
+          [
+            { text: "No", style: "cancel" },
+            {
+              text: `Yes, charge $${chargeAmount.toFixed(2)}`,
+              onPress: () =>
+                setPendingDealerCharge({
+                  dealerId: matchedDealer.id,
+                  amount: chargeAmount,
+                  note: `Auto: ${r.name || "Receipt scan"}`,
+                }),
+            },
+            {
+              text: "Edit amount…",
+              onPress: () => {
+                // Use a minimal numeric prompt via Alert (iOS only supports prompt, Android fallback)
+                if (Platform.OS === "ios" && (Alert as any).prompt) {
+                  (Alert as any).prompt(
+                    "Charge amount",
+                    `Enter amount to charge to ${matchedDealer.name}`,
+                    [
+                      { text: "Cancel", style: "cancel" },
+                      {
+                        text: "Confirm",
+                        onPress: (txt?: string) => {
+                          const n = parseFloat(txt || "0");
+                          if (n > 0) {
+                            setPendingDealerCharge({
+                              dealerId: matchedDealer.id,
+                              amount: n,
+                              note: `Auto: ${r.name || "Receipt scan"}`,
+                            });
+                          }
+                        },
+                      },
+                    ],
+                    "plain-text",
+                    String(chargeAmount.toFixed(2)),
+                    "decimal-pad",
+                  );
+                } else {
+                  // Android: just accept the scanned amount — user can edit manually in dealer screen
+                  setPendingDealerCharge({
+                    dealerId: matchedDealer.id,
+                    amount: chargeAmount,
+                    note: `Auto: ${r.name || "Receipt scan"}`,
+                  });
+                  Alert.alert("Queued", `Charge of $${chargeAmount.toFixed(2)} queued. Edit on dealer screen if needed.`);
+                }
+              },
+            },
+          ],
+        );
+      }, 250);
+    }
+  };
+
 
   const computeExpiry = (startDate: string, months: string) => {
     const m = parseInt(months);
@@ -324,10 +517,24 @@ export default function ToolEdit() {
     try {
       if (isEdit && id) await api.updateTool(id, payload);
       else await api.createTool(payload);
+      // After successful save (on new tools), apply any queued dealer charge.
+      if (!isEdit && pendingDealerCharge && pendingDealerCharge.amount > 0 && pendingDealerCharge.dealerId) {
+        try {
+          await api.addDealerTransaction(pendingDealerCharge.dealerId, {
+            account: "credit",
+            type: "charge",
+            amount: pendingDealerCharge.amount,
+            note: pendingDealerCharge.note || "",
+          });
+        } catch (chargeErr: any) {
+          // Non-fatal: surface a warning but don't block the save
+          console.warn("Dealer charge failed:", chargeErr);
+        }
+      }
       router.back();
     } catch (e: any) { Alert.alert("Error", e.message); }
     finally { setSaving(false); }
-  }, [name, description, brand, model, serial, isSet, setSerials, cost, quantity, purchaseDate, condition, locationId, locationName, category, tags, photos, documents, isConsumable, consumableInfo, needsRepair, repairInfo, hasWarranty, warranty, dealerId, dealerName, purchasedAgentId, purchasedAgentName, isEdit, id, router]);
+  }, [name, description, brand, model, serial, isSet, setSerials, cost, quantity, purchaseDate, condition, locationId, locationName, category, tags, photos, documents, receipts, isConsumable, consumableInfo, needsRepair, repairInfo, hasWarranty, warranty, dealerId, dealerName, purchasedAgentId, purchasedAgentName, pendingDealerCharge, isEdit, id, router]);
 
   if (loading) {
     return (
@@ -370,6 +577,33 @@ export default function ToolEdit() {
         </View>
 
         <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 120 }} keyboardShouldPersistTaps="handled">
+          {/* AI Receipt Scanner banner — prominent at top of form */}
+          {!isEdit && (
+            <TouchableOpacity
+              testID="scan-receipt-btn"
+              style={styles.scanBanner}
+              onPress={chooseReceiptSource}
+              disabled={scanning}
+              activeOpacity={0.85}
+            >
+              {scanning ? (
+                <>
+                  <ActivityIndicator color="#000" />
+                  <Text style={styles.scanBannerText}>READING RECEIPT…</Text>
+                </>
+              ) : (
+                <>
+                  <Ionicons name="scan" size={22} color="#000" />
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.scanBannerText}>SCAN RECEIPT</Text>
+                    <Text style={styles.scanBannerSub}>AI auto-fills fields from a photo</Text>
+                  </View>
+                  <Ionicons name="sparkles" size={18} color="#000" />
+                </>
+              )}
+            </TouchableOpacity>
+          )}
+
           <Text style={styles.label}>NAME *</Text>
           <TextInput testID="name-input" placeholder="Cordless Drill" placeholderTextColor={theme.colors.textMuted}
             value={name} onChangeText={setName} style={styles.input} />
@@ -841,6 +1075,51 @@ export default function ToolEdit() {
             </TouchableOpacity>
           </ScrollView>
 
+          {/* Receipts */}
+          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+            <Text style={styles.label}>RECEIPTS ({receipts.length})</Text>
+            <TouchableOpacity
+              testID="add-receipt-btn"
+              onPress={chooseReceiptSource}
+              disabled={scanning}
+              style={styles.smallScanBtn}
+            >
+              {scanning ? (
+                <ActivityIndicator color={theme.colors.accent} size="small" />
+              ) : (
+                <>
+                  <Ionicons name="scan" size={12} color={theme.colors.accent} />
+                  <Text style={styles.smallScanBtnText}>
+                    {isEdit ? "ADD & SCAN" : "SCAN RECEIPT"}
+                  </Text>
+                </>
+              )}
+            </TouchableOpacity>
+          </View>
+          {receipts.length > 0 ? (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 8 }}>
+              {receipts.map((r, i) => (
+                <View key={i} style={styles.photoWrap}>
+                  <Image source={{ uri: r }} style={styles.photo} />
+                  <TouchableOpacity
+                    testID={`remove-receipt-${i}`}
+                    style={styles.photoRemove}
+                    onPress={() => setReceipts((arr) => arr.filter((_, idx) => idx !== i))}
+                  >
+                    <Ionicons name="close" size={16} color={theme.colors.textPrimary} />
+                  </TouchableOpacity>
+                  <View style={styles.receiptBadge}>
+                    <Ionicons name="receipt" size={10} color="#000" />
+                  </View>
+                </View>
+              ))}
+            </ScrollView>
+          ) : (
+            <Text style={styles.helper}>
+              Attach receipt photos for insurance, warranty claims, and PDF reports.
+            </Text>
+          )}
+
           {/* Documents */}
           <Text style={styles.label}>DOCUMENTS ({documents.length})</Text>
           {documents.map((d, i) => (
@@ -1020,6 +1299,96 @@ export default function ToolEdit() {
             </View>
           </View>
         </KeyboardAvoidingView>
+      </Modal>
+
+      {/* AI Receipt Scan — Confirmation Modal (per-field toggles) */}
+      <Modal
+        visible={scanModalOpen}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setScanModalOpen(false)}
+      >
+        <View style={styles.modalBg}>
+          <View style={[styles.modalCard, { maxHeight: "92%" }]}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 8 }}>
+              <Ionicons name="sparkles" size={18} color={theme.colors.accent} />
+              <Text style={styles.modalTitle}>REVIEW RECEIPT</Text>
+            </View>
+            <Text style={[styles.helper, { marginBottom: 12 }]}>
+              Toggle each field to control what the AI fills in. You can still edit any value on the form.
+            </Text>
+            <ScrollView
+              keyboardShouldPersistTaps="handled"
+              style={{ maxHeight: 500 }}
+              showsVerticalScrollIndicator={false}
+            >
+              {!!scanImageUri && (
+                <Image source={{ uri: scanImageUri }} style={styles.scanPreview} resizeMode="contain" />
+              )}
+
+              {[
+                { key: "name", label: "NAME" },
+                { key: "brand", label: "BRAND" },
+                { key: "model", label: "MODEL" },
+                { key: "serial_number", label: "SERIAL #" },
+                { key: "cost", label: "COST ($)" },
+                { key: "quantity", label: "QUANTITY" },
+                { key: "purchase_date", label: "PURCHASE DATE" },
+                { key: "dealer", label: "DEALER" },
+                { key: "description", label: "DESCRIPTION" },
+              ].map((f) => {
+                const val = scanResult?.[f.key];
+                const strVal =
+                  val == null || val === ""
+                    ? "—"
+                    : f.key === "cost"
+                      ? `$${Number(val || 0).toFixed(2)}`
+                      : String(val);
+                const empty = val == null || val === "" || (f.key === "cost" && Number(val) === 0);
+                return (
+                  <View key={f.key} style={styles.scanRow}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.scanRowLabel}>{f.label}</Text>
+                      <Text
+                        style={[
+                          styles.scanRowValue,
+                          empty && { color: theme.colors.textMuted, fontStyle: "italic" },
+                        ]}
+                        numberOfLines={2}
+                      >
+                        {strVal}
+                      </Text>
+                    </View>
+                    <Switch
+                      testID={`scan-toggle-${f.key}`}
+                      value={!!scanApply[f.key] && !empty}
+                      disabled={empty}
+                      onValueChange={(v) => setScanApply((s) => ({ ...s, [f.key]: v }))}
+                      trackColor={{ true: theme.colors.accent, false: theme.colors.border }}
+                      thumbColor="#fff"
+                    />
+                  </View>
+                );
+              })}
+            </ScrollView>
+            <View style={{ flexDirection: "row", gap: 10, marginTop: 12 }}>
+              <TouchableOpacity
+                testID="scan-cancel-btn"
+                style={[styles.btnGhost, { flex: 1, marginTop: 0 }]}
+                onPress={() => setScanModalOpen(false)}
+              >
+                <Text style={styles.btnGhostText}>CANCEL</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                testID="scan-apply-btn"
+                style={[styles.btnPrimary, { flex: 1 }]}
+                onPress={applyScanResult}
+              >
+                <Text style={styles.btnPrimaryText}>APPLY & SAVE PHOTO</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
       </Modal>
 
       {/* Sticky bottom Save Bar */}
@@ -1317,5 +1686,85 @@ const styles = StyleSheet.create({
     fontWeight: "900",
     fontSize: 9,
     letterSpacing: 1.5,
+  },
+  scanBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    backgroundColor: theme.colors.accent,
+    borderRadius: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+    marginBottom: 8,
+    ...(theme.elevation.accent as object),
+  },
+  scanBannerText: {
+    color: "#000",
+    fontWeight: "900",
+    letterSpacing: 2,
+    fontSize: 12,
+  },
+  scanBannerSub: {
+    color: "#000",
+    opacity: 0.7,
+    fontSize: 8,
+    fontWeight: "700",
+    letterSpacing: 1,
+    marginTop: 2,
+  },
+  smallScanBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    borderWidth: 1,
+    borderColor: theme.colors.accent,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 4,
+  },
+  smallScanBtnText: {
+    color: theme.colors.accent,
+    fontWeight: "900",
+    fontSize: 8,
+    letterSpacing: 1.5,
+  },
+  receiptBadge: {
+    position: "absolute",
+    bottom: 4,
+    left: 4,
+    backgroundColor: theme.colors.accent,
+    width: 20,
+    height: 20,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 10,
+  },
+  scanPreview: {
+    width: "100%",
+    height: 200,
+    backgroundColor: "#000",
+    borderRadius: 6,
+    marginBottom: 12,
+  },
+  scanRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.borderSubtle,
+  },
+  scanRowLabel: {
+    color: theme.colors.textMuted,
+    fontSize: 8,
+    fontWeight: "800",
+    letterSpacing: 1.5,
+    marginBottom: 2,
+  },
+  scanRowValue: {
+    color: theme.colors.textPrimary,
+    fontSize: 11,
+    fontWeight: "600",
   },
 });
