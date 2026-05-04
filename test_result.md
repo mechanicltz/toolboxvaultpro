@@ -1986,23 +1986,25 @@ agent_communication:
 backend_ai_receipt_scan:
   - task: "AI Receipt Scanner — POST /api/ai/receipt-scan (GPT-4o Vision via emergentintegrations)"
     implemented: true
-    working: "NA"
+    working: true
     file: "/app/backend/server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: |
-          Backend endpoint was implemented in a previous session (~L2918). Frontend now wires it end-to-end in /app/frontend/app/tool/edit.tsx — SCAN RECEIPT button → expo-image-picker (camera OR library) → expo-image-manipulator compress (max-width 1600, JPEG q=0.6, base64) → POST /api/ai/receipt-scan → per-field toggle confirmation modal → applies chosen fields to the tool form and appends the compressed image to `receipts[]`. Also adds a dealer-charge Alert after APPLY on new tools when a dealer was auto-matched and cost>0 — on save, fires POST /api/dealers/{id}/transactions with a `charge` transaction for the captured amount. No backend code changed this session.
-
-          Please smoke-test the endpoint (subtest@example.com / password123):
-          1. POST /api/ai/receipt-scan {image_base64: "<valid small JPEG base64>"} → expect 200, ReceiptScanResponse shape.
-          2. POST /api/ai/receipt-scan {image_base64: ""} → expect 400 "image_base64 is required".
-          3. POST /api/ai/receipt-scan {image_base64: "not-base64!@#"} → expect 400 OR 500 ("Invalid base64 image" preferred; 500 from the downstream LLM call if base64.b64decode didn't validate is acceptable as long as a clear error is surfaced).
-          4. Unauthorized (no Authorization header) → expect 401.
-          5. Confirm EMERGENT_LLM_KEY is still set in backend/.env — otherwise endpoint will return 500 "EMERGENT_LLM_KEY missing in backend environment".
+          Backend endpoint was implemented in a previous session (~L2918). Frontend wires it end-to-end in /app/frontend/app/tool/edit.tsx (SCAN RECEIPT → expo-image-picker camera/library → expo-image-manipulator compress → POST /api/ai/receipt-scan → per-field toggle modal → apply).
+      - working: false
+        agent: "testing"
+        comment: "Happy-path 500 `AttributeError: 'LlmChat' object has no attribute 'with_max_tokens'` because emergentintegrations was updated and dropped that helper. Other 4 smoke cases passed."
+      - working: "NA"
+        agent: "main"
+        comment: "One-line fix at server.py L2979 `.with_max_tokens(800)` → `.with_params(max_tokens=800)`. Requested re-test."
+      - working: true
+        agent: "testing"
+        comment: "RETEST PASSED — 8/8 scenarios, 19/19 assertions green. Happy path now returns 200 with correct ReceiptScanResponse shape (all 10 keys, cost numeric, quantity int, raw dict-or-None). GPT-4o call succeeds end-to-end in ~1.5s. Unauthorized → 401; empty base64 → 400 'image_base64 is required'; invalid base64 → 400 'Invalid base64 image'. Regression GET /tools /dealers /auth/me all 200. Task complete."
 
 agent_communication:
   - agent: "main"
