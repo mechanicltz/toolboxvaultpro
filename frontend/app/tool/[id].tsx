@@ -126,6 +126,44 @@ export default function ToolDetail() {
     }
   };
 
+  // Add a photo to this tool from camera or library, then save to backend
+  const addToolPhoto = async (src: "camera" | "library") => {
+    try {
+      const perm =
+        src === "camera"
+          ? await ImagePicker.requestCameraPermissionsAsync()
+          : await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!perm.granted) {
+        Alert.alert("Permission needed", `Please grant ${src === "camera" ? "camera" : "photo library"} access.`);
+        return;
+      }
+      const opts: any = { quality: 0.7, allowsEditing: false, base64: true };
+      const res =
+        src === "camera"
+          ? await ImagePicker.launchCameraAsync(opts)
+          : await ImagePicker.launchImageLibraryAsync({
+              ...opts,
+              mediaTypes: ImagePicker.MediaTypeOptions.Images,
+            });
+      if (res.canceled || !res.assets?.[0]) return;
+      const a = res.assets[0];
+      const data = a.base64 ? `data:image/jpeg;base64,${a.base64}` : a.uri;
+      const next = [...(tool?.photos || []), data];
+      await api.updateTool(tool.id, { photos: next });
+      load();
+    } catch (e: any) {
+      Alert.alert("Error", e.message || "Could not add photo");
+    }
+  };
+
+  const promptAddPhoto = () => {
+    Alert.alert("Add a photo", "Choose source", [
+      { text: "Take Photo", onPress: () => addToolPhoto("camera") },
+      { text: "Choose from Library", onPress: () => addToolPhoto("library") },
+      { text: "Cancel", style: "cancel" },
+    ]);
+  };
+
   const load = useCallback(async () => {
     if (!id) return;
     try {
@@ -395,33 +433,40 @@ export default function ToolDetail() {
       </View>
 
       <ScrollView contentContainerStyle={{ paddingBottom: 120 }}>
-        <View style={styles.heroBox}>
-          {photos.length > 0 ? (
+        {photos.length > 0 ? (
+          <View style={styles.heroBox}>
             <Image source={{ uri: photos[photoIdx] }} style={styles.heroImg} />
-          ) : (
-            <View style={styles.heroPlaceholder}>
-              <Ionicons name="construct" size={64} color={theme.colors.accent} />
-            </View>
-          )}
-          {photos.length > 1 && (
-            <ScrollView
-              horizontal
-              style={styles.thumbStrip}
-              contentContainerStyle={{ gap: 8, padding: 8 }}
-            >
-              {photos.map((p: string, i: number) => (
-                <TouchableOpacity key={i} onPress={() => setPhotoIdx(i)}>
-                  <Image
-                    source={{ uri: p }}
-                    style={[styles.thumbSm, photoIdx === i && styles.thumbActive]}
-                  />
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-          )}
-        </View>
+            {photos.length > 1 && (
+              <ScrollView
+                horizontal
+                style={styles.thumbStrip}
+                contentContainerStyle={{ gap: 8, padding: 8 }}
+              >
+                {photos.map((p: string, i: number) => (
+                  <TouchableOpacity key={i} onPress={() => setPhotoIdx(i)}>
+                    <Image
+                      source={{ uri: p }}
+                      style={[styles.thumbSm, photoIdx === i && styles.thumbActive]}
+                    />
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            )}
+          </View>
+        ) : null}
 
         <View style={styles.bodyContainer}>
+          {photos.length === 0 && (
+            <TouchableOpacity
+              testID="add-photo-pill"
+              style={styles.addPhotoPill}
+              onPress={promptAddPhoto}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="camera" size={14} color={theme.colors.accent} />
+              <Text style={styles.addPhotoPillText}>ADD PHOTO</Text>
+            </TouchableOpacity>
+          )}
           <View
             style={[
               styles.statusBanner,
@@ -1536,6 +1581,26 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: theme.colors.surface,
+  },
+  addPhotoPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    alignSelf: "flex-start",
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: theme.colors.accent,
+    backgroundColor: theme.colors.bgSecondary,
+    marginBottom: 10,
+  },
+  addPhotoPillText: {
+    color: theme.colors.accent,
+    fontSize: 9,
+    fontWeight: "900",
+    letterSpacing: 1.5,
   },
   thumbStrip: { backgroundColor: theme.colors.bg },
   thumbSm: {
