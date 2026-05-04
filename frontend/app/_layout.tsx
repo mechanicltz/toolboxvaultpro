@@ -35,14 +35,39 @@ import { theme } from "../src/theme";
 // can confirm in the JS console that the latest layout module has been
 // re-evaluated. If you don't see this log line increment after editing,
 // you need a full reload (shake → Reload) — hot reload skips root layouts.
-const NATIVE_SCALE_VERSION = 4;
-const NATIVE_FONT_SCALE = Platform.select({ ios: 0.65, android: 0.7, default: 1 }) as number;
-if (Platform.OS !== "web") {
-  // eslint-disable-next-line no-console
-  console.log(
-    `[ToolboxVault] native font scale v${NATIVE_SCALE_VERSION} active — ${Platform.OS} ${NATIVE_FONT_SCALE}x`,
-  );
-}
+const NATIVE_SCALE_VERSION = 5;
+
+// We scale on:
+//   - iOS / Android native (always)
+//   - Web ONLY when running inside a mobile browser. We check user-agent
+//     because Dimensions.get("window") on web isn't reliable until first
+//     paint — but the UA is available immediately at module-eval time.
+const _isMobileWeb = (() => {
+  if (Platform.OS !== "web") return false;
+  try {
+    const w: any = (globalThis as any).window;
+    const nav: any = w?.navigator;
+    const ua: string = (nav?.userAgent || "") + "";
+    const widthOk = (w?.innerWidth || 0) > 0 && (w?.innerWidth || 0) < 700;
+    // iPhone / iPad in mobile mode / Android phones / general "Mobile" UA
+    const uaMobile = /iPhone|iPod|Android.*Mobile|Mobile Safari|webOS/i.test(ua);
+    return uaMobile || widthOk;
+  } catch {
+    return false;
+  }
+})();
+
+const NATIVE_FONT_SCALE = (() => {
+  if (Platform.OS === "ios") return 0.65;
+  if (Platform.OS === "android") return 0.7;
+  if (_isMobileWeb) return 0.7;
+  return 1;
+})();
+
+// eslint-disable-next-line no-console
+console.log(
+  `[ToolboxVault] font scale v${NATIVE_SCALE_VERSION} active — platform=${Platform.OS} mobileWeb=${_isMobileWeb} scale=${NATIVE_FONT_SCALE}`,
+);
 
 // Disable iOS auto font scaling globally — must be set before any Text renders.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -59,11 +84,7 @@ TextInputAny.defaultProps.maxFontSizeMultiplier = 1;
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const StyleSheetAny = StyleSheet as any;
-if (
-  Platform.OS !== "web" &&
-  NATIVE_FONT_SCALE !== 1 &&
-  !StyleSheetAny.__tv_create_patched__
-) {
+if (NATIVE_FONT_SCALE !== 1 && !StyleSheetAny.__tv_create_patched__) {
   StyleSheetAny.__tv_create_patched__ = true;
   const origCreate = StyleSheet.create.bind(StyleSheet);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

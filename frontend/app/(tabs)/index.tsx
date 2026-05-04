@@ -204,7 +204,7 @@ export default function HomeScreen() {
       />
     ),
     owed_to_dealers: () => (
-      <>
+      <View style={styles.owedCluster}>
         <SummaryRow
           icon="wallet"
           label="OWED TO DEALERS"
@@ -214,21 +214,28 @@ export default function HomeScreen() {
         {dealersWithBalance.length === 0 ? (
           <Text style={styles.emptyInline}>No outstanding balances. 🎉</Text>
         ) : (
-          dealersWithBalance.map((d) => (
-            <DealerBalanceRow
+          dealersWithBalance.map((d, i) => (
+            <View
               key={d.id}
-              dealer={d}
-              onOpenDealer={() => router.push(`/dealer/${d.id}`)}
-              onPayCredit={() =>
-                setPaymentTarget({ dealer: d, account: "credit" })
-              }
-              onPayPersonal={() =>
-                setPaymentTarget({ dealer: d, account: "personal" })
-              }
-            />
+              style={[
+                styles.owedDivider,
+                i === dealersWithBalance.length - 1 && { borderBottomWidth: 0 },
+              ]}
+            >
+              <DealerBalanceRow
+                dealer={d}
+                onOpenDealer={() => router.push(`/dealer/${d.id}`)}
+                onPayCredit={() =>
+                  setPaymentTarget({ dealer: d, account: "credit" })
+                }
+                onPayPersonal={() =>
+                  setPaymentTarget({ dealer: d, account: "personal" })
+                }
+              />
+            </View>
           ))
         )}
-      </>
+      </View>
     ),
   };
 
@@ -560,22 +567,27 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
 
-  /* Dealer rows (two-line) — same rounded card design */
+  /* Dealer rows (two-line) — nested inside the OWED TO DEALERS card */
   emptyInline: {
     color: theme.colors.textMuted,
     fontSize: 12,
     fontStyle: "italic",
     paddingHorizontal: 14,
     paddingVertical: 14,
+    textAlign: "center",
+  },
+  owedCluster: {
     backgroundColor: theme.colors.bgSecondary,
     borderRadius: 10,
-    textAlign: "center",
+    overflow: "hidden",
+  },
+  owedDivider: {
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: theme.colors.border,
   },
   dealerRow: {
     paddingHorizontal: 14,
     paddingVertical: 12,
-    backgroundColor: theme.colors.bgSecondary,
-    borderRadius: 10,
   },
   dealerHeader: {
     flexDirection: "row",
