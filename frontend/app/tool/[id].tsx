@@ -398,25 +398,37 @@ export default function ToolDetail() {
   };
 
   const exportPdf = async () => {
-    // If the item is listed for sale, default to the poster builder so the
-    // user can pick which fields appear on the for-sale flyer.
-    if (tool?.for_sale && !tool?.is_sold) {
-      setShowPosterBuilder(true);
-      return;
-    }
+    // Always present a choice — the for-sale poster should be available even
+    // if the listing flag isn't strictly set (e.g. user wants to advertise an
+    // item they haven't formally listed yet).
     const hasReceipts = Array.isArray(tool.receipts) && tool.receipts.length > 0;
-    if (hasReceipts) {
-      Alert.alert(
-        "Include receipts?",
-        `This item has ${tool.receipts.length} receipt${tool.receipts.length === 1 ? "" : "s"} attached. Include them in the printout (each on its own page)?`,
-        [
-          { text: "No", onPress: () => doExportPdf(false), style: "cancel" },
-          { text: "Yes, include", onPress: () => doExportPdf(true) },
-        ],
-      );
-    } else {
-      doExportPdf(false);
-    }
+    const isListed = !!tool?.for_sale && !tool?.is_sold;
+    const posterButton = {
+      text: isListed ? "🪧 For-Sale Poster" : "🪧 For-Sale Poster…",
+      onPress: () => setShowPosterBuilder(true),
+    };
+    const standardButton = {
+      text: hasReceipts ? "📄 Standard PDF (with receipts?)" : "📄 Standard PDF",
+      onPress: () => {
+        if (hasReceipts) {
+          Alert.alert(
+            "Include receipts?",
+            `This item has ${tool.receipts.length} receipt${tool.receipts.length === 1 ? "" : "s"} attached. Include them in the printout (each on its own page)?`,
+            [
+              { text: "No", onPress: () => doExportPdf(false), style: "cancel" },
+              { text: "Yes, include", onPress: () => doExportPdf(true) },
+            ],
+          );
+        } else {
+          doExportPdf(false);
+        }
+      },
+    };
+    Alert.alert(
+      "Export PDF",
+      "Choose the type of PDF to generate for this item.",
+      [posterButton, standardButton, { text: "Cancel", style: "cancel" }],
+    );
   };
 
   // Poster generator — produces a single-page "FOR SALE" flyer using the
