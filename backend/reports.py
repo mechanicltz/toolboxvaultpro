@@ -984,12 +984,13 @@ async def _fetch_claims(db, user, options: Dict[str, Any]) -> Dict[str, Any]:
         "Open Claims" if mode == "current"
         else ("Past Claims" if mode == "history" else "All Claims")
     )
+    only_real = [r for r in sorted_rows if not r.get("_section_header")]
     stats = [
-        (title_word, str(len(sorted_rows)), False),
+        (title_word, str(len(only_real)), False),
         (
             "Open" if mode != "history" else "Closed",
             str(sum(
-                1 for r in sorted_rows
+                1 for r in only_real
                 if (mode == "history" and r["status"] in ("Completed", "Rejected"))
                 or (mode != "history" and r["status"] not in ("Completed", "Rejected"))
             )),
