@@ -31,7 +31,18 @@ import { theme } from "../src/theme";
  *     get scaled regardless of how Text is wrapped — and runs exactly once
  *     per stylesheet.
  */
-const NATIVE_FONT_SCALE = Platform.select({ ios: 0.78, android: 0.82, default: 1 }) as number;
+// Bumped each time we change NATIVE_FONT_SCALE so a hot-reloading device
+// can confirm in the JS console that the latest layout module has been
+// re-evaluated. If you don't see this log line increment after editing,
+// you need a full reload (shake → Reload) — hot reload skips root layouts.
+const NATIVE_SCALE_VERSION = 4;
+const NATIVE_FONT_SCALE = Platform.select({ ios: 0.65, android: 0.7, default: 1 }) as number;
+if (Platform.OS !== "web") {
+  // eslint-disable-next-line no-console
+  console.log(
+    `[ToolboxVault] native font scale v${NATIVE_SCALE_VERSION} active — ${Platform.OS} ${NATIVE_FONT_SCALE}x`,
+  );
+}
 
 // Disable iOS auto font scaling globally — must be set before any Text renders.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
