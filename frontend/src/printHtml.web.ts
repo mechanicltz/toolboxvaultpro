@@ -99,6 +99,7 @@ export async function printReportHtml(
 
   // ------- Trigger the download -------
   const blobUrl = w.URL.createObjectURL(blob);
+  let downloadFired = false;
 
   // Strategy A: anchor download (Chrome / Firefox / Edge / Android)
   try {
@@ -110,19 +111,26 @@ export async function printReportHtml(
     doc.body.appendChild(a);
     a.click();
     doc.body.removeChild(a);
+    downloadFired = true;
   } catch {
     /* ignore */
   }
 
-  // Strategy B (iOS Safari): anchor `download` is ignored on blob URLs;
-  // open the PDF inline so the user can use the share sheet to save it.
-  if (isIOSSafari()) {
-    try {
-      const win = w.open(blobUrl, "_blank");
-      if (!win) w.location.href = blobUrl;
-    } catch {
-      /* ignore */
+  // Strategy B (always also try to open in a new tab):
+  // Expo Web preview runs inside a sandboxed iframe where blob downloads are
+  // often silently blocked. Opening the PDF inline in a new top-level tab
+  // means the user can preview/save/print it from there. We always try this
+  // in addition to the download — if the download succeeded, the user just
+  // ends up with both an inline tab and a saved file. iOS Safari ALWAYS
+  // needed this path (download attribute is ignored on blob:).
+  try {
+    const win = w.open(blobUrl, "_blank", "noopener,noreferrer");
+    if (!win && !downloadFired) {
+      // Browser blocked window.open AND we never got a download — last resort
+      w.location.href = blobUrl;
     }
+  } catch {
+    /* ignore */
   }
 
   setTimeout(() => {

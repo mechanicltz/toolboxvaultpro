@@ -690,64 +690,257 @@ export default function ToolDetail() {
 
   const doExportPdf = async (includeReceipts: boolean) => {
     const esc = (s: any) => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;");
-    const photoTags = (tool.photos || [])
-      .slice(0, 4)
-      .map((p: string) => `<img src="${p}" style="width:48%;margin:1%;border:1px solid #ccc"/>`)
-      .join("");
+    const fmtMoney = (v: any) => {
+      const n = Number(v);
+      return isFinite(n) ? `$${n.toFixed(2)}` : "—";
+    };
+
+    // Photos — render up to 4 in a 2-up grid (xhtml2pdf-friendly: <table>)
+    const photoCells = (tool.photos || []).slice(0, 4);
+    const photosHtml = photoCells.length
+      ? `<table class="photos"><tr>${photoCells
+          .slice(0, 2)
+          .map((p: string) => `<td><img src="${p}"/></td>`)
+          .join("")}</tr>${
+          photoCells.length > 2
+            ? `<tr>${photoCells
+                .slice(2, 4)
+                .map((p: string) => `<td><img src="${p}"/></td>`)
+                .join("")}</tr>`
+            : ""
+        }</table>`
+      : "";
+
     const history = (tool.checkout_history || [])
       .map(
         (h: any) =>
-          `<tr><td>${esc(h.borrower_name)}</td><td>${esc(formatDateUS(h.checked_out_at))}</td><td>${esc(formatDateUS(h.checked_in_at))}</td></tr>`
+          `<tr><td>${esc(h.borrower_name)}</td><td>${esc(formatDateUS(h.checked_out_at))}</td><td>${esc(formatDateUS(h.checked_in_at))}</td></tr>`,
       )
       .join("");
-    // Build per-receipt pages — each on its own page with a header line.
+
     const receipts: string[] = Array.isArray(tool.receipts) ? tool.receipts : [];
     const receiptPages =
       includeReceipts && receipts.length > 0
         ? receipts
             .map(
               (r: string, i: number) => `
-              <div style="page-break-before:always;padding-top:8px">
-                <h2 style="font-size:18px;border-bottom:2px solid #FFB300;padding-bottom:6px;letter-spacing:1px">
-                  RECEIPT ${i + 1} OF ${receipts.length}
-                </h2>
-                <div style="font-size:11px;color:#444;margin:4px 0 12px 0">
-                  <b>${esc(tool.name) || "(unnamed)"}</b>
-                  &nbsp;&middot;&nbsp; Serial: <b>${esc(tool.serial_number) || "—"}</b>
-                </div>
-                <img src="${r}" style="display:block;max-width:100%;max-height:88vh;margin:0 auto;border:1px solid #ddd"/>
-              </div>`,
+              <pdf:nextpage/>
+              <div class="rcpt-header">RECEIPT ${i + 1} OF ${receipts.length}</div>
+              <div class="rcpt-sub"><b>${esc(tool.name) || "(unnamed)"}</b> &middot; Serial: <b>${esc(tool.serial_number) || "—"}</b></div>
+              <div class="rcpt-img-wrap"><img class="rcpt-img" src="${r}"/></div>`,
             )
             .join("")
         : "";
-    const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><style>
-      body{font-family:Helvetica;margin:24px;color:#111}
-      h1{font-size:22px;letter-spacing:2px;text-transform:uppercase;border-bottom:3px solid #FFB300;padding-bottom:8px}
-      .lab{font-size:10px;color:#666;text-transform:uppercase;letter-spacing:1px}
-      .val{font-size:14px;font-weight:700;margin-bottom:8px}
-      .col{display:inline-block;width:48%;padding:6px 0;vertical-align:top}
-      table{width:100%;border-collapse:collapse;font-size:12px;margin-top:12px}
-      th{background:#111;color:#FFB300;text-align:left;padding:6px;font-size:10px}
-      td{padding:6px;border-bottom:1px solid #eee}
-      .status{display:inline-block;padding:4px 10px;font-size:10px;font-weight:700;letter-spacing:1px}
-      .out{background:#fee;color:#dc2626}.in{background:#efe;color:#16a34a}
-    </style></head><body>
-      <h1>${esc(tool.name)}</h1>
-      <span class="status ${tool.is_checked_out ? "out" : "in"}">${tool.is_checked_out ? "CHECKED OUT" : "AVAILABLE"}</span>
-      <div>
-        <div class="col"><div class="lab">Brand</div><div class="val">${esc(tool.brand) || "—"}</div></div>
-        <div class="col"><div class="lab">Model</div><div class="val">${esc(tool.model) || "—"}</div></div>
-        <div class="col"><div class="lab">Serial</div><div class="val">${esc(tool.serial_number) || "—"}</div></div>
-        <div class="col"><div class="lab">Cost</div><div class="val">$${(tool.cost || 0).toFixed(2)}</div></div>
-        <div class="col"><div class="lab">Location</div><div class="val">${esc(tool.location_name) || "—"}</div></div>
-        <div class="col"><div class="lab">Condition</div><div class="val">${esc(tool.condition) || "—"}</div></div>
-        <div style="margin-top:8px"><div class="lab">Description</div><div style="font-size:14px">${esc(tool.description) || "—"}</div></div>
-        <div style="margin-top:8px"><div class="lab">Tags</div><div style="font-size:14px">${esc((tool.tag_names || []).join(", ")) || "—"}</div></div>
-      </div>
-      ${photoTags ? `<h3 style="margin-top:20px">Photos</h3><div>${photoTags}</div>` : ""}
-      ${history ? `<h3 style="margin-top:20px">Checkout History</h3><table><thead><tr><th>Borrower</th><th>Out</th><th>In</th></tr></thead><tbody>${history}</tbody></table>` : ""}
-      ${receiptPages}
-    </body></html>`;
+
+    const statusLabel = tool.is_checked_out ? "CHECKED OUT" : "AVAILABLE";
+    const statusColor = tool.is_checked_out ? "#dc2626" : "#16a34a";
+    const statusBg = tool.is_checked_out ? "#fee2e2" : "#dcfce7";
+
+    // Build spec rows (only show populated fields)
+    const specPairs: { label: string; value: string }[] = [];
+    if (tool.brand) specPairs.push({ label: "Brand", value: String(tool.brand) });
+    if (tool.model) specPairs.push({ label: "Model", value: String(tool.model) });
+    if (tool.serial_number) specPairs.push({ label: "Serial #", value: String(tool.serial_number) });
+    if (tool.condition) specPairs.push({ label: "Condition", value: String(tool.condition) });
+    if (tool.category_name) specPairs.push({ label: "Category", value: String(tool.category_name) });
+    if (tool.location_name) specPairs.push({ label: "Location", value: String(tool.location_name) });
+    if (tool.purchase_date) specPairs.push({ label: "Purchased", value: formatDateUS(tool.purchase_date) });
+    if (tool.dealer_name) specPairs.push({ label: "Dealer", value: String(tool.dealer_name) });
+    if (tool.cost != null) specPairs.push({ label: "Cost", value: fmtMoney(tool.cost) });
+    if (tool.quantity != null && Number(tool.quantity) > 1)
+      specPairs.push({ label: "Quantity", value: String(tool.quantity) });
+    if (tool.tag_names && tool.tag_names.length)
+      specPairs.push({ label: "Tags", value: tool.tag_names.join(", ") });
+
+    // Render specs as a 2-column table (xhtml2pdf supports tables well)
+    const half = Math.ceil(specPairs.length / 2);
+    const leftCol = specPairs.slice(0, half);
+    const rightCol = specPairs.slice(half);
+    const specRowHtml: string[] = [];
+    for (let i = 0; i < half; i++) {
+      const l = leftCol[i];
+      const r = rightCol[i];
+      specRowHtml.push(`
+        <tr>
+          <td class="lab">${l ? esc(l.label).toUpperCase() : ""}</td>
+          <td class="val">${l ? esc(l.value) : ""}</td>
+          <td class="lab">${r ? esc(r.label).toUpperCase() : ""}</td>
+          <td class="val">${r ? esc(r.value) : ""}</td>
+        </tr>`);
+    }
+
+    const html = `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8"/>
+<style>
+  @page { size: letter; margin: 0.5in; }
+  body { font-family: Helvetica, Arial, sans-serif; color: #111; font-size: 11pt; }
+  table { border-collapse: collapse; width: 100%; }
+
+  .header {
+    border-bottom: 4pt solid #FFB300;
+    padding-bottom: 10pt;
+    margin-bottom: 16pt;
+  }
+  .h-title {
+    font-size: 22pt;
+    font-weight: bold;
+    color: #111;
+    text-transform: uppercase;
+  }
+  .h-status {
+    display: inline-block;
+    padding: 4pt 12pt;
+    margin-top: 6pt;
+    background-color: ${statusBg};
+    color: ${statusColor};
+    font-size: 9pt;
+    font-weight: bold;
+    letter-spacing: 1.5pt;
+  }
+
+  .section-title {
+    font-size: 9pt;
+    font-weight: bold;
+    color: #FFB300;
+    letter-spacing: 2pt;
+    margin: 18pt 0 8pt 0;
+    padding-bottom: 4pt;
+    border-bottom: 1pt solid #ddd;
+  }
+
+  table.specs td {
+    padding: 6pt 8pt;
+    vertical-align: top;
+  }
+  table.specs td.lab {
+    color: #666;
+    font-weight: bold;
+    font-size: 8pt;
+    width: 18%;
+  }
+  table.specs td.val {
+    color: #111;
+    font-weight: bold;
+    font-size: 11pt;
+    width: 32%;
+  }
+  table.specs tr {
+    border-bottom: 1pt solid #f0f0f0;
+  }
+
+  .desc-box {
+    background-color: #fafafa;
+    border-left: 4pt solid #FFB300;
+    padding: 10pt 14pt;
+    font-size: 11pt;
+    line-height: 1.5;
+    color: #222;
+  }
+
+  table.photos td {
+    width: 50%;
+    padding: 4pt;
+    text-align: center;
+  }
+  table.photos img {
+    max-width: 100%;
+    max-height: 250pt;
+    border: 2pt solid #111;
+  }
+
+  table.history th {
+    background-color: #111;
+    color: #FFB300;
+    text-align: left;
+    padding: 6pt 8pt;
+    font-size: 9pt;
+    letter-spacing: 1pt;
+  }
+  table.history td {
+    padding: 5pt 8pt;
+    border-bottom: 1pt solid #eee;
+    font-size: 10pt;
+  }
+
+  .footer {
+    margin-top: 24pt;
+    padding-top: 8pt;
+    border-top: 1pt solid #ddd;
+    text-align: center;
+    color: #999;
+    font-size: 8pt;
+    letter-spacing: 1pt;
+  }
+
+  .rcpt-header {
+    font-size: 18pt;
+    font-weight: bold;
+    color: #111;
+    border-bottom: 3pt solid #FFB300;
+    padding-bottom: 6pt;
+    margin-bottom: 6pt;
+  }
+  .rcpt-sub {
+    font-size: 10pt;
+    color: #666;
+    margin-bottom: 14pt;
+  }
+  .rcpt-img-wrap { text-align: center; }
+  .rcpt-img {
+    max-width: 100%;
+    max-height: 8.5in;
+    border: 1pt solid #ddd;
+  }
+</style>
+</head>
+<body>
+
+  <div class="header">
+    <div class="h-title">${esc(tool.name) || "(unnamed)"}</div>
+    <div class="h-status">${statusLabel}</div>
+  </div>
+
+  ${
+    specRowHtml.length
+      ? `<div class="section-title">SPECIFICATIONS</div>
+         <table class="specs">${specRowHtml.join("")}</table>`
+      : ""
+  }
+
+  ${
+    tool.description
+      ? `<div class="section-title">DESCRIPTION</div>
+         <div class="desc-box">${esc(tool.description)}</div>`
+      : ""
+  }
+
+  ${
+    photosHtml
+      ? `<div class="section-title">PHOTOS</div>${photosHtml}`
+      : ""
+  }
+
+  ${
+    history
+      ? `<div class="section-title">CHECKOUT HISTORY</div>
+         <table class="history">
+           <thead><tr><th>BORROWER</th><th>CHECKED OUT</th><th>CHECKED IN</th></tr></thead>
+           <tbody>${history}</tbody>
+         </table>`
+      : ""
+  }
+
+  <div class="footer">
+    Generated by TOOLBOX VAULT &middot; ${new Date().toLocaleDateString()}
+  </div>
+
+  ${receiptPages}
+
+</body>
+</html>`;
+
     try {
       await printReportHtml(html, `${tool.name || "tool"}-${Date.now()}`);
     } catch (e: any) {
@@ -1553,7 +1746,7 @@ export default function ToolDetail() {
                 onPress={generateForSalePoster}
               >
                 <Ionicons name="print" size={14} color="#000" />
-                <Text style={styles.btnPrimaryText}>  GENERATE POSTER</Text>
+                <Text style={styles.btnPrimaryText}>GENERATE POSTER</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -2441,14 +2634,17 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
+    gap: 8,
     backgroundColor: theme.colors.accent,
     height: 48,
     borderRadius: 4,
+    paddingHorizontal: 12,
   },
   btnPrimaryText: {
     color: "#000",
     fontWeight: "900",
-    letterSpacing: 2,
+    letterSpacing: 1.5,
     fontSize: 11,
+    textAlign: "center",
   },
 });
