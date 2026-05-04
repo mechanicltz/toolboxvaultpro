@@ -1810,6 +1810,10 @@ async def update_tool(tool_id: str, payload: ToolUpdate):
 @api_router.delete("/tools/{tool_id}")
 async def delete_tool(tool_id: str):
     await db.tools.delete_one({"id": tool_id})
+    # Cascade: also remove any warranty claims that referenced this tool —
+    # otherwise the dealer-claims summary keeps counting orphaned claims
+    # but the detail screen can't resolve them back to a tool.
+    await db.warranty_claims.delete_many({"tool_id": tool_id})
     return {"ok": True}
 
 
@@ -2178,6 +2182,8 @@ async def bulk_tools(payload: BulkRequest):
     if payload.action == "delete":
         result = await db.tools.delete_many({"id": {"$in": payload.tool_ids}})
         affected = result.deleted_count
+        # Cascade: drop any warranty claims that referenced the deleted tools.
+        await db.warranty_claims.delete_many({"tool_id": {"$in": payload.tool_ids}})
     elif payload.action == "move_location":
         result = await db.tools.update_many(
             {"id": {"$in": payload.tool_ids}},
@@ -2376,6 +2382,24 @@ async def warranty_alerts(days: int = 60):
 
 
 # ---------- Warranty Claims ----------
+async def _purge_orphan_claims() -> int:
+    """Delete any warranty claim whose tool no longer exists. Heals stale
+    state from before the cascade-on-tool-delete fix. Cheap (one find +
+    one delete_many) and idempotent — safe to call before every list
+    /summary read."""
+    tool_ids_with_claims = await db.warranty_claims.distinct("tool_id")
+    if not tool_ids_with_claims:
+        return 0
+    existing_tool_ids = set(
+        await db.tools.distinct("id", {"id": {"$in": tool_ids_with_claims}})
+    )
+    orphans = [tid for tid in tool_ids_with_claims if tid and tid not in existing_tool_ids]
+    if not orphans:
+        return 0
+    res = await db.warranty_claims.delete_many({"tool_id": {"$in": orphans}})
+    return res.deleted_count
+
+
 @api_router.get("/warranty-claims", response_model=List[WarrantyClaim])
 async def list_warranty_claims(
     dealer_id: Optional[str] = None,
@@ -2383,6 +2407,7 @@ async def list_warranty_claims(
     status: Optional[str] = None,
     archived: Optional[bool] = None,  # true -> completed/rejected only; false -> active only
 ):
+    await _purge_orphan_claims()
     q: Dict[str, Any] = {}
     if tool_id:
         q["tool_id"] = tool_id
@@ -2404,6 +2429,7 @@ async def list_warranty_claims(
 
 @api_router.get("/warranty-claims/summary")
 async def warranty_claims_summary():
+    await _purge_orphan_claims()
     items = await db.warranty_claims.find({}, {"_id": 0}).to_list(10000)
     dealers = await db.dealers.find({}, {"_id": 0, "id": 1, "name": 1}).to_list(2000)
     dealer_name_by_id = {d["id"]: d["name"] for d in dealers}
