@@ -487,195 +487,159 @@ export default function ToolDetail() {
         </tr>`);
     }
 
-    // CLASSIC POSTER design — heavy, restrained, professional. Black on white
-    // with a single yellow accent stripe. Photo dominates. Stark typography.
+    // CLASSIC POSTER design — modeled on the missing-person poster aesthetic.
+    // Red banners top + bottom, photo on the LEFT and stats list on the RIGHT,
+    // big red ASKING PRICE prompt in the middle, all on a single letter page.
     // 100% xhtml2pdf-safe (table layout, no inline-block / flex / gradients).
     const html = `<!DOCTYPE html>
 <html>
 <head>
 <meta charset="utf-8"/>
 <style>
-  @page { size: letter; margin: 0.4in; }
+  @page { size: letter; margin: 0.35in; }
   body {
     font-family: Helvetica, Arial, sans-serif;
     color: #000000;
-    font-size: 11pt;
+    font-size: 10.5pt;
   }
   table { border-collapse: collapse; }
   p, div { margin: 0; padding: 0; }
 
-  /* === HEADLINE: "FOR SALE" — heavy block letters, stark === */
-  table.headline { width: 100%; }
-  td.headline-text {
+  /* === TOP RED BANNER ("FOR SALE") === */
+  table.top-banner { width: 100%; }
+  td.top-banner-cell {
+    background-color: #DC2626;
+    color: #FFFFFF;
     text-align: center;
-    font-size: 44pt;
+    font-size: 72pt;
     font-weight: bold;
-    color: #000000;
-    letter-spacing: 3pt;
-    padding: 2pt 0 0 0;
+    letter-spacing: 4pt;
+    padding: 14pt 0 16pt 0;
     line-height: 1;
   }
-  td.headline-rule {
-    height: 4pt;
-    background-color: #000000;
-    padding: 0;
-    line-height: 0;
-    font-size: 0;
-  }
-  td.headline-thin {
-    height: 1pt;
-    background-color: #000000;
-    padding: 0;
-    line-height: 0;
-    font-size: 0;
-  }
-  td.headline-gap { height: 2pt; padding: 0; }
 
   /* === ITEM NAME === */
-  table.name-band { width: 100%; margin-top: 8pt; }
+  table.name-band { width: 100%; }
   td.name-text {
     text-align: center;
     font-size: 18pt;
     font-weight: bold;
     color: #000000;
     text-transform: uppercase;
-    letter-spacing: 1.5pt;
-    padding: 0 0 6pt 0;
+    letter-spacing: 1pt;
+    padding: 14pt 0 12pt 0;
   }
 
-  /* === HERO PHOTO === */
-  table.photo-wrap { width: 100%; }
+  /* === PHOTO + SPECS (side-by-side row) === */
+  table.photo-specs { width: 100%; }
   td.photo-cell {
-    text-align: center;
-    padding: 0 0 8pt 0;
+    width: 48%;
+    text-align: left;
+    vertical-align: top;
+    padding: 0 10pt 0 0;
   }
   img.hero-photo {
-    /* Maximum size only — preserve aspect ratio, never stretch. */
-    max-width: 3.6in;
-    max-height: 2.4in;
-    border: 1pt solid #000000;
+    /* Max-only sizing preserves natural aspect ratio (no stretching). */
+    max-width: 3.4in;
+    max-height: 3.4in;
+    border: 2pt solid #000000;
   }
-
-  /* === ASKING PRICE === */
-  table.price-band { width: 100%; }
-  td.price-rule {
-    height: 2pt;
-    background-color: #000000;
-    padding: 0;
-    line-height: 0;
-    font-size: 0;
-  }
-  td.price-label {
-    text-align: center;
-    font-size: 9pt;
-    letter-spacing: 4pt;
-    font-weight: bold;
-    color: #000000;
-    padding: 6pt 0 0 0;
-  }
-  td.price-amount {
-    text-align: center;
-    font-size: 34pt;
-    font-weight: bold;
-    color: #000000;
-    padding: 0 0 6pt 0;
-    line-height: 1;
-  }
-
-  /* === VITAL STATS GRID === */
-  .section-label {
-    font-size: 9.5pt;
-    font-weight: bold;
-    color: #000000;
-    letter-spacing: 4pt;
-    text-align: center;
-    padding: 12pt 0 6pt 0;
-    border-bottom: 0.75pt solid #000000;
-    margin-bottom: 6pt;
-  }
-  table.specs { width: 100%; margin-bottom: 2pt; }
-  table.specs td {
-    padding: 4pt 6pt;
+  td.specs-cell {
+    width: 52%;
     vertical-align: top;
-    font-size: 10pt;
+    padding: 4pt 0 0 8pt;
   }
-  table.specs td.lab {
-    color: #555555;
-    font-weight: bold;
-    font-size: 7.5pt;
-    letter-spacing: 1pt;
-    width: 16%;
+  table.specs-list { width: 100%; }
+  table.specs-list td {
+    padding: 4pt 0;
+    vertical-align: top;
+    font-size: 11pt;
   }
-  table.specs td.val {
+  td.spec-lab {
     color: #000000;
     font-weight: bold;
-    width: 34%;
-    border-bottom: 0.5pt solid #cccccc;
+    font-size: 10pt;
+    letter-spacing: 0.5pt;
+    width: 38%;
+    text-transform: uppercase;
+  }
+  td.spec-val {
+    color: #000000;
+    width: 62%;
+    border-bottom: 0.75pt solid #000000;
+    padding-bottom: 4pt;
   }
 
-  /* === DESCRIPTION === */
-  table.body-block { width: 100%; margin-top: 4pt; }
-  td.body-text {
+  /* === ASKING PRICE PROMPT (the big red middle callout) === */
+  table.price-prompt { width: 100%; margin-top: 14pt; }
+  td.price-prompt-cell {
+    text-align: center;
+    color: #DC2626;
+    font-size: 30pt;
+    font-weight: bold;
+    letter-spacing: 1pt;
+    padding: 8pt 0;
+    line-height: 1.1;
+  }
+
+  /* === DESCRIPTION (optional, small below price) === */
+  table.desc-band { width: 100%; margin-top: 4pt; }
+  td.desc-text {
+    text-align: center;
     color: #1a1a1a;
     font-size: 10pt;
     line-height: 1.4;
-    padding: 2pt 0 0 0;
+    padding: 0 8pt 4pt 8pt;
+    font-style: italic;
   }
 
-  /* === CONTACT (bottom section) === */
-  table.contact-band { width: 100%; margin-top: 14pt; }
-  td.contact-rule-top {
-    height: 2.5pt;
-    background-color: #000000;
-    padding: 0;
-    line-height: 0;
-    font-size: 0;
-  }
-  td.contact-title {
+  /* === BOTTOM RED BANNER ("CONTACT") === */
+  table.bot-banner { width: 100%; margin-top: 14pt; }
+  td.bot-banner-cell {
+    background-color: #DC2626;
+    color: #FFFFFF;
     text-align: center;
-    font-size: 10pt;
-    letter-spacing: 5pt;
+    font-size: 14pt;
+    font-weight: bold;
+    letter-spacing: 3pt;
+    padding: 10pt 0;
+  }
+
+  /* === CONTACT WHITE BOX (inside red bottom area) === */
+  table.contact-box { width: 100%; }
+  td.contact-cell {
+    background-color: #DC2626;
+    padding: 0 14pt 14pt 14pt;
+  }
+  table.contact-inner {
+    width: 100%;
+    background-color: #FFFFFF;
+    border: 2pt solid #000000;
+  }
+  td.contact-line-bold {
+    text-align: center;
+    font-size: 16pt;
     font-weight: bold;
     color: #000000;
-    padding: 8pt 0 4pt 0;
+    padding: 8pt 8pt 2pt 8pt;
+    text-transform: uppercase;
+    letter-spacing: 1pt;
   }
   td.contact-line {
     text-align: center;
     font-size: 12pt;
     color: #000000;
-    padding: 1pt 0;
+    padding: 1pt 8pt;
   }
-  td.contact-line-bold {
-    text-align: center;
-    font-size: 14pt;
-    font-weight: bold;
-    color: #000000;
-    padding: 2pt 0 1pt 0;
-    text-transform: uppercase;
-    letter-spacing: 1pt;
-  }
-  td.contact-rule-bottom {
-    height: 1pt;
-    background-color: #000000;
-    padding: 6pt 0 0 0;
-    line-height: 0;
-    font-size: 0;
-  }
-
-  /* === ACCENT (single yellow bar — the only color on the poster) === */
-  td.accent-bar {
-    height: 3pt;
-    background-color: #FFB300;
-    padding: 0;
-    line-height: 0;
-    font-size: 0;
+  td.contact-line-pad-bottom {
+    padding-bottom: 8pt;
   }
 
   /* === FOOTER === */
   .footer {
-    margin-top: 10pt;
+    margin-top: 8pt;
     text-align: center;
-    color: #666666;
+    color: #888888;
     font-size: 7pt;
     letter-spacing: 2pt;
   }
@@ -683,14 +647,8 @@ export default function ToolDetail() {
 </head>
 <body>
 
-  <!-- HEADLINE -->
-  <table class="headline">
-    <tr><td class="headline-rule">&nbsp;</td></tr>
-    <tr><td class="headline-gap">&nbsp;</td></tr>
-    <tr><td class="headline-text">FOR SALE</td></tr>
-    <tr><td class="accent-bar">&nbsp;</td></tr>
-    <tr><td class="headline-thin">&nbsp;</td></tr>
-  </table>
+  <!-- TOP RED BANNER -->
+  <table class="top-banner"><tr><td class="top-banner-cell">FOR SALE</td></tr></table>
 
   ${
     F.name
@@ -698,59 +656,59 @@ export default function ToolDetail() {
       : ""
   }
 
-  ${
-    heroPhoto
-      ? `<table class="photo-wrap"><tr><td class="photo-cell"><img class="hero-photo" src="${heroPhoto}"/></td></tr></table>`
-      : ""
-  }
+  <!-- PHOTO LEFT, SPECS RIGHT -->
+  <table class="photo-specs"><tr>
+    <td class="photo-cell">${
+      heroPhoto
+        ? `<img class="hero-photo" src="${heroPhoto}"/>`
+        : `<div style="width: 3.4in; height: 3.4in; border: 2pt solid #000000; background-color: #f0f0f0;">&nbsp;</div>`
+    }</td>
+    <td class="specs-cell">
+      <table class="specs-list">
+        ${specRows
+          .map(
+            (r) => `
+              <tr>
+                <td class="spec-lab">${esc(r.label).toUpperCase()}:</td>
+                <td class="spec-val">${esc(r.value)}</td>
+              </tr>`,
+          )
+          .join("")}
+      </table>
+    </td>
+  </tr></table>
 
   ${
     F.price
-      ? `<table class="price-band">
-           <tr><td class="price-rule">&nbsp;</td></tr>
-           <tr><td class="price-label">ASKING PRICE</td></tr>
-           <tr><td class="price-amount">$${askingPrice}</td></tr>
-           <tr><td class="price-rule">&nbsp;</td></tr>
-         </table>`
+      ? `<table class="price-prompt"><tr><td class="price-prompt-cell">ASKING PRICE: $${askingPrice}</td></tr></table>`
       : ""
   }
 
   ${
-    specPairsHtml.length
-      ? `<div class="section-label">DETAILS</div>
-         <table class="specs">${specPairsHtml.join("")}</table>`
-      : ""
-  }
-
-  ${
-    F.description && tool.description
-      ? `<div class="section-label">DESCRIPTION</div>
-         <table class="body-block"><tr><td class="body-text">${esc(tool.description)}</td></tr></table>`
-      : ""
-  }
-
-  ${
-    F.sale_notes && tool.sale_notes
-      ? `<div class="section-label">NOTES</div>
-         <table class="body-block"><tr><td class="body-text">${esc(tool.sale_notes)}</td></tr></table>`
+    (F.description && tool.description) || (F.sale_notes && tool.sale_notes)
+      ? `<table class="desc-band"><tr><td class="desc-text">${[
+          F.description && tool.description ? esc(tool.description) : "",
+          F.sale_notes && tool.sale_notes ? esc(tool.sale_notes) : "",
+        ]
+          .filter(Boolean)
+          .join(" &middot; ")}</td></tr></table>`
       : ""
   }
 
   ${
     contactLines.length
-      ? `<table class="contact-band">
-           <tr><td class="contact-rule-top">&nbsp;</td></tr>
-           <tr><td class="contact-title">CONTACT THE SELLER</td></tr>
-           ${contactLines
-             .map(
-               (l, i) =>
+      ? `<table class="bot-banner"><tr><td class="bot-banner-cell">FOR INQUIRIES PLEASE CONTACT</td></tr></table>
+         <table class="contact-box"><tr><td class="contact-cell">
+           <table class="contact-inner">
+             ${contactLines
+               .map((l, i) =>
                  i === 0 && F.contact_name && profile?.name
                    ? `<tr><td class="contact-line-bold">${l}</td></tr>`
-                   : `<tr><td class="contact-line">${l}</td></tr>`,
-             )
-             .join("")}
-           <tr><td class="contact-rule-bottom" style="margin-top:8pt">&nbsp;</td></tr>
-         </table>`
+                   : `<tr><td class="contact-line${i === contactLines.length - 1 ? " contact-line-pad-bottom" : ""}">${l}</td></tr>`,
+               )
+               .join("")}
+           </table>
+         </td></tr></table>`
       : ""
   }
 
