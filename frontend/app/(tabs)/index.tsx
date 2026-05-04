@@ -566,25 +566,24 @@ const styles = StyleSheet.create({
   },
   dealerAdjustWrap: {
     alignItems: "center",
-    marginTop: 6,
+    marginTop: 4,
     marginBottom: 2,
   },
   dealerAdjustPill: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 6,
-    paddingHorizontal: 18,
-    paddingVertical: 6,
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 3,
     backgroundColor: theme.colors.accent,
     borderRadius: 999,
-    minWidth: 160,
   },
   dealerAdjustText: {
     color: "#000",
-    fontSize: 11,
+    fontSize: 9,
     fontWeight: "900",
-    letterSpacing: 0.6,
+    letterSpacing: 0.4,
   },
 
   /* Feedback */
