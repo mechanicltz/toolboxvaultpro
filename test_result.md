@@ -369,6 +369,24 @@ agent_communication:
       Backend untouched — existing POST /api/tools/export-csv already supports format='xlsx' via openpyxl and POST /api/tools/import accepts normalised rows. Please regression-test (a) POST /api/tools/export-csv with {format:'xlsx', fields:['name','brand','cost']} returns an openpyxl xlsx blob (base64 decodes to a valid zip starting with PK), and (b) POST /api/tools/import with sample rows still creates tools (unchanged contract). Frontend screenshot captured at /tmp/ie-top.png shows CSV/XLSX toggle + 17 fields + 'EXPORT 17 FIELDS AS CSV' button + new IMPORT FROM SPREADSHEET card with 'CHOOSE CSV OR EXCEL FILE' button. Test credentials: subtest@example.com / password123."
 
 backend_import_export:
+  - task: "Import/Export Database — tolerant cost/quantity parsing (handles '13,500.00', '$1,200', '1 ea', etc.)"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: false
+        agent: "user"
+        comment: "User reported 'Import failed' alert with a long list of Pydantic validation errors like 'rows.0.cost: Input should be a valid number, unable to parse string as a number'. Their CSV's price column had values like '13,500.00' with thousand-separator commas which Pydantic's strict Optional[float] cannot parse."
+      - working: "NA"
+        agent: "main"
+        comment: "Changed ImportRow.cost and ImportRow.quantity from Optional[float]/Optional[int] to Optional[Any] in /app/backend/server.py L1457-1471. Added _to_float() and _to_int() tolerant parsers that strip currency symbols, thousand separators, whitespace, and unit text ('1 ea' → 1) before coercing. Heuristic for European decimals: comma followed by exactly 3 digits is treated as thousands; otherwise comma is treated as decimal point. Garbage values fall back to 0.0 / 1. Tools_import() now calls _to_int(raw.quantity, default=1) and _to_float(raw.cost) instead of inline try/except float() calls."
+      - working: true
+        agent: "testing"
+        comment: "PASS — 25/25 checks. Sent the exact 8-row reproduction payload (mix of '13,500.00', '$1,200.50', '1 ea', blanks, garbage, '13.500,00', empty-name) — returns HTTP 200 (not 422) with created=7, errors=[{row:8, error:'Name is required'}]. Per-row verification: Widget A cost=13500.00 qty=5, Widget B cost=1200.50, Widget C cost=1234.00 qty=1 (parsed '1 ea'), Widget D cost=0.0 qty=1 (blank fallback), Widget E cost=99.99 qty=3, Widget F cost=0.0 qty=1 (garbage fallback), Widget G numeric (no 500). All 7 widgets deleted in cleanup. Smoke: GET /api/tools/export-fields and POST /api/tools (normal create) both still 200."
+
   - task: "Import/Export Database — XLSX export (openpyxl) + CSV/XLSX format branching"
     implemented: true
     working: true
