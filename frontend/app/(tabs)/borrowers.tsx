@@ -21,7 +21,9 @@ import { confirm } from "../../src/confirm";
 import { parseContacts, openEmail, openPhone, openSms } from "../../src/contactLinks";
 import {
   isDeviceContactsAvailable,
-  loadAllDeviceContacts,
+  isAndroidPickerNeeded,
+  loadAllDeviceContactsAndroid,
+  pickContactNativeIOS,
   formatContactField,
   PickedContact,
 } from "../../src/deviceContacts";
@@ -55,11 +57,23 @@ export default function BorrowersScreen() {
   }, [deviceContacts, pickerFilter]);
 
   const openContactPicker = async () => {
+    if (Platform.OS === "ios") {
+      // iOS — bypass the in-app picker entirely. Open the native iOS
+      // contact picker sheet directly. Avoids Expo Go's contacts
+      // entitlement quirk that causes getContactsAsync() to return [].
+      const c = await pickContactNativeIOS();
+      if (c) {
+        setName(c.name);
+        setContact(formatContactField(c));
+      }
+      return;
+    }
+    // Android — load contacts list and show our in-app picker modal.
     setShowPicker(true);
     if (deviceContacts.length > 0) return; // cached
     setPickerLoading(true);
     try {
-      const list = await loadAllDeviceContacts();
+      const list = await loadAllDeviceContactsAndroid();
       setDeviceContacts(list);
     } finally {
       setPickerLoading(false);

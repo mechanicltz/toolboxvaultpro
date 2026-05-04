@@ -28,7 +28,8 @@ import { DateField } from "../../src/DateField";
 import { useAuth } from "../../src/AuthContext";
 import {
   isDeviceContactsAvailable,
-  loadAllDeviceContacts,
+  loadAllDeviceContactsAndroid,
+  pickContactNativeIOS,
   PickedContact,
 } from "../../src/deviceContacts";
 
@@ -61,11 +62,25 @@ export default function DealerDetail() {
   }, [deviceContacts, pickerFilter]);
 
   const openContactPicker = async () => {
+    if (Platform.OS === "ios") {
+      // iOS — open the native iOS contact picker sheet (works in Expo Go).
+      const c = await pickContactNativeIOS();
+      if (c) {
+        setAgentForm({
+          ...(agentForm || {}),
+          name: c.name,
+          phone: c.phone || agentForm?.phone || "",
+          email: c.email || agentForm?.email || "",
+        });
+      }
+      return;
+    }
+    // Android — use the in-app contact picker modal.
     setShowContactPicker(true);
     if (deviceContacts.length > 0) return;
     setPickerLoading(true);
     try {
-      const list = await loadAllDeviceContacts();
+      const list = await loadAllDeviceContactsAndroid();
       setDeviceContacts(list);
     } finally {
       setPickerLoading(false);
