@@ -470,14 +470,15 @@ export default function ToolDetail() {
         value: tool.purchase_date ? formatDateUS(tool.purchase_date) : "",
       });
 
-    // Contact lines as plain strings — no emojis (xhtml2pdf chokes on them).
-    const contactLines: string[] = [];
-    if (F.contact_name && profile?.name)
-      contactLines.push(esc(profile.name));
-    if (F.contact_phone && profile?.phone)
-      contactLines.push(`Phone: ${esc(profile.phone)}`);
-    if (F.contact_email && profile?.email)
-      contactLines.push(`Email: ${esc(profile.email)}`);
+    // Contact lines — always render the label when toggled, even if the
+    // underlying profile field is empty (missing-poster fillable-line look).
+    const contactLines: { label: string; value: string; bold?: boolean }[] = [];
+    if (F.contact_name)
+      contactLines.push({ label: "", value: profile?.name || "", bold: true });
+    if (F.contact_phone)
+      contactLines.push({ label: "Phone", value: profile?.phone || "" });
+    if (F.contact_email)
+      contactLines.push({ label: "Email", value: profile?.email || "" });
 
     // Lay specs out as a 2-column "vital stats" grid (4 td's per row).
     const specPairsHtml: string[] = [];
@@ -517,10 +518,10 @@ export default function ToolDetail() {
     background-color: #DC2626;
     color: #FFFFFF;
     text-align: center;
-    font-size: 72pt;
+    font-size: 56pt;
     font-weight: bold;
     letter-spacing: 4pt;
-    padding: 14pt 0 16pt 0;
+    padding: 10pt 0 12pt 0;
     line-height: 1;
   }
 
@@ -528,12 +529,12 @@ export default function ToolDetail() {
   table.name-band { width: 100%; }
   td.name-text {
     text-align: center;
-    font-size: 18pt;
+    font-size: 16pt;
     font-weight: bold;
     color: #000000;
     text-transform: uppercase;
     letter-spacing: 1pt;
-    padding: 14pt 0 12pt 0;
+    padding: 8pt 0 6pt 0;
   }
 
   /* === PHOTO + SPECS (side-by-side row) === */
@@ -546,25 +547,25 @@ export default function ToolDetail() {
   }
   img.hero-photo {
     /* Max-only sizing preserves natural aspect ratio (no stretching). */
-    max-width: 3.4in;
-    max-height: 3.4in;
+    max-width: 3.2in;
+    max-height: 2.6in;
     border: 2pt solid #000000;
   }
   td.specs-cell {
     width: 52%;
     vertical-align: top;
-    padding: 4pt 0 0 8pt;
+    padding: 2pt 0 0 8pt;
   }
   table.specs-list { width: 100%; }
   table.specs-list td {
-    padding: 4pt 0;
+    padding: 2pt 0;
     vertical-align: top;
-    font-size: 11pt;
+    font-size: 10.5pt;
   }
   td.spec-lab {
     color: #000000;
     font-weight: bold;
-    font-size: 10pt;
+    font-size: 9.5pt;
     letter-spacing: 0.5pt;
     width: 38%;
     text-transform: uppercase;
@@ -573,49 +574,48 @@ export default function ToolDetail() {
     color: #000000;
     width: 62%;
     border-bottom: 0.75pt solid #000000;
-    padding-bottom: 4pt;
+    padding-bottom: 3pt;
   }
 
   /* === ASKING PRICE PROMPT (the big red middle callout) === */
-  table.price-prompt { width: 100%; margin-top: 14pt; }
+  table.price-prompt { width: 100%; margin-top: 8pt; }
   td.price-prompt-cell {
     text-align: center;
     color: #DC2626;
-    font-size: 30pt;
+    font-size: 26pt;
     font-weight: bold;
     letter-spacing: 1pt;
-    padding: 8pt 0;
+    padding: 4pt 0;
     line-height: 1.1;
   }
 
   /* === DESCRIPTION (optional, small below price) === */
-  table.desc-band { width: 100%; margin-top: 4pt; }
+  table.desc-band { width: 100%; margin-top: 2pt; }
   td.desc-text {
     text-align: center;
     color: #1a1a1a;
-    font-size: 10pt;
-    line-height: 1.4;
-    padding: 0 8pt 4pt 8pt;
-    font-style: italic;
+    font-size: 9.5pt;
+    line-height: 1.3;
+    padding: 2pt 8pt 2pt 8pt;
   }
 
   /* === BOTTOM RED BANNER ("CONTACT") === */
-  table.bot-banner { width: 100%; margin-top: 14pt; }
+  table.bot-banner { width: 100%; margin-top: 8pt; }
   td.bot-banner-cell {
     background-color: #DC2626;
     color: #FFFFFF;
     text-align: center;
-    font-size: 14pt;
+    font-size: 12pt;
     font-weight: bold;
     letter-spacing: 3pt;
-    padding: 10pt 0;
+    padding: 7pt 0;
   }
 
   /* === CONTACT WHITE BOX (inside red bottom area) === */
   table.contact-box { width: 100%; }
   td.contact-cell {
     background-color: #DC2626;
-    padding: 0 14pt 14pt 14pt;
+    padding: 0 12pt 10pt 12pt;
   }
   table.contact-inner {
     width: 100%;
@@ -624,21 +624,21 @@ export default function ToolDetail() {
   }
   td.contact-line-bold {
     text-align: center;
-    font-size: 16pt;
+    font-size: 14pt;
     font-weight: bold;
     color: #000000;
-    padding: 8pt 8pt 2pt 8pt;
+    padding: 6pt 8pt 1pt 8pt;
     text-transform: uppercase;
     letter-spacing: 1pt;
   }
   td.contact-line {
     text-align: center;
-    font-size: 12pt;
+    font-size: 11pt;
     color: #000000;
     padding: 1pt 8pt;
   }
   td.contact-line-pad-bottom {
-    padding-bottom: 8pt;
+    padding-bottom: 6pt;
   }
 
   /* === FOOTER (inlined into the red contact box) === */
@@ -691,13 +691,18 @@ export default function ToolDetail() {
   }
 
   ${
-    (F.description && tool.description) || (F.sale_notes && tool.sale_notes)
-      ? `<table class="desc-band"><tr><td class="desc-text">${[
-          F.description && tool.description ? esc(tool.description) : "",
-          F.sale_notes && tool.sale_notes ? esc(tool.sale_notes) : "",
-        ]
-          .filter(Boolean)
-          .join(" &middot; ")}</td></tr></table>`
+    F.description
+      ? `<table class="desc-band"><tr><td class="desc-text"><b>DESCRIPTION:</b> ${
+          tool.description ? esc(tool.description) : "&nbsp;"
+        }</td></tr></table>`
+      : ""
+  }
+
+  ${
+    F.sale_notes
+      ? `<table class="desc-band"><tr><td class="desc-text"><b>NOTES:</b> ${
+          tool.sale_notes ? esc(tool.sale_notes) : "&nbsp;"
+        }</td></tr></table>`
       : ""
   }
 
@@ -707,11 +712,15 @@ export default function ToolDetail() {
          <table class="contact-box"><tr><td class="contact-cell">
            <table class="contact-inner">
              ${contactLines
-               .map((l, i) =>
-                 i === 0 && F.contact_name && profile?.name
-                   ? `<tr><td class="contact-line-bold">${l}</td></tr>`
-                   : `<tr><td class="contact-line${i === contactLines.length - 1 ? " contact-line-pad-bottom" : ""}">${l}</td></tr>`,
-               )
+               .map((c, i) => {
+                 const isLast = i === contactLines.length - 1;
+                 const padBottom = isLast ? " contact-line-pad-bottom" : "";
+                 if (c.bold) {
+                   return `<tr><td class="contact-line-bold${padBottom}">${c.value ? esc(c.value) : "&nbsp;"}</td></tr>`;
+                 }
+                 const labelPart = c.label ? `<b>${c.label}:</b> ` : "";
+                 return `<tr><td class="contact-line${padBottom}">${labelPart}${c.value ? esc(c.value) : "&nbsp;"}</td></tr>`;
+               })
                .join("")}
            </table>
            <div class="footer-inline">LISTED VIA TOOLBOX VAULT &nbsp;&middot;&nbsp; ${new Date().toLocaleDateString()}</div>
