@@ -527,7 +527,7 @@ const styles = StyleSheet.create({
     gap: 12,
     paddingHorizontal: 14,
     paddingVertical: 14,
-    backgroundColor: theme.colors.surface,
+    backgroundColor: theme.colors.bgSecondary,
     borderRadius: 10,
   },
   rowIcon: {
@@ -565,14 +565,14 @@ const styles = StyleSheet.create({
     fontStyle: "italic",
     paddingHorizontal: 14,
     paddingVertical: 14,
-    backgroundColor: theme.colors.surface,
+    backgroundColor: theme.colors.bgSecondary,
     borderRadius: 10,
     textAlign: "center",
   },
   dealerRow: {
     paddingHorizontal: 14,
     paddingVertical: 12,
-    backgroundColor: theme.colors.surface,
+    backgroundColor: theme.colors.bgSecondary,
     borderRadius: 10,
   },
   dealerHeader: {
