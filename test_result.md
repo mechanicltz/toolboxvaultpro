@@ -2012,6 +2012,13 @@ backend_ai_receipt_scan:
       - working: true
         agent: "testing"
         comment: "MULTI-ITEM RETEST PASSED — 23/23 assertions green. Happy path returns full new shape: items: List[ReceiptItem], raw_text: str, dealer/purchase_date strings, top-level fields mirror items[0] (defaults '' / 0.0 / 1 when items empty), raw is dict. 400/401 error paths still correct. Backend log shows successful GPT-4o call with no tracebacks. Production-ready."
+      - working: "NA"
+        agent: "main"
+        comment: |
+          SOLD_BY + ISO DATE UPDATE: Added top-level sold_by field (sales rep / agent, e.g. "Sold By: Wade Miller" → sold_by: "Wade Miller"). Added _normalize_date() helper to ALWAYS coerce purchase_date to YYYY-MM-DD (handles M/D/YYYY, MM-DD-YYYY, 2-digit year, ISO already). Updated GPT-4o prompt to request both. Frontend matches sold_by against the resolved dealer's agents and offers Add/Skip if not found.
+      - working: true
+        agent: "testing"
+        comment: "SOLD_BY + ISO DATE RETEST PASSED — 25/25 assertions green. New `sold_by` key present (str), `purchase_date` always empty or matches ^\\d{4}-\\d{2}-\\d{2}$. Existing items[]/raw_text/dealer/top-level mirrors all still working. 400/401 paths still correct. Production-ready."
 
 agent_communication:
   - agent: "main"
