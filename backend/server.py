@@ -2895,6 +2895,84 @@ async def reset_password(payload: ResetPasswordRequest):
     return AuthResponse(token=token, user=to_public(user))
 
 
+# ---------- DELETE ACCOUNT (irreversible) ----------
+class DeleteAccountRequest(BaseModel):
+    password: str
+
+
+# Every collection that holds user-owned data — must wipe each on account delete.
+USER_DATA_COLLECTIONS = [
+    "tools",
+    "dealers",
+    "borrowers",
+    "locations",
+    "tags",
+    "categories",
+    "wishlist_items",
+    "warranty_claims",
+    "personal_profile",
+    "checkout_history",
+    "feedback",
+    "password_resets",
+    "saved_reports",
+    "saved_report_presets",
+    "report_presets",
+    "maintenance_log",
+    "maintenance_schedules",
+    "tool_documents",
+    "user_prefs",
+    "preferences",
+    "user_preferences",
+]
+
+
+@auth_router.delete("/account")
+async def delete_account(
+    payload: DeleteAccountRequest, user: User = Depends(get_current_user)
+):
+    """Permanently delete the authenticated user's account and ALL associated
+    data across every collection. Requires the user's password as a
+    confirmation. Returns 401 on wrong password, 200 on success.
+
+    Idempotent across collections that may not exist (motor `delete_many`
+    on a non-existent collection is a no-op).
+    """
+    udoc = await real_db.users.find_one({"id": user.id}, {"_id": 0})
+    if not udoc:
+        raise HTTPException(401, "Account not found")
+    if not verify_password(payload.password or "", udoc.get("password_hash", "")):
+        raise HTTPException(401, "Incorrect password")
+
+    uid = user.id
+    deleted = {"user_id": uid, "collections": {}, "total": 0}
+    for coll in USER_DATA_COLLECTIONS:
+        try:
+            res = await real_db[coll].delete_many({"owner_id": uid})
+            n = int(getattr(res, "deleted_count", 0) or 0)
+            if n > 0:
+                deleted["collections"][coll] = n
+                deleted["total"] += n
+        except Exception as e:
+            logging.warning("Delete-account: skip collection %s (%s)", coll, e)
+
+    # Also wipe any password reset rows tied to this user (might have been
+    # missed if owner_id wasn't set on those rows).
+    try:
+        await real_db.password_resets.delete_many({"user_id": uid})
+    except Exception:
+        pass
+
+    # Finally remove the user record itself
+    try:
+        await real_db.users.delete_one({"id": uid})
+    except Exception as e:
+        logging.error("Delete-account: failed to delete user record: %s", e)
+        raise HTTPException(500, "Could not delete account record")
+
+    logging.info("Account deleted: %s — %d records purged", uid, deleted["total"])
+    return {"ok": True, "deleted": deleted, "message": "Account permanently deleted."}
+
+
 # ---------------------------------------------------------------------------
 # AI RECEIPT SCANNER
 # ---------------------------------------------------------------------------

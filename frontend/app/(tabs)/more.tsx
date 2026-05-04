@@ -11,6 +11,7 @@ import {
   ActivityIndicator,
   Platform,
   KeyboardAvoidingView,
+  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -347,6 +348,40 @@ export default function MoreScreen() {
           <View style={{ flex: 1 }}>
             <Text style={[styles.rowTitle, { color: theme.colors.danger }]}>Sign Out</Text>
             <Text style={styles.rowSub}>{user?.email || ""}</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color={theme.colors.textMuted} />
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.row}
+          activeOpacity={0.7}
+          testID="more-delete-account"
+          onPress={() => {
+            Alert.alert(
+              "DELETE ACCOUNT?",
+              "Are you sure you want to delete your account?\n\nThis action CANNOT be undone. ALL of your data will be DESTROYED — every tool, photo, receipt, dealer, location, transaction, report, and preference will be permanently erased.",
+              [
+                { text: "No, keep my account", style: "cancel" },
+                {
+                  text: "Yes, continue",
+                  style: "destructive",
+                  onPress: () => router.push("/delete-account" as any),
+                },
+              ],
+              { cancelable: true },
+            );
+          }}
+        >
+          <View style={styles.iconBox}>
+            <Ionicons name="skull" size={20} color={theme.colors.danger} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.rowTitle, { color: theme.colors.danger }]}>
+              Delete Account
+            </Text>
+            <Text style={styles.rowSub}>
+              Permanently destroy your account and all data
+            </Text>
           </View>
           <Ionicons name="chevron-forward" size={18} color={theme.colors.textMuted} />
         </TouchableOpacity>

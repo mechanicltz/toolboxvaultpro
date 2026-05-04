@@ -2027,3 +2027,70 @@ agent_communication:
         - tool/edit.tsx: SCAN RECEIPT banner, receipts section w/ thumbnails, confirmation modal w/ per-field toggles, compression via expo-image-manipulator, dealer-charge prompt on new tools.
         - api.post/addDealerTransaction used. No new src/ file created.
         - Added dep: expo-image-manipulator.
+
+
+backend_delete_account:
+  - task: "DELETE /api/auth/account — irreversible account deletion"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: |
+          New endpoint DELETE /api/auth/account. Body: {password: str}. Verifies the user's password against their stored hash (verify_password), then deletes ALL data with owner_id == user.id from every user-data collection (USER_DATA_COLLECTIONS list — tools, dealers, borrowers, locations, tags, categories, wishlist_items, warranty_claims, personal_profile, checkout_history, feedback, password_resets, saved_reports, saved_report_presets, report_presets, maintenance_log, maintenance_schedules, tool_documents, user_prefs, preferences, user_preferences). Also deletes the user record from real_db.users.
+      - working: true
+        agent: "testing"
+        comment: |
+          PASS — 30/30 checks GREEN via /app/backend_test_delete_account.py against EXPO_PUBLIC_BACKEND_URL/api. All 5 review tests verified end-to-end:
+          
+          TEST 1 (Wrong password): Login as subtest@example.com / password123 → 200; DELETE /api/auth/account {password:"wrong"} with valid token → 401 with detail exactly "Incorrect password". GET /api/auth/me with same token after → 200 (account NOT deleted, confirming password check blocks deletion). ✓
+          
+          TEST 2 (Empty password): DELETE /api/auth/account {password:""} with valid token → 401. ✓
+          
+          TEST 3 (Unauthorized): DELETE /api/auth/account without Authorization header → 401. ✓
+          
+          TEST 4 (Happy path with throwaway user): 
+          (a) POST /api/auth/register {email:"delete-test-575065d6b0@example.com", password:"tempPass123", name:"Delete Tester"} → 200 with token + user_id captured (adfc333d-e06a-41a4-825f-b448228a901b). 
+          (b) With that token: POST /api/locations {name:"Test Loc"} → 200, POST /api/dealers {name:"Test Dealer"} → 200, POST /api/tools {name:"Test Tool", quantity:1} → 200. Pre-delete counts: tools=1, dealers=1, locations=1. 
+          (c) DELETE /api/auth/account {password:"tempPass123"} → 200. Response body exactly: {"ok":true, "deleted":{"user_id":"adfc333d-e06a-41a4-825f-b448228a901b", "collections":{"tools":1, "dealers":1, "locations":1}, "total":3}, "message":"Account permanently deleted."}. All required keys present, ok==true, total>=3, collections contains tools/dealers/locations with count>=1 each, user_id matches. 
+          (d) GET /api/auth/me with the same token → 401 (token now references nonexistent user). 
+          (e) POST /api/auth/login {email:<same>, password:"tempPass123"} → 401 (user truly gone). 
+          (f) Re-register with SAME email + "freshPass456" → 200 (email-uniqueness purge worked, user can recreate account). 
+          (g) GET /api/tools with new token → 200 with empty list [] (clean slate). ✓
+          
+          TEST 5 (Smoke regression — subtest user untouched): Login subtest@example.com → 200, GET /api/auth/me → 200, GET /api/tools → 200, GET /api/dealers → 200. ✓
+          
+          Cleanup: The re-registered throwaway user (delete-test-575065d6b0@example.com with password "freshPass456") was also deleted via DELETE /api/auth/account → 200. No test residue left in the DB. The subtest@example.com user was NOT deleted (as required).
+          
+          Backend logs during run show all calls 200/401 only, zero tracebacks. The endpoint is production-ready. Main agent: summarise and finish.
+
+          Tests to run (auth as subtest@example.com / password123):
+          1. Wrong password → POST /api/auth/login first to confirm correct creds, then DELETE /api/auth/account with {password: "wrong"} → expect 401 "Incorrect password" AND user data still intact (GET /api/auth/me still 200, GET /api/tools still works).
+          2. Missing/empty password → {password: ""} → expect 401 "Incorrect password".
+          3. Unauthorized → no Authorization header → expect 401.
+          4. CRITICAL — DO NOT actually delete the subtest user. Instead:
+             a. Register a NEW throwaway user (POST /api/auth/register with {email: "delete-test-<uuid>@example.com", password: "tempPass123", name: "Delete Tester"}) → grab token.
+             b. Create at least one tool + one dealer for them so there is data to delete.
+             c. DELETE /api/auth/account with {password: "tempPass123"} → expect 200 with {ok: true, deleted: {total: N>=2, collections: {tools:1, dealers:1, ...}}}.
+             d. Confirm subsequent GET /api/auth/me with the same token → 401 (user gone).
+             e. Re-register with the SAME email + a fresh password → expect 200 success (user can recreate account with same email — confirms full purge + email-uniqueness OK).
+          5. Smoke regression — subtest@example.com still works (login, /me, /tools, /dealers all 200) — this was NOT touched.
+
+agent_communication:
+  - agent: "main"
+    message: |
+      Account-Deletion feature shipped end-to-end.
+      
+      Backend (NEW): DELETE /api/auth/account in /app/backend/server.py — see backend_delete_account task above for the full test plan.
+      
+      Frontend (NEW):
+        - /app/frontend/app/delete-account.tsx — full screen with red FINAL WARNING banner, password input, futuristic glass-tube progress bar (LinearGradient lime→emerald with shadow glow + mini bubbles + percentage readout). On submit: 7.5s animated fill in parallel with the DELETE API call; on success → Alert "Account Deleted" → logout (returns user to /login). On 401 → animation stops + "Incorrect password" error.
+        - /app/frontend/app/(tabs)/more.tsx — added "Delete Account" red row in the renamed ACCOUNT section (under Sign Out). Tap shows severe Alert.alert "ALL DATA WILL BE DESTROYED — Are you sure?" with No/Yes; Yes → router.push("/delete-account").
+        - /app/frontend/src/api.ts — added api.deleteAccount(password).
+      
+      Please run the backend tests in the task block above. Frontend testing will be done by the user. Report when done.
+

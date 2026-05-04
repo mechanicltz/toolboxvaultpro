@@ -204,6 +204,8 @@ export const api = {
     request<any>(`/auth/login`, { method: "POST", body: JSON.stringify(data) }),
   me: () => request<any>(`/auth/me`),
   updateMe: (data: any) => request<any>(`/auth/me`, { method: "PUT", body: JSON.stringify(data) }),
+  deleteAccount: (password: string) =>
+    request<any>(`/auth/account`, { method: "DELETE", body: JSON.stringify({ password }) }),
   forgotPassword: (data: { email: string }) =>
     request<{ ok: boolean; message: string }>(`/auth/forgot-password`, {
       method: "POST",
