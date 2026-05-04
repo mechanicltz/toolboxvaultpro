@@ -2387,13 +2387,17 @@ async def _purge_orphan_claims() -> int:
     state from before the cascade-on-tool-delete fix. Cheap (one find +
     one delete_many) and idempotent — safe to call before every list
     /summary read."""
-    tool_ids_with_claims = await db.warranty_claims.distinct("tool_id")
+    claim_rows = await db.warranty_claims.find(
+        {}, {"_id": 0, "tool_id": 1}
+    ).to_list(20000)
+    tool_ids_with_claims = list({(r.get("tool_id") or "") for r in claim_rows if r.get("tool_id")})
     if not tool_ids_with_claims:
         return 0
-    existing_tool_ids = set(
-        await db.tools.distinct("id", {"id": {"$in": tool_ids_with_claims}})
-    )
-    orphans = [tid for tid in tool_ids_with_claims if tid and tid not in existing_tool_ids]
+    existing_rows = await db.tools.find(
+        {"id": {"$in": tool_ids_with_claims}}, {"_id": 0, "id": 1}
+    ).to_list(20000)
+    existing_tool_ids = {r.get("id") for r in existing_rows}
+    orphans = [tid for tid in tool_ids_with_claims if tid not in existing_tool_ids]
     if not orphans:
         return 0
     res = await db.warranty_claims.delete_many({"tool_id": {"$in": orphans}})
