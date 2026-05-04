@@ -13,6 +13,7 @@ import {
   Linking,
   KeyboardAvoidingView,
   ActivityIndicator,
+  Switch,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -64,6 +65,40 @@ export default function ToolDetail() {
     sold_quantity: "",
   });
   const [markSoldBusy, setMarkSoldBusy] = useState(false);
+
+  // For-Sale poster builder modal
+  const [showPosterBuilder, setShowPosterBuilder] = useState(false);
+  type PosterFieldKey =
+    | "photo"
+    | "price"
+    | "name"
+    | "brand"
+    | "model"
+    | "serial"
+    | "condition"
+    | "category"
+    | "purchase_date"
+    | "description"
+    | "sale_notes"
+    | "contact_name"
+    | "contact_phone"
+    | "contact_email";
+  const [posterFields, setPosterFields] = useState<Record<PosterFieldKey, boolean>>({
+    photo: true,
+    price: true,
+    name: true,
+    brand: true,
+    model: true,
+    serial: false,
+    condition: true,
+    category: false,
+    purchase_date: false,
+    description: true,
+    sale_notes: true,
+    contact_name: true,
+    contact_phone: true,
+    contact_email: false,
+  });
 
   const openSaleModal = () => {
     setSaleForm({
@@ -363,6 +398,12 @@ export default function ToolDetail() {
   };
 
   const exportPdf = async () => {
+    // If the item is listed for sale, default to the poster builder so the
+    // user can pick which fields appear on the for-sale flyer.
+    if (tool?.for_sale && !tool?.is_sold) {
+      setShowPosterBuilder(true);
+      return;
+    }
     const hasReceipts = Array.isArray(tool.receipts) && tool.receipts.length > 0;
     if (hasReceipts) {
       Alert.alert(
@@ -375,6 +416,224 @@ export default function ToolDetail() {
       );
     } else {
       doExportPdf(false);
+    }
+  };
+
+  // Poster generator — produces a single-page "FOR SALE" flyer using the
+  // user's currently-toggled fields.
+  const generateForSalePoster = async () => {
+    const esc = (s: any) => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;");
+    const F = posterFields;
+    let profile: any = null;
+    if (F.contact_name || F.contact_phone || F.contact_email) {
+      try {
+        profile = await api.getPersonalProfile();
+      } catch {
+        profile = null;
+      }
+    }
+    const heroPhoto = F.photo && photos.length > 0 ? photos[0] : "";
+    const askingPrice =
+      tool?.sale_price != null ? Number(tool.sale_price).toFixed(2) : "0.00";
+
+    // Each spec row = optional [icon-label, value]
+    const specRows: { label: string; value: string }[] = [];
+    if (F.brand && tool.brand) specRows.push({ label: "Brand", value: tool.brand });
+    if (F.model && tool.model) specRows.push({ label: "Model", value: tool.model });
+    if (F.serial && tool.serial_number)
+      specRows.push({ label: "Serial #", value: tool.serial_number });
+    if (F.condition && tool.condition)
+      specRows.push({ label: "Condition", value: tool.condition });
+    if (F.category && tool.category_name)
+      specRows.push({ label: "Category", value: tool.category_name });
+    if (F.purchase_date && tool.purchase_date)
+      specRows.push({ label: "Purchased", value: formatDateUS(tool.purchase_date) });
+
+    const specsHtml = specRows
+      .map(
+        (r) =>
+          `<div class="row"><span class="lab">${esc(r.label).toUpperCase()}</span><span class="val">${esc(r.value)}</span></div>`,
+      )
+      .join("");
+
+    const descBlock =
+      F.description && tool.description
+        ? `<div class="desc"><div class="lab">DESCRIPTION</div><p>${esc(tool.description)}</p></div>`
+        : "";
+
+    const noteBlock =
+      F.sale_notes && tool.sale_notes
+        ? `<div class="note"><div class="lab">SELLER'S NOTES</div><p>${esc(tool.sale_notes)}</p></div>`
+        : "";
+
+    const contactRows: string[] = [];
+    if (F.contact_name && profile?.name)
+      contactRows.push(`<div><b>${esc(profile.name)}</b></div>`);
+    if (F.contact_phone && profile?.phone)
+      contactRows.push(`<div>📞 ${esc(profile.phone)}</div>`);
+    if (F.contact_email && profile?.email)
+      contactRows.push(`<div>✉️ ${esc(profile.email)}</div>`);
+    const contactBlock = contactRows.length
+      ? `<div class="contact"><div class="contact-title">CONTACT</div>${contactRows.join("")}</div>`
+      : "";
+
+    const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><style>
+      @page { size: letter; margin: 0; }
+      *{box-sizing:border-box;margin:0;padding:0}
+      html,body{font-family:Helvetica,Arial,sans-serif;color:#0a0a0a;background:#fafafa}
+      .poster{
+        width: 8.5in; min-height: 11in;
+        padding: 0.5in;
+        background:
+          radial-gradient(circle at 0% 0%, rgba(255,179,0,0.06), transparent 40%),
+          radial-gradient(circle at 100% 100%, rgba(255,179,0,0.05), transparent 40%),
+          #ffffff;
+        position: relative;
+        border: 14px solid #111;
+        outline: 3px solid #FFB300;
+        outline-offset: -10px;
+      }
+      .ribbon{
+        background: linear-gradient(90deg, #FFB300 0%, #FF8F00 100%);
+        color: #111;
+        font-size: 64px;
+        font-weight: 900;
+        letter-spacing: 14px;
+        text-align: center;
+        padding: 18px 0;
+        margin: -8px -8px 18px -8px;
+        text-transform: uppercase;
+        text-shadow: 1px 2px 0 rgba(255,255,255,0.4);
+      }
+      .name {
+        font-size: 36px;
+        font-weight: 900;
+        text-align: center;
+        text-transform: uppercase;
+        letter-spacing: 2px;
+        line-height: 1.05;
+        margin-bottom: 12px;
+        color: #111;
+      }
+      .price-box{
+        display: block;
+        text-align: center;
+        background:#111;
+        color:#FFB300;
+        padding: 18px 0;
+        border: 2px solid #FFB300;
+        margin-bottom: 18px;
+      }
+      .price-box .ask{
+        font-size: 16px;
+        letter-spacing: 6px;
+        font-weight: 800;
+        text-transform: uppercase;
+        opacity: 0.85;
+      }
+      .price-box .price{
+        font-size: 78px;
+        font-weight: 900;
+        letter-spacing: -2px;
+        line-height: 1;
+        margin-top: 4px;
+      }
+      .photo{
+        display:block;
+        width: 100%;
+        max-height: 4.2in;
+        object-fit: cover;
+        border: 4px solid #111;
+        margin-bottom: 18px;
+        background: #f0f0f0;
+      }
+      .specs{
+        border: 2px solid #111;
+        padding: 14px 16px;
+        margin-bottom: 16px;
+      }
+      .row{
+        display: flex;
+        justify-content: space-between;
+        font-size: 14px;
+        padding: 6px 0;
+        border-bottom: 1px dotted #ccc;
+      }
+      .row:last-child{border-bottom:none}
+      .lab{
+        font-weight: 800;
+        letter-spacing: 1.5px;
+        color: #555;
+        font-size: 11px;
+      }
+      .val{
+        font-weight: 700;
+        color: #111;
+        font-size: 14px;
+        max-width: 60%;
+        text-align: right;
+      }
+      .desc, .note{
+        margin-bottom: 14px;
+        padding: 10px 14px;
+        background: #fff8e6;
+        border-left: 4px solid #FFB300;
+      }
+      .desc p, .note p{
+        font-size: 13px;
+        line-height: 1.4;
+        color: #222;
+        margin-top: 4px;
+      }
+      .note{ background:#f4f4f4; border-left-color:#111 }
+      .contact{
+        position: absolute;
+        bottom: 0.6in;
+        left: 0.5in;
+        right: 0.5in;
+        padding: 14px 18px;
+        background: #111;
+        color: #fff;
+        text-align: center;
+        font-size: 14px;
+        line-height: 1.5;
+      }
+      .contact-title{
+        color:#FFB300;
+        font-size: 11px;
+        letter-spacing: 4px;
+        font-weight: 900;
+        margin-bottom: 6px;
+      }
+      .footer{
+        position:absolute;
+        bottom: 0.18in;
+        left: 0.5in;
+        right: 0.5in;
+        text-align:center;
+        font-size: 8px;
+        letter-spacing: 1.5px;
+        color:#999;
+      }
+    </style></head><body>
+      <div class="poster">
+        <div class="ribbon">FOR SALE</div>
+        ${F.name ? `<div class="name">${esc(tool.name) || "(unnamed)"}</div>` : ""}
+        ${F.price ? `<div class="price-box"><div class="ask">Asking Price</div><div class="price">$${askingPrice}</div></div>` : ""}
+        ${heroPhoto ? `<img class="photo" src="${heroPhoto}"/>` : ""}
+        ${specsHtml ? `<div class="specs">${specsHtml}</div>` : ""}
+        ${descBlock}
+        ${noteBlock}
+        ${contactBlock}
+        <div class="footer">Listed via TOOLBOX VAULT · ${new Date().toLocaleDateString()}</div>
+      </div>
+    </body></html>`;
+
+    setShowPosterBuilder(false);
+    try {
+      await printReportHtml(html, `${tool.name || "for-sale"}-poster-${Date.now()}`);
+    } catch (e: any) {
+      Alert.alert("Error", e?.message || "Could not generate poster");
     }
   };
 
@@ -1178,6 +1437,78 @@ export default function ToolDetail() {
         </View>
       </Modal>
 
+      {/* For-Sale Poster Builder Modal */}
+      <Modal
+        visible={showPosterBuilder}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowPosterBuilder(false)}
+      >
+        <View style={styles.modalBackdrop}>
+          <View style={[styles.modalCard, { maxHeight: "92%" }]}>
+            <View style={styles.modalHeader}>
+              <Ionicons name="megaphone" size={20} color={theme.colors.accent} />
+              <Text style={styles.modalTitle}>FOR-SALE POSTER</Text>
+              <TouchableOpacity onPress={() => setShowPosterBuilder(false)} hitSlop={10}>
+                <Ionicons name="close" size={22} color={theme.colors.textPrimary} />
+              </TouchableOpacity>
+            </View>
+            <Text style={[styles.helper, { marginBottom: 12 }]}>
+              Pick which fields appear on the poster. The flyer is letter-size with a
+              big "FOR SALE" banner, your asking price, and the photo & specs you choose.
+            </Text>
+            <ScrollView style={{ maxHeight: 460 }} showsVerticalScrollIndicator={false}>
+              {([
+                { k: "photo", label: "Main photo (large)" },
+                { k: "name", label: "Item name" },
+                { k: "price", label: "Asking price (large box)" },
+                { k: "brand", label: "Brand" },
+                { k: "model", label: "Model" },
+                { k: "serial", label: "Serial / Part #" },
+                { k: "condition", label: "Condition" },
+                { k: "category", label: "Category" },
+                { k: "purchase_date", label: "Original purchase date" },
+                { k: "description", label: "Description" },
+                { k: "sale_notes", label: "Seller's notes" },
+                { k: "contact_name", label: "Contact: your name" },
+                { k: "contact_phone", label: "Contact: phone" },
+                { k: "contact_email", label: "Contact: email" },
+              ] as { k: PosterFieldKey; label: string }[]).map((f) => (
+                <View key={f.k} style={styles.posterRow}>
+                  <Text style={styles.posterRowLabel}>{f.label}</Text>
+                  <Switch
+                    testID={`poster-toggle-${f.k}`}
+                    value={!!posterFields[f.k]}
+                    onValueChange={(v) =>
+                      setPosterFields((s) => ({ ...s, [f.k]: v }))
+                    }
+                    trackColor={{ true: theme.colors.accent, false: theme.colors.border }}
+                    thumbColor="#fff"
+                  />
+                </View>
+              ))}
+            </ScrollView>
+            <View style={{ flexDirection: "row", gap: 10, marginTop: 12 }}>
+              <TouchableOpacity
+                testID="poster-cancel-btn"
+                style={[styles.btnGhost, { flex: 1, marginTop: 0 }]}
+                onPress={() => setShowPosterBuilder(false)}
+              >
+                <Text style={styles.btnGhostText}>CANCEL</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                testID="poster-generate-btn"
+                style={[styles.btnPrimary, { flex: 1 }]}
+                onPress={generateForSalePoster}
+              >
+                <Ionicons name="print" size={14} color="#000" />
+                <Text style={styles.btnPrimaryText}>  GENERATE POSTER</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
       {/* List For Sale Modal */}
       <Modal visible={showSaleListing} transparent animationType="slide" onRequestClose={() => setShowSaleListing(false)}>
         <KeyboardAvoidingView
@@ -1641,6 +1972,21 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     letterSpacing: 1,
   },
+  posterRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: 10,
+    paddingHorizontal: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.borderSubtle,
+  },
+  posterRowLabel: {
+    flex: 1,
+    color: theme.colors.textPrimary,
+    fontSize: 12,
+    fontWeight: "600",
+  },
   thumbStrip: { backgroundColor: theme.colors.bg },
   thumbSm: {
     width: 56,
@@ -2025,14 +2371,33 @@ const styles = StyleSheet.create({
     fontSize: 11,
   },
   modalActions: { flexDirection: "row", gap: 10, marginTop: 4 },
+  helper: {
+    color: theme.colors.textMuted,
+    fontSize: 11,
+    lineHeight: 16,
+  },
   btnGhost: {
-    flex: 1,
     borderWidth: 1,
     borderColor: theme.colors.border,
     height: 48,
     alignItems: "center",
     justifyContent: "center",
     borderRadius: 4,
+    marginTop: 4,
   },
   btnGhostText: { color: theme.colors.textPrimary, fontWeight: "800", letterSpacing: 2, fontSize: 10 },
+  btnPrimary: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: theme.colors.accent,
+    height: 48,
+    borderRadius: 4,
+  },
+  btnPrimaryText: {
+    color: "#000",
+    fontWeight: "900",
+    letterSpacing: 2,
+    fontSize: 11,
+  },
 });
