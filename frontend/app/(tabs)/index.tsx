@@ -182,7 +182,6 @@ export default function HomeScreen() {
               icon="cube"
               label="TOTAL ITEMS"
               value={String(totalItems)}
-              color={theme.colors.accent}
               onPress={() => router.push("/inventory")}
             />
           )}
@@ -191,7 +190,6 @@ export default function HomeScreen() {
               icon="cash"
               label="INVESTED"
               value={`$${totalInvested.toFixed(2)}`}
-              color={theme.colors.success}
             />
           )}
           {visible.checked_out && (
@@ -199,7 +197,6 @@ export default function HomeScreen() {
               icon="swap-horizontal"
               label="CHECKED OUT"
               value={String(checkedOut)}
-              color={theme.colors.accentSecondary}
               onPress={() => router.push("/inventory?filter=out")}
             />
           )}
@@ -208,7 +205,6 @@ export default function HomeScreen() {
               icon="pricetag"
               label="SELLING"
               value={String(forSaleCount)}
-              color={theme.colors.accent}
               onPress={() => router.push("/for-sale")}
             />
           )}
@@ -217,7 +213,6 @@ export default function HomeScreen() {
               icon="heart"
               label="WISH LIST"
               value={`${wishlistCount} · $${wishlistTotal.toFixed(2)}`}
-              color={theme.colors.accent}
               onPress={() => router.push("/wishlist")}
             />
           )}
@@ -226,7 +221,6 @@ export default function HomeScreen() {
               icon="warning"
               label="LOST / STOLEN"
               value={String(lost)}
-              color={theme.colors.danger}
               onPress={() => router.push("/inventory?filter=lost")}
             />
           )}
@@ -236,7 +230,6 @@ export default function HomeScreen() {
               label="MAINTENANCE DUE"
               value={String(mnt.overdue + mnt.due_soon)}
               sub={mnt.overdue > 0 ? `${mnt.overdue} OVERDUE` : "DUE 30D"}
-              color={mnt.overdue > 0 ? theme.colors.danger : theme.colors.accent}
               onPress={() => router.push("/maintenance")}
             />
           )}
@@ -245,7 +238,6 @@ export default function HomeScreen() {
               icon="document-text"
               label="OPEN CLAIMS"
               value={String(claims?.totals?.open || 0)}
-              color={theme.colors.accent}
               onPress={() => router.push("/claims")}
             />
           )}
@@ -257,9 +249,6 @@ export default function HomeScreen() {
                 icon="wallet"
                 label="OWED TO DEALERS"
                 value={`$${totalOwed.toFixed(2)}`}
-                color={
-                  totalOwed > 0 ? theme.colors.danger : theme.colors.success
-                }
                 onPress={() => router.push("/dealers")}
               />
               {dealersWithBalance.length === 0 ? (
@@ -339,7 +328,6 @@ function SummaryRow({
   icon,
   label,
   value,
-  color,
   sub,
   onPress,
   rightSlot,
@@ -347,23 +335,18 @@ function SummaryRow({
   icon: any;
   label: string;
   value: string;
-  color: string;
   sub?: string;
   onPress?: () => void;
   rightSlot?: ReactNode;
 }) {
   const Wrapper: any = onPress ? TouchableOpacity : View;
   return (
-    <Wrapper
-      style={[styles.row, { borderLeftColor: color }]}
-      onPress={onPress}
-      activeOpacity={0.65}
-    >
-      <View style={[styles.rowIcon, { backgroundColor: `${color}22` }]}>
-        <Ionicons name={icon} size={16} color={color} />
+    <Wrapper style={styles.row} onPress={onPress} activeOpacity={0.65}>
+      <View style={styles.rowIcon}>
+        <Ionicons name={icon} size={16} color={theme.colors.textPrimary} />
       </View>
       <View style={{ flex: 1, minWidth: 0 }}>
-        <Text style={[styles.rowLabel, { color }]} numberOfLines={1}>
+        <Text style={styles.rowLabel} numberOfLines={1}>
           {label}
         </Text>
         {sub ? <Text style={styles.rowSub}>{sub}</Text> : null}
@@ -405,10 +388,14 @@ function DealerBalanceRow({
         activeOpacity={0.7}
       >
         <View style={styles.dealerIcon}>
-          <Ionicons name="business" size={14} color={theme.colors.accent} />
+          <Ionicons
+            name="business"
+            size={14}
+            color={theme.colors.textPrimary}
+          />
         </View>
         <Text style={styles.dealerName} numberOfLines={1}>
-          {dealer.name}
+          {dealer.name} Accounts
         </Text>
         <Text style={styles.dealerTotal}>${total.toFixed(2)}</Text>
         <Ionicons
@@ -422,12 +409,17 @@ function DealerBalanceRow({
         {credit > 0 && (
           <TouchableOpacity
             testID={`pay-credit-${dealer.id}`}
-            style={[styles.dealerPill, { borderColor: theme.colors.accent }]}
+            style={styles.dealerPill}
             onPress={onPayCredit}
+            activeOpacity={0.8}
           >
-            <Ionicons name="card" size={12} color={theme.colors.accent} />
-            <Text style={styles.dealerPillLabel}>CREDIT</Text>
-            <Text style={styles.dealerPillVal}>${credit.toFixed(2)}</Text>
+            <Ionicons name="card" size={12} color={theme.colors.textPrimary} />
+            <Text style={styles.dealerPillLabel} numberOfLines={1}>
+              CREDIT
+            </Text>
+            <Text style={styles.dealerPillVal} numberOfLines={1}>
+              ${credit.toFixed(2)}
+            </Text>
             <View style={styles.dealerPillCta}>
               <Text style={styles.dealerPillCtaText}>PAY</Text>
             </View>
@@ -436,29 +428,22 @@ function DealerBalanceRow({
         {personal > 0 && (
           <TouchableOpacity
             testID={`pay-personal-${dealer.id}`}
-            style={[styles.dealerPill, { borderColor: theme.colors.accentSecondary }]}
+            style={styles.dealerPill}
             onPress={onPayPersonal}
+            activeOpacity={0.8}
           >
             <Ionicons
               name="person"
               size={12}
-              color={theme.colors.accentSecondary}
+              color={theme.colors.textPrimary}
             />
-            <Text
-              style={[
-                styles.dealerPillLabel,
-                { color: theme.colors.accentSecondary },
-              ]}
-            >
-              PERSONAL
+            <Text style={styles.dealerPillLabel} numberOfLines={1}>
+              TRUCK
             </Text>
-            <Text style={styles.dealerPillVal}>${personal.toFixed(2)}</Text>
-            <View
-              style={[
-                styles.dealerPillCta,
-                { backgroundColor: theme.colors.accentSecondary },
-              ]}
-            >
+            <Text style={styles.dealerPillVal} numberOfLines={1}>
+              ${personal.toFixed(2)}
+            </Text>
+            <View style={styles.dealerPillCta}>
               <Text style={styles.dealerPillCtaText}>PAY</Text>
             </View>
           </TouchableOpacity>
@@ -545,8 +530,6 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.border,
-    borderLeftWidth: 3,
-    borderLeftColor: "transparent",
   },
   rowIcon: {
     width: 32,
@@ -554,8 +537,10 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     alignItems: "center",
     justifyContent: "center",
+    backgroundColor: theme.colors.surface,
   },
   rowLabel: {
+    color: theme.colors.textPrimary,
     fontSize: 11,
     fontWeight: "900",
     letterSpacing: 1.4,
@@ -587,10 +572,10 @@ const styles = StyleSheet.create({
   },
   dealerRow: {
     paddingHorizontal: 14,
-    paddingVertical: 10,
+    paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.border,
-    backgroundColor: theme.colors.bg,
+    backgroundColor: theme.colors.bgSecondary,
   },
   dealerHeader: {
     flexDirection: "row",
@@ -601,53 +586,56 @@ const styles = StyleSheet.create({
     width: 22,
     height: 22,
     borderRadius: 11,
-    backgroundColor: `${theme.colors.accent}22`,
+    backgroundColor: theme.colors.surface,
     alignItems: "center",
     justifyContent: "center",
   },
   dealerName: {
     flex: 1,
     color: theme.colors.textPrimary,
-    fontSize: 13,
-    fontWeight: "800",
-    letterSpacing: 0.5,
+    fontSize: 11,
+    fontWeight: "900",
+    letterSpacing: 1.4,
   },
   dealerTotal: {
-    color: theme.colors.danger,
-    fontSize: 13,
+    color: theme.colors.textPrimary,
+    fontSize: 14,
     fontWeight: "900",
   },
   dealerActionsRow: {
     flexDirection: "row",
-    flexWrap: "wrap",
     gap: 8,
-    marginTop: 8,
+    marginTop: 10,
     marginLeft: 30,
   },
   dealerPill: {
+    flex: 1,
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    paddingHorizontal: 8,
-    paddingVertical: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
     borderWidth: 1,
+    borderColor: theme.colors.border,
     borderRadius: 999,
-    backgroundColor: theme.colors.bgSecondary,
+    backgroundColor: theme.colors.surface,
   },
   dealerPillLabel: {
-    color: theme.colors.accent,
+    color: theme.colors.textPrimary,
     fontSize: 9,
     fontWeight: "900",
     letterSpacing: 1,
   },
   dealerPillVal: {
+    flex: 1,
     color: theme.colors.textPrimary,
     fontSize: 12,
     fontWeight: "900",
+    textAlign: "right",
   },
   dealerPillCta: {
     backgroundColor: theme.colors.accent,
-    paddingHorizontal: 8,
+    paddingHorizontal: 10,
     paddingVertical: 3,
     borderRadius: 999,
     marginLeft: 4,

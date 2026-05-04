@@ -193,11 +193,12 @@ export default function ForSaleScreen() {
         </TouchableOpacity>
         <Text style={styles.title}>INVENTORY FOR SALE</Text>
         <TouchableOpacity
-          onPress={() => router.push({ pathname: "/reports", params: { preset: "sales" } })}
-          testID="report-btn"
+          onPress={() => router.push("/tool/edit")}
+          testID="add-item-btn"
           style={styles.reportsBtn}
         >
-          <Text style={styles.reportsBtnText}>REPORTS</Text>
+          <Ionicons name="add" size={14} color={theme.colors.accent} />
+          <Text style={styles.reportsBtnText}>ADD ITEM</Text>
         </TouchableOpacity>
       </View>
 
@@ -372,16 +373,21 @@ const styles = StyleSheet.create({
     letterSpacing: 2,
   },
   reportsBtn: {
-    backgroundColor: theme.colors.accent,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: 4,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: "rgba(15,15,15,0.9)",
+    borderWidth: 1,
+    borderColor: theme.colors.accent,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 5,
   },
   reportsBtnText: {
-    color: "#000",
-    fontSize: 11,
+    color: theme.colors.accent,
+    fontSize: 10,
     fontWeight: "900",
-    letterSpacing: 1.5,
+    letterSpacing: 1.2,
   },
   tabRow: {
     flexDirection: "row",
