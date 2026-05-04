@@ -35,7 +35,7 @@ import { theme } from "../src/theme";
 // can confirm in the JS console that the latest layout module has been
 // re-evaluated. If you don't see this log line increment after editing,
 // you need a full reload (shake → Reload) — hot reload skips root layouts.
-const NATIVE_SCALE_VERSION = 5;
+const NATIVE_SCALE_VERSION = 6;
 
 // We scale on:
 //   - iOS / Android native (always)
@@ -58,9 +58,9 @@ const _isMobileWeb = (() => {
 })();
 
 const NATIVE_FONT_SCALE = (() => {
-  if (Platform.OS === "ios") return 0.65;
-  if (Platform.OS === "android") return 0.7;
-  if (_isMobileWeb) return 0.7;
+  if (Platform.OS === "ios") return 0.55;
+  if (Platform.OS === "android") return 0.6;
+  if (_isMobileWeb) return 0.6;
   return 1;
 })();
 
