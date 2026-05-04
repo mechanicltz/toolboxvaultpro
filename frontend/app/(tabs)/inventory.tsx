@@ -406,148 +406,152 @@ export default function InventoryScreen() {
       </View>
 
       {/* Filter / sort dropdowns — Status · Location · Tag · Sort (2 rows × 2) */}
-      <View style={styles.filterDropdownRow}>
-        <TouchableOpacity
-          testID="status-filter-btn"
-          style={[
-            styles.locationFilterBtn,
-            styles.filterHalf,
-            filter !== "all" && styles.locationFilterBtnActive,
-          ]}
-          onPress={() => setShowStatusPicker(true)}
-          activeOpacity={0.7}
-        >
-          <Ionicons
-            name="filter"
-            size={14}
-            color={filter !== "all" ? theme.colors.accent : theme.colors.textMuted}
-          />
-          <Text
+      <View style={styles.filterDropdownGrid}>
+        <View style={styles.filterDropdownRow}>
+          <TouchableOpacity
+            testID="status-filter-btn"
             style={[
-              styles.locationFilterText,
-              filter !== "all" && styles.locationFilterTextActive,
+              styles.locationFilterBtn,
+              styles.filterHalf,
+              filter !== "all" && styles.locationFilterBtnActive,
             ]}
-            numberOfLines={1}
+            onPress={() => setShowStatusPicker(true)}
+            activeOpacity={0.7}
           >
-            {statusLabel}
-          </Text>
-          <Ionicons name="chevron-down" size={14} color={theme.colors.textMuted} />
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          testID="location-filter-btn"
-          style={[
-            styles.locationFilterBtn,
-            styles.filterHalf,
-            locationFilter && styles.locationFilterBtnActive,
-          ]}
-          onPress={() => setShowLocationPicker(true)}
-          activeOpacity={0.7}
-        >
-          <Ionicons
-            name="location"
-            size={14}
-            color={locationFilter ? theme.colors.accent : theme.colors.textMuted}
-          />
-          <Text
-            style={[
-              styles.locationFilterText,
-              locationFilter && styles.locationFilterTextActive,
-            ]}
-            numberOfLines={1}
-          >
-            {selectedLocationName || "Locations"}
-          </Text>
-          {locationFilter ? (
-            <TouchableOpacity
-              testID="location-filter-clear"
-              onPress={(e) => {
-                e.stopPropagation();
-                setLocationFilter(null);
-              }}
-              hitSlop={6}
+            <Ionicons
+              name="filter"
+              size={14}
+              color={filter !== "all" ? theme.colors.accent : theme.colors.textMuted}
+            />
+            <Text
+              style={[
+                styles.locationFilterText,
+                filter !== "all" && styles.locationFilterTextActive,
+              ]}
+              numberOfLines={1}
             >
-              <Ionicons name="close-circle" size={14} color={theme.colors.accent} />
-            </TouchableOpacity>
-          ) : (
+              {statusLabel}
+            </Text>
             <Ionicons name="chevron-down" size={14} color={theme.colors.textMuted} />
-          )}
-        </TouchableOpacity>
+          </TouchableOpacity>
 
-        <TouchableOpacity
-          testID="tag-filter-btn"
-          style={[
-            styles.locationFilterBtn,
-            styles.filterHalf,
-            tagFilter.length > 0 && styles.locationFilterBtnActive,
-          ]}
-          onPress={() => setShowTagPicker(true)}
-          activeOpacity={0.7}
-        >
-          <Ionicons
-            name="pricetag"
-            size={14}
-            color={tagFilter.length ? theme.colors.accent : theme.colors.textMuted}
-          />
-          <Text
+          <TouchableOpacity
+            testID="location-filter-btn"
             style={[
-              styles.locationFilterText,
-              tagFilter.length > 0 && styles.locationFilterTextActive,
+              styles.locationFilterBtn,
+              styles.filterHalf,
+              locationFilter && styles.locationFilterBtnActive,
             ]}
-            numberOfLines={1}
+            onPress={() => setShowLocationPicker(true)}
+            activeOpacity={0.7}
           >
-            {tagFilterLabel}
-          </Text>
-          {tagFilter.length > 0 ? (
-            <TouchableOpacity
-              testID="tag-filter-clear"
-              onPress={(e) => {
-                e.stopPropagation();
-                setTagFilter([]);
-              }}
-              hitSlop={6}
+            <Ionicons
+              name="location"
+              size={14}
+              color={locationFilter ? theme.colors.accent : theme.colors.textMuted}
+            />
+            <Text
+              style={[
+                styles.locationFilterText,
+                locationFilter && styles.locationFilterTextActive,
+              ]}
+              numberOfLines={1}
             >
-              <Ionicons name="close-circle" size={14} color={theme.colors.accent} />
-            </TouchableOpacity>
-          ) : (
-            <Ionicons name="chevron-down" size={14} color={theme.colors.textMuted} />
-          )}
-        </TouchableOpacity>
+              {selectedLocationName || "Locations"}
+            </Text>
+            {locationFilter ? (
+              <TouchableOpacity
+                testID="location-filter-clear"
+                onPress={(e) => {
+                  e.stopPropagation();
+                  setLocationFilter(null);
+                }}
+                hitSlop={6}
+              >
+                <Ionicons name="close-circle" size={14} color={theme.colors.accent} />
+              </TouchableOpacity>
+            ) : (
+              <Ionicons name="chevron-down" size={14} color={theme.colors.textMuted} />
+            )}
+          </TouchableOpacity>
+        </View>
 
-        <TouchableOpacity
-          testID="sort-filter-btn"
-          style={[
-            styles.locationFilterBtn,
-            styles.filterHalf,
-            sortBy !== "date_desc" && styles.locationFilterBtnActive,
-          ]}
-          onPress={() => setShowSortPicker(true)}
-          activeOpacity={0.7}
-        >
-          <Ionicons
-            name="swap-vertical"
-            size={14}
-            color={sortBy !== "date_desc" ? theme.colors.accent : theme.colors.textMuted}
-          />
-          <Text
+        <View style={styles.filterDropdownRow}>
+          <TouchableOpacity
+            testID="tag-filter-btn"
             style={[
-              styles.locationFilterText,
-              sortBy !== "date_desc" && styles.locationFilterTextActive,
+              styles.locationFilterBtn,
+              styles.filterHalf,
+              tagFilter.length > 0 && styles.locationFilterBtnActive,
             ]}
-            numberOfLines={1}
+            onPress={() => setShowTagPicker(true)}
+            activeOpacity={0.7}
           >
-            {sortBy === "date_desc"
-              ? "NEWEST FIRST"
-              : sortBy === "date_asc"
-                ? "OLDEST FIRST"
-                : sortBy === "alpha"
-                  ? "A → Z"
-                  : sortBy === "price_high"
-                    ? "PRICE: HIGH → LOW"
-                    : "PRICE: LOW → HIGH"}
-          </Text>
-          <Ionicons name="chevron-down" size={14} color={theme.colors.textMuted} />
-        </TouchableOpacity>
+            <Ionicons
+              name="pricetag"
+              size={14}
+              color={tagFilter.length ? theme.colors.accent : theme.colors.textMuted}
+            />
+            <Text
+              style={[
+                styles.locationFilterText,
+                tagFilter.length > 0 && styles.locationFilterTextActive,
+              ]}
+              numberOfLines={1}
+            >
+              {tagFilterLabel}
+            </Text>
+            {tagFilter.length > 0 ? (
+              <TouchableOpacity
+                testID="tag-filter-clear"
+                onPress={(e) => {
+                  e.stopPropagation();
+                  setTagFilter([]);
+                }}
+                hitSlop={6}
+              >
+                <Ionicons name="close-circle" size={14} color={theme.colors.accent} />
+              </TouchableOpacity>
+            ) : (
+              <Ionicons name="chevron-down" size={14} color={theme.colors.textMuted} />
+            )}
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            testID="sort-filter-btn"
+            style={[
+              styles.locationFilterBtn,
+              styles.filterHalf,
+              sortBy !== "date_desc" && styles.locationFilterBtnActive,
+            ]}
+            onPress={() => setShowSortPicker(true)}
+            activeOpacity={0.7}
+          >
+            <Ionicons
+              name="swap-vertical"
+              size={14}
+              color={sortBy !== "date_desc" ? theme.colors.accent : theme.colors.textMuted}
+            />
+            <Text
+              style={[
+                styles.locationFilterText,
+                sortBy !== "date_desc" && styles.locationFilterTextActive,
+              ]}
+              numberOfLines={1}
+            >
+              {sortBy === "date_desc"
+                ? "NEWEST FIRST"
+                : sortBy === "date_asc"
+                  ? "OLDEST FIRST"
+                  : sortBy === "alpha"
+                    ? "A → Z"
+                    : sortBy === "price_high"
+                      ? "PRICE: HIGH → LOW"
+                      : "PRICE: LOW → HIGH"}
+            </Text>
+            <Ionicons name="chevron-down" size={14} color={theme.colors.textMuted} />
+          </TouchableOpacity>
+        </View>
       </View>
 
       {prefs.show_details_summary && agg && (
@@ -1348,13 +1352,14 @@ const styles = StyleSheet.create({
   searchInput: { flex: 1, color: theme.colors.textPrimary, fontSize: 11 },
   filterWrap: { maxHeight: 56, paddingVertical: 4 },
   filterRow: { paddingHorizontal: 20, paddingVertical: 8, gap: 8, alignItems: "center" },
-  filterDropdownRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
+  filterDropdownGrid: {
     paddingHorizontal: 16,
     paddingTop: 6,
     paddingBottom: 8,
     rowGap: 8,
+  },
+  filterDropdownRow: {
+    flexDirection: "row",
     columnGap: 8,
   },
   locationFilterRow: {
@@ -1374,7 +1379,7 @@ const styles = StyleSheet.create({
     borderColor: theme.colors.border,
   },
   filterHalf: {
-    width: "48.5%",
+    flex: 1,
     minWidth: 0,
   },
   locationFilterBtnActive: {
