@@ -25,11 +25,11 @@ import { theme } from "../src/theme";
  *  1. Disable iOS Dynamic Type so a user's accessibility "larger text"
  *     setting cannot inflate every font size and break tight tab/header
  *     layouts.
- *  2. On iOS / Android only, monkey-patch the Text component's render
- *     so every Text gets its fontSize multiplied by NATIVE_FONT_SCALE.
- *     We chose 0.88 because RN-iOS's default SF rendering looks ~12%
- *     bigger than the same fontSize on RN-web at the same logical
- *     viewport — bringing them visually in line.
+ *  2. On iOS / Android only, monkey-patch `StyleSheet.create` so every
+ *     style with a numeric `fontSize` gets multiplied by NATIVE_FONT_SCALE
+ *     at registration time. This is bulletproof — every screen's styles
+ *     get scaled regardless of how Text is wrapped — and runs exactly once
+ *     per stylesheet.
  */
 const NATIVE_FONT_SCALE = Platform.select({ ios: 0.78, android: 0.82, default: 1 }) as number;
 
@@ -46,27 +46,38 @@ TextInputAny.defaultProps = TextInputAny.defaultProps || {};
 TextInputAny.defaultProps.allowFontScaling = false;
 TextInputAny.defaultProps.maxFontSizeMultiplier = 1;
 
-// Monkey-patch render so every Text on native gets its fontSize scaled.
-// (Web is left untouched — its rendering is the target we're matching.)
-if (Platform.OS !== "web" && NATIVE_FONT_SCALE !== 1 && !TextAny.__tv_patched__) {
-  TextAny.__tv_patched__ = true;
-  const origRender = TextAny.render;
-  if (typeof origRender === "function") {
-    TextAny.render = function patchedTextRender(props: any, ref: any) {
-      let nextProps = props;
-      if (props && props.style) {
-        const flat = StyleSheet.flatten(props.style);
-        if (flat && typeof flat.fontSize === "number") {
-          const scaled = Math.round(flat.fontSize * NATIVE_FONT_SCALE);
-          nextProps = {
-            ...props,
-            style: [props.style, { fontSize: scaled }],
-          };
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const StyleSheetAny = StyleSheet as any;
+if (
+  Platform.OS !== "web" &&
+  NATIVE_FONT_SCALE !== 1 &&
+  !StyleSheetAny.__tv_create_patched__
+) {
+  StyleSheetAny.__tv_create_patched__ = true;
+  const origCreate = StyleSheet.create.bind(StyleSheet);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (StyleSheet as any).create = (styles: any) => {
+    const next: any = {};
+    for (const key of Object.keys(styles || {})) {
+      const s = styles[key];
+      if (s && typeof s === "object") {
+        const scaled: any = { ...s };
+        if (typeof s.fontSize === "number") {
+          scaled.fontSize = Math.max(1, Math.round(s.fontSize * NATIVE_FONT_SCALE));
         }
+        if (typeof s.lineHeight === "number") {
+          scaled.lineHeight = Math.max(
+            1,
+            Math.round(s.lineHeight * NATIVE_FONT_SCALE),
+          );
+        }
+        next[key] = scaled;
+      } else {
+        next[key] = s;
       }
-      return origRender.call(this, nextProps, ref);
-    };
-  }
+    }
+    return origCreate(next);
+  };
 }
 
 function AuthGate({ children }: { children: React.ReactNode }) {
