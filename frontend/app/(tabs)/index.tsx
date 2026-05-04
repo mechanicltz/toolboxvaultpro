@@ -187,6 +187,7 @@ export default function HomeScreen() {
         icon="swap-horizontal"
         label="CHECKED OUT"
         value={String(checkedOut)}
+        valueColor={checkedOut > 0 ? theme.colors.danger : undefined}
         onPress={() => router.push("/inventory?filter=out")}
       />
     ),
@@ -214,23 +215,31 @@ export default function HomeScreen() {
         onPress={() => router.push("/inventory?filter=lost")}
       />
     ),
-    maintenance: () => (
-      <SummaryRow
-        icon="settings"
-        label="MAINTENANCE DUE"
-        value={String(mnt.overdue + mnt.due_soon)}
-        sub={mnt.overdue > 0 ? `${mnt.overdue} OVERDUE` : "DUE 30D"}
-        onPress={() => router.push("/maintenance")}
-      />
-    ),
-    open_claims: () => (
-      <SummaryRow
-        icon="document-text"
-        label="OPEN CLAIMS"
-        value={String(claims?.totals?.open || 0)}
-        onPress={() => router.push("/claims")}
-      />
-    ),
+    maintenance: () => {
+      const mnTotal = mnt.overdue + mnt.due_soon;
+      return (
+        <SummaryRow
+          icon="settings"
+          label="MAINTENANCE DUE"
+          value={String(mnTotal)}
+          sub={mnt.overdue > 0 ? `${mnt.overdue} OVERDUE` : "DUE 30D"}
+          valueColor={mnTotal > 0 ? theme.colors.danger : undefined}
+          onPress={() => router.push("/maintenance")}
+        />
+      );
+    },
+    open_claims: () => {
+      const oc = claims?.totals?.open || 0;
+      return (
+        <SummaryRow
+          icon="document-text"
+          label="OPEN CLAIMS"
+          value={String(oc)}
+          valueColor={oc > 0 ? theme.colors.danger : undefined}
+          onPress={() => router.push("/claims")}
+        />
+      );
+    },
     owed_to_dealers: () => (
       <View style={styles.owedCluster}>
         <SummaryRow
