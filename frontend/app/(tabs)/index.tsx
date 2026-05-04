@@ -179,6 +179,7 @@ export default function HomeScreen() {
         icon="cash"
         label="INVESTED"
         value={`$${totalInvested.toFixed(2)}`}
+        valueColor={theme.colors.success}
       />
     ),
     checked_out: () => (
@@ -367,6 +368,7 @@ function SummaryRow({
   sub,
   onPress,
   rightSlot,
+  valueColor,
 }: {
   icon: any;
   label: string;
@@ -374,6 +376,7 @@ function SummaryRow({
   sub?: string;
   onPress?: () => void;
   rightSlot?: ReactNode;
+  valueColor?: string;
 }) {
   const Wrapper: any = onPress ? TouchableOpacity : View;
   return (
@@ -387,8 +390,16 @@ function SummaryRow({
         </Text>
         {sub ? <Text style={styles.rowSub}>{sub}</Text> : null}
       </View>
-      <View style={styles.rowValuePill}>
-        <Text style={styles.rowValue} numberOfLines={1}>
+      <View
+        style={[
+          styles.rowValuePill,
+          valueColor ? { borderColor: valueColor } : null,
+        ]}
+      >
+        <Text
+          style={[styles.rowValue, valueColor ? { color: valueColor } : null]}
+          numberOfLines={1}
+        >
           {value}
         </Text>
       </View>
