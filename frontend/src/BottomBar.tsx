@@ -8,6 +8,7 @@ import {
   Modal,
   Pressable,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter, usePathname } from "expo-router";
 import { theme } from "./theme";
@@ -58,7 +59,16 @@ export function BottomBar() {
   const router = useRouter();
   const pathname = usePathname() || "/";
   const { isPhone, isTablet } = useResponsive();
+  const insets = useSafeAreaInsets();
   const [chooserOpen, setChooserOpen] = useState<null | (typeof TABS)[number]>(null);
+
+  // Add the bottom safe-area inset on top of our base padding so the tab bar
+  // never sits underneath the Android system nav bar / gesture pill or the
+  // iOS home indicator. iOS already had a generous 24pt — we floor at that.
+  // Android tablets typically report 24–48pt; phones with gesture nav ~16pt.
+  const basePad = Platform.OS === "ios" ? 24 : 10;
+  const bottomPad = Math.max(basePad, insets.bottom);
+  const barHeight = (Platform.OS === "ios" ? 80 : 64) + Math.max(0, insets.bottom - basePad);
 
   const isActive = (tab: (typeof TABS)[number]) => {
     if (tab.altRoutes) {
@@ -72,7 +82,7 @@ export function BottomBar() {
 
   return (
     <>
-      <View style={styles.bar}>
+      <View style={[styles.bar, { height: barHeight, paddingBottom: bottomPad }]}>
         <View
           style={[
             styles.inner,
@@ -129,7 +139,7 @@ export function BottomBar() {
         onRequestClose={() => setChooserOpen(null)}
       >
         <Pressable style={styles.modalBg} onPress={() => setChooserOpen(null)}>
-          <Pressable style={styles.sheet} onPress={() => {}}>
+          <Pressable style={[styles.sheet, { paddingBottom: Math.max(Platform.OS === "ios" ? 32 : 18, insets.bottom + 12) }]} onPress={() => {}}>
             <View style={styles.sheetHandle} />
             <Text style={styles.sheetTitle}>{chooserOpen?.chooser?.title || "Open"}</Text>
             {chooserOpen?.chooser?.options.map((opt) => (
