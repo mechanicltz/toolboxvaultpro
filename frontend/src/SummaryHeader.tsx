@@ -106,10 +106,10 @@ const styles = StyleSheet.create({
   },
   statsRow: { flexDirection: "row", justifyContent: "space-around" },
   stat: { alignItems: "center" },
-  statValue: { color: theme.colors.textPrimary, fontWeight: "900", fontSize: 18 },
+  statValue: { color: theme.colors.textPrimary, fontWeight: "900", fontSize: 15 },
   statLabel: {
     color: theme.colors.textMuted,
-    fontSize: 9,
+    fontSize: 7,
     fontWeight: "800",
     letterSpacing: 1,
     marginTop: 2,
@@ -126,10 +126,10 @@ const styles = StyleSheet.create({
   },
   groupTitle: {
     color: theme.colors.accent,
-    fontSize: 9,
+    fontSize: 7,
     fontWeight: "800",
     letterSpacing: 1,
   },
-  groupItem: { color: theme.colors.textPrimary, fontSize: 11, marginVertical: 1 },
+  groupItem: { color: theme.colors.textPrimary, fontSize: 9, marginVertical: 1 },
   groupCount: { color: theme.colors.textMuted, fontWeight: "700" },
 });

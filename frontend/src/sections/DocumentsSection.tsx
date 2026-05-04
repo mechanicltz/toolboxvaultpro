@@ -161,7 +161,7 @@ function PdfCanvasViewer({ doc }: { doc: any }) {
     return (
       <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: "#1a1a1a" }}>
         <ActivityIndicator color={theme.colors.accent} size="large" />
-        <Text style={{ color: "#ccc", marginTop: 14, fontSize: 13 }}>{loadMsg}</Text>
+        <Text style={{ color: "#ccc", marginTop: 14, fontSize: 11 }}>{loadMsg}</Text>
       </View>
     );
   }
@@ -173,7 +173,7 @@ function PdfCanvasViewer({ doc }: { doc: any }) {
           style={{
             color: "#E94E3F",
             marginTop: 12,
-            fontSize: 13,
+            fontSize: 11,
             fontFamily: Platform.OS === "web" ? "monospace" : undefined,
             textAlign: "center",
           }}
@@ -205,7 +205,7 @@ function PdfCanvasViewer({ doc }: { doc: any }) {
         <Text
           style={{
             color: "#999",
-            fontSize: 11,
+            fontSize: 9,
             letterSpacing: 1,
             marginVertical: 16,
             textAlign: "center",
@@ -308,12 +308,12 @@ function PdfPageItem({
         <View style={{ alignItems: "center", justifyContent: "center" }}>
           {busy && <ActivityIndicator color="#888" size="small" />}
           {failed && (
-            <Text style={{ color: "#888", fontSize: 12, marginTop: 6 }}>
+            <Text style={{ color: "#888", fontSize: 10, marginTop: 6 }}>
               {`Page ${meta.pageNum} failed to render`}
             </Text>
           )}
           {!failed && (
-            <Text style={{ color: "#bbb", fontSize: 11, marginTop: 8, letterSpacing: 1 }}>
+            <Text style={{ color: "#bbb", fontSize: 9, marginTop: 8, letterSpacing: 1 }}>
               {`PAGE ${meta.pageNum}`}
             </Text>
           )}
@@ -684,7 +684,7 @@ const vstyles = StyleSheet.create({
   title: {
     flex: 1,
     color: theme.colors.textPrimary,
-    fontSize: 14,
+    fontSize: 11,
     fontWeight: "700",
   },
   actionBtn: {
@@ -696,7 +696,7 @@ const vstyles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 6,
   },
-  actionText: { color: "#000", fontWeight: "900", fontSize: 11, letterSpacing: 1 },
+  actionText: { color: "#000", fontWeight: "900", fontSize: 9, letterSpacing: 1 },
   closeBtn: {
     width: 36,
     height: 36,
@@ -720,15 +720,15 @@ const vstyles = StyleSheet.create({
   },
   errorTitle: {
     color: theme.colors.textPrimary,
-    fontSize: 16,
+    fontSize: 13,
     fontWeight: "800",
     marginTop: 8,
   },
   errorMsg: {
     color: theme.colors.textMuted,
-    fontSize: 13,
+    fontSize: 11,
     textAlign: "center",
-    lineHeight: 19,
+    lineHeight: 16,
   },
 });
 
@@ -742,7 +742,7 @@ const styles = StyleSheet.create({
   },
   sectionLabel: {
     color: theme.colors.textPrimary,
-    fontSize: 12,
+    fontSize: 10,
     fontWeight: "900",
     letterSpacing: 2,
   },
@@ -758,12 +758,12 @@ const styles = StyleSheet.create({
   addBtnText: {
     color: "#000",
     fontWeight: "900",
-    fontSize: 11,
+    fontSize: 9,
     letterSpacing: 1.5,
   },
   empty: {
     color: theme.colors.textMuted,
-    fontSize: 12,
+    fontSize: 10,
     fontStyle: "italic",
     paddingVertical: 8,
   },
@@ -781,12 +781,12 @@ const styles = StyleSheet.create({
   },
   docName: {
     color: theme.colors.textPrimary,
-    fontSize: 13,
+    fontSize: 11,
     fontWeight: "700",
   },
   docMeta: {
     color: theme.colors.textMuted,
-    fontSize: 11,
+    fontSize: 9,
     marginTop: 2,
   },
 });

@@ -159,13 +159,13 @@ const styles = StyleSheet.create({
   },
   title: {
     color: theme.colors.textPrimary,
-    fontSize: 13,
+    fontSize: 11,
     fontWeight: "900",
     letterSpacing: 2,
   },
   sub: {
     color: theme.colors.textMuted,
-    fontSize: 9,
+    fontSize: 7,
     fontWeight: "700",
     letterSpacing: 1.5,
     marginTop: 2,
@@ -177,7 +177,7 @@ const styles = StyleSheet.create({
     borderRadius: 3,
   },
   badgeText: {
-    fontSize: 9,
+    fontSize: 7,
     fontWeight: "900",
     letterSpacing: 1.2,
   },
@@ -200,7 +200,7 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     color: theme.colors.textMuted,
-    fontSize: 13,
+    fontSize: 11,
     fontStyle: "italic",
   },
   addBtn: {
@@ -217,7 +217,7 @@ const styles = StyleSheet.create({
     color: theme.colors.accent,
     fontWeight: "900",
     letterSpacing: 1.5,
-    fontSize: 11,
+    fontSize: 9,
   },
   row: {
     flexDirection: "row",
@@ -229,13 +229,13 @@ const styles = StyleSheet.create({
   },
   rowLabel: {
     color: theme.colors.textMuted,
-    fontSize: 10,
+    fontSize: 8,
     fontWeight: "800",
     letterSpacing: 1.5,
   },
   rowValue: {
     color: theme.colors.textPrimary,
-    fontSize: 13,
+    fontSize: 11,
     fontWeight: "700",
   },
   terms: {
@@ -246,15 +246,15 @@ const styles = StyleSheet.create({
   },
   termsLabel: {
     color: theme.colors.textMuted,
-    fontSize: 9,
+    fontSize: 7,
     fontWeight: "800",
     letterSpacing: 1.5,
     marginBottom: 4,
   },
   termsText: {
     color: theme.colors.textSecondary,
-    fontSize: 12,
-    lineHeight: 17,
+    fontSize: 10,
+    lineHeight: 14,
   },
   editLink: {
     flexDirection: "row",
@@ -267,7 +267,7 @@ const styles = StyleSheet.create({
   },
   editLinkText: {
     color: theme.colors.accent,
-    fontSize: 10,
+    fontSize: 8,
     fontWeight: "900",
     letterSpacing: 1.5,
   },

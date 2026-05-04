@@ -60,7 +60,7 @@ const styles = StyleSheet.create({
   },
   text: {
     color: theme.colors.accent,
-    fontSize: 10,
+    fontSize: 8,
     fontWeight: "900",
     letterSpacing: 1.2,
   },

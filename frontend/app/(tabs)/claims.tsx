@@ -456,12 +456,12 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   statValue: {
-    fontSize: 18,
+    fontSize: 15,
     fontWeight: "900",
     color: theme.colors.textPrimary,
   },
   statLabel: {
-    fontSize: 9,
+    fontSize: 7,
     fontWeight: "800",
     letterSpacing: 1,
     color: theme.colors.textMuted,
@@ -469,7 +469,7 @@ const styles = StyleSheet.create({
   },
   notifiedLine: {
     color: theme.colors.accent,
-    fontSize: 11,
+    fontSize: 9,
     fontWeight: "800",
     marginTop: 3,
   },
@@ -479,8 +479,8 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.border,
   },
-  title: { color: theme.colors.textPrimary, fontSize: 22, fontWeight: "900", letterSpacing: 4 },
-  subtitle: { color: theme.colors.accent, fontSize: 10, fontWeight: "700", letterSpacing: 2, marginTop: 4 },
+  title: { color: theme.colors.textPrimary, fontSize: 18, fontWeight: "900", letterSpacing: 4 },
+  subtitle: { color: theme.colors.accent, fontSize: 8, fontWeight: "700", letterSpacing: 2, marginTop: 4 },
   modeRow: { flexDirection: "row", gap: 8, paddingHorizontal: 16, paddingVertical: 12 },
   modeChip: {
     flexDirection: "row",
@@ -496,7 +496,7 @@ const styles = StyleSheet.create({
   modeText: {
     color: theme.colors.textSecondary,
     fontWeight: "800",
-    fontSize: 11,
+    fontSize: 9,
     letterSpacing: 1.2,
   },
   modeTextOn: { color: "#000" },
@@ -513,7 +513,7 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     gap: 8,
   },
-  searchInput: { flex: 1, color: theme.colors.textPrimary, fontSize: 13 },
+  searchInput: { flex: 1, color: theme.colors.textPrimary, fontSize: 11 },
   empty: { color: theme.colors.textMuted, fontStyle: "italic", paddingVertical: 16 },
   dealerRow: {
     flexDirection: "row",
@@ -532,11 +532,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  dealerName: { color: theme.colors.textPrimary, fontWeight: "900", fontSize: 14, letterSpacing: 0.5 },
-  dealerSub: { color: theme.colors.textMuted, fontSize: 11, marginTop: 3 },
+  dealerName: { color: theme.colors.textPrimary, fontWeight: "900", fontSize: 11, letterSpacing: 0.5 },
+  dealerSub: { color: theme.colors.textMuted, fontSize: 9, marginTop: 3 },
   countRow: { marginVertical: 2 },
   countPill: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10 },
-  countText: { fontWeight: "900", fontSize: 9, letterSpacing: 0.5 },
+  countText: { fontWeight: "900", fontSize: 7, letterSpacing: 0.5 },
   groupHeader: {
     flexDirection: "row",
     alignItems: "center",
@@ -545,7 +545,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
     marginBottom: 6,
   },
-  groupTitle: { color: theme.colors.textPrimary, fontWeight: "900", fontSize: 12, letterSpacing: 1.5 },
+  groupTitle: { color: theme.colors.textPrimary, fontWeight: "900", fontSize: 10, letterSpacing: 1.5 },
   groupCount: {
     backgroundColor: theme.colors.danger,
     paddingHorizontal: 7,
@@ -553,7 +553,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     marginLeft: "auto",
   },
-  groupCountText: { color: "#fff", fontWeight: "900", fontSize: 10 },
+  groupCountText: { color: "#fff", fontWeight: "900", fontSize: 8 },
   itemRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -573,7 +573,7 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   itemImg: { width: "100%", height: "100%" },
-  itemName: { color: theme.colors.textPrimary, fontWeight: "800", fontSize: 13 },
+  itemName: { color: theme.colors.textPrimary, fontWeight: "800", fontSize: 11 },
   statusPill: {
     alignSelf: "flex-start",
     paddingHorizontal: 6,
@@ -582,5 +582,5 @@ const styles = StyleSheet.create({
     borderRadius: 3,
     marginTop: 4,
   },
-  statusText: { fontWeight: "900", fontSize: 9, letterSpacing: 0.5 },
+  statusText: { fontWeight: "900", fontSize: 7, letterSpacing: 0.5 },
 });

@@ -690,7 +690,7 @@ export default function ToolDetail() {
                       >
                         {i + 1}.
                       </Text>
-                      <Text style={{ color: theme.colors.textPrimary, fontSize: 15, flex: 1 }}>
+                      <Text style={{ color: theme.colors.textPrimary, fontSize: 12, flex: 1 }}>
                         {s || "—"}
                       </Text>
                     </View>
@@ -1000,7 +1000,7 @@ export default function ToolDetail() {
               />
 
               <Text style={styles.repairLabel}>PHOTO OF BROKEN PART</Text>
-              <Text style={{ color: theme.colors.textMuted, fontSize: 11, marginBottom: 6 }}>
+              <Text style={{ color: theme.colors.textMuted, fontSize: 9, marginBottom: 6 }}>
                 Only shown in this claim — not added to the item's main photos.
               </Text>
               {repairForm.broken_photo ? (
@@ -1066,7 +1066,7 @@ export default function ToolDetail() {
               )}
 
               {!tool.needs_repair && tool.is_checked_out && (
-                <Text style={{ color: theme.colors.warning, fontSize: 12, marginVertical: 6 }}>
+                <Text style={{ color: theme.colors.warning, fontSize: 10, marginVertical: 6 }}>
                   Heads up: this tool is currently checked out to{" "}
                   {tool.current_checkout?.borrower_name}. Marking it broken will auto check-in.
                 </Text>
@@ -1196,7 +1196,7 @@ export default function ToolDetail() {
                     style={styles.input}
                     keyboardType="number-pad"
                   />
-                  <Text style={[{ color: "#888", fontSize: 11, lineHeight: 14, marginTop: -4, marginBottom: 8 }]}>
+                  <Text style={[{ color: "#888", fontSize: 9, lineHeight: 11, marginTop: -4, marginBottom: 8 }]}>
                     Leave blank to sell all {tool.quantity}. Enter a smaller number for a partial sale (stock decreases, item stays active).
                   </Text>
                 </>
@@ -1292,7 +1292,7 @@ export default function ToolDetail() {
               <Ionicons name="checkmark-done-circle" size={22} color="#27AE60" />
               <Text style={styles.modalTitle}>SOLD!</Text>
             </View>
-            <Text style={{ color: theme.colors.textSecondary, fontSize: 13, lineHeight: 19, marginBottom: 16 }}>
+            <Text style={{ color: theme.colors.textSecondary, fontSize: 11, lineHeight: 16, marginBottom: 16 }}>
               The item has been marked sold.  Would you like to keep it in your
               SOLD archive (you can still report on it later) or remove it
               from the system entirely?
@@ -1473,13 +1473,13 @@ const qsStyles = StyleSheet.create({
   },
   label: {
     color: theme.colors.textMuted,
-    fontSize: 10,
+    fontSize: 8,
     fontWeight: "800",
     letterSpacing: 1.4,
   },
   sub: {
     color: theme.colors.textSecondary,
-    fontSize: 12,
+    fontSize: 10,
     marginTop: 3,
   },
   row: { flexDirection: "row", alignItems: "center", gap: 6 },
@@ -1500,7 +1500,7 @@ const qsStyles = StyleSheet.create({
     minWidth: 48,
     textAlign: "center",
     color: theme.colors.textPrimary,
-    fontSize: 22,
+    fontSize: 18,
     fontWeight: "900",
     paddingHorizontal: 6,
     paddingVertical: 0,
@@ -1558,8 +1558,8 @@ const styles = StyleSheet.create({
     ...(theme.elevation.md as object),
   },
   statusDot: { width: 10, height: 10, borderRadius: 5 },
-  statusText: { color: theme.colors.textPrimary, fontWeight: "800", letterSpacing: 1, fontSize: 12 },
-  statusSub: { color: theme.colors.textSecondary, fontSize: 11, marginTop: 2 },
+  statusText: { color: theme.colors.textPrimary, fontWeight: "800", letterSpacing: 1, fontSize: 10 },
+  statusSub: { color: theme.colors.textSecondary, fontSize: 9, marginTop: 2 },
   repairBanner: {
     padding: 14,
     borderWidth: 1,
@@ -1573,10 +1573,10 @@ const styles = StyleSheet.create({
     color: "#FCA5A5",
     fontWeight: "900",
     letterSpacing: 1.5,
-    fontSize: 12,
+    fontSize: 10,
     marginBottom: 4,
   },
-  repairLine: { color: theme.colors.textPrimary, fontSize: 13, marginTop: 1 },
+  repairLine: { color: theme.colors.textPrimary, fontSize: 11, marginTop: 1 },
   brokenPhoto: {
     width: "100%",
     height: 220,
@@ -1602,11 +1602,11 @@ const styles = StyleSheet.create({
   notifyText: {
     color: "#fff",
     fontWeight: "900",
-    fontSize: 11,
+    fontSize: 9,
     letterSpacing: 1.2,
   },
-  title: { color: theme.colors.textPrimary, fontSize: 26, fontWeight: "900", letterSpacing: 1 },
-  description: { color: theme.colors.textSecondary, fontSize: 15, marginTop: 8, lineHeight: 22 },
+  title: { color: theme.colors.textPrimary, fontSize: 21, fontWeight: "900", letterSpacing: 1 },
+  description: { color: theme.colors.textSecondary, fontSize: 12, marginTop: 8, lineHeight: 18 },
   tagWrap: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 16 },
   detailRow: {
     flexDirection: "row",
@@ -1622,14 +1622,14 @@ const styles = StyleSheet.create({
   },
   detailRowLabel: {
     color: theme.colors.textMuted,
-    fontSize: 10,
+    fontSize: 8,
     fontWeight: "800",
     letterSpacing: 1.8,
     marginBottom: 2,
   },
   detailRowValue: {
     color: theme.colors.textPrimary,
-    fontSize: 14,
+    fontSize: 11,
     fontWeight: "700",
   },
   // Sale / Sold banner
@@ -1658,24 +1658,24 @@ const styles = StyleSheet.create({
     flex: 1,
     color: theme.colors.accent,
     fontWeight: "900",
-    fontSize: 13,
+    fontSize: 11,
     letterSpacing: 1.5,
   },
   saleBannerTitle: {
     color: "#000",
     fontWeight: "900",
-    fontSize: 13,
+    fontSize: 11,
     letterSpacing: 2,
   },
   saleBannerPrice: {
     color: "#000",
-    fontSize: 18,
+    fontSize: 15,
     fontWeight: "900",
     marginTop: 4,
   },
   saleBannerNotes: {
     color: "rgba(0,0,0,0.7)",
-    fontSize: 11,
+    fontSize: 9,
     marginTop: 4,
     fontStyle: "italic",
   },
@@ -1691,7 +1691,7 @@ const styles = StyleSheet.create({
   markSoldText: {
     color: "#fff",
     fontWeight: "900",
-    fontSize: 11,
+    fontSize: 9,
     letterSpacing: 1.5,
   },
   // Generic modal helpers
@@ -1721,7 +1721,7 @@ const styles = StyleSheet.create({
   modalTitle: {
     flex: 1,
     color: theme.colors.textPrimary,
-    fontSize: 14,
+    fontSize: 11,
     fontWeight: "900",
     letterSpacing: 1.5,
   },
@@ -1732,7 +1732,7 @@ const styles = StyleSheet.create({
   },
   modalBtnText: {
     fontWeight: "900",
-    fontSize: 12,
+    fontSize: 10,
     letterSpacing: 1.5,
   },
   tag: {
@@ -1743,7 +1743,7 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255,179,0,0.15)",
     borderRadius: 2,
   },
-  tagText: { color: theme.colors.accent, fontSize: 11, fontWeight: "700", letterSpacing: 0.5 },
+  tagText: { color: theme.colors.accent, fontSize: 9, fontWeight: "700", letterSpacing: 0.5 },
   grid: { flexDirection: "row", flexWrap: "wrap", marginTop: 24, gap: 0 },
   field: {
     width: "50%",
@@ -1753,15 +1753,15 @@ const styles = StyleSheet.create({
   },
   fieldLabel: {
     color: theme.colors.textMuted,
-    fontSize: 10,
+    fontSize: 8,
     letterSpacing: 1.5,
     fontWeight: "800",
     textTransform: "uppercase",
   },
-  fieldValue: { color: theme.colors.textPrimary, fontSize: 14, fontWeight: "600", marginTop: 4 },
+  fieldValue: { color: theme.colors.textPrimary, fontSize: 11, fontWeight: "600", marginTop: 4 },
   sectionLabel: {
     color: theme.colors.textMuted,
-    fontSize: 11,
+    fontSize: 9,
     letterSpacing: 2,
     fontWeight: "800",
     marginTop: 28,
@@ -1775,15 +1775,15 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.borderSubtle,
   },
-  docName: { color: theme.colors.textPrimary, flex: 1, fontSize: 14 },
+  docName: { color: theme.colors.textPrimary, flex: 1, fontSize: 11 },
   histRow: {
     paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.borderSubtle,
   },
-  histName: { color: theme.colors.textPrimary, fontWeight: "700", fontSize: 14 },
-  histDate: { color: theme.colors.textSecondary, fontSize: 12, marginTop: 2 },
-  histNotes: { color: theme.colors.textMuted, fontSize: 12, marginTop: 4, fontStyle: "italic" },
+  histName: { color: theme.colors.textPrimary, fontWeight: "700", fontSize: 11 },
+  histDate: { color: theme.colors.textSecondary, fontSize: 10, marginTop: 2 },
+  histNotes: { color: theme.colors.textMuted, fontSize: 10, marginTop: 4, fontStyle: "italic" },
   consumableBox: {
     marginTop: 16, padding: 12, borderWidth: 1,
     borderColor: theme.colors.accent, backgroundColor: "rgba(255,179,0,0.08)", borderRadius: 4,
@@ -1793,8 +1793,8 @@ const styles = StyleSheet.create({
     borderColor: theme.colors.success, backgroundColor: "rgba(34,197,94,0.06)", borderRadius: 4,
   },
   consumableHead: { flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 8 },
-  consumableTitle: { color: theme.colors.accent, fontWeight: "900", letterSpacing: 1.5, fontSize: 12 },
-  consumableLine: { color: theme.colors.textPrimary, fontSize: 13, marginTop: 2 },
+  consumableTitle: { color: theme.colors.accent, fontWeight: "900", letterSpacing: 1.5, fontSize: 10 },
+  consumableLine: { color: theme.colors.textPrimary, fontSize: 11, marginTop: 2 },
   actionBar: {
     position: "absolute",
     bottom: 0,
@@ -1839,7 +1839,7 @@ const styles = StyleSheet.create({
   },
   repairLabel: {
     color: theme.colors.textMuted,
-    fontSize: 10,
+    fontSize: 8,
     fontWeight: "800",
     letterSpacing: 1.5,
     marginTop: 8,
@@ -1860,13 +1860,13 @@ const styles = StyleSheet.create({
   dealerLockName: {
     flex: 1,
     color: theme.colors.textPrimary,
-    fontSize: 14,
+    fontSize: 11,
     fontWeight: "700",
   },
   dealerLockMissing: {
     flex: 1,
     color: theme.colors.warning,
-    fontSize: 12,
+    fontSize: 10,
     fontStyle: "italic",
   },
   repChip: {
@@ -1880,9 +1880,9 @@ const styles = StyleSheet.create({
     borderColor: theme.colors.danger,
     backgroundColor: theme.colors.danger,
   },
-  repChipText: { color: theme.colors.textSecondary, fontSize: 12, fontWeight: "700", letterSpacing: 0.5 },
+  repChipText: { color: theme.colors.textSecondary, fontSize: 10, fontWeight: "700", letterSpacing: 0.5 },
   repChipTextActive: { color: theme.colors.textPrimary },
-  btnText: { color: "#000", fontWeight: "900", letterSpacing: 2, fontSize: 14 },
+  btnText: { color: "#000", fontWeight: "900", letterSpacing: 2, fontSize: 11 },
   segment: {
     flexDirection: "row",
     borderWidth: 1,
@@ -1893,7 +1893,7 @@ const styles = StyleSheet.create({
   },
   segBtn: { flex: 1, paddingVertical: 12, alignItems: "center" },
   segBtnActive: { backgroundColor: theme.colors.accent },
-  segText: { color: theme.colors.textSecondary, fontWeight: "800", fontSize: 12, letterSpacing: 1 },
+  segText: { color: theme.colors.textSecondary, fontWeight: "800", fontSize: 10, letterSpacing: 1 },
   segTextActive: { color: "#000" },
   borrowerPick: {
     flexDirection: "row",
@@ -1907,7 +1907,7 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   borrowerPickActive: { borderColor: theme.colors.accent, backgroundColor: "rgba(255,179,0,0.1)" },
-  borrowerName: { color: theme.colors.textPrimary, fontWeight: "600", fontSize: 14 },
+  borrowerName: { color: theme.colors.textPrimary, fontWeight: "600", fontSize: 11 },
   input: {
     backgroundColor: theme.colors.bg,
     borderWidth: 1,
@@ -1918,7 +1918,7 @@ const styles = StyleSheet.create({
     height: 48,
     borderRadius: 4,
     marginBottom: 10,
-    fontSize: 15,
+    fontSize: 12,
   },
   modalActions: { flexDirection: "row", gap: 10, marginTop: 4 },
   btnGhost: {
@@ -1930,5 +1930,5 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     borderRadius: 4,
   },
-  btnGhostText: { color: theme.colors.textPrimary, fontWeight: "800", letterSpacing: 2, fontSize: 14 },
+  btnGhostText: { color: theme.colors.textPrimary, fontWeight: "800", letterSpacing: 2, fontSize: 11 },
 });

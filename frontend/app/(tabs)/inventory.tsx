@@ -848,7 +848,7 @@ export default function InventoryScreen() {
         <View style={styles.modalBg}>
           <View style={styles.modalSheet}>
             <Text style={styles.modalTitle}>FILTER BY TAGS</Text>
-            <Text style={{ color: theme.colors.textMuted, fontSize: 11, marginBottom: 8 }}>
+            <Text style={{ color: theme.colors.textMuted, fontSize: 9, marginBottom: 8 }}>
               Tap to toggle. Items matching ANY checked tag will be shown.
             </Text>
             <ScrollView style={{ maxHeight: 460 }}>
@@ -1020,7 +1020,7 @@ const styles = StyleSheet.create({
   },
   headerBtnText: {
     color: theme.colors.textPrimary,
-    fontSize: 11,
+    fontSize: 9,
     fontWeight: "900",
     letterSpacing: 1.5,
   },
@@ -1035,13 +1035,13 @@ const styles = StyleSheet.create({
   },
   headerBadgeText: {
     color: "#000",
-    fontSize: 10,
+    fontSize: 8,
     fontWeight: "900",
   },
-  title: { color: theme.colors.textPrimary, fontSize: 28, fontWeight: "900", letterSpacing: 2 },
+  title: { color: theme.colors.textPrimary, fontSize: 23, fontWeight: "900", letterSpacing: 2 },
   subtitle: {
     color: theme.colors.accent,
-    fontSize: 11,
+    fontSize: 9,
     fontWeight: "700",
     letterSpacing: 2,
     textTransform: "uppercase",
@@ -1064,7 +1064,7 @@ const styles = StyleSheet.create({
   warrantyText: {
     color: theme.colors.warning,
     flex: 1,
-    fontSize: 12,
+    fontSize: 10,
     fontWeight: "700",
     letterSpacing: 0.5,
   },
@@ -1085,14 +1085,14 @@ const styles = StyleSheet.create({
   claimsBannerText: {
     color: theme.colors.danger,
     flex: 1,
-    fontSize: 12,
+    fontSize: 10,
     fontWeight: "700",
     letterSpacing: 0.5,
   },
   searchRow: { paddingHorizontal: 20, marginBottom: 8, flexDirection: "row", alignItems: "center", gap: 8 },
   rowDealer: {
     color: theme.colors.textMuted,
-    fontSize: 11,
+    fontSize: 9,
     fontWeight: "700",
     letterSpacing: 0.3,
     flexShrink: 1,
@@ -1112,7 +1112,7 @@ const styles = StyleSheet.create({
   },
   rowQtyPillText: {
     color: "#000",
-    fontSize: 11,
+    fontSize: 9,
     fontWeight: "900",
     letterSpacing: 0.5,
   },
@@ -1128,7 +1128,7 @@ const styles = StyleSheet.create({
     marginTop: 5,
   },
   mntText: {
-    fontSize: 9,
+    fontSize: 7,
     fontWeight: "900",
     letterSpacing: 0.5,
   },
@@ -1154,7 +1154,7 @@ const styles = StyleSheet.create({
     gap: 8,
     ...(theme.elevation.inset as object),
   },
-  searchInput: { flex: 1, color: theme.colors.textPrimary, fontSize: 15 },
+  searchInput: { flex: 1, color: theme.colors.textPrimary, fontSize: 12 },
   filterWrap: { maxHeight: 56, paddingVertical: 4 },
   filterRow: { paddingHorizontal: 20, paddingVertical: 8, gap: 8, alignItems: "center" },
   locationFilterRow: {
@@ -1180,7 +1180,7 @@ const styles = StyleSheet.create({
   locationFilterText: {
     flex: 1,
     color: theme.colors.textSecondary,
-    fontSize: 12,
+    fontSize: 10,
     fontWeight: "700",
     letterSpacing: 1,
   },
@@ -1226,13 +1226,13 @@ const styles = StyleSheet.create({
   },
   setBadgeText: {
     color: "#000",
-    fontSize: 9,
+    fontSize: 7,
     fontWeight: "900",
     letterSpacing: 0.5,
   },
   lostBadgeText: {
     color: "#fff",
-    fontSize: 9,
+    fontSize: 7,
     fontWeight: "900",
     letterSpacing: 0.5,
   },
@@ -1271,7 +1271,7 @@ const styles = StyleSheet.create({
     color: theme.colors.textPrimary,
     fontWeight: "900",
     letterSpacing: 1.5,
-    fontSize: 13,
+    fontSize: 11,
     marginLeft: 6,
   },
   selectAllBtn: {
@@ -1284,7 +1284,7 @@ const styles = StyleSheet.create({
   selectAllText: {
     color: theme.colors.accent,
     fontWeight: "900",
-    fontSize: 11,
+    fontSize: 9,
     letterSpacing: 1.5,
   },
   bulkActions: {
@@ -1310,7 +1310,7 @@ const styles = StyleSheet.create({
   bulkBtnText: {
     color: theme.colors.accent,
     fontWeight: "900",
-    fontSize: 11,
+    fontSize: 9,
     letterSpacing: 1.2,
   },
   modalBg: {
@@ -1329,7 +1329,7 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     color: theme.colors.textPrimary,
-    fontSize: 14,
+    fontSize: 11,
     fontWeight: "900",
     letterSpacing: 2,
     marginBottom: 12,
@@ -1348,7 +1348,7 @@ const styles = StyleSheet.create({
   },
   locOptName: {
     color: theme.colors.textPrimary,
-    fontSize: 14,
+    fontSize: 11,
     fontWeight: "700",
     flex: 1,
   },
@@ -1363,7 +1363,7 @@ const styles = StyleSheet.create({
   bulkTagChipText: {
     color: theme.colors.accent,
     fontWeight: "700",
-    fontSize: 13,
+    fontSize: 11,
   },
   btnGhost: {
     height: 44,
@@ -1402,7 +1402,7 @@ const styles = StyleSheet.create({
   chipClaimsText: { color: "#FFFFFF" },
   chipText: {
     color: theme.colors.textSecondary,
-    fontSize: 11,
+    fontSize: 9,
     fontWeight: "800",
     letterSpacing: 1,
   },
@@ -1450,8 +1450,8 @@ const styles = StyleSheet.create({
     borderRadius: 9,
     ...(theme.elevation.sm as object),
   },
-  rowTitle: { color: theme.colors.textPrimary, fontWeight: "700", fontSize: 16 },
-  rowSub: { color: theme.colors.textSecondary, fontSize: 12, marginTop: 2 },
+  rowTitle: { color: theme.colors.textPrimary, fontWeight: "700", fontSize: 13 },
+  rowSub: { color: theme.colors.textSecondary, fontSize: 10, marginTop: 2 },
   tagRow: { flexDirection: "row", marginTop: 6, gap: 4, flexWrap: "wrap" },
   tag: {
     paddingHorizontal: 8,
@@ -1463,7 +1463,7 @@ const styles = StyleSheet.create({
   },
   tagText: {
     color: theme.colors.accent,
-    fontSize: 10,
+    fontSize: 8,
     fontWeight: "700",
     letterSpacing: 0.5,
   },
@@ -1471,21 +1471,21 @@ const styles = StyleSheet.create({
   statusDot: { width: 10, height: 10, borderRadius: 5 },
   statusText: {
     color: theme.colors.textSecondary,
-    fontSize: 9,
+    fontSize: 7,
     fontWeight: "800",
     letterSpacing: 1,
   },
   empty: { alignItems: "center", marginTop: 80, paddingHorizontal: 40 },
   emptyTitle: {
     color: theme.colors.textPrimary,
-    fontSize: 18,
+    fontSize: 15,
     fontWeight: "900",
     letterSpacing: 2,
     marginTop: 16,
   },
   emptyText: {
     color: theme.colors.textSecondary,
-    fontSize: 14,
+    fontSize: 11,
     textAlign: "center",
     marginTop: 8,
   },

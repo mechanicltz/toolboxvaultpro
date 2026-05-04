@@ -557,7 +557,7 @@ export default function ToolEdit() {
           </TouchableOpacity>
           {dealer && (dealer.agents || []).length > 0 && (
             <>
-              <Text style={[styles.label, { fontSize: 9 }]}>PURCHASED FROM AGENT (snapshot)</Text>
+              <Text style={[styles.label, { fontSize: 7 }]}>PURCHASED FROM AGENT (snapshot)</Text>
               <View style={styles.chipWrap}>
                 {(dealer.agents || []).map((a: any) => (
                   <TouchableOpacity key={a.id} testID={`pick-agent-${a.id}`}
@@ -984,7 +984,7 @@ export default function ToolEdit() {
                   }}
                 >
                   <Ionicons name="alert-circle" size={14} color={theme.colors.danger} />
-                  <Text style={{ color: theme.colors.danger, fontSize: 12, flex: 1 }}>
+                  <Text style={{ color: theme.colors.danger, fontSize: 10, flex: 1 }}>
                     {newDealerErr}
                   </Text>
                 </View>
@@ -1065,23 +1065,23 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  topTitle: { color: theme.colors.textPrimary, fontSize: 16, fontWeight: "900", letterSpacing: 2 },
-  saveText: { color: theme.colors.accent, fontWeight: "900", letterSpacing: 2, fontSize: 14 },
+  topTitle: { color: theme.colors.textPrimary, fontSize: 13, fontWeight: "900", letterSpacing: 2 },
+  saveText: { color: theme.colors.accent, fontWeight: "900", letterSpacing: 2, fontSize: 11 },
   label: {
-    color: theme.colors.textMuted, fontSize: 11, fontWeight: "800",
+    color: theme.colors.textMuted, fontSize: 9, fontWeight: "800",
     letterSpacing: 2, marginTop: 16, marginBottom: 6,
   },
   input: {
     backgroundColor: theme.colors.bgSecondary, borderWidth: 1, borderColor: theme.colors.border,
     color: theme.colors.textPrimary, paddingHorizontal: 14, paddingVertical: 12,
-    minHeight: 48, borderRadius: 4, fontSize: 15,
+    minHeight: 48, borderRadius: 4, fontSize: 12,
   },
   row2: { flexDirection: "row", gap: 10 },
-  helper: { color: theme.colors.textMuted, fontStyle: "italic", fontSize: 13 },
+  helper: { color: theme.colors.textMuted, fontStyle: "italic", fontSize: 11 },
   chipWrap: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   chip: { paddingHorizontal: 14, paddingVertical: 8, borderWidth: 1, borderColor: theme.colors.border, borderRadius: 4 },
   chipActive: { backgroundColor: theme.colors.accent, borderColor: theme.colors.accent },
-  chipText: { color: theme.colors.textSecondary, fontSize: 12, fontWeight: "700", letterSpacing: 0.5 },
+  chipText: { color: theme.colors.textSecondary, fontSize: 10, fontWeight: "700", letterSpacing: 0.5 },
   chipTextActive: { color: "#000" },
   locRow: {
     flexDirection: "row",
@@ -1094,19 +1094,19 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.bgSecondary,
   },
   locRowActive: { backgroundColor: theme.colors.accent },
-  locText: { color: theme.colors.textPrimary, fontSize: 14, fontWeight: "600" },
+  locText: { color: theme.colors.textPrimary, fontSize: 11, fontWeight: "600" },
   pickerRow: {
     flexDirection: "row", alignItems: "center", gap: 12,
     backgroundColor: theme.colors.bgSecondary, borderWidth: 1, borderColor: theme.colors.border,
     paddingHorizontal: 14, paddingVertical: 12, borderRadius: 4,
   },
-  pickerText: { color: theme.colors.textPrimary, flex: 1, fontWeight: "600", fontSize: 14 },
+  pickerText: { color: theme.colors.textPrimary, flex: 1, fontWeight: "600", fontSize: 11 },
   toggleRow: {
     flexDirection: "row", alignItems: "center", gap: 12,
     paddingVertical: 14, marginTop: 16,
     borderTopWidth: 1, borderTopColor: theme.colors.border,
   },
-  toggleText: { color: theme.colors.textPrimary, fontSize: 13, fontWeight: "900", letterSpacing: 1.5, flex: 1 },
+  toggleText: { color: theme.colors.textPrimary, fontSize: 11, fontWeight: "900", letterSpacing: 1.5, flex: 1 },
   subSection: {
     marginTop: 4, paddingLeft: 12,
     borderLeftWidth: 2, borderLeftColor: theme.colors.accent,
@@ -1121,36 +1121,36 @@ const styles = StyleSheet.create({
     width: 100, height: 100, borderWidth: 2, borderStyle: "dashed", borderColor: theme.colors.border,
     alignItems: "center", justifyContent: "center", marginRight: 8, borderRadius: 4, gap: 4,
   },
-  photoAddText: { color: theme.colors.accent, fontSize: 10, fontWeight: "800", letterSpacing: 1 },
+  photoAddText: { color: theme.colors.accent, fontSize: 8, fontWeight: "800", letterSpacing: 1 },
   docRow: {
     flexDirection: "row", alignItems: "center", gap: 10,
     backgroundColor: theme.colors.bgSecondary, borderWidth: 1, borderColor: theme.colors.border,
     paddingHorizontal: 12, paddingVertical: 10, marginBottom: 6, borderRadius: 4,
   },
-  docName: { color: theme.colors.textPrimary, flex: 1, fontSize: 13 },
+  docName: { color: theme.colors.textPrimary, flex: 1, fontSize: 11 },
   docAdd: {
     flexDirection: "row", gap: 8, alignItems: "center", justifyContent: "center",
     borderWidth: 2, borderStyle: "dashed", borderColor: theme.colors.border,
     paddingVertical: 14, borderRadius: 4,
   },
-  docAddText: { color: theme.colors.accent, fontWeight: "800", letterSpacing: 1.5, fontSize: 12 },
+  docAddText: { color: theme.colors.accent, fontWeight: "800", letterSpacing: 1.5, fontSize: 10 },
   modalBg: { flex: 1, backgroundColor: "rgba(0,0,0,0.7)", justifyContent: "flex-end" },
   modalCard: {
     backgroundColor: theme.colors.bgSecondary, padding: 20,
     borderTopWidth: 2, borderTopColor: theme.colors.accent,
   },
-  modalTitle: { color: theme.colors.textPrimary, fontSize: 18, fontWeight: "900", letterSpacing: 2, marginBottom: 12 },
+  modalTitle: { color: theme.colors.textPrimary, fontSize: 15, fontWeight: "900", letterSpacing: 2, marginBottom: 12 },
   dealerOpt: {
     paddingVertical: 14, paddingHorizontal: 14, borderWidth: 1,
     borderColor: theme.colors.border, marginBottom: 6, borderRadius: 4,
   },
   dealerOptName: { color: theme.colors.textPrimary, fontWeight: "700" },
-  dealerOptSub: { color: theme.colors.textSecondary, fontSize: 12, marginTop: 2 },
+  dealerOptSub: { color: theme.colors.textSecondary, fontSize: 10, marginTop: 2 },
   btnGhost: {
     borderWidth: 1, borderColor: theme.colors.border, height: 48, marginTop: 8,
     alignItems: "center", justifyContent: "center", borderRadius: 4,
   },
-  btnGhostText: { color: theme.colors.textPrimary, fontWeight: "800", letterSpacing: 2, fontSize: 14 },
+  btnGhostText: { color: theme.colors.textPrimary, fontWeight: "800", letterSpacing: 2, fontSize: 11 },
   btnPrimary: {
     flex: 1,
     height: 48,
@@ -1159,7 +1159,7 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     backgroundColor: theme.colors.accent,
   },
-  btnPrimaryText: { color: "#000", fontWeight: "900", letterSpacing: 2, fontSize: 14 },
+  btnPrimaryText: { color: "#000", fontWeight: "900", letterSpacing: 2, fontSize: 11 },
   newInlineBtn: {
     flexDirection: "row",
     alignItems: "center",
@@ -1173,7 +1173,7 @@ const styles = StyleSheet.create({
     color: "#000",
     fontWeight: "900",
     letterSpacing: 1.5,
-    fontSize: 12,
+    fontSize: 10,
   },
   bottomBar: {
     position: "absolute",
@@ -1201,7 +1201,7 @@ const styles = StyleSheet.create({
     color: "#000",
     fontWeight: "900",
     letterSpacing: 2.5,
-    fontSize: 15,
+    fontSize: 12,
   },
   warrChipWrap: {
     flexDirection: "row",
@@ -1226,7 +1226,7 @@ const styles = StyleSheet.create({
   },
   warrChipText: {
     color: theme.colors.textSecondary,
-    fontSize: 12,
+    fontSize: 10,
     fontWeight: "800",
     letterSpacing: 1,
   },
@@ -1248,9 +1248,9 @@ const styles = StyleSheet.create({
   },
   warrInfoText: {
     color: theme.colors.textSecondary,
-    fontSize: 12,
+    fontSize: 10,
     flex: 1,
-    lineHeight: 16,
+    lineHeight: 13,
   },
   dealerInfoBox: {
     flexDirection: "row",
@@ -1266,19 +1266,19 @@ const styles = StyleSheet.create({
   },
   dealerInfoLabel: {
     color: theme.colors.textMuted,
-    fontSize: 9,
+    fontSize: 7,
     fontWeight: "800",
     letterSpacing: 1.5,
   },
   dealerInfoVal: {
     color: theme.colors.textPrimary,
-    fontSize: 13,
+    fontSize: 11,
     fontWeight: "800",
     marginTop: 3,
   },
   dealerInfoSub: {
     color: theme.colors.accent,
-    fontSize: 11,
+    fontSize: 9,
     fontWeight: "700",
     marginTop: 2,
   },
@@ -1314,7 +1314,7 @@ const styles = StyleSheet.create({
   addPhotoText: {
     color: theme.colors.accent,
     fontWeight: "900",
-    fontSize: 12,
+    fontSize: 10,
     letterSpacing: 1.5,
   },
 });

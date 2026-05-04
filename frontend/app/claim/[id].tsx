@@ -217,13 +217,13 @@ const styles = StyleSheet.create({
   },
   title: {
     color: theme.colors.textPrimary,
-    fontSize: 16,
+    fontSize: 13,
     fontWeight: "900",
     letterSpacing: 2,
   },
   subtitle: {
     color: theme.colors.accent,
-    fontSize: 10,
+    fontSize: 8,
     fontWeight: "700",
     letterSpacing: 2,
     marginTop: 2,
@@ -239,7 +239,7 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   statusDot: { width: 12, height: 12, borderRadius: 6 },
-  statusText: { fontSize: 13, fontWeight: "900", letterSpacing: 1.5 },
+  statusText: { fontSize: 11, fontWeight: "900", letterSpacing: 1.5 },
   toolCard: {
     flexDirection: "row",
     alignItems: "center",
@@ -259,18 +259,18 @@ const styles = StyleSheet.create({
   },
   toolName: {
     color: theme.colors.textPrimary,
-    fontSize: 16,
+    fontSize: 13,
     fontWeight: "900",
   },
   toolMeta: {
     color: theme.colors.textMuted,
-    fontSize: 11,
+    fontSize: 9,
     marginTop: 2,
   },
   section: { marginBottom: 14 },
   sectionLabel: {
     color: theme.colors.textMuted,
-    fontSize: 10,
+    fontSize: 8,
     fontWeight: "800",
     letterSpacing: 1.5,
     marginBottom: 5,
@@ -284,12 +284,12 @@ const styles = StyleSheet.create({
   },
   value: {
     color: theme.colors.textPrimary,
-    fontSize: 14,
+    fontSize: 11,
     fontWeight: "700",
   },
   linkText: {
     color: theme.colors.accent,
-    fontSize: 11,
+    fontSize: 9,
     fontWeight: "900",
     letterSpacing: 1,
     marginTop: 6,
@@ -310,26 +310,26 @@ const styles = StyleSheet.create({
   },
   dateLabel: {
     color: theme.colors.textMuted,
-    fontSize: 9,
+    fontSize: 7,
     fontWeight: "800",
     letterSpacing: 1.5,
   },
   dateValue: {
     color: theme.colors.textPrimary,
-    fontSize: 13,
+    fontSize: 11,
     fontWeight: "700",
     marginTop: 4,
   },
   dateValueHi: {
     color: theme.colors.accent,
-    fontSize: 14,
+    fontSize: 11,
     fontWeight: "900",
     marginTop: 4,
   },
   notes: {
     color: theme.colors.textPrimary,
-    fontSize: 13,
-    lineHeight: 19,
+    fontSize: 11,
+    lineHeight: 16,
   },
   photoLarge: {
     width: "100%",

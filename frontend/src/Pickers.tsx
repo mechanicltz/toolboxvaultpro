@@ -567,7 +567,7 @@ const styles = StyleSheet.create({
   triggerText: {
     flex: 1,
     color: theme.colors.textPrimary,
-    fontSize: 14,
+    fontSize: 11,
     fontWeight: "600",
   },
   chip: {
@@ -579,7 +579,7 @@ const styles = StyleSheet.create({
     paddingVertical: 3,
     borderRadius: 4,
   },
-  chipText: { color: "#000", fontSize: 11, fontWeight: "800" },
+  chipText: { color: "#000", fontSize: 9, fontWeight: "800" },
 
   modalBg: {
     flex: 1,
@@ -606,7 +606,7 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     color: theme.colors.textPrimary,
-    fontSize: 13,
+    fontSize: 11,
     fontWeight: "900",
     letterSpacing: 1.5,
   },
@@ -625,7 +625,7 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     color: theme.colors.textPrimary,
-    fontSize: 14,
+    fontSize: 11,
     padding: 0,
   },
   modalList: {
@@ -646,12 +646,12 @@ const styles = StyleSheet.create({
   rowText: {
     flex: 1,
     color: theme.colors.textPrimary,
-    fontSize: 14,
+    fontSize: 11,
     fontWeight: "600",
   },
   empty: {
     color: theme.colors.textMuted,
-    fontSize: 12,
+    fontSize: 10,
     fontStyle: "italic",
     paddingHorizontal: 16,
     paddingVertical: 24,
@@ -669,7 +669,7 @@ const styles = StyleSheet.create({
   },
   createBtnText: {
     color: "#000",
-    fontSize: 13,
+    fontSize: 11,
     fontWeight: "900",
     letterSpacing: 0.6,
   },

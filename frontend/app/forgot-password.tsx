@@ -256,7 +256,7 @@ export default function ForgotPasswordScreen() {
                 onPress={resendCode}
                 disabled={busy}
               >
-                <Text style={{ color: theme.colors.accent, fontSize: 14, fontWeight: "700" }}>
+                <Text style={{ color: theme.colors.accent, fontSize: 11, fontWeight: "700" }}>
                   Didn&apos;t get it? Resend code
                 </Text>
               </TouchableOpacity>
@@ -281,20 +281,20 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     color: theme.colors.textPrimary,
-    fontSize: 14,
+    fontSize: 11,
     fontWeight: "900",
     letterSpacing: 2,
   },
   body: { padding: 20, paddingBottom: 40 },
   intro: {
     color: theme.colors.textSecondary,
-    fontSize: 14,
-    lineHeight: 20,
+    fontSize: 11,
+    lineHeight: 16,
     marginBottom: 22,
   },
   label: {
     color: theme.colors.accent,
-    fontSize: 10,
+    fontSize: 8,
     fontWeight: "900",
     letterSpacing: 1.5,
     marginTop: 14,
@@ -308,10 +308,10 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     paddingHorizontal: 12,
     paddingVertical: 12,
-    fontSize: 15,
+    fontSize: 12,
   },
   codeInput: {
-    fontSize: 26,
+    fontSize: 21,
     letterSpacing: 10,
     textAlign: "center",
     fontWeight: "900",
@@ -335,7 +335,7 @@ const styles = StyleSheet.create({
   },
   submitText: {
     color: "#000",
-    fontSize: 14,
+    fontSize: 11,
     fontWeight: "900",
     letterSpacing: 2,
   },

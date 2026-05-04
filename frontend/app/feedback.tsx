@@ -343,20 +343,20 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     color: theme.colors.textPrimary,
-    fontSize: 14,
+    fontSize: 11,
     fontWeight: "900",
     letterSpacing: 2,
   },
   body: { padding: 16, paddingBottom: 24 },
   intro: {
     color: theme.colors.textSecondary,
-    fontSize: 13,
-    lineHeight: 18,
+    fontSize: 11,
+    lineHeight: 15,
     marginBottom: 18,
   },
   label: {
     color: theme.colors.accent,
-    fontSize: 10,
+    fontSize: 8,
     fontWeight: "900",
     letterSpacing: 1.5,
     marginTop: 14,
@@ -370,7 +370,7 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     paddingHorizontal: 12,
     paddingVertical: 10,
-    fontSize: 15,
+    fontSize: 12,
   },
   textarea: { minHeight: 120, paddingTop: 10 },
   segmented: {
@@ -395,7 +395,7 @@ const styles = StyleSheet.create({
   },
   segText: {
     color: theme.colors.textPrimary,
-    fontSize: 13,
+    fontSize: 11,
     fontWeight: "800",
     letterSpacing: 1,
   },
@@ -421,7 +421,7 @@ const styles = StyleSheet.create({
   },
   checkLabel: {
     color: theme.colors.textPrimary,
-    fontSize: 14,
+    fontSize: 11,
     fontWeight: "700",
     flex: 1,
   },
@@ -439,13 +439,13 @@ const styles = StyleSheet.create({
   },
   pickBtnText: {
     color: theme.colors.accent,
-    fontSize: 13,
+    fontSize: 11,
     fontWeight: "800",
     letterSpacing: 1,
   },
   versionNote: {
     color: theme.colors.textMuted,
-    fontSize: 12,
+    fontSize: 10,
     fontStyle: "italic",
     marginTop: 16,
     textAlign: "center",
@@ -467,7 +467,7 @@ const styles = StyleSheet.create({
   },
   submitText: {
     color: "#000",
-    fontSize: 14,
+    fontSize: 11,
     fontWeight: "900",
     letterSpacing: 2,
   },

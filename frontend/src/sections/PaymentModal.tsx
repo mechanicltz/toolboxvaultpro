@@ -146,7 +146,7 @@ export function PaymentModal({
               placeholderTextColor={theme.colors.textMuted}
               value={amount}
               onChangeText={setAmount}
-              style={[styles.input, { fontSize: 22, fontWeight: "900" }]}
+              style={[styles.input, { fontSize: 18, fontWeight: "900" }]}
               keyboardType="decimal-pad"
               autoFocus
             />
@@ -207,10 +207,10 @@ const styles = StyleSheet.create({
     borderTopWidth: 2,
     borderTopColor: theme.colors.accent,
   },
-  title: { color: theme.colors.textPrimary, fontSize: 18, fontWeight: "900", letterSpacing: 1 },
+  title: { color: theme.colors.textPrimary, fontSize: 15, fontWeight: "900", letterSpacing: 1 },
   subtitle: {
     color: theme.colors.accent,
-    fontSize: 11,
+    fontSize: 9,
     fontWeight: "800",
     letterSpacing: 2,
     marginTop: 4,
@@ -224,8 +224,8 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.borderSubtle,
   },
-  balLabel: { color: theme.colors.textMuted, fontSize: 11, fontWeight: "700" },
-  balVal: { color: theme.colors.textPrimary, fontSize: 16, fontWeight: "900" },
+  balLabel: { color: theme.colors.textMuted, fontSize: 9, fontWeight: "700" },
+  balVal: { color: theme.colors.textPrimary, fontSize: 13, fontWeight: "900" },
   segment: {
     flexDirection: "row",
     backgroundColor: theme.colors.bg,
@@ -243,11 +243,11 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   segBtnActive: { backgroundColor: theme.colors.accent },
-  segText: { color: theme.colors.textSecondary, fontWeight: "800", letterSpacing: 1.5, fontSize: 12 },
+  segText: { color: theme.colors.textSecondary, fontWeight: "800", letterSpacing: 1.5, fontSize: 10 },
   segTextActive: { color: "#000" },
   label: {
     color: theme.colors.textMuted,
-    fontSize: 11,
+    fontSize: 9,
     fontWeight: "800",
     letterSpacing: 1.5,
     marginTop: 12,
@@ -261,7 +261,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 12,
     borderRadius: 4,
-    fontSize: 14,
+    fontSize: 11,
   },
   btnGhost: {
     flex: 1,
@@ -281,5 +281,5 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     borderRadius: theme.radii.sm,
   },
-  btnPrimaryText: { color: "#000", fontWeight: "900", letterSpacing: 2, fontSize: 14 },
+  btnPrimaryText: { color: "#000", fontWeight: "900", letterSpacing: 2, fontSize: 11 },
 });

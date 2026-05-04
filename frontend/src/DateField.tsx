@@ -77,7 +77,7 @@ export function DateField({
             border: 0,
             outline: "none",
             color: theme.colors.textPrimary,
-            fontSize: 15,
+            fontSize: 12,
             fontFamily: "inherit",
             colorScheme: "dark",
             cursor: "pointer",
@@ -105,7 +105,7 @@ export function DateField({
         <Text
           style={{
             color: display ? theme.colors.textPrimary : theme.colors.textMuted,
-            fontSize: 15,
+            fontSize: 12,
             flex: 1,
           }}
         >
@@ -243,7 +243,7 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     color: theme.colors.textPrimary,
-    fontSize: 16,
+    fontSize: 13,
     fontWeight: "900",
     letterSpacing: 2,
     marginBottom: 12,

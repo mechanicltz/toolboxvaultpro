@@ -179,7 +179,7 @@ export default function LoginScreen() {
                 style={{ alignSelf: "center", marginTop: 14 }}
                 testID="forgot-password-link"
               >
-                <Text style={{ color: theme.colors.accent, fontSize: 14, fontWeight: "700" }}>
+                <Text style={{ color: theme.colors.accent, fontSize: 11, fontWeight: "700" }}>
                   Forgot password?
                 </Text>
               </TouchableOpacity>
@@ -215,12 +215,12 @@ const styles = StyleSheet.create({
   brandTitle: {
     color: theme.colors.textPrimary,
     fontWeight: "900",
-    fontSize: 22,
+    fontSize: 18,
     letterSpacing: 3,
   },
   brandSub: {
     color: theme.colors.textMuted,
-    fontSize: 11,
+    fontSize: 9,
     fontWeight: "700",
     marginTop: 4,
     letterSpacing: 1,
@@ -242,13 +242,13 @@ const styles = StyleSheet.create({
   },
   tab: { flex: 1, paddingVertical: 10, alignItems: "center", borderRadius: 8 },
   tabActive: { backgroundColor: theme.colors.accent },
-  tabText: { color: theme.colors.textMuted, fontWeight: "800", fontSize: 12, letterSpacing: 1 },
+  tabText: { color: theme.colors.textMuted, fontWeight: "800", fontSize: 10, letterSpacing: 1 },
   tabTextActive: { color: "#000" },
   field: { marginBottom: 14 },
   label: {
     color: theme.colors.textMuted,
     fontWeight: "800",
-    fontSize: 11,
+    fontSize: 9,
     letterSpacing: 1.5,
     marginBottom: 6,
   },
@@ -258,7 +258,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 12,
     color: theme.colors.textPrimary,
-    fontSize: 15,
+    fontSize: 12,
     borderWidth: 1,
     borderColor: theme.colors.border,
   },
@@ -284,7 +284,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "rgba(239,68,68,0.3)",
   },
-  errText: { color: theme.colors.danger, fontSize: 13, flex: 1 },
+  errText: { color: theme.colors.danger, fontSize: 11, flex: 1 },
   submitBtn: {
     backgroundColor: theme.colors.accent,
     paddingVertical: 14,
@@ -295,12 +295,12 @@ const styles = StyleSheet.create({
     gap: 8,
     marginTop: 6,
   },
-  submitText: { color: "#000", fontWeight: "900", fontSize: 14, letterSpacing: 1.5 },
+  submitText: { color: "#000", fontWeight: "900", fontSize: 11, letterSpacing: 1.5 },
   hint: {
     color: theme.colors.textMuted,
-    fontSize: 11,
+    fontSize: 9,
     textAlign: "center",
     marginTop: 14,
-    lineHeight: 16,
+    lineHeight: 13,
   },
 });

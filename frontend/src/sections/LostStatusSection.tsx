@@ -304,13 +304,13 @@ const styles = StyleSheet.create({
   bannerTitle: {
     color: "#fff",
     fontWeight: "900",
-    fontSize: 14,
+    fontSize: 11,
     letterSpacing: 2,
     marginBottom: 4,
   },
   bannerLine: {
     color: "#fff",
-    fontSize: 12,
+    fontSize: 10,
     marginTop: 2,
   },
   recoverBtn: {
@@ -327,7 +327,7 @@ const styles = StyleSheet.create({
   recoverText: {
     color: "#000",
     fontWeight: "900",
-    fontSize: 11,
+    fontSize: 9,
     letterSpacing: 1.5,
   },
   outlineBtn: {
@@ -346,7 +346,7 @@ const styles = StyleSheet.create({
     color: theme.colors.danger,
     fontWeight: "800",
     letterSpacing: 1.5,
-    fontSize: 12,
+    fontSize: 10,
   },
   modalBg: {
     flex: 1,
@@ -364,7 +364,7 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     color: theme.colors.textPrimary,
-    fontSize: 16,
+    fontSize: 13,
     fontWeight: "900",
     letterSpacing: 2,
     marginBottom: 14,
@@ -389,12 +389,12 @@ const styles = StyleSheet.create({
     color: theme.colors.textSecondary,
     fontWeight: "800",
     letterSpacing: 1.5,
-    fontSize: 12,
+    fontSize: 10,
   },
   segTextActive: { color: "#fff" },
   label: {
     color: theme.colors.textMuted,
-    fontSize: 11,
+    fontSize: 9,
     fontWeight: "800",
     letterSpacing: 1.5,
     marginTop: 12,
@@ -408,7 +408,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 10,
     borderRadius: 4,
-    fontSize: 14,
+    fontSize: 11,
   },
   btnGhost: {
     flex: 1,
@@ -438,6 +438,6 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontWeight: "900",
     letterSpacing: 2,
-    fontSize: 14,
+    fontSize: 11,
   },
 });

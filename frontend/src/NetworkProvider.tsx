@@ -58,7 +58,7 @@ const styles = StyleSheet.create({
   bannerText: {
     color: "#000",
     fontWeight: "900",
-    fontSize: 11,
+    fontSize: 9,
     letterSpacing: 1.5,
   },
 });
