@@ -531,6 +531,8 @@ class Tool(BaseModel):
     tag_names: List[str] = []
     photos: List[str] = []
     documents: List[Document] = []
+    receipts: List[str] = []  # base64 receipt photos auto-saved by AI scanner
+
     is_consumable: bool = False
     consumable_info: Optional[ConsumableInfo] = None
     needs_repair: bool = False
@@ -578,6 +580,8 @@ class ToolCreate(BaseModel):
     tag_ids: List[str] = []
     tag_names: List[str] = []
     photos: List[str] = []
+    receipts: List[str] = []
+
     documents: List[Document] = []
     is_consumable: bool = False
     consumable_info: Optional[ConsumableInfo] = None
@@ -610,6 +614,7 @@ class ToolUpdate(BaseModel):
     tag_names: Optional[List[str]] = None
     photos: Optional[List[str]] = None
     documents: Optional[List[Document]] = None
+    receipts: Optional[List[str]] = None
     is_consumable: Optional[bool] = None
     consumable_info: Optional[ConsumableInfo] = None
     needs_repair: Optional[bool] = None
@@ -2888,6 +2893,136 @@ async def reset_password(payload: ResetPasswordRequest):
     user = User(**user_doc)
     token = create_token(user.id)
     return AuthResponse(token=token, user=to_public(user))
+
+
+# ---------------------------------------------------------------------------
+# AI RECEIPT SCANNER
+# ---------------------------------------------------------------------------
+class ReceiptScanRequest(BaseModel):
+    image_base64: str  # raw base64 (no data: prefix needed; we strip it if present)
+
+
+class ReceiptScanResponse(BaseModel):
+    name: Optional[str] = ""
+    brand: Optional[str] = ""
+    model: Optional[str] = ""
+    serial_number: Optional[str] = ""
+    cost: Optional[float] = 0.0
+    quantity: Optional[int] = 1
+    purchase_date: Optional[str] = ""  # ISO YYYY-MM-DD
+    dealer: Optional[str] = ""
+    description: Optional[str] = ""
+    raw: Optional[Dict[str, Any]] = None
+
+
+@api_router.post("/ai/receipt-scan", response_model=ReceiptScanResponse)
+async def ai_receipt_scan(payload: ReceiptScanRequest):
+    """Send the receipt image to GPT-4o vision and extract structured fields.
+    Returns best-guess values that the user reviews/edits in the mapping UI
+    before they are committed to a tool record."""
+    import base64
+    import json
+    import re
+    import tempfile
+    import os as _os
+
+    raw_b64 = payload.image_base64 or ""
+    if not raw_b64:
+        raise HTTPException(status_code=400, detail="image_base64 is required")
+    # Strip data URL prefix if present
+    if raw_b64.startswith("data:"):
+        comma = raw_b64.find(",")
+        if comma > 0:
+            raw_b64 = raw_b64[comma + 1 :]
+    try:
+        image_bytes = base64.b64decode(raw_b64, validate=False)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid base64 image")
+
+    # Write to a temp file so emergentintegrations can pass it as a file path
+    tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".jpg")
+    try:
+        tmp.write(image_bytes)
+        tmp.flush()
+        tmp.close()
+
+        from emergentintegrations.llm.chat import (
+            LlmChat,
+            UserMessage,
+            ImageContent,
+        )
+
+        api_key = _os.environ.get("EMERGENT_LLM_KEY", "")
+        if not api_key:
+            raise HTTPException(
+                status_code=500,
+                detail="EMERGENT_LLM_KEY missing in backend environment",
+            )
+
+        system_prompt = (
+            "You are a precise receipt-OCR extractor for a tool inventory app. "
+            "Given an image of a receipt or product box, return ONLY a JSON "
+            "object with these keys (use empty strings or 0 if not present): "
+            "name, brand, model, serial_number, cost (number, no currency "
+            "symbol), quantity (integer, default 1), purchase_date (YYYY-MM-DD "
+            "or empty), dealer (the store/seller name), description (very brief, "
+            "1 sentence). Do NOT add any commentary — only the JSON object."
+        )
+
+        chat = (
+            LlmChat(
+                api_key=api_key,
+                session_id=f"receipt-scan-{uuid.uuid4()}",
+                system_message=system_prompt,
+            )
+            .with_model("openai", "gpt-4o")
+            .with_max_tokens(800)
+        )
+
+        msg = UserMessage(
+            text=(
+                "Extract the receipt fields from this image. Return ONLY the "
+                "JSON object — no markdown, no prose."
+            ),
+            file_contents=[ImageContent(image_base64=raw_b64)],
+        )
+        response_text = await chat.send_message(msg)
+
+        # Try parse JSON. Fall back to regex extraction if model wraps with prose.
+        cleaned = (response_text or "").strip()
+        m = re.search(r"\{.*\}", cleaned, re.DOTALL)
+        json_text = m.group(0) if m else cleaned
+        try:
+            data = json.loads(json_text)
+        except Exception:
+            data = {}
+
+        # Coerce numeric fields safely
+        cost_val = _to_float(data.get("cost", 0))
+        qty_val = _to_int(data.get("quantity", 1), default=1)
+        return ReceiptScanResponse(
+            name=str(data.get("name") or "").strip(),
+            brand=str(data.get("brand") or "").strip(),
+            model=str(data.get("model") or "").strip(),
+            serial_number=str(data.get("serial_number") or "").strip(),
+            cost=cost_val,
+            quantity=qty_val,
+            purchase_date=str(data.get("purchase_date") or "").strip(),
+            dealer=str(data.get("dealer") or "").strip(),
+            description=str(data.get("description") or "").strip(),
+            raw=data if isinstance(data, dict) else None,
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"AI receipt scan failed: {e}")
+    finally:
+        try:
+            _os.unlink(tmp.name)
+        except Exception:
+            pass
+
+
 
 
 app.include_router(api_router)

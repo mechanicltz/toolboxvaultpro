@@ -41,6 +41,7 @@ export default function ToolEdit() {
   const [category, setCategory] = useState<{ id: string; name: string } | null>(null);
   const [tags, setTags] = useState<{ id: string; name: string }[]>([]);
   const [photos, setPhotos] = useState<string[]>([]);
+  const [receipts, setReceipts] = useState<string[]>([]);
   const [documents, setDocuments] = useState<{ name: string; data: string; mime_type?: string }[]>([]);
   const [isConsumable, setIsConsumable] = useState(false);
   const [consumableInfo, setConsumableInfo] = useState({ store_name: "", website: "", sku: "", notes: "" });
@@ -111,7 +112,7 @@ export default function ToolEdit() {
         setLocationName(t.location_name || "");
         setCategory(t.category_id ? { id: t.category_id, name: t.category_name } : null);
         setTags((t.tag_ids || []).map((tid: string, i: number) => ({ id: tid, name: t.tag_names?.[i] || "" })));
-        setPhotos(t.photos || []); setDocuments(t.documents || []);
+        setPhotos(t.photos || []); setDocuments(t.documents || []); setReceipts(t.receipts || []);
         setIsConsumable(!!t.is_consumable);
         if (t.consumable_info) setConsumableInfo({ ...consumableInfo, ...t.consumable_info });
         setNeedsRepair(!!t.needs_repair);
@@ -296,7 +297,7 @@ export default function ToolEdit() {
       location_id: locationId, location_name: locationName,
       category_id: category?.id || null, category_name: category?.name || "",
       tag_ids: tags.map((t) => t.id), tag_names: tags.map((t) => t.name),
-      photos, documents,
+      photos, documents, receipts,
       is_consumable: isConsumable,
       consumable_info: isConsumable ? consumableInfo : null,
       needs_repair: needsRepair,
