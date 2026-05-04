@@ -6,8 +6,6 @@ import {
   ActivityIndicator,
   Text as RNText,
   TextInput as RNTextInput,
-  StyleSheet,
-  Platform,
 } from "react-native";
 import { useEffect } from "react";
 import { AuroraBackground } from "../src/Aurora";
@@ -31,45 +29,12 @@ import { theme } from "../src/theme";
  *     get scaled regardless of how Text is wrapped — and runs exactly once
  *     per stylesheet.
  */
-// Bumped each time we change NATIVE_FONT_SCALE so a hot-reloading device
-// can confirm in the JS console that the latest layout module has been
-// re-evaluated. If you don't see this log line increment after editing,
-// you need a full reload (shake → Reload) — hot reload skips root layouts.
-const NATIVE_SCALE_VERSION = 6;
-
-// We scale on:
-//   - iOS / Android native (always)
-//   - Web ONLY when running inside a mobile browser. We check user-agent
-//     because Dimensions.get("window") on web isn't reliable until first
-//     paint — but the UA is available immediately at module-eval time.
-const _isMobileWeb = (() => {
-  if (Platform.OS !== "web") return false;
-  try {
-    const w: any = (globalThis as any).window;
-    const nav: any = w?.navigator;
-    const ua: string = (nav?.userAgent || "") + "";
-    const widthOk = (w?.innerWidth || 0) > 0 && (w?.innerWidth || 0) < 700;
-    // iPhone / iPad in mobile mode / Android phones / general "Mobile" UA
-    const uaMobile = /iPhone|iPod|Android.*Mobile|Mobile Safari|webOS/i.test(ua);
-    return uaMobile || widthOk;
-  } catch {
-    return false;
-  }
-})();
-
-const NATIVE_FONT_SCALE = (() => {
-  if (Platform.OS === "ios") return 0.55;
-  if (Platform.OS === "android") return 0.6;
-  if (_isMobileWeb) return 0.6;
-  return 1;
-})();
-
-// eslint-disable-next-line no-console
-console.log(
-  `[ToolboxVault] font scale v${NATIVE_SCALE_VERSION} active — platform=${Platform.OS} mobileWeb=${_isMobileWeb} scale=${NATIVE_FONT_SCALE}`,
-);
-
-// Disable iOS auto font scaling globally — must be set before any Text renders.
+/**
+ * Disable iOS Dynamic Type globally so a user's accessibility "larger
+ * text" setting can't blow up tight tab/header layouts. This is the only
+ * font-related root tweak we apply globally — per-screen sizing is tuned
+ * directly in each StyleSheet.
+ */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const TextAny = RNText as any;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -81,36 +46,6 @@ TextAny.defaultProps.maxFontSizeMultiplier = 1;
 TextInputAny.defaultProps = TextInputAny.defaultProps || {};
 TextInputAny.defaultProps.allowFontScaling = false;
 TextInputAny.defaultProps.maxFontSizeMultiplier = 1;
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const StyleSheetAny = StyleSheet as any;
-if (NATIVE_FONT_SCALE !== 1 && !StyleSheetAny.__tv_create_patched__) {
-  StyleSheetAny.__tv_create_patched__ = true;
-  const origCreate = StyleSheet.create.bind(StyleSheet);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  (StyleSheet as any).create = (styles: any) => {
-    const next: any = {};
-    for (const key of Object.keys(styles || {})) {
-      const s = styles[key];
-      if (s && typeof s === "object") {
-        const scaled: any = { ...s };
-        if (typeof s.fontSize === "number") {
-          scaled.fontSize = Math.max(1, Math.round(s.fontSize * NATIVE_FONT_SCALE));
-        }
-        if (typeof s.lineHeight === "number") {
-          scaled.lineHeight = Math.max(
-            1,
-            Math.round(s.lineHeight * NATIVE_FONT_SCALE),
-          );
-        }
-        next[key] = scaled;
-      } else {
-        next[key] = s;
-      }
-    }
-    return origCreate(next);
-  };
-}
 
 function AuthGate({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
