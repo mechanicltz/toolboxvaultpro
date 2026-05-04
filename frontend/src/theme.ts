@@ -79,14 +79,14 @@ export const theme = {
     accent: Platform.select({
       web: {
         boxShadow:
-          "0 4px 8px rgba(255, 143, 0, 0.45), 0 12px 24px rgba(255, 179, 0, 0.40), 0 20px 40px rgba(255, 179, 0, 0.20), inset 0 2px 0 rgba(255, 255, 255, 0.40), inset 0 -3px 0 rgba(184, 100, 0, 0.55)" as any,
+          "0 2px 4px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.25), inset 0 -1px 0 rgba(184, 100, 0, 0.35)" as any,
       },
       default: {
-        shadowColor: "#FF8F00",
-        shadowOpacity: 0.65,
-        shadowOffset: { width: 0, height: 8 },
-        shadowRadius: 16,
-        elevation: 12,
+        shadowColor: "#000",
+        shadowOpacity: 0.25,
+        shadowOffset: { width: 0, height: 2 },
+        shadowRadius: 4,
+        elevation: 3,
       },
     }),
     inset: Platform.select({
