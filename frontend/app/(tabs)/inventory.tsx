@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useMemo } from "react";
+import { useEffect, useState, useCallback, useMemo, memo } from "react";
 import {
   View,
   Text,
@@ -6,13 +6,13 @@ import {
   FlatList,
   TextInput,
   TouchableOpacity,
-  Image,
   RefreshControl,
   ScrollView,
   Alert,
   Modal,
   ActivityIndicator,
 } from "react-native";
+import { Image as ExpoImage } from "expo-image";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter, useFocusEffect, useLocalSearchParams } from "expo-router";
@@ -359,6 +359,12 @@ export default function InventoryScreen() {
     return sorted;
   }, [tools, filter, locationFilter, tagFilter, sortBy, allLocations]);
 
+  // Stable references — prevents FlatList from treating the callbacks as new
+  // every render, which would force every visible row to remount and re-decode
+  // its base64 thumbnail (the actual cause of the "filter takes 4 seconds"
+  // lag in TestFlight).
+  const keyExtractor = useCallback((i: any) => i.id, []);
+
   useFocusEffect(
     useCallback(() => {
       load();
@@ -584,7 +590,7 @@ export default function InventoryScreen() {
 
       <FlatList
         data={displayedTools}
-        keyExtractor={(i) => i.id}
+        keyExtractor={keyExtractor}
         key={`grid-${gridCols}`}
         numColumns={gridCols}
         columnWrapperStyle={gridCols > 1 ? { gap: 12, paddingHorizontal: 16 } : undefined}
@@ -592,6 +598,16 @@ export default function InventoryScreen() {
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.colors.accent} />
         }
+        // ----- Virtualization tuning (critical for TestFlight perf) -----
+        // Without these, FlatList renders far more rows than necessary on
+        // mount and recycles them poorly during scroll, which causes the
+        // "filter takes 4 seconds" symptom (most of that time is iOS
+        // re-decoding base64 photo thumbnails for off-screen rows).
+        removeClippedSubviews
+        initialNumToRender={8}
+        maxToRenderPerBatch={6}
+        windowSize={5}
+        updateCellsBatchingPeriod={40}
         ListEmptyComponent={
           <View style={styles.empty}>
             <Ionicons
@@ -682,7 +698,14 @@ export default function InventoryScreen() {
               )}
               <View style={styles.thumb}>
                 {item.photos?.[0] ? (
-                  <Image source={{ uri: item.photos[0] }} style={styles.thumbImg} />
+                  <ExpoImage
+                    source={{ uri: item.photos[0] }}
+                    style={styles.thumbImg}
+                    contentFit="cover"
+                    cachePolicy="memory-disk"
+                    recyclingKey={item.id}
+                    transition={0}
+                  />
                 ) : (
                   <Ionicons name="construct" size={28} color={theme.colors.accent} />
                 )}
