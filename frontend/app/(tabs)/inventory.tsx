@@ -82,6 +82,18 @@ export default function InventoryScreen() {
   const [locationFilter, setLocationFilter] = useState<string | null>(null);
   const [showLocationPicker, setShowLocationPicker] = useState(false);
 
+  // Tag filter (multi-select)
+  const [tagFilter, setTagFilter] = useState<string[]>([]);
+  const [showTagPicker, setShowTagPicker] = useState(false);
+  const tagFilterLabel = useMemo(() => {
+    if (!tagFilter.length) return "All Tags";
+    if (tagFilter.length === 1) {
+      const found = allTags.find((t) => t.id === tagFilter[0]);
+      return found?.name || "1 tag";
+    }
+    return `${tagFilter.length} tags`;
+  }, [tagFilter, allTags]);
+
   // Selected location + all its descendants
   const locationFilterIds = useMemo(() => {
     if (!locationFilter) return null;
@@ -236,6 +248,13 @@ export default function InventoryScreen() {
         }
         filteredTools = filteredTools.filter((x: any) => x.location_id && ids.has(x.location_id));
       }
+      // Apply tag filter — tool must have at least one of the selected tags
+      if (tagFilter.length) {
+        const wanted = new Set(tagFilter);
+        filteredTools = filteredTools.filter((x: any) =>
+          Array.isArray(x.tag_ids) && x.tag_ids.some((tid: string) => wanted.has(tid))
+        );
+      }
       setTools(setCached("inv_tools", filteredTools));
       setAgg(setCached("inv_agg", a));
       setWarningCount((w.expiring?.length || 0) + (w.expired?.length || 0));
@@ -246,7 +265,7 @@ export default function InventoryScreen() {
     } catch (e) {
       console.error(e);
     }
-  }, [search, filter, prefs.warranty_alerts, locationFilter]);
+  }, [search, filter, prefs.warranty_alerts, locationFilter, tagFilter]);
 
   useFocusEffect(
     useCallback(() => {
@@ -257,7 +276,7 @@ export default function InventoryScreen() {
   useEffect(() => {
     const t = setTimeout(load, 250);
     return () => clearTimeout(t);
-  }, [search, filter, locationFilter, load]);
+  }, [search, filter, locationFilter, tagFilter, load]);
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -344,43 +363,89 @@ export default function InventoryScreen() {
         </ScrollView>
       </View>
 
-      {/* Location filter row */}
+      {/* Location + Tag filter row */}
       <View style={styles.locationFilterRow}>
-        <TouchableOpacity
-          testID="location-filter-btn"
-          style={[styles.locationFilterBtn, locationFilter && styles.locationFilterBtnActive]}
-          onPress={() => setShowLocationPicker(true)}
-          activeOpacity={0.7}
-        >
-          <Ionicons
-            name="location"
-            size={14}
-            color={locationFilter ? theme.colors.accent : theme.colors.textMuted}
-          />
-          <Text
+        <View style={{ flexDirection: "row", gap: 8 }}>
+          <TouchableOpacity
+            testID="location-filter-btn"
             style={[
-              styles.locationFilterText,
-              locationFilter && styles.locationFilterTextActive,
+              styles.locationFilterBtn,
+              { flex: 1 },
+              locationFilter && styles.locationFilterBtnActive,
             ]}
-            numberOfLines={1}
+            onPress={() => setShowLocationPicker(true)}
+            activeOpacity={0.7}
           >
-            {selectedLocationName || "All Locations"}
-          </Text>
-          {locationFilter ? (
-            <TouchableOpacity
-              testID="location-filter-clear"
-              onPress={(e) => {
-                e.stopPropagation();
-                setLocationFilter(null);
-              }}
-              hitSlop={8}
+            <Ionicons
+              name="location"
+              size={14}
+              color={locationFilter ? theme.colors.accent : theme.colors.textMuted}
+            />
+            <Text
+              style={[
+                styles.locationFilterText,
+                locationFilter && styles.locationFilterTextActive,
+              ]}
+              numberOfLines={1}
             >
-              <Ionicons name="close-circle" size={16} color={theme.colors.accent} />
-            </TouchableOpacity>
-          ) : (
-            <Ionicons name="chevron-down" size={14} color={theme.colors.textMuted} />
-          )}
-        </TouchableOpacity>
+              {selectedLocationName || "All Locations"}
+            </Text>
+            {locationFilter ? (
+              <TouchableOpacity
+                testID="location-filter-clear"
+                onPress={(e) => {
+                  e.stopPropagation();
+                  setLocationFilter(null);
+                }}
+                hitSlop={8}
+              >
+                <Ionicons name="close-circle" size={16} color={theme.colors.accent} />
+              </TouchableOpacity>
+            ) : (
+              <Ionicons name="chevron-down" size={14} color={theme.colors.textMuted} />
+            )}
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            testID="tag-filter-btn"
+            style={[
+              styles.locationFilterBtn,
+              { flex: 1 },
+              tagFilter.length > 0 && styles.locationFilterBtnActive,
+            ]}
+            onPress={() => setShowTagPicker(true)}
+            activeOpacity={0.7}
+          >
+            <Ionicons
+              name="pricetag"
+              size={14}
+              color={tagFilter.length ? theme.colors.accent : theme.colors.textMuted}
+            />
+            <Text
+              style={[
+                styles.locationFilterText,
+                tagFilter.length > 0 && styles.locationFilterTextActive,
+              ]}
+              numberOfLines={1}
+            >
+              {tagFilterLabel}
+            </Text>
+            {tagFilter.length > 0 ? (
+              <TouchableOpacity
+                testID="tag-filter-clear"
+                onPress={(e) => {
+                  e.stopPropagation();
+                  setTagFilter([]);
+                }}
+                hitSlop={8}
+              >
+                <Ionicons name="close-circle" size={16} color={theme.colors.accent} />
+              </TouchableOpacity>
+            ) : (
+              <Ionicons name="chevron-down" size={14} color={theme.colors.textMuted} />
+            )}
+          </TouchableOpacity>
+        </View>
       </View>
 
       {prefs.show_details_summary && agg && (
@@ -761,6 +826,79 @@ export default function InventoryScreen() {
             </ScrollView>
             <TouchableOpacity style={styles.btnGhost} onPress={() => setShowLocationPicker(false)}>
               <Text style={styles.btnGhostText}>CLOSE</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Filter: Tag picker modal (multi-select) */}
+      <Modal visible={showTagPicker} transparent animationType="slide" onRequestClose={() => setShowTagPicker(false)}>
+        <View style={styles.modalBg}>
+          <View style={styles.modalSheet}>
+            <Text style={styles.modalTitle}>FILTER BY TAGS</Text>
+            <Text style={{ color: theme.colors.textMuted, fontSize: 11, marginBottom: 8 }}>
+              Tap to toggle. Items matching ANY checked tag will be shown.
+            </Text>
+            <ScrollView style={{ maxHeight: 460 }}>
+              <TouchableOpacity
+                testID="tag-filter-all"
+                style={[styles.locOption, tagFilter.length === 0 && styles.locOptionActive]}
+                onPress={() => setTagFilter([])}
+              >
+                <Ionicons
+                  name="apps"
+                  size={16}
+                  color={tagFilter.length === 0 ? theme.colors.accent : theme.colors.textMuted}
+                />
+                <Text style={[styles.locOptName, tagFilter.length === 0 && { color: theme.colors.accent }]}>
+                  ALL TAGS
+                </Text>
+              </TouchableOpacity>
+              {[...allTags]
+                .sort((a, b) => (a.name || "").localeCompare(b.name || ""))
+                .map((t) => {
+                  const isActive = tagFilter.includes(t.id);
+                  return (
+                    <TouchableOpacity
+                      key={t.id}
+                      testID={`tag-filter-${t.id}`}
+                      style={[styles.locOption, isActive && styles.locOptionActive]}
+                      onPress={() =>
+                        setTagFilter((curr) =>
+                          curr.includes(t.id)
+                            ? curr.filter((x) => x !== t.id)
+                            : [...curr, t.id]
+                        )
+                      }
+                    >
+                      <View
+                        style={{
+                          width: 18,
+                          height: 18,
+                          borderRadius: 4,
+                          borderWidth: 2,
+                          borderColor: isActive ? theme.colors.accent : theme.colors.border,
+                          backgroundColor: isActive ? theme.colors.accent : "transparent",
+                          alignItems: "center",
+                          justifyContent: "center",
+                        }}
+                      >
+                        {isActive && <Ionicons name="checkmark" size={12} color="#000" />}
+                      </View>
+                      <Text style={[styles.locOptName, isActive && { color: theme.colors.accent }]}>
+                        {t.name}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              {allTags.length === 0 && (
+                <Text style={{ color: theme.colors.textMuted, padding: 16, textAlign: "center" }}>
+                  No tags yet. Add tags to your tools to use this filter.
+                </Text>
+              )}
+            </ScrollView>
+            <TouchableOpacity style={styles.btnGhost} onPress={() => setShowTagPicker(false)}>
+              <Text style={styles.btnGhostText}>DONE</Text>
             </TouchableOpacity>
           </View>
         </View>
