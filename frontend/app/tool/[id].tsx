@@ -30,6 +30,7 @@ import {
   ReportLostButton,
 } from "../../src/sections/LostStatusSection";
 import { DocumentsSection } from "../../src/sections/DocumentsSection";
+import { ReceiptsSection } from "../../src/sections/ReceiptsSection";
 import { MaintenanceSection } from "../../src/sections/MaintenanceSection";
 import { ClaimsHistorySection } from "../../src/sections/ClaimsHistorySection";
 import { WarrantySection } from "../../src/sections/WarrantySection";
@@ -751,6 +752,7 @@ export default function ToolDetail() {
 
             <QuantityStepper tool={tool} onChange={load} />
 
+            <ReceiptsSection receipts={tool.receipts} />
             <DocumentsSection tool={tool} onChange={load} />
             <MaintenanceSection tool={tool} onChange={load} />
             <WarrantySection tool={tool} />
