@@ -2976,7 +2976,7 @@ async def ai_receipt_scan(payload: ReceiptScanRequest):
                 system_message=system_prompt,
             )
             .with_model("openai", "gpt-4o")
-            .with_max_tokens(800)
+            .with_params(max_tokens=800)
         )
 
         msg = UserMessage(
