@@ -206,6 +206,13 @@ export default function MoreScreen() {
           testID="more-locations"
           onPress={() => router.push("/locations")}
         />
+        <Row
+          icon="swap-horizontal"
+          title="Import / Export CSV"
+          subtitle="Bulk-upload tools or back up to a spreadsheet"
+          testID="more-import-export"
+          onPress={() => router.push("/import-export" as any)}
+        />
 
         <Text style={styles.sectionLabel}>DISPLAY</Text>
         <View style={styles.toggleRow}>

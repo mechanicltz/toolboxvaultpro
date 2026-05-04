@@ -1209,6 +1209,265 @@ async def create_tool(payload: ToolCreate, user: User = Depends(get_current_user
     return tool
 
 
+# ---------------------------------------------------------------------------
+# CSV Import / Export
+# ---------------------------------------------------------------------------
+
+# Logical field set the import wizard maps to. Keep this list authoritative.
+_IMPORT_FIELDS = [
+    {"id": "name", "label": "Name *", "required": True},
+    {"id": "brand", "label": "Brand"},
+    {"id": "model", "label": "Model"},
+    {"id": "serial_number", "label": "Serial number"},
+    {"id": "quantity", "label": "Quantity"},
+    {"id": "cost", "label": "Cost (per unit)"},
+    {"id": "description", "label": "Description / Notes"},
+    {"id": "category", "label": "Category (by name)"},
+    {"id": "location", "label": "Location (by name)"},
+    {"id": "dealer", "label": "Dealer (by name)"},
+    {"id": "condition", "label": "Condition"},
+    {"id": "purchase_date", "label": "Purchase date (YYYY-MM-DD)"},
+    {"id": "warranty_expiry", "label": "Warranty expiry (YYYY-MM-DD)"},
+    {"id": "tags", "label": "Tags (comma-separated)"},
+]
+
+
+@api_router.get("/tools/import-fields")
+async def tools_import_fields(user: User = Depends(get_current_user)):
+    return {"fields": _IMPORT_FIELDS}
+
+
+@api_router.get("/tools/export-csv")
+async def tools_export_csv(user: User = Depends(get_current_user)):
+    """Dump all tools to a CSV. Returns base64 so the client can save/share
+    cross-platform (web blob, expo-file-system, etc.)."""
+    tools = await db.tools.find({}, {"_id": 0}).sort("name", 1).to_list(20000)
+    # Resolve names for tags/categories/locations/dealers in batch
+    cat_ids = {t.get("category_id") for t in tools if t.get("category_id")}
+    cats = {
+        c["id"]: c.get("name") or ""
+        for c in await db.categories.find({"id": {"$in": list(cat_ids)}}, {"_id": 0, "id": 1, "name": 1}).to_list(5000)
+    } if cat_ids else {}
+    loc_ids = {t.get("location_id") for t in tools if t.get("location_id")}
+    locs = {
+        l["id"]: l.get("name") or ""
+        for l in await db.locations.find({"id": {"$in": list(loc_ids)}}, {"_id": 0, "id": 1, "name": 1}).to_list(5000)
+    } if loc_ids else {}
+    dlr_ids = {t.get("dealer_id") for t in tools if t.get("dealer_id")}
+    dlrs = {
+        d["id"]: d.get("name") or ""
+        for d in await db.dealers.find({"id": {"$in": list(dlr_ids)}}, {"_id": 0, "id": 1, "name": 1}).to_list(5000)
+    } if dlr_ids else {}
+    all_tag_ids: List[str] = []
+    for t in tools:
+        all_tag_ids.extend(t.get("tag_ids") or [])
+    uniq_tag_ids = list(set(all_tag_ids))
+    tags = {
+        tg["id"]: tg.get("name") or ""
+        for tg in await db.tags.find({"id": {"$in": uniq_tag_ids}}, {"_id": 0, "id": 1, "name": 1}).to_list(5000)
+    } if uniq_tag_ids else {}
+
+    import csv as _csv
+    import io as _io
+    buf = _io.StringIO()
+    w = _csv.writer(buf)
+    headers = [
+        "Name", "Brand", "Model", "Serial number", "Quantity", "Cost",
+        "Category", "Location", "Dealer", "Tags", "Condition",
+        "Purchase date", "Warranty expiry", "Description",
+        "Is consumable", "Is set", "Set serials",
+    ]
+    w.writerow(headers)
+    for t in tools:
+        tag_names = ", ".join(
+            sorted([tags.get(tid, "") for tid in (t.get("tag_ids") or []) if tags.get(tid)])
+        )
+        w.writerow([
+            t.get("name") or "",
+            t.get("brand") or "",
+            t.get("model") or "",
+            t.get("serial_number") or "",
+            t.get("quantity") or 1,
+            t.get("cost") or 0,
+            cats.get(t.get("category_id") or "", ""),
+            locs.get(t.get("location_id") or "", ""),
+            dlrs.get(t.get("dealer_id") or "", ""),
+            tag_names,
+            t.get("condition") or "",
+            (t.get("purchase_date") or ""),
+            (t.get("warranty_expiry") or ""),
+            t.get("description") or "",
+            "yes" if t.get("is_consumable") else "",
+            "yes" if t.get("is_set") else "",
+            "; ".join(t.get("set_serials") or []),
+        ])
+    raw = buf.getvalue().encode("utf-8")
+    import base64 as _b64
+    return {
+        "filename": f"toolbox-vault-export-{datetime.utcnow().strftime('%Y-%m-%d')}.csv",
+        "base64": _b64.b64encode(raw).decode("ascii"),
+        "rows": len(tools),
+    }
+
+
+class ImportRow(BaseModel):
+    name: str
+    brand: Optional[str] = ""
+    model: Optional[str] = ""
+    serial_number: Optional[str] = ""
+    quantity: Optional[int] = 1
+    cost: Optional[float] = 0.0
+    description: Optional[str] = ""
+    category: Optional[str] = ""        # name (case-insensitive lookup; auto-create if missing)
+    location: Optional[str] = ""        # name match (existing only)
+    dealer: Optional[str] = ""          # name match (existing only)
+    condition: Optional[str] = ""
+    purchase_date: Optional[str] = ""
+    warranty_expiry: Optional[str] = ""
+    tags: Optional[str] = ""            # comma-separated names; auto-create if missing
+
+
+class ImportPayload(BaseModel):
+    rows: List[ImportRow]
+    create_missing_categories: bool = True
+    create_missing_tags: bool = True
+
+
+def _norm(s: Optional[str]) -> str:
+    return (s or "").strip()
+
+
+def _norm_lower(s: Optional[str]) -> str:
+    return (s or "").strip().lower()
+
+
+@api_router.post("/tools/import")
+async def tools_import(payload: ImportPayload, user: User = Depends(get_current_user)):
+    """Bulk-create tools from a normalised list of rows. The frontend is
+    responsible for column mapping; this endpoint just creates tools and
+    resolves FK names → ids (with optional auto-create for categories/tags).
+    """
+    # Pre-load all the lookup collections once.
+    cats = await db.categories.find({}, {"_id": 0}).to_list(5000)
+    cats_by_name = {(_norm_lower(c.get("name"))): c for c in cats if c.get("name")}
+    tags = await db.tags.find({}, {"_id": 0}).to_list(5000)
+    tags_by_name = {(_norm_lower(t.get("name"))): t for t in tags if t.get("name")}
+    locs = await db.locations.find({}, {"_id": 0}).to_list(5000)
+    locs_by_name = {(_norm_lower(l.get("name"))): l for l in locs if l.get("name")}
+    dlrs = await db.dealers.find({}, {"_id": 0}).to_list(5000)
+    dlrs_by_name = {(_norm_lower(d.get("name"))): d for d in dlrs if d.get("name")}
+
+    created: List[Dict[str, Any]] = []
+    errors: List[Dict[str, Any]] = []
+
+    for idx, raw in enumerate(payload.rows):
+        try:
+            name = _norm(raw.name)
+            if not name:
+                raise ValueError("Name is required")
+
+            # Category — auto-create if missing
+            category_id = None
+            category_name = ""
+            cname = _norm(raw.category)
+            if cname:
+                key = cname.lower()
+                if key in cats_by_name:
+                    c = cats_by_name[key]
+                    category_id = c.get("id")
+                    category_name = c.get("name") or cname
+                elif payload.create_missing_categories:
+                    new_cat = Category(name=cname)
+                    await db.categories.insert_one(new_cat.dict())
+                    cats_by_name[key] = new_cat.dict()
+                    category_id = new_cat.id
+                    category_name = new_cat.name
+
+            # Location — match existing only (don't auto-create — too rich)
+            location_id = None
+            location_name = ""
+            lname = _norm(raw.location)
+            if lname:
+                key = lname.lower()
+                if key in locs_by_name:
+                    l = locs_by_name[key]
+                    location_id = l.get("id")
+                    location_name = l.get("name") or lname
+                # else: silently leave unset (the row still imports)
+
+            # Dealer — match existing only
+            dealer_id = None
+            dealer_name = ""
+            dname = _norm(raw.dealer)
+            if dname:
+                key = dname.lower()
+                if key in dlrs_by_name:
+                    d = dlrs_by_name[key]
+                    dealer_id = d.get("id")
+                    dealer_name = d.get("name") or dname
+
+            # Tags — comma-separated; auto-create if missing
+            tag_ids: List[str] = []
+            tag_names: List[str] = []
+            if raw.tags:
+                for piece in (raw.tags or "").split(","):
+                    tname = _norm(piece)
+                    if not tname:
+                        continue
+                    key = tname.lower()
+                    if key in tags_by_name:
+                        tg = tags_by_name[key]
+                        tag_ids.append(tg.get("id"))
+                        tag_names.append(tg.get("name") or tname)
+                    elif payload.create_missing_tags:
+                        new_tag = Tag(name=tname)
+                        await db.tags.insert_one(new_tag.dict())
+                        tags_by_name[key] = new_tag.dict()
+                        tag_ids.append(new_tag.id)
+                        tag_names.append(new_tag.name)
+
+            qty = 1
+            try:
+                qty = max(1, int(float(raw.quantity or 1)))
+            except Exception:
+                qty = 1
+            try:
+                cost = float(raw.cost or 0)
+            except Exception:
+                cost = 0.0
+
+            tool = Tool(
+                name=name,
+                brand=_norm(raw.brand),
+                model=_norm(raw.model),
+                serial_number=_norm(raw.serial_number),
+                quantity=qty,
+                cost=cost,
+                description=_norm(raw.description),
+                category_id=category_id,
+                category_name=category_name,
+                location_id=location_id,
+                location_name=location_name,
+                dealer_id=dealer_id,
+                dealer_name=dealer_name,
+                tag_ids=tag_ids,
+                tag_names=tag_names,
+                condition=_norm(raw.condition),
+                purchase_date=_norm(raw.purchase_date) or None,
+                warranty_expiry=_norm(raw.warranty_expiry) or None,
+            )
+            await db.tools.insert_one(tool.dict())
+            created.append({"id": tool.id, "name": tool.name})
+        except Exception as e:
+            errors.append({"row": idx + 1, "name": _norm(raw.name), "error": str(e)})
+
+    return {"created": len(created), "errors": errors, "ids": [c["id"] for c in created]}
+
+
+# ---------------------------------------------------------------------------
+
+
+
 @api_router.get("/tools", response_model=List[Tool])
 async def list_tools(
     search: Optional[str] = None,

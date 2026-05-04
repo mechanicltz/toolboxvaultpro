@@ -756,18 +756,28 @@ frontend:
 metadata:
   created_by: "main_agent"
   version: "1.0"
-  test_sequence: 5
+  test_sequence: 6
   run_ui: false
 
 test_plan:
   current_focus:
-    - "Auth System (register, login, JWT, /me)"
-    - "Per-user data scoping via DBProxy + ContextVar"
-    - "Subscription endpoints (mock payments)"
-    - "Free tier limits enforcement (HTTP 402)"
+    - "CSV import/export — GET /api/tools/import-fields, GET /api/tools/export-csv, POST /api/tools/import"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
+
+backend_csv_import_export:
+  - task: "CSV import/export — GET /api/tools/import-fields, GET /api/tools/export-csv, POST /api/tools/import"
+    implemented: true
+    working: false
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: false
+        agent: "testing"
+        comment: "PARTIAL PASS — 59/62 checks via /app/backend_test.py against EXPO_PUBLIC_BACKEND_URL/api with subtest@example.com / password123. ONE REAL BUG in POST /api/tools/import row-level validation: when a row is missing 'name', the endpoint returns HTTP 422 from Pydantic instead of the spec-required 200 with {created:0, errors:[{row:1, name:'', error:'Name is required'}]}.\n\nPASSED (59/62):\n  (1) GET /api/tools/import-fields → 200 with exactly 14 fields; ids = ['name','brand','model','serial_number','quantity','cost','description','category','location','dealer','condition','purchase_date','warranty_expiry','tags']; name has required=True (label='Name *').\n  (2) GET /api/tools/export-csv → 200 with {filename:'toolbox-vault-export-2026-05-04.csv', base64:<...>, rows:7}. Base64 decodes to a UTF-8 CSV whose first line EXACTLY matches the 17-column header 'Name,Brand,Model,Serial number,Quantity,Cost,Category,Location,Dealer,Tags,Condition,Purchase date,Warranty expiry,Description,Is consumable,Is set,Set serials'. rows field (7) matched GET /api/tools length (7).\n  (3) POST /api/tools/import {rows:[]} → 200 with {created:0, errors:[], ids:[]}.\n  (4) POST /api/tools/import with {name:'CSV-Imported Tool', brand:'Snap-on', quantity:'3', cost:'49.99', category:'CSV-Test-Category', tags:'csv-tag-a, csv-tag-b'} → 200 with created=1 and one id. GET /api/tools returned the new tool with brand='Snap-on', quantity=3 (parsed from string), cost=49.99 (parsed from string), category_id non-empty, category_name='CSV-Test-Category'. GET /api/categories now includes 'CSV-Test-Category' (auto-created). GET /api/tags includes both 'csv-tag-a' and 'csv-tag-b' (auto-created). Tool.tag_ids contains BOTH new tag ids. Tag name trimming of ' csv-tag-b' (with leading space from the comma-split) works correctly.\n  (6) POST /api/tools/import with create_missing_categories=false + unknown category 'DefinitelyNotAnExistingCategoryXYZ' → 200 with created=1. Created tool has category_id=None and category_name=''. GET /api/categories confirms the unknown category was NOT auto-created.\n  (7) POST /api/tools/import with non-existent dealer + location → 200, created=1, errors=[]. Tool has dealer_id=None and location_id=None (silently skipped, not an error — matches review spec).\n  (8) Pre-created dealer 'Test-Dealer-Import' via POST /api/dealers and location 'Test-Loc-Import' via POST /api/locations (both 200). Then POST /api/tools/import {name:'WithFKMatch', dealer:'Test-Dealer-Import', location:'Test-Loc-Import'} → 200, created=1. Tool.dealer_id EXACTLY matches the dealer.id and tool.location_id EXACTLY matches the location.id (case-insensitive FK resolution works).\n  (9) Cleanup: all 4 CSV-test tools deleted, 'CSV-Test-Category', 'csv-tag-a', 'csv-tag-b', 'Test-Dealer-Import', 'Test-Loc-Import' deleted — all DELETEs returned 200.\n  (10) Smoke: GET /api/tools, /api/categories, /api/tags, /api/dealers, /api/locations all returned 200 after cleanup.\n\nFAILED (3/62 — all from review step 5):\n  (5) POST /api/tools/import {rows:[{'brand':'Foo'}]} (missing name) → got HTTP 422 {'detail':[{'type':'missing','loc':['body','rows',0,'name'],'msg':'Field required','input':{'brand':'Foo'},'url':'https://errors.pydantic.dev/2.12/v/missing'}]}. Spec expects HTTP 200 with body {created:0, errors:[{row:1, name:'', error:'Name is required'}], ids:[]}.\n\nROOT CAUSE: server.py L1313-1327 defines `class ImportRow(BaseModel): name: str` — marking name as a REQUIRED string at the Pydantic layer. When FastAPI parses the body, the ImportRow validator rejects the row before the endpoint handler runs, so the row-level try/except at L1363-1462 (which raises ValueError('Name is required') and appends to errors[]) is NEVER executed for the obvious missing-name case. This contradicts the review spec which expects the endpoint to collect per-row errors rather than 422 the whole batch.\n\nFIX (one-line, main agent to apply): change ImportRow.name from `name: str` to `name: Optional[str] = ''` at server.py L1314. The handler at L1365-1367 (`name = _norm(raw.name); if not name: raise ValueError('Name is required')`) then correctly catches the missing-name case and returns it in the per-row errors array. All other ImportRow fields are already Optional.\n\nIMPACT: Any real-world CSV with a blank-name row will cause the ENTIRE import batch to 422 (nothing created at all), instead of the spec's 'create the good ones, report the bad ones' behavior. This is a functional regression for real-world CSV imports where users commonly have empty rows or rows missing required fields."
 
 
 ## 2026-04-29 — PDF/Document Inline Viewer FIXED (verified by main agent)
@@ -1814,6 +1824,30 @@ agent_communication:
     working: false
     file: "/app/backend/reports.py"
     stuck_count: 1
+
+  - agent: "main"
+    message: |
+      **CSV Import / Export feature added — backend changes need verification.**
+
+      Backend (`/app/backend/server.py`):
+      - `GET /api/tools/import-fields` → returns `{fields: [{id, label, required?}]}`. Used by the import wizard to populate the column-mapping dropdown. Authoritative list: name (required), brand, model, serial_number, quantity, cost, description, category, location, dealer, condition, purchase_date, warranty_expiry, tags.
+      - `GET /api/tools/export-csv` → returns `{filename, base64, rows}`. CSV columns: Name, Brand, Model, Serial number, Quantity, Cost, Category, Location, Dealer, Tags, Condition, Purchase date, Warranty expiry, Description, Is consumable, Is set, Set serials. FK ids resolved to names.
+      - `POST /api/tools/import` with body `{rows: [{name, brand, ...}], create_missing_categories?: bool, create_missing_tags?: bool}` → bulk-creates tools. Resolves FK by name (case-insensitive). Auto-creates missing categories and tags by default. Locations and dealers must already exist (matched by name; row imports fine without them — left null). Returns `{created, errors:[{row, name, error}], ids}`.
+
+      Test plan (subtest@example.com / password123):
+      1. GET /api/tools/import-fields → 200, includes 14 fields with `name` marked `required: true`.
+      2. GET /api/tools/export-csv → 200, returns `{filename, base64, rows}`. Decode the base64 → valid CSV starting with the 17-column header. `rows` field equals number of tools currently in the DB (sanity check).
+      3. POST /api/tools/import with empty rows → 200, `created: 0, errors: []`.
+      4. POST /api/tools/import with one good row `{rows:[{name:"Imported Tool", brand:"Snap-on", quantity:"3", cost:"49.99", category:"Power Tools", tags:"electric, drill"}]}` → 200, `created: 1`, returned `ids: [<uuid>]`. Verify the tool exists via GET /api/tools (search by name). Confirm `category_id`/`category_name` populated AND a new "Power Tools" category exists in /api/categories. Confirm both "electric" and "drill" tags exist in /api/tags and are linked to the tool.
+      5. POST /api/tools/import with one row missing name → 200 overall, `created: 0, errors:[{row:1, error:"Name is required"}]`.
+      6. POST /api/tools/import with `create_missing_categories: false` and an unknown category name → tool still created but `category_id` is null/empty.
+      7. POST /api/tools/import with a row referencing a NON-existent location and dealer → tool created with `location_id`/`dealer_id` null but other fields populated (lookup miss is non-fatal).
+      8. POST /api/tools/import with one row referencing an EXISTING dealer + location by name → those FK ids properly resolved on the created tool.
+      9. Cleanup: delete the imported test tools, the auto-created "Power Tools" category, and the auto-created "electric"/"drill" tags.
+      10. Smoke: GET /api/tools, /api/categories, /api/tags, /api/dealers all 200.
+
+      No frontend testing yet (waiting on user). Frontend: new screen at `app/import-export.tsx` linked from More tab → ORGANIZATION → "Import / Export CSV". Has Export CSV button, Import flow (file pick → auto-guessed mapping → preview → IMPORT button) with a per-column mapping modal.
+
     priority: "high"
     needs_retesting: false
     status_history:

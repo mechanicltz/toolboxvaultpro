@@ -1,0 +1,723 @@
+import { useState, useEffect, useCallback } from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  Alert,
+  ActivityIndicator,
+  Modal,
+  Platform,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
+import * as DocumentPicker from "expo-document-picker";
+import * as FileSystem from "expo-file-system/legacy";
+import { theme } from "../src/theme";
+import { api } from "../src/api";
+import { parseCsv, saveBase64 } from "../src/csvIO";
+
+type ImportField = { id: string; label: string; required?: boolean };
+
+type Mapping = Record<number, string>; // colIndex -> system field id (or "" = skip)
+
+const SKIP_VALUE = ""; // empty string == skip
+
+// Header → field guesser. Returns the system field id, or "" if no match.
+function guessField(header: string, fields: ImportField[]): string {
+  const h = (header || "").trim().toLowerCase().replace(/[^a-z0-9]+/g, "");
+  if (!h) return "";
+  const aliases: Record<string, string> = {
+    name: "name",
+    title: "name",
+    item: "name",
+    tool: "name",
+    toolname: "name",
+    description: "description",
+    desc: "description",
+    notes: "description",
+    note: "description",
+    brand: "brand",
+    make: "brand",
+    manufacturer: "brand",
+    model: "model",
+    modelnumber: "model",
+    serial: "serial_number",
+    serialnumber: "serial_number",
+    sn: "serial_number",
+    quantity: "quantity",
+    qty: "quantity",
+    cost: "cost",
+    price: "cost",
+    amount: "cost",
+    unitcost: "cost",
+    category: "category",
+    type: "category",
+    location: "location",
+    storedat: "location",
+    where: "location",
+    dealer: "dealer",
+    vendor: "dealer",
+    supplier: "dealer",
+    seller: "dealer",
+    condition: "condition",
+    state: "condition",
+    purchasedate: "purchase_date",
+    datepurchased: "purchase_date",
+    purchased: "purchase_date",
+    boughton: "purchase_date",
+    warranty: "warranty_expiry",
+    warrantyexpiry: "warranty_expiry",
+    warrantyuntil: "warranty_expiry",
+    warrantyexpires: "warranty_expiry",
+    tags: "tags",
+    tag: "tags",
+    labels: "tags",
+  };
+  if (aliases[h]) return aliases[h];
+  // partial fallback: if any field's id is contained in the header
+  for (const f of fields) {
+    const fid = f.id.replace(/_/g, "");
+    if (h === fid) return f.id;
+    if (h.includes(fid)) return f.id;
+  }
+  return "";
+}
+
+export default function ImportExportScreen() {
+  const router = useRouter();
+  const [busy, setBusy] = useState<string>("");
+
+  // Import state
+  const [fileName, setFileName] = useState<string>("");
+  const [headers, setHeaders] = useState<string[]>([]);
+  const [rows, setRows] = useState<string[][]>([]);
+  const [mapping, setMapping] = useState<Mapping>({});
+  const [importFields, setImportFields] = useState<ImportField[]>([]);
+  const [pickerForCol, setPickerForCol] = useState<number | null>(null);
+  const [importResult, setImportResult] = useState<any>(null);
+
+  // Load the system field schema once
+  useEffect(() => {
+    api
+      .get("/tools/import-fields")
+      .then((r: any) => setImportFields(r?.fields || []))
+      .catch(() => setImportFields([]));
+  }, []);
+
+  /* ---------------- EXPORT ---------------- */
+  const doExport = useCallback(async () => {
+    setBusy("export");
+    try {
+      const r: any = await api.get("/tools/export-csv");
+      if (!r?.base64) throw new Error("Server returned no data");
+      await saveBase64(r.filename || "tools.csv", "text/csv", r.base64);
+      Alert.alert(
+        "Export ready",
+        `Exported ${r.rows} tool${r.rows === 1 ? "" : "s"}.${
+          Platform.OS === "web" ? " The file should download now." : ""
+        }`,
+      );
+    } catch (e: any) {
+      Alert.alert("Export failed", e?.message || "Could not export.");
+    } finally {
+      setBusy("");
+    }
+  }, []);
+
+  /* ---------------- IMPORT — pick file + parse ---------------- */
+  const pickFile = useCallback(async () => {
+    setBusy("pick");
+    try {
+      const res = await DocumentPicker.getDocumentAsync({
+        type: ["text/csv", "text/comma-separated-values", "application/csv", "*/*"],
+        copyToCacheDirectory: true,
+        multiple: false,
+      });
+      if (res.canceled || !res.assets?.length) {
+        setBusy("");
+        return;
+      }
+      const asset = res.assets[0];
+      let text = "";
+      if (Platform.OS === "web") {
+        // expo-document-picker on web returns a File-like blob via res.assets[0].file
+        // but in Expo SDK 54 it also exposes a uri (object URL). Use fetch().
+        const r = await fetch(asset.uri);
+        text = await r.text();
+      } else {
+        text = await FileSystem.readAsStringAsync(asset.uri, {
+          encoding: FileSystem.EncodingType.UTF8,
+        });
+      }
+      const parsed = parseCsv(text);
+      if (!parsed.length) {
+        Alert.alert("Empty file", "We couldn't find any rows in that CSV.");
+        setBusy("");
+        return;
+      }
+      const hdr = parsed[0].map((h) => (h || "").trim());
+      const dataRows = parsed.slice(1);
+      setFileName(asset.name || "import.csv");
+      setHeaders(hdr);
+      setRows(dataRows);
+      // Auto-guess mapping from headers
+      const auto: Mapping = {};
+      hdr.forEach((h, i) => {
+        auto[i] = guessField(h, importFields);
+      });
+      setMapping(auto);
+      setImportResult(null);
+    } catch (e: any) {
+      Alert.alert("Couldn't open file", e?.message || "");
+    } finally {
+      setBusy("");
+    }
+  }, [importFields]);
+
+  /* ---------------- IMPORT — submit ---------------- */
+  const doImport = useCallback(async () => {
+    if (!rows.length) return;
+    // Verify a Name column is mapped
+    const hasName = Object.values(mapping).some((v) => v === "name");
+    if (!hasName) {
+      Alert.alert(
+        "Name column required",
+        "Map at least one CSV column to the system field “Name”. That's the only required field.",
+      );
+      return;
+    }
+    setBusy("import");
+    try {
+      const normalized = rows
+        .map((r) => {
+          const obj: Record<string, any> = {};
+          for (const [colIdxStr, fieldId] of Object.entries(mapping)) {
+            if (!fieldId) continue;
+            const colIdx = parseInt(colIdxStr, 10);
+            const val = (r[colIdx] || "").trim();
+            // Allow same target field mapped from multiple columns —
+            // last-wins (and non-empty wins over empty)
+            if (val || !(fieldId in obj)) obj[fieldId] = val;
+          }
+          return obj;
+        })
+        // Skip rows that are completely empty
+        .filter((o) => Object.values(o).some((v) => (v || "") !== ""));
+
+      const result: any = await api.post("/tools/import", {
+        rows: normalized,
+        create_missing_categories: true,
+        create_missing_tags: true,
+      });
+      setImportResult(result);
+    } catch (e: any) {
+      Alert.alert("Import failed", e?.message || "Server error during import.");
+    } finally {
+      setBusy("");
+    }
+  }, [rows, mapping]);
+
+  /* ---------------- RENDER ---------------- */
+  return (
+    <SafeAreaView style={styles.container} edges={["bottom"]}>
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => router.back()} hitSlop={10}>
+          <Ionicons name="chevron-back" size={26} color={theme.colors.textPrimary} />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>IMPORT / EXPORT CSV</Text>
+        <View style={{ width: 26 }} />
+      </View>
+
+      <ScrollView contentContainerStyle={{ padding: 18 }}>
+        {/* EXPORT CARD */}
+        <View style={styles.card}>
+          <View style={styles.cardHeader}>
+            <Ionicons name="download-outline" size={22} color={theme.colors.accent} />
+            <Text style={styles.cardTitle}>EXPORT TO CSV</Text>
+          </View>
+          <Text style={styles.cardBody}>
+            Download a spreadsheet of every tool in your inventory. Includes name,
+            brand, model, serial, quantity, cost, category, location, dealer,
+            tags, condition, purchase / warranty dates, description and Set info.
+          </Text>
+          <TouchableOpacity
+            testID="export-csv-btn"
+            style={[styles.btnPrimary, busy === "export" && { opacity: 0.6 }]}
+            disabled={!!busy}
+            onPress={doExport}
+            activeOpacity={0.8}
+          >
+            {busy === "export" ? (
+              <ActivityIndicator color="#000" />
+            ) : (
+              <>
+                <Ionicons name="cloud-download" size={18} color="#000" />
+                <Text style={styles.btnPrimaryText}>EXPORT CSV</Text>
+              </>
+            )}
+          </TouchableOpacity>
+        </View>
+
+        {/* IMPORT CARD */}
+        <View style={styles.card}>
+          <View style={styles.cardHeader}>
+            <Ionicons name="cloud-upload-outline" size={22} color={theme.colors.accent} />
+            <Text style={styles.cardTitle}>IMPORT FROM CSV</Text>
+          </View>
+          <Text style={styles.cardBody}>
+            Import tools from a spreadsheet exported from any other system. Pick
+            a CSV file, then map each of its columns to a Toolbox Vault field.
+            Categories and Tags are auto-created if they don't exist; Locations
+            and Dealers are matched by name only (so create those manually first
+            for the cleanest result).
+          </Text>
+
+          <TouchableOpacity
+            testID="pick-csv-btn"
+            style={[styles.btnGhost, busy === "pick" && { opacity: 0.6 }]}
+            disabled={!!busy}
+            onPress={pickFile}
+            activeOpacity={0.8}
+          >
+            {busy === "pick" ? (
+              <ActivityIndicator color={theme.colors.textPrimary} />
+            ) : (
+              <>
+                <Ionicons name="folder-open" size={18} color={theme.colors.textPrimary} />
+                <Text style={styles.btnGhostText}>
+                  {fileName ? "CHOOSE A DIFFERENT FILE" : "CHOOSE CSV FILE"}
+                </Text>
+              </>
+            )}
+          </TouchableOpacity>
+
+          {fileName ? (
+            <Text style={styles.fileName} numberOfLines={1}>
+              📄 {fileName} · {rows.length} row{rows.length === 1 ? "" : "s"}
+            </Text>
+          ) : null}
+
+          {/* MAPPING */}
+          {headers.length > 0 ? (
+            <>
+              <Text style={styles.sectionLabel}>COLUMN MAPPING</Text>
+              <Text style={styles.helper}>
+                Map each column from your file to a Toolbox Vault field. Leave any
+                column you don't need set to "Skip".
+              </Text>
+              {headers.map((h, i) => {
+                const sel = mapping[i] || "";
+                const selField = importFields.find((f) => f.id === sel);
+                const sample = (rows[0] && rows[0][i]) || "";
+                return (
+                  <View key={i} style={styles.mapRow}>
+                    <View style={{ flex: 1, minWidth: 0 }}>
+                      <Text style={styles.mapHeader} numberOfLines={1}>
+                        {h || `Column ${i + 1}`}
+                      </Text>
+                      <Text style={styles.mapSample} numberOfLines={1}>
+                        e.g. {sample || "—"}
+                      </Text>
+                    </View>
+                    <Ionicons
+                      name="arrow-forward"
+                      size={16}
+                      color={theme.colors.textMuted}
+                      style={{ marginHorizontal: 6 }}
+                    />
+                    <TouchableOpacity
+                      style={[styles.mapBtn, !sel && styles.mapBtnSkipped]}
+                      onPress={() => setPickerForCol(i)}
+                      testID={`map-col-${i}`}
+                    >
+                      <Text style={[styles.mapBtnText, !sel && styles.mapBtnTextSkipped]} numberOfLines={1}>
+                        {selField ? selField.label : "Skip"}
+                      </Text>
+                      <Ionicons name="chevron-down" size={16} color={theme.colors.textSecondary} />
+                    </TouchableOpacity>
+                  </View>
+                );
+              })}
+
+              {/* PREVIEW */}
+              {rows.length > 0 ? (
+                <>
+                  <Text style={[styles.sectionLabel, { marginTop: 18 }]}>PREVIEW (first 3 rows)</Text>
+                  <ScrollView horizontal contentContainerStyle={{ paddingVertical: 4 }}>
+                    <View>
+                      <View style={styles.previewRow}>
+                        {headers.map((h, i) => {
+                          const sel = mapping[i] || "";
+                          const f = importFields.find((x) => x.id === sel);
+                          return (
+                            <View key={i} style={styles.previewCell}>
+                              <Text style={styles.previewHead} numberOfLines={1}>{h}</Text>
+                              <Text style={styles.previewMap} numberOfLines={1}>
+                                {f ? `→ ${f.label}` : "→ Skip"}
+                              </Text>
+                            </View>
+                          );
+                        })}
+                      </View>
+                      {rows.slice(0, 3).map((r, ri) => (
+                        <View key={ri} style={styles.previewRow}>
+                          {headers.map((_, ci) => (
+                            <View key={ci} style={styles.previewCell}>
+                              <Text style={styles.previewVal} numberOfLines={2}>
+                                {r[ci] || ""}
+                              </Text>
+                            </View>
+                          ))}
+                        </View>
+                      ))}
+                    </View>
+                  </ScrollView>
+                </>
+              ) : null}
+
+              <TouchableOpacity
+                testID="run-import-btn"
+                style={[styles.btnPrimary, { marginTop: 18 }, busy === "import" && { opacity: 0.6 }]}
+                disabled={!!busy || rows.length === 0}
+                onPress={doImport}
+                activeOpacity={0.8}
+              >
+                {busy === "import" ? (
+                  <ActivityIndicator color="#000" />
+                ) : (
+                  <>
+                    <Ionicons name="checkmark-circle" size={18} color="#000" />
+                    <Text style={styles.btnPrimaryText}>
+                      IMPORT {rows.length} ROW{rows.length === 1 ? "" : "S"}
+                    </Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            </>
+          ) : null}
+
+          {/* RESULT */}
+          {importResult ? (
+            <View style={styles.resultBox}>
+              <Text style={styles.resultTitle}>
+                ✅ Created {importResult.created} tool
+                {importResult.created === 1 ? "" : "s"}
+              </Text>
+              {importResult.errors?.length ? (
+                <View style={{ marginTop: 6 }}>
+                  <Text style={styles.resultErr}>
+                    {importResult.errors.length} row
+                    {importResult.errors.length === 1 ? "" : "s"} skipped:
+                  </Text>
+                  {importResult.errors.slice(0, 8).map((e: any, i: number) => (
+                    <Text key={i} style={styles.resultErrLine} numberOfLines={1}>
+                      · row {e.row}: {e.error}
+                    </Text>
+                  ))}
+                  {importResult.errors.length > 8 ? (
+                    <Text style={styles.resultErrLine}>
+                      …and {importResult.errors.length - 8} more
+                    </Text>
+                  ) : null}
+                </View>
+              ) : null}
+              <TouchableOpacity
+                style={[styles.btnGhost, { marginTop: 10 }]}
+                onPress={() => router.replace("/(tabs)/inventory")}
+              >
+                <Ionicons name="cube" size={16} color={theme.colors.textPrimary} />
+                <Text style={styles.btnGhostText}>VIEW INVENTORY</Text>
+              </TouchableOpacity>
+            </View>
+          ) : null}
+        </View>
+      </ScrollView>
+
+      {/* Field-picker modal */}
+      <Modal
+        visible={pickerForCol !== null}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setPickerForCol(null)}
+      >
+        <View style={styles.modalBg}>
+          <View style={styles.modalCard}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>MAP TO…</Text>
+              <TouchableOpacity onPress={() => setPickerForCol(null)} hitSlop={10}>
+                <Ionicons name="close" size={24} color={theme.colors.textPrimary} />
+              </TouchableOpacity>
+            </View>
+            <ScrollView style={{ maxHeight: 460 }}>
+              <TouchableOpacity
+                style={styles.modalRow}
+                onPress={() => {
+                  if (pickerForCol !== null) {
+                    setMapping((m) => ({ ...m, [pickerForCol]: SKIP_VALUE }));
+                  }
+                  setPickerForCol(null);
+                }}
+              >
+                <Ionicons name="close-circle" size={18} color={theme.colors.textMuted} />
+                <Text style={styles.modalRowText}>Skip this column</Text>
+              </TouchableOpacity>
+              {importFields.map((f) => (
+                <TouchableOpacity
+                  key={f.id}
+                  style={styles.modalRow}
+                  onPress={() => {
+                    if (pickerForCol !== null) {
+                      setMapping((m) => ({ ...m, [pickerForCol]: f.id }));
+                    }
+                    setPickerForCol(null);
+                  }}
+                >
+                  <Ionicons
+                    name={f.required ? "star" : "ellipse-outline"}
+                    size={16}
+                    color={f.required ? theme.colors.accent : theme.colors.textMuted}
+                  />
+                  <Text style={styles.modalRowText}>{f.label}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: theme.colors.bg },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
+  },
+  headerTitle: {
+    color: theme.colors.textPrimary,
+    fontSize: 14,
+    fontWeight: "900",
+    letterSpacing: 2,
+  },
+  card: {
+    backgroundColor: theme.colors.bgSecondary,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: 10,
+    padding: 16,
+    marginBottom: 18,
+  },
+  cardHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 8,
+  },
+  cardTitle: {
+    color: theme.colors.textPrimary,
+    fontSize: 14,
+    fontWeight: "900",
+    letterSpacing: 1.5,
+  },
+  cardBody: {
+    color: theme.colors.textSecondary,
+    fontSize: 13,
+    lineHeight: 18,
+    marginBottom: 14,
+  },
+  btnPrimary: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: theme.colors.accent,
+    paddingVertical: 14,
+    borderRadius: 8,
+    gap: 8,
+  },
+  btnPrimaryText: {
+    color: "#000",
+    fontWeight: "900",
+    letterSpacing: 1.5,
+    fontSize: 13,
+  },
+  btnGhost: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    paddingVertical: 12,
+    borderRadius: 8,
+    gap: 8,
+  },
+  btnGhostText: {
+    color: theme.colors.textPrimary,
+    fontWeight: "800",
+    letterSpacing: 1.5,
+    fontSize: 12,
+  },
+  fileName: {
+    color: theme.colors.textSecondary,
+    marginTop: 10,
+    fontSize: 12,
+  },
+  sectionLabel: {
+    color: theme.colors.textPrimary,
+    fontSize: 12,
+    fontWeight: "900",
+    letterSpacing: 1.5,
+    marginTop: 18,
+    marginBottom: 8,
+  },
+  helper: {
+    color: theme.colors.textSecondary,
+    fontSize: 12,
+    marginBottom: 10,
+    fontStyle: "italic",
+  },
+  mapRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.borderSubtle,
+    gap: 6,
+  },
+  mapHeader: {
+    color: theme.colors.textPrimary,
+    fontWeight: "700",
+    fontSize: 13,
+  },
+  mapSample: {
+    color: theme.colors.textMuted,
+    fontSize: 11,
+    fontStyle: "italic",
+  },
+  mapBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: theme.colors.bg,
+    borderWidth: 1,
+    borderColor: theme.colors.accent,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderRadius: 6,
+    gap: 6,
+    minWidth: 140,
+    maxWidth: 180,
+  },
+  mapBtnSkipped: {
+    borderColor: theme.colors.border,
+  },
+  mapBtnText: {
+    color: theme.colors.textPrimary,
+    fontSize: 12,
+    fontWeight: "700",
+    flex: 1,
+  },
+  mapBtnTextSkipped: {
+    color: theme.colors.textMuted,
+  },
+  previewRow: { flexDirection: "row" },
+  previewCell: {
+    width: 130,
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+    borderRightWidth: 1,
+    borderRightColor: theme.colors.border,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.borderSubtle,
+    backgroundColor: theme.colors.bg,
+  },
+  previewHead: {
+    color: theme.colors.textPrimary,
+    fontWeight: "800",
+    fontSize: 11,
+    letterSpacing: 1,
+  },
+  previewMap: {
+    color: theme.colors.accent,
+    fontSize: 10,
+    marginTop: 2,
+  },
+  previewVal: {
+    color: theme.colors.textSecondary,
+    fontSize: 11,
+    marginTop: 2,
+  },
+  resultBox: {
+    marginTop: 18,
+    padding: 12,
+    backgroundColor: theme.colors.bg,
+    borderWidth: 1,
+    borderColor: theme.colors.accent,
+    borderRadius: 8,
+  },
+  resultTitle: {
+    color: theme.colors.textPrimary,
+    fontWeight: "900",
+    fontSize: 14,
+    letterSpacing: 1,
+  },
+  resultErr: {
+    color: theme.colors.danger,
+    fontWeight: "800",
+    fontSize: 12,
+  },
+  resultErrLine: {
+    color: theme.colors.textSecondary,
+    fontSize: 11,
+    marginTop: 2,
+  },
+  modalBg: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.7)",
+    justifyContent: "center",
+    paddingHorizontal: 16,
+  },
+  modalCard: {
+    backgroundColor: theme.colors.bgSecondary,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: 10,
+    overflow: "hidden",
+    maxHeight: "85%",
+  },
+  modalHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
+  },
+  modalTitle: {
+    color: theme.colors.textPrimary,
+    fontWeight: "900",
+    fontSize: 12,
+    letterSpacing: 1.5,
+  },
+  modalRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.borderSubtle,
+  },
+  modalRowText: {
+    color: theme.colors.textPrimary,
+    fontSize: 14,
+  },
+});
