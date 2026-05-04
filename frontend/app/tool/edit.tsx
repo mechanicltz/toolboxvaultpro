@@ -336,6 +336,80 @@ export default function ToolEdit() {
     );
   };
 
+  // EDIT-MODE: just attach a receipt photo to the existing tool — no OCR,
+  // no multi-item picker, no overwriting of any current fields.
+  const pickReceiptPhotoOnly = async (src: "camera" | "library") => {
+    try {
+      const perm =
+        src === "camera"
+          ? await ImagePicker.requestCameraPermissionsAsync()
+          : await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!perm.granted) {
+        Alert.alert(
+          "Permission needed",
+          `Please grant ${src === "camera" ? "camera" : "photo library"} access.`,
+        );
+        return;
+      }
+      const opts: any = { quality: 0.8, allowsEditing: false, base64: false };
+      const res =
+        src === "camera"
+          ? await ImagePicker.launchCameraAsync(opts)
+          : await ImagePicker.launchImageLibraryAsync({
+              ...opts,
+              mediaTypes: ImagePicker.MediaTypeOptions.Images,
+            });
+      if (res.canceled || !res.assets?.[0]?.uri) return;
+      const { uri } = await compressImage(res.assets[0].uri);
+      const dataUri =
+        uri && uri.startsWith("data:")
+          ? uri
+          : (await (async () => {
+              // Fall back: re-encode as base64 for portability across devices
+              const { base64 } = await compressImage(res.assets[0].uri);
+              return base64 ? `data:image/jpeg;base64,${base64}` : uri;
+            })());
+      if (!dataUri) {
+        Alert.alert("Error", "Could not process image.");
+        return;
+      }
+      setReceipts((arr) => [...arr, dataUri]);
+    } catch (e: any) {
+      Alert.alert("Error", e.message || "Could not attach photo.");
+    }
+  };
+
+  // Entry point used by the small button in the RECEIPTS section.
+  // - On a NEW tool: full OCR scanner flow (camera/library + auto-fill fields).
+  // - On an EXISTING tool (edit mode): default to "just attach the photo",
+  //   but offer an optional "Scan & auto-fill" path for power users.
+  const onTapReceiptButton = () => {
+    if (!isEdit) {
+      // New tool — keep the existing OCR-first flow
+      chooseReceiptSource();
+      return;
+    }
+    Alert.alert(
+      "Add receipt to this item",
+      "Just attach the photo, or also use AI to auto-fill any missing fields on this item?",
+      [
+        {
+          text: "Take Photo (no scan)",
+          onPress: () => pickReceiptPhotoOnly("camera"),
+        },
+        {
+          text: "Choose from Library (no scan)",
+          onPress: () => pickReceiptPhotoOnly("library"),
+        },
+        {
+          text: "Scan & auto-fill",
+          onPress: chooseReceiptSource,
+        },
+        { text: "Cancel", style: "cancel" },
+      ],
+    );
+  };
+
   // Find dealer by case-insensitive name match
   const findDealerByName = (name: string): any | null => {
     const n = (name || "").trim().toLowerCase();
@@ -1289,7 +1363,7 @@ export default function ToolEdit() {
             <Text style={styles.label}>RECEIPTS ({receipts.length})</Text>
             <TouchableOpacity
               testID="add-receipt-btn"
-              onPress={chooseReceiptSource}
+              onPress={onTapReceiptButton}
               disabled={scanning}
               style={styles.smallScanBtn}
             >
@@ -1297,9 +1371,13 @@ export default function ToolEdit() {
                 <ActivityIndicator color={theme.colors.accent} size="small" />
               ) : (
                 <>
-                  <Ionicons name="scan" size={12} color={theme.colors.accent} />
+                  <Ionicons
+                    name={isEdit ? "add-circle" : "scan"}
+                    size={12}
+                    color={theme.colors.accent}
+                  />
                   <Text style={styles.smallScanBtnText}>
-                    {isEdit ? "ADD & SCAN" : "SCAN RECEIPT"}
+                    {isEdit ? "ADD RECEIPT" : "SCAN RECEIPT"}
                   </Text>
                 </>
               )}
