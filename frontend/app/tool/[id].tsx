@@ -23,6 +23,7 @@ import { theme } from "../../src/theme";
 import { api } from "../../src/api";
 import { printReportHtml } from "../../src/printHtml";
 import { confirm } from "../../src/confirm";
+import { compressForPdf, compressManyForPdf } from "../../src/pdfImage";
 import { formatDateTime } from "../../src/dt";
 import { formatDateUS } from "../../src/dateUtil";
 import { DateField } from "../../src/DateField";
@@ -440,7 +441,13 @@ export default function ToolDetail() {
         profile = null;
       }
     }
-    const heroPhoto = F.photo && photos.length > 0 ? photos[0] : "";
+    // Compress the hero photo before embedding. Camera photos can be 5+ MB
+    // base64-encoded, which causes iOS WKWebView's print pipeline to silently
+    // hang. compressForPdf is a no-op for empty strings.
+    const heroPhotoRaw = F.photo && photos.length > 0 ? photos[0] : "";
+    const heroPhoto = heroPhotoRaw
+      ? await compressForPdf(heroPhotoRaw, { maxWidth: 1100, quality: 0.65 })
+      : "";
     const askingPrice =
       tool?.sale_price != null ? Number(tool.sale_price).toFixed(2) : "0.00";
 
@@ -457,8 +464,7 @@ export default function ToolDetail() {
     if (F.purchase_date && tool.purchase_date)
       specRows.push({ label: "Purchased", value: formatDateUS(tool.purchase_date) });
 
-    // Build clean text values — no emojis (they choke xhtml2pdf on
-    // letter-spacing) and the contact lines are simple strings.
+    // Contact lines as plain strings — no emojis (xhtml2pdf chokes on them).
     const contactLines: string[] = [];
     if (F.contact_name && profile?.name)
       contactLines.push(esc(profile.name));
@@ -467,232 +473,288 @@ export default function ToolDetail() {
     if (F.contact_email && profile?.email)
       contactLines.push(`Email: ${esc(profile.email)}`);
 
-    // xhtml2pdf-compatible HTML — uses tables for layout, basic CSS only.
-    // No flex, no gradients, no outline-offset, no position:absolute,
-    // no large letter-spacing on giant fonts (hangs the layouter).
-    const specsTableRows = specRows
-      .map(
-        (r) => `
-          <tr>
-            <td class="lab">${esc(r.label).toUpperCase()}</td>
-            <td class="val">${esc(r.value)}</td>
-          </tr>`,
-      )
-      .join("");
+    // Lay specs out as a 2-column "vital stats" grid (4 td's per row).
+    const specPairsHtml: string[] = [];
+    for (let i = 0; i < specRows.length; i += 2) {
+      const a = specRows[i];
+      const b = specRows[i + 1];
+      specPairsHtml.push(`
+        <tr>
+          <td class="lab">${a ? esc(a.label).toUpperCase() : ""}</td>
+          <td class="val">${a ? esc(a.value) : ""}</td>
+          <td class="lab">${b ? esc(b.label).toUpperCase() : ""}</td>
+          <td class="val">${b ? esc(b.value) : ""}</td>
+        </tr>`);
+    }
 
+    // CLASSIC POSTER design — heavy, restrained, professional. Black on white
+    // with a single yellow accent stripe. Photo dominates. Stark typography.
+    // 100% xhtml2pdf-safe (table layout, no inline-block / flex / gradients).
     const html = `<!DOCTYPE html>
 <html>
 <head>
 <meta charset="utf-8"/>
 <style>
-  @page { size: letter; margin: 0.5in; }
-  body { font-family: Helvetica, Arial, sans-serif; color: #111111; font-size: 11pt; }
+  @page { size: letter; margin: 0.4in; }
+  body {
+    font-family: Helvetica, Arial, sans-serif;
+    color: #000000;
+    font-size: 11pt;
+  }
   table { border-collapse: collapse; }
   p, div { margin: 0; padding: 0; }
 
-  /* === FOR SALE BANNER === */
-  table.banner { width: 100%; margin-bottom: 14pt; }
-  table.banner td {
-    background-color: #FFB300;
-    color: #111111;
+  /* === HEADLINE: "FOR SALE" — heavy block letters, stark === */
+  table.headline { width: 100%; }
+  td.headline-text {
     text-align: center;
-    padding: 18pt 0 18pt 0;
-    font-size: 38pt;
-    font-weight: bold;
-    letter-spacing: 4pt;
-    border: 4pt solid #111111;
-  }
-
-  /* === ITEM NAME === */
-  table.name-band { width: 100%; margin-bottom: 14pt; }
-  table.name-band td {
-    text-align: center;
-    font-size: 22pt;
-    font-weight: bold;
-    color: #111111;
-    text-transform: uppercase;
-    padding: 4pt 0 4pt 0;
-  }
-
-  /* === PRICE BOX === */
-  table.price-box {
-    width: 100%;
-    margin-bottom: 16pt;
-    border: 3pt solid #FFB300;
-  }
-  table.price-box td {
-    background-color: #111111;
-    text-align: center;
-  }
-  td.price-ask {
-    color: #FFB300;
-    font-size: 10pt;
-    letter-spacing: 3pt;
-    font-weight: bold;
-    padding: 12pt 0 0 0;
-  }
-  td.price-amount {
-    color: #FFB300;
     font-size: 44pt;
     font-weight: bold;
-    padding: 4pt 0 14pt 0;
+    color: #000000;
+    letter-spacing: 3pt;
+    padding: 2pt 0 0 0;
+    line-height: 1;
+  }
+  td.headline-rule {
+    height: 4pt;
+    background-color: #000000;
+    padding: 0;
+    line-height: 0;
+    font-size: 0;
+  }
+  td.headline-thin {
+    height: 1pt;
+    background-color: #000000;
+    padding: 0;
+    line-height: 0;
+    font-size: 0;
+  }
+  td.headline-gap { height: 2pt; padding: 0; }
+
+  /* === ITEM NAME === */
+  table.name-band { width: 100%; margin-top: 8pt; }
+  td.name-text {
+    text-align: center;
+    font-size: 18pt;
+    font-weight: bold;
+    color: #000000;
+    text-transform: uppercase;
+    letter-spacing: 1.5pt;
+    padding: 0 0 6pt 0;
   }
 
   /* === HERO PHOTO === */
-  table.photo-wrap { width: 100%; margin-bottom: 14pt; }
-  table.photo-wrap td {
+  table.photo-wrap { width: 100%; }
+  td.photo-cell {
     text-align: center;
-    padding: 0;
+    padding: 0 0 8pt 0;
   }
   img.hero-photo {
-    /* No width: % — xhtml2pdf preserves aspect ratio when only max-* set. */
-    max-width: 4.5in;
-    max-height: 3.5in;
-    border: 3pt solid #111111;
+    /* Maximum size only — preserve aspect ratio, never stretch. */
+    max-width: 3.6in;
+    max-height: 2.4in;
+    border: 1pt solid #000000;
   }
 
-  /* === SPECS TABLE === */
-  table.specs {
-    width: 100%;
-    margin-bottom: 14pt;
-    border: 2pt solid #111111;
+  /* === ASKING PRICE === */
+  table.price-band { width: 100%; }
+  td.price-rule {
+    height: 2pt;
+    background-color: #000000;
+    padding: 0;
+    line-height: 0;
+    font-size: 0;
   }
+  td.price-label {
+    text-align: center;
+    font-size: 9pt;
+    letter-spacing: 4pt;
+    font-weight: bold;
+    color: #000000;
+    padding: 6pt 0 0 0;
+  }
+  td.price-amount {
+    text-align: center;
+    font-size: 34pt;
+    font-weight: bold;
+    color: #000000;
+    padding: 0 0 6pt 0;
+    line-height: 1;
+  }
+
+  /* === VITAL STATS GRID === */
+  .section-label {
+    font-size: 9.5pt;
+    font-weight: bold;
+    color: #000000;
+    letter-spacing: 4pt;
+    text-align: center;
+    padding: 12pt 0 6pt 0;
+    border-bottom: 0.75pt solid #000000;
+    margin-bottom: 6pt;
+  }
+  table.specs { width: 100%; margin-bottom: 2pt; }
   table.specs td {
-    padding: 6pt 12pt;
-    font-size: 11pt;
-    border-bottom: 0.75pt solid #dddddd;
+    padding: 4pt 6pt;
+    vertical-align: top;
+    font-size: 10pt;
   }
   table.specs td.lab {
     color: #555555;
-    font-size: 9pt;
     font-weight: bold;
-    width: 40%;
+    font-size: 7.5pt;
     letter-spacing: 1pt;
+    width: 16%;
   }
   table.specs td.val {
-    color: #111111;
+    color: #000000;
     font-weight: bold;
-    text-align: right;
+    width: 34%;
+    border-bottom: 0.5pt solid #cccccc;
   }
 
-  /* === DESCRIPTION / NOTES === */
-  table.note-box { width: 100%; margin-bottom: 10pt; }
-  table.note-box td.bar {
-    width: 4pt;
-    background-color: #FFB300;
-    padding: 0;
-  }
-  table.note-box td.body {
-    background-color: #fff5d6;
-    padding: 10pt 14pt;
-    font-size: 11pt;
-    color: #2a2a2a;
+  /* === DESCRIPTION === */
+  table.body-block { width: 100%; margin-top: 4pt; }
+  td.body-text {
+    color: #1a1a1a;
+    font-size: 10pt;
     line-height: 1.4;
-  }
-  table.note-box.alt td.bar { background-color: #111111; }
-  table.note-box.alt td.body { background-color: #f0f0f0; }
-  .note-label {
-    font-size: 8.5pt;
-    font-weight: bold;
-    color: #777777;
-    letter-spacing: 1.5pt;
-    margin-bottom: 4pt;
+    padding: 2pt 0 0 0;
   }
 
-  /* === CONTACT === */
-  table.contact { width: 100%; margin-top: 14pt; }
-  table.contact td {
-    background-color: #111111;
-    color: #ffffff;
-    text-align: center;
-    padding: 6pt 14pt;
-    font-size: 12pt;
+  /* === CONTACT (bottom section) === */
+  table.contact-band { width: 100%; margin-top: 14pt; }
+  td.contact-rule-top {
+    height: 2.5pt;
+    background-color: #000000;
+    padding: 0;
+    line-height: 0;
+    font-size: 0;
   }
   td.contact-title {
-    color: #FFB300;
+    text-align: center;
     font-size: 10pt;
-    letter-spacing: 3pt;
+    letter-spacing: 5pt;
     font-weight: bold;
-    padding: 14pt 14pt 6pt 14pt;
+    color: #000000;
+    padding: 8pt 0 4pt 0;
   }
   td.contact-line {
+    text-align: center;
     font-size: 12pt;
-    padding: 2pt 14pt 2pt 14pt;
+    color: #000000;
+    padding: 1pt 0;
   }
-  td.contact-spacer { padding: 0 0 14pt 0; height: 1pt; }
+  td.contact-line-bold {
+    text-align: center;
+    font-size: 14pt;
+    font-weight: bold;
+    color: #000000;
+    padding: 2pt 0 1pt 0;
+    text-transform: uppercase;
+    letter-spacing: 1pt;
+  }
+  td.contact-rule-bottom {
+    height: 1pt;
+    background-color: #000000;
+    padding: 6pt 0 0 0;
+    line-height: 0;
+    font-size: 0;
+  }
+
+  /* === ACCENT (single yellow bar — the only color on the poster) === */
+  td.accent-bar {
+    height: 3pt;
+    background-color: #FFB300;
+    padding: 0;
+    line-height: 0;
+    font-size: 0;
+  }
 
   /* === FOOTER === */
   .footer {
-    margin-top: 14pt;
+    margin-top: 10pt;
     text-align: center;
-    color: #999999;
-    font-size: 8pt;
-    letter-spacing: 1pt;
+    color: #666666;
+    font-size: 7pt;
+    letter-spacing: 2pt;
   }
 </style>
 </head>
 <body>
 
-  <table class="banner"><tr><td>FOR SALE</td></tr></table>
+  <!-- HEADLINE -->
+  <table class="headline">
+    <tr><td class="headline-rule">&nbsp;</td></tr>
+    <tr><td class="headline-gap">&nbsp;</td></tr>
+    <tr><td class="headline-text">FOR SALE</td></tr>
+    <tr><td class="accent-bar">&nbsp;</td></tr>
+    <tr><td class="headline-thin">&nbsp;</td></tr>
+  </table>
 
   ${
     F.name
-      ? `<table class="name-band"><tr><td>${esc(tool.name) || "(UNNAMED)"}</td></tr></table>`
-      : ""
-  }
-
-  ${
-    F.price
-      ? `<table class="price-box">
-           <tr><td class="price-ask">ASKING PRICE</td></tr>
-           <tr><td class="price-amount">$${askingPrice}</td></tr>
-         </table>`
+      ? `<table class="name-band"><tr><td class="name-text">${esc(tool.name) || "(UNNAMED)"}</td></tr></table>`
       : ""
   }
 
   ${
     heroPhoto
-      ? `<table class="photo-wrap"><tr><td><img class="hero-photo" src="${heroPhoto}"/></td></tr></table>`
+      ? `<table class="photo-wrap"><tr><td class="photo-cell"><img class="hero-photo" src="${heroPhoto}"/></td></tr></table>`
       : ""
   }
 
-  ${specsTableRows ? `<table class="specs">${specsTableRows}</table>` : ""}
+  ${
+    F.price
+      ? `<table class="price-band">
+           <tr><td class="price-rule">&nbsp;</td></tr>
+           <tr><td class="price-label">ASKING PRICE</td></tr>
+           <tr><td class="price-amount">$${askingPrice}</td></tr>
+           <tr><td class="price-rule">&nbsp;</td></tr>
+         </table>`
+      : ""
+  }
+
+  ${
+    specPairsHtml.length
+      ? `<div class="section-label">DETAILS</div>
+         <table class="specs">${specPairsHtml.join("")}</table>`
+      : ""
+  }
 
   ${
     F.description && tool.description
-      ? `<table class="note-box"><tr>
-           <td class="bar">&nbsp;</td>
-           <td class="body">
-             <div class="note-label">DESCRIPTION</div>
-             ${esc(tool.description)}
-           </td>
-         </tr></table>`
+      ? `<div class="section-label">DESCRIPTION</div>
+         <table class="body-block"><tr><td class="body-text">${esc(tool.description)}</td></tr></table>`
       : ""
   }
 
   ${
     F.sale_notes && tool.sale_notes
-      ? `<table class="note-box alt"><tr>
-           <td class="bar">&nbsp;</td>
-           <td class="body">
-             <div class="note-label">SELLER'S NOTES</div>
-             ${esc(tool.sale_notes)}
-           </td>
-         </tr></table>`
+      ? `<div class="section-label">NOTES</div>
+         <table class="body-block"><tr><td class="body-text">${esc(tool.sale_notes)}</td></tr></table>`
       : ""
   }
 
   ${
     contactLines.length
-      ? `<table class="contact">
-           <tr><td class="contact-title">CONTACT</td></tr>
-           ${contactLines.map((l) => `<tr><td class="contact-line">${l}</td></tr>`).join("")}
-           <tr><td class="contact-spacer">&nbsp;</td></tr>
+      ? `<table class="contact-band">
+           <tr><td class="contact-rule-top">&nbsp;</td></tr>
+           <tr><td class="contact-title">CONTACT THE SELLER</td></tr>
+           ${contactLines
+             .map(
+               (l, i) =>
+                 i === 0 && F.contact_name && profile?.name
+                   ? `<tr><td class="contact-line-bold">${l}</td></tr>`
+                   : `<tr><td class="contact-line">${l}</td></tr>`,
+             )
+             .join("")}
+           <tr><td class="contact-rule-bottom" style="margin-top:8pt">&nbsp;</td></tr>
          </table>`
       : ""
   }
 
-  <div class="footer">LISTED VIA TOOLBOX VAULT &middot; ${new Date().toLocaleDateString()}</div>
+  <div class="footer">LISTED VIA TOOLBOX VAULT &nbsp;&middot;&nbsp; ${new Date().toLocaleDateString()}</div>
 
 </body>
 </html>`;
@@ -716,8 +778,14 @@ export default function ToolDetail() {
       return isFinite(n) ? `$${n.toFixed(2)}` : "—";
     };
 
-    // Photos — render up to 4 in a 2-up grid (xhtml2pdf-friendly: <table>)
-    const photoCells = (tool.photos || []).slice(0, 4);
+    // Photos — compress and render up to 4 in a 2-up grid (xhtml2pdf-friendly).
+    // Compression is critical to prevent iOS WKWebView print pipeline hangs
+    // on large camera-quality photos.
+    const rawPhotos = (tool.photos || []).slice(0, 4);
+    const photoCells = await compressManyForPdf(rawPhotos, {
+      maxWidth: 900,
+      quality: 0.6,
+    });
     const photosHtml = photoCells.length
       ? `<table class="photos"><tr>${photoCells
           .slice(0, 2)
@@ -739,7 +807,10 @@ export default function ToolDetail() {
       )
       .join("");
 
-    const receipts: string[] = Array.isArray(tool.receipts) ? tool.receipts : [];
+    const rawReceipts: string[] = Array.isArray(tool.receipts) ? tool.receipts : [];
+    const receipts: string[] = includeReceipts && rawReceipts.length > 0
+      ? await compressManyForPdf(rawReceipts, { maxWidth: 1200, quality: 0.6 })
+      : [];
     const receiptPages =
       includeReceipts && receipts.length > 0
         ? receipts

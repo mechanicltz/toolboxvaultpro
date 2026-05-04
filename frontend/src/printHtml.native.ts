@@ -51,9 +51,25 @@ export async function printReportHtml(
   const finalName = safeFilename(filename);
 
   // Step 1: render HTML → PDF on disk.
+  // Wrapped in a timeout — if the iOS WKWebView hangs (e.g. on huge embedded
+  // base64 images), we want to surface an error instead of an infinite spinner.
   let uri: string;
   try {
-    const result = await Print.printToFileAsync({ html, base64: false });
+    const printPromise = Print.printToFileAsync({ html, base64: false });
+    const timeoutPromise = new Promise<never>((_, reject) =>
+      setTimeout(
+        () =>
+          reject(
+            new Error(
+              "PDF rendering timed out after 45s. The image may be too large — try regenerating with a smaller photo.",
+            ),
+          ),
+        45_000,
+      ),
+    );
+    const result = (await Promise.race([printPromise, timeoutPromise])) as {
+      uri: string;
+    };
     uri = result.uri;
   } catch (err: any) {
     // eslint-disable-next-line no-console
