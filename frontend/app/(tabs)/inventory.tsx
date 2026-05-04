@@ -710,10 +710,17 @@ export default function InventoryScreen() {
               </Text>
             </TouchableOpacity>
           </View>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.bulkActions}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            // On phones wider than ~370px, the 4 actions all fit so we let the
+            // inner View claim 100% width and flex:1 each. On very narrow
+            // screens (<370) we fall back to horizontal scroll.
+            contentContainerStyle={[styles.bulkActions, { width: "100%" }]}
+          >
             <TouchableOpacity
               testID="bulk-move"
-              style={[styles.bulkBtn, selectedIds.length === 0 && { opacity: 0.4 }]}
+              style={[styles.bulkBtn, { flex: 1 }, selectedIds.length === 0 && { opacity: 0.4 }]}
               onPress={() => setShowBulkLocation(true)}
               disabled={selectedIds.length === 0 || bulkBusy}
             >
@@ -722,34 +729,39 @@ export default function InventoryScreen() {
             </TouchableOpacity>
             <TouchableOpacity
               testID="bulk-tag"
-              style={[styles.bulkBtn, selectedIds.length === 0 && { opacity: 0.4 }]}
+              style={[styles.bulkBtn, { flex: 1 }, selectedIds.length === 0 && { opacity: 0.4 }]}
               onPress={() => setShowBulkTag(true)}
               disabled={selectedIds.length === 0 || bulkBusy}
             >
               <Ionicons name="pricetag" size={16} color={theme.colors.accent} />
-              <Text style={styles.bulkBtnText}>ADD TAG</Text>
+              <Text style={styles.bulkBtnText}>TAG</Text>
             </TouchableOpacity>
             <TouchableOpacity
               testID="bulk-lost"
-              style={[styles.bulkBtn, selectedIds.length === 0 && { opacity: 0.4 }]}
+              style={[styles.bulkBtn, { flex: 1 }, selectedIds.length === 0 && { opacity: 0.4 }]}
               onPress={() => setShowBulkLost(true)}
               disabled={selectedIds.length === 0 || bulkBusy}
             >
               <Ionicons name="warning" size={16} color={theme.colors.danger} />
-              <Text style={[styles.bulkBtnText, { color: theme.colors.danger }]}>MARK LOST</Text>
+              <Text style={[styles.bulkBtnText, { color: theme.colors.danger }]}>LOST</Text>
             </TouchableOpacity>
             <TouchableOpacity
               testID="bulk-delete"
-              style={[styles.bulkBtn, selectedIds.length === 0 && { opacity: 0.4 }]}
+              style={[
+                styles.bulkBtn,
+                styles.bulkBtnDanger,
+                { flex: 1 },
+                selectedIds.length === 0 && { opacity: 0.4 },
+              ]}
               onPress={bulkDelete}
               disabled={selectedIds.length === 0 || bulkBusy}
             >
               {bulkBusy ? (
-                <ActivityIndicator color={theme.colors.danger} size="small" />
+                <ActivityIndicator color="#fff" size="small" />
               ) : (
                 <>
-                  <Ionicons name="trash" size={16} color={theme.colors.danger} />
-                  <Text style={[styles.bulkBtnText, { color: theme.colors.danger }]}>DELETE</Text>
+                  <Ionicons name="trash" size={16} color="#fff" />
+                  <Text style={[styles.bulkBtnText, { color: "#fff" }]}>DELETE</Text>
                 </>
               )}
             </TouchableOpacity>
@@ -1282,13 +1294,18 @@ const styles = StyleSheet.create({
   bulkBtn: {
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "center",
     gap: 6,
-    paddingHorizontal: 14,
+    paddingHorizontal: 8,
     paddingVertical: 10,
     borderWidth: 1,
     borderColor: theme.colors.border,
     borderRadius: 4,
     backgroundColor: theme.colors.bg,
+  },
+  bulkBtnDanger: {
+    backgroundColor: theme.colors.danger,
+    borderColor: theme.colors.danger,
   },
   bulkBtnText: {
     color: theme.colors.accent,
