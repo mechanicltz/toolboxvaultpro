@@ -19,6 +19,7 @@ import { api } from "../src/api";
 import { useAuth } from "../src/AuthContext";
 
 const FILL_DURATION_MS = 7500; // total animation length (5–10s spec → 7.5s)
+const SEGMENT_COUNT = 18; // number of vertical segments visible across the bar
 
 export default function DeleteAccountScreen() {
   const router = useRouter();
@@ -217,55 +218,84 @@ export default function DeleteAccountScreen() {
 
           {showProgress && (
             <View style={styles.progressWrap}>
-              <Text style={styles.progressLabel}>PURGING USER DATA</Text>
+              {/* === Segmented neon progress bar — matches reference === */}
+              <View style={styles.barFrame}>
+                {/* Top header strip: LCD label on left, status LEDs on right */}
+                <View style={styles.barHeader}>
+                  <View style={styles.lcdBox}>
+                    <Text style={styles.lcdText}>DELETING</Text>
+                  </View>
+                  <View style={styles.notchRow}>
+                    <View style={styles.notch} />
+                    <View style={styles.notch} />
+                    <View style={styles.notch} />
+                    <View style={styles.notch} />
+                  </View>
+                  <View style={styles.ledRow}>
+                    <Animated.View style={[styles.led, { opacity: glowOpacity }]} />
+                    <Animated.View style={[styles.led, { opacity: glowOpacity }]} />
+                    <Animated.View style={[styles.led, { opacity: glowOpacity }]} />
+                  </View>
+                </View>
 
-              {/* Glass tube + green nuclear fluid */}
-              <View style={styles.tube}>
-                {/* Outer glass border highlight */}
-                <View pointerEvents="none" style={styles.tubeHighlight} />
-                {/* Animated fluid fill */}
-                <Animated.View style={[styles.fluidContainer, { width: fillWidth }]}>
-                  {/* Outer glow shadow layer (under the gradient) */}
+                {/* Bar slot */}
+                <View style={styles.barSlot}>
+                  {/* Animated green fill (gradient) */}
+                  <Animated.View style={[styles.fillContainer, { width: fillWidth }]}>
+                    <LinearGradient
+                      colors={["#1d6b2a", "#33d65a", "#9bff8c", "#33d65a", "#0e4a18"]}
+                      locations={[0, 0.18, 0.5, 0.82, 1]}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 0, y: 1 }}
+                      style={styles.fillGradient}
+                    >
+                      {/* Highlight band along the top of the fill */}
+                      <View style={styles.fillShine} />
+                    </LinearGradient>
+                  </Animated.View>
+
+                  {/* Trailing-edge spill: a soft green halo right after the
+                      filled portion, fading into the unfilled black area. */}
                   <Animated.View
                     pointerEvents="none"
                     style={[
-                      styles.glowShadow,
-                      {
-                        opacity: glowOpacity,
-                        shadowRadius: glowRadius,
-                      },
+                      styles.trailingGlow,
+                      { left: fillWidth, opacity: glowOpacity },
                     ]}
-                  />
-                  <LinearGradient
-                    colors={[
-                      "#0aff5a",
-                      "#39ff7a",
-                      "#7dff9a",
-                      "#39ff7a",
-                      "#0aff5a",
-                    ]}
-                    locations={[0, 0.25, 0.5, 0.75, 1]}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
-                    style={styles.fluid}
                   >
-                    {/* Highlight band (top sheen) */}
-                    <View style={styles.fluidShine} />
-                    {/* Mini bubbles for bio-hazard look */}
-                    <View style={[styles.bubble, { left: 12, bottom: 6, opacity: 0.7 }]} />
-                    <View style={[styles.bubble, { left: 36, bottom: 12, width: 4, height: 4, opacity: 0.5 }]} />
-                    <View style={[styles.bubble, { left: 60, bottom: 4, width: 3, height: 3, opacity: 0.5 }]} />
-                    <View style={[styles.bubble, { left: 92, bottom: 10, width: 5, height: 5, opacity: 0.6 }]} />
-                  </LinearGradient>
-                </Animated.View>
+                    <LinearGradient
+                      colors={[
+                        "rgba(50,255,90,0.85)",
+                        "rgba(50,255,90,0.35)",
+                        "rgba(50,255,90,0)",
+                      ]}
+                      locations={[0, 0.4, 1]}
+                      start={{ x: 0, y: 0.5 }}
+                      end={{ x: 1, y: 0.5 }}
+                      style={{ flex: 1 }}
+                    />
+                  </Animated.View>
+
+                  {/* Vertical segment dividers — 19 thin dark lines on top */}
+                  {Array.from({ length: SEGMENT_COUNT - 1 }).map((_, i) => (
+                    <View
+                      key={i}
+                      pointerEvents="none"
+                      style={[
+                        styles.divider,
+                        { left: `${((i + 1) / SEGMENT_COUNT) * 100}%` },
+                      ]}
+                    />
+                  ))}
+                </View>
               </View>
 
               <View style={styles.progressMeta}>
                 <Text style={styles.progressPct}>{progressPct}%</Text>
                 <Text style={styles.progressHint}>
                   {progressPct < 100
-                    ? "Wiping records — do not close the app"
-                    : "Finalizing…"}
+                    ? "PURGING USER DATA — DO NOT CLOSE THE APP"
+                    : "FINALIZING…"}
                 </Text>
               </View>
             </View>
@@ -366,115 +396,158 @@ const styles = StyleSheet.create({
     letterSpacing: 2,
   },
 
-  // Progress / glass tube + green fluid
+  // Progress / segmented neon bar (matches reference)
   progressWrap: {
     marginTop: 28,
     alignItems: "center",
-  },
-  progressLabel: {
-    color: "#0aff5a",
-    fontSize: 10,
-    fontWeight: "900",
-    letterSpacing: 3,
-    marginBottom: 14,
-    textShadowColor: "#0aff5a",
-    textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 12,
-  },
-  tube: {
     width: "100%",
-    height: 38,
-    borderRadius: 22,
-    backgroundColor: "rgba(8, 18, 14, 0.85)",
+  },
+  barFrame: {
+    width: "100%",
+    backgroundColor: "#191c1a",
+    borderRadius: 10,
+    paddingHorizontal: 6,
+    paddingVertical: 6,
     borderWidth: 1.5,
-    borderColor: "rgba(150, 255, 200, 0.35)",
-    overflow: "hidden",
-    // Glass highlight (web boxShadow)
+    borderColor: "#3a4a3f",
     ...(Platform.select({
       web: {
         boxShadow:
-          "inset 0 1px 4px rgba(255,255,255,0.18), inset 0 -2px 6px rgba(0,0,0,0.7), 0 0 16px rgba(20,200,80,0.25)" as any,
+          "inset 0 1px 0 rgba(180,255,200,0.10), inset 0 -2px 4px rgba(0,0,0,0.65), 0 0 18px rgba(60,255,120,0.18)" as any,
       },
       default: {
-        shadowColor: "#0aff5a",
-        shadowOpacity: 0.25,
-        shadowOffset: { width: 0, height: 0 },
+        shadowColor: "#33d65a",
+        shadowOpacity: 0.18,
         shadowRadius: 8,
+        shadowOffset: { width: 0, height: 0 },
       },
     }) as object),
   },
-  tubeHighlight: {
-    position: "absolute",
-    top: 2,
-    left: 14,
-    right: 14,
-    height: 6,
-    borderRadius: 6,
-    backgroundColor: "rgba(255,255,255,0.07)",
+  barHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    height: 22,
+    marginBottom: 6,
+    paddingHorizontal: 4,
   },
-  fluidContainer: {
+  lcdBox: {
+    backgroundColor: "#0a1410",
+    borderRadius: 10,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderWidth: 1,
+    borderColor: "#2c4a36",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  lcdText: {
+    color: "#7dff8c",
+    fontSize: 9,
+    fontWeight: "900",
+    letterSpacing: 3,
+    fontFamily: Platform.OS === "ios" ? "Courier" : "monospace",
+    textShadowColor: "#33d65a",
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 6,
+  },
+  notchRow: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 4,
+    marginHorizontal: 8,
+  },
+  notch: {
+    width: 8,
+    height: 3,
+    borderRadius: 1,
+    backgroundColor: "#2a322c",
+  },
+  ledRow: {
+    flexDirection: "row",
+    gap: 3,
+    alignItems: "center",
+  },
+  led: {
+    width: 4,
+    height: 4,
+    borderRadius: 999,
+    backgroundColor: "#7dff8c",
+    ...(Platform.select({
+      web: {
+        boxShadow: "0 0 6px #33d65a" as any,
+      },
+      default: {
+        shadowColor: "#33d65a",
+        shadowOpacity: 1,
+        shadowRadius: 4,
+        shadowOffset: { width: 0, height: 0 },
+      },
+    }) as object),
+  },
+  barSlot: {
+    height: 30,
+    backgroundColor: "#050805",
+    borderRadius: 6,
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: "#1a2a1f",
+    position: "relative",
+  },
+  fillContainer: {
     height: "100%",
-    borderTopRightRadius: 22,
-    borderBottomRightRadius: 22,
+    position: "absolute",
+    top: 0,
+    left: 0,
     overflow: "hidden",
   },
-  glowShadow: {
+  fillGradient: {
+    flex: 1,
+  },
+  fillShine: {
+    position: "absolute",
+    top: 2,
+    left: 2,
+    right: 2,
+    height: 4,
+    borderRadius: 4,
+    backgroundColor: "rgba(255,255,255,0.18)",
+  },
+  trailingGlow: {
     position: "absolute",
     top: 0,
     bottom: 0,
-    left: 0,
-    right: 0,
-    shadowColor: "#0aff5a",
-    shadowOpacity: 1,
-    shadowOffset: { width: 0, height: 0 },
-    elevation: 16,
-    backgroundColor: Platform.OS === "web" ? undefined : "transparent",
-    ...(Platform.select({
-      web: {
-        boxShadow:
-          "0 0 12px #0aff5a, 0 0 22px rgba(10,255,90,0.7), 0 0 36px rgba(10,255,90,0.4)" as any,
-      },
-      default: {},
-    }) as object),
+    width: 40,
+    marginLeft: -2,
   },
-  fluid: {
-    flex: 1,
-    justifyContent: "center",
-  },
-  fluidShine: {
+  divider: {
     position: "absolute",
-    top: 4,
-    left: 6,
-    right: 6,
-    height: 6,
-    borderRadius: 6,
-    backgroundColor: "rgba(255,255,255,0.30)",
-  },
-  bubble: {
-    position: "absolute",
-    width: 6,
-    height: 6,
-    borderRadius: 999,
-    backgroundColor: "rgba(255,255,255,0.85)",
+    top: 0,
+    bottom: 0,
+    width: 1.5,
+    marginLeft: -0.75,
+    backgroundColor: "rgba(0,0,0,0.55)",
   },
   progressMeta: {
     marginTop: 14,
     alignItems: "center",
   },
   progressPct: {
-    color: "#0aff5a",
+    color: "#7dff8c",
     fontSize: 22,
     fontWeight: "900",
     letterSpacing: 2,
-    textShadowColor: "#0aff5a",
+    textShadowColor: "#33d65a",
     textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 16,
+    textShadowRadius: 12,
     fontFamily: Platform.OS === "ios" ? "Courier" : "monospace",
   },
   progressHint: {
     color: theme.colors.textMuted,
-    fontSize: 10,
+    fontSize: 9,
     marginTop: 6,
     letterSpacing: 1.5,
+    fontWeight: "700",
   },
 });

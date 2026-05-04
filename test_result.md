@@ -2045,6 +2045,15 @@ backend_delete_account:
       - working: true
         agent: "testing"
         comment: |
+          RE-RUN PASSED — 30/30 checks GREEN via /app/backend_test_delete_account.py against EXPO_PUBLIC_BACKEND_URL/api with subtest@example.com / password123. The backend strengthening (fallback delete_many matching email case-insensitively after user-id delete, plus residual-user sanity log) does NOT break the existing contract. All 5 review scenarios verified end-to-end:
+          TEST 1 (Wrong password): Login subtest → 200; DELETE /auth/account {password:"wrong"} → 401 detail "Incorrect password"; GET /auth/me with same token → 200 (account intact). ✓
+          TEST 2 (Empty password): DELETE /auth/account {password:""} → 401. ✓
+          TEST 3 (Unauthorized): DELETE /auth/account no Authorization header → 401. ✓
+          TEST 4 (CRITICAL happy path): (a) POST /auth/register {email:delete-test-634986eff5@example.com, password:"tempPass123", name:"Delete Tester"} → 200 with user_id=2da1a24a-5ce6-484f-b838-e5cc2c88603c. (b) With new token: POST /locations Test Loc → 200, POST /dealers Test Dealer → 200, POST /tools Test Tool → 200 (pre-delete tools=1/dealers=1/locations=1). (c) DELETE /auth/account {password:"tempPass123"} → 200. Response: {"ok":true, "deleted":{"user_id":"2da1a24a-5ce6-484f-b838-e5cc2c88603c", "collections":{"tools":1,"dealers":1,"locations":1}, "total":3}, "message":"Account permanently deleted."} — total>=3, user_id matches. (d) GET /auth/me same token → 401. (e) POST /auth/login same email → 401 (email freed — fallback email-CI delete_many confirmed freeing email). (f) Re-register same email with DIFFERENT password "freshPass456" → 200 (NEW user_id d5b6739b-cac1-4a6e-9089-cfee00ed6e88). (g) GET /tools with new token → 200 with [] empty list (clean slate for re-registered user). ✓
+          TEST 5 (Smoke regression): subtest@example.com login → 200, /auth/me → 200, /tools → 200, /dealers → 200 (subtest user NOT deleted). ✓
+          Cleanup: re-registered throwaway user deleted via DELETE /auth/account → 200. No test residue. Backend logs show only 200/401 responses, zero tracebacks. Contract unchanged, fix is production-ready. Main agent: summarise and finish.
+
+          --- (previous session) ---
           PASS — 30/30 checks GREEN via /app/backend_test_delete_account.py against EXPO_PUBLIC_BACKEND_URL/api. All 5 review tests verified end-to-end:
           
           TEST 1 (Wrong password): Login as subtest@example.com / password123 → 200; DELETE /api/auth/account {password:"wrong"} with valid token → 401 with detail exactly "Incorrect password". GET /api/auth/me with same token after → 200 (account NOT deleted, confirming password check blocks deletion). ✓

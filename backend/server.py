@@ -2961,15 +2961,51 @@ async def delete_account(
         await real_db.password_resets.delete_many({"user_id": uid})
     except Exception:
         pass
+    try:
+        await real_db.password_resets.delete_many({"email": (udoc.get("email") or "").lower()})
+    except Exception:
+        pass
 
-    # Finally remove the user record itself
+    # Finally remove the user record itself — by id AND by email (case-
+    # insensitive), so the email is GUARANTEED freed for re-registration
+    # even in the unlikely case of duplicate rows or case mismatches.
+    user_email_lower = (udoc.get("email") or "").strip().lower()
     try:
         await real_db.users.delete_one({"id": uid})
     except Exception as e:
-        logging.error("Delete-account: failed to delete user record: %s", e)
+        logging.error("Delete-account: failed to delete user record by id: %s", e)
         raise HTTPException(500, "Could not delete account record")
+    if user_email_lower:
+        try:
+            # Sweep any stragglers that match the email (case-insensitive).
+            email_re = {"$regex": f"^{re.escape(user_email_lower)}$", "$options": "i"}
+            extra = await real_db.users.delete_many({"email": email_re})
+            if getattr(extra, "deleted_count", 0):
+                logging.info(
+                    "Delete-account: cleaned %d stray user row(s) for email %s",
+                    extra.deleted_count,
+                    user_email_lower,
+                )
+        except Exception as e:
+            logging.warning("Delete-account: email sweep failed: %s", e)
 
-    logging.info("Account deleted: %s — %d records purged", uid, deleted["total"])
+    # Sanity check — log if any user with this email survived (should be 0)
+    try:
+        survivors = await real_db.users.count_documents(
+            {"email": {"$regex": f"^{re.escape(user_email_lower)}$", "$options": "i"}}
+            if user_email_lower
+            else {"id": uid}
+        )
+        if survivors:
+            logging.warning(
+                "Delete-account: %d residual user row(s) remain for %s — email may still be locked.",
+                survivors,
+                user_email_lower or uid,
+            )
+    except Exception:
+        pass
+
+    logging.info("Account deleted: %s (%s) — %d records purged", uid, user_email_lower, deleted["total"])
     return {"ok": True, "deleted": deleted, "message": "Account permanently deleted."}
 
 
