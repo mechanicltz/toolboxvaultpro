@@ -723,6 +723,11 @@ export default function ToolDetail() {
 </html>`;
 
     setShowPosterBuilder(false);
+    // Wait for the Poster Builder Modal to fully dismiss before invoking
+    // expo-print. iOS only allows one presented view controller at a time —
+    // calling Print.printToFileAsync mid-dismiss will hang silently. The
+    // 400ms wait covers the standard iOS modal dismissal animation (~330ms).
+    await new Promise((r) => setTimeout(r, 400));
     setPdfBusy(true);
     try {
       await printReportHtml(html, `${tool.name || "for-sale"}-poster-${Date.now()}`);
@@ -1905,16 +1910,22 @@ export default function ToolDetail() {
         </View>
       </Modal>
 
-      {/* PDF Generating overlay */}
-      <Modal visible={pdfBusy} transparent animationType="fade">
-        <View style={styles.modalBackdrop}>
+      {/* PDF Generating overlay — NOT a Modal. iOS only allows one presented
+          view controller at a time, and `expo-print` internally presents its
+          own VC. Wrapping this indicator in a <Modal> caused
+          Print.printToFileAsync to hang silently on iOS Expo Go (the Poster
+          generation symptom). An inline absolutely-positioned overlay does
+          not compete with iOS for the presented-VC slot, so the print job
+          and any error Alerts can mount normally on top of it. */}
+      {pdfBusy ? (
+        <View style={pickerStyles.busyOverlay} pointerEvents="auto">
           <View style={pickerStyles.busyCard}>
             <ActivityIndicator size="large" color={theme.colors.accent} />
             <Text style={pickerStyles.busyText}>Generating PDF…</Text>
             <Text style={pickerStyles.busySub}>This may take a moment for items with photos.</Text>
           </View>
         </View>
-      </Modal>
+      ) : null}
 
       {/* For-Sale Poster Builder Modal */}
       <Modal
@@ -2926,6 +2937,22 @@ const pickerStyles = StyleSheet.create({
     paddingHorizontal: 36,
     alignItems: "center",
     minWidth: 240,
+  },
+  busyOverlay: {
+    // Absolute, in-tree overlay (NOT a Modal). On iOS, only one presented
+    // view controller is allowed at a time — a Modal here would block
+    // expo-print's internal WKWebView VC from mounting, which is why the
+    // poster generation hung silently. Inline overlay sidesteps that.
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "rgba(0,0,0,0.65)",
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 9999,
+    elevation: 30,
   },
   busyText: {
     color: theme.colors.textPrimary,
