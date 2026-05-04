@@ -235,98 +235,25 @@ export default function InventoryScreen() {
   };
 
   const load = useCallback(async () => {
+    // Only `search` goes to the server. All other filters (status, location,
+    // tag, sort) are applied client-side via the `displayedTools` useMemo
+    // below, so changing them is instant — no network round-trip.
     const params: any = { search: search || undefined };
-    if (filter === "available") params.checked_out = false;
-    if (filter === "out") params.checked_out = true;
-    if (filter === "consumables") params.is_consumable = true;
-    if (filter === "for_sale") params.for_sale = true;
     try {
       const [t, a, w, cs, locs, tags, mu] = await Promise.all([
         api.listTools(params),
-        api.aggregate(params),
+        api.aggregate({}),
         prefs.warranty_alerts ? api.warrantyAlerts(60) : Promise.resolve({ expiring: [], expired: [] }),
         api.warrantyClaimsSummary().catch(() => ({ totals: { open: 0 } })),
         api.listLocations().catch(() => []),
         api.listTags().catch(() => []),
         api.upcomingMaintenance(60).catch(() => ({ overdue: [], due_soon: [] })),
       ]);
-      // Build maintenance tool id set (overdue + due_soon) — used for the badge count only
       const mItems: any[] = (mu as any)?.items || [];
       const mIds = new Set<string>(mItems.map((x: any) => x.tool_id));
       setMaintToolIds(mIds);
-      // Client-side filter for "lost" / "maintenance"
-      // - "maintenance" filter = ALL items that have ANY maintenance schedule (not just due ones)
-      let filteredTools =
-        filter === "lost"
-          ? t.filter((x: any) => x?.lost_status?.is_lost)
-          : filter === "maintenance"
-          ? t.filter(
-              (x: any) => Array.isArray(x?.maintenance) && x.maintenance.length > 0
-            )
-          : t;
-      // Apply location filter (selected location + all descendants)
-      if (locationFilter) {
-        const ids = new Set<string>([locationFilter]);
-        const queue = [locationFilter];
-        const allLocs = locs || [];
-        while (queue.length) {
-          const cur = queue.shift()!;
-          allLocs
-            .filter((l: any) => l.parent_id === cur)
-            .forEach((l: any) => {
-              if (!ids.has(l.id)) {
-                ids.add(l.id);
-                queue.push(l.id);
-              }
-            });
-        }
-        filteredTools = filteredTools.filter((x: any) => x.location_id && ids.has(x.location_id));
-      }
-      // Apply tag filter — tool must have at least one of the selected tags
-      if (tagFilter.length) {
-        const wanted = new Set(tagFilter);
-        filteredTools = filteredTools.filter((x: any) =>
-          Array.isArray(x.tag_ids) && x.tag_ids.some((tid: string) => wanted.has(tid))
-        );
-      }
-      // Apply sort selection (last step before setting state)
-      const _toTime = (s: any): number => {
-        if (!s) return 0;
-        const t = new Date(String(s)).getTime();
-        return isNaN(t) ? 0 : t;
-      };
-      const _toCost = (x: any): number => {
-        const n = parseFloat(String(x?.cost ?? 0));
-        return isNaN(n) ? 0 : n;
-      };
-      switch (sortBy) {
-        case "date_asc":
-          filteredTools.sort(
-            (a: any, b: any) =>
-              (_toTime(a.purchase_date) || _toTime(a.created_at)) -
-              (_toTime(b.purchase_date) || _toTime(b.created_at)),
-          );
-          break;
-        case "date_desc":
-          filteredTools.sort(
-            (a: any, b: any) =>
-              (_toTime(b.purchase_date) || _toTime(b.created_at)) -
-              (_toTime(a.purchase_date) || _toTime(a.created_at)),
-          );
-          break;
-        case "alpha":
-          filteredTools.sort((a: any, b: any) =>
-            String(a.name || "").localeCompare(String(b.name || ""), undefined, { sensitivity: "base" }),
-          );
-          break;
-        case "price_high":
-          filteredTools.sort((a: any, b: any) => _toCost(b) - _toCost(a));
-          break;
-        case "price_low":
-          filteredTools.sort((a: any, b: any) => _toCost(a) - _toCost(b));
-          break;
-      }
-      setTools(setCached("inv_tools", filteredTools));
+      // Raw master list — client-side filters apply to this.
+      setTools(setCached("inv_tools", t));
       setAgg(setCached("inv_agg", a));
       setWarningCount((w.expiring?.length || 0) + (w.expired?.length || 0));
       setOpenClaims(cs?.totals?.open || 0);
@@ -336,18 +263,115 @@ export default function InventoryScreen() {
     } catch (e) {
       console.error(e);
     }
-  }, [search, filter, prefs.warranty_alerts, locationFilter, tagFilter, sortBy]);
+  }, [search, prefs.warranty_alerts]);
+
+  // ---------------------------------------------------------------------------
+  // Client-side filtering / sorting. Applied to the master `tools` list every
+  // time any filter dep changes — runs in microseconds even for thousands of
+  // items, so the list updates instantly when the user picks a new status,
+  // location, tag, or sort. Network is only re-hit for search / refresh.
+  // ---------------------------------------------------------------------------
+  const displayedTools = useMemo(() => {
+    let out = tools;
+
+    // Status filter
+    if (filter === "available") out = out.filter((x: any) => !x.is_checked_out);
+    else if (filter === "out") out = out.filter((x: any) => x.is_checked_out);
+    else if (filter === "consumables") out = out.filter((x: any) => x.is_consumable);
+    else if (filter === "for_sale") out = out.filter((x: any) => x.for_sale && !x.is_sold);
+    else if (filter === "lost") out = out.filter((x: any) => x?.lost_status?.is_lost);
+    else if (filter === "maintenance")
+      out = out.filter(
+        (x: any) => Array.isArray(x?.maintenance) && x.maintenance.length > 0,
+      );
+
+    // Location filter (selected location + all descendants)
+    if (locationFilter) {
+      const ids = new Set<string>([locationFilter]);
+      const queue: string[] = [locationFilter];
+      while (queue.length) {
+        const cur = queue.shift()!;
+        (allLocations || [])
+          .filter((l: any) => l.parent_id === cur)
+          .forEach((l: any) => {
+            if (!ids.has(l.id)) {
+              ids.add(l.id);
+              queue.push(l.id);
+            }
+          });
+      }
+      out = out.filter((x: any) => x.location_id && ids.has(x.location_id));
+    }
+
+    // Tag filter
+    if (tagFilter.length) {
+      const wanted = new Set(tagFilter);
+      out = out.filter(
+        (x: any) =>
+          Array.isArray(x.tag_ids) &&
+          x.tag_ids.some((tid: string) => wanted.has(tid)),
+      );
+    }
+
+    // Sort
+    const _toTime = (s: any): number => {
+      if (!s) return 0;
+      const t = new Date(String(s)).getTime();
+      return isNaN(t) ? 0 : t;
+    };
+    const _toCost = (x: any): number => {
+      const n = parseFloat(String(x?.cost ?? 0));
+      return isNaN(n) ? 0 : n;
+    };
+    // Copy before sort so we don't mutate the master `tools` array.
+    const sorted = [...out];
+    switch (sortBy) {
+      case "date_asc":
+        sorted.sort(
+          (a: any, b: any) =>
+            (_toTime(a.purchase_date) || _toTime(a.created_at)) -
+            (_toTime(b.purchase_date) || _toTime(b.created_at)),
+        );
+        break;
+      case "date_desc":
+        sorted.sort(
+          (a: any, b: any) =>
+            (_toTime(b.purchase_date) || _toTime(b.created_at)) -
+            (_toTime(a.purchase_date) || _toTime(a.created_at)),
+        );
+        break;
+      case "alpha":
+        sorted.sort((a: any, b: any) =>
+          String(a.name || "").localeCompare(
+            String(b.name || ""),
+            undefined,
+            { sensitivity: "base" },
+          ),
+        );
+        break;
+      case "price_high":
+        sorted.sort((a: any, b: any) => _toCost(b) - _toCost(a));
+        break;
+      case "price_low":
+        sorted.sort((a: any, b: any) => _toCost(a) - _toCost(b));
+        break;
+    }
+    return sorted;
+  }, [tools, filter, locationFilter, tagFilter, sortBy, allLocations]);
 
   useFocusEffect(
     useCallback(() => {
       load();
-    }, [load])
+    }, [load]),
   );
 
+  // Re-fetch only when the search query changes (debounced).
+  // Status / location / tag / sort changes are handled instantly client-side
+  // by the `displayedTools` useMemo above — no network round-trip needed.
   useEffect(() => {
     const t = setTimeout(load, 250);
     return () => clearTimeout(t);
-  }, [search, filter, locationFilter, tagFilter, load]);
+  }, [search, load]);
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -559,7 +583,7 @@ export default function InventoryScreen() {
       )}
 
       <FlatList
-        data={tools}
+        data={displayedTools}
         keyExtractor={(i) => i.id}
         key={`grid-${gridCols}`}
         numColumns={gridCols}
