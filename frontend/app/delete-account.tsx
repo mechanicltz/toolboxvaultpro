@@ -122,15 +122,9 @@ export default function DeleteAccountScreen() {
   };
 
   const confirmAndDelete = () => {
-    Alert.alert(
-      "Last warning",
-      "This will PERMANENTLY destroy your account and all of its data. There is NO recovery.\n\nProceed with the deletion?",
-      [
-        { text: "Cancel", style: "cancel" },
-        { text: "DELETE FOREVER", style: "destructive", onPress: beginDeletion },
-      ],
-      { cancelable: true },
-    );
+    // No second alert — the first prompt on the MORE screen + the on-screen
+    // FINAL WARNING banner above is enough confirmation.
+    beginDeletion();
   };
 
   // Animated styles
@@ -284,15 +278,19 @@ export default function DeleteAccountScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.colors.bg },
-  body: { flex: 1, padding: 20 },
+  body: { flex: 1, padding: 20, justifyContent: "center" },
   warnCard: {
     backgroundColor: "#2a0d0d",
     borderColor: theme.colors.danger,
     borderWidth: 2,
     borderRadius: theme.radii.md,
-    padding: 18,
+    paddingVertical: 22,
+    paddingHorizontal: 18,
     marginBottom: 20,
     alignItems: "center",
+    alignSelf: "center",
+    width: "100%",
+    maxWidth: 380,
   },
   warnTitle: {
     color: theme.colors.danger,

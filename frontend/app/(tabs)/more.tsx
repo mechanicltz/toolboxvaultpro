@@ -358,12 +358,12 @@ export default function MoreScreen() {
           testID="more-delete-account"
           onPress={() => {
             Alert.alert(
-              "DELETE ACCOUNT?",
-              "Are you sure you want to delete your account?\n\nThis action CANNOT be undone. ALL of your data will be DESTROYED — every tool, photo, receipt, dealer, location, transaction, report, and preference will be permanently erased.",
+              "Delete Account",
+              "Are you sure you want to delete your account?",
               [
-                { text: "No, keep my account", style: "cancel" },
+                { text: "No", style: "cancel" },
                 {
-                  text: "Yes, continue",
+                  text: "Yes",
                   style: "destructive",
                   onPress: () => router.push("/delete-account" as any),
                 },
