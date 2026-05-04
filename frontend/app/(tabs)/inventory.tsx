@@ -94,6 +94,40 @@ export default function InventoryScreen() {
     return `${tagFilter.length} tags`;
   }, [tagFilter, allTags]);
 
+  // Status picker (replaces the horizontal chip scroller)
+  const [showStatusPicker, setShowStatusPicker] = useState(false);
+  const STATUS_OPTIONS = useMemo(
+    () => [
+      { k: "all", label: "ALL", icon: "apps" as const },
+      { k: "available", label: "AVAILABLE", icon: "checkmark-circle" as const },
+      { k: "out", label: "CHECKED OUT", icon: "log-out" as const },
+      {
+        k: "maintenance",
+        label: maintDueCount > 0 ? `MAINTENANCE (${maintDueCount})` : "MAINTENANCE",
+        icon: "build" as const,
+      },
+      { k: "consumables", label: "CONSUMABLES", icon: "cube" as const },
+      { k: "for_sale", label: "FOR SALE", icon: "pricetag" as const },
+      { k: "lost", label: "LOST / STOLEN", icon: "alert-circle" as const },
+    ],
+    [maintDueCount],
+  );
+  const statusLabel =
+    STATUS_OPTIONS.find((o) => o.k === filter)?.label || "ALL";
+
+  // Sort dropdown
+  type SortKey = "date_desc" | "date_asc" | "alpha" | "price_high" | "price_low";
+  const [sortBy, setSortBy] = useState<SortKey>("date_desc");
+  const [showSortPicker, setShowSortPicker] = useState(false);
+  const SORT_OPTIONS: { k: SortKey; label: string; icon: any }[] = [
+    { k: "date_desc", label: "DATE — NEWEST FIRST", icon: "arrow-down" },
+    { k: "date_asc", label: "DATE — OLDEST FIRST", icon: "arrow-up" },
+    { k: "alpha", label: "ALPHABETICAL (A → Z)", icon: "text" },
+    { k: "price_high", label: "PRICE — HIGH TO LOW", icon: "trending-down" },
+    { k: "price_low", label: "PRICE — LOW TO HIGH", icon: "trending-up" },
+  ];
+  const sortLabel = SORT_OPTIONS.find((o) => o.k === sortBy)?.label || "SORT";
+
   // Selected location + all its descendants
   const locationFilterIds = useMemo(() => {
     if (!locationFilter) return null;
@@ -255,6 +289,43 @@ export default function InventoryScreen() {
           Array.isArray(x.tag_ids) && x.tag_ids.some((tid: string) => wanted.has(tid))
         );
       }
+      // Apply sort selection (last step before setting state)
+      const _toTime = (s: any): number => {
+        if (!s) return 0;
+        const t = new Date(String(s)).getTime();
+        return isNaN(t) ? 0 : t;
+      };
+      const _toCost = (x: any): number => {
+        const n = parseFloat(String(x?.cost ?? 0));
+        return isNaN(n) ? 0 : n;
+      };
+      switch (sortBy) {
+        case "date_asc":
+          filteredTools.sort(
+            (a: any, b: any) =>
+              (_toTime(a.purchase_date) || _toTime(a.created_at)) -
+              (_toTime(b.purchase_date) || _toTime(b.created_at)),
+          );
+          break;
+        case "date_desc":
+          filteredTools.sort(
+            (a: any, b: any) =>
+              (_toTime(b.purchase_date) || _toTime(b.created_at)) -
+              (_toTime(a.purchase_date) || _toTime(a.created_at)),
+          );
+          break;
+        case "alpha":
+          filteredTools.sort((a: any, b: any) =>
+            String(a.name || "").localeCompare(String(b.name || ""), undefined, { sensitivity: "base" }),
+          );
+          break;
+        case "price_high":
+          filteredTools.sort((a: any, b: any) => _toCost(b) - _toCost(a));
+          break;
+        case "price_low":
+          filteredTools.sort((a: any, b: any) => _toCost(a) - _toCost(b));
+          break;
+      }
       setTools(setCached("inv_tools", filteredTools));
       setAgg(setCached("inv_agg", a));
       setWarningCount((w.expiring?.length || 0) + (w.expired?.length || 0));
@@ -265,7 +336,7 @@ export default function InventoryScreen() {
     } catch (e) {
       console.error(e);
     }
-  }, [search, filter, prefs.warranty_alerts, locationFilter, tagFilter]);
+  }, [search, filter, prefs.warranty_alerts, locationFilter, tagFilter, sortBy]);
 
   useFocusEffect(
     useCallback(() => {
@@ -334,118 +405,149 @@ export default function InventoryScreen() {
         </TouchableOpacity>
       </View>
 
-      <View style={styles.filterWrap}>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.filterRow}
+      {/* Filter / sort dropdowns — Status · Location · Tag · Sort */}
+      <View style={styles.filterDropdownRow}>
+        <TouchableOpacity
+          testID="status-filter-btn"
+          style={[
+            styles.locationFilterBtn,
+            { flex: 1, minWidth: 0 },
+            filter !== "all" && styles.locationFilterBtnActive,
+          ]}
+          onPress={() => setShowStatusPicker(true)}
+          activeOpacity={0.7}
         >
-          {[
-            { k: "all", label: "ALL" },
-            { k: "available", label: "AVAILABLE" },
-            { k: "out", label: "CHECKED OUT" },
-            { k: "maintenance", label: maintDueCount > 0 ? `MAINT (${maintDueCount})` : "MAINT" },
-            { k: "consumables", label: "CONSUMABLES" },
-            { k: "for_sale", label: "FOR SALE" },
-            { k: "lost", label: "LOST/STOLEN" },
-          ].map((f) => (
+          <Ionicons
+            name="filter"
+            size={12}
+            color={filter !== "all" ? theme.colors.accent : theme.colors.textMuted}
+          />
+          <Text
+            style={[
+              styles.locationFilterText,
+              filter !== "all" && styles.locationFilterTextActive,
+            ]}
+            numberOfLines={1}
+          >
+            {statusLabel}
+          </Text>
+          <Ionicons name="chevron-down" size={12} color={theme.colors.textMuted} />
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          testID="location-filter-btn"
+          style={[
+            styles.locationFilterBtn,
+            { flex: 1, minWidth: 0 },
+            locationFilter && styles.locationFilterBtnActive,
+          ]}
+          onPress={() => setShowLocationPicker(true)}
+          activeOpacity={0.7}
+        >
+          <Ionicons
+            name="location"
+            size={12}
+            color={locationFilter ? theme.colors.accent : theme.colors.textMuted}
+          />
+          <Text
+            style={[
+              styles.locationFilterText,
+              locationFilter && styles.locationFilterTextActive,
+            ]}
+            numberOfLines={1}
+          >
+            {selectedLocationName || "Locations"}
+          </Text>
+          {locationFilter ? (
             <TouchableOpacity
-              key={f.k}
-              testID={`filter-${f.k}`}
-              onPress={() => setFilter(f.k as any)}
-              style={[styles.chip, filter === f.k && styles.chipActive]}
+              testID="location-filter-clear"
+              onPress={(e) => {
+                e.stopPropagation();
+                setLocationFilter(null);
+              }}
+              hitSlop={6}
             >
-              <Text style={[styles.chipText, filter === f.k && styles.chipTextActive]}>
-                {f.label}
-              </Text>
+              <Ionicons name="close-circle" size={14} color={theme.colors.accent} />
             </TouchableOpacity>
-          ))}
-        </ScrollView>
-      </View>
+          ) : (
+            <Ionicons name="chevron-down" size={12} color={theme.colors.textMuted} />
+          )}
+        </TouchableOpacity>
 
-      {/* Location + Tag filter row */}
-      <View style={styles.locationFilterRow}>
-        <View style={{ flexDirection: "row", gap: 8 }}>
-          <TouchableOpacity
-            testID="location-filter-btn"
+        <TouchableOpacity
+          testID="tag-filter-btn"
+          style={[
+            styles.locationFilterBtn,
+            { flex: 1, minWidth: 0 },
+            tagFilter.length > 0 && styles.locationFilterBtnActive,
+          ]}
+          onPress={() => setShowTagPicker(true)}
+          activeOpacity={0.7}
+        >
+          <Ionicons
+            name="pricetag"
+            size={12}
+            color={tagFilter.length ? theme.colors.accent : theme.colors.textMuted}
+          />
+          <Text
             style={[
-              styles.locationFilterBtn,
-              { flex: 1 },
-              locationFilter && styles.locationFilterBtnActive,
+              styles.locationFilterText,
+              tagFilter.length > 0 && styles.locationFilterTextActive,
             ]}
-            onPress={() => setShowLocationPicker(true)}
-            activeOpacity={0.7}
+            numberOfLines={1}
           >
-            <Ionicons
-              name="location"
-              size={14}
-              color={locationFilter ? theme.colors.accent : theme.colors.textMuted}
-            />
-            <Text
-              style={[
-                styles.locationFilterText,
-                locationFilter && styles.locationFilterTextActive,
-              ]}
-              numberOfLines={1}
+            {tagFilterLabel}
+          </Text>
+          {tagFilter.length > 0 ? (
+            <TouchableOpacity
+              testID="tag-filter-clear"
+              onPress={(e) => {
+                e.stopPropagation();
+                setTagFilter([]);
+              }}
+              hitSlop={6}
             >
-              {selectedLocationName || "All Locations"}
-            </Text>
-            {locationFilter ? (
-              <TouchableOpacity
-                testID="location-filter-clear"
-                onPress={(e) => {
-                  e.stopPropagation();
-                  setLocationFilter(null);
-                }}
-                hitSlop={8}
-              >
-                <Ionicons name="close-circle" size={16} color={theme.colors.accent} />
-              </TouchableOpacity>
-            ) : (
-              <Ionicons name="chevron-down" size={14} color={theme.colors.textMuted} />
-            )}
-          </TouchableOpacity>
+              <Ionicons name="close-circle" size={14} color={theme.colors.accent} />
+            </TouchableOpacity>
+          ) : (
+            <Ionicons name="chevron-down" size={12} color={theme.colors.textMuted} />
+          )}
+        </TouchableOpacity>
 
-          <TouchableOpacity
-            testID="tag-filter-btn"
+        <TouchableOpacity
+          testID="sort-filter-btn"
+          style={[
+            styles.locationFilterBtn,
+            { flex: 1, minWidth: 0 },
+            sortBy !== "date_desc" && styles.locationFilterBtnActive,
+          ]}
+          onPress={() => setShowSortPicker(true)}
+          activeOpacity={0.7}
+        >
+          <Ionicons
+            name="swap-vertical"
+            size={12}
+            color={sortBy !== "date_desc" ? theme.colors.accent : theme.colors.textMuted}
+          />
+          <Text
             style={[
-              styles.locationFilterBtn,
-              { flex: 1 },
-              tagFilter.length > 0 && styles.locationFilterBtnActive,
+              styles.locationFilterText,
+              sortBy !== "date_desc" && styles.locationFilterTextActive,
             ]}
-            onPress={() => setShowTagPicker(true)}
-            activeOpacity={0.7}
+            numberOfLines={1}
           >
-            <Ionicons
-              name="pricetag"
-              size={14}
-              color={tagFilter.length ? theme.colors.accent : theme.colors.textMuted}
-            />
-            <Text
-              style={[
-                styles.locationFilterText,
-                tagFilter.length > 0 && styles.locationFilterTextActive,
-              ]}
-              numberOfLines={1}
-            >
-              {tagFilterLabel}
-            </Text>
-            {tagFilter.length > 0 ? (
-              <TouchableOpacity
-                testID="tag-filter-clear"
-                onPress={(e) => {
-                  e.stopPropagation();
-                  setTagFilter([]);
-                }}
-                hitSlop={8}
-              >
-                <Ionicons name="close-circle" size={16} color={theme.colors.accent} />
-              </TouchableOpacity>
-            ) : (
-              <Ionicons name="chevron-down" size={14} color={theme.colors.textMuted} />
-            )}
-          </TouchableOpacity>
-        </View>
+            {sortBy === "date_desc"
+              ? "NEWEST"
+              : sortBy === "date_asc"
+                ? "OLDEST"
+                : sortBy === "alpha"
+                  ? "A → Z"
+                  : sortBy === "price_high"
+                    ? "$ HIGH"
+                    : "$ LOW"}
+          </Text>
+          <Ionicons name="chevron-down" size={12} color={theme.colors.textMuted} />
+        </TouchableOpacity>
       </View>
 
       {prefs.show_details_summary && agg && (
@@ -916,8 +1018,97 @@ export default function InventoryScreen() {
         </View>
       </Modal>
 
+      {/* Filter: Status picker modal */}
+      <Modal
+        visible={showStatusPicker}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowStatusPicker(false)}
+      >
+        <View style={styles.modalBg}>
+          <View style={styles.modalSheet}>
+            <Text style={styles.modalTitle}>FILTER BY STATUS</Text>
+            <ScrollView style={{ maxHeight: 460 }}>
+              {STATUS_OPTIONS.map((o) => {
+                const isActive = filter === o.k;
+                return (
+                  <TouchableOpacity
+                    key={o.k}
+                    testID={`status-filter-${o.k}`}
+                    style={[styles.locOption, isActive && styles.locOptionActive]}
+                    onPress={() => {
+                      setFilter(o.k as any);
+                      setShowStatusPicker(false);
+                    }}
+                  >
+                    <Ionicons
+                      name={o.icon}
+                      size={16}
+                      color={isActive ? theme.colors.accent : theme.colors.textMuted}
+                    />
+                    <Text style={[styles.locOptName, isActive && { color: theme.colors.accent }]}>
+                      {o.label}
+                    </Text>
+                    {isActive && (
+                      <Ionicons name="checkmark" size={16} color={theme.colors.accent} />
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+            <TouchableOpacity style={styles.btnGhost} onPress={() => setShowStatusPicker(false)}>
+              <Text style={styles.btnGhostText}>CLOSE</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
 
-      {/* Bulk: Move location modal */}
+      {/* Filter: Sort picker modal */}
+      <Modal
+        visible={showSortPicker}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowSortPicker(false)}
+      >
+        <View style={styles.modalBg}>
+          <View style={styles.modalSheet}>
+            <Text style={styles.modalTitle}>SORT BY</Text>
+            <ScrollView style={{ maxHeight: 460 }}>
+              {SORT_OPTIONS.map((o) => {
+                const isActive = sortBy === o.k;
+                return (
+                  <TouchableOpacity
+                    key={o.k}
+                    testID={`sort-filter-${o.k}`}
+                    style={[styles.locOption, isActive && styles.locOptionActive]}
+                    onPress={() => {
+                      setSortBy(o.k);
+                      setShowSortPicker(false);
+                    }}
+                  >
+                    <Ionicons
+                      name={o.icon}
+                      size={16}
+                      color={isActive ? theme.colors.accent : theme.colors.textMuted}
+                    />
+                    <Text style={[styles.locOptName, isActive && { color: theme.colors.accent }]}>
+                      {o.label}
+                    </Text>
+                    {isActive && (
+                      <Ionicons name="checkmark" size={16} color={theme.colors.accent} />
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+            <TouchableOpacity style={styles.btnGhost} onPress={() => setShowSortPicker(false)}>
+              <Text style={styles.btnGhostText}>CLOSE</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+
       <Modal visible={showBulkLocation} transparent animationType="slide" onRequestClose={() => setShowBulkLocation(false)}>
         <View style={styles.modalBg}>
           <View style={styles.modalSheet}>
@@ -1157,6 +1348,13 @@ const styles = StyleSheet.create({
   searchInput: { flex: 1, color: theme.colors.textPrimary, fontSize: 11 },
   filterWrap: { maxHeight: 56, paddingVertical: 4 },
   filterRow: { paddingHorizontal: 20, paddingVertical: 8, gap: 8, alignItems: "center" },
+  filterDropdownRow: {
+    flexDirection: "row",
+    paddingHorizontal: 16,
+    paddingTop: 6,
+    paddingBottom: 8,
+    gap: 6,
+  },
   locationFilterRow: {
     paddingHorizontal: 20,
     paddingTop: 0,
@@ -1165,8 +1363,8 @@ const styles = StyleSheet.create({
   locationFilterBtn: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
-    paddingHorizontal: 12,
+    gap: 4,
+    paddingHorizontal: 8,
     paddingVertical: 8,
     borderRadius: theme.radii.sm,
     backgroundColor: theme.colors.surface,
@@ -1180,9 +1378,9 @@ const styles = StyleSheet.create({
   locationFilterText: {
     flex: 1,
     color: theme.colors.textSecondary,
-    fontSize: 9,
-    fontWeight: "700",
-    letterSpacing: 1,
+    fontSize: 8,
+    fontWeight: "800",
+    letterSpacing: 0.8,
   },
   locationFilterTextActive: {
     color: theme.colors.accent,
