@@ -334,10 +334,23 @@ metadata:
 
 test_plan:
   current_focus:
-    - "AI Receipt Scanner — POST /api/ai/receipt-scan (smoke test)"
+    - "Reports — include_receipts toggle (PDF appendix) for inventory/insurance/sales"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
+
+backend_include_receipts:
+  - task: "Reports — include_receipts toggle (PDF appendix) for inventory/insurance/sales"
+    implemented: true
+    working: false
+    file: "/app/backend/reports.py"
+    stuck_count: 1
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: false
+        agent: "testing"
+        comment: "TESTED via /app/backend_test_include_receipts.py against EXPO_PUBLIC_BACKEND_URL/api with subtest@example.com / password123. 11/14 PASS, 3/14 FAIL.\n\n  PASS:\n  (1) GET /api/reports/spec — `include_receipts` toggle is present in inventory, insurance, AND sales options_schema; each entry has id='include_receipts', type='toggle', default=False ✓\n  (2) Inventory PDF WITHOUT receipts (regression): POST /api/reports/render {report_type:'inventory', format:'pdf', options:{}} → 200, content-type application/pdf, payload starts with %PDF, L1=42932 bytes ✓\n  Tool creation with receipts: POST /api/tools {name:'ReceiptTest Drill', quantity:1, cost:99.99, receipts:[<1x1 PNG b64>]} → 200, then GET /api/tools/{id} confirms `receipts` is a list with exactly 1 entry — the receipts field IS persisted correctly. ✓\n  PUT /api/tools/{id} {for_sale:true, sale_price:50} → 200 ✓\n  Smoke regression: GET /api/auth/me, GET /api/tools, GET /api/dealers all 200 ✓\n  DELETE /api/tools/{id} cleanup ✓\n\n  FAIL — CRITICAL BUG (blocking the entire include_receipts feature):\n  (3) Inventory PDF WITH receipts: POST /api/reports/render {report_type:'inventory', format:'pdf', options:{include_receipts:true}} → HTTP 500 with body {\"detail\":\"PDF generation failed: 'normal'\"}\n  (4) Insurance PDF WITH receipts: POST {report_type:'insurance', format:'pdf', options:{include_receipts:true, include_personal:false}} → HTTP 500 same 'normal' error\n  (5) Sales PDF (listed) WITH receipts: POST {report_type:'sales', format:'pdf', options:{sales_mode:'listed', include_receipts:true}} → HTTP 500 same error\n\n  ROOT CAUSE — KeyError 'normal' inside `_build_receipt_pages()` at /app/backend/reports.py L787:\n  ```python\n  header_style = ParagraphStyle(\n      \"ReceiptHeader\",\n      parent=st[\"normal\"],   # ← KeyError: 'normal'\n      ...\n  )\n  ```\n  The `_styles()` factory at L255-355 builds a dict with these keys ONLY: title, title_sub, section, subsection, muted, small, small_right, small_bold_right, th, th_right, stat_l, stat_l_dark, stat_v, pi_name, pi_line, pi_line_right, flyer_name, flyer_price, ribbon, spec_l, spec_v, footer. There is NO `\"normal\"` key. Whenever `include_receipts=true` and at least one receipt exists, the call chain `render_pdf → _build_receipt_pages → ParagraphStyle(parent=st['normal'])` raises KeyError, which is caught by the outer try/except in render_pdf (L1868) and re-raised as 'PDF generation failed: normal' HTTP 500.\n\n  FIX (one-line at /app/backend/reports.py L787, MUST be done by main agent — testing agent is not permitted to fix beyond minor test plumbing):\n  Replace `parent=st[\"normal\"]` with `parent=st[\"small\"]` (or equivalently add a 'normal' style to the _styles() dict). Same applies to L795 IF the bug pattern repeats — but L795 already uses `parent=st[\"small\"]` correctly.\n\n  After fix, re-run /app/backend_test_include_receipts.py — expect 14/14 PASS including: L2 > L1 (PDF with receipts must be larger than PDF without), /tmp/inv_with_receipts.pdf saved as a valid %PDF file, and the insurance/sales PDFs.\n\n  Confirmed: receipts field on Tool model persists correctly (the previous-round work is intact). The bug is purely in the new _build_receipt_pages flowable factory."
 
 backend_ai_receipt_scan:
   - task: "AI Receipt Scanner — POST /api/ai/receipt-scan (smoke test)"

@@ -736,6 +736,98 @@ def _footer_painter(canvas, doc):
     canvas.restoreState()
 
 
+def _build_receipt_pages(
+    receipts_meta: List[Dict[str, Any]],
+    spec: ReportSpec,
+    st: Dict[str, ParagraphStyle],
+) -> List[Any]:
+    """Build flowable list for the appended receipt pages.
+
+    Each page has:
+      - A header line: "RECEIPT #<i> · <ITEM-NO> — <TOOL NAME> · Serial: <SERIAL>"
+      - The receipt image, fitted to the available page area.
+
+    receipts_meta: list of {item_no, tool_name, serial, image_b64}.
+    """
+    if not receipts_meta:
+        return []
+    flow: List[Any] = []
+    # A new page after the main report content
+    flow.append(PageBreak())
+
+    # Section opener
+    cover_title = ParagraphStyle(
+        "ReceiptCoverTitle",
+        parent=st["title"],
+        fontSize=20,
+        textColor=colors.HexColor(spec.accent),
+        alignment=TA_CENTER,
+        spaceAfter=10,
+    )
+    cover_sub = ParagraphStyle(
+        "ReceiptCoverSub",
+        parent=st["small"],
+        fontSize=10,
+        textColor=colors.HexColor("#666666"),
+        alignment=TA_CENTER,
+        spaceAfter=24,
+    )
+    flow.append(Paragraph("RECEIPTS APPENDIX", cover_title))
+    flow.append(
+        Paragraph(
+            f"{len(receipts_meta)} receipt"
+            f"{'s' if len(receipts_meta) != 1 else ''} attached",
+            cover_sub,
+        )
+    )
+
+    # Header style for each receipt page
+    header_style = ParagraphStyle(
+        "ReceiptHeader",
+        parent=st["normal"],
+        fontSize=11,
+        leading=14,
+        textColor=colors.HexColor("#111111"),
+        spaceAfter=6,
+    )
+    sub_style = ParagraphStyle(
+        "ReceiptSub",
+        parent=st["small"],
+        fontSize=9,
+        textColor=colors.HexColor("#666666"),
+        spaceAfter=10,
+    )
+
+    # Available area on letter page minus margins (0.5" each side)
+    page_w_pt = letter[0] - 1.0 * inch
+    img_max_h = letter[1] - 1.5 * inch  # leave room for the header
+
+    for i, m in enumerate(receipts_meta):
+        if i > 0:
+            flow.append(PageBreak())
+        title_html = (
+            f"<b>RECEIPT #{i + 1}</b> &nbsp;&middot;&nbsp; Item <b>#{m.get('item_no', '?')}</b>"
+            f" &mdash; {esc(m.get('tool_name') or '(unnamed)')}"
+        )
+        sub_html = (
+            f"Serial: <b>{esc(m.get('serial') or '—')}</b>"
+            f"&nbsp;&nbsp;|&nbsp;&nbsp;Receipt {m.get('receipt_idx', 1)} of {m.get('receipt_total', 1)} for this item"
+        )
+        flow.append(Paragraph(title_html, header_style))
+        flow.append(Paragraph(sub_html, sub_style))
+        img = _fit_image(m.get("image_b64") or "", page_w_pt, img_max_h, max_px=1600)
+        if img is not None:
+            flow.append(img)
+        else:
+            flow.append(
+                Paragraph(
+                    "<i>(receipt image could not be rendered — corrupt or unsupported format)</i>",
+                    sub_style,
+                )
+            )
+    return flow
+
+
 def render_pdf(spec: ReportSpec, cols: List[Column],
                fetch_result: Dict[str, Any]) -> bytes:
     """Render a PDF for the given spec + chosen columns + fetch_result."""
@@ -768,6 +860,11 @@ def render_pdf(spec: ReportSpec, cols: List[Column],
         story.extend(body_factory(st))
     else:
         story.append(_data_table(cols, rows, spec.accent, st))
+
+    # Append receipt pages if requested (one page per receipt photo)
+    receipts_meta = fetch_result.get("receipts_meta") or []
+    if receipts_meta:
+        story.extend(_build_receipt_pages(receipts_meta, spec, st))
 
     buf = io.BytesIO()
     doc = SimpleDocTemplate(
@@ -863,12 +960,39 @@ def _normalise_tool_row(t: Dict[str, Any]) -> Dict[str, Any]:
         "cost": round(unit_cost * qty, 2),  # EXTENDED cost (qty × unit)
         "quantity": qty,
         "photo": photo,
+        "receipts": t.get("receipts") or [],
     }
 
 
 # ---------------------------------------------------------------------------
 # Fetchers
 # ---------------------------------------------------------------------------
+
+def _build_receipts_meta(rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """Helper for fetchers — extract per-receipt metadata for the appendix.
+
+    Returns a list of {item_no, tool_name, serial, image_b64, receipt_idx,
+    receipt_total} entries, one per receipt photo across all rows that have
+    receipts. item_no is the 1-based index of the tool in the report.
+    """
+    out: List[Dict[str, Any]] = []
+    for row_idx, r in enumerate(rows, start=1):
+        photos = r.get("receipts") or []
+        if not isinstance(photos, list) or not photos:
+            continue
+        for j, img in enumerate(photos, start=1):
+            if not img:
+                continue
+            out.append({
+                "item_no": row_idx,
+                "tool_name": r.get("name") or "(unnamed)",
+                "serial": r.get("serial") or "",
+                "image_b64": img,
+                "receipt_idx": j,
+                "receipt_total": len(photos),
+            })
+    return out
+
 
 def _date_range_subtitle(start: str, end: str) -> str:
     """Returns a human-readable date-range string for a report subtitle.
@@ -1043,7 +1167,10 @@ async def _fetch_insurance(db, user, options: Dict[str, Any]) -> Dict[str, Any]:
         ("Total Items", items_label, False),
         ("Total Value", fmt_money(total_value), True),
     ]
-    return {"rows": rows, "stats": stats, "personal_info": pi}
+    out: Dict[str, Any] = {"rows": rows, "stats": stats, "personal_info": pi}
+    if options.get("include_receipts"):
+        out["receipts_meta"] = _build_receipts_meta(rows)
+    return out
 
 
 # ---- INVENTORY ----------------------------------------------------------------
@@ -1093,7 +1220,10 @@ async def _fetch_inventory(db, user, options: Dict[str, Any]) -> Dict[str, Any]:
         ("Total Items", items_label, False),
         ("Total Cost", fmt_money(total), True),
     ]
-    return {"rows": rows, "stats": stats}
+    out: Dict[str, Any] = {"rows": rows, "stats": stats}
+    if options.get("include_receipts"):
+        out["receipts_meta"] = _build_receipts_meta(rows)
+    return out
 
 
 # ---- SALES --------------------------------------------------------------------
@@ -1151,7 +1281,10 @@ async def _fetch_sales(db, user, options: Dict[str, Any]) -> Dict[str, Any]:
     if layout == "per_item":
         body_factory = _make_sales_per_item_factory(rows, mode, options)
 
-    return {"rows": rows, "stats": stats, "body_factory": body_factory}
+    out: Dict[str, Any] = {"rows": rows, "stats": stats, "body_factory": body_factory}
+    if options.get("include_receipts"):
+        out["receipts_meta"] = _build_receipts_meta(rows)
+    return out
 
 
 def _make_sales_per_item_factory(rows: List[Dict[str, Any]], mode: str,
@@ -1554,6 +1687,9 @@ REPORTS: Dict[str, ReportSpec] = {
         options_schema=[
             {"id": "include_personal", "type": "toggle",
              "label": "Include personal / address info", "default": True},
+            {"id": "include_receipts", "type": "toggle",
+             "label": "Append receipts (one page per receipt)",
+             "default": False},
         ],
     ),
     "inventory": ReportSpec(
@@ -1573,6 +1709,9 @@ REPORTS: Dict[str, ReportSpec] = {
              "choices": ["", "New", "Like New", "Good", "Fair", "Poor"]},
             {"id": "date_from", "type": "date", "label": "Purchased From"},
             {"id": "date_to", "type": "date", "label": "Purchased To"},
+            {"id": "include_receipts", "type": "toggle",
+             "label": "Append receipts (one page per receipt)",
+             "default": False},
         ],
     ),
     "sales": ReportSpec(
@@ -1599,6 +1738,9 @@ REPORTS: Dict[str, ReportSpec] = {
              "default": "table"},
             {"id": "date_from", "type": "date", "label": "From"},
             {"id": "date_to", "type": "date", "label": "To"},
+            {"id": "include_receipts", "type": "toggle",
+             "label": "Append receipts (one page per receipt)",
+             "default": False},
         ],
     ),
     "account": ReportSpec(

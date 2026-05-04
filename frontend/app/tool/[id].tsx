@@ -363,6 +363,22 @@ export default function ToolDetail() {
   };
 
   const exportPdf = async () => {
+    const hasReceipts = Array.isArray(tool.receipts) && tool.receipts.length > 0;
+    if (hasReceipts) {
+      Alert.alert(
+        "Include receipts?",
+        `This item has ${tool.receipts.length} receipt${tool.receipts.length === 1 ? "" : "s"} attached. Include them in the printout (each on its own page)?`,
+        [
+          { text: "No", onPress: () => doExportPdf(false), style: "cancel" },
+          { text: "Yes, include", onPress: () => doExportPdf(true) },
+        ],
+      );
+    } else {
+      doExportPdf(false);
+    }
+  };
+
+  const doExportPdf = async (includeReceipts: boolean) => {
     const esc = (s: any) => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;");
     const photoTags = (tool.photos || [])
       .slice(0, 4)
@@ -374,6 +390,26 @@ export default function ToolDetail() {
           `<tr><td>${esc(h.borrower_name)}</td><td>${esc(formatDateUS(h.checked_out_at))}</td><td>${esc(formatDateUS(h.checked_in_at))}</td></tr>`
       )
       .join("");
+    // Build per-receipt pages — each on its own page with a header line.
+    const receipts: string[] = Array.isArray(tool.receipts) ? tool.receipts : [];
+    const receiptPages =
+      includeReceipts && receipts.length > 0
+        ? receipts
+            .map(
+              (r: string, i: number) => `
+              <div style="page-break-before:always;padding-top:8px">
+                <h2 style="font-size:18px;border-bottom:2px solid #FFB300;padding-bottom:6px;letter-spacing:1px">
+                  RECEIPT ${i + 1} OF ${receipts.length}
+                </h2>
+                <div style="font-size:11px;color:#444;margin:4px 0 12px 0">
+                  <b>${esc(tool.name) || "(unnamed)"}</b>
+                  &nbsp;&middot;&nbsp; Serial: <b>${esc(tool.serial_number) || "—"}</b>
+                </div>
+                <img src="${r}" style="display:block;max-width:100%;max-height:88vh;margin:0 auto;border:1px solid #ddd"/>
+              </div>`,
+            )
+            .join("")
+        : "";
     const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><style>
       body{font-family:Helvetica;margin:24px;color:#111}
       h1{font-size:22px;letter-spacing:2px;text-transform:uppercase;border-bottom:3px solid #FFB300;padding-bottom:8px}
@@ -400,6 +436,7 @@ export default function ToolDetail() {
       </div>
       ${photoTags ? `<h3 style="margin-top:20px">Photos</h3><div>${photoTags}</div>` : ""}
       ${history ? `<h3 style="margin-top:20px">Checkout History</h3><table><thead><tr><th>Borrower</th><th>Out</th><th>In</th></tr></thead><tbody>${history}</tbody></table>` : ""}
+      ${receiptPages}
     </body></html>`;
     try {
       await printReportHtml(html, `${tool.name || "tool"}-${Date.now()}`);
