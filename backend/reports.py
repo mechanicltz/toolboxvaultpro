@@ -576,12 +576,30 @@ def _data_table(cols: List[Column], rows: List[Dict[str, Any]],
         textColor=colors.HexColor("#888888"),
     )
 
-    # Data rows
+    # Data rows. Rows with `_section_header=True` are rendered as a single
+    # cell spanning all columns — used to group claims by dealer, etc.
     data: List[List[Any]] = [header]
-    for r_i, r in enumerate(rows):
-        cells: List[Any] = []
+    section_row_indices: List[int] = []
+    section_label_style = ParagraphStyle(
+        "section_label", parent=st["th"],
+        fontName="Helvetica-Bold", fontSize=10,
+        textColor=colors.HexColor("#000000"),
+        leading=12,
+    )
+    data_row_counter = 0
+    for r in rows:
+        if r.get("_section_header"):
+            label = str(r.get("_section_label") or "")
+            row_idx = len(data)
+            section_row_indices.append(row_idx)
+            cell = _para(esc(label.upper()), section_label_style)
+            cells: List[Any] = [cell] + [""] * (len(header) - 1)
+            data.append(cells)
+            continue
+        data_row_counter += 1
+        cells = []
         if show_index:
-            cells.append(_para(str(r_i + 1), idx_body_style))
+            cells.append(_para(str(data_row_counter), idx_body_style))
         for i, c in enumerate(cols):
             cell_idx = i + idx_off
             if c.type == "image":
@@ -595,11 +613,18 @@ def _data_table(cols: List[Column], rows: List[Dict[str, Any]],
                     cells.append(img)
             else:
                 v = str(cell_value(c, r))
-                v = _truncate_to_fit(v, "Helvetica", 9, col_w[cell_idx] - 6)
-                if c.align == "right":
-                    cells.append(_para(esc(v), st["small_right"]))
+                # Multi-line cells (e.g. set serials) — preserve line breaks
+                # by emitting <br/> between escaped lines, no truncation.
+                if "\n" in v:
+                    lines = [esc(p) for p in v.split("\n")]
+                    html = "<br/>".join(lines)
+                    cells.append(_para(html, st["small_right"] if c.align == "right" else st["small"]))
                 else:
-                    cells.append(_para(esc(v), st["small"]))
+                    v = _truncate_to_fit(v, "Helvetica", 9, col_w[cell_idx] - 6)
+                    if c.align == "right":
+                        cells.append(_para(esc(v), st["small_right"]))
+                    else:
+                        cells.append(_para(esc(v), st["small"]))
         data.append(cells)
 
     # Footer / totals
@@ -657,12 +682,28 @@ def _data_table(cols: List[Column], rows: List[Dict[str, Any]],
     # Alternating row backgrounds (skip the # column to keep its grey)
     body_end = len(data) - (1 if has_total else 0)
     for ri in range(1, body_end):
+        if ri in section_row_indices:
+            continue
         if ri % 2 == 0:
             style_cmds.append((
                 "BACKGROUND",
                 (idx_off, ri), (-1, ri),
                 colors.HexColor("#fafafa"),
             ))
+    # Section header rows: span all columns + accent background
+    for ri in section_row_indices:
+        style_cmds += [
+            ("SPAN", (0, ri), (-1, ri)),
+            ("BACKGROUND", (0, ri), (-1, ri), accent),
+            ("LEFTPADDING", (0, ri), (-1, ri), 8),
+            ("RIGHTPADDING", (0, ri), (-1, ri), 8),
+            ("TOPPADDING", (0, ri), (-1, ri), 7),
+            ("BOTTOMPADDING", (0, ri), (-1, ri), 7),
+            ("LINEBEFORE", (0, ri), (0, ri), 0, colors.transparent),
+            ("LINEAFTER", (-1, ri), (-1, ri), 0, colors.transparent),
+            ("ALIGN", (0, ri), (-1, ri), "LEFT"),
+            ("VALIGN", (0, ri), (-1, ri), "MIDDLE"),
+        ]
     # Totals row
     if has_total:
         style_cmds += [
@@ -746,10 +787,14 @@ def render_pdf(spec: ReportSpec, cols: List[Column],
 def render_csv(cols: List[Column], rows: List[Dict[str, Any]]) -> bytes:
     buf = io.StringIO()
     w = _csv.writer(buf)
-    show_idx = len(rows) > 1
+    # Drop pseudo section-header rows — they are a PDF-only grouping affordance
+    # and would clutter a spreadsheet. The "Dealer" column already carries the
+    # grouping in CSV form.
+    data_rows = [r for r in rows if not r.get("_section_header")]
+    show_idx = len(data_rows) > 1
     header = (["#"] if show_idx else []) + [c.label for c in cols]
     w.writerow(header)
-    for ri, r in enumerate(rows):
+    for ri, r in enumerate(data_rows):
         out: List[str] = [str(ri + 1)] if show_idx else []
         for c in cols:
             if c.type == "image":
@@ -767,7 +812,7 @@ def render_csv(cols: List[Column], rows: List[Dict[str, Any]]) -> bytes:
         first_label_placed = False
         for c in cols:
             if c.type in ("money", "number"):
-                tot = sum(numeric_value(r, c.id) for r in rows)
+                tot = sum(numeric_value(r, c.id) for r in data_rows)
                 foot.append(f"{tot:.2f}" if c.type == "money" else f"{tot:.0f}")
             elif not first_label_placed:
                 first_label_placed = True
@@ -833,7 +878,10 @@ def _date_range_subtitle(start: str, end: str) -> str:
 
 async def _fetch_claims(db, user, options: Dict[str, Any]) -> Dict[str, Any]:
     mode = options.get("claims_mode") or "current"  # "current" | "history" | "all"
-    dealer_id = options.get("dealer_id") or ""
+    # Backwards compat: support both legacy single dealer_id and new multi.
+    dealer_ids = options.get("dealer_ids") or []
+    if not dealer_ids and options.get("dealer_id"):
+        dealer_ids = [options.get("dealer_id")]
     start = options.get("date_from") or ""
     end = options.get("date_to") or ""
 
@@ -842,11 +890,17 @@ async def _fetch_claims(db, user, options: Dict[str, Any]) -> Dict[str, Any]:
         q["claim_status"] = {"$nin": ["completed", "rejected"]}
     elif mode == "history":
         q["claim_status"] = {"$in": ["completed", "rejected"]}
-    if dealer_id:
-        if dealer_id == "_none_":
-            q["$or"] = [{"dealer_id": None}, {"dealer_id": ""}]
-        else:
-            q["dealer_id"] = dealer_id
+    if dealer_ids:
+        none_only = [d for d in dealer_ids if d == "_none_"]
+        real_ids = [d for d in dealer_ids if d and d != "_none_"]
+        ors: List[Dict[str, Any]] = []
+        if real_ids:
+            ors.append({"dealer_id": {"$in": real_ids}})
+        if none_only:
+            ors.append({"dealer_id": None})
+            ors.append({"dealer_id": ""})
+        if ors:
+            q["$or"] = ors
 
     items = await db.warranty_claims.find(q, {"_id": 0}).sort("created_at", -1).to_list(5000)
     if start or end:
@@ -854,6 +908,17 @@ async def _fetch_claims(db, user, options: Dict[str, Any]) -> Dict[str, Any]:
             i for i in items
             if in_range(i.get("created_at") or i.get("notified_at"), start, end)
         ]
+
+    # Build a tool-id → tool lookup so we can resolve serial / set serials
+    # without N+1 round-trips.
+    tool_ids = list({i.get("tool_id") for i in items if i.get("tool_id")})
+    tool_lookup: Dict[str, Dict[str, Any]] = {}
+    if tool_ids:
+        tools = await db.tools.find(
+            {"id": {"$in": tool_ids}},
+            {"_id": 0, "id": 1, "serial": 1, "set_serials": 1, "is_set": 1},
+        ).to_list(len(tool_ids))
+        tool_lookup = {t["id"]: t for t in tools}
 
     # Map status values → readable labels
     label_map = {
@@ -865,12 +930,23 @@ async def _fetch_claims(db, user, options: Dict[str, Any]) -> Dict[str, Any]:
     }
     rows = []
     for it in items:
+        t = tool_lookup.get(it.get("tool_id") or "") or {}
+        # When the underlying tool is a set, list every serial on its own
+        # line in the same column. Falls back to the single serial otherwise.
+        if t.get("is_set") and (t.get("set_serials") or []):
+            serial_str = "\n".join([s for s in (t.get("set_serials") or []) if s])
+        else:
+            serial_str = t.get("serial") or ""
         rows.append({
             "id": it.get("id"),
             "tool_name": it.get("tool_name") or "",
             "tool_photo": it.get("tool_photo") or "",
             "broken_photo": it.get("broken_photo") or "",
-            "dealer": it.get("dealer_name") or "",
+            "dealer": it.get("dealer_name") or "—",
+            "_dealer_group": it.get("dealer_name") or "(No dealer)",
+            "_dealer_id": it.get("dealer_id") or "",
+            "_notified_at_iso": it.get("notified_at") or it.get("created_at") or "",
+            "serial": serial_str,
             "status": label_map.get(it.get("claim_status") or "broken",
                                     it.get("claim_status") or "—"),
             "repair_company": it.get("repair_company") or "",
@@ -882,16 +958,38 @@ async def _fetch_claims(db, user, options: Dict[str, Any]) -> Dict[str, Any]:
             "created_at": (it.get("created_at") or "")[:10],
         })
 
+    # Group rows by dealer; within each group keep newest claim first.
+    def _row_key(r: Dict[str, Any]) -> str:
+        # Use notified_at when present, else created_at. Empty strings sort last.
+        return r.get("_notified_at_iso") or ""
+
+    groups: Dict[str, List[Dict[str, Any]]] = {}
+    for r in rows:
+        groups.setdefault(r["_dealer_group"], []).append(r)
+    for k in groups:
+        groups[k].sort(key=_row_key, reverse=True)
+
+    # Ordered list of dealer names: dealers with claims, alphabetically.
+    ordered_dealers = sorted(groups.keys(), key=lambda s: s.lower())
+
+    sorted_rows: List[Dict[str, Any]] = []
+    for d in ordered_dealers:
+        # Insert a section header row only when there's more than one dealer
+        # group (otherwise the regular header is enough).
+        if len(ordered_dealers) > 1:
+            sorted_rows.append({"_section_header": True, "_section_label": d})
+        sorted_rows.extend(groups[d])
+
     title_word = (
         "Open Claims" if mode == "current"
         else ("Past Claims" if mode == "history" else "All Claims")
     )
     stats = [
-        (title_word, str(len(rows)), False),
+        (title_word, str(len(sorted_rows)), False),
         (
             "Open" if mode != "history" else "Closed",
             str(sum(
-                1 for r in rows
+                1 for r in sorted_rows
                 if (mode == "history" and r["status"] in ("Completed", "Rejected"))
                 or (mode != "history" and r["status"] not in ("Completed", "Rejected"))
             )),
@@ -905,7 +1003,14 @@ async def _fetch_claims(db, user, options: Dict[str, Any]) -> Dict[str, Any]:
         sub = f"History (Closed)  ·  {sub}"
     else:
         sub = f"All Claims  ·  {sub}"
-    return {"rows": rows, "stats": stats, "subtitle": sub}
+    return {
+        "rows": sorted_rows,
+        "stats": stats,
+        "subtitle": sub,
+        "group_by": "_dealer_group",
+        "group_label": "Dealer",
+        "ordered_groups": ordered_dealers,
+    }
 
 
 # ---- INSURANCE -----------------------------------------------------------------
@@ -948,9 +1053,16 @@ async def _fetch_inventory(db, user, options: Dict[str, Any]) -> Dict[str, Any]:
     tag_ids = options.get("tag_ids") or []
     if tag_ids:
         q["tag_ids"] = {"$in": tag_ids}
-    brand = (options.get("brand") or "").strip()
-    if brand:
-        q["brand"] = {"$regex": f"^{re.escape(brand)}$", "$options": "i"}
+    # Multi-select brand filter (preferred). Falls back to legacy single text.
+    brands_raw = options.get("brands")
+    if isinstance(brands_raw, list) and brands_raw:
+        clean = [b.strip() for b in brands_raw if isinstance(b, str) and b.strip()]
+        if clean:
+            q["brand"] = {"$in": clean}
+    else:
+        brand = (options.get("brand") or "").strip()
+        if brand:
+            q["brand"] = {"$regex": f"^{re.escape(brand)}$", "$options": "i"}
     condition = (options.get("condition") or "").strip()
     if condition:
         q["condition"] = condition
@@ -1446,11 +1558,12 @@ REPORTS: Dict[str, ReportSpec] = {
         fetch=_fetch_inventory,
         options_schema=[
             {"id": "location_id", "type": "location", "label": "Location"},
-            {"id": "date_from", "type": "date", "label": "Purchased From"},
-            {"id": "date_to", "type": "date", "label": "Purchased To"},
-            {"id": "brand", "type": "text", "label": "Brand"},
+            {"id": "tag_ids", "type": "tag_multi", "label": "Tags"},
+            {"id": "brands", "type": "brand_multi", "label": "Brands"},
             {"id": "condition", "type": "select", "label": "Condition",
              "choices": ["", "New", "Like New", "Good", "Fair", "Poor"]},
+            {"id": "date_from", "type": "date", "label": "Purchased From"},
+            {"id": "date_to", "type": "date", "label": "Purchased To"},
         ],
     ),
     "sales": ReportSpec(
@@ -1502,24 +1615,24 @@ REPORTS: Dict[str, ReportSpec] = {
     "claims": ReportSpec(
         id="claims",
         title="Warranty Claims Report",
-        description="Open and historical warranty / repair claims, filterable by dealer and date range.",
+        description="Open and historical warranty / repair claims, filterable by dealer and date range. Grouped by dealer (newest first).",
         icon="construct",
         accent="#FFB300",
         columns=[
             Column("tool_photo", "Photo", "center", "image"),
+            Column("notified_at", "Notified", "left", "date"),
             Column("tool_name", "Tool", "left", "text"),
+            Column("serial", "Serial #", "left", "text"),
             Column("dealer", "Dealer", "left", "text"),
             Column("status", "Status", "left", "text"),
             Column("repair_company", "Repair Co.", "left", "text"),
             Column("contact", "Contact", "left", "text"),
-            Column("notified_at", "Notified", "left", "date"),
             Column("expected_completion", "Expected", "left", "date"),
             Column("completed_at", "Completed", "left", "date"),
             Column("created_at", "Opened", "left", "date"),
             Column("notes", "Notes", "left", "text"),
         ],
-        default_columns=["tool_photo", "tool_name", "dealer", "status",
-                         "notified_at", "expected_completion"],
+        default_columns=["notified_at", "tool_name", "serial", "dealer", "status", "notes"],
         fetch=_fetch_claims,
         options_schema=[
             {"id": "claims_mode", "type": "segmented", "label": "Mode",
@@ -1529,7 +1642,7 @@ REPORTS: Dict[str, ReportSpec] = {
                  {"id": "all", "label": "All"},
              ],
              "default": "current"},
-            {"id": "dealer_id", "type": "dealer_single", "label": "Dealer"},
+            {"id": "dealer_ids", "type": "dealer_multi", "label": "Dealers"},
             {"id": "date_from", "type": "date", "label": "From"},
             {"id": "date_to", "type": "date", "label": "To"},
         ],
@@ -1545,6 +1658,23 @@ def make_reports_router(api_router: APIRouter, get_db, get_current_user) -> None
     @api_router.get("/reports/spec")
     async def reports_spec(user=Depends(get_current_user)):
         return {"reports": [spec.to_dict() for spec in REPORTS.values()]}
+
+    @api_router.get("/reports/filter-options")
+    async def reports_filter_options(user=Depends(get_current_user)):
+        """Return dropdown choices for tag/brand filters."""
+        db = get_db()
+        # Distinct brand strings from existing tools (case-preserving).
+        tools = await db.tools.find(
+            {}, {"_id": 0, "brand": 1}
+        ).to_list(20000)
+        brands = sorted(
+            {(t.get("brand") or "").strip() for t in tools if (t.get("brand") or "").strip()},
+            key=lambda s: s.lower(),
+        )
+        tags = await db.tags.find({}, {"_id": 0}).to_list(2000)
+        tags_min = [{"id": t.get("id"), "name": t.get("name")} for t in tags if t.get("id")]
+        tags_min.sort(key=lambda x: (x.get("name") or "").lower())
+        return {"brands": brands, "tags": tags_min}
 
     @api_router.post("/reports/render")
     async def reports_render(payload: Dict[str, Any] = Body(...),

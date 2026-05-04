@@ -11,7 +11,7 @@ const KEY = "toolbox_prefs_v1";
 const DEFAULTS: Prefs = {
   show_prices: true,
   warranty_alerts: true,
-  show_details_summary: true,
+  show_details_summary: false,
 };
 
 export const loadPrefs = async (): Promise<Prefs> => {

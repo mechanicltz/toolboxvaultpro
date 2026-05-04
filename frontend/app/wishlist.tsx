@@ -12,6 +12,7 @@ import {
   Platform,
   Alert,
   RefreshControl,
+  KeyboardAvoidingView,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -278,8 +279,11 @@ export default function WishlistScreen() {
         <Ionicons name="add" size={32} color="#000" />
       </TouchableOpacity>
 
-      <Modal visible={!!editing} transparent animationType="slide">
-        <View style={styles.modalBg}>
+      <Modal visible={!!editing} transparent animationType="slide" onRequestClose={() => setEditing(null)}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          style={styles.modalBg}
+        >
           <ScrollView style={styles.modalCard} keyboardShouldPersistTaps="handled">
             <Text style={styles.modalTitle}>{editing?.id ? "EDIT WISH" : "NEW WISH"}</Text>
 
@@ -406,7 +410,7 @@ export default function WishlistScreen() {
               </TouchableOpacity>
             </View>
           </ScrollView>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
     </SafeAreaView>
   );

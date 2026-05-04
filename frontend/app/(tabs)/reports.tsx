@@ -14,6 +14,7 @@ import {
   TextInput,
   ActivityIndicator,
   Alert,
+  Modal,
   Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -40,6 +41,8 @@ type OptionField =
   | { id: string; type: "location"; label: string }
   | { id: string; type: "dealer_multi"; label: string }
   | { id: string; type: "dealer_single"; label: string }
+  | { id: string; type: "tag_multi"; label: string }
+  | { id: string; type: "brand_multi"; label: string }
   | {
       id: string;
       type: "segmented";
@@ -59,7 +62,10 @@ type ReportSpec = {
   options_schema: OptionField[];
 };
 
-type WizardStep = "type" | "options" | "fields" | "format";
+// Wizard order: type → options → format → fields. Putting "format" before
+// "fields" lets us know whether the user picked CSV (no column cap) or PDF
+// (capped at 6) by the time we reach the Fields step.
+type WizardStep = "type" | "options" | "format" | "fields";
 
 const MAX_PDF_COLUMNS = 6;
 
@@ -124,7 +130,12 @@ export default function ReportsHubScreen() {
       if (f.type === "toggle") initOpts[f.id] = (f as any).default ?? true;
       else if (f.type === "segmented")
         initOpts[f.id] = (f as any).default ?? (f as any).choices?.[0]?.id;
-      else if (f.type === "dealer_multi") initOpts[f.id] = [];
+      else if (
+        f.type === "dealer_multi" ||
+        f.type === "tag_multi" ||
+        f.type === "brand_multi"
+      )
+        initOpts[f.id] = [];
       else initOpts[f.id] = "";
     }
     setOptions(initOpts);
@@ -133,7 +144,7 @@ export default function ReportsHubScreen() {
 
   function pickType(spec: ReportSpec) {
     applySpec(spec);
-    setStep(spec.options_schema?.length ? "options" : "fields");
+    setStep(spec.options_schema?.length ? "options" : "format");
   }
 
   async function execute(action: ReportAction) {
@@ -212,70 +223,33 @@ export default function ReportsHubScreen() {
         <Crumbs current={1} />
         <ScrollView contentContainerStyle={styles.body}>
           <Text style={styles.sectionLabel}>Filters</Text>
-          {(selected.options_schema || []).map((f) => (
-            <OptionRow
-              key={f.id}
-              field={f}
-              value={options[f.id]}
-              onChange={(v) => setOptions((o) => ({ ...o, [f.id]: v }))}
-            />
-          ))}
+          {(() => {
+            // Show the "leave dates blank for ALL dates" hint exactly once,
+            // right above the first `date` field.
+            let dateHintShown = false;
+            return (selected.options_schema || []).map((f) => {
+              const showDateHint = !dateHintShown && f.type === "date";
+              if (showDateHint) dateHintShown = true;
+              return (
+                <View key={f.id}>
+                  {showDateHint && (
+                    <Text style={styles.dateHint}>
+                      Leave dates blank for ALL dates
+                    </Text>
+                  )}
+                  <OptionRow
+                    field={f}
+                    value={options[f.id]}
+                    onChange={(v) => setOptions((o) => ({ ...o, [f.id]: v }))}
+                  />
+                </View>
+              );
+            });
+          })()}
         </ScrollView>
         <FooterButtons
           onBack={() => setStep("type")}
-          onNext={() => setStep("fields")}
-        />
-      </SafeAreaView>
-    );
-  }
-
-  if (step === "fields" && selected) {
-    const max = format === "pdf" ? MAX_PDF_COLUMNS : 99;
-    const isFull = columns.length >= max;
-    return (
-      <SafeAreaView style={styles.container}>
-        <Header title={selected.title} onBack={() => setStep(selected.options_schema?.length ? "options" : "type")} />
-        <Crumbs current={2} />
-        <ScrollView contentContainerStyle={styles.body}>
-          <Text style={styles.sectionLabel}>
-            Choose columns
-            {format === "pdf" ? `  (max ${MAX_PDF_COLUMNS} for PDF)` : ""}
-          </Text>
-          <Text style={styles.helper}>
-            {columns.length} of {selected.columns.length} selected
-          </Text>
-          {selected.columns.map((c) => {
-            const checked = columns.includes(c.id);
-            const disabled = !checked && isFull;
-            return (
-              <TouchableOpacity
-                key={c.id}
-                style={[styles.fieldRow, disabled && { opacity: 0.4 }]}
-                disabled={disabled}
-                onPress={() =>
-                  setColumns((curr) =>
-                    checked ? curr.filter((x) => x !== c.id) : [...curr, c.id],
-                  )
-                }
-                activeOpacity={0.7}
-              >
-                <View style={[styles.checkbox, checked && styles.checkboxOn]}>
-                  {checked && <Ionicons name="checkmark" size={14} color="#000" />}
-                </View>
-                <Text style={styles.fieldLabel}>{c.label}</Text>
-                {c.type === "money" || c.type === "number" ? (
-                  <Text style={styles.fieldHint}>SUMMED</Text>
-                ) : c.type === "image" ? (
-                  <Text style={styles.fieldHint}>IMAGE</Text>
-                ) : null}
-              </TouchableOpacity>
-            );
-          })}
-        </ScrollView>
-        <FooterButtons
-          onBack={() => setStep(selected.options_schema?.length ? "options" : "type")}
           onNext={() => setStep("format")}
-          disabled={columns.length === 0}
         />
       </SafeAreaView>
     );
@@ -284,8 +258,11 @@ export default function ReportsHubScreen() {
   if (step === "format" && selected) {
     return (
       <SafeAreaView style={styles.container}>
-        <Header title={selected.title} onBack={() => setStep("fields")} />
-        <Crumbs current={3} />
+        <Header
+          title={selected.title}
+          onBack={() => setStep(selected.options_schema?.length ? "options" : "type")}
+        />
+        <Crumbs current={2} />
         <ScrollView contentContainerStyle={styles.body}>
           <Text style={styles.sectionLabel}>Export format</Text>
           <View style={styles.formatRow}>
@@ -310,6 +287,119 @@ export default function ReportsHubScreen() {
               </Text>
             </TouchableOpacity>
           </View>
+        </ScrollView>
+        <FooterButtons
+          onBack={() => setStep(selected.options_schema?.length ? "options" : "type")}
+          onNext={() => setStep("fields")}
+        />
+      </SafeAreaView>
+    );
+  }
+
+  if (step === "fields" && selected) {
+    const max = format === "pdf" ? MAX_PDF_COLUMNS : 999;
+    const isFull = columns.length >= max;
+    const moveColumn = (idx: number, dir: -1 | 1) => {
+      setColumns((curr) => {
+        const ni = idx + dir;
+        if (ni < 0 || ni >= curr.length) return curr;
+        const next = [...curr];
+        const [it] = next.splice(idx, 1);
+        next.splice(ni, 0, it);
+        return next;
+      });
+    };
+    const colSpecMap = new Map(selected.columns.map((c) => [c.id, c]));
+    const unselected = selected.columns.filter((c) => !columns.includes(c.id));
+    return (
+      <SafeAreaView style={styles.container}>
+        <Header title={selected.title} onBack={() => setStep("format")} />
+        <Crumbs current={3} />
+        <ScrollView contentContainerStyle={styles.body}>
+          <Text style={styles.sectionLabel}>
+            Columns to include
+            {format === "pdf" ? `  (max ${MAX_PDF_COLUMNS} for PDF)` : ""}
+          </Text>
+          <Text style={styles.helper}>
+            {columns.length} of {selected.columns.length} selected · drag-free
+            order using the ⌃ ⌄ buttons
+          </Text>
+
+          {/* SELECTED — ordered, with up/down arrow controls */}
+          {columns.length > 0 && (
+            <View style={{ marginBottom: 18 }}>
+              <Text style={styles.subLabel}>SELECTED · LEFT → RIGHT IN REPORT</Text>
+              {columns.map((cid, idx) => {
+                const c = colSpecMap.get(cid);
+                if (!c) return null;
+                return (
+                  <View key={cid} style={styles.fieldRowSelected}>
+                    <TouchableOpacity
+                      style={styles.checkboxOn}
+                      onPress={() => setColumns((curr) => curr.filter((x) => x !== cid))}
+                      hitSlop={8}
+                    >
+                      <Ionicons name="checkmark" size={14} color="#000" />
+                    </TouchableOpacity>
+                    <Text style={[styles.fieldLabel, { flex: 1 }]} numberOfLines={1}>
+                      {c.label}
+                    </Text>
+                    {c.type === "money" || c.type === "number" ? (
+                      <Text style={styles.fieldHint}>SUMMED</Text>
+                    ) : c.type === "image" ? (
+                      <Text style={styles.fieldHint}>IMAGE</Text>
+                    ) : null}
+                    <TouchableOpacity
+                      onPress={() => moveColumn(idx, -1)}
+                      disabled={idx === 0}
+                      hitSlop={8}
+                      style={[styles.arrowBtn, idx === 0 && { opacity: 0.3 }]}
+                      testID={`field-up-${cid}`}
+                    >
+                      <Ionicons name="chevron-up" size={20} color={theme.colors.textPrimary} />
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      onPress={() => moveColumn(idx, 1)}
+                      disabled={idx === columns.length - 1}
+                      hitSlop={8}
+                      style={[styles.arrowBtn, idx === columns.length - 1 && { opacity: 0.3 }]}
+                      testID={`field-down-${cid}`}
+                    >
+                      <Ionicons name="chevron-down" size={20} color={theme.colors.textPrimary} />
+                    </TouchableOpacity>
+                  </View>
+                );
+              })}
+            </View>
+          )}
+
+          {/* UNSELECTED */}
+          {unselected.length > 0 && (
+            <View>
+              <Text style={styles.subLabel}>AVAILABLE</Text>
+              {unselected.map((c) => {
+                const disabled = isFull;
+                return (
+                  <TouchableOpacity
+                    key={c.id}
+                    style={[styles.fieldRow, disabled && { opacity: 0.4 }]}
+                    disabled={disabled}
+                    onPress={() => setColumns((curr) => [...curr, c.id])}
+                    activeOpacity={0.7}
+                  >
+                    <View style={styles.checkbox} />
+                    <Text style={[styles.fieldLabel, { flex: 1 }]}>{c.label}</Text>
+                    {c.type === "money" || c.type === "number" ? (
+                      <Text style={styles.fieldHint}>SUMMED</Text>
+                    ) : c.type === "image" ? (
+                      <Text style={styles.fieldHint}>IMAGE</Text>
+                    ) : null}
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          )}
+
           {format === "pdf" && columns.length > MAX_PDF_COLUMNS ? (
             <Text style={styles.warn}>
               You have {columns.length} columns selected — PDF is capped at{" "}
@@ -320,14 +410,14 @@ export default function ReportsHubScreen() {
         <View style={styles.footerBar}>
           <TouchableOpacity
             style={styles.btnGhost}
-            onPress={() => setStep("fields")}
+            onPress={() => setStep("format")}
             disabled={!!running}
           >
             <Text style={styles.btnGhostText}>Back</Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.btnPrimary, running && { opacity: 0.6 }]}
-            disabled={!!running}
+            style={[styles.btnPrimary, (running || columns.length === 0) && { opacity: 0.6 }]}
+            disabled={!!running || columns.length === 0}
             onPress={() => {
               if (format === "pdf" && columns.length > MAX_PDF_COLUMNS) {
                 setColumns(columns.slice(0, MAX_PDF_COLUMNS));
@@ -370,7 +460,7 @@ function Header({ title, onBack }: { title: string; onBack: () => void }) {
 }
 
 function Crumbs({ current }: { current: number }) {
-  const labels = ["Filters", "Fields", "Format"];
+  const labels = ["Filters", "Format", "Fields"];
   return (
     <View style={styles.crumbs}>
       {labels.map((l, i) => {
@@ -518,135 +608,396 @@ function OptionRow({
     );
   }
   if (field.type === "location") {
-    return <LocationPicker value={value} onChange={onChange} label={field.label} />;
+    return <LocationDropdown value={value} onChange={onChange} label={field.label} />;
   }
   if (field.type === "dealer_multi") {
-    return <DealerMultiPicker value={value || []} onChange={onChange} label={field.label} />;
+    return <DealerMultiDropdown value={value || []} onChange={onChange} label={field.label} />;
   }
   if (field.type === "dealer_single") {
-    return <DealerSinglePicker value={value || ""} onChange={onChange} label={field.label} />;
+    return <DealerSingleDropdown value={value || ""} onChange={onChange} label={field.label} />;
+  }
+  if (field.type === "tag_multi") {
+    return <TagMultiDropdown value={value || []} onChange={onChange} label={field.label} />;
+  }
+  if (field.type === "brand_multi") {
+    return <BrandMultiDropdown value={value || []} onChange={onChange} label={field.label} />;
   }
   return null;
 }
 
-function DealerSinglePicker({
+// =============================================================================
+// Dropdown primitives (single + multi select). Replaces the legacy chip rows
+// for Location, Dealer, Tag, and Brand filters in the reports wizard.
+// =============================================================================
+
+type DropdownItem = { id: string; label: string };
+
+function SingleSelectDropdown({
+  label,
   value,
   onChange,
-  label,
+  items,
+  loading,
+  allLabel = "All",
+  testIdPrefix,
 }: {
+  label: string;
   value: string;
   onChange: (v: string) => void;
-  label: string;
+  items: DropdownItem[];
+  loading?: boolean;
+  allLabel?: string;
+  testIdPrefix?: string;
 }) {
-  const [dealers, setDealers] = useState<{ id: string; name: string }[]>([]);
-  useEffect(() => {
-    api.get("/dealers").then((r: any) => setDealers(r || []));
-  }, []);
-  const allSelected = !value;
+  const [open, setOpen] = useState(false);
+  const [filter, setFilter] = useState("");
+  const filtered = useMemo(() => {
+    const q = filter.trim().toLowerCase();
+    if (!q) return items;
+    return items.filter((i) => i.label.toLowerCase().includes(q));
+  }, [items, filter]);
+
+  const selected = items.find((i) => i.id === value);
+  const display = !value ? allLabel : selected?.label || allLabel;
+
   return (
     <View style={styles.optionField}>
       <Text style={styles.optionLabel}>{label}</Text>
-      <View style={styles.chipWrap}>
-        <TouchableOpacity
-          style={[styles.chip, allSelected && styles.chipOn]}
-          onPress={() => onChange("")}
-        >
-          <Text style={[styles.chipText, allSelected && { color: "#000" }]}>All Dealers</Text>
-        </TouchableOpacity>
-        {dealers.map((d) => {
-          const active = value === d.id;
-          return (
-            <TouchableOpacity
-              key={d.id}
-              style={[styles.chip, active && styles.chipOn]}
-              onPress={() => onChange(d.id)}
-            >
-              <Text style={[styles.chipText, active && { color: "#000" }]}>{d.name}</Text>
-            </TouchableOpacity>
-          );
-        })}
-      </View>
+      <TouchableOpacity
+        style={styles.dropdownBtn}
+        onPress={() => setOpen(true)}
+        activeOpacity={0.7}
+        testID={testIdPrefix ? `${testIdPrefix}-dropdown` : undefined}
+      >
+        <Text style={styles.dropdownBtnText} numberOfLines={1}>
+          {display}
+        </Text>
+        <Ionicons name="chevron-down" size={20} color={theme.colors.textSecondary} />
+      </TouchableOpacity>
+      <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>
+        <View style={styles.dropdownBg}>
+          <View style={styles.dropdownCard}>
+            <View style={styles.dropdownHeader}>
+              <Text style={styles.dropdownTitle}>{label.toUpperCase()}</Text>
+              <TouchableOpacity onPress={() => setOpen(false)} hitSlop={10}>
+                <Ionicons name="close" size={24} color={theme.colors.textPrimary} />
+              </TouchableOpacity>
+            </View>
+            <TextInput
+              style={styles.dropdownSearch}
+              placeholder="Search..."
+              placeholderTextColor={theme.colors.textSecondary}
+              value={filter}
+              onChangeText={setFilter}
+            />
+            <ScrollView keyboardShouldPersistTaps="handled" style={{ maxHeight: 420 }}>
+              <TouchableOpacity
+                style={[styles.dropdownRow, !value && styles.dropdownRowSelected]}
+                onPress={() => {
+                  onChange("");
+                  setOpen(false);
+                  setFilter("");
+                }}
+              >
+                <Text style={styles.dropdownRowText}>{allLabel}</Text>
+                {!value && <Ionicons name="checkmark" size={20} color={theme.colors.accent} />}
+              </TouchableOpacity>
+              {loading ? (
+                <View style={{ padding: 24, alignItems: "center" }}>
+                  <ActivityIndicator color={theme.colors.accent} />
+                </View>
+              ) : filtered.length === 0 ? (
+                <Text style={styles.dropdownEmpty}>No matches.</Text>
+              ) : (
+                filtered.map((i) => {
+                  const active = value === i.id;
+                  return (
+                    <TouchableOpacity
+                      key={i.id}
+                      style={[styles.dropdownRow, active && styles.dropdownRowSelected]}
+                      onPress={() => {
+                        onChange(i.id);
+                        setOpen(false);
+                        setFilter("");
+                      }}
+                    >
+                      <Text style={styles.dropdownRowText} numberOfLines={1}>{i.label}</Text>
+                      {active && <Ionicons name="checkmark" size={20} color={theme.colors.accent} />}
+                    </TouchableOpacity>
+                  );
+                })
+              )}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
 
-function LocationPicker({
+function MultiSelectDropdown({
+  label,
   value,
   onChange,
-  label,
+  items,
+  loading,
+  allLabel = "All",
+  testIdPrefix,
 }: {
-  value: string;
-  onChange: (v: string) => void;
   label: string;
-}) {
-  const [locs, setLocs] = useState<{ id: string; name: string }[]>([]);
-  useEffect(() => {
-    api.get("/locations").then((r: any) =>
-      setLocs([{ id: "", name: "All locations" }, ...(r || [])]),
-    );
-  }, []);
-  return (
-    <View style={styles.optionField}>
-      <Text style={styles.optionLabel}>{label}</Text>
-      <View style={styles.chipWrap}>
-        {locs.map((l) => {
-          const active = (value || "") === l.id;
-          return (
-            <TouchableOpacity
-              key={l.id || "_any"}
-              style={[styles.chip, active && styles.chipOn]}
-              onPress={() => onChange(l.id)}
-            >
-              <Text style={[styles.chipText, active && { color: "#000" }]}>{l.name}</Text>
-            </TouchableOpacity>
-          );
-        })}
-      </View>
-    </View>
-  );
-}
-
-function DealerMultiPicker({
-  value,
-  onChange,
-  label,
-}: {
   value: string[];
   onChange: (v: string[]) => void;
-  label: string;
+  items: DropdownItem[];
+  loading?: boolean;
+  allLabel?: string;
+  testIdPrefix?: string;
 }) {
-  const [dealers, setDealers] = useState<{ id: string; name: string }[]>([]);
-  useEffect(() => {
-    api.get("/dealers").then((r: any) => setDealers(r || []));
-  }, []);
-  const allSelected = dealers.length > 0 && value.length === 0;
+  const [open, setOpen] = useState(false);
+  const [filter, setFilter] = useState("");
+  const filtered = useMemo(() => {
+    const q = filter.trim().toLowerCase();
+    if (!q) return items;
+    return items.filter((i) => i.label.toLowerCase().includes(q));
+  }, [items, filter]);
+
+  const display = (() => {
+    if (!value.length) return allLabel;
+    if (value.length === 1) {
+      return items.find((i) => i.id === value[0])?.label || `${value.length} selected`;
+    }
+    return `${value.length} selected`;
+  })();
+
+  const toggle = (id: string) => {
+    if (value.includes(id)) onChange(value.filter((v) => v !== id));
+    else onChange([...value, id]);
+  };
+
   return (
     <View style={styles.optionField}>
       <Text style={styles.optionLabel}>{label}</Text>
-      <View style={styles.chipWrap}>
-        <TouchableOpacity
-          style={[styles.chip, allSelected && styles.chipOn]}
-          onPress={() => onChange([])}
-        >
-          <Text style={[styles.chipText, allSelected && { color: "#000" }]}>All Dealers</Text>
-        </TouchableOpacity>
-        {dealers.map((d) => {
-          const active = value.includes(d.id);
-          return (
+      <TouchableOpacity
+        style={styles.dropdownBtn}
+        onPress={() => setOpen(true)}
+        activeOpacity={0.7}
+        testID={testIdPrefix ? `${testIdPrefix}-dropdown` : undefined}
+      >
+        <Text style={styles.dropdownBtnText} numberOfLines={1}>
+          {display}
+        </Text>
+        <Ionicons name="chevron-down" size={20} color={theme.colors.textSecondary} />
+      </TouchableOpacity>
+      <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>
+        <View style={styles.dropdownBg}>
+          <View style={styles.dropdownCard}>
+            <View style={styles.dropdownHeader}>
+              <Text style={styles.dropdownTitle}>{label.toUpperCase()}</Text>
+              <TouchableOpacity onPress={() => setOpen(false)} hitSlop={10}>
+                <Ionicons name="close" size={24} color={theme.colors.textPrimary} />
+              </TouchableOpacity>
+            </View>
+            <TextInput
+              style={styles.dropdownSearch}
+              placeholder="Search..."
+              placeholderTextColor={theme.colors.textSecondary}
+              value={filter}
+              onChangeText={setFilter}
+            />
+            <View style={styles.dropdownActions}>
+              <TouchableOpacity onPress={() => onChange([])} style={styles.dropdownActionBtn}>
+                <Text style={styles.dropdownActionText}>{allLabel} (clear)</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => onChange(items.map((i) => i.id))}
+                style={styles.dropdownActionBtn}
+              >
+                <Text style={styles.dropdownActionText}>Select all</Text>
+              </TouchableOpacity>
+            </View>
+            <ScrollView keyboardShouldPersistTaps="handled" style={{ maxHeight: 380 }}>
+              {loading ? (
+                <View style={{ padding: 24, alignItems: "center" }}>
+                  <ActivityIndicator color={theme.colors.accent} />
+                </View>
+              ) : filtered.length === 0 ? (
+                <Text style={styles.dropdownEmpty}>No matches.</Text>
+              ) : (
+                filtered.map((i) => {
+                  const active = value.includes(i.id);
+                  return (
+                    <TouchableOpacity
+                      key={i.id}
+                      style={[styles.dropdownRow, active && styles.dropdownRowSelected]}
+                      onPress={() => toggle(i.id)}
+                    >
+                      <View style={[styles.dropdownCheck, active && styles.dropdownCheckOn]}>
+                        {active && <Ionicons name="checkmark" size={14} color="#000" />}
+                      </View>
+                      <Text style={[styles.dropdownRowText, { flex: 1 }]} numberOfLines={1}>
+                        {i.label}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })
+              )}
+            </ScrollView>
             <TouchableOpacity
-              key={d.id}
-              style={[styles.chip, active && styles.chipOn]}
+              style={styles.dropdownDoneBtn}
               onPress={() => {
-                if (active) onChange(value.filter((x) => x !== d.id));
-                else onChange([...value, d.id]);
+                setOpen(false);
+                setFilter("");
               }}
             >
-              <Text style={[styles.chipText, active && { color: "#000" }]}>{d.name}</Text>
+              <Text style={styles.dropdownDoneText}>DONE</Text>
             </TouchableOpacity>
-          );
-        })}
-      </View>
+          </View>
+        </View>
+      </Modal>
     </View>
+  );
+}
+
+// =============================================================================
+// Typed wrappers — fetch once, hand off to the generic dropdowns above.
+// =============================================================================
+
+function DealerSingleDropdown({
+  value, onChange, label,
+}: { value: string; onChange: (v: string) => void; label: string }) {
+  const [dealers, setDealers] = useState<{ id: string; name: string }[]>([]);
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    let alive = true;
+    api.get("/dealers").then((r: any) => {
+      if (alive) {
+        setDealers(r || []);
+        setLoading(false);
+      }
+    }).catch(() => { if (alive) setLoading(false); });
+    return () => { alive = false; };
+  }, []);
+  return (
+    <SingleSelectDropdown
+      label={label}
+      value={value}
+      onChange={onChange}
+      loading={loading}
+      allLabel="All Dealers"
+      items={dealers.map((d) => ({ id: d.id, label: d.name }))}
+      testIdPrefix={`opt-${label.toLowerCase()}`}
+    />
+  );
+}
+
+function DealerMultiDropdown({
+  value, onChange, label,
+}: { value: string[]; onChange: (v: string[]) => void; label: string }) {
+  const [dealers, setDealers] = useState<{ id: string; name: string }[]>([]);
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    let alive = true;
+    api.get("/dealers").then((r: any) => {
+      if (alive) {
+        setDealers(r || []);
+        setLoading(false);
+      }
+    }).catch(() => { if (alive) setLoading(false); });
+    return () => { alive = false; };
+  }, []);
+  return (
+    <MultiSelectDropdown
+      label={label}
+      value={value}
+      onChange={onChange}
+      loading={loading}
+      allLabel="All Dealers"
+      items={dealers.map((d) => ({ id: d.id, label: d.name }))}
+      testIdPrefix={`opt-${label.toLowerCase()}`}
+    />
+  );
+}
+
+function LocationDropdown({
+  value, onChange, label,
+}: { value: string; onChange: (v: string) => void; label: string }) {
+  const [locs, setLocs] = useState<{ id: string; name: string }[]>([]);
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    let alive = true;
+    api.get("/locations").then((r: any) => {
+      if (alive) {
+        setLocs(r || []);
+        setLoading(false);
+      }
+    }).catch(() => { if (alive) setLoading(false); });
+    return () => { alive = false; };
+  }, []);
+  return (
+    <SingleSelectDropdown
+      label={label}
+      value={value}
+      onChange={onChange}
+      loading={loading}
+      allLabel="All Locations"
+      items={locs.map((l) => ({ id: l.id, label: l.name }))}
+      testIdPrefix="opt-location"
+    />
+  );
+}
+
+function TagMultiDropdown({
+  value, onChange, label,
+}: { value: string[]; onChange: (v: string[]) => void; label: string }) {
+  const [tags, setTags] = useState<{ id: string; name: string }[]>([]);
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    let alive = true;
+    api.get("/reports/filter-options").then((r: any) => {
+      if (alive) {
+        setTags(r?.tags || []);
+        setLoading(false);
+      }
+    }).catch(() => { if (alive) setLoading(false); });
+    return () => { alive = false; };
+  }, []);
+  return (
+    <MultiSelectDropdown
+      label={label}
+      value={value}
+      onChange={onChange}
+      loading={loading}
+      allLabel="All Tags"
+      items={tags.map((t) => ({ id: t.id, label: t.name }))}
+      testIdPrefix="opt-tags"
+    />
+  );
+}
+
+function BrandMultiDropdown({
+  value, onChange, label,
+}: { value: string[]; onChange: (v: string[]) => void; label: string }) {
+  const [brands, setBrands] = useState<string[]>([]);
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    let alive = true;
+    api.get("/reports/filter-options").then((r: any) => {
+      if (alive) {
+        setBrands(r?.brands || []);
+        setLoading(false);
+      }
+    }).catch(() => { if (alive) setLoading(false); });
+    return () => { alive = false; };
+  }, []);
+  return (
+    <MultiSelectDropdown
+      label={label}
+      value={value}
+      onChange={onChange}
+      loading={loading}
+      allLabel={brands.length ? "All Brands" : "No brands yet"}
+      items={brands.map((b) => ({ id: b, label: b }))}
+      testIdPrefix="opt-brands"
+    />
   );
 }
 
@@ -860,6 +1211,157 @@ const styles = StyleSheet.create({
     paddingVertical: 11,
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.border,
+  },
+  fieldRowSelected: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 11,
+    paddingRight: 4,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
+    gap: 10,
+  },
+  arrowBtn: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  subLabel: {
+    color: theme.colors.textSecondary,
+    fontSize: 10,
+    fontWeight: "900",
+    letterSpacing: 1.5,
+    marginBottom: 6,
+    marginTop: 4,
+  },
+  dateHint: {
+    color: theme.colors.textSecondary,
+    fontSize: 11,
+    fontStyle: "italic",
+    marginBottom: 4,
+    marginTop: 8,
+  },
+  // ---- generic dropdown ----
+  dropdownBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: theme.colors.bgSecondary,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    borderRadius: 6,
+    marginTop: 8,
+  },
+  dropdownBtnText: {
+    color: theme.colors.textPrimary,
+    fontSize: 14,
+    flex: 1,
+  },
+  dropdownBg: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.7)",
+    justifyContent: "center",
+    paddingHorizontal: 16,
+  },
+  dropdownCard: {
+    backgroundColor: theme.colors.bgSecondary,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: 10,
+    overflow: "hidden",
+    maxHeight: "85%",
+  },
+  dropdownHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
+  },
+  dropdownTitle: {
+    color: theme.colors.textPrimary,
+    fontWeight: "900",
+    fontSize: 12,
+    letterSpacing: 1.5,
+  },
+  dropdownSearch: {
+    backgroundColor: theme.colors.bg,
+    color: theme.colors.textPrimary,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
+  },
+  dropdownActions: {
+    flexDirection: "row",
+    paddingHorizontal: 8,
+    paddingVertical: 8,
+    gap: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
+  },
+  dropdownActionBtn: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  dropdownActionText: {
+    color: theme.colors.textPrimary,
+    fontSize: 11,
+    fontWeight: "800",
+    letterSpacing: 1,
+  },
+  dropdownRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
+    gap: 10,
+  },
+  dropdownRowSelected: {
+    backgroundColor: "rgba(255,179,0,0.08)",
+  },
+  dropdownRowText: {
+    color: theme.colors.textPrimary,
+    fontSize: 14,
+  },
+  dropdownEmpty: {
+    color: theme.colors.textSecondary,
+    fontSize: 13,
+    textAlign: "center",
+    padding: 24,
+    fontStyle: "italic",
+  },
+  dropdownCheck: {
+    width: 20,
+    height: 20,
+    borderRadius: 4,
+    borderWidth: 2,
+    borderColor: theme.colors.border,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  dropdownCheckOn: {
+    backgroundColor: theme.colors.accent,
+    borderColor: theme.colors.accent,
+  },
+  dropdownDoneBtn: {
+    backgroundColor: theme.colors.accent,
+    paddingVertical: 14,
+    alignItems: "center",
+  },
+  dropdownDoneText: {
+    color: "#000",
+    fontWeight: "900",
+    letterSpacing: 2,
+    fontSize: 14,
   },
   checkbox: {
     width: 22,
