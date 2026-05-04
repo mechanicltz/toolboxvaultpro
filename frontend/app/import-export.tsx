@@ -20,6 +20,7 @@ import { api } from "../src/api";
 import { parseCsv, saveBase64 } from "../src/csvIO";
 
 type ImportField = { id: string; label: string; required?: boolean };
+type ExportField = { id: string; label: string };
 
 type Mapping = Record<number, string>; // colIndex -> system field id (or "" = skip)
 
@@ -99,24 +100,60 @@ export default function ImportExportScreen() {
   const [pickerForCol, setPickerForCol] = useState<number | null>(null);
   const [importResult, setImportResult] = useState<any>(null);
 
+  // Export state (field selection)
+  const [exportFields, setExportFields] = useState<ExportField[]>([]);
+  const [selectedExportFields, setSelectedExportFields] = useState<Set<string>>(new Set());
+
   // Load the system field schema once
   useEffect(() => {
     api
       .get("/tools/import-fields")
       .then((r: any) => setImportFields(r?.fields || []))
       .catch(() => setImportFields([]));
+    api
+      .get("/tools/export-fields")
+      .then((r: any) => {
+        const fs: ExportField[] = r?.fields || [];
+        setExportFields(fs);
+        // default = all fields selected
+        setSelectedExportFields(new Set(fs.map((f) => f.id)));
+      })
+      .catch(() => setExportFields([]));
   }, []);
+
+  const toggleExportField = (id: string) => {
+    setSelectedExportFields((curr) => {
+      const next = new Set(curr);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+  const selectAllExportFields = () =>
+    setSelectedExportFields(new Set(exportFields.map((f) => f.id)));
+  const clearExportFields = () => setSelectedExportFields(new Set());
 
   /* ---------------- EXPORT ---------------- */
   const doExport = useCallback(async () => {
+    if (selectedExportFields.size === 0) {
+      Alert.alert(
+        "No fields selected",
+        "Pick at least one field to include in the export.",
+      );
+      return;
+    }
     setBusy("export");
     try {
-      const r: any = await api.get("/tools/export-csv");
+      // Preserve the order shown in the UI (the export-fields list).
+      const ordered = exportFields
+        .map((f) => f.id)
+        .filter((id) => selectedExportFields.has(id));
+      const r: any = await api.post("/tools/export-csv", { fields: ordered });
       if (!r?.base64) throw new Error("Server returned no data");
       await saveBase64(r.filename || "tools.csv", "text/csv", r.base64);
       Alert.alert(
         "Export ready",
-        `Exported ${r.rows} tool${r.rows === 1 ? "" : "s"}.${
+        `Exported ${r.rows} tool${r.rows === 1 ? "" : "s"} with ${ordered.length} field${ordered.length === 1 ? "" : "s"}.${
           Platform.OS === "web" ? " The file should download now." : ""
         }`,
       );
@@ -125,7 +162,7 @@ export default function ImportExportScreen() {
     } finally {
       setBusy("");
     }
-  }, []);
+  }, [exportFields, selectedExportFields]);
 
   /* ---------------- IMPORT — pick file + parse ---------------- */
   const pickFile = useCallback(async () => {
@@ -239,14 +276,63 @@ export default function ImportExportScreen() {
             <Text style={styles.cardTitle}>EXPORT TO CSV</Text>
           </View>
           <Text style={styles.cardBody}>
-            Download a spreadsheet of every tool in your inventory. Includes name,
-            brand, model, serial, quantity, cost, category, location, dealer,
-            tags, condition, purchase / warranty dates, description and Set info.
+            Download a spreadsheet of every tool in your inventory. Pick which
+            fields you want included — by default everything is selected.
           </Text>
+
+          {/* Field selector */}
+          <View style={styles.exportFieldsHeader}>
+            <Text style={styles.exportFieldsHeading}>
+              FIELDS TO INCLUDE ({selectedExportFields.size}/{exportFields.length})
+            </Text>
+            <View style={{ flexDirection: "row", gap: 8 }}>
+              <TouchableOpacity
+                onPress={selectAllExportFields}
+                style={styles.exportFieldsBtn}
+                testID="export-select-all"
+              >
+                <Text style={styles.exportFieldsBtnText}>SELECT ALL</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={clearExportFields}
+                style={styles.exportFieldsBtn}
+                testID="export-clear-all"
+              >
+                <Text style={styles.exportFieldsBtnText}>CLEAR</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+          <View style={styles.exportFieldsList}>
+            {exportFields.map((f) => {
+              const on = selectedExportFields.has(f.id);
+              return (
+                <TouchableOpacity
+                  key={f.id}
+                  testID={`export-field-${f.id}`}
+                  style={styles.exportFieldRow}
+                  onPress={() => toggleExportField(f.id)}
+                  activeOpacity={0.7}
+                >
+                  <View style={[styles.exportCheck, on && styles.exportCheckOn]}>
+                    {on && <Ionicons name="checkmark" size={14} color="#000" />}
+                  </View>
+                  <Text style={styles.exportFieldLabel}>{f.label}</Text>
+                </TouchableOpacity>
+              );
+            })}
+            {exportFields.length === 0 && (
+              <ActivityIndicator color={theme.colors.accent} style={{ padding: 20 }} />
+            )}
+          </View>
+
           <TouchableOpacity
             testID="export-csv-btn"
-            style={[styles.btnPrimary, busy === "export" && { opacity: 0.6 }]}
-            disabled={!!busy}
+            style={[
+              styles.btnPrimary,
+              { marginTop: 14 },
+              (busy === "export" || selectedExportFields.size === 0) && { opacity: 0.6 },
+            ]}
+            disabled={!!busy || selectedExportFields.size === 0}
             onPress={doExport}
             activeOpacity={0.8}
           >
@@ -255,7 +341,10 @@ export default function ImportExportScreen() {
             ) : (
               <>
                 <Ionicons name="cloud-download" size={18} color="#000" />
-                <Text style={styles.btnPrimaryText}>EXPORT CSV</Text>
+                <Text style={styles.btnPrimaryText}>
+                  EXPORT {selectedExportFields.size} FIELD
+                  {selectedExportFields.size === 1 ? "" : "S"}
+                </Text>
               </>
             )}
           </TouchableOpacity>
@@ -719,5 +808,70 @@ const styles = StyleSheet.create({
   modalRowText: {
     color: theme.colors.textPrimary,
     fontSize: 14,
+  },
+  exportFieldsHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 8,
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  exportFieldsHeading: {
+    color: theme.colors.textPrimary,
+    fontSize: 11,
+    fontWeight: "900",
+    letterSpacing: 1.5,
+  },
+  exportFieldsBtn: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  exportFieldsBtnText: {
+    color: theme.colors.textPrimary,
+    fontSize: 10,
+    fontWeight: "800",
+    letterSpacing: 1,
+  },
+  exportFieldsList: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginTop: 4,
+  },
+  exportFieldRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: 6,
+    backgroundColor: theme.colors.bg,
+    flexBasis: "48%",
+    minWidth: 130,
+  },
+  exportCheck: {
+    width: 18,
+    height: 18,
+    borderRadius: 4,
+    borderWidth: 2,
+    borderColor: theme.colors.border,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  exportCheckOn: {
+    backgroundColor: theme.colors.accent,
+    borderColor: theme.colors.accent,
+  },
+  exportFieldLabel: {
+    color: theme.colors.textPrimary,
+    fontSize: 12,
+    fontWeight: "700",
+    flex: 1,
   },
 });

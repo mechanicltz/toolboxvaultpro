@@ -1237,26 +1237,133 @@ async def tools_import_fields(user: User = Depends(get_current_user)):
     return {"fields": _IMPORT_FIELDS}
 
 
+# Export field registry — id, CSV header label, and how to read the value
+# from a tool dict given pre-resolved {cats, locs, dlrs, tags} lookup maps.
+_EXPORT_FIELDS: List[Dict[str, Any]] = [
+    {"id": "name", "label": "Name"},
+    {"id": "brand", "label": "Brand"},
+    {"id": "model", "label": "Model"},
+    {"id": "serial_number", "label": "Serial number"},
+    {"id": "quantity", "label": "Quantity"},
+    {"id": "cost", "label": "Cost"},
+    {"id": "category", "label": "Category"},
+    {"id": "location", "label": "Location"},
+    {"id": "dealer", "label": "Dealer"},
+    {"id": "tags", "label": "Tags"},
+    {"id": "condition", "label": "Condition"},
+    {"id": "purchase_date", "label": "Purchase date"},
+    {"id": "warranty_expiry", "label": "Warranty expiry"},
+    {"id": "description", "label": "Description"},
+    {"id": "is_consumable", "label": "Is consumable"},
+    {"id": "is_set", "label": "Is set"},
+    {"id": "set_serials", "label": "Set serials"},
+]
+_EXPORT_FIELD_IDS = [f["id"] for f in _EXPORT_FIELDS]
+
+
+def _build_export_value(field_id: str, t: Dict[str, Any], lookups: Dict[str, Dict[str, str]]) -> Any:
+    if field_id == "name":
+        return t.get("name") or ""
+    if field_id == "brand":
+        return t.get("brand") or ""
+    if field_id == "model":
+        return t.get("model") or ""
+    if field_id == "serial_number":
+        return t.get("serial_number") or ""
+    if field_id == "quantity":
+        return t.get("quantity") or 1
+    if field_id == "cost":
+        return t.get("cost") or 0
+    if field_id == "category":
+        return lookups["cats"].get(t.get("category_id") or "", "")
+    if field_id == "location":
+        return lookups["locs"].get(t.get("location_id") or "", "")
+    if field_id == "dealer":
+        return lookups["dlrs"].get(t.get("dealer_id") or "", "")
+    if field_id == "tags":
+        return ", ".join(
+            sorted([
+                lookups["tags"].get(tid, "")
+                for tid in (t.get("tag_ids") or [])
+                if lookups["tags"].get(tid)
+            ])
+        )
+    if field_id == "condition":
+        return t.get("condition") or ""
+    if field_id == "purchase_date":
+        return t.get("purchase_date") or ""
+    if field_id == "warranty_expiry":
+        return t.get("warranty_expiry") or ""
+    if field_id == "description":
+        return t.get("description") or ""
+    if field_id == "is_consumable":
+        return "yes" if t.get("is_consumable") else ""
+    if field_id == "is_set":
+        return "yes" if t.get("is_set") else ""
+    if field_id == "set_serials":
+        return "; ".join(t.get("set_serials") or [])
+    return ""
+
+
+@api_router.get("/tools/export-fields")
+async def tools_export_fields(user: User = Depends(get_current_user)):
+    """List of fields the user can choose from when exporting."""
+    return {"fields": _EXPORT_FIELDS}
+
+
+class ExportPayload(BaseModel):
+    fields: Optional[List[str]] = None  # subset of _EXPORT_FIELD_IDS; None/empty = all
+
+
+@api_router.post("/tools/export-csv")
+async def tools_export_csv_post(
+    payload: ExportPayload,
+    user: User = Depends(get_current_user),
+):
+    """Field-customisable CSV export. POST body: {fields: ["name","brand",...]}.
+    Falls through to all fields when `fields` is empty/missing for backwards
+    compatibility with the legacy GET path below."""
+    requested = payload.fields or []
+    if requested:
+        # Filter to known ids and preserve user's chosen order
+        chosen = [fid for fid in requested if fid in _EXPORT_FIELD_IDS]
+    else:
+        chosen = list(_EXPORT_FIELD_IDS)
+    if not chosen:
+        chosen = list(_EXPORT_FIELD_IDS)
+
+    return await _do_export_csv(chosen)
+
+
 @api_router.get("/tools/export-csv")
 async def tools_export_csv(user: User = Depends(get_current_user)):
-    """Dump all tools to a CSV. Returns base64 so the client can save/share
-    cross-platform (web blob, expo-file-system, etc.)."""
+    """Backwards-compat GET — exports every field."""
+    return await _do_export_csv(list(_EXPORT_FIELD_IDS))
+
+
+async def _do_export_csv(chosen_field_ids: List[str]) -> Dict[str, Any]:
+    """Shared implementation used by both POST and legacy GET."""
     tools = await db.tools.find({}, {"_id": 0}).sort("name", 1).to_list(20000)
-    # Resolve names for tags/categories/locations/dealers in batch
     cat_ids = {t.get("category_id") for t in tools if t.get("category_id")}
     cats = {
         c["id"]: c.get("name") or ""
-        for c in await db.categories.find({"id": {"$in": list(cat_ids)}}, {"_id": 0, "id": 1, "name": 1}).to_list(5000)
+        for c in await db.categories.find(
+            {"id": {"$in": list(cat_ids)}}, {"_id": 0, "id": 1, "name": 1}
+        ).to_list(5000)
     } if cat_ids else {}
     loc_ids = {t.get("location_id") for t in tools if t.get("location_id")}
     locs = {
         l["id"]: l.get("name") or ""
-        for l in await db.locations.find({"id": {"$in": list(loc_ids)}}, {"_id": 0, "id": 1, "name": 1}).to_list(5000)
+        for l in await db.locations.find(
+            {"id": {"$in": list(loc_ids)}}, {"_id": 0, "id": 1, "name": 1}
+        ).to_list(5000)
     } if loc_ids else {}
     dlr_ids = {t.get("dealer_id") for t in tools if t.get("dealer_id")}
     dlrs = {
         d["id"]: d.get("name") or ""
-        for d in await db.dealers.find({"id": {"$in": list(dlr_ids)}}, {"_id": 0, "id": 1, "name": 1}).to_list(5000)
+        for d in await db.dealers.find(
+            {"id": {"$in": list(dlr_ids)}}, {"_id": 0, "id": 1, "name": 1}
+        ).to_list(5000)
     } if dlr_ids else {}
     all_tag_ids: List[str] = []
     for t in tools:
@@ -1264,49 +1371,28 @@ async def tools_export_csv(user: User = Depends(get_current_user)):
     uniq_tag_ids = list(set(all_tag_ids))
     tags = {
         tg["id"]: tg.get("name") or ""
-        for tg in await db.tags.find({"id": {"$in": uniq_tag_ids}}, {"_id": 0, "id": 1, "name": 1}).to_list(5000)
+        for tg in await db.tags.find(
+            {"id": {"$in": uniq_tag_ids}}, {"_id": 0, "id": 1, "name": 1}
+        ).to_list(5000)
     } if uniq_tag_ids else {}
+
+    lookups = {"cats": cats, "locs": locs, "dlrs": dlrs, "tags": tags}
+    label_for = {f["id"]: f["label"] for f in _EXPORT_FIELDS}
 
     import csv as _csv
     import io as _io
     buf = _io.StringIO()
     w = _csv.writer(buf)
-    headers = [
-        "Name", "Brand", "Model", "Serial number", "Quantity", "Cost",
-        "Category", "Location", "Dealer", "Tags", "Condition",
-        "Purchase date", "Warranty expiry", "Description",
-        "Is consumable", "Is set", "Set serials",
-    ]
-    w.writerow(headers)
+    w.writerow([label_for[fid] for fid in chosen_field_ids])
     for t in tools:
-        tag_names = ", ".join(
-            sorted([tags.get(tid, "") for tid in (t.get("tag_ids") or []) if tags.get(tid)])
-        )
-        w.writerow([
-            t.get("name") or "",
-            t.get("brand") or "",
-            t.get("model") or "",
-            t.get("serial_number") or "",
-            t.get("quantity") or 1,
-            t.get("cost") or 0,
-            cats.get(t.get("category_id") or "", ""),
-            locs.get(t.get("location_id") or "", ""),
-            dlrs.get(t.get("dealer_id") or "", ""),
-            tag_names,
-            t.get("condition") or "",
-            (t.get("purchase_date") or ""),
-            (t.get("warranty_expiry") or ""),
-            t.get("description") or "",
-            "yes" if t.get("is_consumable") else "",
-            "yes" if t.get("is_set") else "",
-            "; ".join(t.get("set_serials") or []),
-        ])
+        w.writerow([_build_export_value(fid, t, lookups) for fid in chosen_field_ids])
     raw = buf.getvalue().encode("utf-8")
     import base64 as _b64
     return {
         "filename": f"toolbox-vault-export-{datetime.utcnow().strftime('%Y-%m-%d')}.csv",
         "base64": _b64.b64encode(raw).decode("ascii"),
         "rows": len(tools),
+        "fields": chosen_field_ids,
     }
 
 
