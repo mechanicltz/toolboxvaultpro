@@ -86,12 +86,24 @@ def main():
 
     # Required keys present
     expected_keys = {
-        "dealer", "purchase_date", "raw_text", "items",
+        "dealer", "sold_by", "purchase_date", "raw_text", "items",
         "name", "brand", "model", "serial_number", "cost", "quantity", "description", "raw",
     }
     missing = expected_keys - set(body.keys())
-    record("1c. Response has all expected keys (incl. items, raw_text)", not missing,
+    record("1c. Response has all expected keys (incl. sold_by, items, raw_text)", not missing,
            f"missing={missing}" if missing else f"keys={sorted(body.keys())}")
+
+    # sold_by string
+    sb = body.get("sold_by")
+    record("1c2. sold_by key present and is str", isinstance(sb, str),
+           f"type={type(sb).__name__} value={sb!r}")
+
+    # purchase_date — must be empty OR YYYY-MM-DD
+    import re as _re
+    pd = body.get("purchase_date") or ""
+    pd_ok = pd == "" or bool(_re.match(r"^\d{4}-\d{2}-\d{2}$", pd))
+    record("1c3. purchase_date is empty or YYYY-MM-DD ISO", pd_ok,
+           f"purchase_date={pd!r}")
 
     # items: list
     items = body.get("items")

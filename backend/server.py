@@ -2915,7 +2915,8 @@ class ReceiptItem(BaseModel):
 class ReceiptScanResponse(BaseModel):
     # Receipt-level fields (apply to ALL items on the receipt)
     dealer: Optional[str] = ""
-    purchase_date: Optional[str] = ""  # ISO YYYY-MM-DD
+    sold_by: Optional[str] = ""        # Sales rep / agent who sold (e.g. "Sold By: Wade Miller")
+    purchase_date: Optional[str] = ""  # ISO YYYY-MM-DD (normalised)
     raw_text: Optional[str] = ""       # Full OCR transcription (so user can copy missing values)
     items: List[ReceiptItem] = []
     # Backward-compat top-level fields = mirror of items[0] when present
@@ -2927,6 +2928,45 @@ class ReceiptScanResponse(BaseModel):
     quantity: Optional[int] = 1
     description: Optional[str] = ""
     raw: Optional[Dict[str, Any]] = None
+
+
+def _normalize_date(s: str) -> str:
+    """Best-effort normalise common receipt date formats to YYYY-MM-DD.
+    Handles 'M/D/YYYY', 'MM/DD/YYYY', 'M-D-YYYY', 'YYYY/MM/DD', 'YYYY-MM-DD',
+    'D/M/YYYY' (ambiguous — assumes US M/D when day<=12). Returns '' on failure.
+    """
+    if not s:
+        return ""
+    txt = str(s).strip()
+    if not txt:
+        return ""
+    # Strip time-of-day if present
+    txt = re.split(r"\s+", txt, maxsplit=1)[0]
+    # Already ISO?
+    m = re.match(r"^(\d{4})-(\d{1,2})-(\d{1,2})$", txt)
+    if m:
+        y, mo, d = m.groups()
+        return f"{int(y):04d}-{int(mo):02d}-{int(d):02d}"
+    # YYYY/MM/DD
+    m = re.match(r"^(\d{4})/(\d{1,2})/(\d{1,2})$", txt)
+    if m:
+        y, mo, d = m.groups()
+        return f"{int(y):04d}-{int(mo):02d}-{int(d):02d}"
+    # M/D/YYYY or M-D-YYYY (US format — assume M first)
+    m = re.match(r"^(\d{1,2})[/\-](\d{1,2})[/\-](\d{2,4})$", txt)
+    if m:
+        a, b, c = m.groups()
+        a_i, b_i, c_i = int(a), int(b), int(c)
+        if c_i < 100:
+            c_i += 2000 if c_i < 70 else 1900  # 2-digit year
+        # Decide M/D vs D/M — if first part > 12 it must be a day
+        if a_i > 12 and b_i <= 12:
+            mo, d, y = b_i, a_i, c_i
+        else:
+            mo, d, y = a_i, b_i, c_i
+        if 1 <= mo <= 12 and 1 <= d <= 31:
+            return f"{y:04d}-{mo:02d}-{d:02d}"
+    return ""
 
 
 @api_router.post("/ai/receipt-scan", response_model=ReceiptScanResponse)
@@ -2984,16 +3024,19 @@ async def ai_receipt_scan(payload: ReceiptScanRequest):
             "Receipts often contain MULTIPLE distinct line items (different "
             "tools / parts purchased). Identify EVERY purchased line item. "
             "Skip subtotals, taxes, discounts, shipping, fees, totals, "
-            "salesperson lines, account numbers — list ONLY actual products.\n\n"
+            "salesperson lines (those go in 'sold_by'), account numbers, "
+            "transaction history rows, finance charges, payments — list ONLY "
+            "actual products being purchased.\n\n"
             "Return EXACTLY this JSON shape:\n"
             "{\n"
-            '  "dealer": "<store / seller / vendor name>",\n'
-            '  "purchase_date": "YYYY-MM-DD or empty",\n'
+            '  "dealer": "<store / seller / vendor / franchisee name — often a logo at top, e.g. \'Snap-on\', \'Cornwell\', \'Matco\'>",\n'
+            '  "sold_by": "<the sales rep / agent who sold it — appears as \'Sold By:\', \'Salesperson:\', \'Rep:\', \'Sold by:\' on the receipt>",\n'
+            '  "purchase_date": "YYYY-MM-DD (use ISO format; convert M/D/YYYY → YYYY-MM-DD)",\n'
             '  "raw_text": "<full OCR transcription of the receipt, line by line, as you read it>",\n'
             '  "items": [\n'
             "    {\n"
-            '      "name": "<short product/tool name>",\n'
-            '      "brand": "<manufacturer / brand>",\n'
+            '      "name": "<short product/tool name from the Description column>",\n'
+            '      "brand": "<manufacturer / brand — often the same as the dealer for branded receipts>",\n'
             '      "model": "<model number / model name>",\n'
             '      "serial_number": "<serial #, part #, item #, sku, catalog # — see note below>",\n'
             '      "cost": <number, no currency symbols>,\n'
@@ -3011,6 +3054,11 @@ async def ai_receipt_scan(payload: ReceiptScanRequest):
             "- 'cost' is the per-unit price (or extended/total if per-unit "
             "isn't shown). Strip currency symbols and commas. Always a number.\n"
             "- 'quantity' must be a positive integer (default 1).\n"
+            "- 'sold_by' is the human salesperson/rep who sold it (e.g. "
+            "'Wade Miller'). Receipts label this as 'Sold By:' or "
+            "'Salesperson:'. Leave empty if not present.\n"
+            "- 'purchase_date' MUST be ISO YYYY-MM-DD. Convert any other "
+            "format (5/7/2025 → 2025-05-07).\n"
             "- Use empty strings or 0 if a value isn't present. Do NOT invent.\n"
             "- 'raw_text' is REQUIRED — include every line of text from the "
             "receipt so the user can copy any value the structured extraction "
@@ -3087,7 +3135,8 @@ async def ai_receipt_scan(payload: ReceiptScanRequest):
         first = items_list[0] if items_list else ReceiptItem()
         return ReceiptScanResponse(
             dealer=str(data.get("dealer") or "").strip(),
-            purchase_date=str(data.get("purchase_date") or "").strip(),
+            sold_by=str(data.get("sold_by") or "").strip(),
+            purchase_date=_normalize_date(str(data.get("purchase_date") or "").strip()),
             raw_text=str(data.get("raw_text") or "").strip(),
             items=items_list,
             # Mirror first item to top-level for backward compatibility

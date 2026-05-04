@@ -302,6 +302,7 @@ export default function ToolEdit() {
       quantity: it.quantity != null ? String(Math.max(1, parseInt(String(it.quantity), 10) || 1)) : "1",
       purchase_date: String(r.purchase_date || "").trim(),
       dealer: String(r.dealer || "").trim(),
+      sold_by: String(r.sold_by || "").trim(),
       description: String(it.description || "").trim(),
     };
     setScanFields(fields);
@@ -315,6 +316,7 @@ export default function ToolEdit() {
       quantity: !!fields.quantity && parseInt(fields.quantity, 10) > 1,
       purchase_date: !!fields.purchase_date,
       dealer: !!fields.dealer,
+      sold_by: !!fields.sold_by,
       description: !!fields.description,
     });
     setScanItemPickerOpen(false);
@@ -406,9 +408,70 @@ export default function ToolEdit() {
     }
   };
 
-  // After dealer resolution, show the dealer-charge prompt if applicable
-  const afterDealerResolved = (matchedDealer: any | null) => {
+  // After dealer resolution, try to match the salesperson (sold_by) to an
+  // existing agent on that dealer; if not found, offer to add them. Then show
+  // the dealer-charge prompt if applicable.
+  const afterDealerResolved = async (matchedDealer: any | null) => {
     const f = scanFields;
+    // Try to match the salesperson (sold_by) to an agent on the dealer
+    if (matchedDealer && scanApply.sold_by && f.sold_by) {
+      const wantedName = f.sold_by.trim();
+      const agents = matchedDealer.agents || [];
+      const wantedLow = wantedName.toLowerCase();
+      const matchedAgent = agents.find(
+        (a: any) => String(a.name || "").trim().toLowerCase() === wantedLow,
+      );
+      if (matchedAgent) {
+        setPurchasedAgentId(matchedAgent.id);
+        setPurchasedAgentName(matchedAgent.name);
+      } else {
+        // Offer to add a new agent on the dealer
+        await new Promise<void>((resolve) => {
+          Alert.alert(
+            "Sales rep not found",
+            `"${wantedName}" isn't listed as an agent under ${matchedDealer.name}. Add them?`,
+            [
+              {
+                text: "Skip",
+                style: "cancel",
+                onPress: () => resolve(),
+              },
+              {
+                text: `Add "${wantedName}"`,
+                onPress: async () => {
+                  try {
+                    await api.addAgent(matchedDealer.id, {
+                      name: wantedName,
+                      phone: "",
+                      email: "",
+                    });
+                    // Reload dealers to pick up the new agent id
+                    const fresh = await api.listDealers();
+                    setDealers(fresh);
+                    const refreshed = fresh.find((d: any) => d.id === matchedDealer.id);
+                    const newAgent = (refreshed?.agents || []).find(
+                      (a: any) => String(a.name || "").trim().toLowerCase() === wantedLow,
+                    );
+                    if (newAgent) {
+                      setPurchasedAgentId(newAgent.id);
+                      setPurchasedAgentName(newAgent.name);
+                    }
+                  } catch (err: any) {
+                    console.warn("Add agent failed:", err);
+                  } finally {
+                    resolve();
+                  }
+                },
+              },
+            ],
+          );
+        });
+      }
+    } else if (scanApply.sold_by && f.sold_by && !matchedDealer) {
+      // No dealer to attach to — just store the name as agent text so it shows on the form
+      setPurchasedAgentName(f.sold_by.trim());
+    }
+
     const chargeAmount = scanApply.cost ? parseFloat(f.cost) || 0 : parseFloat(cost) || 0;
     if (!isEdit && matchedDealer && chargeAmount > 0) {
       setTimeout(() => {
@@ -1565,6 +1628,7 @@ export default function ToolEdit() {
                   { key: "quantity", label: "QUANTITY", placeholder: "1", keyboard: "number-pad" },
                   { key: "purchase_date", label: "PURCHASE DATE (YYYY-MM-DD)", placeholder: "2025-06-15", keyboard: "default" },
                   { key: "dealer", label: "DEALER (we'll match or offer to add)", placeholder: "Snap-on", keyboard: "default" },
+                  { key: "sold_by", label: "SOLD BY  /  SALES REP (will match an agent on the dealer)", placeholder: "Wade Miller", keyboard: "default" },
                   { key: "description", label: "DESCRIPTION", placeholder: "Optional notes", keyboard: "default" },
                 ].map((f) => (
                   <View key={f.key} style={styles.scanEditRow}>
