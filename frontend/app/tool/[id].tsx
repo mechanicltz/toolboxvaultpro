@@ -457,36 +457,19 @@ export default function ToolDetail() {
     if (F.purchase_date && tool.purchase_date)
       specRows.push({ label: "Purchased", value: formatDateUS(tool.purchase_date) });
 
-    const specsHtml = specRows
-      .map(
-        (r) =>
-          `<div class="row"><span class="lab">${esc(r.label).toUpperCase()}</span><span class="val">${esc(r.value)}</span></div>`,
-      )
-      .join("");
-
-    const descBlock =
-      F.description && tool.description
-        ? `<div class="desc"><div class="lab">DESCRIPTION</div><p>${esc(tool.description)}</p></div>`
-        : "";
-
-    const noteBlock =
-      F.sale_notes && tool.sale_notes
-        ? `<div class="note"><div class="lab">SELLER'S NOTES</div><p>${esc(tool.sale_notes)}</p></div>`
-        : "";
-
-    const contactRows: string[] = [];
+    // Build clean text values — no emojis (they choke xhtml2pdf on
+    // letter-spacing) and the contact lines are simple strings.
+    const contactLines: string[] = [];
     if (F.contact_name && profile?.name)
-      contactRows.push(`<div><b>${esc(profile.name)}</b></div>`);
+      contactLines.push(esc(profile.name));
     if (F.contact_phone && profile?.phone)
-      contactRows.push(`<div>📞 ${esc(profile.phone)}</div>`);
+      contactLines.push(`Phone: ${esc(profile.phone)}`);
     if (F.contact_email && profile?.email)
-      contactRows.push(`<div>✉️ ${esc(profile.email)}</div>`);
-    const contactBlock = contactRows.length
-      ? `<div class="contact"><div class="contact-title">CONTACT</div>${contactRows.join("")}</div>`
-      : "";
+      contactLines.push(`Email: ${esc(profile.email)}`);
 
     // xhtml2pdf-compatible HTML — uses tables for layout, basic CSS only.
-    // No flex, no gradients, no outline-offset, no position:absolute.
+    // No flex, no gradients, no outline-offset, no position:absolute,
+    // no large letter-spacing on giant fonts (hangs the layouter).
     const specsTableRows = specRows
       .map(
         (r) => `
@@ -502,176 +485,215 @@ export default function ToolDetail() {
 <head>
 <meta charset="utf-8"/>
 <style>
-  @page { size: letter; margin: 0.4in; }
-  body { font-family: Helvetica, Arial, sans-serif; color: #111; font-size: 12px; }
+  @page { size: letter; margin: 0.5in; }
+  body { font-family: Helvetica, Arial, sans-serif; color: #111111; font-size: 11pt; }
   table { border-collapse: collapse; }
-  .frame {
-    width: 100%;
-    border: 8pt solid #111;
-    padding: 14pt;
-  }
-  .ribbon {
-    width: 100%;
+  p, div { margin: 0; padding: 0; }
+
+  /* === FOR SALE BANNER === */
+  table.banner { width: 100%; margin-bottom: 14pt; }
+  table.banner td {
     background-color: #FFB300;
-    color: #111;
+    color: #111111;
+    text-align: center;
+    padding: 18pt 0 18pt 0;
+    font-size: 38pt;
+    font-weight: bold;
+    letter-spacing: 4pt;
+    border: 4pt solid #111111;
+  }
+
+  /* === ITEM NAME === */
+  table.name-band { width: 100%; margin-bottom: 14pt; }
+  table.name-band td {
+    text-align: center;
+    font-size: 22pt;
+    font-weight: bold;
+    color: #111111;
+    text-transform: uppercase;
+    padding: 4pt 0 4pt 0;
+  }
+
+  /* === PRICE BOX === */
+  table.price-box {
+    width: 100%;
+    margin-bottom: 16pt;
+    border: 3pt solid #FFB300;
+  }
+  table.price-box td {
+    background-color: #111111;
+    text-align: center;
+  }
+  td.price-ask {
+    color: #FFB300;
+    font-size: 10pt;
+    letter-spacing: 3pt;
+    font-weight: bold;
+    padding: 12pt 0 0 0;
+  }
+  td.price-amount {
+    color: #FFB300;
     font-size: 44pt;
     font-weight: bold;
-    letter-spacing: 8pt;
-    text-align: center;
-    padding: 14pt 0 14pt 0;
-    border-top: 3pt solid #111;
-    border-bottom: 3pt solid #111;
-    margin-bottom: 14pt;
+    padding: 4pt 0 14pt 0;
   }
-  .name {
-    font-size: 24pt;
-    font-weight: bold;
+
+  /* === HERO PHOTO === */
+  table.photo-wrap { width: 100%; margin-bottom: 14pt; }
+  table.photo-wrap td {
     text-align: center;
-    color: #111;
-    margin-bottom: 12pt;
+    padding: 0;
   }
-  .price-box {
+  img.hero-photo {
+    /* No width: % — xhtml2pdf preserves aspect ratio when only max-* set. */
+    max-width: 4.5in;
+    max-height: 3.5in;
+    border: 3pt solid #111111;
+  }
+
+  /* === SPECS TABLE === */
+  table.specs {
     width: 100%;
-    background-color: #111;
-    border: 2pt solid #FFB300;
-    padding: 12pt 0 14pt 0;
     margin-bottom: 14pt;
-    text-align: center;
+    border: 2pt solid #111111;
   }
-  .price-ask {
-    color: #FFB300;
+  table.specs td {
+    padding: 6pt 12pt;
     font-size: 11pt;
-    letter-spacing: 4pt;
-    font-weight: bold;
-    text-align: center;
+    border-bottom: 0.75pt solid #dddddd;
   }
-  .price {
-    color: #FFB300;
-    font-size: 48pt;
-    font-weight: bold;
-    text-align: center;
-  }
-  .photo-wrap {
-    width: 100%;
-    text-align: center;
-    margin-bottom: 14pt;
-  }
-  .photo {
-    width: 80%;
-    max-width: 5in;
-    border: 3pt solid #111;
-  }
-  .specs {
-    width: 100%;
-    border: 2pt solid #111;
-    margin-bottom: 12pt;
-  }
-  .specs td {
-    padding: 5pt 12pt;
-    font-size: 11pt;
-    border-bottom: 1pt dotted #ccc;
-  }
-  .specs td.lab {
-    color: #555;
+  table.specs td.lab {
+    color: #555555;
     font-size: 9pt;
     font-weight: bold;
     width: 40%;
+    letter-spacing: 1pt;
   }
-  .specs td.val {
-    color: #111;
+  table.specs td.val {
+    color: #111111;
     font-weight: bold;
     text-align: right;
   }
-  .desc, .note {
-    width: 100%;
+
+  /* === DESCRIPTION / NOTES === */
+  table.note-box { width: 100%; margin-bottom: 10pt; }
+  table.note-box td.bar {
+    width: 4pt;
+    background-color: #FFB300;
+    padding: 0;
+  }
+  table.note-box td.body {
     background-color: #fff5d6;
-    border-left: 4pt solid #FFB300;
     padding: 10pt 14pt;
-    margin-bottom: 10pt;
-  }
-  .note { background-color: #f0f0f0; border-left-color: #111; }
-  .lab-small {
-    font-size: 9pt;
-    font-weight: bold;
-    color: #555;
-    letter-spacing: 1pt;
-  }
-  .body-text {
     font-size: 11pt;
-    color: #222;
-    margin-top: 4pt;
+    color: #2a2a2a;
+    line-height: 1.4;
   }
-  .contact {
-    width: 100%;
-    background-color: #111;
-    color: #fff;
+  table.note-box.alt td.bar { background-color: #111111; }
+  table.note-box.alt td.body { background-color: #f0f0f0; }
+  .note-label {
+    font-size: 8.5pt;
+    font-weight: bold;
+    color: #777777;
+    letter-spacing: 1.5pt;
+    margin-bottom: 4pt;
+  }
+
+  /* === CONTACT === */
+  table.contact { width: 100%; margin-top: 14pt; }
+  table.contact td {
+    background-color: #111111;
+    color: #ffffff;
     text-align: center;
-    padding: 14pt;
-    margin-top: 12pt;
+    padding: 6pt 14pt;
+    font-size: 12pt;
   }
-  .contact-title {
+  td.contact-title {
     color: #FFB300;
-    font-size: 9pt;
+    font-size: 10pt;
     letter-spacing: 3pt;
     font-weight: bold;
-    margin-bottom: 6pt;
+    padding: 14pt 14pt 6pt 14pt;
   }
-  .contact-line {
-    color: #fff;
+  td.contact-line {
     font-size: 12pt;
-    margin: 2pt 0 2pt 0;
-    text-align: center;
+    padding: 2pt 14pt 2pt 14pt;
   }
+  td.contact-spacer { padding: 0 0 14pt 0; height: 1pt; }
+
+  /* === FOOTER === */
   .footer {
-    margin-top: 12pt;
+    margin-top: 14pt;
     text-align: center;
-    color: #999;
+    color: #999999;
     font-size: 8pt;
+    letter-spacing: 1pt;
   }
 </style>
 </head>
 <body>
-  <div class="frame">
-    <div class="ribbon">FOR SALE</div>
-    ${F.name ? `<div class="name">${esc(tool.name) || "(unnamed)"}</div>` : ""}
-    ${
-      F.price
-        ? `<div class="price-box">
-             <div class="price-ask">ASKING PRICE</div>
-             <div class="price">$${askingPrice}</div>
-           </div>`
-        : ""
-    }
-    ${heroPhoto ? `<div class="photo-wrap"><img class="photo" src="${heroPhoto}"/></div>` : ""}
-    ${specsTableRows ? `<table class="specs">${specsTableRows}</table>` : ""}
-    ${
-      F.description && tool.description
-        ? `<div class="desc">
-             <div class="lab-small">DESCRIPTION</div>
-             <div class="body-text">${esc(tool.description)}</div>
-           </div>`
-        : ""
-    }
-    ${
-      F.sale_notes && tool.sale_notes
-        ? `<div class="note">
-             <div class="lab-small">SELLER'S NOTES</div>
-             <div class="body-text">${esc(tool.sale_notes)}</div>
-           </div>`
-        : ""
-    }
-    ${
-      contactRows.length
-        ? `<div class="contact">
-             <div class="contact-title">CONTACT</div>
-             ${contactRows
-               .map((r) => `<div class="contact-line">${r.replace(/<\/?div>/g, "")}</div>`)
-               .join("")}
-           </div>`
-        : ""
-    }
-    <div class="footer">Listed via TOOLBOX VAULT &middot; ${new Date().toLocaleDateString()}</div>
-  </div>
+
+  <table class="banner"><tr><td>FOR SALE</td></tr></table>
+
+  ${
+    F.name
+      ? `<table class="name-band"><tr><td>${esc(tool.name) || "(UNNAMED)"}</td></tr></table>`
+      : ""
+  }
+
+  ${
+    F.price
+      ? `<table class="price-box">
+           <tr><td class="price-ask">ASKING PRICE</td></tr>
+           <tr><td class="price-amount">$${askingPrice}</td></tr>
+         </table>`
+      : ""
+  }
+
+  ${
+    heroPhoto
+      ? `<table class="photo-wrap"><tr><td><img class="hero-photo" src="${heroPhoto}"/></td></tr></table>`
+      : ""
+  }
+
+  ${specsTableRows ? `<table class="specs">${specsTableRows}</table>` : ""}
+
+  ${
+    F.description && tool.description
+      ? `<table class="note-box"><tr>
+           <td class="bar">&nbsp;</td>
+           <td class="body">
+             <div class="note-label">DESCRIPTION</div>
+             ${esc(tool.description)}
+           </td>
+         </tr></table>`
+      : ""
+  }
+
+  ${
+    F.sale_notes && tool.sale_notes
+      ? `<table class="note-box alt"><tr>
+           <td class="bar">&nbsp;</td>
+           <td class="body">
+             <div class="note-label">SELLER'S NOTES</div>
+             ${esc(tool.sale_notes)}
+           </td>
+         </tr></table>`
+      : ""
+  }
+
+  ${
+    contactLines.length
+      ? `<table class="contact">
+           <tr><td class="contact-title">CONTACT</td></tr>
+           ${contactLines.map((l) => `<tr><td class="contact-line">${l}</td></tr>`).join("")}
+           <tr><td class="contact-spacer">&nbsp;</td></tr>
+         </table>`
+      : ""
+  }
+
+  <div class="footer">LISTED VIA TOOLBOX VAULT &middot; ${new Date().toLocaleDateString()}</div>
+
 </body>
 </html>`;
 
@@ -908,13 +930,15 @@ export default function ToolDetail() {
   table.photos { width: 100%; }
   table.photos td {
     width: 50%;
-    padding: 4pt;
+    padding: 6pt;
     text-align: center;
     vertical-align: middle;
   }
   table.photos img {
-    width: 100%;
-    max-height: 240pt;
+    /* No width:100% — that stretches the image. Cap with max-* only so
+       xhtml2pdf preserves the natural aspect ratio. */
+    max-width: 3.2in;
+    max-height: 2.4in;
     border: 1.5pt solid #111111;
   }
 
