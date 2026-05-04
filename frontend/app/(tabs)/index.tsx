@@ -6,12 +6,14 @@ import {
   ScrollView,
   TouchableOpacity,
   RefreshControl,
+  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter, useFocusEffect } from "expo-router";
 import { theme } from "../../src/theme";
 import { api } from "../../src/api";
+import { PaymentModal } from "../../src/sections/PaymentModal";
 import { nextRouteDate, DAY_NAMES } from "../../src/route";
 import { formatDateUS } from "../../src/dateUtil";
 import { getCached, setCached } from "../../src/cache";
@@ -32,6 +34,30 @@ export default function HomeScreen() {
     getCached("claims_summary", { totals: { open: 0 } }),
   );
   const [refreshing, setRefreshing] = useState(false);
+  const [paymentTarget, setPaymentTarget] = useState<{
+    dealer: any;
+    account: "credit" | "personal";
+  } | null>(null);
+
+  const openAdjustForDealer = useCallback((d: any) => {
+    // Action sheet — pick which account to adjust for this dealer
+    Alert.alert(
+      `Adjust ${d.name}`,
+      "Which account do you want to adjust?",
+      [
+        {
+          text: `Truck Acct  ($${(Number(d.personal_balance) || 0).toFixed(2)})`,
+          onPress: () => setPaymentTarget({ dealer: d, account: "personal" }),
+        },
+        {
+          text: `Credit Acct  ($${(Number(d.credit_balance) || 0).toFixed(2)})`,
+          onPress: () => setPaymentTarget({ dealer: d, account: "credit" }),
+        },
+        { text: "Cancel", style: "cancel" },
+      ],
+      { cancelable: true },
+    );
+  }, []);
 
   void stats;
 
@@ -225,8 +251,7 @@ export default function HomeScreen() {
             >
               <DealerBalanceRow
                 dealer={d}
-                onOpenDealer={() => router.push(`/dealer/${d.id}`)}
-                onAdjust={() => router.push(`/dealer/${d.id}`)}
+                onAdjust={() => openAdjustForDealer(d)}
               />
             </View>
           ))
@@ -315,6 +340,19 @@ export default function HomeScreen() {
           Pull to refresh · Customize this list under MORE → DISPLAY
         </Text>
       </ScrollView>
+
+      {paymentTarget && (
+        <PaymentModal
+          visible={!!paymentTarget}
+          dealer={paymentTarget.dealer}
+          account={paymentTarget.account}
+          onClose={() => setPaymentTarget(null)}
+          onSaved={() => {
+            setPaymentTarget(null);
+            load();
+          }}
+        />
+      )}
     </SafeAreaView>
   );
 }
@@ -365,55 +403,35 @@ function SummaryRow({
 
 function DealerBalanceRow({
   dealer,
-  onOpenDealer,
   onAdjust,
 }: {
   dealer: any;
-  onOpenDealer: () => void;
   onAdjust: () => void;
 }) {
   const credit = Number(dealer.credit_balance) || 0;
   const truck = Number(dealer.personal_balance) || 0;
+  const total = credit + truck;
   return (
     <View style={styles.dealerRow}>
-      {/* Line 1: Dealer name + Truck Acct + balance */}
-      <TouchableOpacity
-        style={styles.dealerAcctLine}
-        onPress={onOpenDealer}
-        activeOpacity={0.7}
+      <Text style={styles.dealerName} numberOfLines={1}>
+        {dealer.name}
+      </Text>
+      <Text
+        style={[
+          styles.dealerTotal,
+          total === 0 && { color: theme.colors.textMuted },
+        ]}
       >
-        <Ionicons name="bus" size={14} color={theme.colors.accent} />
-        <Text style={styles.dealerAcctText} numberOfLines={1}>
-          {dealer.name} Truck Acct
-        </Text>
-        <Text style={styles.dealerAcctVal}>${truck.toFixed(2)}</Text>
-      </TouchableOpacity>
-
-      {/* Line 2: Dealer name + Credit Acct + balance */}
+        ${total.toFixed(2)}
+      </Text>
       <TouchableOpacity
-        style={styles.dealerAcctLine}
-        onPress={onOpenDealer}
-        activeOpacity={0.7}
+        testID={`adjust-${dealer.id}`}
+        style={styles.dealerAdjustPill}
+        onPress={onAdjust}
+        activeOpacity={0.85}
       >
-        <Ionicons name="card" size={14} color={theme.colors.accent} />
-        <Text style={styles.dealerAcctText} numberOfLines={1}>
-          {dealer.name} Credit Acct
-        </Text>
-        <Text style={styles.dealerAcctVal}>${credit.toFixed(2)}</Text>
+        <Text style={styles.dealerAdjustText}>Adjust</Text>
       </TouchableOpacity>
-
-      {/* Line 3: gold "Adjust Balance" pill, centered */}
-      <View style={styles.dealerAdjustWrap}>
-        <TouchableOpacity
-          testID={`adjust-balance-${dealer.id}`}
-          style={styles.dealerAdjustPill}
-          onPress={onAdjust}
-          activeOpacity={0.85}
-        >
-          <Ionicons name="create" size={12} color="#000" />
-          <Text style={styles.dealerAdjustText}>Adjust Balance</Text>
-        </TouchableOpacity>
-      </View>
     </View>
   );
 }
@@ -543,39 +561,29 @@ const styles = StyleSheet.create({
     borderBottomColor: theme.colors.border,
   },
   dealerRow: {
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    gap: 4,
-  },
-  dealerAcctLine: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    paddingVertical: 4,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
   },
-  dealerAcctText: {
+  dealerName: {
     flex: 1,
     color: theme.colors.textPrimary,
     fontSize: 11,
-    fontWeight: "700",
+    fontWeight: "800",
+    letterSpacing: 0.3,
   },
-  dealerAcctVal: {
+  dealerTotal: {
     color: theme.colors.textPrimary,
     fontSize: 11,
     fontWeight: "900",
-  },
-  dealerAdjustWrap: {
-    alignItems: "center",
-    marginTop: 4,
-    marginBottom: 2,
+    minWidth: 64,
+    textAlign: "right",
   },
   dealerAdjustPill: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 4,
     paddingHorizontal: 10,
-    paddingVertical: 3,
+    paddingVertical: 4,
     backgroundColor: theme.colors.accent,
     borderRadius: 999,
   },
@@ -583,7 +591,7 @@ const styles = StyleSheet.create({
     color: "#000",
     fontSize: 9,
     fontWeight: "900",
-    letterSpacing: 0.4,
+    letterSpacing: 0.6,
   },
 
   /* Feedback */
