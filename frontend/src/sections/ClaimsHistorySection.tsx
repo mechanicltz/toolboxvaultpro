@@ -123,13 +123,13 @@ const styles = StyleSheet.create({
   head: { flexDirection: "row", alignItems: "center", marginBottom: 10 },
   title: {
     color: theme.colors.textPrimary,
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: "900",
     letterSpacing: 2,
   },
   sub: {
     color: theme.colors.textMuted,
-    fontSize: 8,
+    fontSize: 7,
     fontWeight: "700",
     letterSpacing: 1.5,
     marginTop: 2,
@@ -142,7 +142,7 @@ const styles = StyleSheet.create({
     minWidth: 30,
     alignItems: "center",
   },
-  countBadgeText: { color: "#fff", fontSize: 10, fontWeight: "900" },
+  countBadgeText: { color: "#fff", fontSize: 9, fontWeight: "900" },
   card: {
     backgroundColor: theme.colors.bgSecondary,
     borderWidth: 1,
@@ -164,7 +164,7 @@ const styles = StyleSheet.create({
   },
   num: {
     color: theme.colors.accent,
-    fontSize: 9,
+    fontSize: 8,
     fontWeight: "900",
   },
   thumb: {
@@ -184,13 +184,13 @@ const styles = StyleSheet.create({
   statusText: { fontSize: 7, fontWeight: "900", letterSpacing: 1 },
   notifiedHi: {
     color: theme.colors.accent,
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: "900",
     marginTop: 2,
   },
   meta: {
     color: theme.colors.textSecondary,
-    fontSize: 9,
+    fontSize: 8,
     marginTop: 2,
   },
   notesBox: {
@@ -208,7 +208,7 @@ const styles = StyleSheet.create({
   },
   notes: {
     color: theme.colors.textPrimary,
-    fontSize: 10,
-    lineHeight: 15,
+    fontSize: 9,
+    lineHeight: 14,
   },
 });

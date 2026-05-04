@@ -169,7 +169,7 @@ function BalanceCard({
 const styles = StyleSheet.create({
   sectionLabel: {
     color: theme.colors.textPrimary,
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: "900",
     letterSpacing: 2,
     marginTop: 18,
@@ -185,10 +185,10 @@ const styles = StyleSheet.create({
     borderLeftWidth: 3,
     borderLeftColor: theme.colors.success,
   },
-  balLabel: { color: theme.colors.textPrimary, fontSize: 9, fontWeight: "900", letterSpacing: 2 },
-  histLink: { color: theme.colors.accent, fontSize: 8, fontWeight: "900", letterSpacing: 1 },
-  balAmount: { fontSize: 23, fontWeight: "900", marginTop: 8 },
-  balSub: { color: theme.colors.textMuted, fontSize: 9, marginTop: 2 },
+  balLabel: { color: theme.colors.textPrimary, fontSize: 8, fontWeight: "900", letterSpacing: 2 },
+  histLink: { color: theme.colors.accent, fontSize: 7, fontWeight: "900", letterSpacing: 1 },
+  balAmount: { fontSize: 21, fontWeight: "900", marginTop: 8 },
+  balSub: { color: theme.colors.textMuted, fontSize: 8, marginTop: 2 },
   payBtn: {
     flex: 1,
     flexDirection: "row",
@@ -199,7 +199,7 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.accent,
     borderRadius: 4,
   },
-  payText: { color: "#000", fontWeight: "900", fontSize: 9, letterSpacing: 1 },
+  payText: { color: "#000", fontWeight: "900", fontSize: 8, letterSpacing: 1 },
   chargeBtn: {
     flex: 1,
     flexDirection: "row",
@@ -211,7 +211,7 @@ const styles = StyleSheet.create({
     borderColor: theme.colors.danger,
     borderRadius: 4,
   },
-  chargeText: { color: theme.colors.danger, fontWeight: "900", fontSize: 9, letterSpacing: 1 },
+  chargeText: { color: theme.colors.danger, fontWeight: "900", fontSize: 8, letterSpacing: 1 },
   modalBg: { flex: 1, backgroundColor: "rgba(0,0,0,0.7)", justifyContent: "flex-end" },
   modalSheet: {
     backgroundColor: theme.colors.bgSecondary,
@@ -222,7 +222,7 @@ const styles = StyleSheet.create({
     borderTopColor: theme.colors.accent,
     maxHeight: "85%",
   },
-  modalTitle: { color: theme.colors.textPrimary, fontSize: 11, fontWeight: "900", letterSpacing: 2, marginBottom: 12 },
+  modalTitle: { color: theme.colors.textPrimary, fontSize: 10, fontWeight: "900", letterSpacing: 2, marginBottom: 12 },
   empty: { color: theme.colors.textMuted, fontStyle: "italic", padding: 16, textAlign: "center" },
   txRow: {
     flexDirection: "row",
@@ -233,9 +233,9 @@ const styles = StyleSheet.create({
     borderBottomColor: theme.colors.borderSubtle,
   },
   txIconBox: { width: 36, height: 36, alignItems: "center", justifyContent: "center", backgroundColor: theme.colors.bg, borderRadius: 18 },
-  txAmount: { color: theme.colors.textPrimary, fontWeight: "900", fontSize: 13 },
-  txMeta: { color: theme.colors.textMuted, fontSize: 9, fontWeight: "700", marginTop: 2, letterSpacing: 0.5 },
-  txNote: { color: theme.colors.textSecondary, fontSize: 10, marginTop: 3, fontStyle: "italic" },
+  txAmount: { color: theme.colors.textPrimary, fontWeight: "900", fontSize: 12 },
+  txMeta: { color: theme.colors.textMuted, fontSize: 8, fontWeight: "700", marginTop: 2, letterSpacing: 0.5 },
+  txNote: { color: theme.colors.textSecondary, fontSize: 9, marginTop: 3, fontStyle: "italic" },
   btnGhost: {
     height: 44,
     borderWidth: 1,

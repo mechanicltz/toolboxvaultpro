@@ -202,7 +202,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.border,
   },
-  title: { color: theme.colors.textPrimary, fontSize: 15, fontWeight: "900", letterSpacing: 2 },
+  title: { color: theme.colors.textPrimary, fontSize: 14, fontWeight: "900", letterSpacing: 2 },
   addRow: { flexDirection: "row", padding: 16, gap: 8 },
   input: {
     flex: 1,
@@ -213,7 +213,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     height: 48,
     borderRadius: theme.radii.md,
-    fontSize: 12,
+    fontSize: 11,
     ...(theme.elevation.inset as object),
   },
   addBtn: {
@@ -239,7 +239,7 @@ const styles = StyleSheet.create({
     borderRadius: theme.radii.md,
     ...(theme.elevation.md as object),
   },
-  rowText: { color: theme.colors.textPrimary, fontSize: 12, fontWeight: "600" },
+  rowText: { color: theme.colors.textPrimary, fontSize: 11, fontWeight: "600" },
   editInput: {
     flex: 1,
     backgroundColor: theme.colors.surfaceAlt,
@@ -249,7 +249,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: theme.radii.sm,
-    fontSize: 11,
+    fontSize: 10,
   },
   iconAction: {
     paddingHorizontal: 6,

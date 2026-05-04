@@ -417,7 +417,7 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.colors.bg },
   notifiedHighlight: {
     color: theme.colors.accent,
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: "900",
     marginTop: 4,
     letterSpacing: 0.3,
@@ -434,14 +434,14 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     color: theme.colors.textPrimary,
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: "900",
     letterSpacing: 2,
     marginBottom: 4,
   },
   modalSubtitle: {
     color: theme.colors.accent,
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: "700",
     marginBottom: 14,
   },
@@ -464,7 +464,7 @@ const styles = StyleSheet.create({
   statusOptionText: {
     color: theme.colors.textPrimary,
     fontWeight: "700",
-    fontSize: 11,
+    fontSize: 10,
   },
   statusOptionTextActive: { color: theme.colors.accent, fontWeight: "900" },
   cancelBtn: {
@@ -491,8 +491,8 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   backBtn: { padding: 8 },
-  title: { color: theme.colors.textPrimary, fontSize: 16, fontWeight: "900", letterSpacing: 1 },
-  subtitle: { color: theme.colors.accent, fontSize: 8, fontWeight: "700", letterSpacing: 1.5, marginTop: 2 },
+  title: { color: theme.colors.textPrimary, fontSize: 14, fontWeight: "900", letterSpacing: 1 },
+  subtitle: { color: theme.colors.accent, fontSize: 7, fontWeight: "700", letterSpacing: 1.5, marginTop: 2 },
   dealerBtn: {
     flexDirection: "row",
     alignItems: "center",
@@ -503,7 +503,7 @@ const styles = StyleSheet.create({
     borderColor: theme.colors.border,
     borderRadius: 4,
   },
-  dealerBtnText: { color: theme.colors.accent, fontWeight: "900", fontSize: 8, letterSpacing: 1 },
+  dealerBtnText: { color: theme.colors.accent, fontWeight: "900", fontSize: 7, letterSpacing: 1 },
   tabRow: {
     flexDirection: "row",
     gap: 8,
@@ -519,11 +519,11 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   tabChipOn: { backgroundColor: theme.colors.accent, borderColor: theme.colors.accent },
-  tabText: { color: theme.colors.textSecondary, fontWeight: "900", fontSize: 10, letterSpacing: 1 },
+  tabText: { color: theme.colors.textSecondary, fontWeight: "900", fontSize: 9, letterSpacing: 1 },
   tabTextOn: { color: "#000" },
   emptyState: { alignItems: "center", padding: 40, gap: 12 },
-  emptyTitle: { color: theme.colors.textPrimary, fontWeight: "900", letterSpacing: 1.5, fontSize: 11 },
-  emptyText: { color: theme.colors.textMuted, fontSize: 10, textAlign: "center", lineHeight: 15 },
+  emptyTitle: { color: theme.colors.textPrimary, fontWeight: "900", letterSpacing: 1.5, fontSize: 10 },
+  emptyText: { color: theme.colors.textMuted, fontSize: 9, textAlign: "center", lineHeight: 14 },
   card: {
     backgroundColor: theme.colors.bgSecondary,
     borderRadius: 6,
@@ -543,8 +543,8 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   thumbImg: { width: "100%", height: "100%" },
-  itemName: { color: theme.colors.textPrimary, fontWeight: "900", fontSize: 12, letterSpacing: 0.3 },
-  itemMeta: { color: theme.colors.textMuted, fontSize: 9, marginTop: 2 },
+  itemName: { color: theme.colors.textPrimary, fontWeight: "900", fontSize: 11, letterSpacing: 0.3 },
+  itemMeta: { color: theme.colors.textMuted, fontSize: 8, marginTop: 2 },
   statusPill: {
     alignSelf: "flex-start",
     paddingHorizontal: 7,
@@ -553,10 +553,10 @@ const styles = StyleSheet.create({
     borderRadius: 3,
     marginTop: 5,
   },
-  statusText: { fontWeight: "900", fontSize: 8, letterSpacing: 0.5 },
+  statusText: { fontWeight: "900", fontSize: 7, letterSpacing: 0.5 },
   notes: {
     color: theme.colors.textSecondary,
-    fontSize: 10,
+    fontSize: 9,
     fontStyle: "italic",
     marginTop: 8,
     paddingLeft: 8,
@@ -574,5 +574,5 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.danger,
     borderRadius: 4,
   },
-  actionText: { color: "#fff", fontWeight: "900", fontSize: 9, letterSpacing: 1 },
+  actionText: { color: "#fff", fontWeight: "900", fontSize: 8, letterSpacing: 1 },
 });

@@ -445,13 +445,13 @@ const pwStyles = StyleSheet.create({
   title: {
     flex: 1,
     color: theme.colors.textPrimary,
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: "900",
     letterSpacing: 1.5,
   },
   label: {
     color: theme.colors.textSecondary,
-    fontSize: 9,
+    fontSize: 8,
     fontWeight: "800",
     letterSpacing: 1.5,
     marginTop: 8,
@@ -465,16 +465,16 @@ const pwStyles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 10,
     color: theme.colors.textPrimary,
-    fontSize: 11,
+    fontSize: 10,
   },
   err: {
     color: theme.colors.danger,
-    fontSize: 10,
+    fontSize: 9,
     marginTop: 10,
   },
   ok: {
     color: "#27AE60",
-    fontSize: 10,
+    fontSize: 9,
     marginTop: 10,
   },
   primaryBtn: {
@@ -488,17 +488,17 @@ const pwStyles = StyleSheet.create({
     color: "#000",
     fontWeight: "900",
     letterSpacing: 1.5,
-    fontSize: 11,
+    fontSize: 10,
   },
 });
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.colors.bg },
   header: { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 12 },
-  title: { color: theme.colors.textPrimary, fontSize: 23, fontWeight: "900", letterSpacing: 2 },
+  title: { color: theme.colors.textPrimary, fontSize: 21, fontWeight: "900", letterSpacing: 2 },
   subtitle: {
     color: theme.colors.accent,
-    fontSize: 9,
+    fontSize: 8,
     fontWeight: "700",
     letterSpacing: 2,
     textTransform: "uppercase",
@@ -506,7 +506,7 @@ const styles = StyleSheet.create({
   },
   sectionLabel: {
     color: theme.colors.textMuted,
-    fontSize: 9,
+    fontSize: 8,
     fontWeight: "800",
     letterSpacing: 2,
     paddingHorizontal: 20,
@@ -539,8 +539,8 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     borderRadius: 4,
   },
-  rowTitle: { color: theme.colors.textPrimary, fontWeight: "700", fontSize: 12 },
-  rowSub: { color: theme.colors.textSecondary, fontSize: 10, marginTop: 2 },
+  rowTitle: { color: theme.colors.textPrimary, fontWeight: "700", fontSize: 11 },
+  rowSub: { color: theme.colors.textSecondary, fontSize: 9, marginTop: 2 },
   badge: {
     minWidth: 24,
     height: 24,
@@ -553,7 +553,7 @@ const styles = StyleSheet.create({
   },
   badgeText: {
     color: "#000",
-    fontSize: 9,
+    fontSize: 8,
     fontWeight: "900",
     letterSpacing: 0.5,
   },
@@ -567,7 +567,7 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     marginRight: 6,
   },
-  upgradePillText: { color: "#000", fontSize: 8, fontWeight: "900", letterSpacing: 1 },
+  upgradePillText: { color: "#000", fontSize: 7, fontWeight: "900", letterSpacing: 1 },
 
   homeRowsCard: {
     marginHorizontal: 16,
@@ -581,13 +581,13 @@ const styles = StyleSheet.create({
   },
   homeRowsTitle: {
     color: theme.colors.accent,
-    fontSize: 9,
+    fontSize: 8,
     fontWeight: "900",
     letterSpacing: 1.5,
   },
   homeRowsHelp: {
     color: theme.colors.textSecondary,
-    fontSize: 9,
+    fontSize: 8,
     marginTop: 4,
     marginBottom: 8,
   },
@@ -616,7 +616,7 @@ const styles = StyleSheet.create({
   homeRowToggleLabel: {
     flex: 1,
     color: theme.colors.textPrimary,
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: "600",
   },
 });

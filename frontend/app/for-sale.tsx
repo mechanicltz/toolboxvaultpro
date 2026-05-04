@@ -368,7 +368,7 @@ const styles = StyleSheet.create({
   title: {
     flex: 1,
     color: theme.colors.textPrimary,
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: "900",
     letterSpacing: 2,
   },
@@ -385,7 +385,7 @@ const styles = StyleSheet.create({
   },
   reportsBtnText: {
     color: theme.colors.accent,
-    fontSize: 8,
+    fontSize: 7,
     fontWeight: "900",
     letterSpacing: 1.2,
   },
@@ -409,7 +409,7 @@ const styles = StyleSheet.create({
   },
   tabBtnActive: { backgroundColor: theme.colors.accent, borderColor: theme.colors.accent },
   tabBtnActiveSold: { backgroundColor: "#27AE60", borderColor: "#27AE60" },
-  tabText: { color: theme.colors.textSecondary, fontWeight: "900", fontSize: 10, letterSpacing: 1.5 },
+  tabText: { color: theme.colors.textSecondary, fontWeight: "900", fontSize: 9, letterSpacing: 1.5 },
   tabTextActive: { color: "#000" },
   searchWrap: {
     flexDirection: "row",
@@ -427,7 +427,7 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     color: theme.colors.textPrimary,
-    fontSize: 11,
+    fontSize: 10,
     paddingVertical: 10,
   },
   filterBtn: {
@@ -439,7 +439,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 6,
   },
-  filterBtnText: { color: theme.colors.textPrimary, fontSize: 9, fontWeight: "800", letterSpacing: 1.5 },
+  filterBtnText: { color: theme.colors.textPrimary, fontSize: 8, fontWeight: "800", letterSpacing: 1.5 },
   statsRow: { flexDirection: "row", gap: 10, paddingHorizontal: 16, marginTop: 12, marginBottom: 4 },
   statBox: {
     flex: 1,
@@ -449,8 +449,8 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     padding: 10,
   },
-  statLabel: { color: theme.colors.textMuted, fontSize: 8, fontWeight: "800", letterSpacing: 1.5 },
-  statValue: { color: theme.colors.textPrimary, fontSize: 15, fontWeight: "900", marginTop: 2 },
+  statLabel: { color: theme.colors.textMuted, fontSize: 7, fontWeight: "800", letterSpacing: 1.5 },
+  statValue: { color: theme.colors.textPrimary, fontSize: 14, fontWeight: "900", marginTop: 2 },
   card: {
     backgroundColor: theme.colors.bgSecondary,
     borderWidth: 1,
@@ -461,11 +461,11 @@ const styles = StyleSheet.create({
   },
   cardImg: { width: 120, height: 120, backgroundColor: theme.colors.bg },
   cardBody: { flex: 1, padding: 10 },
-  cardName: { color: theme.colors.textPrimary, fontWeight: "900", fontSize: 11 },
-  cardSub: { color: theme.colors.textSecondary, fontSize: 9, marginTop: 2 },
+  cardName: { color: theme.colors.textPrimary, fontWeight: "900", fontSize: 10 },
+  cardSub: { color: theme.colors.textSecondary, fontSize: 8, marginTop: 2 },
   priceRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: 6 },
-  cardPrice: { color: theme.colors.accent, fontSize: 16, fontWeight: "900" },
-  cardMeta: { color: theme.colors.textMuted, fontSize: 8, marginTop: 2 },
+  cardPrice: { color: theme.colors.accent, fontSize: 14, fontWeight: "900" },
+  cardMeta: { color: theme.colors.textMuted, fontSize: 7, marginTop: 2 },
   listedPill: {
     flexDirection: "row",
     alignItems: "center",
@@ -487,8 +487,8 @@ const styles = StyleSheet.create({
   },
   soldPillText: { color: "#fff", fontSize: 7, fontWeight: "900", letterSpacing: 1 },
   empty: { alignItems: "center", padding: 40, gap: 10 },
-  emptyTitle: { color: theme.colors.textPrimary, fontSize: 12, fontWeight: "800" },
-  emptyMsg: { color: theme.colors.textMuted, fontSize: 10, textAlign: "center", lineHeight: 15 },
+  emptyTitle: { color: theme.colors.textPrimary, fontSize: 11, fontWeight: "800" },
+  emptyMsg: { color: theme.colors.textMuted, fontSize: 9, textAlign: "center", lineHeight: 14 },
   // Modal helpers
   modalBackdrop: { flex: 1, backgroundColor: "rgba(0,0,0,0.6)", alignItems: "center", justifyContent: "center", padding: 16 },
   modalCard: {
@@ -496,11 +496,11 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: theme.colors.border, borderRadius: 12, padding: 18,
   },
   modalHeader: { flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 12 },
-  modalTitle: { flex: 1, color: theme.colors.textPrimary, fontSize: 11, fontWeight: "900", letterSpacing: 1.5 },
+  modalTitle: { flex: 1, color: theme.colors.textPrimary, fontSize: 10, fontWeight: "900", letterSpacing: 1.5 },
   modalBtn: { paddingVertical: 12, borderRadius: 8, alignItems: "center" },
-  modalBtnText: { fontWeight: "900", fontSize: 10, letterSpacing: 1.5 },
-  fLabel: { color: theme.colors.textSecondary, fontSize: 9, fontWeight: "800", letterSpacing: 1.5, marginTop: 12, marginBottom: 4 },
-  fSub: { color: theme.colors.textMuted, fontSize: 8, fontWeight: "700", letterSpacing: 1, marginBottom: 4 },
+  modalBtnText: { fontWeight: "900", fontSize: 9, letterSpacing: 1.5 },
+  fLabel: { color: theme.colors.textSecondary, fontSize: 8, fontWeight: "800", letterSpacing: 1.5, marginTop: 12, marginBottom: 4 },
+  fSub: { color: theme.colors.textMuted, fontSize: 7, fontWeight: "700", letterSpacing: 1, marginBottom: 4 },
   chip: {
     paddingHorizontal: 12, paddingVertical: 7,
     backgroundColor: theme.colors.bg,
@@ -508,7 +508,7 @@ const styles = StyleSheet.create({
     borderRadius: 999,
   },
   chipActive: { backgroundColor: theme.colors.accent, borderColor: theme.colors.accent },
-  chipText: { color: theme.colors.textSecondary, fontSize: 10, fontWeight: "700" },
+  chipText: { color: theme.colors.textSecondary, fontSize: 9, fontWeight: "700" },
   chipTextActive: { color: "#000", fontWeight: "900" },
   // Report option cards
   reportOpt: {
@@ -521,6 +521,6 @@ const styles = StyleSheet.create({
     padding: 14,
     marginBottom: 10,
   },
-  reportOptTitle: { color: theme.colors.textPrimary, fontWeight: "900", fontSize: 11, letterSpacing: 1.5 },
-  reportOptSub: { color: theme.colors.textMuted, fontSize: 9, marginTop: 2 },
+  reportOptTitle: { color: theme.colors.textPrimary, fontWeight: "900", fontSize: 10, letterSpacing: 1.5 },
+  reportOptSub: { color: theme.colors.textMuted, fontSize: 8, marginTop: 2 },
 });

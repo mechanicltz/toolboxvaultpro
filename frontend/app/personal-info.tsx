@@ -353,13 +353,13 @@ const styles = StyleSheet.create({
   },
   title: {
     color: theme.colors.textPrimary,
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: "900",
     letterSpacing: 2,
   },
   subtitle: {
     color: theme.colors.accent,
-    fontSize: 8,
+    fontSize: 7,
     fontWeight: "700",
     letterSpacing: 2,
     marginTop: 2,
@@ -379,16 +379,16 @@ const styles = StyleSheet.create({
     color: theme.colors.textPrimary,
     fontWeight: "900",
     letterSpacing: 1.5,
-    fontSize: 10,
+    fontSize: 9,
   },
   toggleHint: {
     color: theme.colors.textMuted,
-    fontSize: 9,
+    fontSize: 8,
     marginTop: 4,
   },
   fieldLabel: {
     color: theme.colors.textMuted,
-    fontSize: 8,
+    fontSize: 7,
     fontWeight: "800",
     letterSpacing: 1.5,
     marginBottom: 5,
@@ -402,7 +402,7 @@ const styles = StyleSheet.create({
     paddingVertical: 11,
     minHeight: 46,
     borderRadius: 4,
-    fontSize: 11,
+    fontSize: 10,
   },
   divider: {
     height: 1,
@@ -412,7 +412,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     color: theme.colors.accent,
-    fontSize: 9,
+    fontSize: 8,
     fontWeight: "900",
     letterSpacing: 2,
     marginTop: 8,
@@ -458,6 +458,6 @@ const styles = StyleSheet.create({
     color: "#000",
     fontWeight: "900",
     letterSpacing: 2,
-    fontSize: 11,
+    fontSize: 10,
   },
 });

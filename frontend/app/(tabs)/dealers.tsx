@@ -286,10 +286,10 @@ export default function DealersScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.colors.bg },
   header: { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 12 },
-  title: { color: theme.colors.textPrimary, fontSize: 23, fontWeight: "900", letterSpacing: 2 },
+  title: { color: theme.colors.textPrimary, fontSize: 21, fontWeight: "900", letterSpacing: 2 },
   subtitle: {
     color: theme.colors.accent,
-    fontSize: 9,
+    fontSize: 8,
     fontWeight: "700",
     letterSpacing: 2,
     textTransform: "uppercase",
@@ -327,14 +327,14 @@ const styles = StyleSheet.create({
   avatarText: {
     color: theme.colors.accent,
     fontWeight: "900",
-    fontSize: 11,
+    fontSize: 10,
     letterSpacing: 1,
   },
-  rowTitle: { color: theme.colors.textPrimary, fontWeight: "700", fontSize: 13 },
-  rowSub: { color: theme.colors.textSecondary, fontSize: 10, marginTop: 2 },
+  rowTitle: { color: theme.colors.textPrimary, fontWeight: "700", fontSize: 12 },
+  rowSub: { color: theme.colors.textSecondary, fontSize: 9, marginTop: 2 },
   rowMeta: {
     color: theme.colors.textMuted,
-    fontSize: 8,
+    fontSize: 7,
     fontWeight: "800",
     letterSpacing: 1,
     marginTop: 4,
@@ -352,7 +352,7 @@ const styles = StyleSheet.create({
   empty: { alignItems: "center", paddingVertical: 60, paddingHorizontal: 40 },
   emptyTitle: {
     color: theme.colors.textPrimary,
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: "900",
     letterSpacing: 2,
     marginTop: 16,
@@ -384,7 +384,7 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     color: theme.colors.textPrimary,
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: "900",
     letterSpacing: 2,
     marginBottom: 16,
@@ -398,7 +398,7 @@ const styles = StyleSheet.create({
     height: 48,
     borderRadius: 4,
     marginBottom: 12,
-    fontSize: 12,
+    fontSize: 11,
   },
   btn: {
     flex: 1,
@@ -408,7 +408,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     borderRadius: 4,
   },
-  btnText: { color: "#000", fontWeight: "900", letterSpacing: 2, fontSize: 11 },
+  btnText: { color: "#000", fontWeight: "900", letterSpacing: 2, fontSize: 10 },
   btnGhost: {
     flex: 1,
     borderWidth: 1,
@@ -418,10 +418,10 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     borderRadius: 4,
   },
-  btnGhostText: { color: theme.colors.textPrimary, fontWeight: "800", letterSpacing: 2, fontSize: 11 },
+  btnGhostText: { color: theme.colors.textPrimary, fontWeight: "800", letterSpacing: 2, fontSize: 10 },
   fieldLabel: {
     color: theme.colors.textMuted,
-    fontSize: 8,
+    fontSize: 7,
     fontWeight: "800",
     letterSpacing: 1.5,
     marginBottom: 6,
@@ -429,7 +429,7 @@ const styles = StyleSheet.create({
   },
   fieldHint: {
     color: theme.colors.textMuted,
-    fontSize: 9,
+    fontSize: 8,
     fontStyle: "italic",
     marginBottom: 8,
   },
@@ -447,7 +447,7 @@ const styles = StyleSheet.create({
   },
   chipText: {
     color: theme.colors.textSecondary,
-    fontSize: 9,
+    fontSize: 8,
     fontWeight: "800",
     letterSpacing: 1,
   },

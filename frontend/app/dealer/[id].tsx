@@ -660,25 +660,25 @@ const styles = StyleSheet.create({
   },
   routeRowLabel: {
     color: theme.colors.textPrimary,
-    fontSize: 9,
+    fontSize: 8,
     fontWeight: "900",
     letterSpacing: 1.5,
   },
   routeRowNext: {
     color: theme.colors.accent,
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: "800",
     marginTop: 3,
   },
   routeRowEmpty: {
     color: theme.colors.textMuted,
-    fontSize: 9,
+    fontSize: 8,
     fontStyle: "italic",
     marginTop: 3,
   },
   editFieldLabel: {
     color: theme.colors.textMuted,
-    fontSize: 8,
+    fontSize: 7,
     fontWeight: "800",
     letterSpacing: 1.5,
     marginTop: 6,
@@ -686,7 +686,7 @@ const styles = StyleSheet.create({
   },
   editFieldHint: {
     color: theme.colors.textMuted,
-    fontSize: 9,
+    fontSize: 8,
     fontStyle: "italic",
     marginBottom: 8,
   },
@@ -704,7 +704,7 @@ const styles = StyleSheet.create({
   },
   editChipText: {
     color: theme.colors.textSecondary,
-    fontSize: 9,
+    fontSize: 8,
     fontWeight: "800",
     letterSpacing: 1,
   },
@@ -722,10 +722,10 @@ const styles = StyleSheet.create({
   bigAvatarText: {
     color: theme.colors.accent,
     fontWeight: "900",
-    fontSize: 21,
+    fontSize: 19,
     letterSpacing: 2,
   },
-  dealerName: { color: theme.colors.textPrimary, fontSize: 20, fontWeight: "900", letterSpacing: 1, marginTop: 12 },
+  dealerName: { color: theme.colors.textPrimary, fontSize: 18, fontWeight: "900", letterSpacing: 1, marginTop: 12 },
   summaryGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -737,7 +737,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingVertical: 8,
   },
-  cellValue: { color: theme.colors.textPrimary, fontWeight: "900", fontSize: 15 },
+  cellValue: { color: theme.colors.textPrimary, fontWeight: "900", fontSize: 14 },
   cellLabel: {
     color: theme.colors.textMuted,
     fontSize: 7,
@@ -747,7 +747,7 @@ const styles = StyleSheet.create({
   },
   sectionLabel: {
     color: theme.colors.textMuted,
-    fontSize: 9,
+    fontSize: 8,
     fontWeight: "800",
     letterSpacing: 2,
     paddingHorizontal: 20,
@@ -756,7 +756,7 @@ const styles = StyleSheet.create({
   },
   sectionLabelStrong: {
     color: theme.colors.textPrimary,
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: "900",
     letterSpacing: 2,
     paddingHorizontal: 20,
@@ -789,11 +789,11 @@ const styles = StyleSheet.create({
   viewToolsTitle: {
     color: theme.colors.textPrimary,
     fontWeight: "800",
-    fontSize: 12,
+    fontSize: 11,
   },
   viewToolsSub: {
     color: theme.colors.textSecondary,
-    fontSize: 10,
+    fontSize: 9,
     marginTop: 3,
   },
   toolsHeader: {    flexDirection: "row",
@@ -817,7 +817,7 @@ const styles = StyleSheet.create({
   },
   totalPillValue: {
     color: "#000",
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: "900",
     letterSpacing: 0.5,
   },
@@ -841,7 +841,7 @@ const styles = StyleSheet.create({
   addBtnText: {
     color: theme.colors.accent,
     fontWeight: "800",
-    fontSize: 9,
+    fontSize: 8,
     letterSpacing: 1,
   },
   contactRow: {
@@ -853,7 +853,7 @@ const styles = StyleSheet.create({
     borderBottomColor: theme.colors.borderSubtle,
     borderBottomWidth: 1,
   },
-  contactText: { color: theme.colors.textPrimary, fontSize: 11 },
+  contactText: { color: theme.colors.textPrimary, fontSize: 10 },
   agentCard: {
     marginHorizontal: 20,
     marginBottom: 10,
@@ -887,7 +887,7 @@ const styles = StyleSheet.create({
   agentActionText: {
     color: theme.colors.accent,
     fontWeight: "800",
-    fontSize: 9,
+    fontSize: 8,
     letterSpacing: 1,
   },
   currentAgent: {
@@ -910,8 +910,8 @@ const styles = StyleSheet.create({
     borderRadius: 2,
   },
   currentBadgeText: { color: "#000", fontSize: 7, fontWeight: "900", letterSpacing: 1 },
-  agentName: { color: theme.colors.textPrimary, fontWeight: "700", fontSize: 13, marginTop: 6 },
-  agentMeta: { color: theme.colors.textSecondary, fontSize: 10, marginTop: 2 },
+  agentName: { color: theme.colors.textPrimary, fontWeight: "700", fontSize: 12, marginTop: 6 },
+  agentMeta: { color: theme.colors.textSecondary, fontSize: 9, marginTop: 2 },
   agentRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -930,8 +930,8 @@ const styles = StyleSheet.create({
     borderBottomColor: theme.colors.borderSubtle,
     borderBottomWidth: 1,
   },
-  toolName: { color: theme.colors.textPrimary, fontWeight: "700", fontSize: 11 },
-  toolMeta: { color: theme.colors.textSecondary, fontSize: 10, marginTop: 2 },
+  toolName: { color: theme.colors.textPrimary, fontWeight: "700", fontSize: 10 },
+  toolMeta: { color: theme.colors.textSecondary, fontSize: 9, marginTop: 2 },
   empty: { color: theme.colors.textMuted, fontStyle: "italic", padding: 20 },
   modalBg: { flex: 1, backgroundColor: "rgba(0,0,0,0.7)", justifyContent: "flex-end" },
   modalCard: {
@@ -941,7 +941,7 @@ const styles = StyleSheet.create({
     borderTopColor: theme.colors.accent,
     maxHeight: "85%",
   },
-  modalTitle: { color: theme.colors.textPrimary, fontSize: 16, fontWeight: "900", letterSpacing: 2, marginBottom: 16 },
+  modalTitle: { color: theme.colors.textPrimary, fontSize: 14, fontWeight: "900", letterSpacing: 2, marginBottom: 16 },
   input: {
     backgroundColor: theme.colors.bg,
     borderWidth: 1,
@@ -952,7 +952,7 @@ const styles = StyleSheet.create({
     minHeight: 48,
     borderRadius: 4,
     marginBottom: 10,
-    fontSize: 12,
+    fontSize: 11,
   },
   btn: {
     flex: 1,
@@ -962,7 +962,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     borderRadius: 4,
   },
-  btnText: { color: "#000", fontWeight: "900", letterSpacing: 2, fontSize: 11 },
+  btnText: { color: "#000", fontWeight: "900", letterSpacing: 2, fontSize: 10 },
   btnGhost: {
     flex: 1,
     borderWidth: 1,
@@ -972,7 +972,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     borderRadius: 4,
   },
-  btnGhostText: { color: theme.colors.textPrimary, fontWeight: "800", letterSpacing: 2, fontSize: 11 },
+  btnGhostText: { color: theme.colors.textPrimary, fontWeight: "800", letterSpacing: 2, fontSize: 10 },
   importBtn: {
     flexDirection: "row",
     alignItems: "center",
@@ -988,7 +988,7 @@ const styles = StyleSheet.create({
   importBtnText: {
     color: theme.colors.accent,
     fontWeight: "900",
-    fontSize: 10,
+    fontSize: 9,
     letterSpacing: 1.5,
   },
   pickerBg: { flex: 1, backgroundColor: theme.colors.bg },
@@ -1004,7 +1004,7 @@ const styles = StyleSheet.create({
   },
   pickerTitle: {
     color: theme.colors.textPrimary,
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: "900",
     letterSpacing: 2,
   },
@@ -1015,7 +1015,7 @@ const styles = StyleSheet.create({
     color: theme.colors.textPrimary,
     paddingHorizontal: 16,
     paddingVertical: 14,
-    fontSize: 12,
+    fontSize: 11,
   },
   pickerRow: {
     flexDirection: "row",
@@ -1036,9 +1036,9 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     borderRadius: 4,
   },
-  pickerAvatarText: { color: theme.colors.accent, fontWeight: "900", fontSize: 11 },
-  pickerName: { color: theme.colors.textPrimary, fontWeight: "700", fontSize: 12 },
-  pickerSub: { color: theme.colors.textSecondary, fontSize: 10, marginTop: 2 },
+  pickerAvatarText: { color: theme.colors.accent, fontWeight: "900", fontSize: 10 },
+  pickerName: { color: theme.colors.textPrimary, fontWeight: "700", fontSize: 11 },
+  pickerSub: { color: theme.colors.textSecondary, fontSize: 9, marginTop: 2 },
   pickerEmpty: {
     flex: 1,
     alignItems: "center",

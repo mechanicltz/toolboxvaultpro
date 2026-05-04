@@ -159,7 +159,7 @@ const styles = StyleSheet.create({
   },
   title: {
     color: theme.colors.textPrimary,
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: "900",
     letterSpacing: 2,
   },
@@ -200,7 +200,7 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     color: theme.colors.textMuted,
-    fontSize: 11,
+    fontSize: 10,
     fontStyle: "italic",
   },
   addBtn: {
@@ -217,7 +217,7 @@ const styles = StyleSheet.create({
     color: theme.colors.accent,
     fontWeight: "900",
     letterSpacing: 1.5,
-    fontSize: 9,
+    fontSize: 8,
   },
   row: {
     flexDirection: "row",
@@ -229,13 +229,13 @@ const styles = StyleSheet.create({
   },
   rowLabel: {
     color: theme.colors.textMuted,
-    fontSize: 8,
+    fontSize: 7,
     fontWeight: "800",
     letterSpacing: 1.5,
   },
   rowValue: {
     color: theme.colors.textPrimary,
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: "700",
   },
   terms: {
@@ -253,8 +253,8 @@ const styles = StyleSheet.create({
   },
   termsText: {
     color: theme.colors.textSecondary,
-    fontSize: 10,
-    lineHeight: 14,
+    fontSize: 9,
+    lineHeight: 13,
   },
   editLink: {
     flexDirection: "row",
@@ -267,7 +267,7 @@ const styles = StyleSheet.create({
   },
   editLinkText: {
     color: theme.colors.accent,
-    fontSize: 8,
+    fontSize: 7,
     fontWeight: "900",
     letterSpacing: 1.5,
   },

@@ -193,14 +193,14 @@ const styles = StyleSheet.create({
   },
   headerOver: {
     color: theme.colors.textMuted,
-    fontSize: 8,
+    fontSize: 7,
     fontWeight: "800",
     letterSpacing: 1.4,
     marginBottom: 1,
   },
   headerName: {
     color: theme.colors.textPrimary,
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: "900",
   },
   summary: {
@@ -225,24 +225,24 @@ const styles = StyleSheet.create({
   },
   summaryValue: {
     color: theme.colors.textPrimary,
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: "900",
   },
   summaryValueAccent: {
     color: "#000",
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: "900",
   },
   summaryLabel: {
     color: theme.colors.textMuted,
-    fontSize: 8,
+    fontSize: 7,
     fontWeight: "800",
     letterSpacing: 1.2,
     marginTop: 4,
   },
   summaryLabelAccent: {
     color: "#000",
-    fontSize: 8,
+    fontSize: 7,
     fontWeight: "800",
     letterSpacing: 1.2,
     marginTop: 4,
@@ -252,10 +252,10 @@ const styles = StyleSheet.create({
   emptyText: {
     color: theme.colors.textPrimary,
     fontWeight: "800",
-    fontSize: 12,
+    fontSize: 11,
     textAlign: "center",
   },
-  emptyHint: { color: theme.colors.textMuted, fontSize: 10, textAlign: "center" },
+  emptyHint: { color: theme.colors.textMuted, fontSize: 9, textAlign: "center" },
   row: {
     flexDirection: "row",
     alignItems: "center",
@@ -269,7 +269,7 @@ const styles = StyleSheet.create({
   },
   rowIndex: {
     color: theme.colors.textMuted,
-    fontSize: 9,
+    fontSize: 8,
     fontWeight: "800",
     minWidth: 18,
     textAlign: "center",
@@ -287,11 +287,11 @@ const styles = StyleSheet.create({
   rowName: {
     color: theme.colors.textPrimary,
     fontWeight: "800",
-    fontSize: 11,
+    fontSize: 10,
   },
   rowSub: {
     color: theme.colors.textSecondary,
-    fontSize: 10,
+    fontSize: 9,
     marginTop: 2,
   },
   rowMeta: {
@@ -303,7 +303,7 @@ const styles = StyleSheet.create({
   },
   rowAgent: {
     color: theme.colors.textMuted,
-    fontSize: 9,
+    fontSize: 8,
     fontWeight: "700",
     flexShrink: 1,
   },
@@ -315,18 +315,18 @@ const styles = StyleSheet.create({
   },
   qtyPillText: {
     color: "#000",
-    fontSize: 9,
+    fontSize: 8,
     fontWeight: "900",
     letterSpacing: 0.5,
   },
   rowCost: {
     color: theme.colors.textPrimary,
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: "800",
   },
   rowUnit: {
     color: theme.colors.textMuted,
-    fontSize: 8,
+    fontSize: 7,
     marginTop: 1,
   },
 });

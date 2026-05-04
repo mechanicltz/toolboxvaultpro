@@ -110,7 +110,7 @@ export function BottomBar() {
                   allowFontScaling={false}
                   style={[
                     styles.label,
-                    !isPhone && { fontSize: 9 },
+                    !isPhone && { fontSize: 8 },
                     { color: active ? theme.colors.accent : theme.colors.textMuted },
                   ]}
                 >
@@ -218,7 +218,7 @@ const styles = StyleSheet.create({
   },
   sheetTitle: {
     color: theme.colors.textMuted,
-    fontSize: 9,
+    fontSize: 8,
     fontWeight: "800",
     letterSpacing: 2,
     paddingHorizontal: 4,
@@ -247,11 +247,11 @@ const styles = StyleSheet.create({
   sheetRowTitle: {
     color: theme.colors.textPrimary,
     fontWeight: "800",
-    fontSize: 12,
+    fontSize: 11,
   },
   sheetRowSub: {
     color: theme.colors.textSecondary,
-    fontSize: 9,
+    fontSize: 8,
     marginTop: 2,
   },
   sheetCancel: {
@@ -262,7 +262,7 @@ const styles = StyleSheet.create({
   sheetCancelText: {
     color: theme.colors.textMuted,
     fontWeight: "800",
-    fontSize: 10,
+    fontSize: 9,
     letterSpacing: 2,
   },
 });

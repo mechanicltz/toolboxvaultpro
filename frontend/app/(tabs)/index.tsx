@@ -477,14 +477,14 @@ const styles = StyleSheet.create({
   },
   title: {
     color: theme.colors.textPrimary,
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: "900",
     letterSpacing: 2.5,
     flexShrink: 1,
   },
   subtitle: {
     color: theme.colors.accent,
-    fontSize: 9,
+    fontSize: 8,
     fontWeight: "700",
     letterSpacing: 1.5,
     marginTop: 3,
@@ -514,13 +514,13 @@ const styles = StyleSheet.create({
   },
   routeBannerLabel: {
     color: theme.colors.accent,
-    fontSize: 8,
+    fontSize: 7,
     fontWeight: "900",
     letterSpacing: 1.4,
   },
   routeBannerText: {
     color: theme.colors.textPrimary,
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: "800",
     marginTop: 2,
   },
@@ -551,20 +551,20 @@ const styles = StyleSheet.create({
   },
   rowLabel: {
     color: theme.colors.textPrimary,
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: "800",
     letterSpacing: 0.3,
   },
   rowSub: {
     color: theme.colors.textMuted,
-    fontSize: 9,
+    fontSize: 8,
     fontWeight: "600",
     marginTop: 3,
     letterSpacing: 0.3,
   },
   rowValue: {
     color: theme.colors.textPrimary,
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: "900",
     marginLeft: 8,
   },
@@ -572,7 +572,7 @@ const styles = StyleSheet.create({
   /* Dealer rows (two-line) — nested inside the OWED TO DEALERS card */
   emptyInline: {
     color: theme.colors.textMuted,
-    fontSize: 11,
+    fontSize: 10,
     fontStyle: "italic",
     paddingHorizontal: 14,
     paddingVertical: 12,
@@ -609,13 +609,13 @@ const styles = StyleSheet.create({
   dealerName: {
     flex: 1,
     color: theme.colors.textPrimary,
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: "800",
     letterSpacing: 0.3,
   },
   dealerTotal: {
     color: theme.colors.textPrimary,
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: "900",
   },
   dealerActionsRow: {
@@ -638,14 +638,14 @@ const styles = StyleSheet.create({
   },
   dealerPillLabel: {
     color: theme.colors.textPrimary,
-    fontSize: 8,
+    fontSize: 7,
     fontWeight: "900",
     letterSpacing: 0.8,
   },
   dealerPillVal: {
     flex: 1,
     color: theme.colors.textPrimary,
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: "900",
     textAlign: "right",
   },
@@ -658,7 +658,7 @@ const styles = StyleSheet.create({
   },
   dealerPillCtaText: {
     color: "#000",
-    fontSize: 9,
+    fontSize: 8,
     fontWeight: "900",
     letterSpacing: 0.8,
   },
@@ -678,19 +678,19 @@ const styles = StyleSheet.create({
   },
   feedbackTitle: {
     color: theme.colors.textPrimary,
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: "900",
     letterSpacing: 1,
   },
   feedbackSub: {
     color: theme.colors.textMuted,
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: "600",
     marginTop: 3,
   },
   tip: {
     color: theme.colors.textMuted,
-    fontSize: 9,
+    fontSize: 8,
     textAlign: "center",
     fontStyle: "italic",
     marginTop: 14,

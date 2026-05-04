@@ -498,7 +498,7 @@ const styles = StyleSheet.create({
   },
   sectionLabel: {
     color: theme.colors.textPrimary,
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: "900",
     letterSpacing: 2,
   },
@@ -514,12 +514,12 @@ const styles = StyleSheet.create({
   addBtnText: {
     color: "#000",
     fontWeight: "900",
-    fontSize: 9,
+    fontSize: 8,
     letterSpacing: 1.5,
   },
   empty: {
     color: theme.colors.textMuted,
-    fontSize: 10,
+    fontSize: 9,
     fontStyle: "italic",
     paddingVertical: 8,
   },
@@ -536,18 +536,18 @@ const styles = StyleSheet.create({
   },
   rowTitle: {
     color: theme.colors.textPrimary,
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: "800",
     letterSpacing: 1,
   },
   rowMeta: {
     color: theme.colors.textSecondary,
-    fontSize: 9,
+    fontSize: 8,
     marginTop: 4,
   },
   rowNotes: {
     color: theme.colors.textMuted,
-    fontSize: 10,
+    fontSize: 9,
     fontStyle: "italic",
     marginTop: 4,
   },
@@ -558,7 +558,7 @@ const styles = StyleSheet.create({
     marginLeft: "auto",
   },
   badgeText: {
-    fontSize: 8,
+    fontSize: 7,
     fontWeight: "900",
     letterSpacing: 1,
   },
@@ -573,7 +573,7 @@ const styles = StyleSheet.create({
     borderRadius: 3,
   },
   smBtnText: {
-    fontSize: 8,
+    fontSize: 7,
     fontWeight: "900",
     letterSpacing: 1.2,
   },
@@ -593,14 +593,14 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     color: theme.colors.textPrimary,
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: "900",
     letterSpacing: 2,
     marginBottom: 14,
   },
   label: {
     color: theme.colors.textMuted,
-    fontSize: 9,
+    fontSize: 8,
     fontWeight: "800",
     letterSpacing: 1.5,
     marginTop: 12,
@@ -614,7 +614,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 10,
     borderRadius: 4,
-    fontSize: 11,
+    fontSize: 10,
   },
   chipWrap: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
   chip: {
@@ -631,7 +631,7 @@ const styles = StyleSheet.create({
   },
   chipText: {
     color: theme.colors.textSecondary,
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: "700",
   },
   chipTextOn: { color: "#000", fontWeight: "900" },
@@ -661,7 +661,7 @@ const styles = StyleSheet.create({
     color: "#000",
     fontWeight: "900",
     letterSpacing: 2,
-    fontSize: 11,
+    fontSize: 10,
   },
   histRow: {
     paddingVertical: 10,
@@ -671,22 +671,22 @@ const styles = StyleSheet.create({
   histDate: {
     color: theme.colors.textPrimary,
     fontWeight: "800",
-    fontSize: 11,
+    fontSize: 10,
   },
   histCost: {
     color: theme.colors.accent,
     fontWeight: "800",
-    fontSize: 10,
+    fontSize: 9,
     marginTop: 2,
   },
   histLine: {
     color: theme.colors.textSecondary,
-    fontSize: 10,
+    fontSize: 9,
     marginTop: 2,
   },
   histNotes: {
     color: theme.colors.textMuted,
-    fontSize: 10,
+    fontSize: 9,
     fontStyle: "italic",
     marginTop: 4,
   },

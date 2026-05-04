@@ -405,7 +405,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.border,
   },
-  title: { color: theme.colors.textPrimary, fontSize: 13, fontWeight: "900", letterSpacing: 2 },
+  title: { color: theme.colors.textPrimary, fontSize: 12, fontWeight: "900", letterSpacing: 2 },
   moveOption: {
     flexDirection: "row",
     alignItems: "center",
@@ -417,7 +417,7 @@ const styles = StyleSheet.create({
   },
   moveOptionText: {
     color: theme.colors.textPrimary,
-    fontSize: 11,
+    fontSize: 10,
     flex: 1,
   },
   row: {
@@ -429,10 +429,10 @@ const styles = StyleSheet.create({
     borderBottomColor: theme.colors.borderSubtle,
     borderBottomWidth: 1,
   },
-  rowText: { color: theme.colors.textPrimary, fontSize: 12, flex: 1 },
+  rowText: { color: theme.colors.textPrimary, fontSize: 11, flex: 1 },
   countBadge: {
     color: theme.colors.textMuted,
-    fontSize: 9,
+    fontSize: 8,
     fontWeight: "800",
     paddingHorizontal: 6,
     paddingVertical: 2,
@@ -451,7 +451,7 @@ const styles = StyleSheet.create({
   empty: { alignItems: "center", paddingVertical: 60, paddingHorizontal: 40 },
   emptyTitle: {
     color: theme.colors.textPrimary,
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: "900",
     letterSpacing: 2,
     marginTop: 16,
@@ -461,12 +461,12 @@ const styles = StyleSheet.create({
     textAlign: "center",
     marginTop: 8,
     marginBottom: 20,
-    lineHeight: 16,
+    lineHeight: 14,
   },
   tip: {
     color: theme.colors.textMuted,
     fontStyle: "italic",
-    fontSize: 10,
+    fontSize: 9,
     padding: 20,
     textAlign: "center",
   },
@@ -479,12 +479,12 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     color: theme.colors.textPrimary,
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: "900",
     letterSpacing: 2,
     marginBottom: 8,
   },
-  modalParent: { color: theme.colors.accent, fontSize: 10, marginBottom: 12 },
+  modalParent: { color: theme.colors.accent, fontSize: 9, marginBottom: 12 },
   input: {
     backgroundColor: theme.colors.bg,
     borderWidth: 1,
@@ -494,7 +494,7 @@ const styles = StyleSheet.create({
     height: 48,
     borderRadius: 4,
     marginBottom: 12,
-    fontSize: 12,
+    fontSize: 11,
   },
   btn: {
     flex: 1,
@@ -506,7 +506,7 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     gap: 8,
   },
-  btnText: { color: "#000", fontWeight: "900", letterSpacing: 2, fontSize: 11 },
+  btnText: { color: "#000", fontWeight: "900", letterSpacing: 2, fontSize: 10 },
   btnGhost: {
     flex: 1,
     borderWidth: 1,
@@ -516,5 +516,5 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     borderRadius: 4,
   },
-  btnGhostText: { color: theme.colors.textPrimary, fontWeight: "800", letterSpacing: 2, fontSize: 11 },
+  btnGhostText: { color: theme.colors.textPrimary, fontWeight: "800", letterSpacing: 2, fontSize: 10 },
 });

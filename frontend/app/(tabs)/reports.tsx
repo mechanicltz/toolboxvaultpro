@@ -1066,7 +1066,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     flex: 1,
     color: theme.colors.textPrimary,
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: "900",
     letterSpacing: 2,
     textAlign: "center",
@@ -1074,9 +1074,9 @@ const styles = StyleSheet.create({
   body: { padding: 16, paddingBottom: 100 },
   intro: {
     color: theme.colors.textSecondary,
-    fontSize: 11,
+    fontSize: 10,
     marginBottom: 16,
-    lineHeight: 16,
+    lineHeight: 14,
   },
   // ---- type cards ----
   typeCard: {
@@ -1097,12 +1097,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  typeTitle: { color: theme.colors.textPrimary, fontSize: 12, fontWeight: "800" },
+  typeTitle: { color: theme.colors.textPrimary, fontSize: 11, fontWeight: "800" },
   typeDesc: {
     color: theme.colors.textSecondary,
-    fontSize: 9,
+    fontSize: 8,
     marginTop: 3,
-    lineHeight: 12,
+    lineHeight: 11,
   },
   // ---- crumbs ----
   crumbs: {
@@ -1123,9 +1123,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  crumbDotText: { fontSize: 9, fontWeight: "800", color: theme.colors.textSecondary },
+  crumbDotText: { fontSize: 8, fontWeight: "800", color: theme.colors.textSecondary },
   crumbLabel: {
-    fontSize: 9,
+    fontSize: 8,
     color: theme.colors.textSecondary,
     marginLeft: 6,
     letterSpacing: 1,
@@ -1135,7 +1135,7 @@ const styles = StyleSheet.create({
   // ---- options ----
   sectionLabel: {
     color: theme.colors.textPrimary,
-    fontSize: 9,
+    fontSize: 8,
     fontWeight: "800",
     letterSpacing: 2,
     marginTop: 6,
@@ -1143,7 +1143,7 @@ const styles = StyleSheet.create({
   },
   helper: {
     color: theme.colors.textSecondary,
-    fontSize: 9,
+    fontSize: 8,
     marginBottom: 8,
   },
   optionRow: {
@@ -1155,7 +1155,7 @@ const styles = StyleSheet.create({
   },
   optionLabel: {
     color: theme.colors.textPrimary,
-    fontSize: 11,
+    fontSize: 10,
     flex: 1,
     marginLeft: 12,
   },
@@ -1173,7 +1173,7 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     borderWidth: 1,
     borderColor: theme.colors.border,
-    fontSize: 11,
+    fontSize: 10,
   },
   segmentedRow: {
     flexDirection: "row",
@@ -1192,7 +1192,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   segmentedBtnOn: { backgroundColor: theme.colors.accent },
-  segmentedText: { color: theme.colors.textPrimary, fontSize: 10, fontWeight: "700" },
+  segmentedText: { color: theme.colors.textPrimary, fontSize: 9, fontWeight: "700" },
   chipWrap: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 8 },
   chip: {
     paddingVertical: 6,
@@ -1203,7 +1203,7 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.bgSecondary,
   },
   chipOn: { backgroundColor: theme.colors.accent, borderColor: theme.colors.accent },
-  chipText: { color: theme.colors.textPrimary, fontSize: 9, fontWeight: "700" },
+  chipText: { color: theme.colors.textPrimary, fontSize: 8, fontWeight: "700" },
   // ---- fields ----
   fieldRow: {
     flexDirection: "row",
@@ -1227,7 +1227,7 @@ const styles = StyleSheet.create({
   },
   subLabel: {
     color: theme.colors.textSecondary,
-    fontSize: 8,
+    fontSize: 7,
     fontWeight: "900",
     letterSpacing: 1.5,
     marginBottom: 6,
@@ -1235,7 +1235,7 @@ const styles = StyleSheet.create({
   },
   dateHint: {
     color: theme.colors.textSecondary,
-    fontSize: 9,
+    fontSize: 8,
     fontStyle: "italic",
     marginBottom: 4,
     marginTop: 8,
@@ -1254,7 +1254,7 @@ const styles = StyleSheet.create({
   },
   dropdownBtnText: {
     color: theme.colors.textPrimary,
-    fontSize: 11,
+    fontSize: 10,
     flex: 1,
   },
   dropdownBg: {
@@ -1283,7 +1283,7 @@ const styles = StyleSheet.create({
   dropdownTitle: {
     color: theme.colors.textPrimary,
     fontWeight: "900",
-    fontSize: 10,
+    fontSize: 9,
     letterSpacing: 1.5,
   },
   dropdownSearch: {
@@ -1291,7 +1291,7 @@ const styles = StyleSheet.create({
     color: theme.colors.textPrimary,
     paddingHorizontal: 14,
     paddingVertical: 12,
-    fontSize: 11,
+    fontSize: 10,
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.border,
   },
@@ -1312,7 +1312,7 @@ const styles = StyleSheet.create({
   },
   dropdownActionText: {
     color: theme.colors.textPrimary,
-    fontSize: 9,
+    fontSize: 8,
     fontWeight: "800",
     letterSpacing: 1,
   },
@@ -1330,11 +1330,11 @@ const styles = StyleSheet.create({
   },
   dropdownRowText: {
     color: theme.colors.textPrimary,
-    fontSize: 11,
+    fontSize: 10,
   },
   dropdownEmpty: {
     color: theme.colors.textSecondary,
-    fontSize: 11,
+    fontSize: 10,
     textAlign: "center",
     padding: 24,
     fontStyle: "italic",
@@ -1361,7 +1361,7 @@ const styles = StyleSheet.create({
     color: "#000",
     fontWeight: "900",
     letterSpacing: 2,
-    fontSize: 11,
+    fontSize: 10,
   },
   checkbox: {
     width: 22,
@@ -1375,7 +1375,7 @@ const styles = StyleSheet.create({
   checkboxOn: { backgroundColor: theme.colors.accent, borderColor: theme.colors.accent },
   fieldLabel: {
     color: theme.colors.textPrimary,
-    fontSize: 11,
+    fontSize: 10,
     flex: 1,
     marginLeft: 12,
   },
@@ -1404,21 +1404,21 @@ const styles = StyleSheet.create({
   formatCardOn: { backgroundColor: theme.colors.accent, borderColor: theme.colors.accent },
   formatTitle: {
     color: theme.colors.textPrimary,
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: "900",
     letterSpacing: 2,
     marginTop: 8,
   },
   formatSub: {
     color: theme.colors.textSecondary,
-    fontSize: 8,
+    fontSize: 7,
     marginTop: 4,
     textAlign: "center",
-    lineHeight: 11,
+    lineHeight: 10,
   },
   warn: {
     color: "#dc2626",
-    fontSize: 9,
+    fontSize: 8,
     marginTop: 12,
     fontStyle: "italic",
   },
@@ -1442,8 +1442,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  actionTitle: { color: theme.colors.textPrimary, fontSize: 11, fontWeight: "800" },
-  actionSub: { color: theme.colors.textSecondary, fontSize: 9, marginTop: 2 },
+  actionTitle: { color: theme.colors.textPrimary, fontSize: 10, fontWeight: "800" },
+  actionSub: { color: theme.colors.textSecondary, fontSize: 8, marginTop: 2 },
   summaryBox: {
     marginTop: 18,
     backgroundColor: theme.colors.bgSecondary,
@@ -1454,7 +1454,7 @@ const styles = StyleSheet.create({
   },
   summaryHead: {
     color: theme.colors.textPrimary,
-    fontSize: 9,
+    fontSize: 8,
     fontWeight: "800",
     letterSpacing: 2,
     marginBottom: 8,
@@ -1463,10 +1463,10 @@ const styles = StyleSheet.create({
   summaryKey: {
     width: 90,
     color: theme.colors.textSecondary,
-    fontSize: 9,
+    fontSize: 8,
     fontWeight: "700",
   },
-  summaryVal: { color: theme.colors.textPrimary, fontSize: 10, flex: 1 },
+  summaryVal: { color: theme.colors.textPrimary, fontSize: 9, flex: 1 },
   // ---- footer buttons ----
   footerBar: {
     flexDirection: "row",
@@ -1483,7 +1483,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: theme.colors.border,
   },
-  btnGhostText: { color: theme.colors.textPrimary, fontWeight: "800", fontSize: 10, letterSpacing: 1 },
+  btnGhostText: { color: theme.colors.textPrimary, fontWeight: "800", fontSize: 9, letterSpacing: 1 },
   btnPrimary: {
     flex: 1,
     backgroundColor: theme.colors.accent,
@@ -1494,5 +1494,5 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 6,
   },
-  btnPrimaryText: { color: "#000", fontWeight: "900", fontSize: 11, letterSpacing: 1 },
+  btnPrimaryText: { color: "#000", fontWeight: "900", fontSize: 10, letterSpacing: 1 },
 });

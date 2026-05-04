@@ -490,13 +490,13 @@ const styles = StyleSheet.create({
   header: { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 16 },
   title: {
     color: theme.colors.textPrimary,
-    fontSize: 23,
+    fontSize: 21,
     fontWeight: "900",
     letterSpacing: 2,
   },
   subtitle: {
     color: theme.colors.accent,
-    fontSize: 9,
+    fontSize: 8,
     fontWeight: "700",
     letterSpacing: 2,
     textTransform: "uppercase",
@@ -505,7 +505,7 @@ const styles = StyleSheet.create({
   section: { paddingHorizontal: 20, paddingVertical: 8 },
   sectionLabel: {
     color: theme.colors.textMuted,
-    fontSize: 9,
+    fontSize: 8,
     fontWeight: "800",
     letterSpacing: 2,
     marginBottom: 8,
@@ -520,8 +520,8 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     marginBottom: 6,
   },
-  checkedOutTool: { color: theme.colors.textPrimary, fontWeight: "700", fontSize: 11 },
-  checkedOutBy: { color: theme.colors.textSecondary, fontSize: 10, marginTop: 2 },
+  checkedOutTool: { color: theme.colors.textPrimary, fontWeight: "700", fontSize: 10 },
+  checkedOutBy: { color: theme.colors.textSecondary, fontSize: 9, marginTop: 2 },
   rowChipsWrap: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -549,7 +549,7 @@ const styles = StyleSheet.create({
   },
   rowChipText: {
     color: theme.colors.textPrimary,
-    fontSize: 9,
+    fontSize: 8,
     fontWeight: "700",
     flexShrink: 1,
   },
@@ -575,7 +575,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 8,
     borderRadius: 4,
-    fontSize: 11,
+    fontSize: 10,
     minHeight: 38,
   },
   iconBtn: {
@@ -595,13 +595,13 @@ const styles = StyleSheet.create({
   avatarText: {
     color: theme.colors.accent,
     fontWeight: "900",
-    fontSize: 15,
+    fontSize: 14,
   },
-  rowTitle: { color: theme.colors.textPrimary, fontWeight: "700", fontSize: 13 },
-  rowSub: { color: theme.colors.textSecondary, fontSize: 10, marginTop: 2 },
+  rowTitle: { color: theme.colors.textPrimary, fontWeight: "700", fontSize: 12 },
+  rowSub: { color: theme.colors.textSecondary, fontSize: 9, marginTop: 2 },
   rowMeta: {
     color: theme.colors.textMuted,
-    fontSize: 9,
+    fontSize: 8,
     fontWeight: "700",
     letterSpacing: 1,
     marginTop: 2,
@@ -637,7 +637,7 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     color: theme.colors.textPrimary,
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: "900",
     letterSpacing: 2,
     marginBottom: 16,
@@ -651,7 +651,7 @@ const styles = StyleSheet.create({
     height: 48,
     borderRadius: 4,
     marginBottom: 12,
-    fontSize: 12,
+    fontSize: 11,
   },
   modalActions: { flexDirection: "row", gap: 12, marginTop: 8 },
   btn: {
@@ -666,7 +666,7 @@ const styles = StyleSheet.create({
     color: "#000",
     fontWeight: "900",
     letterSpacing: 2,
-    fontSize: 11,
+    fontSize: 10,
   },
   btnGhost: {
     flex: 1,
@@ -681,7 +681,7 @@ const styles = StyleSheet.create({
     color: theme.colors.textPrimary,
     fontWeight: "800",
     letterSpacing: 2,
-    fontSize: 11,
+    fontSize: 10,
   },
   importBtn: {
     flexDirection: "row",
@@ -698,7 +698,7 @@ const styles = StyleSheet.create({
   importBtnText: {
     color: theme.colors.accent,
     fontWeight: "900",
-    fontSize: 10,
+    fontSize: 9,
     letterSpacing: 1.5,
   },
   pickerBg: {
@@ -720,7 +720,7 @@ const styles = StyleSheet.create({
   },
   pickerTitle: {
     color: theme.colors.textPrimary,
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: "900",
     letterSpacing: 2,
   },
@@ -731,7 +731,7 @@ const styles = StyleSheet.create({
     color: theme.colors.textPrimary,
     paddingHorizontal: 16,
     paddingVertical: 14,
-    fontSize: 12,
+    fontSize: 11,
   },
   pickerRow: {
     flexDirection: "row",

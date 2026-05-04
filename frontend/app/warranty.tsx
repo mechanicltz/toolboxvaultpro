@@ -83,10 +83,10 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.border,
   },
-  title: { color: theme.colors.textPrimary, fontSize: 13, fontWeight: "900", letterSpacing: 2 },
+  title: { color: theme.colors.textPrimary, fontSize: 12, fontWeight: "900", letterSpacing: 2 },
   sectionLabel: {
     color: theme.colors.textMuted,
-    fontSize: 9,
+    fontSize: 8,
     fontWeight: "800",
     letterSpacing: 2,
     paddingHorizontal: 20,
@@ -115,7 +115,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  toolName: { color: theme.colors.textPrimary, fontWeight: "700", fontSize: 11 },
-  toolMeta: { color: theme.colors.warning, fontWeight: "800", fontSize: 9, letterSpacing: 1, marginTop: 2 },
+  toolName: { color: theme.colors.textPrimary, fontWeight: "700", fontSize: 10 },
+  toolMeta: { color: theme.colors.warning, fontWeight: "800", fontSize: 8, letterSpacing: 1, marginTop: 2 },
   empty: { color: theme.colors.textMuted, fontStyle: "italic", padding: 24, textAlign: "center" },
 });

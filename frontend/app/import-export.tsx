@@ -851,7 +851,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     color: theme.colors.textPrimary,
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: "900",
     letterSpacing: 2,
   },
@@ -871,14 +871,14 @@ const styles = StyleSheet.create({
   },
   cardTitle: {
     color: theme.colors.textPrimary,
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: "900",
     letterSpacing: 1.5,
   },
   cardBody: {
     color: theme.colors.textSecondary,
-    fontSize: 11,
-    lineHeight: 15,
+    fontSize: 10,
+    lineHeight: 14,
     marginBottom: 14,
   },
   btnPrimary: {
@@ -894,7 +894,7 @@ const styles = StyleSheet.create({
     color: "#000",
     fontWeight: "900",
     letterSpacing: 1.5,
-    fontSize: 11,
+    fontSize: 10,
   },
   btnGhost: {
     flexDirection: "row",
@@ -910,16 +910,16 @@ const styles = StyleSheet.create({
     color: theme.colors.textPrimary,
     fontWeight: "800",
     letterSpacing: 1.5,
-    fontSize: 10,
+    fontSize: 9,
   },
   fileName: {
     color: theme.colors.textSecondary,
     marginTop: 10,
-    fontSize: 10,
+    fontSize: 9,
   },
   sectionLabel: {
     color: theme.colors.textPrimary,
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: "900",
     letterSpacing: 1.5,
     marginTop: 18,
@@ -927,7 +927,7 @@ const styles = StyleSheet.create({
   },
   helper: {
     color: theme.colors.textSecondary,
-    fontSize: 10,
+    fontSize: 9,
     marginBottom: 10,
     fontStyle: "italic",
   },
@@ -942,11 +942,11 @@ const styles = StyleSheet.create({
   mapHeader: {
     color: theme.colors.textPrimary,
     fontWeight: "700",
-    fontSize: 11,
+    fontSize: 10,
   },
   mapSample: {
     color: theme.colors.textMuted,
-    fontSize: 9,
+    fontSize: 8,
     fontStyle: "italic",
   },
   mapBtn: {
@@ -967,7 +967,7 @@ const styles = StyleSheet.create({
   },
   mapBtnText: {
     color: theme.colors.textPrimary,
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: "700",
     flex: 1,
   },
@@ -988,17 +988,17 @@ const styles = StyleSheet.create({
   previewHead: {
     color: theme.colors.textPrimary,
     fontWeight: "800",
-    fontSize: 9,
+    fontSize: 8,
     letterSpacing: 1,
   },
   previewMap: {
     color: theme.colors.accent,
-    fontSize: 8,
+    fontSize: 7,
     marginTop: 2,
   },
   previewVal: {
     color: theme.colors.textSecondary,
-    fontSize: 9,
+    fontSize: 8,
     marginTop: 2,
   },
   resultBox: {
@@ -1012,22 +1012,22 @@ const styles = StyleSheet.create({
   resultTitle: {
     color: theme.colors.textPrimary,
     fontWeight: "900",
-    fontSize: 11,
+    fontSize: 10,
     letterSpacing: 1,
   },
   resultErr: {
     color: theme.colors.danger,
     fontWeight: "800",
-    fontSize: 10,
+    fontSize: 9,
   },
   resultErrLine: {
     color: theme.colors.textSecondary,
-    fontSize: 9,
+    fontSize: 8,
     marginTop: 2,
   },
   resultSub: {
     color: theme.colors.textPrimary,
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: "800",
     letterSpacing: 0.5,
     marginBottom: 4,
@@ -1040,7 +1040,7 @@ const styles = StyleSheet.create({
   },
   autoCreatedText: {
     color: theme.colors.textSecondary,
-    fontSize: 9,
+    fontSize: 8,
     flex: 1,
   },
   modalBg: {
@@ -1069,7 +1069,7 @@ const styles = StyleSheet.create({
   modalTitle: {
     color: theme.colors.textPrimary,
     fontWeight: "900",
-    fontSize: 10,
+    fontSize: 9,
     letterSpacing: 1.5,
   },
   modalRow: {
@@ -1083,7 +1083,7 @@ const styles = StyleSheet.create({
   },
   modalRowText: {
     color: theme.colors.textPrimary,
-    fontSize: 11,
+    fontSize: 10,
   },
   exportFieldsHeader: {
     flexDirection: "row",
@@ -1095,7 +1095,7 @@ const styles = StyleSheet.create({
   },
   exportFieldsHeading: {
     color: theme.colors.textPrimary,
-    fontSize: 9,
+    fontSize: 8,
     fontWeight: "900",
     letterSpacing: 1.5,
   },
@@ -1108,7 +1108,7 @@ const styles = StyleSheet.create({
   },
   exportFieldsBtnText: {
     color: theme.colors.textPrimary,
-    fontSize: 8,
+    fontSize: 7,
     fontWeight: "800",
     letterSpacing: 1,
   },
@@ -1146,7 +1146,7 @@ const styles = StyleSheet.create({
   },
   exportFieldLabel: {
     color: theme.colors.textPrimary,
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: "700",
     flex: 1,
   },
@@ -1172,7 +1172,7 @@ const styles = StyleSheet.create({
   },
   smallBtnText: {
     color: theme.colors.textPrimary,
-    fontSize: 8,
+    fontSize: 7,
     fontWeight: "800",
     letterSpacing: 1,
   },
@@ -1198,13 +1198,13 @@ const styles = StyleSheet.create({
   },
   statusText: {
     color: theme.colors.textPrimary,
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: "800",
     letterSpacing: 0.5,
   },
   statusSubText: {
     color: theme.colors.textSecondary,
-    fontSize: 9,
+    fontSize: 8,
     flex: 1,
   },
   mapBtnRequired: {
@@ -1238,7 +1238,7 @@ const styles = StyleSheet.create({
   },
   formatBtnText: {
     color: theme.colors.textSecondary,
-    fontSize: 9,
+    fontSize: 8,
     fontWeight: "900",
     letterSpacing: 1.2,
   },
