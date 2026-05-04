@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import {
   View,
   Text,
@@ -6,12 +6,243 @@ import {
   TouchableOpacity,
   StyleSheet,
   ScrollView,
+  Modal,
+  Platform,
+  KeyboardAvoidingView,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { theme } from "./theme";
 import { api } from "./api";
+import { buildLocationTree, flattenLocationTree } from "./locationTree";
 
 type Item = { id: string; name: string };
+
+/* ---------------------------- shared modal shell ---------------------------- */
+
+function PickerModal({
+  visible,
+  title,
+  onClose,
+  searchPlaceholder,
+  searchText,
+  onSearchChange,
+  onCreate,
+  canCreate,
+  children,
+  createLabel,
+}: {
+  visible: boolean;
+  title: string;
+  onClose: () => void;
+  searchPlaceholder: string;
+  searchText: string;
+  onSearchChange: (s: string) => void;
+  onCreate?: () => void;
+  canCreate?: boolean;
+  children: React.ReactNode;
+  createLabel?: string;
+}) {
+  return (
+    <Modal
+      visible={visible}
+      transparent
+      animationType="slide"
+      onRequestClose={onClose}
+    >
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        style={styles.modalBg}
+      >
+        <View style={styles.modalSheet}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>{title}</Text>
+            <TouchableOpacity onPress={onClose} hitSlop={8} testID="picker-close">
+              <Ionicons
+                name="close"
+                size={22}
+                color={theme.colors.textPrimary}
+              />
+            </TouchableOpacity>
+          </View>
+          <View style={styles.searchBox}>
+            <Ionicons name="search" size={16} color={theme.colors.textMuted} />
+            <TextInput
+              testID="picker-search"
+              placeholder={searchPlaceholder}
+              placeholderTextColor={theme.colors.textMuted}
+              style={styles.searchInput}
+              value={searchText}
+              onChangeText={onSearchChange}
+              autoFocus
+              autoCorrect={false}
+            />
+            {searchText.length > 0 ? (
+              <TouchableOpacity onPress={() => onSearchChange("")} hitSlop={8}>
+                <Ionicons
+                  name="close-circle"
+                  size={16}
+                  color={theme.colors.textMuted}
+                />
+              </TouchableOpacity>
+            ) : null}
+          </View>
+          <ScrollView
+            style={styles.modalList}
+            keyboardShouldPersistTaps="handled"
+          >
+            {children}
+          </ScrollView>
+          {onCreate && canCreate ? (
+            <TouchableOpacity
+              testID="picker-create"
+              style={styles.createBtn}
+              onPress={onCreate}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="add-circle" size={18} color="#000" />
+              <Text style={styles.createBtnText}>
+                {createLabel || `Create "${searchText.trim()}"`}
+              </Text>
+            </TouchableOpacity>
+          ) : null}
+        </View>
+      </KeyboardAvoidingView>
+    </Modal>
+  );
+}
+
+/* ---------------------------- Category picker ---------------------------- */
+
+export function CategoryPicker({
+  selected,
+  onChange,
+}: {
+  selected: Item | null;
+  onChange: (item: Item | null) => void;
+}) {
+  const [all, setAll] = useState<Item[]>([]);
+  const [open, setOpen] = useState(false);
+  const [text, setText] = useState("");
+
+  const reload = useCallback(() => {
+    api.listCategories().then(setAll).catch(() => {});
+  }, []);
+  useEffect(() => {
+    reload();
+  }, [reload]);
+
+  const filtered = useMemo(() => {
+    const q = text.trim().toLowerCase();
+    if (!q) return all;
+    return all.filter((c) => c.name.toLowerCase().includes(q));
+  }, [text, all]);
+
+  const exactMatch = useMemo(
+    () =>
+      all.some((c) => c.name.toLowerCase() === text.trim().toLowerCase()),
+    [all, text],
+  );
+
+  const pick = (c: Item) => {
+    onChange(c);
+    setText("");
+    setOpen(false);
+  };
+  const createAndPick = async () => {
+    const name = text.trim();
+    if (!name) return;
+    try {
+      const c = await api.createCategory({ name });
+      setAll((cur) => (cur.some((x) => x.id === c.id) ? cur : [...cur, c]));
+      pick(c);
+    } catch {}
+  };
+
+  return (
+    <>
+      <TouchableOpacity
+        testID="cat-picker-btn"
+        style={styles.triggerRow}
+        onPress={() => setOpen(true)}
+        activeOpacity={0.7}
+      >
+        <Ionicons name="folder" size={18} color={theme.colors.accent} />
+        <Text
+          style={[
+            styles.triggerText,
+            !selected && { color: theme.colors.textMuted },
+          ]}
+        >
+          {selected ? selected.name : "Select a category..."}
+        </Text>
+        {selected ? (
+          <TouchableOpacity
+            onPress={() => onChange(null)}
+            hitSlop={8}
+            testID="cat-clear-btn"
+          >
+            <Ionicons name="close" size={18} color={theme.colors.danger} />
+          </TouchableOpacity>
+        ) : (
+          <Ionicons
+            name="chevron-down"
+            size={18}
+            color={theme.colors.textMuted}
+          />
+        )}
+      </TouchableOpacity>
+      <PickerModal
+        visible={open}
+        title="SELECT CATEGORY"
+        onClose={() => {
+          setOpen(false);
+          setText("");
+        }}
+        searchPlaceholder="Search or type a new name..."
+        searchText={text}
+        onSearchChange={setText}
+        onCreate={createAndPick}
+        canCreate={!!text.trim() && !exactMatch}
+      >
+        {filtered.length === 0 && !text.trim() ? (
+          <Text style={styles.empty}>No categories yet — type a name below to create one.</Text>
+        ) : null}
+        {filtered.map((c) => (
+          <TouchableOpacity
+            key={c.id}
+            testID={`cat-suggest-${c.id}`}
+            style={[
+              styles.row,
+              selected?.id === c.id && styles.rowActive,
+            ]}
+            onPress={() => pick(c)}
+          >
+            <Ionicons
+              name="folder-outline"
+              size={16}
+              color={
+                selected?.id === c.id ? "#000" : theme.colors.accent
+              }
+            />
+            <Text
+              style={[
+                styles.rowText,
+                selected?.id === c.id && { color: "#000" },
+              ]}
+            >
+              {c.name}
+            </Text>
+            {selected?.id === c.id ? (
+              <Ionicons name="checkmark" size={18} color="#000" />
+            ) : null}
+          </TouchableOpacity>
+        ))}
+      </PickerModal>
+    </>
+  );
+}
+
+/* ---------------------------- Tag picker (multi) ---------------------------- */
 
 export function TagInput({
   selected,
@@ -21,36 +252,36 @@ export function TagInput({
   onChange: (items: Item[]) => void;
 }) {
   const [all, setAll] = useState<Item[]>([]);
+  const [open, setOpen] = useState(false);
   const [text, setText] = useState("");
 
   useEffect(() => {
     api.listTags().then(setAll).catch(() => {});
   }, []);
 
-  const suggestions = useMemo(() => {
-    const q = text.trim().toLowerCase();
-    if (!q) return [];
-    const selectedIds = new Set(selected.map((s) => s.id));
-    return all
-      .filter(
-        (t) =>
-          !selectedIds.has(t.id) && t.name.toLowerCase().includes(q)
-      )
-      .slice(0, 6);
-  }, [text, all, selected]);
-
-  const exists = useMemo(
-    () =>
-      all.some((t) => t.name.toLowerCase() === text.trim().toLowerCase()) ||
-      selected.some(
-        (t) => t.name.toLowerCase() === text.trim().toLowerCase()
-      ),
-    [all, selected, text]
+  const selectedIds = useMemo(
+    () => new Set(selected.map((s) => s.id)),
+    [selected],
   );
 
-  const addExisting = (t: Item) => {
-    onChange([...selected, t]);
-    setText("");
+  const filtered = useMemo(() => {
+    const q = text.trim().toLowerCase();
+    if (!q) return all;
+    return all.filter((t) => t.name.toLowerCase().includes(q));
+  }, [text, all]);
+
+  const exactMatch = useMemo(
+    () =>
+      all.some((t) => t.name.toLowerCase() === text.trim().toLowerCase()),
+    [all, text],
+  );
+
+  const toggle = (t: Item) => {
+    if (selectedIds.has(t.id)) {
+      onChange(selected.filter((s) => s.id !== t.id));
+    } else {
+      onChange([...selected, t]);
+    }
   };
 
   const createAndAdd = async () => {
@@ -64,235 +295,382 @@ export function TagInput({
     } catch {}
   };
 
-  const remove = (id: string) => {
+  const removeChip = (id: string) => {
     onChange(selected.filter((s) => s.id !== id));
   };
 
   return (
-    <View>
-      <View style={styles.chipsBox}>
-        {selected.map((t) => (
-          <View key={t.id} style={styles.chip} testID={`tag-chip-${t.id}`}>
-            <Text style={styles.chipText}>{t.name}</Text>
-            <TouchableOpacity onPress={() => remove(t.id)} hitSlop={6}>
-              <Ionicons name="close" size={14} color="#000" />
-            </TouchableOpacity>
-          </View>
-        ))}
-        <TextInput
-          testID="tag-input"
-          placeholder={selected.length ? "Add another tag..." : "Type a tag..."}
-          placeholderTextColor={theme.colors.textMuted}
-          style={styles.input}
-          value={text}
-          onChangeText={setText}
-          onSubmitEditing={() => {
-            if (suggestions.length) addExisting(suggestions[0]);
-            else if (!exists && text.trim()) createAndAdd();
-          }}
-          autoCapitalize="none"
-        />
-      </View>
-      {text.length > 0 && (
-        <ScrollView style={styles.dropdown} keyboardShouldPersistTaps="handled">
-          {suggestions.map((s) => (
+    <>
+      <TouchableOpacity
+        testID="tag-picker-btn"
+        style={[styles.triggerRow, { minHeight: 48 }]}
+        onPress={() => setOpen(true)}
+        activeOpacity={0.7}
+      >
+        <Ionicons name="pricetag" size={18} color={theme.colors.accent} />
+        <View style={{ flex: 1, flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
+          {selected.length === 0 ? (
+            <Text style={[styles.triggerText, { color: theme.colors.textMuted }]}>
+              Add tags...
+            </Text>
+          ) : (
+            selected.map((t) => (
+              <View key={t.id} style={styles.chip} testID={`tag-chip-${t.id}`}>
+                <Text style={styles.chipText}>{t.name}</Text>
+                <TouchableOpacity
+                  onPress={(e) => {
+                    e.stopPropagation();
+                    removeChip(t.id);
+                  }}
+                  hitSlop={6}
+                >
+                  <Ionicons name="close" size={12} color="#000" />
+                </TouchableOpacity>
+              </View>
+            ))
+          )}
+        </View>
+        <Ionicons name="chevron-down" size={18} color={theme.colors.textMuted} />
+      </TouchableOpacity>
+      <PickerModal
+        visible={open}
+        title="SELECT TAGS"
+        onClose={() => {
+          setOpen(false);
+          setText("");
+        }}
+        searchPlaceholder="Search or type a new tag..."
+        searchText={text}
+        onSearchChange={setText}
+        onCreate={createAndAdd}
+        canCreate={!!text.trim() && !exactMatch}
+      >
+        {filtered.length === 0 && !text.trim() ? (
+          <Text style={styles.empty}>No tags yet — type a name below to create one.</Text>
+        ) : null}
+        {filtered.map((t) => {
+          const isSel = selectedIds.has(t.id);
+          return (
             <TouchableOpacity
-              key={s.id}
-              testID={`tag-suggest-${s.id}`}
-              style={styles.suggestion}
-              onPress={() => addExisting(s)}
+              key={t.id}
+              testID={`tag-suggest-${t.id}`}
+              style={[styles.row, isSel && styles.rowActive]}
+              onPress={() => toggle(t)}
             >
-              <Ionicons name="pricetag" size={14} color={theme.colors.accent} />
-              <Text style={styles.suggestionText}>{s.name}</Text>
-            </TouchableOpacity>
-          ))}
-          {!exists && text.trim().length > 0 && (
-            <TouchableOpacity
-              testID="tag-create-btn"
-              style={[styles.suggestion, { borderTopWidth: suggestions.length ? 1 : 0, borderTopColor: theme.colors.border }]}
-              onPress={createAndAdd}
-            >
-              <Ionicons name="add-circle" size={14} color={theme.colors.success} />
-              <Text style={[styles.suggestionText, { color: theme.colors.success }]}>
-                Create "{text.trim()}"
+              <Ionicons
+                name={isSel ? "checkbox" : "square-outline"}
+                size={18}
+                color={isSel ? "#000" : theme.colors.textMuted}
+              />
+              <Text style={[styles.rowText, isSel && { color: "#000" }]}>
+                {t.name}
               </Text>
             </TouchableOpacity>
-          )}
-        </ScrollView>
-      )}
-    </View>
+          );
+        })}
+      </PickerModal>
+    </>
   );
 }
 
-export function CategoryPicker({
-  selected,
+/* ---------------------------- Location picker ---------------------------- */
+
+export function LocationPicker({
+  locationId,
+  locationName,
   onChange,
 }: {
-  selected: Item | null;
-  onChange: (item: Item | null) => void;
+  locationId: string | null;
+  locationName: string;
+  onChange: (id: string | null, path: string) => void;
 }) {
-  const [all, setAll] = useState<Item[]>([]);
+  const [all, setAll] = useState<any[]>([]);
+  const [open, setOpen] = useState(false);
   const [text, setText] = useState("");
 
-  useEffect(() => {
-    api.listCategories().then(setAll).catch(() => {});
+  const reload = useCallback(() => {
+    api.listLocations().then(setAll).catch(() => {});
   }, []);
+  useEffect(() => {
+    reload();
+  }, [reload]);
 
-  const suggestions = useMemo(() => {
-    const q = text.trim().toLowerCase();
-    if (!q) return all.slice(0, 8);
-    return all.filter((t) => t.name.toLowerCase().includes(q)).slice(0, 8);
-  }, [text, all]);
-
-  const exists = useMemo(
-    () => all.some((t) => t.name.toLowerCase() === text.trim().toLowerCase()),
-    [all, text]
+  const flat = useMemo(
+    () => flattenLocationTree(buildLocationTree(all)),
+    [all],
   );
 
-  const pick = (t: Item) => {
-    onChange(t);
-    setText("");
-  };
+  const filtered = useMemo(() => {
+    const q = text.trim().toLowerCase();
+    if (!q) return flat;
+    return flat.filter(
+      (n) =>
+        n.name.toLowerCase().includes(q) || n.path.toLowerCase().includes(q),
+    );
+  }, [text, flat]);
 
+  const exactMatch = useMemo(
+    () =>
+      flat.some(
+        (n) => n.name.toLowerCase() === text.trim().toLowerCase(),
+      ),
+    [flat, text],
+  );
+
+  const pick = (n: { id: string; path: string }) => {
+    onChange(n.id, n.path);
+    setText("");
+    setOpen(false);
+  };
+  const clear = () => {
+    onChange(null, "");
+    setText("");
+    setOpen(false);
+  };
   const createAndPick = async () => {
     const name = text.trim();
     if (!name) return;
-    const c = await api.createCategory({ name });
-    setAll((cur) => (cur.some((x) => x.id === c.id) ? cur : [...cur, c]));
-    onChange(c);
-    setText("");
+    try {
+      const loc = await api.createLocation({ name });
+      // Reload to include hierarchy paths
+      const fresh = await api.listLocations();
+      setAll(fresh);
+      onChange(loc.id, loc.name);
+      setText("");
+      setOpen(false);
+    } catch {}
   };
 
   return (
-    <View>
-      {selected ? (
-        <View style={styles.selectedRow}>
-          <Ionicons name="folder" size={16} color={theme.colors.accent} />
-          <Text style={styles.selectedText}>{selected.name}</Text>
-          <TouchableOpacity testID="cat-clear-btn" onPress={() => onChange(null)} hitSlop={8}>
+    <>
+      <TouchableOpacity
+        testID="loc-picker-btn"
+        style={styles.triggerRow}
+        onPress={() => setOpen(true)}
+        activeOpacity={0.7}
+      >
+        <Ionicons name="location" size={18} color={theme.colors.accent} />
+        <Text
+          style={[
+            styles.triggerText,
+            !locationId && { color: theme.colors.textMuted },
+          ]}
+        >
+          {locationName || "Select a location..."}
+        </Text>
+        {locationId ? (
+          <TouchableOpacity
+            onPress={(e) => {
+              e.stopPropagation();
+              clear();
+            }}
+            hitSlop={8}
+            testID="loc-clear-btn"
+          >
             <Ionicons name="close" size={18} color={theme.colors.danger} />
           </TouchableOpacity>
-        </View>
-      ) : (
-        <>
-          <TextInput
-            testID="cat-input"
-            placeholder="Type or pick a category..."
-            placeholderTextColor={theme.colors.textMuted}
-            style={styles.formInput}
-            value={text}
-            onChangeText={setText}
-            onSubmitEditing={() => {
-              if (suggestions.length) pick(suggestions[0]);
-              else if (!exists && text.trim()) createAndPick();
-            }}
-            autoCapitalize="words"
+        ) : (
+          <Ionicons
+            name="chevron-down"
+            size={18}
+            color={theme.colors.textMuted}
           />
-          <View style={styles.dropdownInline}>
-            {suggestions.map((s) => (
-              <TouchableOpacity
-                key={s.id}
-                testID={`cat-suggest-${s.id}`}
-                style={styles.suggestion}
-                onPress={() => pick(s)}
-              >
-                <Ionicons name="folder-outline" size={14} color={theme.colors.accent} />
-                <Text style={styles.suggestionText}>{s.name}</Text>
-              </TouchableOpacity>
-            ))}
-            {text.trim().length > 0 && !exists && (
-              <TouchableOpacity
-                testID="cat-create-btn"
-                style={styles.suggestion}
-                onPress={createAndPick}
-              >
-                <Ionicons name="add-circle" size={14} color={theme.colors.success} />
-                <Text style={[styles.suggestionText, { color: theme.colors.success }]}>
-                  Create "{text.trim()}"
-                </Text>
-              </TouchableOpacity>
-            )}
-          </View>
-        </>
-      )}
-    </View>
+        )}
+      </TouchableOpacity>
+      <PickerModal
+        visible={open}
+        title="SELECT LOCATION"
+        onClose={() => {
+          setOpen(false);
+          setText("");
+        }}
+        searchPlaceholder="Search or type a new location..."
+        searchText={text}
+        onSearchChange={setText}
+        onCreate={createAndPick}
+        canCreate={!!text.trim() && !exactMatch}
+      >
+        <TouchableOpacity
+          testID="loc-pick-none"
+          style={[styles.row, !locationId && styles.rowActive]}
+          onPress={clear}
+        >
+          <Ionicons
+            name="ban"
+            size={16}
+            color={!locationId ? "#000" : theme.colors.textMuted}
+          />
+          <Text
+            style={[
+              styles.rowText,
+              { color: !locationId ? "#000" : theme.colors.textMuted },
+            ]}
+          >
+            NONE
+          </Text>
+          {!locationId ? (
+            <Ionicons name="checkmark" size={18} color="#000" />
+          ) : null}
+        </TouchableOpacity>
+        {filtered.length === 0 && !text.trim() ? (
+          <Text style={styles.empty}>
+            No locations yet — type a name below to create one.
+          </Text>
+        ) : null}
+        {filtered.map((n) => {
+          const isSel = locationId === n.id;
+          return (
+            <TouchableOpacity
+              key={n.id}
+              testID={`pick-loc-${n.id}`}
+              style={[
+                styles.row,
+                { paddingLeft: 14 + n.depth * 14 },
+                isSel && styles.rowActive,
+              ]}
+              onPress={() => pick(n)}
+            >
+              <Ionicons
+                name={n.children.length > 0 ? "folder" : "location"}
+                size={14}
+                color={isSel ? "#000" : theme.colors.accent}
+              />
+              <Text style={[styles.rowText, isSel && { color: "#000" }]}>
+                {n.name}
+              </Text>
+              {isSel ? (
+                <Ionicons name="checkmark" size={18} color="#000" />
+              ) : null}
+            </TouchableOpacity>
+          );
+        })}
+      </PickerModal>
+    </>
   );
 }
 
+/* ---------------------------- styles ---------------------------- */
+
 const styles = StyleSheet.create({
-  chipsBox: {
+  triggerRow: {
     flexDirection: "row",
-    flexWrap: "wrap",
+    alignItems: "center",
+    gap: 10,
     backgroundColor: theme.colors.bgSecondary,
     borderWidth: 1,
     borderColor: theme.colors.border,
-    padding: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
     borderRadius: 4,
-    gap: 6,
     minHeight: 48,
-    alignItems: "center",
+  },
+  triggerText: {
+    flex: 1,
+    color: theme.colors.textPrimary,
+    fontSize: 14,
+    fontWeight: "600",
   },
   chip: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
+    gap: 4,
     backgroundColor: theme.colors.accent,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
     borderRadius: 4,
   },
-  chipText: { color: "#000", fontSize: 12, fontWeight: "800" },
-  input: {
+  chipText: { color: "#000", fontSize: 11, fontWeight: "800" },
+
+  modalBg: {
     flex: 1,
-    minWidth: 100,
+    backgroundColor: "rgba(0,0,0,0.6)",
+    justifyContent: "flex-end",
+  },
+  modalSheet: {
+    backgroundColor: theme.colors.bg,
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    paddingBottom: 24,
+    maxHeight: "85%",
+    borderTopWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  modalHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
+  },
+  modalTitle: {
     color: theme.colors.textPrimary,
-    fontSize: 14,
-    paddingVertical: 6,
+    fontSize: 13,
+    fontWeight: "900",
+    letterSpacing: 1.5,
   },
-  formInput: {
-    backgroundColor: theme.colors.bgSecondary,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    color: theme.colors.textPrimary,
-    paddingHorizontal: 14,
-    height: 48,
-    borderRadius: 4,
-    fontSize: 15,
-  },
-  dropdown: {
-    maxHeight: 180,
-    borderWidth: 1,
-    borderTopWidth: 0,
-    borderColor: theme.colors.border,
-    backgroundColor: theme.colors.bgSecondary,
-  },
-  dropdownInline: {
-    marginTop: 6,
-    backgroundColor: theme.colors.bgSecondary,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: 4,
-  },
-  suggestion: {
+  searchBox: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
     paddingHorizontal: 12,
     paddingVertical: 10,
-    borderBottomColor: theme.colors.borderSubtle,
-    borderBottomWidth: 1,
+    margin: 12,
+    backgroundColor: theme.colors.bgSecondary,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
   },
-  suggestionText: { color: theme.colors.textPrimary, fontSize: 14 },
-  selectedRow: {
+  searchInput: {
+    flex: 1,
+    color: theme.colors.textPrimary,
+    fontSize: 14,
+    padding: 0,
+  },
+  modalList: {
+    flexGrow: 0,
+  },
+  row: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
-    backgroundColor: theme.colors.bgSecondary,
-    borderWidth: 1,
-    borderColor: theme.colors.accent,
+    gap: 10,
     paddingHorizontal: 14,
     paddingVertical: 12,
-    borderRadius: 4,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.borderSubtle,
   },
-  selectedText: { color: theme.colors.textPrimary, fontWeight: "700", flex: 1 },
+  rowActive: {
+    backgroundColor: theme.colors.accent,
+  },
+  rowText: {
+    flex: 1,
+    color: theme.colors.textPrimary,
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  empty: {
+    color: theme.colors.textMuted,
+    fontSize: 12,
+    fontStyle: "italic",
+    paddingHorizontal: 16,
+    paddingVertical: 24,
+    textAlign: "center",
+  },
+  createBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    margin: 12,
+    paddingVertical: 13,
+    backgroundColor: theme.colors.accent,
+    borderRadius: 8,
+  },
+  createBtnText: {
+    color: "#000",
+    fontSize: 13,
+    fontWeight: "900",
+    letterSpacing: 0.6,
+  },
 });

@@ -11,7 +11,8 @@ import * as DocumentPicker from "expo-document-picker";
 import * as FileSystem from "expo-file-system/legacy";
 import { theme } from "../../src/theme";
 import { api } from "../../src/api";
-import { TagInput, CategoryPicker } from "../../src/Pickers";
+import { TagInput, CategoryPicker, LocationPicker } from "../../src/Pickers";
+// (locationTree helpers no longer needed here — LocationPicker handles tree flattening internally)
 import { buildLocationTree, flattenLocationTree } from "../../src/locationTree";
 import { DateField } from "../../src/DateField";
 import { useAuth } from "../../src/AuthContext";
@@ -530,55 +531,14 @@ export default function ToolEdit() {
           <TagInput selected={tags} onChange={setTags} />
 
           <Text style={styles.label}>LOCATION</Text>
-          {locations.length === 0 ? (
-            <TouchableOpacity
-              testID="go-to-locations"
-              onPress={() => router.push("/locations")}
-              style={{
-                flexDirection: "row",
-                alignItems: "center",
-                gap: 6,
-                paddingVertical: 10,
-              }}
-            >
-              <Ionicons name="add-circle" size={16} color={theme.colors.accent} />
-              <Text style={[styles.helper, { color: theme.colors.accent, textDecorationLine: "underline" }]}>
-                No locations yet — tap here to add one
-              </Text>
-            </TouchableOpacity>
-          ) : (
-            <View>
-              <TouchableOpacity
-                testID="loc-clear"
-                style={[styles.locRow, !locationId && styles.locRowActive]}
-                onPress={() => { setLocationId(null); setLocationName(""); }}
-              >
-                <Ionicons name="ban" size={14} color={theme.colors.textMuted} />
-                <Text style={[styles.locText, { color: theme.colors.textMuted }]}>NONE</Text>
-              </TouchableOpacity>
-              {flattenLocationTree(buildLocationTree(locations)).map((n) => (
-                <TouchableOpacity
-                  key={n.id}
-                  testID={`pick-loc-${n.id}`}
-                  style={[
-                    styles.locRow,
-                    { paddingLeft: 14 + n.depth * 16 },
-                    locationId === n.id && styles.locRowActive,
-                  ]}
-                  onPress={() => { setLocationId(n.id); setLocationName(n.path); }}
-                >
-                  <Ionicons
-                    name={n.children.length > 0 ? "folder" : "location"}
-                    size={14}
-                    color={locationId === n.id ? "#000" : theme.colors.accent}
-                  />
-                  <Text style={[styles.locText, locationId === n.id && { color: "#000" }]}>
-                    {n.name}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          )}
+          <LocationPicker
+            locationId={locationId}
+            locationName={locationName}
+            onChange={(id, path) => {
+              setLocationId(id);
+              setLocationName(path);
+            }}
+          />
 
           {/* Dealer */}
           <Text style={styles.label}>DEALER</Text>
