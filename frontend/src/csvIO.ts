@@ -1,12 +1,16 @@
 /**
- * Tiny CSV utilities — purposely no third-party dep.
+ * Tiny CSV / XLSX utilities — CSV parser is purposely no third-party dep.
+ * XLSX parsing delegates to `xlsx` (SheetJS) which is bundle-sized but
+ * the only robust reader for .xlsx files.
  *
  *  parseCsv(text): string[][]
+ *  parseXlsx(base64): string[][]
  *  saveBase64(filename, mime, base64) -> Promise<void>  (cross-platform)
  */
 import { Platform } from "react-native";
 import * as FileSystem from "expo-file-system/legacy";
 import * as Sharing from "expo-sharing";
+import * as XLSX from "xlsx";
 
 /**
  * Parse RFC-4180-ish CSV. Supports:
@@ -63,6 +67,29 @@ export function parseCsv(input: string): string[][] {
     rows.pop();
   }
   return rows;
+}
+
+/**
+ * Parse a base64-encoded XLSX file. Uses SheetJS. Returns the first
+ * worksheet as a 2D string array (header in row 0).
+ */
+export function parseXlsx(base64: string): string[][] {
+  const wb = XLSX.read(base64, { type: "base64" });
+  const firstName = wb.SheetNames[0];
+  if (!firstName) return [];
+  const sheet = wb.Sheets[firstName];
+  const rows = XLSX.utils.sheet_to_json<string[]>(sheet, {
+    header: 1,
+    defval: "",
+    blankrows: false,
+    raw: false,
+  }) as unknown as any[][];
+  // Normalise each cell to a string and trim trailing empties
+  const out: string[][] = rows.map((r) =>
+    (r || []).map((c) => (c === null || c === undefined ? "" : String(c))),
+  );
+  while (out.length && out[out.length - 1].every((c) => c === "")) out.pop();
+  return out;
 }
 
 /**

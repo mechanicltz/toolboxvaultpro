@@ -1313,6 +1313,7 @@ async def tools_export_fields(user: User = Depends(get_current_user)):
 
 class ExportPayload(BaseModel):
     fields: Optional[List[str]] = None  # subset of _EXPORT_FIELD_IDS; None/empty = all
+    format: Optional[str] = "csv"        # "csv" | "xlsx"
 
 
 @api_router.post("/tools/export-csv")
@@ -1320,29 +1321,31 @@ async def tools_export_csv_post(
     payload: ExportPayload,
     user: User = Depends(get_current_user),
 ):
-    """Field-customisable CSV export. POST body: {fields: ["name","brand",...]}.
-    Falls through to all fields when `fields` is empty/missing for backwards
-    compatibility with the legacy GET path below."""
+    """Field-customisable export. POST body:
+       {fields: ["name","brand",...], format: "csv" | "xlsx"}
+    Falls through to all fields when `fields` is empty/missing."""
     requested = payload.fields or []
     if requested:
-        # Filter to known ids and preserve user's chosen order
         chosen = [fid for fid in requested if fid in _EXPORT_FIELD_IDS]
     else:
         chosen = list(_EXPORT_FIELD_IDS)
     if not chosen:
         chosen = list(_EXPORT_FIELD_IDS)
+    fmt = (payload.format or "csv").lower().strip()
+    if fmt not in ("csv", "xlsx"):
+        fmt = "csv"
 
-    return await _do_export_csv(chosen)
+    return await _do_export(chosen, fmt)
 
 
 @api_router.get("/tools/export-csv")
 async def tools_export_csv(user: User = Depends(get_current_user)):
-    """Backwards-compat GET — exports every field."""
-    return await _do_export_csv(list(_EXPORT_FIELD_IDS))
+    """Backwards-compat GET — exports all fields as CSV."""
+    return await _do_export(list(_EXPORT_FIELD_IDS), "csv")
 
 
-async def _do_export_csv(chosen_field_ids: List[str]) -> Dict[str, Any]:
-    """Shared implementation used by both POST and legacy GET."""
+async def _do_export(chosen_field_ids: List[str], fmt: str) -> Dict[str, Any]:
+    """Shared implementation used by POST and legacy GET. `fmt` in ("csv","xlsx")."""
     tools = await db.tools.find({}, {"_id": 0}).sort("name", 1).to_list(20000)
     cat_ids = {t.get("category_id") for t in tools if t.get("category_id")}
     cats = {
@@ -1378,21 +1381,76 @@ async def _do_export_csv(chosen_field_ids: List[str]) -> Dict[str, Any]:
 
     lookups = {"cats": cats, "locs": locs, "dlrs": dlrs, "tags": tags}
     label_for = {f["id"]: f["label"] for f in _EXPORT_FIELDS}
+    headers = [label_for[fid] for fid in chosen_field_ids]
+    rows_data = [
+        [_build_export_value(fid, t, lookups) for fid in chosen_field_ids]
+        for t in tools
+    ]
 
+    today = datetime.utcnow().strftime("%Y-%m-%d")
+    import base64 as _b64
+
+    if fmt == "xlsx":
+        try:
+            from openpyxl import Workbook
+            from openpyxl.styles import Font, PatternFill, Alignment
+        except Exception as e:
+            raise HTTPException(500, f"openpyxl not available: {e}")
+        import io as _io
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "Tools"
+        ws.append(headers)
+        header_font = Font(bold=True, color="000000")
+        header_fill = PatternFill("solid", fgColor="FFB300")
+        for col_i in range(1, len(headers) + 1):
+            c = ws.cell(row=1, column=col_i)
+            c.font = header_font
+            c.fill = header_fill
+            c.alignment = Alignment(vertical="center")
+        for row in rows_data:
+            ws.append(row)
+        # Freeze header row + auto-size columns based on content
+        ws.freeze_panes = "A2"
+        for col_i, header in enumerate(headers, start=1):
+            max_len = len(str(header))
+            for row in rows_data:
+                v = row[col_i - 1]
+                vlen = len(str(v)) if v is not None else 0
+                if vlen > max_len:
+                    max_len = vlen
+            # Cap width so sheet stays readable
+            ws.column_dimensions[ws.cell(row=1, column=col_i).column_letter].width = min(
+                max(12, max_len + 2), 50
+            )
+        buf = _io.BytesIO()
+        wb.save(buf)
+        raw = buf.getvalue()
+        return {
+            "filename": f"toolbox-vault-export-{today}.xlsx",
+            "base64": _b64.b64encode(raw).decode("ascii"),
+            "mime": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            "rows": len(tools),
+            "fields": chosen_field_ids,
+            "format": "xlsx",
+        }
+
+    # Default: CSV
     import csv as _csv
     import io as _io
     buf = _io.StringIO()
     w = _csv.writer(buf)
-    w.writerow([label_for[fid] for fid in chosen_field_ids])
-    for t in tools:
-        w.writerow([_build_export_value(fid, t, lookups) for fid in chosen_field_ids])
+    w.writerow(headers)
+    for row in rows_data:
+        w.writerow(row)
     raw = buf.getvalue().encode("utf-8")
-    import base64 as _b64
     return {
-        "filename": f"toolbox-vault-export-{datetime.utcnow().strftime('%Y-%m-%d')}.csv",
+        "filename": f"toolbox-vault-export-{today}.csv",
         "base64": _b64.b64encode(raw).decode("ascii"),
+        "mime": "text/csv",
         "rows": len(tools),
         "fields": chosen_field_ids,
+        "format": "csv",
     }
 
 

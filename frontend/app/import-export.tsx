@@ -17,7 +17,7 @@ import * as DocumentPicker from "expo-document-picker";
 import * as FileSystem from "expo-file-system/legacy";
 import { theme } from "../src/theme";
 import { api } from "../src/api";
-import { parseCsv, saveBase64 } from "../src/csvIO";
+import { parseCsv, parseXlsx, saveBase64 } from "../src/csvIO";
 
 type ImportField = { id: string; label: string; required?: boolean };
 type ExportField = { id: string; label: string };
@@ -103,6 +103,7 @@ export default function ImportExportScreen() {
   // Export state (field selection)
   const [exportFields, setExportFields] = useState<ExportField[]>([]);
   const [selectedExportFields, setSelectedExportFields] = useState<Set<string>>(new Set());
+  const [exportFormat, setExportFormat] = useState<"csv" | "xlsx">("csv");
 
   // Load the system field schema once
   useEffect(() => {
@@ -144,16 +145,25 @@ export default function ImportExportScreen() {
     }
     setBusy("export");
     try {
-      // Preserve the order shown in the UI (the export-fields list).
       const ordered = exportFields
         .map((f) => f.id)
         .filter((id) => selectedExportFields.has(id));
-      const r: any = await api.post("/tools/export-csv", { fields: ordered });
+      const r: any = await api.post("/tools/export-csv", {
+        fields: ordered,
+        format: exportFormat,
+      });
       if (!r?.base64) throw new Error("Server returned no data");
-      await saveBase64(r.filename || "tools.csv", "text/csv", r.base64);
+      const mime =
+        r.mime ||
+        (exportFormat === "xlsx"
+          ? "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+          : "text/csv");
+      const fallbackFilename =
+        exportFormat === "xlsx" ? "tools.xlsx" : "tools.csv";
+      await saveBase64(r.filename || fallbackFilename, mime, r.base64);
       Alert.alert(
         "Export ready",
-        `Exported ${r.rows} tool${r.rows === 1 ? "" : "s"} with ${ordered.length} field${ordered.length === 1 ? "" : "s"}.${
+        `Exported ${r.rows} tool${r.rows === 1 ? "" : "s"} as ${exportFormat.toUpperCase()} with ${ordered.length} field${ordered.length === 1 ? "" : "s"}.${
           Platform.OS === "web" ? " The file should download now." : ""
         }`,
       );
@@ -162,7 +172,7 @@ export default function ImportExportScreen() {
     } finally {
       setBusy("");
     }
-  }, [exportFields, selectedExportFields]);
+  }, [exportFields, selectedExportFields, exportFormat]);
 
   /* ---------------- IMPORT — pick file + parse ---------------- */
   const pickFile = useCallback(async () => {
