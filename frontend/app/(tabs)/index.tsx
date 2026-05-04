@@ -12,7 +12,6 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter, useFocusEffect } from "expo-router";
 import { theme } from "../../src/theme";
 import { api } from "../../src/api";
-import { PaymentModal } from "../../src/sections/PaymentModal";
 import { nextRouteDate, DAY_NAMES } from "../../src/route";
 import { formatDateUS } from "../../src/dateUtil";
 import { getCached, setCached } from "../../src/cache";
@@ -33,10 +32,6 @@ export default function HomeScreen() {
     getCached("claims_summary", { totals: { open: 0 } }),
   );
   const [refreshing, setRefreshing] = useState(false);
-  const [paymentTarget, setPaymentTarget] = useState<{
-    dealer: any;
-    account: "credit" | "personal";
-  } | null>(null);
 
   void stats;
 
@@ -97,14 +92,20 @@ export default function HomeScreen() {
     .filter((w) => !w.is_purchased)
     .reduce((sum, x) => sum + (Number(x.price) || 0), 0);
 
-  const dealersWithBalance = dealers
+  // Show ALL dealers when the row is enabled, even if both balances are $0.
+  const dealersAll = dealers
     .map((d) => ({
       ...d,
-      total:
-        (Number(d.credit_balance) || 0) + (Number(d.personal_balance) || 0),
+      truck: Number(d.personal_balance) || 0,
+      credit: Number(d.credit_balance) || 0,
     }))
-    .filter((d) => d.total > 0)
-    .sort((a, b) => b.total - a.total);
+    .sort((a, b) => {
+      // Dealers with balances first (largest owed → smallest), then $0 dealers alphabetically
+      const aTotal = a.truck + a.credit;
+      const bTotal = b.truck + b.credit;
+      if (aTotal !== bTotal) return bTotal - aTotal;
+      return (a.name || "").localeCompare(b.name || "");
+    });
 
   const totalOwed = dealers.reduce(
     (sum, d) =>
@@ -211,26 +212,21 @@ export default function HomeScreen() {
           value={`$${totalOwed.toFixed(2)}`}
           onPress={() => router.push("/dealers")}
         />
-        {dealersWithBalance.length === 0 ? (
-          <Text style={styles.emptyInline}>No outstanding balances. 🎉</Text>
+        {dealersAll.length === 0 ? (
+          <Text style={styles.emptyInline}>No dealers yet.</Text>
         ) : (
-          dealersWithBalance.map((d, i) => (
+          dealersAll.map((d, i) => (
             <View
               key={d.id}
               style={[
                 styles.owedDivider,
-                i === dealersWithBalance.length - 1 && { borderBottomWidth: 0 },
+                i === dealersAll.length - 1 && { borderBottomWidth: 0 },
               ]}
             >
               <DealerBalanceRow
                 dealer={d}
                 onOpenDealer={() => router.push(`/dealer/${d.id}`)}
-                onPayCredit={() =>
-                  setPaymentTarget({ dealer: d, account: "credit" })
-                }
-                onPayPersonal={() =>
-                  setPaymentTarget({ dealer: d, account: "personal" })
-                }
+                onAdjust={() => router.push(`/dealer/${d.id}`)}
               />
             </View>
           ))
@@ -319,19 +315,6 @@ export default function HomeScreen() {
           Pull to refresh · Customize this list under MORE → DISPLAY
         </Text>
       </ScrollView>
-
-      {paymentTarget && (
-        <PaymentModal
-          visible={!!paymentTarget}
-          dealer={paymentTarget.dealer}
-          account={paymentTarget.account}
-          onClose={() => setPaymentTarget(null)}
-          onSaved={() => {
-            setPaymentTarget(null);
-            load();
-          }}
-        />
-      )}
     </SafeAreaView>
   );
 }
@@ -383,74 +366,52 @@ function SummaryRow({
 function DealerBalanceRow({
   dealer,
   onOpenDealer,
-  onPayCredit,
-  onPayPersonal,
+  onAdjust,
 }: {
   dealer: any;
   onOpenDealer: () => void;
-  onPayCredit: () => void;
-  onPayPersonal: () => void;
+  onAdjust: () => void;
 }) {
   const credit = Number(dealer.credit_balance) || 0;
-  const personal = Number(dealer.personal_balance) || 0;
-  const total = credit + personal;
+  const truck = Number(dealer.personal_balance) || 0;
   return (
     <View style={styles.dealerRow}>
+      {/* Line 1: Dealer name + Truck Acct + balance */}
       <TouchableOpacity
-        style={styles.dealerHeader}
+        style={styles.dealerAcctLine}
         onPress={onOpenDealer}
         activeOpacity={0.7}
       >
-        <View style={styles.dealerIcon}>
-          <Ionicons name="business" size={18} color={theme.colors.accent} />
-        </View>
-        <Text style={styles.dealerName} numberOfLines={1}>
-          {dealer.name} Accounts
+        <Ionicons name="bus" size={14} color={theme.colors.accent} />
+        <Text style={styles.dealerAcctText} numberOfLines={1}>
+          {dealer.name} Truck Acct
         </Text>
-        <Text style={styles.dealerTotal}>${total.toFixed(2)}</Text>
-        <Ionicons
-          name="chevron-forward"
-          size={14}
-          color={theme.colors.textMuted}
-          style={{ marginLeft: 4 }}
-        />
+        <Text style={styles.dealerAcctVal}>${truck.toFixed(2)}</Text>
       </TouchableOpacity>
-      <View style={styles.dealerActionsRow}>
+
+      {/* Line 2: Dealer name + Credit Acct + balance */}
+      <TouchableOpacity
+        style={styles.dealerAcctLine}
+        onPress={onOpenDealer}
+        activeOpacity={0.7}
+      >
+        <Ionicons name="card" size={14} color={theme.colors.accent} />
+        <Text style={styles.dealerAcctText} numberOfLines={1}>
+          {dealer.name} Credit Acct
+        </Text>
+        <Text style={styles.dealerAcctVal}>${credit.toFixed(2)}</Text>
+      </TouchableOpacity>
+
+      {/* Line 3: gold "Adjust Balance" pill, centered */}
+      <View style={styles.dealerAdjustWrap}>
         <TouchableOpacity
-          testID={`pay-credit-${dealer.id}`}
-          style={[styles.dealerPill, credit <= 0 && { opacity: 0.5 }]}
-          onPress={onPayCredit}
-          disabled={credit <= 0}
-          activeOpacity={0.8}
+          testID={`adjust-balance-${dealer.id}`}
+          style={styles.dealerAdjustPill}
+          onPress={onAdjust}
+          activeOpacity={0.85}
         >
-          <Ionicons name="card" size={12} color={theme.colors.textPrimary} />
-          <Text style={styles.dealerPillLabel} numberOfLines={1}>
-            CREDIT PYMT
-          </Text>
-          <Text style={styles.dealerPillVal} numberOfLines={1}>
-            ${credit.toFixed(2)}
-          </Text>
-          <View style={styles.dealerPillCta}>
-            <Text style={styles.dealerPillCtaText}>PAY</Text>
-          </View>
-        </TouchableOpacity>
-        <TouchableOpacity
-          testID={`pay-personal-${dealer.id}`}
-          style={[styles.dealerPill, personal <= 0 && { opacity: 0.5 }]}
-          onPress={onPayPersonal}
-          disabled={personal <= 0}
-          activeOpacity={0.8}
-        >
-          <Ionicons name="person" size={12} color={theme.colors.textPrimary} />
-          <Text style={styles.dealerPillLabel} numberOfLines={1}>
-            TRUCK PYMT
-          </Text>
-          <Text style={styles.dealerPillVal} numberOfLines={1}>
-            ${personal.toFixed(2)}
-          </Text>
-          <View style={styles.dealerPillCta}>
-            <Text style={styles.dealerPillCtaText}>PAY</Text>
-          </View>
+          <Ionicons name="create" size={12} color="#000" />
+          <Text style={styles.dealerAdjustText}>Adjust Balance</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -584,77 +545,46 @@ const styles = StyleSheet.create({
   dealerRow: {
     paddingHorizontal: 14,
     paddingVertical: 10,
+    gap: 4,
   },
-  dealerHeader: {
+  dealerAcctLine: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
+    gap: 8,
+    paddingVertical: 4,
   },
-  dealerIcon: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    backgroundColor: theme.colors.bg,
+  dealerAcctText: {
+    flex: 1,
+    color: theme.colors.textPrimary,
+    fontSize: 11,
+    fontWeight: "700",
+  },
+  dealerAcctVal: {
+    color: theme.colors.textPrimary,
+    fontSize: 11,
+    fontWeight: "900",
+  },
+  dealerAdjustWrap: {
+    alignItems: "center",
+    marginTop: 6,
+    marginBottom: 2,
+  },
+  dealerAdjustPill: {
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
-  dealerName: {
-    flex: 1,
-    color: theme.colors.textPrimary,
-    fontSize: 11,
-    fontWeight: "800",
-    letterSpacing: 0.3,
-  },
-  dealerTotal: {
-    color: theme.colors.textPrimary,
-    fontSize: 11,
-    fontWeight: "900",
-  },
-  dealerActionsRow: {
-    flexDirection: "row",
-    gap: 8,
-    marginTop: 8,
-    marginLeft: 46,
-  },
-  dealerPill: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
     gap: 6,
-    paddingHorizontal: 8,
-    paddingVertical: 5,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: 999,
-    backgroundColor: theme.colors.bg,
-  },
-  dealerPillLabel: {
-    color: theme.colors.textPrimary,
-    fontSize: 7,
-    fontWeight: "900",
-    letterSpacing: 0.8,
-  },
-  dealerPillVal: {
-    flex: 1,
-    color: theme.colors.textPrimary,
-    fontSize: 9,
-    fontWeight: "900",
-    textAlign: "right",
-  },
-  dealerPillCta: {
+    paddingHorizontal: 18,
+    paddingVertical: 6,
     backgroundColor: theme.colors.accent,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
     borderRadius: 999,
-    marginLeft: 4,
+    minWidth: 160,
   },
-  dealerPillCtaText: {
+  dealerAdjustText: {
     color: "#000",
-    fontSize: 8,
+    fontSize: 11,
     fontWeight: "900",
-    letterSpacing: 0.8,
+    letterSpacing: 0.6,
   },
 
   /* Feedback */
