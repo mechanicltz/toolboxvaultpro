@@ -477,162 +477,201 @@ export default function ToolDetail() {
       ? `<div class="contact"><div class="contact-title">CONTACT</div>${contactRows.join("")}</div>`
       : "";
 
-    const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><style>
-      @page { size: letter; margin: 0; }
-      *{box-sizing:border-box;margin:0;padding:0}
-      html,body{font-family:Helvetica,Arial,sans-serif;color:#0a0a0a;background:#fafafa}
-      .poster{
-        width: 8.5in; min-height: 11in;
-        padding: 0.5in;
-        background:
-          radial-gradient(circle at 0% 0%, rgba(255,179,0,0.06), transparent 40%),
-          radial-gradient(circle at 100% 100%, rgba(255,179,0,0.05), transparent 40%),
-          #ffffff;
-        position: relative;
-        border: 14px solid #111;
-        outline: 3px solid #FFB300;
-        outline-offset: -10px;
-      }
-      .ribbon{
-        background: linear-gradient(90deg, #FFB300 0%, #FF8F00 100%);
-        color: #111;
-        font-size: 64px;
-        font-weight: 900;
-        letter-spacing: 14px;
-        text-align: center;
-        padding: 18px 0;
-        margin: -8px -8px 18px -8px;
-        text-transform: uppercase;
-        text-shadow: 1px 2px 0 rgba(255,255,255,0.4);
-      }
-      .name {
-        font-size: 36px;
-        font-weight: 900;
-        text-align: center;
-        text-transform: uppercase;
-        letter-spacing: 2px;
-        line-height: 1.05;
-        margin-bottom: 12px;
-        color: #111;
-      }
-      .price-box{
-        display: block;
-        text-align: center;
-        background:#111;
-        color:#FFB300;
-        padding: 18px 0;
-        border: 2px solid #FFB300;
-        margin-bottom: 18px;
-      }
-      .price-box .ask{
-        font-size: 16px;
-        letter-spacing: 6px;
-        font-weight: 800;
-        text-transform: uppercase;
-        opacity: 0.85;
-      }
-      .price-box .price{
-        font-size: 78px;
-        font-weight: 900;
-        letter-spacing: -2px;
-        line-height: 1;
-        margin-top: 4px;
-      }
-      .photo{
-        display:block;
-        width: 100%;
-        max-height: 4.2in;
-        object-fit: cover;
-        border: 4px solid #111;
-        margin-bottom: 18px;
-        background: #f0f0f0;
-      }
-      .specs{
-        border: 2px solid #111;
-        padding: 14px 16px;
-        margin-bottom: 16px;
-      }
-      .row{
-        display: flex;
-        justify-content: space-between;
-        font-size: 14px;
-        padding: 6px 0;
-        border-bottom: 1px dotted #ccc;
-      }
-      .row:last-child{border-bottom:none}
-      .lab{
-        font-weight: 800;
-        letter-spacing: 1.5px;
-        color: #555;
-        font-size: 11px;
-      }
-      .val{
-        font-weight: 700;
-        color: #111;
-        font-size: 14px;
-        max-width: 60%;
-        text-align: right;
-      }
-      .desc, .note{
-        margin-bottom: 14px;
-        padding: 10px 14px;
-        background: #fff8e6;
-        border-left: 4px solid #FFB300;
-      }
-      .desc p, .note p{
-        font-size: 13px;
-        line-height: 1.4;
-        color: #222;
-        margin-top: 4px;
-      }
-      .note{ background:#f4f4f4; border-left-color:#111 }
-      .contact{
-        position: absolute;
-        bottom: 0.6in;
-        left: 0.5in;
-        right: 0.5in;
-        padding: 14px 18px;
-        background: #111;
-        color: #fff;
-        text-align: center;
-        font-size: 14px;
-        line-height: 1.5;
-      }
-      .contact-title{
-        color:#FFB300;
-        font-size: 11px;
-        letter-spacing: 4px;
-        font-weight: 900;
-        margin-bottom: 6px;
-      }
-      .footer{
-        position:absolute;
-        bottom: 0.18in;
-        left: 0.5in;
-        right: 0.5in;
-        text-align:center;
-        font-size: 8px;
-        letter-spacing: 1.5px;
-        color:#999;
-      }
-    </style></head><body>
-      <div class="poster">
-        <div class="ribbon">FOR SALE</div>
-        ${F.name ? `<div class="name">${esc(tool.name) || "(unnamed)"}</div>` : ""}
-        ${F.price ? `<div class="price-box"><div class="ask">Asking Price</div><div class="price">$${askingPrice}</div></div>` : ""}
-        ${heroPhoto ? `<img class="photo" src="${heroPhoto}"/>` : ""}
-        ${specsHtml ? `<div class="specs">${specsHtml}</div>` : ""}
-        ${descBlock}
-        ${noteBlock}
-        ${contactBlock}
-        <div class="footer">Listed via TOOLBOX VAULT · ${new Date().toLocaleDateString()}</div>
-      </div>
-    </body></html>`;
+    // xhtml2pdf-compatible HTML — uses tables for layout, basic CSS only.
+    // No flex, no gradients, no outline-offset, no position:absolute.
+    const specsTableRows = specRows
+      .map(
+        (r) => `
+          <tr>
+            <td class="lab">${esc(r.label).toUpperCase()}</td>
+            <td class="val">${esc(r.value)}</td>
+          </tr>`,
+      )
+      .join("");
+
+    const html = `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8"/>
+<style>
+  @page { size: letter; margin: 0.4in; }
+  body { font-family: Helvetica, Arial, sans-serif; color: #111; font-size: 12px; }
+  table { border-collapse: collapse; }
+  .frame {
+    width: 100%;
+    border: 8pt solid #111;
+    padding: 14pt;
+  }
+  .ribbon {
+    width: 100%;
+    background-color: #FFB300;
+    color: #111;
+    font-size: 44pt;
+    font-weight: bold;
+    letter-spacing: 8pt;
+    text-align: center;
+    padding: 14pt 0 14pt 0;
+    border-top: 3pt solid #111;
+    border-bottom: 3pt solid #111;
+    margin-bottom: 14pt;
+  }
+  .name {
+    font-size: 24pt;
+    font-weight: bold;
+    text-align: center;
+    color: #111;
+    margin-bottom: 12pt;
+  }
+  .price-box {
+    width: 100%;
+    background-color: #111;
+    border: 2pt solid #FFB300;
+    padding: 12pt 0 14pt 0;
+    margin-bottom: 14pt;
+    text-align: center;
+  }
+  .price-ask {
+    color: #FFB300;
+    font-size: 11pt;
+    letter-spacing: 4pt;
+    font-weight: bold;
+    text-align: center;
+  }
+  .price {
+    color: #FFB300;
+    font-size: 48pt;
+    font-weight: bold;
+    text-align: center;
+  }
+  .photo-wrap {
+    width: 100%;
+    text-align: center;
+    margin-bottom: 14pt;
+  }
+  .photo {
+    width: 80%;
+    max-width: 5in;
+    border: 3pt solid #111;
+  }
+  .specs {
+    width: 100%;
+    border: 2pt solid #111;
+    margin-bottom: 12pt;
+  }
+  .specs td {
+    padding: 5pt 12pt;
+    font-size: 11pt;
+    border-bottom: 1pt dotted #ccc;
+  }
+  .specs td.lab {
+    color: #555;
+    font-size: 9pt;
+    font-weight: bold;
+    width: 40%;
+  }
+  .specs td.val {
+    color: #111;
+    font-weight: bold;
+    text-align: right;
+  }
+  .desc, .note {
+    width: 100%;
+    background-color: #fff5d6;
+    border-left: 4pt solid #FFB300;
+    padding: 10pt 14pt;
+    margin-bottom: 10pt;
+  }
+  .note { background-color: #f0f0f0; border-left-color: #111; }
+  .lab-small {
+    font-size: 9pt;
+    font-weight: bold;
+    color: #555;
+    letter-spacing: 1pt;
+  }
+  .body-text {
+    font-size: 11pt;
+    color: #222;
+    margin-top: 4pt;
+  }
+  .contact {
+    width: 100%;
+    background-color: #111;
+    color: #fff;
+    text-align: center;
+    padding: 14pt;
+    margin-top: 12pt;
+  }
+  .contact-title {
+    color: #FFB300;
+    font-size: 9pt;
+    letter-spacing: 3pt;
+    font-weight: bold;
+    margin-bottom: 6pt;
+  }
+  .contact-line {
+    color: #fff;
+    font-size: 12pt;
+    margin: 2pt 0 2pt 0;
+    text-align: center;
+  }
+  .footer {
+    margin-top: 12pt;
+    text-align: center;
+    color: #999;
+    font-size: 8pt;
+  }
+</style>
+</head>
+<body>
+  <div class="frame">
+    <div class="ribbon">FOR SALE</div>
+    ${F.name ? `<div class="name">${esc(tool.name) || "(unnamed)"}</div>` : ""}
+    ${
+      F.price
+        ? `<div class="price-box">
+             <div class="price-ask">ASKING PRICE</div>
+             <div class="price">$${askingPrice}</div>
+           </div>`
+        : ""
+    }
+    ${heroPhoto ? `<div class="photo-wrap"><img class="photo" src="${heroPhoto}"/></div>` : ""}
+    ${specsTableRows ? `<table class="specs">${specsTableRows}</table>` : ""}
+    ${
+      F.description && tool.description
+        ? `<div class="desc">
+             <div class="lab-small">DESCRIPTION</div>
+             <div class="body-text">${esc(tool.description)}</div>
+           </div>`
+        : ""
+    }
+    ${
+      F.sale_notes && tool.sale_notes
+        ? `<div class="note">
+             <div class="lab-small">SELLER'S NOTES</div>
+             <div class="body-text">${esc(tool.sale_notes)}</div>
+           </div>`
+        : ""
+    }
+    ${
+      contactRows.length
+        ? `<div class="contact">
+             <div class="contact-title">CONTACT</div>
+             ${contactRows
+               .map((r) => `<div class="contact-line">${r.replace(/<\/?div>/g, "")}</div>`)
+               .join("")}
+           </div>`
+        : ""
+    }
+    <div class="footer">Listed via TOOLBOX VAULT &middot; ${new Date().toLocaleDateString()}</div>
+  </div>
+</body>
+</html>`;
 
     setShowPosterBuilder(false);
     try {
       await printReportHtml(html, `${tool.name || "for-sale"}-poster-${Date.now()}`);
     } catch (e: any) {
+      console.error("[poster] generation failed:", e);
       Alert.alert("Error", e?.message || "Could not generate poster");
     }
   };
