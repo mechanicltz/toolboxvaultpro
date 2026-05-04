@@ -121,29 +121,7 @@ export default function MoreScreen() {
           onPress={() => router.push("/feedback")}
         />
 
-        <Text style={styles.sectionLabel}>ACCOUNT</Text>
-
-        <Row
-          icon="key"
-          title="Change Password"
-          subtitle="Update your account password"
-          testID="more-change-password"
-          onPress={() => {
-            setPwNew("");
-            setPwConfirm("");
-            setPwErr("");
-            setPwOk("");
-            setPwOpen(true);
-          }}
-        />
-
-        <Row
-          icon="person-circle"
-          title="Personal Information"
-          subtitle="Name, address, phone, insurance — used in reports"
-          testID="more-personal-info"
-          onPress={() => router.push("/personal-info")}
-        />
+        <Text style={styles.sectionLabel}>SYSTEM</Text>
 
         <Row
           icon="heart"
@@ -333,7 +311,30 @@ export default function MoreScreen() {
           />
         </View>
 
-        <Text style={styles.sectionLabel}>SESSION</Text>
+        <Text style={styles.sectionLabel}>ACCOUNT</Text>
+
+        <Row
+          icon="person-circle"
+          title="Personal Information"
+          subtitle="Name, address, phone, insurance — used in reports"
+          testID="more-personal-info"
+          onPress={() => router.push("/personal-info")}
+        />
+
+        <Row
+          icon="key"
+          title="Change Password"
+          subtitle="Update your account password"
+          testID="more-change-password"
+          onPress={() => {
+            setPwNew("");
+            setPwConfirm("");
+            setPwErr("");
+            setPwOk("");
+            setPwOpen(true);
+          }}
+        />
+
         <TouchableOpacity
           style={styles.row}
           onPress={() => logout()}
