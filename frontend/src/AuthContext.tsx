@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { api, ApiError, getToken, setToken, setUnauthorizedHandler } from "./api";
-import { loadCacheFromDisk } from "./cache";
+import { loadCacheFromDisk, clearCached } from "./cache";
 import { startNetworkWatcher } from "./network";
 
 const USER_CACHE_KEY = "tt.auth.user";
@@ -100,6 +100,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [refresh]);
 
   const login = useCallback(async (email: string, password: string) => {
+    // Wipe any cached data BEFORE the new auth — prevents the new user from
+    // briefly seeing the previous user's tools/locations/etc., and prevents
+    // stale cached data from a different account showing up at all.
+    await clearCached();
     const res = await api.login({ email, password });
     await setToken(res.token);
     setUserState(res.user as AuthUser);
@@ -107,6 +111,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const register = useCallback(async (email: string, password: string, name?: string) => {
+    await clearCached();
     const res = await api.register({ email, password, name });
     await setToken(res.token);
     setUserState(res.user as AuthUser);
@@ -117,6 +122,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await setToken(null);
     setUserState(null);
     await writeCachedUser(null);
+    // Wipe everything on logout so the next login starts clean.
+    await clearCached();
   }, []);
 
   return (

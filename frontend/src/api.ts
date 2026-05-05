@@ -3,7 +3,17 @@ import { apiCacheKey, getCached, hasCached, setCached } from "./cache";
 import { isOnline, OfflineError } from "./network";
 import { showOfflineAlert } from "./offlineGuard";
 
-const BASE = process.env.EXPO_PUBLIC_BACKEND_URL;
+// Defensive fallback: if EXPO_PUBLIC_BACKEND_URL is somehow missing in the
+// production build (e.g. eas.json env not set, or EAS Secrets misconfigured)
+// the app must still hit the real backend instead of `undefined/api/...`.
+// This was the root cause of the "TestFlight shows 4 phantom tools" bug —
+// every fetch was going to `undefined/api/tools` and silently 404ing.
+const PRODUCTION_BACKEND_URL = "https://asset-locator-12.preview.emergentagent.com";
+const _ENV_BASE = process.env.EXPO_PUBLIC_BACKEND_URL;
+const BASE =
+  _ENV_BASE && _ENV_BASE !== "undefined" && _ENV_BASE.startsWith("http")
+    ? _ENV_BASE
+    : PRODUCTION_BACKEND_URL;
 const TOKEN_KEY = "tt.auth.token";
 
 let memToken: string | null = null;
