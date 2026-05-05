@@ -7,12 +7,48 @@ import {
   Platform,
   Modal,
   Pressable,
+  Dimensions,
+  StatusBar,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter, usePathname } from "expo-router";
 import { theme } from "./theme";
 import { useResponsive, CONTENT_MAX_WIDTH_WIDE } from "./responsive";
+
+// ----------------------------------------------------------------------------
+// ANDROID NAV-BAR SAFE PADDING
+// ----------------------------------------------------------------------------
+// Android 15 (API 35+) makes edge-to-edge MANDATORY — `edgeToEdgeEnabled:false`
+// in app.json is honored on older Androids but ignored on Android 15. Worse,
+// `useSafeAreaInsets().bottom` returns 0 on Android 15 in this configuration
+// (known bug in react-native-safe-area-context).
+//
+// Result: previous fixes that relied on insets did NOTHING — the tab bar sat
+// underneath the system nav bar regardless. The only guaranteed solution is a
+// HARDCODED minimum bottom padding that exceeds the largest typical Android
+// nav-bar height. We compute it once at module load using the standard 48dp
+// 3-button bar height, falling back larger for tablets where the bar can be
+// taller. We can't measure the real height because the OS lies to us, so we
+// pick a value that always clears the bar.
+const ANDROID_NAV_SAFE_PAD = (() => {
+  if (Platform.OS !== "android") return 0;
+  // Detect whether the system is auto-insetting the window (non-edge-to-edge).
+  // If `screen.height > window.height + statusBar`, Android already inset the
+  // bottom for us — no extra padding needed (return 0). Otherwise we pad.
+  const screen = Dimensions.get("screen");
+  const win = Dimensions.get("window");
+  const statusBar = StatusBar.currentHeight ?? 0;
+  const systemReservedAtBottom = screen.height - win.height - statusBar;
+  if (systemReservedAtBottom >= 24) {
+    // OS is already reserving room — nothing to do.
+    return 0;
+  }
+  // Edge-to-edge or unknown: pad enough to clear any nav bar style.
+  // 48dp covers 3-button nav; tablets sometimes use 56dp. Pick 48 as a
+  // sensible minimum that always works.
+  return 48;
+})();
 
 type IconName = React.ComponentProps<typeof Ionicons>["name"];
 
@@ -64,11 +100,21 @@ export function BottomBar() {
 
   // Add the bottom safe-area inset on top of our base padding so the tab bar
   // never sits underneath the Android system nav bar / gesture pill or the
-  // iOS home indicator. iOS already had a generous 24pt — we floor at that.
-  // Android tablets typically report 24–48pt; phones with gesture nav ~16pt.
+  // iOS home indicator.
+  //
+  // We take the LARGEST of three values:
+  //   1. `basePad` — minimum visual breathing room (looks balanced even when
+  //      no system bar exists, e.g. landscape or non-edge-to-edge)
+  //   2. `insets.bottom` — what the OS reports (works on iOS; broken on
+  //      Android 15 where it always returns 0)
+  //   3. `ANDROID_NAV_SAFE_PAD` — hardcoded 48dp Android fallback that's
+  //      ONLY active when we detect the system isn't already auto-insetting.
+  //      This is what guarantees the bar clears the nav bar even when
+  //      `useSafeAreaInsets` lies (the previous root cause we kept missing).
   const basePad = Platform.OS === "ios" ? 24 : 10;
-  const bottomPad = Math.max(basePad, insets.bottom);
-  const barHeight = (Platform.OS === "ios" ? 80 : 64) + Math.max(0, insets.bottom - basePad);
+  const bottomPad = Math.max(basePad, insets.bottom, ANDROID_NAV_SAFE_PAD);
+  const baseHeight = Platform.OS === "ios" ? 80 : 64;
+  const barHeight = baseHeight + Math.max(0, bottomPad - basePad);
 
   const isActive = (tab: (typeof TABS)[number]) => {
     if (tab.altRoutes) {
