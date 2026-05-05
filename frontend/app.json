@@ -19,6 +19,7 @@
     },
     "android": {
       "package": "app.emergent.assetlocator128c92565d",
+      "edgeToEdgeEnabled": false,
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#0A0A0A"

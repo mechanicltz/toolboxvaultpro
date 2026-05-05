@@ -1,4 +1,3 @@
-import { SafeAreaProvider } from "react-native-safe-area-context";
 import { Stack, useRouter, useSegments } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
@@ -105,18 +104,16 @@ function ShellNav() {
 export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1, backgroundColor: "#0A0A0A" }}>
-      <SafeAreaProvider>
-        <StatusBar style="light" />
-        <AuthProvider>
-          <NetworkProvider>
-            <AuroraBackground>
-              <AuthGate>
-                <ShellNav />
-              </AuthGate>
-            </AuroraBackground>
-          </NetworkProvider>
-        </AuthProvider>
-      </SafeAreaProvider>
+      <StatusBar style="light" />
+      <AuthProvider>
+        <NetworkProvider>
+          <AuroraBackground>
+            <AuthGate>
+              <ShellNav />
+            </AuthGate>
+          </AuroraBackground>
+        </NetworkProvider>
+      </AuthProvider>
     </GestureHandlerRootView>
   );
 }
