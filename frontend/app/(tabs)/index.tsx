@@ -275,12 +275,10 @@ export default function HomeScreen() {
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <View style={styles.header}>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.title}>TOOLBOX VAULT</Text>
-          <Text style={styles.subtitle} testID="home-version">
-            SUMMARY · {APP_VERSION_LABEL}
-          </Text>
-        </View>
+        <Text style={styles.title}>TOOLBOX VAULT</Text>
+        <Text style={styles.subtitle} testID="home-version">
+          SUMMARY · {APP_VERSION_LABEL}
+        </Text>
       </View>
 
       <ScrollView

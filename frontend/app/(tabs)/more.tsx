@@ -111,12 +111,10 @@ export default function MoreScreen() {
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <View style={styles.header}>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.title}>MORE</Text>
-          <Text style={styles.subtitle} numberOfLines={1} testID="more-version">
-            {APP_VERSION_LABEL + " · " + (user?.email || "Manage everything")}
-          </Text>
-        </View>
+        <Text style={styles.title}>MORE</Text>
+        <Text style={styles.subtitle} numberOfLines={1} testID="more-version">
+          {APP_VERSION_LABEL + " · " + (user?.email || "Manage everything")}
+        </Text>
       </View>
       <ScrollView contentContainerStyle={{ paddingBottom: 100 }}>
         <Row
