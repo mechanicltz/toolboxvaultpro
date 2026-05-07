@@ -112,8 +112,11 @@ export default function MoreScreen() {
     <SafeAreaView style={styles.container} edges={["top"]}>
       <View style={styles.header}>
         <Text style={styles.title}>MORE</Text>
-        <Text style={styles.subtitle} numberOfLines={1} testID="more-version">
-          {APP_VERSION_LABEL + " · " + (user?.email || "Manage everything")}
+        <Text style={styles.subtitle} numberOfLines={1}>
+          {user?.email || "Manage everything"}
+        </Text>
+        <Text style={styles.versionLine} testID="more-version">
+          {APP_VERSION_LABEL}
         </Text>
       </View>
       <ScrollView contentContainerStyle={{ paddingBottom: 100 }}>
@@ -546,6 +549,13 @@ const styles = StyleSheet.create({
     letterSpacing: 2,
     textTransform: "uppercase",
     marginTop: 2,
+  },
+  versionLine: {
+    color: theme.colors.textMuted,
+    fontSize: 10,
+    fontWeight: "700",
+    letterSpacing: 1.5,
+    marginTop: 4,
   },
   sectionLabel: {
     color: theme.colors.textMuted,
