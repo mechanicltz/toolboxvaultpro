@@ -275,10 +275,13 @@ export default function HomeScreen() {
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <View style={styles.header}>
-        <Text style={styles.title}>TOOLBOX VAULT</Text>
-        <Text style={styles.subtitle} testID="home-version">
-          SUMMARY · {APP_VERSION_LABEL}
-        </Text>
+        <View>
+          <Text style={styles.title}>TOOLBOX VAULT</Text>
+          <Text style={styles.subtitle}>SUMMARY</Text>
+          <Text style={styles.versionLine} testID="home-version">
+            {APP_VERSION_LABEL}
+          </Text>
+        </View>
       </View>
 
       <ScrollView
@@ -494,6 +497,13 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     letterSpacing: 1.5,
     marginTop: 3,
+  },
+  versionLine: {
+    color: theme.colors.textMuted,
+    fontSize: 10,
+    fontWeight: "700",
+    letterSpacing: 1.5,
+    marginTop: 4,
   },
 
   /* Highlighted next-route banner */
