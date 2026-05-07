@@ -18,6 +18,7 @@ import { nextRouteDate, DAY_NAMES } from "../../src/route";
 import { formatDateUS } from "../../src/dateUtil";
 import { getCached, setCached } from "../../src/cache";
 import { usePrefs } from "../../src/prefs";
+import { APP_VERSION_LABEL } from "../../src/version";
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -274,10 +275,13 @@ export default function HomeScreen() {
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <View style={styles.header}>
-        <View>
+        <View style={{ flex: 1 }}>
           <Text style={styles.title}>TOOLBOX VAULT</Text>
           <Text style={styles.subtitle}>SUMMARY</Text>
         </View>
+        <Text style={styles.versionTag} testID="home-version">
+          {APP_VERSION_LABEL}
+        </Text>
       </View>
 
       <ScrollView
@@ -493,6 +497,13 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     letterSpacing: 1.5,
     marginTop: 3,
+  },
+  versionTag: {
+    color: theme.colors.textMuted,
+    fontSize: 9,
+    fontWeight: "700",
+    letterSpacing: 1,
+    marginLeft: 8,
   },
 
   /* Highlighted next-route banner */

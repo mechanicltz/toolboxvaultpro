@@ -20,6 +20,7 @@ import { theme } from "../../src/theme";
 import { usePrefs, HOME_ROW_LABELS, HomeRowKey } from "../../src/prefs";
 import { api } from "../../src/api";
 import { useAuth } from "../../src/AuthContext";
+import { APP_VERSION_LABEL } from "../../src/version";
 
 type RowProps = {
   icon: any;
@@ -110,8 +111,13 @@ export default function MoreScreen() {
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <View style={styles.header}>
-        <Text style={styles.title}>MORE</Text>
-        <Text style={styles.subtitle}>{user?.email || "Manage everything"}</Text>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.title}>MORE</Text>
+          <Text style={styles.subtitle}>{user?.email || "Manage everything"}</Text>
+        </View>
+        <Text style={styles.versionTag} testID="more-version">
+          {APP_VERSION_LABEL}
+        </Text>
       </View>
       <ScrollView contentContainerStyle={{ paddingBottom: 100 }}>
         <Row
@@ -530,8 +536,21 @@ const pwStyles = StyleSheet.create({
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.colors.bg },
-  header: { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 12 },
+  header: {
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    paddingBottom: 12,
+    flexDirection: "row",
+    alignItems: "center",
+  },
   title: { color: theme.colors.textPrimary, fontSize: 21, fontWeight: "900", letterSpacing: 2 },
+  versionTag: {
+    color: theme.colors.textMuted,
+    fontSize: 9,
+    fontWeight: "700",
+    letterSpacing: 1,
+    marginLeft: 8,
+  },
   subtitle: {
     color: theme.colors.accent,
     fontSize: 8,
