@@ -113,11 +113,10 @@ export default function MoreScreen() {
       <View style={styles.header}>
         <View style={{ flex: 1 }}>
           <Text style={styles.title}>MORE</Text>
-          <Text style={styles.subtitle}>{user?.email || "Manage everything"}</Text>
+          <Text style={styles.subtitle} numberOfLines={1} testID="more-version">
+            {APP_VERSION_LABEL + " · " + (user?.email || "Manage everything")}
+          </Text>
         </View>
-        <Text style={styles.versionTag} testID="more-version">
-          {APP_VERSION_LABEL}
-        </Text>
       </View>
       <ScrollView contentContainerStyle={{ paddingBottom: 100 }}>
         <Row
@@ -540,17 +539,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 12,
     paddingBottom: 12,
-    flexDirection: "row",
-    alignItems: "center",
   },
   title: { color: theme.colors.textPrimary, fontSize: 21, fontWeight: "900", letterSpacing: 2 },
-  versionTag: {
-    color: theme.colors.textMuted,
-    fontSize: 9,
-    fontWeight: "700",
-    letterSpacing: 1,
-    marginLeft: 8,
-  },
   subtitle: {
     color: theme.colors.accent,
     fontSize: 8,

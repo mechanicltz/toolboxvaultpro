@@ -277,11 +277,10 @@ export default function HomeScreen() {
       <View style={styles.header}>
         <View style={{ flex: 1 }}>
           <Text style={styles.title}>TOOLBOX VAULT</Text>
-          <Text style={styles.subtitle}>SUMMARY</Text>
+          <Text style={styles.subtitle} testID="home-version">
+            SUMMARY · {APP_VERSION_LABEL}
+          </Text>
         </View>
-        <Text style={styles.versionTag} testID="home-version">
-          {APP_VERSION_LABEL}
-        </Text>
       </View>
 
       <ScrollView
@@ -497,13 +496,6 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     letterSpacing: 1.5,
     marginTop: 3,
-  },
-  versionTag: {
-    color: theme.colors.textMuted,
-    fontSize: 9,
-    fontWeight: "700",
-    letterSpacing: 1,
-    marginLeft: 8,
   },
 
   /* Highlighted next-route banner */
