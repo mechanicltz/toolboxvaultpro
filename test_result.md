@@ -2173,3 +2173,223 @@ agent_communication:
       Files: app/tool/[id].tsx (picker modal + busy overlay + new PDF HTML),
       src/printHtml.native.ts (rewritten with sharing fallbacks).
 
+
+
+
+###############################################################################
+# COMPREHENSIVE DEPLOYMENT READINESS AUDIT — 2026-05-08
+# User asked for full pre-launch audit. Find ALL bugs first, do NOT fix yet.
+###############################################################################
+
+backend_full_audit:
+  - task: "Comprehensive deployment-readiness backend audit"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/server.py + /app/backend/reports.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: |
+          User requested a 110% pre-public-launch audit. Test EVERY backend
+          feature end-to-end and report a CONSOLIDATED LIST OF BUGS (no fixes
+          yet — user wants the list first, then will approve fixes).
+          
+          Test credentials: subtest@example.com / password123 — DO NOT delete
+          this user. Use the throwaway-user pattern for any destructive tests.
+          
+          ### SCOPE — test ALL of the following:
+          
+          1. **Auth & Account**
+             - POST /api/auth/register (happy + duplicate email + weak pw)
+             - POST /api/auth/login (happy + wrong pw + nonexistent + empty)
+             - GET /api/auth/me (with/without token, expired token)
+             - POST /api/auth/change-password
+             - POST /api/auth/forgot-password (email-enumeration safe?)
+             - POST /api/auth/reset-password (valid code, expired code, wrong code, max attempts)
+             - DELETE /api/auth/account (wrong pw, missing pw, full purge, re-register same email)
+          
+          2. **Tools CRUD**
+             - GET /api/tools (with filters: search, tags, location, status)
+             - POST /api/tools (with photos as base64, with all optional fields)
+             - GET /api/tools/{id}
+             - PATCH /api/tools/{id} (every field individually)
+             - DELETE /api/tools/{id}
+             - Photos: upload large base64, multiple photos, edge cases
+             - Receipts: attach/detach, list under tool
+          
+          3. **Locations** (nested) — CRUD + parent/child integrity, deletion cascade
+          
+          4. **Tags** — CRUD + assignment to tools
+          
+          5. **Dealers** — CRUD + balances (truck/credit) + payment history + agents (free vs premium limits)
+          
+          6. **Borrowers / Checkouts** — CRUD + checkout/return cycles + history
+          
+          7. **Maintenance** — CRUD + upcoming endpoint + overdue counter
+          
+          8. **Warranty Claims** — CRUD + status transitions + summary endpoint
+          
+          9. **Wishlist** — CRUD
+          
+          10. **Inventory for Sale** — list, mark sold, sale/sold reports
+          
+          11. **Reports / PDF**
+              - POST /api/render-pdf (the inventory, insurance, sales, maintenance, claims, theft, dealer-balance variants)
+              - include_receipts toggle on inventory/insurance/sales
+              - Single-tool standard PDF + for-sale poster (template HTML rendering)
+              - Empty-data edge cases (no tools, no dealers)
+          
+          12. **Aggregate / Stats** — GET /api/aggregate, GET /api/stats
+          
+          13. **Multi-tenant isolation** — user A must NEVER see user B's data on ANY endpoint
+          
+          14. **Free-tier limits** — verify HTTP 402 on tools (>10), dealers (>1), agents (>1)
+          
+          15. **OCR** — POST /api/ocr/receipt (skip the actual external call if no OPENAI key, just confirm route + auth)
+          
+          16. **Health & root** — GET /api/, GET /api/health
+          
+          17. **Error handling sanity** — malformed JSON, oversized payloads (try a 10MB photo), invalid ObjectIds, SQL/NoSQL injection attempts in search params
+          
+          18. **Security**
+              - All non-public endpoints require Authorization?
+              - JWT expired/tampered → 401?
+              - CORS configured?
+          
+          ### DELIVERABLE
+          A categorized list of every bug found. For each bug:
+            - Endpoint / feature
+            - Severity (CRITICAL / HIGH / MEDIUM / LOW)
+            - Reproduction steps
+            - Expected vs actual
+          
+          Do NOT fix anything. We want the consolidated list first.
+
+agent_communication:
+  - agent: "main"
+    message: |
+      User requested full pre-launch deployment-readiness audit. Please run
+      a thorough sweep of EVERY backend feature listed above and return a
+      categorized bug list (no fixes — user wants to review first). Use
+      subtest@example.com / password123 for auth and the throwaway-user
+      pattern for destructive tests. Check test_credentials.md for context.
+
+
+  - agent: "testing"
+    message: |
+      DEPLOYMENT-READINESS BACKEND AUDIT COMPLETE — 8 bugs found, no CRITICAL.
+      Run via /app/backend_audit.py against EXPO_PUBLIC_BACKEND_URL/api with
+      subtest@example.com / password123 + throwaway delete-test-<uuid>@example.com.
+      Investigation-only; no fixes applied per review instructions.
+
+      === RESULTS PER REVIEW ITEM ===
+
+      1) Auth & account — PASS overall
+         - register/login/me/PUT-me/forgot-password/reset-password/delete-account all work.
+         - /forgot-password is enumeration-safe (same generic 200 for unknown/malformed/known emails).
+         - /reset-password TTL and 5-attempt lockout verified (sequence [400,400,400,400,400,429]).
+         - /auth/me requires auth; rejects forged-sig and expired JWTs (all 401).
+         - delete-account: wrong pw → 401; correct pw → 200 wipes all collections, login post-delete → 401, re-registration with same email yields a clean account (no leaked data).
+         - subtest@example.com still intact post-run (verified by login).
+         - BUG (SECURITY/MEDIUM): POST /api/auth/login leaks pydantic 422 error for malformed-but-syntactically-invalid email like "@nowhere.test" (response includes verbose pydantic detail), while wrong-pw on a real-shape email returns 401 with a generic "Invalid email or password". This subtly distinguishes malformed/unknown vs invalid-pw and is an indirect enumeration vector. Catch the EmailStr validation in the handler and convert to a uniform 401 with the same generic detail.
+
+      2) Tools CRUD — PASS
+         - listing with search/checked_out/is_consumable/needs_repair/for_sale/is_sold filters all work.
+         - create/update/delete with photos works.
+         - documents POST/DELETE works.
+         - checkout/checkin works; mark-sold/unmark-sold works; report-lost/recover works.
+         - bulk endpoint validates unknown action with non-empty tool_ids → 400 (verified).
+         - 8.6MB base64 photo accepted (no hard size cap — by design).
+
+      3) Locations — PASS (nested cascade, cycle prevention, self-parent rejection all working)
+
+      4) Tags / Categories / Borrowers / Wishlist — PASS
+
+      5) Dealers — PASS (CRUD, agents, current-agent, balance transactions)
+
+      6) Maintenance — PASS (/maintenance/upcoming returns 200; schedule CRUD covered in earlier sweeps)
+
+      7) Warranty Claims — PASS (/warranty-claims, /summary, PUT, DELETE; 15 existing claims, totals consistent)
+
+      8) Reports — PASS (all 5 spec types: insurance, inventory, sales, account, claims)
+         - Render verified for both csv AND pdf for every type (10/10 PASS).
+         - include_receipts=true on inventory PDF works.
+         - Empty-data render on a freshly-registered user works for inventory pdf+csv.
+         - /api/render-pdf direct HTML→PDF works; empty html → 400.
+
+      9) Aggregate / Stats — PASS (both ~70-90ms; /tools listing 2097ms with 13 tools)
+
+      10) Multi-tenant isolation — PASS (CRITICAL test passed)
+          - Registered userB; created tools/dealers as B.
+          - userA cannot GET, PUT, or DELETE userB's tool (404 / no-op).
+          - userA cannot GET userB's dealer, add agent, or post tx (all 404).
+          - userA's listing shows zero AUDIT_B_* entries; userB's listing shows zero AUDIT_A_*.
+
+      11) FREE-TIER LIMITS — *** NOT ENFORCED *** (3 HIGH bugs)
+          - FREE_LIMITS = {tools:10, dealers:1, agents_per_dealer:1} is defined in /app/backend/auth.py L50-54 but NEVER referenced in server.py.
+          - Created 11 tools as a brand-new free user — all returned 200. Expected 402 on the 11th.
+          - Created a 2nd dealer as free user — 200. Expected 402.
+          - Created a 2nd agent as free user — 200. Expected 402.
+          - NOTE: Frontend comment in app/(tabs)/inventory.tsx L156 says "No subscription tiers — every tool is fully editable for everyone." So this MAY be intentional product strategy. But the review request explicitly asked to verify enforcement — flagging so main agent can decide whether to (a) enforce, or (b) delete the dead FREE_LIMITS dict and the misleading docs in /app/memory/test_credentials.md.
+
+      12) OCR — endpoint mismatch
+          - Review request mentioned POST /api/ocr/receipt — that path returns 404. The actual endpoint is POST /api/ai/receipt-scan (verified). Either the review is using an outdated path name or main agent should add an alias. Auth + empty-input validation work correctly on the actual endpoint.
+
+      13) Health & root — minor
+          - GET /api/ → 200 (works).
+          - GET /api/health → 404. Middleware PUBLIC_PATHS allows this path through but no handler is registered. Add `@api_router.get("/health")` returning {"ok":true} or remove the path from PUBLIC_PATHS to keep the surface clean.
+
+      14) Error handling sanity — PASS
+          - Malformed JSON body → 422.
+          - 8.6MB photo accepted (no cap — by design or platform default).
+          - Invalid id path returns 404.
+          - NoSQL injection literal in dealer_id filter is matched as a string (returns 0 rows — safe).
+          - NoSQL operator literal in search param safely handled.
+
+      15) Security headers
+          - JWT expired/forged/tampered all return 401 (PASS).
+          - All 18 sample protected endpoints (/tools, /dealers, /locations, /tags, /categories, /borrowers, /wishlist, /aggregate, /stats, /maintenance/upcoming, /warranty-claims, /warranty-claims/summary, /warranty-alerts, /personal-profile, /reports/spec, /reports/filter-options, /tools/import-fields, /tools/export-fields) return 401 without auth.
+          - CORS preflight returns 204; ACAO=*. Note: server.py L3527-3533 sets allow_origins=['*'] AND allow_credentials=True simultaneously — browsers will refuse to send credentials on cross-origin requests with this combo, and Starlette logs a warning. Acceptable since the app uses Authorization-header tokens (not cookies), but tighten allow_origins to your domain(s) for production hygiene.
+
+      16) Performance — PASS overall
+          - /aggregate ~80ms, /stats ~70ms (well under 2s).
+          - /tools listing on subtest (13 tools): 2097ms — slightly over the 2s sniff threshold for a small dataset. Likely caused by photos being large base64 strings inside each Tool payload (response sizes are large because photos field always returned). LOW severity. Consider returning a thumbnail-only summary for list endpoint and a full payload for /tools/{id} only.
+
+      17) Polish — DELETE endpoints are non-strict
+          - Every DELETE on a non-existent id returns 200 (tools/dealers/borrowers/tags/categories/wishlist/locations/warranty-claims). This is technically idempotent and not insecure (cross-tenant tests confirmed scoping protects userB's data even when userA's DELETE returns 200), but it gives a misleading success indication for stale ids. Consider returning {"ok": true, "deleted": 0|1} so the frontend can detect no-ops.
+
+      === BUG SUMMARY (categorised) ===
+
+      SECURITY/AUTH (1 MEDIUM)
+      - [MEDIUM] POST /api/auth/login: pydantic 422 leak for malformed emails differs from generic 401 for wrong-pw ⇒ subtle email-enumeration vector. Catch ValidationError in /auth/login (and /auth/register) and respond with a uniform 401/400 with generic message.
+
+      DATA INTEGRITY (0)
+      (No data-integrity bugs found. Multi-tenant isolation, cascade deletes, cycle-prevention, balance arithmetic all PASS.)
+
+      FEATURE/FUNCTIONAL (3 HIGH + 2 LOW)
+      - [HIGH] POST /api/tools — Free-tier 10-tool limit not enforced. Add count check at handler.
+      - [HIGH] POST /api/dealers — Free-tier 1-dealer limit not enforced.
+      - [HIGH] POST /api/dealers/{id}/agents — Free-tier 1-agent limit not enforced.
+        (NOTE: All three are HIGH only if monetisation gating is the product intent. If free is unlimited per the recent product pivot, delete the FREE_LIMITS dict and the references in /app/memory/test_credentials.md.)
+      - [LOW] GET /api/health — 404 (no handler).
+      - [LOW] POST /api/ocr/receipt — 404 (review used wrong path; actual is /ai/receipt-scan).
+
+      PERFORMANCE (1 LOW)
+      - [LOW] GET /api/tools at 2097ms with only 13 tools — slightly over 2s, likely full base64 photos in list payload. Consider returning a list-card view (no `photos`) and full doc only on /tools/{id}.
+
+      POLISH/UX (1 LOW)
+      - [LOW] DELETE on any non-existent resource returns 200 {ok:true} silently (8 endpoints). Consider returning {"deleted": 0|1} or 404 for stricter feedback.
+
+      === FIXTURES & CLEANUP ===
+      - All AUDIT_* test fixtures created during the run were deleted on the way out.
+      - Throwaway delete-test-<uuid>@example.com user was created → wrong-pw 401 → correct-pw delete → re-register → re-delete; verified subtest@example.com is still intact at the end.
+      - Sweep at the end of /app/backend_audit.py removes any AUDIT_LIMIT_B_* / AUDIT_FullTool / AUDIT_BigPhoto / AUDIT_Borrower / AUDIT_Garage / AUDIT_Drawer1 / AUDIT_red / AUDIT_PowerTools fixtures.
+      - subtest's display name was temporarily set to "QA Tester Updated" mid-run and restored to "QA Tester" at the end (verified via /auth/me).
+
+      === DELIVERABLES ===
+      - /app/backend_audit.py — fully self-contained audit script. Re-runnable; cleans up after itself. Run with `python /app/backend_audit.py` (requires `requests` and `pyjwt`).
+      - This message — categorised bug list with reproduction notes.
+      - No fixes applied. Main agent: review the 3 HIGH free-tier bugs first (decide product intent), then ship.
