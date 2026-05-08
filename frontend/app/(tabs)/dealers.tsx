@@ -24,6 +24,7 @@ import { DateField } from "../../src/DateField";
 import { getCached, setCached } from "../../src/cache";
 import { useAuth } from "../../src/AuthContext";
 import { useResponsive } from "../../src/responsive";
+import { rescheduleDealerNotifications } from "../../src/notifications";
 
 export default function DealersScreen() {
   const router = useRouter();
@@ -43,7 +44,22 @@ export default function DealersScreen() {
     const [d, t] = await Promise.all([api.listDealers(), api.listTools()]);
     setDealers(setCached("dealers", d));
     setTools(setCached("tools", t));
-  }, []);
+    // Re-sync local route notifications whenever the dealer list changes
+    // (covers create/edit/delete + remote changes from another device).
+    if (prefs.dealer_notifications_enabled) {
+      rescheduleDealerNotifications(d, {
+        enabled: true,
+        hour: prefs.dealer_notification_hour,
+        minute: prefs.dealer_notification_minute,
+        notifyDayBefore: prefs.dealer_notify_day_before,
+      }).catch(() => {});
+    }
+  }, [
+    prefs.dealer_notifications_enabled,
+    prefs.dealer_notification_hour,
+    prefs.dealer_notification_minute,
+    prefs.dealer_notify_day_before,
+  ]);
 
   useFocusEffect(
     useCallback(() => {

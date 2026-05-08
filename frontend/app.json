@@ -61,6 +61,13 @@
       "expo-mail-composer",
       "expo-font",
       [
+        "expo-notifications",
+        {
+          "color": "#F5C518",
+          "defaultChannel": "dealer-routes"
+        }
+      ],
+      [
         "expo-contacts",
         {
           "contactsPermission": "Import names and phone numbers from your contacts"

@@ -22,6 +22,11 @@ export type Prefs = {
   show_details_summary: boolean;
   home_rows: HomeRowVis;
   home_row_order: HomeRowKey[];
+  // Dealer route notifications
+  dealer_notifications_enabled: boolean;
+  dealer_notification_hour: number; // 0-23
+  dealer_notification_minute: number; // 0-59
+  dealer_notify_day_before: boolean;
 };
 
 const KEY = "toolbox_prefs_v2";
@@ -57,6 +62,10 @@ const DEFAULTS: Prefs = {
   show_details_summary: false,
   home_rows: DEFAULT_HOME_ROWS,
   home_row_order: DEFAULT_HOME_ROW_ORDER,
+  dealer_notifications_enabled: false,
+  dealer_notification_hour: 7,
+  dealer_notification_minute: 0,
+  dealer_notify_day_before: false,
 };
 
 export const loadPrefs = async (): Promise<Prefs> => {

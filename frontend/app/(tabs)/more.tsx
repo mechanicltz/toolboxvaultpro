@@ -13,6 +13,7 @@ import {
   KeyboardAvoidingView,
   Alert,
 } from "react-native";
+import DateTimePicker from "@react-native-community/datetimepicker";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter, useFocusEffect } from "expo-router";
@@ -21,6 +22,11 @@ import { usePrefs, HOME_ROW_LABELS, HomeRowKey } from "../../src/prefs";
 import { api } from "../../src/api";
 import { useAuth } from "../../src/AuthContext";
 import { APP_VERSION_LABEL } from "../../src/version";
+import {
+  requestPermissions as requestNotificationPermissions,
+  rescheduleDealerNotifications,
+  cancelDealerNotifications,
+} from "../../src/notifications";
 
 type RowProps = {
   icon: any;
@@ -66,6 +72,15 @@ export default function MoreScreen() {
   const [pwBusy, setPwBusy] = useState(false);
   const [pwErr, setPwErr] = useState("");
   const [pwOk, setPwOk] = useState("");
+  const [timePickerOpen, setTimePickerOpen] = useState(false);
+
+  // Format hour:minute as "7:00 AM" / "1:30 PM" for the row.
+  const formatHourMinute = (h: number, m: number): string => {
+    const period = h >= 12 ? "PM" : "AM";
+    const h12 = h % 12 === 0 ? 12 : h % 12;
+    const mm = String(m).padStart(2, "0");
+    return `${h12}:${mm} ${period}`;
+  };
 
   const submitPasswordChange = async () => {
     setPwErr("");
@@ -318,6 +333,109 @@ export default function MoreScreen() {
           />
         </View>
 
+        <Text style={styles.sectionLabel}>NOTIFICATIONS</Text>
+
+        <View style={styles.toggleRow} testID="notif-toggle-row">
+          <View style={styles.iconBox}>
+            <Ionicons name="notifications" size={20} color={theme.colors.accent} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.rowTitle}>Dealer route reminders</Text>
+            <Text style={styles.rowSub}>
+              Local notification when a tool dealer is scheduled to visit
+            </Text>
+          </View>
+          <Switch
+            value={prefs.dealer_notifications_enabled}
+            onValueChange={async (v) => {
+              if (v) {
+                const granted = await requestNotificationPermissions();
+                if (!granted) {
+                  Alert.alert(
+                    "Permission needed",
+                    "To remind you about dealer visits, please allow notifications for this app in your device settings.",
+                  );
+                  return;
+                }
+                await update({ dealer_notifications_enabled: true });
+                try {
+                  const dealers = await api.listDealers();
+                  await rescheduleDealerNotifications(dealers, {
+                    enabled: true,
+                    hour: prefs.dealer_notification_hour,
+                    minute: prefs.dealer_notification_minute,
+                    notifyDayBefore: prefs.dealer_notify_day_before,
+                  });
+                } catch {
+                  /* dealers fetch may fail offline; user can re-toggle later */
+                }
+              } else {
+                await update({ dealer_notifications_enabled: false });
+                await cancelDealerNotifications();
+              }
+            }}
+            trackColor={{ true: theme.colors.accent, false: theme.colors.border }}
+            thumbColor="#fff"
+          />
+        </View>
+
+        {prefs.dealer_notifications_enabled && (
+          <>
+            <TouchableOpacity
+              style={styles.toggleRow}
+              onPress={() => setTimePickerOpen(true)}
+              testID="notif-time-row"
+            >
+              <View style={styles.iconBox}>
+                <Ionicons name="time" size={20} color={theme.colors.accent} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.rowTitle}>Reminder time</Text>
+                <Text style={styles.rowSub}>
+                  When to send the reminder on dealer-visit days
+                </Text>
+              </View>
+              <Text style={styles.timeValue}>
+                {formatHourMinute(
+                  prefs.dealer_notification_hour,
+                  prefs.dealer_notification_minute,
+                )}
+              </Text>
+            </TouchableOpacity>
+
+            <View style={styles.toggleRow}>
+              <View style={styles.iconBox}>
+                <Ionicons name="calendar" size={20} color={theme.colors.accent} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.rowTitle}>Also remind day before</Text>
+                <Text style={styles.rowSub}>
+                  Get a heads-up reminder the day before too
+                </Text>
+              </View>
+              <Switch
+                value={prefs.dealer_notify_day_before}
+                onValueChange={async (v) => {
+                  await update({ dealer_notify_day_before: v });
+                  try {
+                    const dealers = await api.listDealers();
+                    await rescheduleDealerNotifications(dealers, {
+                      enabled: true,
+                      hour: prefs.dealer_notification_hour,
+                      minute: prefs.dealer_notification_minute,
+                      notifyDayBefore: v,
+                    });
+                  } catch {
+                    /* no-op */
+                  }
+                }}
+                trackColor={{ true: theme.colors.accent, false: theme.colors.border }}
+                thumbColor="#fff"
+              />
+            </View>
+          </>
+        )}
+
         <Text style={styles.sectionLabel}>ACCOUNT</Text>
 
         <Row
@@ -457,6 +575,49 @@ export default function MoreScreen() {
           </View>
         </KeyboardAvoidingView>
       </Modal>
+
+      {/* Time picker — schedules when on dealer-route days the reminder fires */}
+      {timePickerOpen && (
+        <DateTimePicker
+          value={(() => {
+            const d = new Date();
+            d.setHours(prefs.dealer_notification_hour, prefs.dealer_notification_minute, 0, 0);
+            return d;
+          })()}
+          mode="time"
+          is24Hour={false}
+          display={Platform.OS === "ios" ? "spinner" : "default"}
+          onChange={async (_event, selected) => {
+            // On Android the picker auto-dismisses; on iOS we keep it open until user taps elsewhere
+            if (Platform.OS !== "ios") setTimePickerOpen(false);
+            if (selected) {
+              const h = selected.getHours();
+              const m = selected.getMinutes();
+              await update({ dealer_notification_hour: h, dealer_notification_minute: m });
+              try {
+                const dealers = await api.listDealers();
+                await rescheduleDealerNotifications(dealers, {
+                  enabled: prefs.dealer_notifications_enabled,
+                  hour: h,
+                  minute: m,
+                  notifyDayBefore: prefs.dealer_notify_day_before,
+                });
+              } catch {
+                /* no-op */
+              }
+            }
+          }}
+        />
+      )}
+      {Platform.OS === "ios" && timePickerOpen && (
+        <Modal transparent animationType="fade" onRequestClose={() => setTimePickerOpen(false)}>
+          <TouchableOpacity
+            style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.4)", justifyContent: "flex-end" }}
+            activeOpacity={1}
+            onPress={() => setTimePickerOpen(false)}
+          />
+        </Modal>
+      )}
     </SafeAreaView>
   );
 }
@@ -594,6 +755,12 @@ const styles = StyleSheet.create({
   },
   rowTitle: { color: theme.colors.textPrimary, fontWeight: "700", fontSize: 11 },
   rowSub: { color: theme.colors.textSecondary, fontSize: 9, marginTop: 2 },
+  timeValue: {
+    color: theme.colors.accent,
+    fontSize: 13,
+    fontWeight: "800",
+    letterSpacing: 0.5,
+  },
   badge: {
     minWidth: 24,
     height: 24,
