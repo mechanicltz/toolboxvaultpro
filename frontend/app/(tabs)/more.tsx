@@ -26,6 +26,7 @@ import {
   requestPermissions as requestNotificationPermissions,
   rescheduleDealerNotifications,
   cancelDealerNotifications,
+  sendTestNotification,
 } from "../../src/notifications";
 
 type RowProps = {
@@ -433,6 +434,40 @@ export default function MoreScreen() {
                 thumbColor="#fff"
               />
             </View>
+
+            <TouchableOpacity
+              style={styles.toggleRow}
+              testID="notif-test-row"
+              onPress={async () => {
+                const ok = await sendTestNotification();
+                if (ok) {
+                  Alert.alert(
+                    "Test scheduled",
+                    "A test notification will appear in about 5 seconds. If your phone is on silent or Do Not Disturb is on, you'll see it in Notification Center.",
+                  );
+                } else {
+                  Alert.alert(
+                    "Permission needed",
+                    "Please enable notifications for this app in your device settings.",
+                  );
+                }
+              }}
+            >
+              <View style={styles.iconBox}>
+                <Ionicons name="paper-plane" size={20} color={theme.colors.accent} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.rowTitle}>Send a test notification</Text>
+                <Text style={styles.rowSub}>
+                  Fires in 5 seconds — confirms permissions are working
+                </Text>
+              </View>
+              <Ionicons
+                name="chevron-forward"
+                size={16}
+                color={theme.colors.textMuted}
+              />
+            </TouchableOpacity>
           </>
         )}
 

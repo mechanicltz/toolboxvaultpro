@@ -193,10 +193,11 @@ export async function rescheduleDealerNotifications(
           sound: "default",
           data: { tag: SCHEDULED_TAG, kind: "same-day", date: day },
         },
-        trigger:
-          Platform.OS === "android"
-            ? ({ date: sameDay, channelId: CHANNEL_ID } as any)
-            : ({ date: sameDay } as any),
+        trigger: {
+          type: Notifications.SchedulableTriggerInputTypes.DATE,
+          date: sameDay,
+          ...(Platform.OS === "android" ? { channelId: CHANNEL_ID } : {}),
+        } as any,
       });
     }
 
@@ -216,10 +217,11 @@ export async function rescheduleDealerNotifications(
             sound: "default",
             data: { tag: SCHEDULED_TAG, kind: "day-before", date: day },
           },
-          trigger:
-            Platform.OS === "android"
-              ? ({ date: dayBefore, channelId: CHANNEL_ID } as any)
-              : ({ date: dayBefore } as any),
+          trigger: {
+            type: Notifications.SchedulableTriggerInputTypes.DATE,
+            date: dayBefore,
+            ...(Platform.OS === "android" ? { channelId: CHANNEL_ID } : {}),
+          } as any,
         });
       }
     }
@@ -238,5 +240,33 @@ export async function pendingDealerNotificationCount(): Promise<number> {
     return all.filter((n) => (n.content?.data as any)?.tag === SCHEDULED_TAG).length;
   } catch {
     return 0;
+  }
+}
+
+/**
+ * Fires a notification ~5 seconds from now to let the user validate that
+ * permissions + delivery are working end-to-end without having to wait for
+ * a real dealer-route day. Returns true on success.
+ */
+export async function sendTestNotification(): Promise<boolean> {
+  try {
+    const granted = await requestPermissions();
+    if (!granted) return false;
+    await Notifications.scheduleNotificationAsync({
+      content: {
+        title: "🔧 Test — Toolbox Vault",
+        body: "Notifications are working! You'll get reminders on dealer-route days.",
+        sound: "default",
+        data: { tag: SCHEDULED_TAG, kind: "test" },
+      },
+      trigger: {
+        type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
+        seconds: 5,
+        ...(Platform.OS === "android" ? { channelId: CHANNEL_ID } : {}),
+      } as any,
+    });
+    return true;
+  } catch {
+    return false;
   }
 }
