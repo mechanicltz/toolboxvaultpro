@@ -576,8 +576,11 @@ export default function MoreScreen() {
         </KeyboardAvoidingView>
       </Modal>
 
-      {/* Time picker — schedules when on dealer-route days the reminder fires */}
-      {timePickerOpen && (
+      {/* Time picker — schedules when on dealer-route days the reminder fires.
+          On iOS, the picker is rendered INSIDE a bottom-sheet modal so taps
+          reach the picker (not the dismiss overlay). On Android, the system
+          shows its native dialog. */}
+      {Platform.OS === "android" && timePickerOpen && (
         <DateTimePicker
           value={(() => {
             const d = new Date();
@@ -586,11 +589,11 @@ export default function MoreScreen() {
           })()}
           mode="time"
           is24Hour={false}
-          display={Platform.OS === "ios" ? "spinner" : "default"}
-          onChange={async (_event, selected) => {
-            // On Android the picker auto-dismisses; on iOS we keep it open until user taps elsewhere
-            if (Platform.OS !== "ios") setTimePickerOpen(false);
-            if (selected) {
+          display="default"
+          onChange={async (event, selected) => {
+            // Android auto-dismisses; respect dismiss vs. set events.
+            setTimePickerOpen(false);
+            if (event.type === "set" && selected) {
               const h = selected.getHours();
               const m = selected.getMinutes();
               await update({ dealer_notification_hour: h, dealer_notification_minute: m });
@@ -609,13 +612,59 @@ export default function MoreScreen() {
           }}
         />
       )}
-      {Platform.OS === "ios" && timePickerOpen && (
-        <Modal transparent animationType="fade" onRequestClose={() => setTimePickerOpen(false)}>
+      {Platform.OS === "ios" && (
+        <Modal
+          visible={timePickerOpen}
+          transparent
+          animationType="slide"
+          onRequestClose={() => setTimePickerOpen(false)}
+        >
           <TouchableOpacity
-            style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.4)", justifyContent: "flex-end" }}
+            style={styles.timeModalBackdrop}
             activeOpacity={1}
             onPress={() => setTimePickerOpen(false)}
           />
+          <View style={styles.timeModalSheet}>
+            <View style={styles.timeModalHeader}>
+              <TouchableOpacity onPress={() => setTimePickerOpen(false)}>
+                <Text style={styles.timeModalCancel}>Cancel</Text>
+              </TouchableOpacity>
+              <Text style={styles.timeModalTitle}>Reminder Time</Text>
+              <TouchableOpacity onPress={() => setTimePickerOpen(false)}>
+                <Text style={styles.timeModalDone}>Done</Text>
+              </TouchableOpacity>
+            </View>
+            <DateTimePicker
+              value={(() => {
+                const d = new Date();
+                d.setHours(prefs.dealer_notification_hour, prefs.dealer_notification_minute, 0, 0);
+                return d;
+              })()}
+              mode="time"
+              is24Hour={false}
+              display="spinner"
+              themeVariant="dark"
+              textColor="#FFFFFF"
+              onChange={async (_event, selected) => {
+                if (selected) {
+                  const h = selected.getHours();
+                  const m = selected.getMinutes();
+                  await update({ dealer_notification_hour: h, dealer_notification_minute: m });
+                  try {
+                    const dealers = await api.listDealers();
+                    await rescheduleDealerNotifications(dealers, {
+                      enabled: prefs.dealer_notifications_enabled,
+                      hour: h,
+                      minute: m,
+                      notifyDayBefore: prefs.dealer_notify_day_before,
+                    });
+                  } catch {
+                    /* no-op */
+                  }
+                }
+              }}
+            />
+          </View>
         </Modal>
       )}
     </SafeAreaView>
@@ -760,6 +809,43 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "800",
     letterSpacing: 0.5,
+  },
+  timeModalBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+  },
+  timeModalSheet: {
+    backgroundColor: theme.colors.bg,
+    borderTopLeftRadius: 14,
+    borderTopRightRadius: 14,
+    paddingBottom: 28,
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.border,
+  },
+  timeModalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 18,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
+  },
+  timeModalTitle: {
+    color: theme.colors.textPrimary,
+    fontWeight: "800",
+    fontSize: 13,
+    letterSpacing: 1,
+  },
+  timeModalCancel: {
+    color: theme.colors.textSecondary,
+    fontSize: 13,
+    fontWeight: "600",
+  },
+  timeModalDone: {
+    color: theme.colors.accent,
+    fontSize: 13,
+    fontWeight: "800",
   },
   badge: {
     minWidth: 24,
