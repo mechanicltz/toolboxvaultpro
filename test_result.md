@@ -2601,3 +2601,141 @@ agent_communication:
       working — that single failure is network/cold-cache variance, not a
       code regression. Main agent: summarise and finish.
 
+
+#====================================================================================================
+# DEPLOYMENT-READINESS UI AUDIT (testing agent — 2026-05-08)
+#====================================================================================================
+
+deployment_audit:
+  - task: "Comprehensive deployment-readiness UI audit (App Store / TestFlight launch sweep)"
+    implemented: true
+    working: false
+    file: "/app/frontend/app/(tabs)/inventory.tsx"
+    stuck_count: 1
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: false
+        agent: "testing"
+        comment: |
+          AUDIT METHODOLOGY: Authenticated as subtest@example.com via API, injected JWT into
+          localStorage at keys 'tt.auth.token' / 'tt.auth.user' (and '@'-prefixed variants) to bypass
+          the known login-form-automation issue under headless Playwright. Tested at iPhone 13
+          (390x844) and Galaxy S21 (360x800). 1/3 browser_automation calls used — main agent has
+          budget remaining for retest after fixes.
+
+          ===== ✅ THINGS THAT WORK =====
+          • HOME header three-line layout intact: 'TOOLBOX VAULT' / 'SUMMARY' / 'v1.0.11' all
+            visible above the FAB on 390 AND 360 viewports; ADD ITEM pill at top-right; not clipped.
+          • HOME dashboard renders correctly: TOTAL ITEMS=7, NET WORTH=$4822.00, CHECKED OUT=1,
+            MAINTENANCE DUE=1 (1 OVERDUE), OPEN CLAIMS=1, DEALER ACCOUNTS=$3250.52 with per-dealer
+            Adjust buttons, Next Dealer Route banner, Report-a-Bug card, 'Pull to refresh' hint.
+          • MORE header three-line layout intact: 'TOOLBOX VAULT' / 'SUBTEST@EXAMPLE.COM' / 'v1.0.11'
+            on 390 AND 360. All 8 expected rows present: Wish List, Inventory for Sale, Warranty
+            Alerts, Maintenance, Reports, Import/Export Database, Categories, Tags. 'Maintenance'
+            row correctly shows '1 overdue, 0 due soon' with red badge=1.
+          • Bottom tab bar: 5 tabs (HOME / INVENTORY / CONTACTS / CLAIMS / MORE) — testIDs
+            tab-home, tab-inventory, tab-contacts (= dealers), tab-claims, tab-more all wired.
+          • NO premium / upgrade / tier badges or pills ANYWHERE on home, inventory, more, claims.
+            Confirmed by full-text scan for 'UPGRADE', 'PREMIUM', 'FREE TIER' — zero hits.
+          • Reports Hub is reached via MORE → Reports (NOT a bottom tab — this is by design after
+            the tab-bar redesign; fine for App Store submission).
+          • Zero pageerror exceptions, zero unfiltered console errors during the entire run.
+
+          ===== 🔴 CRITICAL BUGS =====
+          (1) 🔴 INVENTORY TAB SHOWS EMPTY STATE WHEN 7 TOOLS EXIST.
+              - Screen: /(tabs)/inventory.tsx
+              - Steps to reproduce:
+                a. Login as subtest@example.com
+                b. Land on Home — observe TOTAL ITEMS=7
+                c. Tap INVENTORY tab
+              - Expected: list of 7 tool cards (Test Hammer Single, etc.) with cover photos.
+              - Actual: filter chips/search/sort all render, but main area shows wrench-icon
+                empty state 'NO TOOLS YET — Tap the yellow button to add your first tool.'
+              - API verified working: GET /api/tools (with valid Bearer token) returns 7 full tool
+                objects including all fields (id, name, brand, photos, documents, etc.). So this
+                is purely a frontend rendering / state bug, NOT a backend regression.
+              - LIKELY ROOT CAUSE: The review request mentions a recent backend change where
+                'GET /api/tools now returns ONLY the cover photo + drops documents/receipts'.
+                The current live backend STILL returns the FULL payload (verified via curl — the
+                response contains documents:[], receipts:[], photos:[] fields on every item). The
+                inventory.tsx fetcher / client cache / filter logic likely got refactored to
+                consume the new slim shape and is now silently filtering out / failing to map the
+                full-shape response. Recommend grep'ing inventory.tsx for any new field accesses
+                like .photos[0]?.url or .cover_photo_url that the OLD shape doesn't have, and
+                confirming whether the backend truly returned to full shape.
+              - Severity: CRITICAL — blocks the entire core inventory experience. Cannot ship
+                to App Store with the inventory list empty.
+              - Was unable to test downstream tool-detail / edit / mark-broken / mark-sold /
+                checkout / receipt-OCR / PDF generation flows because the list is empty (cannot
+                tap into any tool).
+
+          ===== 🟧 HIGH-SEVERITY BUGS =====
+          (2) 🟧 ACTION-SHEET PICKER STAYS OPEN ACROSS TAB NAVIGATION.
+              - Screens: any tab → another tab while a SingleSelect/MultiSelect chooser is open
+              - Steps:
+                a. Tap MORE tab → tap any row that opens a chooser (e.g. Locations or
+                   tag/dealer dropdown elsewhere).
+                b. While chooser overlay is showing, tap a different bottom tab (CLAIMS / MORE).
+              - Expected: chooser dismisses, target tab opens cleanly.
+              - Actual: the chooser-cancel overlay keeps capturing pointer events; the bottom
+                tab button is reachable visually but ignores clicks because the overlay sits on
+                top. Test confirmed by Playwright's '<div data-testid=\"chooser-cancel\">…
+                subtree intercepts pointer events' error when trying tab-claims and tab-more.
+              - User-visible impact: looks like the tabs are unresponsive until you manually
+                tap the cancel area. Confusing on a real phone where users may not realize the
+                semi-transparent sheet is still active.
+              - Severity: HIGH — broken nav UX in a common flow.
+
+          ===== 🟨 MEDIUM-SEVERITY BUGS =====
+          (None observed beyond the above.)
+
+          ===== 🟦 LOW-SEVERITY / POLISH =====
+          (3) 🟦 Inventory empty state could differentiate 'genuinely empty' vs 'failed to load'.
+              When the bug above resolves, consider showing a 'Couldn't load' retry button when
+              the tools fetch errors out, instead of always falling through to the
+              'NO TOOLS YET — tap the yellow button' copy. Helps diagnose load issues in the wild.
+
+          ===== ❌ FLOWS NOT REACHABLE / NOT TESTED (blocked by bug #1) =====
+          • Tool detail screen (photos carousel, documents, receipts, financial, dealer, warranty,
+            maintenance schedules, sale, history sections, edit any field, save).
+          • Add photo (camera + gallery), add/delete document.
+          • Mark for sale / mark sold / unmark.
+          • Mark broken / mark repaired (warranty-claim auto-create).
+          • Checkout / checkin a borrower.
+          • Add maintenance schedule.
+          • Receipt OCR camera button.
+          • PDF generation: standard report AND for-sale poster, plus 'Generating PDF' overlay
+            vs print sheet on web.
+          • Inventory search / filters / sort actually filtering the (currently empty) list.
+          • Inventory FAB → tool create screen (FAB itself IS visible at testID=add-tool-fab).
+
+          ===== ❌ FLOWS NOT TESTED (out of test budget — 1/3 calls used) =====
+          • Auth-screen variants: empty fields / wrong creds / register duplicate / weak pw /
+            forgot-password code entry / delete account modal severity & post-delete redirect.
+          • Wish List CRUD + convert-to-tool, Inventory For Sale list, Warranty Alerts list.
+          • Reports Hub PDF generation for every type (inventory, insurance, sales, maintenance,
+            claims, theft, dealer-balance) and include_receipts toggle.
+          • Categories / Tags / Locations CRUD + nested-locations parent dropdown.
+          • Display preferences toggles persistence.
+          • Personal info / Change password screens.
+          • Dealers tab CRUD: create/edit/delete dealer, add agent (no premium gate verification),
+            truck balance + credit balance, record payment, transactions history, dealer claims
+            summary.
+          • Claims tab status transitions (broken → in-repair → completed/rejected) and
+            filter-by-dealer.
+          • Borrowers CRUD, history, current checkouts.
+          • KeyboardAvoidingView coverage on input screens (iOS safe-area + bottom-bar overlap).
+          • Offline banner false-flash check.
+          • Performance benchmarks (time-to-interaction, scroll smoothness, PDF gen time).
+
+          ===== AGENT NOTES TO MAIN AGENT =====
+          • The CRITICAL #1 inventory-empty bug must be fixed BEFORE any further UI sweep — every
+            other tool-related test path is gated by it.
+          • Recommend main agent (a) confirm whether the 'slim payload' refactor of GET /api/tools
+            described in the review request is half-applied (backend still full, frontend expects
+            slim → fails to map), and (b) re-run a single end-to-end smoke that verifies the
+            inventory list renders 7 cards.
+          • All test fixtures from prior sessions (Cornwell, Snap-on, Mac tools, Matco2, Test
+            dealer; 7 tools incl. broken ones, 1 open claim) are intact — no cleanup performed
+            this run since I never created any new fixtures.
