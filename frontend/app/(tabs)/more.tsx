@@ -610,17 +610,6 @@ const styles = StyleSheet.create({
     fontWeight: "900",
     letterSpacing: 0.5,
   },
-  subscriptionRow: {
-    backgroundColor: theme.colors.glass,
-  },
-  upgradePill: {
-    backgroundColor: theme.colors.accent,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 4,
-    marginRight: 6,
-  },
-  upgradePillText: { color: "#000", fontSize: 7, fontWeight: "900", letterSpacing: 1 },
 
   homeRowsCard: {
     marginHorizontal: 16,

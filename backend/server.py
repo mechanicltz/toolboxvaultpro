@@ -17,7 +17,6 @@ from datetime import datetime, timezone, timedelta
 from auth import (
     User,
     UserPublic,
-    Subscription,
     RegisterRequest,
     LoginRequest,
     AuthResponse,
@@ -25,9 +24,6 @@ from auth import (
     verify_password,
     create_token,
     decode_token,
-    make_subscription_for_tier,
-    evaluate_subscription_status,
-    TIER_FREE,
 )
 from email_sender import send_password_reset_code, send_feedback_email
 
@@ -118,13 +114,7 @@ async def get_current_user(request: Request) -> User:
     udoc = await real_db.users.find_one({"id": uid}, {"_id": 0})
     if not udoc:
         raise HTTPException(401, "User not found")
-    user = User(**udoc)
-    # Refresh sub status (may downgrade to free if expired)
-    sub = evaluate_subscription_status(user.subscription.dict())
-    if sub != user.subscription.dict():
-        await real_db.users.update_one({"id": uid}, {"$set": {"subscription": sub, "updated_at": datetime.now(timezone.utc).isoformat()}})
-        user.subscription = Subscription(**sub)
-    return user
+    return User(**udoc)
 
 
 def to_public(u: User) -> UserPublic:
@@ -132,9 +122,6 @@ def to_public(u: User) -> UserPublic:
         id=u.id,
         email=u.email,
         name=u.name or "",
-        subscription=u.subscription,
-        discount_pct=getattr(u, "discount_pct", 0) or 0,
-        promo_codes_used=getattr(u, "promo_codes_used", []) or [],
         created_at=u.created_at,
     )
 
@@ -703,6 +690,12 @@ async def root():
     return {"message": "Toolbox Vault API"}
 
 
+@api_router.get("/health")
+async def health():
+    """Lightweight health probe for monitoring & uptime checks. Public."""
+    return {"status": "ok", "service": "toolbox-vault-api"}
+
+
 # ---------- Locations ----------
 @api_router.post("/locations", response_model=Location)
 async def create_location(payload: LocationCreate):
@@ -770,7 +763,7 @@ async def delete_location(loc_id: str, cascade: bool = False):
     # default: only delete if no children, else reparent children to this loc's parent
     doc = await db.locations.find_one({"id": loc_id}, {"_id": 0})
     if not doc:
-        return {"ok": True}
+        raise HTTPException(404, "Location not found")
     parent_of_deleted = doc.get("parent_id")
     await db.locations.update_many(
         {"parent_id": loc_id}, {"$set": {"parent_id": parent_of_deleted}}
@@ -823,7 +816,9 @@ async def update_tag(tag_id: str, payload: TagCreate):
 
 @api_router.delete("/tags/{tag_id}")
 async def delete_tag(tag_id: str):
-    await db.tags.delete_one({"id": tag_id})
+    res = await db.tags.delete_one({"id": tag_id})
+    if res.deleted_count == 0:
+        raise HTTPException(404, "Tag not found")
     return {"ok": True}
 
 
@@ -864,7 +859,9 @@ async def update_category(cat_id: str, payload: CategoryCreate):
 
 @api_router.delete("/categories/{cat_id}")
 async def delete_category(cat_id: str):
-    await db.categories.delete_one({"id": cat_id})
+    res = await db.categories.delete_one({"id": cat_id})
+    if res.deleted_count == 0:
+        raise HTTPException(404, "Category not found")
     return {"ok": True}
 
 
@@ -923,7 +920,9 @@ async def update_borrower(borrower_id: str, payload: BorrowerCreate):
 
 @api_router.delete("/borrowers/{borrower_id}")
 async def delete_borrower(borrower_id: str):
-    await db.borrowers.delete_one({"id": borrower_id})
+    res = await db.borrowers.delete_one({"id": borrower_id})
+    if res.deleted_count == 0:
+        raise HTTPException(404, "Borrower not found")
     return {"ok": True}
 
 
@@ -1048,7 +1047,9 @@ async def update_dealer(dealer_id: str, payload: DealerUpdate):
 
 @api_router.delete("/dealers/{dealer_id}")
 async def delete_dealer(dealer_id: str):
-    await db.dealers.delete_one({"id": dealer_id})
+    res = await db.dealers.delete_one({"id": dealer_id})
+    if res.deleted_count == 0:
+        raise HTTPException(404, "Dealer not found")
     return {"ok": True}
 
 
@@ -1190,6 +1191,7 @@ async def delete_dealer_transaction(dealer_id: str, tx_id: str):
 # ---------- Tools ----------
 @api_router.post("/tools", response_model=Tool)
 async def create_tool(payload: ToolCreate, user: User = Depends(get_current_user)):
+    _validate_photo_payload(payload.photos)
     tool = Tool(**payload.dict())
     await db.tools.insert_one(tool.dict())
     # If created already broken, also create a warranty claim mirror with broken_photo
@@ -1684,7 +1686,37 @@ async def tools_import(payload: ImportPayload, user: User = Depends(get_current_
 
 
 # ---------------------------------------------------------------------------
+# Photo size cap — prevent oversized base64 payloads from bloating the DB.
+# Each photo gets its own ~5MB cap (well above what camera+compress yields)
+# and the total per-tool photo payload is capped at 25MB so a single tool
+# can have multiple photos but never balloon the document.
+# ---------------------------------------------------------------------------
+MAX_PHOTO_BYTES = 5 * 1024 * 1024            # ~5MB per photo (raw decoded ≈ 3.7MB)
+MAX_TOTAL_PHOTO_BYTES = 25 * 1024 * 1024     # ~25MB total per tool
 
+
+def _validate_photo_payload(photos: Optional[List[str]]) -> None:
+    if not photos:
+        return
+    total = 0
+    for i, p in enumerate(photos):
+        if not p:
+            continue
+        size = len(p)  # length in bytes of the base64 string itself
+        if size > MAX_PHOTO_BYTES:
+            raise HTTPException(
+                413,
+                f"Photo #{i + 1} is too large ({size // 1024} KB). "
+                f"Maximum allowed is {MAX_PHOTO_BYTES // (1024 * 1024)} MB per photo. "
+                "Please re-take or resize the photo before saving.",
+            )
+        total += size
+    if total > MAX_TOTAL_PHOTO_BYTES:
+        raise HTTPException(
+            413,
+            f"Total photo payload is too large ({total // (1024 * 1024)} MB). "
+            f"Maximum allowed is {MAX_TOTAL_PHOTO_BYTES // (1024 * 1024)} MB across all photos for one tool.",
+        )
 
 
 @api_router.get("/tools", response_model=List[Tool])
@@ -1700,12 +1732,29 @@ async def list_tools(
     for_sale: Optional[bool] = None,
     is_sold: Optional[bool] = None,
 ):
+    """List tools — returns a slim payload for fast list rendering.
+
+    To keep the inventory list snappy on phones, this endpoint:
+      - Returns ONLY the first photo (the cover), not all photos
+      - Strips `documents` (heavy base64 PDFs/images attached to the tool)
+      - Strips `receipts` (heavy base64 receipt images)
+    The full set of photos / documents / receipts is only loaded when the
+    user opens a tool's detail page (GET /tools/{id}).
+    """
     query = build_tool_query(
         search, location_id, tag_id, category_id, dealer_id,
         checked_out, is_consumable, needs_repair, for_sale, is_sold,
     )
     items = await db.tools.find(query, {"_id": 0}).sort("created_at", -1).to_list(5000)
-    return [Tool(**i) for i in items]
+    out: List[Tool] = []
+    for i in items:
+        # Slim payload: keep only first photo, drop documents & receipts
+        photos = i.get("photos") or []
+        i["photos"] = photos[:1] if photos else []
+        i["documents"] = []
+        i["receipts"] = []
+        out.append(Tool(**i))
+    return out
 
 
 @api_router.get("/tools/{tool_id}", response_model=Tool)
@@ -1718,6 +1767,8 @@ async def get_tool(tool_id: str):
 
 @api_router.put("/tools/{tool_id}", response_model=Tool)
 async def update_tool(tool_id: str, payload: ToolUpdate):
+    if payload.photos is not None:
+        _validate_photo_payload(payload.photos)
     doc = await db.tools.find_one({"id": tool_id}, {"_id": 0})
     if not doc:
         raise HTTPException(status_code=404, detail="Tool not found")
@@ -1814,7 +1865,9 @@ async def update_tool(tool_id: str, payload: ToolUpdate):
 
 @api_router.delete("/tools/{tool_id}")
 async def delete_tool(tool_id: str):
-    await db.tools.delete_one({"id": tool_id})
+    res = await db.tools.delete_one({"id": tool_id})
+    if res.deleted_count == 0:
+        raise HTTPException(404, "Tool not found")
     # Cascade: also remove any warranty claims that referenced this tool —
     # otherwise the dealer-claims summary keeps counting orphaned claims
     # but the detail screen can't resolve them back to a tool.
@@ -2550,7 +2603,9 @@ async def update_warranty_claim(claim_id: str, payload: WarrantyClaimUpdate):
 
 @api_router.delete("/warranty-claims/{claim_id}")
 async def delete_warranty_claim(claim_id: str):
-    await db.warranty_claims.delete_one({"id": claim_id})
+    res = await db.warranty_claims.delete_one({"id": claim_id})
+    if res.deleted_count == 0:
+        raise HTTPException(404, "Warranty claim not found")
     return {"ok": True}
 
 
@@ -2598,7 +2653,9 @@ async def update_wishlist(item_id: str, payload: WishlistItemUpdate):
 
 @api_router.delete("/wishlist/{item_id}")
 async def delete_wishlist(item_id: str):
-    await db.wishlist_items.delete_one({"id": item_id})
+    res = await db.wishlist_items.delete_one({"id": item_id})
+    if res.deleted_count == 0:
+        raise HTTPException(404, "Wishlist item not found")
     return {"ok": True}
 
 
@@ -2667,7 +2724,7 @@ async def update_personal_profile(payload: PersonalProfile):
 
 
 # ============================================================================
-# Auth + Subscription
+# Auth
 # ============================================================================
 auth_router = APIRouter(prefix="/api/auth")
 
@@ -2721,19 +2778,25 @@ async def register(payload: RegisterRequest):
 
 
 @auth_router.post("/login", response_model=AuthResponse)
-async def login(payload: LoginRequest):
-    email = payload.email.strip().lower()
+async def login(request: Request):
+    """Login. Always responds with a uniform 401 for any auth failure
+    (bad email format, unknown email, wrong password) so that an attacker
+    cannot enumerate which emails are registered.
+    """
+    try:
+        payload = await request.json()
+    except Exception:
+        raise HTTPException(401, "Invalid email or password")
+    email = (payload.get("email") or "").strip().lower() if isinstance(payload, dict) else ""
+    password = payload.get("password") or "" if isinstance(payload, dict) else ""
+    if not email or "@" not in email or "." not in email or not password:
+        raise HTTPException(401, "Invalid email or password")
     udoc = await real_db.users.find_one({"email": email}, {"_id": 0})
     if not udoc:
         raise HTTPException(401, "Invalid email or password")
-    if not verify_password(payload.password, udoc.get("password_hash", "")):
+    if not verify_password(password, udoc.get("password_hash", "")):
         raise HTTPException(401, "Invalid email or password")
     user = User(**udoc)
-    # Refresh subscription status
-    sub = evaluate_subscription_status(user.subscription.dict())
-    if sub != user.subscription.dict():
-        await real_db.users.update_one({"id": user.id}, {"$set": {"subscription": sub}})
-        user.subscription = Subscription(**sub)
     token = create_token(user.id)
     return AuthResponse(token=token, user=to_public(user))
 
@@ -3274,6 +3337,13 @@ async def ai_receipt_scan(payload: ReceiptScanRequest):
             pass
 
 
+@api_router.post("/ocr/receipt", response_model=ReceiptScanResponse)
+async def ocr_receipt_alias(payload: ReceiptScanRequest):
+    """Alias for /api/ai/receipt-scan — kept for forward-compatibility with
+    any older clients or tooling that hits the simpler `/ocr/receipt` path."""
+    return await ai_receipt_scan(payload)
+
+
 
 
 app.include_router(api_router)
@@ -3526,7 +3596,10 @@ async def render_pdf(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_credentials=True,
+    # We authenticate with a JWT in the Authorization header (not cookies),
+    # so we do not need credentialed CORS. Disabling credentials lets us
+    # safely keep allow_origins=['*'] (Starlette refuses '*' + credentials=True).
+    allow_credentials=False,
     allow_origins=["*"],
     allow_methods=["*"],
     allow_headers=["*"],
