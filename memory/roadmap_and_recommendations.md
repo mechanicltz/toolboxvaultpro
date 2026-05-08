@@ -209,3 +209,91 @@ re-introduce them:
 ---
 
 *Last updated: 2025-06-12. User to update when picking next item to tackle.*
+
+
+---
+
+## 🎯 FUTURE FEATURE — MSRP Auto-Lookup from Dealer Catalogs
+
+**Status:** 📋 SAVED FOR LATER (May 2026)
+**Priority:** P2 (nice-to-have, big UX win)
+**Estimated effort:** 1–2 days
+
+### What it does
+When the user enters a **Serial / Part Number** on a tool, an inline **🔍 Lookup MSRP**
+button hits the matching dealer's public catalog and auto-fills the Cost field.
+The user's "serial number" field is being used as the dealer's part/model number,
+so it IS searchable on Snap-On / Matco / Mac Tools public catalogs.
+
+### Why we paused
+Implementation is straightforward but we're focused on launch-readiness fixes.
+This is a feature for v1.2.x or later, after the app is publicly live and we
+have real users.
+
+### Build plan (already scoped — pick up where we left off)
+
+**Backend**
+- New endpoint: `POST /api/lookup-msrp`
+  - Input: `{ dealer: "snap-on" | "matco" | "mac-tools", part_number: "MTAW1414" }`
+  - Per-dealer scraper using `httpx` + `BeautifulSoup`
+  - 7-day cache in MongoDB (collection: `msrp_cache`) keyed by `(dealer, part_number)` to avoid hammering dealer sites + give instant repeat lookups
+  - 8s timeout per dealer, friendly error if site is slow/down
+  - Output: `{ found: true, msrp: 189.00, currency: "USD", product_name, product_url, source }` or `{ found: false }`
+- Helper modules to add: `/app/backend/integrations/dealer_lookup.py`
+  - `lookup_snapon(part_number)`
+  - `lookup_matco(part_number)`
+  - `lookup_mactools(part_number)`
+- Each dealer's URL pattern needs verification at build time — they may have changed.
+  Starting points (need confirmation from user):
+    - Snap-On: `shop.snapon.com/search?q={part}`
+    - Matco: `matcotools.com/catalog/product/{part}` (or search)
+    - Mac Tools: `mactools.com/search?q={part}`
+
+**Frontend**
+- Small **🔍 Lookup MSRP** button next to the Serial / Part Number field on
+  `app/tool/[id].tsx` (and on the new-tool create flow).
+- Auto-detects dealer from the tool's `dealer_id` (no double-picking).
+- If no dealer is set yet → show a small dealer-picker inside the lookup modal
+  rather than blocking.
+- Result modal:
+  ```
+  Found at Snap-On
+  "Heavy-Duty Air Wrench"
+  MSRP $189.00
+  [Use this price] [Cancel]
+  ```
+- On confirm → fill the Cost field. Optionally also fill Product Name + Photo
+  + Description if currently blank.
+
+### Open design questions (need user answers when we resume)
+1. **Dealer URLs to use** — confirm exact public catalog URL pattern per dealer
+   (user has experience using them — they confirmed catalogs are publicly
+   searchable for MSRP).
+2. **No dealer selected yet** — search all 3 in parallel OR show a picker?
+   Decision needed.
+3. **Multiple variants returned** for one part number (kit vs individual) —
+   show all with prices for user to pick OR auto-use first match?
+4. **What else to auto-fill** alongside MSRP? Just price, or also description,
+   brand, photo from the product page?
+
+### Risk / things to watch out for
+- Dealer sites use **Cloudflare / anti-bot protection** — may require a
+  browser-like User-Agent header, may rate-limit, may require a
+  retry-with-backoff strategy. If we get blocked, fallback messaging:
+  *"Lookup unavailable right now — try again in a few minutes."*
+- **Terms of Service** review: confirm with the user that scraping public
+  catalog pages is OK for our use case before going live.
+- **Pricing accuracy** — dealer pricing can vary by region. The MSRP we
+  scrape is the "list" price; real-world dealer-truck prices may differ.
+  Show source + date next to the auto-filled price so the user knows
+  where it came from.
+- **Performance** — first lookup hits the network (~1–3s); cache hits are
+  instant. Show a spinner during lookup.
+
+### When to pick this up
+After v1.0.11 launches publicly, gets some real users, and we know:
+- What dealers users actually have set up most
+- Which part numbers users enter most (so we can prioritize the cache)
+- Whether real users even ask for this feature, or whether the existing
+  receipt OCR is already good enough
+
