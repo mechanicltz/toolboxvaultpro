@@ -111,7 +111,7 @@ export default function MoreScreen() {
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <View style={styles.header}>
-        <Text style={styles.title}>MORE</Text>
+        <Text style={styles.title}>TOOLBOX VAULT</Text>
         <Text style={styles.subtitle} numberOfLines={1}>
           {user?.email || "Manage everything"}
         </Text>
@@ -541,7 +541,7 @@ const styles = StyleSheet.create({
     paddingTop: 12,
     paddingBottom: 12,
   },
-  title: { color: theme.colors.textPrimary, fontSize: 21, fontWeight: "900", letterSpacing: 2 },
+  title: { color: theme.colors.textPrimary, fontSize: 14, fontWeight: "900", letterSpacing: 2.5 },
   subtitle: {
     color: theme.colors.accent,
     fontSize: 8,
