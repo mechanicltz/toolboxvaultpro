@@ -10,6 +10,7 @@ import {
   Modal,
   KeyboardAvoidingView,
   Platform,
+  ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -22,6 +23,7 @@ import { buildLocationTree, LocationNode } from "../src/locationTree";
 export default function LocationsTreeScreen() {
   const router = useRouter();
   const [nodes, setNodes] = useState<LocationNode[]>([]);
+  const [loaded, setLoaded] = useState(false);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [adding, setAdding] = useState<{ parentId: string | null; parentName: string } | null>(null);
   const [editing, setEditing] = useState<{ id: string; currentName: string } | null>(null);
@@ -29,20 +31,27 @@ export default function LocationsTreeScreen() {
   const [name, setName] = useState("");
 
   const load = useCallback(async () => {
-    const flat = await api.listLocations();
-    const tree = buildLocationTree(flat);
-    setNodes(tree);
-    // Auto-expand top-level on first load
-    if (expanded.size === 0 && tree.length > 0) {
-      const all = new Set<string>();
-      const collectIds = (ns: LocationNode[]) => {
-        ns.forEach((n) => {
-          all.add(n.id);
-          collectIds(n.children);
-        });
-      };
-      collectIds(tree);
-      setExpanded(all);
+    try {
+      const flat = await api.listLocations();
+      const tree = buildLocationTree(flat);
+      setNodes(tree);
+      // Auto-expand top-level on first load
+      if (expanded.size === 0 && tree.length > 0) {
+        const all = new Set<string>();
+        const collectIds = (ns: LocationNode[]) => {
+          ns.forEach((n) => {
+            all.add(n.id);
+            collectIds(n.children);
+          });
+        };
+        collectIds(tree);
+        setExpanded(all);
+      }
+      setLoaded(true);
+    } catch {
+      // Don't reset `nodes` — keep whatever we last had so the user
+      // doesn't see a flash of empty state on a transient API blip.
+      setLoaded(true);
     }
   }, [expanded.size]);
 
@@ -214,7 +223,11 @@ export default function LocationsTreeScreen() {
         </TouchableOpacity>
       </View>
       <ScrollView contentContainerStyle={{ paddingBottom: 60 }}>
-        {nodes.length === 0 ? (
+        {!loaded ? (
+          <View style={styles.empty}>
+            <ActivityIndicator color={theme.colors.accent} />
+          </View>
+        ) : nodes.length === 0 ? (
           <View style={styles.empty}>
             <Ionicons name="location-outline" size={48} color={theme.colors.textMuted} />
             <Text style={styles.emptyTitle}>NO LOCATIONS</Text>

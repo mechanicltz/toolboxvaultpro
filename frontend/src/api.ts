@@ -29,6 +29,23 @@ export async function getToken(): Promise<string | null> {
   }
 }
 
+/**
+ * Eagerly populate `memToken` from disk before any screen renders.
+ * Called once at app boot from `AuthProvider`. Without this, the very
+ * first navigation to a screen with `useFocusEffect(load)` could fire
+ * its API call BEFORE AsyncStorage has been read, sending an
+ * unauthenticated request → 401 → silent empty state.
+ */
+export async function bootstrapToken(): Promise<void> {
+  if (memToken) return;
+  try {
+    const t = await AsyncStorage.getItem(TOKEN_KEY);
+    if (t) memToken = t;
+  } catch {
+    /* best effort */
+  }
+}
+
 export async function setToken(t: string | null) {
   memToken = t;
   try {

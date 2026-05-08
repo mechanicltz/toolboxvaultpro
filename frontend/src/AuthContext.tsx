@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { api, ApiError, getToken, setToken, setUnauthorizedHandler } from "./api";
+import { api, ApiError, getToken, setToken, setUnauthorizedHandler, bootstrapToken } from "./api";
 import { loadCacheFromDisk, clearCached } from "./cache";
 import { startNetworkWatcher } from "./network";
 
@@ -89,6 +89,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       writeCachedUser(null);
     });
     (async () => {
+      // Eagerly populate the in-memory auth token BEFORE any screen
+      // renders so that the very first API call after a navigation
+      // already includes the Authorization header. Without this, screens
+      // using `useFocusEffect(load)` could fire an unauthenticated
+      // request and silently show their empty state.
+      await bootstrapToken();
       // Hydrate the in-memory cache from disk BEFORE any screen renders so
       // every list shows previously-fetched data instantly.
       await loadCacheFromDisk();

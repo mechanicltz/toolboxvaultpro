@@ -7,6 +7,7 @@ import {
   TextInput,
   TouchableOpacity,
   Alert,
+  ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -28,6 +29,7 @@ export default function ManageScreen() {
   const router = useRouter();
   const k = (kind || "categories") as Kind;
   const [items, setItems] = useState<any[]>([]);
+  const [loaded, setLoaded] = useState(false);
   const [name, setName] = useState("");
   const [editId, setEditId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
@@ -39,8 +41,14 @@ export default function ManageScreen() {
   } as const;
 
   const load = useCallback(async () => {
-    const data = await fetcher[k].list();
-    setItems(data);
+    try {
+      const data = await fetcher[k].list();
+      setItems(data);
+      setLoaded(true);
+    } catch {
+      // Keep prior items so a transient API blip doesn't show empty state.
+      setLoaded(true);
+    }
   }, [k]);
 
   useFocusEffect(
@@ -112,7 +120,11 @@ export default function ManageScreen() {
         </TouchableOpacity>
       </View>
       <ScrollView contentContainerStyle={{ paddingBottom: 60 }} keyboardShouldPersistTaps="handled">
-        {items.length === 0 ? (
+        {!loaded ? (
+          <View style={{ paddingVertical: 40, alignItems: "center" }}>
+            <ActivityIndicator color={theme.colors.accent} />
+          </View>
+        ) : items.length === 0 ? (
           <Text style={styles.empty}>None yet. Add one above.</Text>
         ) : (
           items.map((i) => {
