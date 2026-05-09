@@ -2739,3 +2739,162 @@ deployment_audit:
           • All test fixtures from prior sessions (Cornwell, Snap-on, Mac tools, Matco2, Test
             dealer; 7 tools incl. broken ones, 1 open claim) are intact — no cleanup performed
             this run since I never created any new fixtures.
+
+
+## 2026-05-09 — Phase 2 of RevenueCat Subscription Integration (BACKEND)
+
+### Goal
+Re-introduce strict server-side enforcement of the **15-item free-tier limit**
+(after Phase 1 setup of dashboards is being handled by the user) by adding the
+RevenueCat webhook receiver, the per-user `subscriptions` collection, the
+`/api/subscription` read endpoint, and the `/api/promo/redeem` endpoint for
+lifetime / N-month promo codes.
+
+### Files added / changed
+- **NEW** `/app/backend/subscriptions.py` — self-contained module:
+  - `SubscriptionState` Pydantic model (entitlement, is_active, is_lifetime,
+    expires_at, will_renew, product_id, period_type, store, etc.)
+  - `enforce_tool_limit(real_db, user_id)` → raises HTTPException(402) when
+    free-tier user is at/over `FREE_TOOL_LIMIT` (=15).
+  - `is_pro(real_db, user_id)` boolean helper.
+  - `make_router(real_db, get_current_user)` builds the FastAPI router with:
+      - `GET  /api/subscription` (auth)
+      - `POST /api/revenuecat/webhook` (header secret auth, public)
+      - `POST /api/promo/redeem` (auth)
+- **CHANGED** `/app/backend/server.py`
+  - `POST /api/tools` now calls `enforce_tool_limit` before insert.
+  - `POST /api/tools/import` enforces limit for full batch size.
+  - `POST /api/wishlist/{id}/convert` enforces limit (prevents creating new
+    tool via wishlist conversion when over cap).
+  - Mounted the new subscriptions router after the auth router.
+  - Added `GET /api/guides` (PUBLIC) — renders all 5 markdown setup guides
+    from `/app/memory/` as a single styled HTML page so the user has a
+    bookmarkable URL: <preview>/api/guides
+  - Auth middleware now treats `/api/guides` and `/api/revenuecat/webhook`
+    as public paths.
+- **CHANGED** `/app/backend/.env`
+  - Added `REVENUECAT_WEBHOOK_SECRET` (currently
+    `test-webhook-secret-12345` for backend testing). User will replace with
+    real RevenueCat dashboard value when Phase 1 dashboard setup is complete.
+  - Added `REVENUECAT_SECRET_KEY` (empty placeholder for future promo
+    grants via RC REST API).
+- **CHANGED** `/app/backend/requirements.txt` — added `Markdown==3.10.2`
+  (for rendering the setup-guide HTML page on demand).
+
+### Test user state
+- `subtest@example.com` / `password123` was granted **LIFETIME PRO** via
+  promo `TEST_LIFETIME` so legacy backend tests creating tools are not
+  blocked by the new 15-item cap. To test the cap itself, register a new
+  user — they default to `entitlement="free"`.
+
+### Smoke tests run by main agent before delegating to testing agent
+- ✅ Login → `GET /api/subscription` returns lifetime pro for subtest
+- ✅ `POST /api/revenuecat/webhook` rejects (401) without `Authorization` header
+- ✅ Webhook with correct secret + INITIAL_PURCHASE event upgrades a fresh
+  user from free → pro; subsequent tool creates beyond 15 succeed
+- ✅ Webhook with EXPIRATION event past `expiration_at_ms` flips
+  `is_active=false` (entitlement string preserved but enforce_tool_limit
+  treats them as free again)
+- ✅ Fresh free user: 1st–15th tool create returns 200, 16th returns 402
+  with structured `{"detail": {"error": "free_limit_exceeded", ...}}`
+- ✅ `GET /api/guides` returns ~49 KB of styled HTML containing all 5
+  guides (Apple, Google, RevenueCat, Privacy, Terms)
+
+### Outstanding (out of Phase 2 scope, deferred)
+- Promo-code seeding (creating actual codes in `promo_codes` collection
+  via an admin-only endpoint) — for now the `/api/promo/redeem` endpoint
+  reads from the collection but there's no UI yet to seed codes; user
+  will seed manually or via a future admin tool.
+- Frontend Phase 3 (RevenueCat SDK integration, paywall UI, downgrade
+  read-only banner, manage-subscription deep links). Awaiting user
+  confirmation that Phase 1 dashboards are fully configured AND the
+  Emergent build pipeline package-name bug (separate ticket sent to
+  support@emergent.sh) is resolved.
+
+### Action items for backend testing agent
+- Test `GET /api/subscription` for both a pro user (subtest) and a fresh
+  free user — verify field shape and `is_active` derivation logic.
+- Test `POST /api/tools` 15-item limit:
+  1. Register new user → confirm 15 tools succeed → 16th returns 402 with
+     the structured `free_limit_exceeded` body.
+  2. After upgrading via webhook, more tools should succeed unbounded.
+- Test webhook event handling for at minimum: INITIAL_PURCHASE, RENEWAL,
+  CANCELLATION (will_renew=false but is_active stays true while
+  expires_at is in the future), EXPIRATION (is_active flips false),
+  REFUND (entitlement → free immediately).
+- Test webhook auth: missing header → 401, wrong secret → 401, correct
+  secret → 200.
+- Test that `/api/guides` returns 200 + content-type text/html for a
+  publicly-accessible call (no Authorization header).
+- Test that import (`POST /api/tools/import`) and wishlist conversion
+  (`POST /api/wishlist/{id}/convert`) also respect the free limit.
+- Smoke-test that EXISTING flows (auth, tools CRUD, dealers, claims,
+  reports, etc.) still work unchanged for the lifetime-pro test user.
+
+
+
+backend_phase2_subscriptions:
+  - task: "Phase 2 RevenueCat subscription integration — /api/subscription, /api/revenuecat/webhook, /api/promo/redeem, /api/guides, 15-item free-tier enforcement"
+    implemented: true
+    working: true
+    file: "/app/backend/subscriptions.py + /app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "PASS — 65/65 ASSERTIONS GREEN (0 FAIL) via /app/backend_test_phase2_subscription.py against EXPO_PUBLIC_BACKEND_URL/api. End-to-end verified all 6 review areas:
+
+  (1) GET /api/subscription:
+   • Pro user (subtest@example.com): 200, entitlement='pro', is_lifetime=true, is_active=true, free_limit=15 ✓
+   • Fresh free user (newly-registered): 200, entitlement='free', is_active=false, free_limit=15 ✓
+
+  (2) POST /api/revenuecat/webhook (PUBLIC; secret-header auth):
+   AUTH PATHS:
+   • No Authorization header → 401 ✓
+   • Wrong secret 'Bearer wrong-secret' → 401 ✓
+   • Correct 'Bearer test-webhook-secret-12345' (matching REVENUECAT_WEBHOOK_SECRET in /app/backend/.env) → 200 ✓
+   LIFECYCLE on a fresh user (verified via GET /api/subscription after each event):
+   (a) INITIAL_PURCHASE with future expiration_at_ms → entitlement='pro', is_active=true, will_renew=true ✓
+   (b) RENEWAL → entitlement still 'pro', will_renew=true ✓
+   (c) CANCELLATION (with future expiration) → will_renew=false, is_active stays true (because expires_at is in the future) ✓
+   (d) EXPIRATION with past expiration_at_ms → is_active=false ✓
+   (e) REFUND → entitlement='free', is_active=false immediately ✓
+   Body shapes accepted: {event:{...}} (top-level single event). Required event fields: type + app_user_id; optional product_id, period_type, store, purchased_at_ms, expiration_at_ms — all parse correctly via _coerce_iso for ms-since-epoch.
+
+  (3) POST /api/promo/redeem (auth required):
+   • POST {code:'DEFINITELY_NOT_A_REAL_CODE_XYZ'} → 404 'Code not found' (no codes seeded — review explicitly said do NOT seed) ✓
+   Negative-path verified; positive path is gated by an admin endpoint that doesn't yet exist (per review).
+
+  (4) GET /api/guides (PUBLIC, no auth):
+   • Status 200 ✓
+   • Content-Type contains 'text/html' ✓
+   • Size ≥ 30 KB (actual ~30+ KB rendered from /app/memory/setup_*.md guides) ✓
+   • No Authorization header was sent — endpoint is correctly publicly accessible per /app/backend/server.py L149 PUBLIC_PATHS list.
+
+  (5) 15-ITEM FREE-TIER ENFORCEMENT — VERIFIED on fresh-registered users:
+   (5a) POST /api/tools — registered limit_<rand>@example.com:
+     • 15 tools all returned 200 ✓
+     • 16th tool → 402 with body shape EXACTLY: {detail:{error:'free_limit_exceeded', limit:15, current:15, message:'Free plan is limited to 15 tools. Upgrade to Toolbox Vault Pro for unlimited.'}} ✓
+       — All 4 keys (error, limit, current, message) present and match spec; current==15, limit==15, error string is 'free_limit_exceeded' verbatim. message is non-empty string. THIS IS THE STRUCTURED 402 BODY SHAPE THE FRONTEND DEPENDS ON. ✓
+     • 17th tool also → 402 (idempotent enforcement) ✓
+   (5b) Upgrade via webhook unblocks: POST /api/revenuecat/webhook with INITIAL_PURCHASE+future expiration_at_ms for that same user → 200; GET /api/subscription confirms entitlement='pro' is_active=true; subsequent POST /api/tools (3 more) all return 200 unbounded ✓
+   (5c) POST /api/tools/import on fresh free user with 17 rows → 402 with same {error:'free_limit_exceeded', limit:15, current:0, message:...} body — the batch size is correctly counted against the limit IN ADDITION to existing tools (17 > 15) ✓
+   (5d) POST /api/wishlist/{id}/convert by free user already at 15: registered fresh user, created 15 tools, created wishlist item via POST /api/wishlist {name:'Cordless Drill', price:199}, then POST /api/wishlist/{id}/convert → 402 with {error:'free_limit_exceeded', limit:15, current:15, ...} ✓
+
+  (6) REGRESSION SMOKE for subtest@example.com (lifetime pro):
+   • GET /tools, /locations, /dealers, /categories, /tags, /borrowers, /wishlist, /maintenance/upcoming, /warranty-claims/summary, /aggregate, /stats — all 200 ✓
+   • POST /api/tools as subtest → 200 (NOT blocked by 15-limit because lifetime pro) ✓ (created tool was cleaned up via DELETE)
+   • GET /api/health → 200 with body {'status':'ok'} ✓
+   • POST /api/auth/login subtest → 200 ✓
+   • POST /api/auth/register fresh email → 200 ✓
+   • POST /api/auth/forgot-password → 200 (email-enumeration safe path) ✓
+
+  Backend log during run shows only 200/401/402/404 responses; zero tracebacks, zero 500s. All endpoints in /app/backend/subscriptions.py are production-ready.
+
+  Per review constraints honored: did NOT modify subtest@example.com's lifetime-pro state (only read it); did NOT seed promo codes (only verified 404 path); did NOT modify any .env values."
+
+agent_communication:
+  - agent: "testing"
+    message: "PHASE 2 REVENUECAT SUBSCRIPTION INTEGRATION — ALL 65/65 GREEN via /app/backend_test_phase2_subscription.py. Every review point confirmed pass: (1) GET /api/subscription returns the correct entitlement+is_lifetime+is_active+free_limit shape for both pro (subtest) and fresh-free users; (2) POST /api/revenuecat/webhook honors the Bearer-token header against REVENUECAT_WEBHOOK_SECRET (no/wrong → 401, correct → 200) and the full lifecycle works — INITIAL_PURCHASE→pro, RENEWAL→pro+will_renew, CANCELLATION→will_renew=false (is_active stays true while expires_at is future), EXPIRATION (past expires_at)→is_active=false, REFUND→entitlement='free' immediately; (3) POST /api/promo/redeem returns 404 for non-existent codes (no codes seeded per spec); (4) GET /api/guides is PUBLIC, returns 200 text/html, ≥30KB; (5) 15-item enforcement on POST /api/tools, POST /api/tools/import (batch counts), and POST /api/wishlist/{id}/convert all return HTTP 402 with the exact structured body {detail:{error:'free_limit_exceeded', limit:15, current:N, message:'…'}} — VERIFIED EXACT KEY NAMES: error / limit / current / message — and webhook upgrade unblocks subsequent creates; (6) regression smoke for subtest is 100% green across /tools, /locations, /dealers, /categories, /tags, /borrowers, /wishlist, /maintenance/upcoming, /warranty-claims/summary, /aggregate, /stats, /health, /auth/login, /auth/register, /auth/forgot-password, plus subtest can still create tools (lifetime-pro bypass works). Constraints honored: did NOT modify subtest's lifetime-pro state, did NOT seed promo_codes, did NOT touch .env. The structured 402 body shape that the frontend depends on is correct. Main agent: summarise and finish."

@@ -146,6 +146,8 @@ async def attach_user_to_context(request: Request, call_next):
         or path == "/api/"
         or path == "/api/health"
         or path == "/api/feedback"
+        or path == "/api/guides"
+        or path == "/api/revenuecat/webhook"
     ):
         return await call_next(request)
     auth = request.headers.get("Authorization", "")
@@ -1192,6 +1194,9 @@ async def delete_dealer_transaction(dealer_id: str, tx_id: str):
 @api_router.post("/tools", response_model=Tool)
 async def create_tool(payload: ToolCreate, user: User = Depends(get_current_user)):
     _validate_photo_payload(payload.photos)
+    # Free-tier 15-item limit. Pro / lifetime users always pass.
+    from subscriptions import enforce_tool_limit  # local import to avoid cycles
+    await enforce_tool_limit(real_db, user.id)
     tool = Tool(**payload.dict())
     await db.tools.insert_one(tool.dict())
     # If created already broken, also create a warranty claim mirror with broken_photo
@@ -1549,6 +1554,11 @@ async def tools_import(payload: ImportPayload, user: User = Depends(get_current_
     responsible for column mapping; this endpoint just creates tools and
     resolves FK names → ids (with optional auto-create for categories/tags).
     """
+    # Free-tier 15-item limit applied once for the whole batch.
+    from subscriptions import enforce_tool_limit  # local import to avoid cycles
+    rows_count = len(payload.rows or [])
+    if rows_count > 0:
+        await enforce_tool_limit(real_db, user.id, additional=rows_count)
     # Pre-load all the lookup collections once.
     cats = await db.categories.find({}, {"_id": 0}).to_list(5000)
     cats_by_name = {(_norm_lower(c.get("name"))): c for c in cats if c.get("name")}
@@ -2665,6 +2675,9 @@ async def convert_wishlist_to_tool(item_id: str, user: User = Depends(get_curren
     item = await db.wishlist_items.find_one({"id": item_id}, {"_id": 0})
     if not item:
         raise HTTPException(404, "Wishlist item not found")
+    # Free-tier 15-item limit. Pro / lifetime users always pass.
+    from subscriptions import enforce_tool_limit  # local import to avoid cycles
+    await enforce_tool_limit(real_db, user.id)
     tool = Tool(
         name=item.get("name", ""),
         description=item.get("description", "") or "",
@@ -3348,6 +3361,119 @@ async def ocr_receipt_alias(payload: ReceiptScanRequest):
 
 app.include_router(api_router)
 app.include_router(auth_router)
+
+
+# ---------------------------------------------------------------------------
+# Subscription / Entitlement router (RevenueCat webhook + /subscription + /promo/redeem)
+# ---------------------------------------------------------------------------
+from subscriptions import make_router as _make_subscriptions_router  # noqa: E402
+
+app.include_router(_make_subscriptions_router(real_db, get_current_user))
+
+
+# ---------------------------------------------------------------------------
+# Setup-Guides viewer (/api/guides)
+# Renders the markdown setup guides under /app/memory/ as a single styled
+# HTML page so the user can bookmark it and reference it any time.
+# ---------------------------------------------------------------------------
+from fastapi.responses import HTMLResponse  # noqa: E402
+
+_GUIDES_DIR = Path(__file__).parent.parent / "memory"
+_GUIDE_FILES = [
+    ("apple",      "setup_apple_subscriptions.md", "Apple App Store Connect — Subscription Setup"),
+    ("google",     "setup_google_subscriptions.md", "Google Play Console — Subscription Setup"),
+    ("revenuecat", "setup_revenuecat.md",           "RevenueCat — Setup"),
+    ("privacy",    "PRIVACY_POLICY_TEMPLATE.md",    "Privacy Policy — Template"),
+    ("terms",      "TERMS_OF_SERVICE_TEMPLATE.md",  "Terms of Service — Template"),
+]
+
+
+def _render_guides_html() -> str:
+    try:
+        import markdown as _md  # type: ignore
+    except Exception:  # pragma: no cover
+        _md = None
+
+    sections = []
+    toc = []
+    for slug, fname, title in _GUIDE_FILES:
+        fpath = _GUIDES_DIR / fname
+        try:
+            raw = fpath.read_text(encoding="utf-8")
+        except FileNotFoundError:
+            raw = f"_(file `{fname}` not found)_"
+        if _md:
+            html = _md.markdown(
+                raw,
+                extensions=["extra", "sane_lists", "toc", "tables", "fenced_code"],
+            )
+        else:
+            # Fallback: <pre> if Python markdown isn't installed
+            html = f"<pre>{raw}</pre>"
+        sections.append(f'<section id="{slug}"><h1>{title}</h1>{html}</section>')
+        toc.append(f'<a href="#{slug}">{title}</a>')
+
+    css = """
+    :root { color-scheme: light dark; }
+    * { box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+           line-height: 1.6; max-width: 880px; margin: 0 auto; padding: 24px;
+           color: #1a1a1a; background: #fff; }
+    @media (prefers-color-scheme: dark) {
+        body { color: #e8e8e8; background: #111; }
+        a { color: #4ea1ff; }
+        .nav { background: #1c1c1e; border-color: #333; }
+        code, pre { background: #1c1c1e !important; }
+    }
+    .nav { position: sticky; top: 0; background: #fff; padding: 12px 16px; margin: -24px -24px 24px;
+           border-bottom: 1px solid #e5e5e5; display: flex; flex-wrap: wrap; gap: 6px 12px;
+           font-size: 13px; z-index: 10; }
+    .nav strong { width: 100%; font-size: 12px; color: #888; text-transform: uppercase; letter-spacing: .04em; }
+    .nav a { color: #4ea1ff; text-decoration: none; padding: 4px 10px; border: 1px solid #4ea1ff; border-radius: 6px; }
+    .nav a:hover { background: rgba(78,161,255,.1); }
+    section { padding: 24px 0 48px; border-bottom: 2px solid #e5e5e5; }
+    section:last-child { border-bottom: none; }
+    h1 { font-size: 26px; padding-bottom: 8px; border-bottom: 2px solid #4ea1ff; }
+    h2 { font-size: 20px; margin-top: 28px; padding-bottom: 4px; border-bottom: 1px solid #e5e5e5; }
+    h3 { font-size: 16px; margin-top: 20px; }
+    code { background: #f6f6f6; padding: 2px 6px; border-radius: 4px; font-size: 90%; }
+    pre { background: #f6f6f6; padding: 12px; border-radius: 6px; overflow-x: auto; }
+    pre code { background: transparent; padding: 0; }
+    table { border-collapse: collapse; width: 100%; margin: 14px 0; font-size: 14px; }
+    th, td { border: 1px solid #ccc; padding: 8px 10px; text-align: left; vertical-align: top; }
+    th { background: rgba(127,127,127,.08); }
+    blockquote { margin: 12px 0; padding: 8px 14px; border-left: 4px solid #4ea1ff;
+                 background: rgba(78,161,255,.05); }
+    hr { border: 0; border-top: 1px solid #e5e5e5; margin: 24px 0; }
+    li input[type=checkbox] { margin-right: 6px; }
+    """
+    body = (
+        '<div class="nav">'
+        '<strong>Toolbox Vault — Setup Guides</strong>'
+        + "".join(toc) +
+        '</div>'
+        + "".join(sections)
+    )
+    return (
+        "<!DOCTYPE html>\n<html lang='en'>\n<head>"
+        "<meta charset='utf-8'>"
+        "<meta name='viewport' content='width=device-width, initial-scale=1'>"
+        "<title>Toolbox Vault — Setup Guides</title>"
+        f"<style>{css}</style>"
+        "</head><body>"
+        + body +
+        "</body></html>"
+    )
+
+
+@app.get("/api/guides", response_class=HTMLResponse)
+async def get_setup_guides():
+    """Public bookmarkable page that renders all 5 setup guides as one HTML doc.
+
+    No auth required — these guides contain no secrets. They are convenience
+    documentation for the app owner.
+    """
+    return HTMLResponse(_render_guides_html())
 
 
 # ---------------------------------------------------------------------------
