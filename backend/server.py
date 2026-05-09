@@ -3738,3 +3738,80 @@ logger = logging.getLogger(__name__)
 @app.on_event("shutdown")
 async def shutdown_db_client():
     client.close()
+
+
+# ---------------------------------------------------------------------------
+# MongoDB indexes — ensure on startup. Idempotent: creating an existing index
+# is a no-op. All indexes are non-unique (except where noted) and additive,
+# so this cannot change query results — only speed them up.
+# ---------------------------------------------------------------------------
+INDEX_PLAN = [
+    # collection,            keys,                                     options
+    ("users",                [("email", 1)],                          {"unique": True, "name": "email_unique"}),
+    ("users",                [("id", 1)],                              {"unique": True, "name": "id_unique"}),
+    ("tools",                [("owner_id", 1)],                        {"name": "owner_id_idx"}),
+    ("tools",                [("owner_id", 1), ("name", 1)],           {"name": "owner_name_idx"}),
+    ("tools",                [("owner_id", 1), ("dealer_id", 1)],      {"name": "owner_dealer_idx"}),
+    ("tools",                [("owner_id", 1), ("status", 1)],         {"name": "owner_status_idx"}),
+    ("tools",                [("owner_id", 1), ("location_id", 1)],    {"name": "owner_location_idx"}),
+    ("tools",                [("owner_id", 1), ("for_sale", 1)],       {"name": "owner_for_sale_idx"}),
+    ("tools",                [("id", 1)],                              {"unique": True, "name": "tool_id_unique"}),
+    ("locations",            [("owner_id", 1)],                        {"name": "owner_id_idx"}),
+    ("locations",            [("owner_id", 1), ("parent_id", 1)],      {"name": "owner_parent_idx"}),
+    ("dealers",              [("owner_id", 1)],                        {"name": "owner_id_idx"}),
+    ("dealers",              [("owner_id", 1), ("name", 1)],           {"name": "owner_name_idx"}),
+    ("tags",                 [("owner_id", 1)],                        {"name": "owner_id_idx"}),
+    ("categories",           [("owner_id", 1)],                        {"name": "owner_id_idx"}),
+    ("borrowers",            [("owner_id", 1)],                        {"name": "owner_id_idx"}),
+    ("borrowers",            [("owner_id", 1), ("name", 1)],           {"name": "owner_name_idx"}),
+    ("checkouts",            [("owner_id", 1), ("tool_id", 1)],        {"name": "owner_tool_idx"}),
+    ("checkouts",            [("owner_id", 1), ("borrower_id", 1)],    {"name": "owner_borrower_idx"}),
+    ("checkouts",            [("owner_id", 1), ("returned_at", 1)],    {"name": "owner_returned_idx"}),
+    ("wishlist_items",       [("owner_id", 1)],                        {"name": "owner_id_idx"}),
+    ("transactions",         [("owner_id", 1), ("dealer_id", 1)],      {"name": "owner_dealer_idx"}),
+    ("transactions",         [("owner_id", 1), ("date", -1)],          {"name": "owner_date_idx"}),
+    ("warranty_claims",      [("owner_id", 1)],                        {"name": "owner_id_idx"}),
+    ("warranty_claims",      [("owner_id", 1), ("status", 1)],         {"name": "owner_status_idx"}),
+    ("warranty_claims",      [("owner_id", 1), ("dealer_id", 1)],      {"name": "owner_dealer_idx"}),
+    ("warranty_claims",      [("tool_id", 1)],                         {"name": "tool_id_idx"}),
+    ("maintenance_logs",     [("owner_id", 1), ("tool_id", 1)],        {"name": "owner_tool_idx"}),
+    ("maintenance_logs",     [("owner_id", 1), ("scheduled_for", 1)],  {"name": "owner_scheduled_idx"}),
+    ("activity_log",         [("owner_id", 1), ("at", -1)],            {"name": "owner_at_idx"}),
+    ("activity_log",         [("owner_id", 1), ("tool_id", 1)],        {"name": "owner_tool_idx"}),
+    ("subscriptions",        [("user_id", 1)],                         {"unique": True, "name": "user_id_unique"}),
+    ("promo_codes",          [("code", 1)],                            {"unique": True, "name": "code_unique"}),
+    ("password_reset_codes", [("email", 1)],                           {"name": "email_idx"}),
+    # TTL: auto-delete expired reset codes 24h after they expire
+    ("password_reset_codes", [("expires_at", 1)],                      {"name": "expires_ttl", "expireAfterSeconds": 86400}),
+    ("feedback",             [("created_at", -1)],                     {"name": "created_at_idx"}),
+]
+
+
+@app.on_event("startup")
+async def ensure_mongo_indexes():
+    """Create / refresh indexes on startup. Idempotent.
+
+    We swallow IndexOptionsConflict (raised when an index with the same name
+    already exists with slightly different options) and log it — that's fine
+    in dev, and we don't want to crash the API on boot for that.
+    """
+    created = 0
+    skipped = 0
+    errors: list[str] = []
+    for coll_name, keys, options in INDEX_PLAN:
+        try:
+            await real_db[coll_name].create_index(keys, **options)
+            created += 1
+        except Exception as e:  # pymongo.errors.OperationFailure most often
+            msg = str(e)
+            # Index already exists with different options — non-fatal in dev.
+            if "IndexOptionsConflict" in msg or "already exists with a different name" in msg or "already exists" in msg.lower():
+                skipped += 1
+                continue
+            errors.append(f"{coll_name}.{options.get('name','?')}: {msg[:140]}")
+    if errors:
+        logger.warning("Mongo index init: %d ok, %d skipped, %d errors -> %s",
+                       created, skipped, len(errors), "; ".join(errors[:3]))
+    else:
+        logger.info("Mongo index init: %d created/verified, %d skipped (already existed)",
+                    created, skipped)
