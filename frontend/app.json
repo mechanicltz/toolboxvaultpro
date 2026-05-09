@@ -9,7 +9,7 @@
     "userInterfaceStyle": "dark",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "app.emergent.assetlocator128c92565d",
+      "bundleIdentifier": "app.emergent.assetlocator12533f4c89",
       "buildNumber": "13",
       "infoPlist": {
         "NSCameraUsageDescription": "Take photos of your tools",
@@ -19,7 +19,7 @@
       }
     },
     "android": {
-      "package": "app.emergent.assetlocator128c92565d",
+      "package": "app.emergent.assetlocator12533f4c89",
       "versionCode": 13,
       "edgeToEdgeEnabled": false,
       "adaptiveIcon": {

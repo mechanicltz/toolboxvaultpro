@@ -30,7 +30,7 @@ Console that RevenueCat and the app will use.
    - Accept the declarations → **Create app**.
 
 4. **Set the App's package name** to match your `app.json` Android `package`
-   value (currently `app.emergent.assetlocator128c92565d`).
+   value (currently `app.emergent.assetlocator12533f4c89`).
    - This is set when you upload your first APK/AAB. **Do NOT upload yet** —
      just have it ready in `app.json`.
    - **Important:** package name cannot be changed once a build is uploaded.

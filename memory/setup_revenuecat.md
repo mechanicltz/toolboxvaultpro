@@ -16,7 +16,7 @@ needs the IDs/keys you produced there).
 3. **Name:** `Toolbox Vault iOS`
 4. **App store:** **App Store**
 5. **App Bundle ID:** paste the bundle ID from your `app.json` (currently
-   `app.emergent.assetlocator128c92565d`). Must match exactly.
+   `app.emergent.assetlocator12533f4c89`). Must match exactly.
 6. **App Store Connect API:**
    - **Issuer ID:** paste the Issuer ID you noted in the Apple guide Step 6.
    - **Key ID:** paste the Key ID.
