@@ -26,7 +26,7 @@ You must complete these in App Store Connect BEFORE creating subscriptions:
    - Name: **Toolbox Vault**
    - Primary language: English (U.S.)
    - Bundle ID: select the one matching your Xcode/EAS project
-     (`app.emergent.assetlocator12533f4c89` based on your current `app.json`).
+     (`app.emergent.assetlocator128c92565d` based on your current `app.json`).
      **Important:** if you plan to launch under a custom domain (e.g.,
      `com.yourcompany.toolboxvault`), change it now in `app.json` BEFORE
      submitting subscriptions — bundle IDs cannot be changed later.

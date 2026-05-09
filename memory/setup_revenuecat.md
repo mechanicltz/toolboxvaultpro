@@ -15,8 +15,8 @@ needs the IDs/keys you produced there).
 2. In your project, **+ New app**.
 3. **Name:** `Toolbox Vault iOS`
 4. **App store:** **App Store**
-5. **App Bundle ID:** paste the bundle ID from your `app.json` (currently
-   `app.emergent.assetlocator12533f4c89`). Must match exactly.
+5. **App Bundle ID:** **`app.emergent.assetlocator128c92565d`** — must match
+   your Apple App Store Connect record exactly. (iOS builds use this ID.)
 6. **App Store Connect API:**
    - **Issuer ID:** paste the Issuer ID you noted in the Apple guide Step 6.
    - **Key ID:** paste the Key ID.
@@ -37,7 +37,9 @@ ID and that the Paid Apps Agreement is Active.
 1. **+ New app** in the same project.
 2. **Name:** `Toolbox Vault Android`
 3. **App store:** **Google Play Store**
-4. **Package name:** paste the Android package from your `app.json`.
+4. **Package name:** **`app.emergent.assetlocator12533f4c89`** — must match
+   your Google Play Console listing exactly. (Android builds from Emergent
+   currently produce this internal slug regardless of `app.json`.)
 5. **Service account credentials JSON:** paste the contents of the JSON
    file you downloaded in the Google guide Step 5.
 6. **Save**.
