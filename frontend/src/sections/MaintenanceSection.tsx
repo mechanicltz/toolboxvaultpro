@@ -460,30 +460,54 @@ function HistoryModal({
   const events = (schedule.history || []).slice().reverse();
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <View style={styles.modalBg}>
-        <View style={styles.modalCard}>
-          <Text style={styles.modalTitle}>{schedule.type} HISTORY</Text>
-          <ScrollView style={{ maxHeight: 480 }}>
-            {events.length === 0 ? (
-              <Text style={styles.empty}>No events logged yet.</Text>
-            ) : (
-              events.map((ev: any, i: number) => (
-                <View key={ev.id || i} style={styles.histRow}>
-                  <Text style={styles.histDate}>{ev.date}</Text>
-                  {!!ev.cost && <Text style={styles.histCost}>${(ev.cost || 0).toFixed(2)}</Text>}
-                  {!!ev.technician && (
-                    <Text style={styles.histLine}>By: {ev.technician}</Text>
-                  )}
-                  {!!ev.notes && <Text style={styles.histNotes}>{ev.notes}</Text>}
-                </View>
-              ))
-            )}
-          </ScrollView>
-          <TouchableOpacity style={styles.btnGhost} onPress={onClose}>
-            <Text style={styles.btnGhostText}>CLOSE</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
+      {/* Tapping outside the card closes the modal — a common iOS/Android pattern. */}
+      <TouchableOpacity
+        style={styles.modalBg}
+        activeOpacity={1}
+        onPress={onClose}
+        testID="history-modal-backdrop"
+      >
+        <TouchableOpacity activeOpacity={1} onPress={() => {}}>
+          <View style={styles.modalCard}>
+            {/* Top-right X close — always visible, can't be squeezed off-screen. */}
+            <View style={styles.historyHeaderRow}>
+              <Text style={styles.modalTitle}>{schedule.type} HISTORY</Text>
+              <TouchableOpacity
+                onPress={onClose}
+                hitSlop={12}
+                testID="history-modal-close"
+                style={styles.closeXBtn}
+              >
+                <Ionicons name="close" size={20} color={theme.colors.textPrimary} />
+              </TouchableOpacity>
+            </View>
+            <ScrollView style={{ maxHeight: 420 }}>
+              {events.length === 0 ? (
+                <Text style={styles.empty}>No events logged yet.</Text>
+              ) : (
+                events.map((ev: any, i: number) => (
+                  <View key={ev.id || i} style={styles.histRow}>
+                    <Text style={styles.histDate}>{ev.date}</Text>
+                    {!!ev.cost && <Text style={styles.histCost}>${(ev.cost || 0).toFixed(2)}</Text>}
+                    {!!ev.technician && (
+                      <Text style={styles.histLine}>By: {ev.technician}</Text>
+                    )}
+                    {!!ev.notes && <Text style={styles.histNotes}>{ev.notes}</Text>}
+                  </View>
+                ))
+              )}
+            </ScrollView>
+            {/* Big primary CLOSE button at the bottom — always tappable. */}
+            <TouchableOpacity
+              style={styles.historyCloseBtn}
+              onPress={onClose}
+              testID="history-modal-close-bottom"
+            >
+              <Text style={styles.historyCloseBtnText}>CLOSE</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </TouchableOpacity>
     </Modal>
   );
 }
@@ -643,6 +667,39 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     borderRadius: theme.radii.sm,
+  },
+
+  // ---------- HISTORY MODAL ----------
+  historyHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 12,
+    gap: 8,
+  },
+  closeXBtn: {
+    width: 32,
+    height: 32,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 16,
+    backgroundColor: theme.colors.bg,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  historyCloseBtn: {
+    marginTop: 14,
+    height: 46,
+    backgroundColor: theme.colors.accent,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: theme.radii.sm,
+  },
+  historyCloseBtnText: {
+    color: "#000",
+    fontWeight: "900",
+    fontSize: 12,
+    letterSpacing: 2,
   },
   btnGhostText: {
     color: theme.colors.textPrimary,
