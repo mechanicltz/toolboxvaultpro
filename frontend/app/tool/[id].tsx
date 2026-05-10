@@ -1119,146 +1119,254 @@ export default function ToolDetail() {
 
   const photos = tool.photos || [];
 
+  // ---- Helpers for the new layout ----------------------------------------
+  const fmtMoney = (n: any) => `$${(Number(n) || 0).toFixed(2)}`;
+  const statusInfo = (() => {
+    if (tool.is_lost) return { label: "LOST", color: theme.colors.danger };
+    if (tool.is_sold) return { label: "SOLD", color: theme.colors.success };
+    if (tool.for_sale) return { label: `FOR SALE  ${fmtMoney(tool.sale_price)}`, color: theme.colors.accent };
+    if (tool.needs_repair) return { label: "BROKEN", color: theme.colors.danger };
+    if (tool.is_checked_out) return {
+      label: `OUT — ${tool.current_checkout?.borrower_name?.toUpperCase() || ""}`,
+      color: theme.colors.accentSecondary,
+    };
+    return { label: "AVAILABLE", color: theme.colors.success };
+  })();
+
+  const maintenanceSummary = (() => {
+    const arr = Array.isArray(tool.maintenance_logs) ? tool.maintenance_logs : [];
+    if (!arr.length) return "Never serviced";
+    const last = arr[arr.length - 1];
+    return last?.scheduled_for
+      ? `Last: ${formatDateUS(last.scheduled_for)}`
+      : "Service logged";
+  })();
+  const warrantySummary = (() => {
+    const w = tool.warranty || {};
+    if (!w.type && !w.expires_at) return "None";
+    if (w.type === "lifetime") return "Lifetime";
+    if (w.expires_at) return `Until ${formatDateUS(w.expires_at)}`;
+    return w.type ? String(w.type) : "—";
+  })();
+
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
-      <View style={styles.topBar}>
+      {/* HEADER — back arrow, name+serial, 3 action icons. Layout flexes safely. */}
+      <View style={newStyles.headerBar}>
         <TouchableOpacity testID="back-btn" onPress={() => router.back()} hitSlop={10}>
           <Ionicons name="arrow-back" size={26} color={theme.colors.textPrimary} />
         </TouchableOpacity>
-        <View style={{ flexDirection: "row", gap: 18 }}>
-          <TouchableOpacity testID="export-pdf-btn" onPress={exportPdf} hitSlop={10}>
-            <Ionicons name="document-text-outline" size={24} color={theme.colors.accent} />
+        <View style={newStyles.headerTitleCol}>
+          <Text style={newStyles.headerTitle} numberOfLines={2}>
+            {tool.name || "Untitled tool"}
+          </Text>
+          {!!tool.serial_number && !tool.is_set && (
+            <Text style={newStyles.headerSerial} numberOfLines={1}>
+              SN  {tool.serial_number}
+            </Text>
+          )}
+        </View>
+        <View style={newStyles.headerActions}>
+          <TouchableOpacity testID="export-pdf-btn" onPress={() => setShowExportPicker(true)} hitSlop={10}>
+            <Ionicons name="document-text-outline" size={22} color={theme.colors.accent} />
           </TouchableOpacity>
           <TouchableOpacity
             testID="edit-tool-btn"
             onPress={() => router.push({ pathname: "/tool/edit", params: { id: tool.id } })}
             hitSlop={10}
           >
-            <Ionicons name="create-outline" size={24} color={theme.colors.textPrimary} />
+            <Ionicons name="create-outline" size={22} color={theme.colors.textPrimary} />
           </TouchableOpacity>
           <TouchableOpacity testID="delete-tool-btn" onPress={doDelete} hitSlop={10}>
-            <Ionicons name="trash-outline" size={24} color={theme.colors.danger} />
+            <Ionicons name="trash-outline" size={22} color={theme.colors.danger} />
           </TouchableOpacity>
         </View>
       </View>
 
-      <ScrollView contentContainerStyle={{ paddingBottom: 120 }}>
-        {photos.length > 0 ? (
-          <View style={styles.heroBox}>
-            <Image source={{ uri: photos[photoIdx] }} style={styles.heroImg} />
-            {photos.length > 1 && (
-              <ScrollView
-                horizontal
-                style={styles.thumbStrip}
-                contentContainerStyle={{ gap: 8, padding: 8 }}
-              >
-                {photos.map((p: string, i: number) => (
-                  <TouchableOpacity key={i} onPress={() => setPhotoIdx(i)}>
-                    <Image
-                      source={{ uri: p }}
-                      style={[styles.thumbSm, photoIdx === i && styles.thumbActive]}
-                    />
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-            )}
-          </View>
-        ) : null}
+      <ScrollView contentContainerStyle={{ paddingBottom: 40 }}>
+        <View style={newStyles.page}>
 
-        <View style={styles.bodyContainer}>
-          {photos.length === 0 && (
-            <TouchableOpacity
-              testID="add-photo-pill"
-              style={styles.addPhotoPill}
-              onPress={promptAddPhoto}
-              activeOpacity={0.85}
-            >
-              <Ionicons name="camera" size={14} color={theme.colors.accent} />
-              <Text style={styles.addPhotoPillText}>ADD PHOTO</Text>
-            </TouchableOpacity>
-          )}
-          <View
-            style={[
-              styles.statusBanner,
-              { borderColor: tool.is_checked_out ? theme.colors.accentSecondary : theme.colors.success },
-            ]}
-          >
-            <View
-              style={[
-                styles.statusDot,
-                { backgroundColor: tool.is_checked_out ? theme.colors.accentSecondary : theme.colors.success },
-              ]}
-            />
-            <View style={{ flex: 1 }}>
+          {/* STATUS PILLBOX — small row above photo with inline status-change pill buttons */}
+          <View style={newStyles.statusPill}>
+            <View style={[newStyles.statusDot, { backgroundColor: statusInfo.color }]} />
+            <Text style={newStyles.statusLabel} numberOfLines={1}>{statusInfo.label}</Text>
+            <View style={{ flex: 1 }} />
+            <View style={newStyles.statusActions}>
               {tool.is_checked_out ? (
-                <>
-                  <TouchableOpacity
-                    testID="banner-borrower-link"
-                    onPress={() => {
-                      if (tool.current_checkout?.borrower_id)
-                        router.push(`/borrower/${tool.current_checkout.borrower_id}`);
-                    }}
-                    disabled={!tool.current_checkout?.borrower_id}
-                  >
-                    <Text style={styles.statusText}>
-                      OUT WITH {tool.current_checkout?.borrower_name?.toUpperCase()}
-                      {tool.current_checkout?.borrower_id ? "  ›" : ""}
-                    </Text>
+                <TouchableOpacity testID="status-checkin" style={newStyles.statusBtn} onPress={doCheckin}>
+                  <Text style={newStyles.statusBtnText}>CHECK IN</Text>
+                </TouchableOpacity>
+              ) : tool.needs_repair ? (
+                <TouchableOpacity testID="status-fixed" style={newStyles.statusBtn} onPress={markRepaired}>
+                  <Text style={newStyles.statusBtnText}>FIXED</Text>
+                </TouchableOpacity>
+              ) : !tool.is_sold && !tool.is_lost ? (
+                <TouchableOpacity testID="status-checkout" style={newStyles.statusBtn} onPress={() => setShowCheckout(true)}>
+                  <Text style={newStyles.statusBtnText}>CHECK OUT</Text>
+                </TouchableOpacity>
+              ) : null}
+              {!tool.is_sold && !tool.is_lost && !tool.needs_repair && (
+                <TouchableOpacity testID="status-broken" style={newStyles.statusBtnGhost} onPress={openRepair}>
+                  <Ionicons name="build" size={11} color={theme.colors.danger} />
+                </TouchableOpacity>
+              )}
+              {!tool.is_sold && !tool.is_lost && (
+                tool.for_sale ? (
+                  <TouchableOpacity testID="status-marksold" style={newStyles.statusBtnGhost} onPress={() => setShowMarkSold(true)}>
+                    <Ionicons name="checkmark-circle" size={13} color={theme.colors.accent} />
                   </TouchableOpacity>
-                  <Text style={styles.statusSub}>
-                    Since {formatDateTime(tool.current_checkout?.checked_out_at)}
-                  </Text>
-                </>
-              ) : (
-                <Text style={styles.statusText}>AVAILABLE</Text>
+                ) : (
+                  <TouchableOpacity testID="status-listsale" style={newStyles.statusBtnGhost} onPress={() => openSaleModal()}>
+                    <Ionicons name="pricetag" size={11} color={theme.colors.accent} />
+                  </TouchableOpacity>
+                )
               )}
             </View>
           </View>
 
+          {/* PHOTO + 3 PILLBOX FIELDS (Price, Location, Quantity) on the right, height-matched */}
+          <View style={newStyles.photoRow}>
+            <TouchableOpacity
+              testID="photo-thumb"
+              style={newStyles.photoFrame}
+              activeOpacity={photos.length ? 0.85 : 1}
+              onPress={photos.length ? () => setPhotoIdx(0) : promptAddPhoto}
+            >
+              {photos.length > 0 ? (
+                <Image source={{ uri: photos[0] }} style={newStyles.photoImg} />
+              ) : (
+                <View style={newStyles.photoEmpty}>
+                  <Ionicons name="camera" size={22} color={theme.colors.accent} />
+                  <Text style={newStyles.photoEmptyText}>ADD PHOTO</Text>
+                </View>
+              )}
+            </TouchableOpacity>
+            <View style={newStyles.photoRightCol}>
+              <PillRow label="PRICE" value={fmtMoney(tool.cost)} />
+              <PillRow
+                label="LOCATION"
+                value={tool.location_name || "—"}
+                onPress={tool.location_id ? () => router.push(`/locations`) : undefined}
+              />
+              <PillRow
+                label="QUANTITY"
+                value={String(tool.quantity ?? 1)}
+              />
+            </View>
+          </View>
+
+          {/* DESCRIPTION — first thing below the photo row */}
+          {!!tool.description && (
+            <View style={newStyles.descBox}>
+              <Text style={newStyles.descText}>{tool.description}</Text>
+            </View>
+          )}
+
+          {/* TAGS row — chips under description */}
+          {(tool.tag_names || []).length > 0 && (
+            <View style={newStyles.tagWrap}>
+              {tool.tag_names.map((t: string) => (
+                <View key={t} style={newStyles.tagChip}>
+                  <Text style={newStyles.tagChipText}>{t}</Text>
+                </View>
+              ))}
+            </View>
+          )}
+
+          {/* PILLBOX DETAIL FIELDS — Dealer, Maintenance, Warranty, then the rest */}
+          <View style={newStyles.fieldGroup}>
+            <PillRow
+              label="DEALER"
+              value={tool.dealer_name || "—"}
+              sub={tool.purchased_from_agent_name || undefined}
+              onPress={tool.dealer_id ? () => router.push(`/dealer/${tool.dealer_id}`) : undefined}
+            />
+            <PillRow label="MAINTENANCE" value={maintenanceSummary} />
+            <PillRow label="WARRANTY" value={warrantySummary} />
+            {!!tool.brand && <PillRow label="BRAND" value={tool.brand} />}
+            {!!tool.model && <PillRow label="MODEL" value={tool.model} />}
+            {!!tool.purchase_date && (
+              <PillRow label="PURCHASED" value={formatDateUS(tool.purchase_date)} />
+            )}
+            {!!tool.category_name && <PillRow label="CATEGORY" value={tool.category_name} />}
+          </View>
+
+          {/* Set serials (only when the tool is a set) */}
+          {tool.is_set && (
+            <View style={newStyles.setSerialBox}>
+              <Text style={newStyles.sectionTitle}>
+                SET SERIAL NUMBERS{Array.isArray(tool.set_serials) ? `  (${tool.set_serials.length})` : ""}
+              </Text>
+              {(tool.set_serials || []).map((s: string, i: number) => (
+                <View key={i} style={newStyles.setSerialRow}>
+                  <Text style={newStyles.setSerialIdx}>{i + 1}.</Text>
+                  <Text style={newStyles.setSerialVal}>{s || "—"}</Text>
+                </View>
+              ))}
+              {(!tool.set_serials || tool.set_serials.length === 0) && (
+                <Text style={newStyles.emptyHint}>No serial numbers entered.</Text>
+              )}
+            </View>
+          )}
+
+          {/* QuantityStepper kept for inventories that need explicit +/- buttons */}
+          <View style={{ marginTop: 8 }}>
+            <QuantityStepper tool={tool} onChange={load} />
+          </View>
+
+          {/* Lost banner — only renders if tool.is_lost */}
           <LostStatusBanner tool={tool} onChange={load} />
 
-          {/* For Sale section — primary action on the item details */}
-          {tool.is_sold ? (
-            <View style={[styles.saleBanner, { backgroundColor: "#27AE60" }]}>
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-                <Ionicons name="checkmark-done-circle" size={22} color="#fff" />
+          {/* Repair detail card — only when broken */}
+          {tool.needs_repair && (
+            <View style={newStyles.repairCard}>
+              <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 10 }}>
+                <Ionicons name="build" size={18} color={theme.colors.danger} />
                 <View style={{ flex: 1 }}>
-                  <Text style={[styles.saleBannerTitle, { color: "#fff" }]}>SOLD</Text>
-                  <Text style={[styles.saleBannerPrice, { color: "#fff" }]}>
-                    {tool.sold_price ? `$${tool.sold_price.toFixed(2)}` : ""}
-                    {tool.sold_at ? `  ·  ${formatDateUS(tool.sold_at)}` : ""}
-                    {tool.sold_to ? `  ·  to ${tool.sold_to}` : ""}
+                  <Text style={newStyles.repairTitle}>
+                    {(tool.repair_info?.repair_status || "Repair pending").toUpperCase()}
                   </Text>
+                  {!!tool.repair_info?.company_notified && (
+                    <Text style={newStyles.repairLine}>At: {tool.repair_info.company_notified}</Text>
+                  )}
+                  {!!tool.repair_info?.notified_at && (
+                    <Text style={newStyles.repairLine}>Notified: {formatDateUS(tool.repair_info.notified_at)}</Text>
+                  )}
+                  {!!tool.repair_info?.expected_completion && (
+                    <Text style={newStyles.repairLine}>Expected back: {formatDateUS(tool.repair_info.expected_completion)}</Text>
+                  )}
+                  {!!tool.repair_info?.notes && (
+                    <Text style={[newStyles.repairLine, { fontStyle: "italic", marginTop: 6 }]}>
+                      {tool.repair_info.notes}
+                    </Text>
+                  )}
                 </View>
+                <TouchableOpacity onPress={openRepair} hitSlop={10}>
+                  <Ionicons name="create-outline" size={18} color={theme.colors.danger} />
+                </TouchableOpacity>
               </View>
             </View>
-          ) : tool.for_sale ? (
-            <View style={styles.saleBanner}>
+          )}
+
+          {/* Sale listing detail (when for sale, shows the listing controls) */}
+          {tool.for_sale && !tool.is_sold && (
+            <View style={newStyles.saleCard}>
               <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-                <Ionicons name="pricetag" size={22} color="#000" />
+                <Ionicons name="pricetag" size={20} color="#000" />
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.saleBannerTitle}>FOR SALE</Text>
-                  <Text style={styles.saleBannerPrice}>
-                    {`$${(tool.sale_price || 0).toFixed(2)}`}
-                    {tool.sale_listed_at ? `  ·  Listed ${formatDateUS(tool.sale_listed_at)}` : ""}
-                  </Text>
+                  <Text style={newStyles.saleTitle}>LISTED  {fmtMoney(tool.sale_price)}</Text>
                   {!!tool.sale_notes && (
-                    <Text style={styles.saleBannerNotes}>{tool.sale_notes}</Text>
+                    <Text style={newStyles.saleNotes}>{tool.sale_notes}</Text>
                   )}
                 </View>
               </View>
               <View style={{ flexDirection: "row", gap: 8, marginTop: 12 }}>
-                <TouchableOpacity
-                  testID="edit-listing-btn"
-                  style={[styles.markSoldBtn, { flex: 1, backgroundColor: "#000" }]}
-                  onPress={() => openSaleModal()}
-                >
-                  <Ionicons name="create-outline" size={14} color="#FFB300" />
-                  <Text style={[styles.markSoldText, { color: "#FFB300" }]}>EDIT LISTING</Text>
+                <TouchableOpacity style={[newStyles.saleBtn, { backgroundColor: "#000" }]} onPress={() => openSaleModal()}>
+                  <Ionicons name="create-outline" size={12} color={theme.colors.accent} />
+                  <Text style={[newStyles.saleBtnText, { color: theme.colors.accent }]}>EDIT</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  testID="unlist-btn"
-                  style={[styles.markSoldBtn, { flex: 1, backgroundColor: "rgba(0,0,0,0.15)" }]}
+                  style={[newStyles.saleBtn, { backgroundColor: "rgba(0,0,0,0.15)" }]}
                   onPress={async () => {
                     try {
                       await api.updateTool(tool.id, { for_sale: false, sale_price: 0, sale_notes: "" });
@@ -1268,292 +1376,111 @@ export default function ToolDetail() {
                     }
                   }}
                 >
-                  <Ionicons name="close-circle" size={14} color="#000" />
-                  <Text style={[styles.markSoldText, { color: "#000" }]}>UNLIST</Text>
+                  <Ionicons name="close-circle" size={12} color="#000" />
+                  <Text style={[newStyles.saleBtnText, { color: "#000" }]}>UNLIST</Text>
                 </TouchableOpacity>
-                <TouchableOpacity
-                  testID="mark-sold-btn"
-                  style={[styles.markSoldBtn, { flex: 1.2 }]}
-                  onPress={() => setShowMarkSold(true)}
-                >
-                  <Ionicons name="checkmark-circle" size={14} color="#fff" />
-                  <Text style={styles.markSoldText}>MARK SOLD</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          ) : null /* "LIST FOR SALE" CTA moved to bottom of page */}
-
-          {tool.needs_repair && (
-            <View style={styles.repairBanner}>
-              <View style={{ flexDirection: "row", gap: 10, alignItems: "flex-start" }}>
-                <Ionicons name="build" size={20} color={theme.colors.danger} />
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.repairTitle}>
-                    {(tool.repair_info?.repair_status || "Not Reported").toUpperCase()}
-                  </Text>
-                  {!!tool.repair_info?.company_notified && (
-                    <Text style={styles.repairLine}>At: {tool.repair_info.company_notified}</Text>
-                  )}
-                  {!!tool.repair_info?.notified_at && (
-                    <Text style={styles.repairLine}>Notified: {formatDateUS(tool.repair_info.notified_at)}</Text>
-                  )}
-                  {!!tool.repair_info?.expected_completion && (
-                    <Text style={styles.repairLine}>Expected back: {formatDateUS(tool.repair_info.expected_completion)}</Text>
-                  )}
-                  {!!tool.repair_info?.contact && (
-                    <Text style={styles.repairLine}>Contact: {tool.repair_info.contact}</Text>
-                  )}
-                  {!!tool.repair_info?.notes && (
-                    <Text style={[styles.repairLine, { fontStyle: "italic", marginTop: 4 }]}>
-                      {tool.repair_info.notes}
-                    </Text>
-                  )}
-                </View>
-                <TouchableOpacity testID="edit-repair-btn" onPress={openRepair} hitSlop={10}>
-                  <Ionicons name="create-outline" size={18} color={theme.colors.danger} />
-                </TouchableOpacity>
-              </View>
-
-              {!!tool.repair_info?.broken_photo && (
-                <Image
-                  source={{ uri: tool.repair_info.broken_photo }}
-                  style={styles.brokenPhoto}
-                />
-              )}
-
-              <View style={styles.notifyRow}>
-                <TouchableOpacity
-                  testID="notify-email-btn"
-                  style={styles.notifyBtn}
-                  onPress={() => notifyDealer(tool, "email")}
-                >
-                  <Ionicons name="mail" size={14} color="#fff" />
-                  <Text style={styles.notifyText}>EMAIL DEALER</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  testID="notify-sms-btn"
-                  style={styles.notifyBtn}
-                  onPress={() => notifyDealer(tool, "sms")}
-                >
-                  <Ionicons name="chatbubble" size={14} color="#fff" />
-                  <Text style={styles.notifyText}>TEXT DEALER</Text>
+                <TouchableOpacity style={[newStyles.saleBtn, { backgroundColor: theme.colors.success }]} onPress={() => setShowMarkSold(true)}>
+                  <Ionicons name="checkmark-circle" size={12} color="#fff" />
+                  <Text style={[newStyles.saleBtnText, { color: "#fff" }]}>MARK SOLD</Text>
                 </TouchableOpacity>
               </View>
             </View>
           )}
 
-          <View style={styles.infoCard}>
-            <Text style={styles.title}>{tool.name}</Text>
-            {!!tool.description && (
-              <Text style={styles.description}>{tool.description}</Text>
-            )}
-
-            {(tool.tag_names || []).length > 0 && (
-              <View style={styles.tagWrap}>
-                {tool.tag_names.map((t: string) => (
-                  <View key={t} style={styles.tag}>
-                    <Text style={styles.tagText}>{t}</Text>
-                  </View>
-                ))}
-              </View>
-            )}
-
-            {/* Dealer / Agent — right under the tags */}
-            {(!!tool.dealer_name || !!tool.purchased_from_agent_name) && (
-              <TouchableOpacity
-                testID="detail-dealer-row"
-                activeOpacity={tool.dealer_id ? 0.7 : 1}
-                onPress={() => {
-                  if (tool.dealer_id) router.push(`/dealer/${tool.dealer_id}`);
-                }}
-                style={styles.detailRow}
-              >
-                <Ionicons
-                  name="briefcase"
-                  size={16}
-                  color={theme.colors.accent}
-                />
+          {/* Sold summary (when sold, just shows it) */}
+          {tool.is_sold && (
+            <View style={[newStyles.saleCard, { backgroundColor: theme.colors.success }]}>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+                <Ionicons name="checkmark-done-circle" size={22} color="#fff" />
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.detailRowLabel}>DEALER</Text>
-                  <Text style={styles.detailRowValue}>
-                    {tool.dealer_name || "—"}
-                    {tool.purchased_from_agent_name
-                      ? `  ·  ${tool.purchased_from_agent_name}`
-                      : ""}
+                  <Text style={[newStyles.saleTitle, { color: "#fff" }]}>
+                    SOLD {tool.sold_price ? fmtMoney(tool.sold_price) : ""}
+                  </Text>
+                  <Text style={[newStyles.saleNotes, { color: "#fff" }]}>
+                    {tool.sold_at ? formatDateUS(tool.sold_at) : ""}
+                    {tool.sold_to ? `  ·  ${tool.sold_to}` : ""}
                   </Text>
                 </View>
-                {tool.dealer_id && (
-                  <Ionicons
-                    name="chevron-forward"
-                    size={16}
-                    color={theme.colors.textMuted}
-                  />
-                )}
-              </TouchableOpacity>
-            )}
-
-            {/* Location — right under dealer/agent */}
-            {!!tool.location_name && (
-              <View style={styles.detailRow}>
-                <Ionicons
-                  name="location"
-                  size={16}
-                  color={theme.colors.accent}
-                />
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.detailRowLabel}>LOCATION</Text>
-                  <Text style={styles.detailRowValue}>{tool.location_name}</Text>
-                </View>
               </View>
-            )}
-
-            <View style={styles.grid}>
-              <Field label="Brand" value={tool.brand} />
-              <Field label="Model" value={tool.model} />
-              {!tool.is_set && <Field label="Serial #" value={tool.serial_number} />}
-              <Field label="Cost" value={`$${(tool.cost || 0).toFixed(2)}`} />
-              <Field label="Condition" value={tool.condition} />
-              <Field label="Purchased" value={formatDateUS(tool.purchase_date)} />
             </View>
+          )}
 
-            {tool.is_set && (
-              <View style={{ marginTop: 8 }}>
-                <Text style={styles.sectionLabel}>
-                  SET SERIAL NUMBERS
-                  {Array.isArray(tool.set_serials) && tool.set_serials.length > 0
-                    ? ` (${tool.set_serials.length})`
-                    : ""}
-                </Text>
-                {(tool.set_serials && tool.set_serials.length > 0 ? tool.set_serials : []).map(
-                  (s: string, i: number) => (
-                    <View
-                      key={i}
-                      style={{
-                        flexDirection: "row",
-                        alignItems: "center",
-                        paddingVertical: 6,
-                        borderBottomWidth: 1,
-                        borderBottomColor: theme.colors.border,
-                      }}
-                    >
-                      <Text
-                        style={{
-                          color: theme.colors.textMuted,
-                          width: 28,
-                          fontWeight: "700",
-                        }}
-                      >
-                        {i + 1}.
-                      </Text>
-                      <Text style={{ color: theme.colors.textPrimary, fontSize: 11, flex: 1 }}>
-                        {s || "—"}
-                      </Text>
-                    </View>
-                  )
-                )}
-                {(!tool.set_serials || tool.set_serials.length === 0) && (
-                  <Text style={{ color: theme.colors.textMuted, fontStyle: "italic" }}>
-                    No serial numbers entered.
-                  </Text>
-                )}
-              </View>
-            )}
+          {/* ===== BOTTOM ACTION CLUSTER ===== */}
+          <View style={newStyles.divider} />
+          <Text style={newStyles.sectionTitle}>ACTIONS</Text>
 
-            <QuantityStepper tool={tool} onChange={load} />
+          {/* Dealer comms — only if there's a dealer */}
+          {tool.dealer_id && (
+            <View style={{ flexDirection: "row", gap: 8, marginTop: 8 }}>
+              <TouchableOpacity style={newStyles.actionBtn} onPress={() => notifyDealer(tool, "email")}>
+                <Ionicons name="mail" size={16} color={theme.colors.accent} />
+                <Text style={newStyles.actionBtnText}>EMAIL DEALER</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={newStyles.actionBtn} onPress={() => notifyDealer(tool, "sms")}>
+                <Ionicons name="chatbubble" size={16} color={theme.colors.accent} />
+                <Text style={newStyles.actionBtnText}>TEXT DEALER</Text>
+              </TouchableOpacity>
+            </View>
+          )}
 
-            <ReceiptsSection receipts={tool.receipts} />
+          {/* DOCUMENTS (full section) */}
+          <View style={{ marginTop: 16 }}>
             <DocumentsSection tool={tool} onChange={load} />
-            <MaintenanceSection tool={tool} onChange={load} />
-            <WarrantySection tool={tool} />
-            <ClaimsHistorySection toolId={tool.id} />
-            <ReportLostButton tool={tool} onChange={load} />
+          </View>
 
-            {(tool.checkout_history || []).length > 0 && (
-              <>
-                <Text style={styles.sectionLabel}>HISTORY</Text>
+          {/* RECEIPTS (full section) */}
+          <View style={{ marginTop: 12 }}>
+            <ReceiptsSection receipts={tool.receipts} />
+          </View>
+
+          {/* MAINTENANCE log + WARRANTY detail + CLAIMS history */}
+          <View style={{ marginTop: 12 }}>
+            <MaintenanceSection tool={tool} onChange={load} />
+          </View>
+          <View style={{ marginTop: 12 }}>
+            <WarrantySection tool={tool} />
+          </View>
+          <View style={{ marginTop: 12 }}>
+            <ClaimsHistorySection toolId={tool.id} />
+          </View>
+
+          {/* REPORT LOST OR STOLEN */}
+          <View style={{ marginTop: 16 }}>
+            <ReportLostButton tool={tool} onChange={load} />
+          </View>
+
+          {/* CHECKOUT HISTORY collapsed at bottom */}
+          {(tool.checkout_history || []).length > 0 && (
+            <View style={{ marginTop: 18 }}>
+              <Text style={newStyles.sectionTitle}>CHECKOUT HISTORY</Text>
               {tool.checkout_history.slice().reverse().map((h: any, i: number) => (
                 <TouchableOpacity
                   key={i}
                   testID={`hist-${i}`}
-                  style={styles.histRow}
+                  style={newStyles.histRow}
                   onPress={() => h.borrower_id && router.push(`/borrower/${h.borrower_id}`)}
                   disabled={!h.borrower_id}
                   activeOpacity={0.7}
                 >
-                  <View>
-                    <Text style={styles.histName}>
-                      {h.borrower_name}
-                      {h.borrower_id ? "  ›" : ""}
-                    </Text>
-                    <Text style={styles.histDate}>
-                      Out: {formatDateTime(h.checked_out_at)}
-                    </Text>
-                    <Text style={styles.histDate}>
-                      In:{"  "}{h.checked_in_at ? formatDateTime(h.checked_in_at) : "—"}
-                    </Text>
-                    {!!h.notes && <Text style={styles.histNotes}>{h.notes}</Text>}
-                  </View>
+                  <Text style={newStyles.histName}>
+                    {h.borrower_name}{h.borrower_id ? "  ›" : ""}
+                  </Text>
+                  <Text style={newStyles.histDate}>
+                    Out: {formatDateTime(h.checked_out_at)}
+                  </Text>
+                  <Text style={newStyles.histDate}>
+                    In:{"  "}{h.checked_in_at ? formatDateTime(h.checked_in_at) : "—"}
+                  </Text>
+                  {!!h.notes && <Text style={newStyles.histNotes}>{h.notes}</Text>}
                 </TouchableOpacity>
               ))}
-            </>
+            </View>
           )}
-          </View>
 
-          {!tool.for_sale && !tool.sold && (
-            <TouchableOpacity
-              testID="list-for-sale-btn-bottom"
-              style={[styles.listForSaleCta, { marginTop: 24, marginBottom: 12 }]}
-              onPress={() => openSaleModal()}
-            >
-              <Ionicons name="pricetag-outline" size={18} color={theme.colors.accent} />
-              <Text style={styles.listForSaleCtaText}>LIST FOR SALE</Text>
-              <Ionicons name="chevron-forward" size={16} color={theme.colors.textMuted} />
-            </TouchableOpacity>
-          )}
         </View>
       </ScrollView>
 
-      <View style={styles.actionBar}>
-        <View style={{ flexDirection: "row", gap: 10 }}>
-          {tool.is_checked_out ? (
-            <TouchableOpacity testID="checkin-btn" style={[styles.btnSuccess, { flex: 2 }]} onPress={doCheckin}>
-              <Ionicons name="checkmark" size={22} color="#000" />
-              <Text style={styles.btnText}>CHECK IN</Text>
-            </TouchableOpacity>
-          ) : tool.needs_repair ? (
-            <TouchableOpacity
-              testID="mark-repaired-btn"
-              style={[styles.btnSuccess, { flex: 2 }]}
-              onPress={markRepaired}
-            >
-              <Ionicons name="checkmark-circle" size={22} color="#000" />
-              <Text style={styles.btnText}>MARK REPAIRED</Text>
-            </TouchableOpacity>
-          ) : (
-            <TouchableOpacity
-              testID="checkout-btn"
-              style={[styles.btn, { flex: 2 }]}
-              onPress={() => setShowCheckout(true)}
-            >
-              <Ionicons name="log-out-outline" size={22} color="#000" />
-              <Text style={styles.btnText}>CHECK OUT</Text>
-            </TouchableOpacity>
-          )}
-
-          {!tool.needs_repair && (
-            <TouchableOpacity
-              testID="mark-broken-btn"
-              style={[styles.btnDanger, { flex: 1 }]}
-              onPress={openRepair}
-            >
-              <Ionicons name="build" size={20} color={theme.colors.textPrimary} />
-              <Text style={[styles.btnText, { color: theme.colors.textPrimary }]}>BROKEN</Text>
-            </TouchableOpacity>
-          )}
-        </View>
-      </View>
-
-      <Modal visible={showCheckout} transparent animationType="slide">
+            <Modal visible={showCheckout} transparent animationType="slide">
         <View style={styles.modalBg}>
           <View style={styles.modalCard}>
             <Text style={styles.modalTitle}>CHECK OUT TOOL</Text>
@@ -2254,6 +2181,46 @@ function Field({ label, value }: { label: string; value?: string }) {
   );
 }
 
+// Pillbox row used in the redesigned ToolDetail layout.
+// Mirrors the look of the Home Screen rows: a grey container with the label on
+// the left and a darker rounded "value pill" on the right. Optional `onPress`
+// makes the row tappable (with a small chevron). Optional `sub` shows a
+// secondary line under the main label.
+function PillRow({
+  label,
+  value,
+  sub,
+  onPress,
+}: {
+  label: string;
+  value: string;
+  sub?: string;
+  onPress?: () => void;
+}) {
+  const Wrap: any = onPress ? TouchableOpacity : View;
+  return (
+    <Wrap style={newStyles.pillRow} {...(onPress ? { onPress, activeOpacity: 0.85 } : {})}>
+      <View style={{ flex: 1 }}>
+        <Text style={newStyles.pillRowLabel}>{label}</Text>
+        {!!sub && <Text style={newStyles.pillRowSub}>{sub}</Text>}
+      </View>
+      <View style={newStyles.pillRowValue}>
+        <Text style={newStyles.pillRowValueText} numberOfLines={1}>
+          {value || "—"}
+        </Text>
+      </View>
+      {!!onPress && (
+        <Ionicons
+          name="chevron-forward"
+          size={14}
+          color={theme.colors.textMuted}
+          style={{ marginLeft: 4 }}
+        />
+      )}
+    </Wrap>
+  );
+}
+
 function QuantityStepper({
   tool,
   onChange,
@@ -2903,6 +2870,361 @@ const styles = StyleSheet.create({
     letterSpacing: 1.5,
     fontSize: 11,
     textAlign: "center",
+  },
+});
+
+// New styles for the redesigned Tool Detail layout. Kept in a separate
+// StyleSheet so the original `styles` object isn't disturbed.
+const newStyles = StyleSheet.create({
+  // ---------- HEADER ----------
+  headerBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 14,
+    paddingTop: 8,
+    paddingBottom: 12,
+    gap: 10,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: theme.colors.border,
+  },
+  headerTitleCol: {
+    flex: 1,
+    minWidth: 0, // critical: lets the title shrink instead of pushing buttons off-screen
+  },
+  headerTitle: {
+    color: theme.colors.textPrimary,
+    fontWeight: "800",
+    fontSize: 20,
+    lineHeight: 24,
+  },
+  headerSerial: {
+    color: theme.colors.textMuted,
+    fontSize: 12,
+    fontWeight: "600",
+    letterSpacing: 0.6,
+    marginTop: 2,
+  },
+  headerActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 16,
+    flexShrink: 0,
+  },
+
+  // ---------- PAGE WRAPPER ----------
+  page: {
+    paddingHorizontal: 14,
+    paddingTop: 14,
+    gap: 14,
+  },
+
+  // ---------- STATUS PILLBOX ROW ----------
+  statusPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: theme.colors.bgSecondary,
+    borderColor: theme.colors.border,
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    gap: 8,
+  },
+  statusDot: {
+    width: 9,
+    height: 9,
+    borderRadius: 999,
+  },
+  statusLabel: {
+    color: theme.colors.textPrimary,
+    fontWeight: "800",
+    fontSize: 12,
+    letterSpacing: 0.8,
+    flexShrink: 1,
+  },
+  statusActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    flexShrink: 0,
+  },
+  statusBtn: {
+    backgroundColor: theme.colors.accent,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 999,
+  },
+  statusBtnText: {
+    color: "#000",
+    fontWeight: "900",
+    fontSize: 10,
+    letterSpacing: 0.8,
+  },
+  statusBtnGhost: {
+    backgroundColor: theme.colors.bg,
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  // ---------- PHOTO + RIGHT-COLUMN PILLBOX FIELDS ----------
+  photoRow: {
+    flexDirection: "row",
+    gap: 12,
+    alignItems: "stretch",
+  },
+  photoFrame: {
+    width: 110,
+    height: 110,
+    borderRadius: 12,
+    backgroundColor: theme.colors.bgSecondary,
+    borderColor: theme.colors.border,
+    borderWidth: 1,
+    overflow: "hidden",
+  },
+  photoImg: { width: "100%", height: "100%" },
+  photoEmpty: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    backgroundColor: theme.colors.bgSecondary,
+  },
+  photoEmptyText: {
+    color: theme.colors.accent,
+    fontSize: 10,
+    fontWeight: "800",
+    letterSpacing: 0.8,
+  },
+  photoRightCol: {
+    flex: 1,
+    justifyContent: "space-between",
+    gap: 6,
+  },
+
+  // ---------- PILLBOX ROW (used in PillRow component) ----------
+  pillRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: theme.colors.bgSecondary,
+    borderColor: theme.colors.border,
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    gap: 10,
+    minHeight: 32,
+  },
+  pillRowLabel: {
+    color: theme.colors.textPrimary,
+    fontWeight: "800",
+    fontSize: 11,
+    letterSpacing: 0.9,
+  },
+  pillRowSub: {
+    color: theme.colors.textMuted,
+    fontWeight: "600",
+    fontSize: 10,
+    marginTop: 1,
+  },
+  pillRowValue: {
+    backgroundColor: theme.colors.bg,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    maxWidth: "60%",
+  },
+  pillRowValueText: {
+    color: theme.colors.textPrimary,
+    fontWeight: "800",
+    fontSize: 11.5,
+    letterSpacing: 0.4,
+  },
+
+  // ---------- DESCRIPTION ----------
+  descBox: {
+    backgroundColor: theme.colors.bgSecondary,
+    borderColor: theme.colors.border,
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  descText: {
+    color: theme.colors.textPrimary,
+    fontSize: 14,
+    lineHeight: 20,
+  },
+
+  // ---------- TAGS ----------
+  tagWrap: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 6,
+  },
+  tagChip: {
+    backgroundColor: theme.colors.bgSecondary,
+    borderColor: theme.colors.border,
+    borderWidth: 1,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 999,
+  },
+  tagChipText: {
+    color: theme.colors.textPrimary,
+    fontSize: 11,
+    fontWeight: "700",
+  },
+
+  // ---------- FIELD GROUP ----------
+  fieldGroup: {
+    gap: 6,
+  },
+
+  // ---------- SET SERIALS ----------
+  setSerialBox: {
+    backgroundColor: theme.colors.bgSecondary,
+    borderColor: theme.colors.border,
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    gap: 6,
+  },
+  setSerialRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  setSerialIdx: {
+    color: theme.colors.textMuted,
+    fontSize: 12,
+    fontWeight: "700",
+    width: 20,
+  },
+  setSerialVal: {
+    color: theme.colors.textPrimary,
+    fontWeight: "700",
+    fontSize: 13,
+    flex: 1,
+  },
+  emptyHint: {
+    color: theme.colors.textMuted,
+    fontStyle: "italic",
+    fontSize: 12,
+  },
+
+  // ---------- REPAIR / SALE CARDS ----------
+  repairCard: {
+    backgroundColor: "rgba(231, 76, 60, 0.08)",
+    borderColor: theme.colors.danger,
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 12,
+  },
+  repairTitle: {
+    color: theme.colors.danger,
+    fontWeight: "900",
+    fontSize: 12,
+    letterSpacing: 0.8,
+  },
+  repairLine: {
+    color: theme.colors.textPrimary,
+    fontSize: 12,
+    marginTop: 4,
+  },
+  saleCard: {
+    backgroundColor: theme.colors.accent,
+    borderRadius: 12,
+    padding: 12,
+  },
+  saleTitle: {
+    color: "#000",
+    fontWeight: "900",
+    fontSize: 13,
+    letterSpacing: 0.8,
+  },
+  saleNotes: {
+    color: "#000",
+    fontSize: 12,
+    marginTop: 2,
+  },
+  saleBtn: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 4,
+    paddingVertical: 8,
+    borderRadius: 999,
+  },
+  saleBtnText: {
+    fontWeight: "900",
+    fontSize: 10,
+    letterSpacing: 0.8,
+  },
+
+  // ---------- BOTTOM ACTION CLUSTER ----------
+  divider: {
+    height: 1,
+    backgroundColor: theme.colors.border,
+    marginVertical: 6,
+  },
+  sectionTitle: {
+    color: theme.colors.textMuted,
+    fontWeight: "800",
+    fontSize: 11,
+    letterSpacing: 1.2,
+  },
+  actionBtn: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    backgroundColor: theme.colors.bgSecondary,
+    borderColor: theme.colors.border,
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingVertical: 12,
+  },
+  actionBtnText: {
+    color: theme.colors.textPrimary,
+    fontWeight: "800",
+    fontSize: 11,
+    letterSpacing: 0.8,
+  },
+
+  // ---------- CHECKOUT HISTORY ----------
+  histRow: {
+    backgroundColor: theme.colors.bgSecondary,
+    borderColor: theme.colors.border,
+    borderWidth: 1,
+    borderRadius: 10,
+    padding: 10,
+    marginTop: 6,
+    gap: 2,
+  },
+  histName: {
+    color: theme.colors.textPrimary,
+    fontWeight: "800",
+    fontSize: 13,
+  },
+  histDate: {
+    color: theme.colors.textMuted,
+    fontSize: 11,
+  },
+  histNotes: {
+    color: theme.colors.textPrimary,
+    fontSize: 12,
+    fontStyle: "italic",
+    marginTop: 4,
   },
 });
 
