@@ -36,6 +36,7 @@ import { ReceiptsSection } from "../../src/sections/ReceiptsSection";
 import { MaintenanceSection } from "../../src/sections/MaintenanceSection";
 import { ClaimsHistorySection } from "../../src/sections/ClaimsHistorySection";
 import { WarrantySection } from "../../src/sections/WarrantySection";
+import ImageView from "react-native-image-viewing";
 
 export default function ToolDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
