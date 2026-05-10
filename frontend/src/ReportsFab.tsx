@@ -15,9 +15,11 @@ export function ReportsFab() {
   const path = usePathname();
   const insets = useSafeAreaInsets();
 
-  // Show on these main tab routes only.
+  // Show on these main tab routes only. Some Expo Router versions return the
+  // route-group-prefixed path ("/(tabs)/inventory") so we normalize first.
+  const p = (path || "").replace("/(tabs)", "") || "/";
   const TAB_PATHS = new Set(["/", "/inventory", "/dealers", "/more"]);
-  if (!TAB_PATHS.has(path || "")) return null;
+  if (!TAB_PATHS.has(p)) return null;
 
   return (
     <View pointerEvents="box-none" style={[styles.wrap, { top: insets.top + 18 }]}>
