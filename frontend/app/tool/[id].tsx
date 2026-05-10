@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import {
   View,
   Text,
@@ -51,6 +51,11 @@ export default function ToolDetail() {
   const [coNotes, setCoNotes] = useState("");
   const [photoIdx, setPhotoIdx] = useState(0);
   const [isImageViewerVisible, setIsImageViewerVisible] = useState(false);
+  // Which pillbox in the Attachments section is currently expanded.
+  // Default to "gallery" so photos are visible at a glance.
+  const [attachOpen, setAttachOpen] = useState<
+    "gallery" | "documents" | "receipts" | null
+  >("gallery");
 
   // Repair modal
   const todayStr = () => new Date().toISOString().substring(0, 10);
@@ -1163,21 +1168,8 @@ export default function ToolDetail() {
             {tool.name || "Untitled tool"}
           </Text>
         </View>
-        <View style={newStyles.headerActions}>
-          <TouchableOpacity testID="export-pdf-btn" onPress={() => setShowExportPicker(true)} hitSlop={10}>
-            <Ionicons name="document-text-outline" size={22} color={theme.colors.accent} />
-          </TouchableOpacity>
-          <TouchableOpacity
-            testID="edit-tool-btn"
-            onPress={() => router.push({ pathname: "/tool/edit", params: { id: tool.id } })}
-            hitSlop={10}
-          >
-            <Ionicons name="create-outline" size={22} color={theme.colors.textPrimary} />
-          </TouchableOpacity>
-          <TouchableOpacity testID="delete-tool-btn" onPress={doDelete} hitSlop={10}>
-            <Ionicons name="trash-outline" size={22} color={theme.colors.danger} />
-          </TouchableOpacity>
-        </View>
+        {/* Header actions intentionally removed — all actions live in the
+            bottom "ACTIONS" section. */}
       </View>
 
       <ScrollView contentContainerStyle={{ paddingBottom: 40 }}>
@@ -1388,67 +1380,84 @@ export default function ToolDetail() {
             </View>
           )}
 
-          {/* ===== BOTTOM ACTION CLUSTER ===== */}
-          <View style={newStyles.divider} />
-          <Text style={newStyles.sectionTitle}>ACTIONS</Text>
-
-          {/* Status-change buttons (Check Out/In, Mark Broken, List for Sale, Mark Sold) */}
-          {!tool.is_sold && !tool.is_lost && (
-            <View style={newStyles.actionRow}>
-              {tool.is_checked_out ? (
-                <TouchableOpacity style={newStyles.actionBtn} onPress={doCheckin}>
-                  <Ionicons name="log-in-outline" size={16} color={theme.colors.accent} />
-                  <Text style={newStyles.actionBtnText}>CHECK IN</Text>
-                </TouchableOpacity>
-              ) : (
-                <TouchableOpacity style={newStyles.actionBtn} onPress={() => setShowCheckout(true)}>
-                  <Ionicons name="log-out-outline" size={16} color={theme.colors.accent} />
-                  <Text style={newStyles.actionBtnText}>CHECK OUT</Text>
-                </TouchableOpacity>
-              )}
-              {tool.needs_repair ? (
-                <TouchableOpacity style={newStyles.actionBtn} onPress={markRepaired}>
-                  <Ionicons name="checkmark-done" size={16} color={theme.colors.success} />
-                  <Text style={newStyles.actionBtnText}>MARK FIXED</Text>
-                </TouchableOpacity>
-              ) : (
-                <TouchableOpacity style={newStyles.actionBtn} onPress={openRepair}>
-                  <Ionicons name="build-outline" size={16} color={theme.colors.danger} />
-                  <Text style={newStyles.actionBtnText}>MARK BROKEN</Text>
-                </TouchableOpacity>
-              )}
-            </View>
-          )}
-          {!tool.is_sold && !tool.is_lost && (
-            <View style={newStyles.actionRow}>
-              {tool.for_sale ? (
-                <>
-                  <TouchableOpacity style={newStyles.actionBtn} onPress={() => openSaleModal()}>
-                    <Ionicons name="create-outline" size={16} color={theme.colors.accent} />
-                    <Text style={newStyles.actionBtnText}>EDIT LISTING</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={newStyles.actionBtn} onPress={() => setShowMarkSold(true)}>
-                    <Ionicons name="checkmark-circle" size={16} color={theme.colors.success} />
-                    <Text style={newStyles.actionBtnText}>MARK SOLD</Text>
-                  </TouchableOpacity>
-                </>
-              ) : (
-                <TouchableOpacity style={newStyles.actionBtn} onPress={() => openSaleModal()}>
-                  <Ionicons name="pricetag-outline" size={16} color={theme.colors.accent} />
-                  <Text style={newStyles.actionBtnText}>LIST FOR SALE</Text>
-                </TouchableOpacity>
-              )}
-            </View>
-          )}
-
-          {/* DOCUMENTS (full section) */}
+          {/* ===== ATTACHMENTS — Gallery / Documents / Receipts ===== */}
           <View style={{ marginTop: 16 }}>
-            <DocumentsSection tool={tool} onChange={load} />
-          </View>
+            <Text style={newStyles.sectionTitle}>ATTACHMENTS</Text>
 
-          {/* RECEIPTS (full section) */}
-          <View style={{ marginTop: 12 }}>
-            <ReceiptsSection receipts={tool.receipts} />
+            {/* GALLERY pillbox */}
+            <AttachmentPill
+              icon="images-outline"
+              label="GALLERY"
+              count={photos.length}
+              open={attachOpen === "gallery"}
+              onToggle={() =>
+                setAttachOpen(attachOpen === "gallery" ? null : "gallery")
+              }
+            >
+              {photos.length === 0 ? (
+                <TouchableOpacity
+                  style={newStyles.galleryEmpty}
+                  onPress={promptAddPhoto}
+                  testID="gallery-add-first"
+                >
+                  <Ionicons name="camera" size={20} color={theme.colors.accent} />
+                  <Text style={newStyles.galleryEmptyText}>ADD PHOTO</Text>
+                </TouchableOpacity>
+              ) : (
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={newStyles.galleryRow}
+                >
+                  {photos.map((p: string, i: number) => (
+                    <TouchableOpacity
+                      key={i}
+                      testID={`gallery-thumb-${i}`}
+                      onPress={() => {
+                        setPhotoIdx(i);
+                        setIsImageViewerVisible(true);
+                      }}
+                      activeOpacity={0.85}
+                    >
+                      <Image source={{ uri: p }} style={newStyles.galleryThumb} />
+                    </TouchableOpacity>
+                  ))}
+                  <TouchableOpacity
+                    testID="gallery-add-more"
+                    style={newStyles.galleryAddTile}
+                    onPress={promptAddPhoto}
+                  >
+                    <Ionicons name="add" size={22} color={theme.colors.accent} />
+                  </TouchableOpacity>
+                </ScrollView>
+              )}
+            </AttachmentPill>
+
+            {/* DOCUMENTS pillbox */}
+            <AttachmentPill
+              icon="document-attach-outline"
+              label="DOCUMENTS"
+              count={Array.isArray(tool.documents) ? tool.documents.length : 0}
+              open={attachOpen === "documents"}
+              onToggle={() =>
+                setAttachOpen(attachOpen === "documents" ? null : "documents")
+              }
+            >
+              <DocumentsSection tool={tool} onChange={load} />
+            </AttachmentPill>
+
+            {/* RECEIPTS pillbox */}
+            <AttachmentPill
+              icon="receipt-outline"
+              label="RECEIPTS"
+              count={Array.isArray(tool.receipts) ? tool.receipts.length : 0}
+              open={attachOpen === "receipts"}
+              onToggle={() =>
+                setAttachOpen(attachOpen === "receipts" ? null : "receipts")
+              }
+            >
+              <ReceiptsSection receipts={tool.receipts} />
+            </AttachmentPill>
           </View>
 
           {/* MAINTENANCE log + WARRANTY detail + CLAIMS history */}
@@ -1467,7 +1476,7 @@ export default function ToolDetail() {
             <ReportLostButton tool={tool} onChange={load} />
           </View>
 
-          {/* CHECKOUT HISTORY collapsed at bottom */}
+          {/* CHECKOUT HISTORY collapsed before actions */}
           {(tool.checkout_history || []).length > 0 && (
             <View style={{ marginTop: 18 }}>
               <Text style={newStyles.sectionTitle}>CHECKOUT HISTORY</Text>
@@ -1494,6 +1503,133 @@ export default function ToolDetail() {
               ))}
             </View>
           )}
+
+          {/* ===== BOTTOM ACTION CLUSTER (final section on the page) ===== */}
+          <View style={newStyles.divider} />
+          <Text style={newStyles.sectionTitle}>ACTIONS</Text>
+
+          <View style={newStyles.actionGrid}>
+            {/* EDIT ITEM */}
+            <TouchableOpacity
+              testID="action-edit"
+              style={newStyles.actionTile}
+              onPress={() => router.push({ pathname: "/tool/edit", params: { id: tool.id } })}
+            >
+              <Ionicons name="create-outline" size={20} color={theme.colors.accent} />
+              <Text style={newStyles.actionTileText}>EDIT</Text>
+            </TouchableOpacity>
+
+            {/* DOCUMENTS — expands the Documents pill in Attachments */}
+            <TouchableOpacity
+              testID="action-documents"
+              style={newStyles.actionTile}
+              onPress={() => setAttachOpen("documents")}
+            >
+              <Ionicons name="document-attach-outline" size={20} color={theme.colors.accent} />
+              <Text style={newStyles.actionTileText}>DOCUMENTS</Text>
+            </TouchableOpacity>
+
+            {/* CHECK OUT / CHECK IN (contextual) */}
+            {!tool.is_sold && !tool.is_lost && (
+              tool.is_checked_out ? (
+                <TouchableOpacity
+                  testID="action-checkin"
+                  style={newStyles.actionTile}
+                  onPress={doCheckin}
+                >
+                  <Ionicons name="log-in-outline" size={20} color={theme.colors.accent} />
+                  <Text style={newStyles.actionTileText}>CHECK IN</Text>
+                </TouchableOpacity>
+              ) : (
+                <TouchableOpacity
+                  testID="action-checkout"
+                  style={newStyles.actionTile}
+                  onPress={() => setShowCheckout(true)}
+                >
+                  <Ionicons name="log-out-outline" size={20} color={theme.colors.accent} />
+                  <Text style={newStyles.actionTileText}>CHECK OUT</Text>
+                </TouchableOpacity>
+              )
+            )}
+
+            {/* MARK BROKEN / MARK FIXED (contextual) */}
+            {!tool.is_sold && !tool.is_lost && (
+              tool.needs_repair ? (
+                <TouchableOpacity
+                  testID="action-fixed"
+                  style={newStyles.actionTile}
+                  onPress={markRepaired}
+                >
+                  <Ionicons name="checkmark-done" size={20} color={theme.colors.success} />
+                  <Text style={newStyles.actionTileText}>MARK FIXED</Text>
+                </TouchableOpacity>
+              ) : (
+                <TouchableOpacity
+                  testID="action-broken"
+                  style={newStyles.actionTile}
+                  onPress={openRepair}
+                >
+                  <Ionicons name="build-outline" size={20} color={theme.colors.danger} />
+                  <Text style={newStyles.actionTileText}>MARK BROKEN</Text>
+                </TouchableOpacity>
+              )
+            )}
+
+            {/* EXPORT PDF */}
+            <TouchableOpacity
+              testID="action-export"
+              style={newStyles.actionTile}
+              onPress={() => setShowExportPicker(true)}
+            >
+              <Ionicons name="document-text-outline" size={20} color={theme.colors.accent} />
+              <Text style={newStyles.actionTileText}>EXPORT</Text>
+            </TouchableOpacity>
+
+            {/* LIST FOR SALE / EDIT LISTING + MARK SOLD (contextual) */}
+            {!tool.is_sold && !tool.is_lost && (
+              tool.for_sale ? (
+                <>
+                  <TouchableOpacity
+                    testID="action-edit-listing"
+                    style={newStyles.actionTile}
+                    onPress={() => openSaleModal()}
+                  >
+                    <Ionicons name="pricetag" size={20} color={theme.colors.accent} />
+                    <Text style={newStyles.actionTileText}>EDIT LISTING</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    testID="action-mark-sold"
+                    style={newStyles.actionTile}
+                    onPress={() => setShowMarkSold(true)}
+                  >
+                    <Ionicons name="checkmark-circle" size={20} color={theme.colors.success} />
+                    <Text style={newStyles.actionTileText}>MARK SOLD</Text>
+                  </TouchableOpacity>
+                </>
+              ) : (
+                <TouchableOpacity
+                  testID="action-list-sale"
+                  style={newStyles.actionTile}
+                  onPress={() => openSaleModal()}
+                >
+                  <Ionicons name="pricetag-outline" size={20} color={theme.colors.accent} />
+                  <Text style={newStyles.actionTileText}>LIST FOR SALE</Text>
+                </TouchableOpacity>
+              )
+            )}
+
+            {/* DELETE — always available, danger styling */}
+            <TouchableOpacity
+              testID="action-delete"
+              style={[newStyles.actionTile, newStyles.actionTileDanger]}
+              onPress={doDelete}
+            >
+              <Ionicons name="trash-outline" size={20} color={theme.colors.danger} />
+              <Text style={[newStyles.actionTileText, { color: theme.colors.danger }]}>
+                DELETE ITEM
+              </Text>
+            </TouchableOpacity>
+          </View>
 
         </View>
       </ScrollView>
@@ -2203,6 +2339,48 @@ function Field({ label, value }: { label: string; value?: string }) {
     <View style={styles.field}>
       <Text style={styles.fieldLabel}>{label}</Text>
       <Text style={styles.fieldValue}>{value || "—"}</Text>
+    </View>
+  );
+}
+
+// Collapsible pillbox used in the Attachments section. Shows label + a small
+// count badge and a chevron; tapping toggles `open`. When open the children
+// are rendered inside a body view directly below the header pill.
+function AttachmentPill({
+  icon,
+  label,
+  count,
+  open,
+  onToggle,
+  children,
+}: {
+  icon: any;
+  label: string;
+  count: number;
+  open: boolean;
+  onToggle: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <View style={newStyles.attachWrap}>
+      <TouchableOpacity
+        style={newStyles.attachHeader}
+        activeOpacity={0.85}
+        onPress={onToggle}
+        testID={`attach-${label.toLowerCase()}-toggle`}
+      >
+        <Ionicons name={icon} size={16} color={theme.colors.accent} />
+        <Text style={newStyles.attachHeaderLabel}>{label}</Text>
+        <View style={newStyles.attachCountPill}>
+          <Text style={newStyles.attachCountText}>{count}</Text>
+        </View>
+        <Ionicons
+          name={open ? "chevron-up" : "chevron-down"}
+          size={16}
+          color={theme.colors.textMuted}
+        />
+      </TouchableOpacity>
+      {open && <View style={newStyles.attachBody}>{children}</View>}
     </View>
   );
 }
@@ -3306,6 +3484,124 @@ const newStyles = StyleSheet.create({
     fontWeight: "800",
     fontSize: 11,
     letterSpacing: 0.8,
+  },
+
+  // ---------- BOTTOM ACTION GRID (2-up tiles) ----------
+  actionGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginTop: 8,
+  },
+  actionTile: {
+    width: "48.5%",
+    minHeight: 60,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    backgroundColor: theme.colors.bgSecondary,
+    borderColor: theme.colors.border,
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 6,
+  },
+  actionTileDanger: {
+    borderColor: theme.colors.danger,
+    backgroundColor: "rgba(220,38,38,0.08)",
+  },
+  actionTileText: {
+    color: theme.colors.textPrimary,
+    fontWeight: "800",
+    fontSize: 11,
+    letterSpacing: 0.8,
+    textAlign: "center",
+  },
+
+  // ---------- ATTACHMENTS (collapsible pillboxes) ----------
+  attachWrap: {
+    marginTop: 8,
+  },
+  attachHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    backgroundColor: theme.colors.bgSecondary,
+    borderColor: theme.colors.border,
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  attachHeaderLabel: {
+    flex: 1,
+    color: theme.colors.textPrimary,
+    fontWeight: "800",
+    fontSize: 12,
+    letterSpacing: 1,
+  },
+  attachCountPill: {
+    minWidth: 28,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 999,
+    backgroundColor: theme.colors.bg,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  attachCountText: {
+    color: theme.colors.textPrimary,
+    fontWeight: "800",
+    fontSize: 11,
+  },
+  attachBody: {
+    marginTop: 8,
+    paddingHorizontal: 4,
+  },
+
+  // ---------- GALLERY thumbnail strip ----------
+  galleryRow: {
+    flexDirection: "row",
+    gap: 8,
+    paddingVertical: 4,
+  },
+  galleryThumb: {
+    width: 84,
+    height: 84,
+    borderRadius: 10,
+    backgroundColor: theme.colors.bg,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  galleryAddTile: {
+    width: 84,
+    height: 84,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderStyle: "dashed",
+    borderColor: theme.colors.accent,
+    backgroundColor: theme.colors.bgSecondary,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  galleryEmpty: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingVertical: 16,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderStyle: "dashed",
+    borderColor: theme.colors.accent,
+  },
+  galleryEmptyText: {
+    color: theme.colors.accent,
+    fontWeight: "800",
+    fontSize: 12,
+    letterSpacing: 1,
   },
 
   // ---------- CHECKOUT HISTORY ----------
