@@ -54,7 +54,7 @@ export default function ToolDetail() {
   // Which pillbox in the Attachments section is currently expanded.
   // Default to "gallery" so photos are visible at a glance.
   const [attachOpen, setAttachOpen] = useState<
-    "gallery" | "documents" | "receipts" | null
+    "gallery" | "documents" | "receipts" | "maintenance" | "warranty" | null
   >("gallery");
 
   // Repair modal
@@ -1227,8 +1227,7 @@ export default function ToolDetail() {
 
           {/* PILLBOX DETAIL FIELDS — dealer first, then serial numbers, then everything else */}
           <View style={newStyles.fieldGroup}>
-            <PillRow
-              label="DEALER"
+            <PillRow label="DEALER"
               value={tool.dealer_name || "—"}
               sub={tool.purchased_from_agent_name || undefined}
               onPress={tool.dealer_id ? () => router.push(`/dealer/${tool.dealer_id}`) : undefined}
@@ -1263,8 +1262,6 @@ export default function ToolDetail() {
               );
             })()}
 
-            <PillRow label="MAINTENANCE" value={maintenanceSummary} />
-            <PillRow label="WARRANTY" value={warrantySummary} />
             {!!tool.brand && <PillRow label="BRAND" value={tool.brand} />}
             {!!tool.model && <PillRow label="MODEL" value={tool.model} />}
             {!!tool.purchase_date && (
@@ -1458,15 +1455,39 @@ export default function ToolDetail() {
             >
               <ReceiptsSection receipts={tool.receipts} />
             </AttachmentPill>
+
+            {/* MAINTENANCE pillbox */}
+            <AttachmentPill
+              icon="construct-outline"
+              label="MAINTENANCE"
+              count={Array.isArray(tool.maintenance_logs) ? tool.maintenance_logs.length : 0}
+              open={attachOpen === "maintenance"}
+              onToggle={() =>
+                setAttachOpen(attachOpen === "maintenance" ? null : "maintenance")
+              }
+            >
+              <MaintenanceSection tool={tool} onChange={load} />
+            </AttachmentPill>
+
+            {/* WARRANTY pillbox */}
+            <AttachmentPill
+              icon="shield-checkmark-outline"
+              label="WARRANTY"
+              count={
+                tool.warranty && (tool.warranty.type || tool.warranty.expires_at)
+                  ? 1
+                  : 0
+              }
+              open={attachOpen === "warranty"}
+              onToggle={() =>
+                setAttachOpen(attachOpen === "warranty" ? null : "warranty")
+              }
+            >
+              <WarrantySection tool={tool} />
+            </AttachmentPill>
           </View>
 
-          {/* MAINTENANCE log + WARRANTY detail + CLAIMS history */}
-          <View style={{ marginTop: 12 }}>
-            <MaintenanceSection tool={tool} onChange={load} />
-          </View>
-          <View style={{ marginTop: 12 }}>
-            <WarrantySection tool={tool} />
-          </View>
+          {/* CLAIMS HISTORY (stays as its own section) */}
           <View style={{ marginTop: 12 }}>
             <ClaimsHistorySection toolId={tool.id} />
           </View>
