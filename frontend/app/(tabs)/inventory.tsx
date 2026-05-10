@@ -738,16 +738,6 @@ export default function InventoryScreen() {
                       <Text style={styles.lostBadgeText}>CHECKED OUT</Text>
                     </View>
                   )}
-                  {item.is_set && (
-                    <View style={styles.setBadge}>
-                      <Ionicons name="cube" size={10} color="#000" />
-                      <Text style={styles.setBadgeText}>
-                        SET{Array.isArray(item.set_serials) && item.set_serials.length > 0
-                          ? ` · ${item.set_serials.length}`
-                          : ""}
-                      </Text>
-                    </View>
-                  )}
                 </View>
                 <Text style={styles.rowSub} numberOfLines={1}>
                   {item.location_name || "No location"}
@@ -761,6 +751,16 @@ export default function InventoryScreen() {
                       <Ionicons name="briefcase" size={11} color={theme.colors.textMuted} />{" "}
                       {item.dealer_name}
                     </Text>
+                  )}
+                  {item.is_set && (
+                    <View style={styles.setBadge}>
+                      <Ionicons name="cube" size={10} color="#000" />
+                      <Text style={styles.setBadgeText}>
+                        SET{Array.isArray(item.set_serials) && item.set_serials.length > 0
+                          ? ` · ${item.set_serials.length}`
+                          : ""}
+                      </Text>
+                    </View>
                   )}
                   <View style={styles.rowQtyPill}>
                     <Text style={styles.rowQtyPillText}>×{Math.max(1, Number(item.quantity) || 1)}</Text>

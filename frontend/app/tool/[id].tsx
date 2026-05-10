@@ -1275,16 +1275,7 @@ export default function ToolDetail() {
             {!!tool.category_name && <PillRow label="CATEGORY" value={tool.category_name} />}
           </View>
 
-          {/* TAGS — chips below the detail pillboxes */}
-          {(tool.tag_names || []).length > 0 && (
-            <View style={newStyles.tagWrap}>
-              {tool.tag_names.map((t: string) => (
-                <View key={t} style={newStyles.tagChip}>
-                  <Text style={newStyles.tagChipText}>{t}</Text>
-                </View>
-              ))}
-            </View>
-          )}
+          {/* TAGS moved to the very bottom of the page — see below */}
 
           {/* Quantity stepper is now opened via the QUANTITY pillbox in the
               photo row above — see <showQtyModal> Modal below. */}
@@ -1656,6 +1647,20 @@ export default function ToolDetail() {
               </Text>
             </TouchableOpacity>
           </View>
+
+          {/* ===== TAGS — pinned at the very bottom of the page ===== */}
+          {(tool.tag_names || []).length > 0 && (
+            <View style={{ marginTop: 18 }}>
+              <Text style={newStyles.sectionTitle}>TAGS</Text>
+              <View style={[newStyles.tagWrap, { marginTop: 8 }]}>
+                {tool.tag_names.map((t: string) => (
+                  <View key={t} style={newStyles.tagChip}>
+                    <Text style={newStyles.tagChipText}>{t}</Text>
+                  </View>
+                ))}
+              </View>
+            </View>
+          )}
 
         </View>
       </ScrollView>
@@ -3347,8 +3352,9 @@ const newStyles = StyleSheet.create({
   },
   tagChipText: {
     color: theme.colors.textPrimary,
-    fontSize: 11,
-    fontWeight: "700",
+    fontSize: 9.5,
+    fontWeight: "800",
+    letterSpacing: 0.4,
   },
 
   // ---------- FIELD GROUP ----------
@@ -3365,15 +3371,15 @@ const newStyles = StyleSheet.create({
     borderColor: theme.colors.border,
     borderWidth: 1,
     borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    minHeight: 34,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    minHeight: 28,
   },
   locationWideText: {
     flex: 1,
     color: theme.colors.textPrimary,
     fontWeight: "800",
-    fontSize: 11,
+    fontSize: 10,
     letterSpacing: 0.3,
   },
 
@@ -3386,21 +3392,22 @@ const newStyles = StyleSheet.create({
     borderColor: theme.colors.border,
     borderWidth: 1,
     borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
     marginTop: 8,
+    minHeight: 28,
   },
   historyLinkLabel: {
     flex: 1,
     color: theme.colors.textPrimary,
     fontWeight: "800",
-    fontSize: 12,
-    letterSpacing: 1,
+    fontSize: 9.5,
+    letterSpacing: 0.8,
   },
   historyCount: {
-    minWidth: 28,
+    minWidth: 24,
     paddingHorizontal: 8,
-    paddingVertical: 2,
+    paddingVertical: 3,
     borderRadius: 999,
     backgroundColor: theme.colors.bg,
     borderWidth: 1,
@@ -3411,7 +3418,7 @@ const newStyles = StyleSheet.create({
   historyCountText: {
     color: theme.colors.textPrimary,
     fontWeight: "800",
-    fontSize: 11,
+    fontSize: 10,
   },
 
   // ---------- SERIAL NUMBERS (under Dealer) ----------
@@ -3420,15 +3427,15 @@ const newStyles = StyleSheet.create({
     borderColor: theme.colors.border,
     borderWidth: 1,
     borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    gap: 4,
   },
   serialBoxLabel: {
     color: theme.colors.textPrimary,
     fontWeight: "800",
-    fontSize: 11,
-    letterSpacing: 0.9,
+    fontSize: 9.5,
+    letterSpacing: 0.8,
     marginBottom: 2,
   },
   serialRow: {
@@ -3439,20 +3446,20 @@ const newStyles = StyleSheet.create({
     borderWidth: 1,
     borderColor: theme.colors.border,
     borderRadius: 999,
-    paddingHorizontal: 12,
-    paddingVertical: 5,
+    paddingHorizontal: 10,
+    paddingVertical: 3,
   },
   serialIdx: {
     color: theme.colors.textMuted,
-    fontSize: 11,
+    fontSize: 9.5,
     fontWeight: "800",
-    minWidth: 18,
+    minWidth: 16,
   },
   serialVal: {
     color: theme.colors.textPrimary,
     fontWeight: "800",
-    fontSize: 12,
-    letterSpacing: 0.4,
+    fontSize: 10,
+    letterSpacing: 0.3,
     flex: 1,
   },
 
@@ -3619,20 +3626,21 @@ const newStyles = StyleSheet.create({
     borderColor: theme.colors.border,
     borderWidth: 1,
     borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    minHeight: 28,
   },
   attachHeaderLabel: {
     flex: 1,
     color: theme.colors.textPrimary,
     fontWeight: "800",
-    fontSize: 12,
-    letterSpacing: 1,
+    fontSize: 9.5,
+    letterSpacing: 0.8,
   },
   attachCountPill: {
-    minWidth: 28,
+    minWidth: 24,
     paddingHorizontal: 8,
-    paddingVertical: 2,
+    paddingVertical: 3,
     borderRadius: 999,
     backgroundColor: theme.colors.bg,
     borderWidth: 1,
@@ -3643,7 +3651,7 @@ const newStyles = StyleSheet.create({
   attachCountText: {
     color: theme.colors.textPrimary,
     fontWeight: "800",
-    fontSize: 11,
+    fontSize: 10,
   },
   attachBody: {
     marginTop: 8,
