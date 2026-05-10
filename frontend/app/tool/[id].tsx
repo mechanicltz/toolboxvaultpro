@@ -1186,45 +1186,7 @@ export default function ToolDetail() {
       <ScrollView contentContainerStyle={{ paddingBottom: 40 }}>
         <View style={newStyles.page}>
 
-          {/* STATUS PILLBOX — small row above photo with inline status-change pill buttons */}
-          <View style={newStyles.statusPill}>
-            <View style={[newStyles.statusDot, { backgroundColor: statusInfo.color }]} />
-            <Text style={newStyles.statusLabel} numberOfLines={1}>{statusInfo.label}</Text>
-            <View style={{ flex: 1 }} />
-            <View style={newStyles.statusActions}>
-              {tool.is_checked_out ? (
-                <TouchableOpacity testID="status-checkin" style={newStyles.statusBtn} onPress={doCheckin}>
-                  <Text style={newStyles.statusBtnText}>CHECK IN</Text>
-                </TouchableOpacity>
-              ) : tool.needs_repair ? (
-                <TouchableOpacity testID="status-fixed" style={newStyles.statusBtn} onPress={markRepaired}>
-                  <Text style={newStyles.statusBtnText}>FIXED</Text>
-                </TouchableOpacity>
-              ) : !tool.is_sold && !tool.is_lost ? (
-                <TouchableOpacity testID="status-checkout" style={newStyles.statusBtn} onPress={() => setShowCheckout(true)}>
-                  <Text style={newStyles.statusBtnText}>CHECK OUT</Text>
-                </TouchableOpacity>
-              ) : null}
-              {!tool.is_sold && !tool.is_lost && !tool.needs_repair && (
-                <TouchableOpacity testID="status-broken" style={newStyles.statusBtnGhost} onPress={openRepair}>
-                  <Ionicons name="build" size={11} color={theme.colors.danger} />
-                </TouchableOpacity>
-              )}
-              {!tool.is_sold && !tool.is_lost && (
-                tool.for_sale ? (
-                  <TouchableOpacity testID="status-marksold" style={newStyles.statusBtnGhost} onPress={() => setShowMarkSold(true)}>
-                    <Ionicons name="checkmark-circle" size={13} color={theme.colors.accent} />
-                  </TouchableOpacity>
-                ) : (
-                  <TouchableOpacity testID="status-listsale" style={newStyles.statusBtnGhost} onPress={() => openSaleModal()}>
-                    <Ionicons name="pricetag" size={11} color={theme.colors.accent} />
-                  </TouchableOpacity>
-                )
-              )}
-            </View>
-          </View>
-
-          {/* PHOTO + 3 PILLBOX FIELDS (Price, Location, Quantity) on the right, height-matched */}
+          {/* PHOTO + 2 PILLBOX FIELDS (Status, Price) on the right, height-matched */}
           <View style={newStyles.photoRow}>
             <TouchableOpacity
               testID="photo-thumb"
@@ -1242,16 +1204,12 @@ export default function ToolDetail() {
               )}
             </TouchableOpacity>
             <View style={newStyles.photoRightCol}>
+              <PillRow
+                label="STATUS"
+                value={statusInfo.label}
+                valueColor={statusInfo.color}
+              />
               <PillRow label="PRICE" value={fmtMoney(tool.cost)} />
-              <PillRow
-                label="LOCATION"
-                value={tool.location_name || "—"}
-                onPress={tool.location_id ? () => router.push(`/locations`) : undefined}
-              />
-              <PillRow
-                label="QUANTITY"
-                value={String(tool.quantity ?? 1)}
-              />
             </View>
           </View>
 
@@ -1262,19 +1220,13 @@ export default function ToolDetail() {
             </View>
           )}
 
-          {/* TAGS row — chips under description */}
-          {(tool.tag_names || []).length > 0 && (
-            <View style={newStyles.tagWrap}>
-              {tool.tag_names.map((t: string) => (
-                <View key={t} style={newStyles.tagChip}>
-                  <Text style={newStyles.tagChipText}>{t}</Text>
-                </View>
-              ))}
-            </View>
-          )}
-
-          {/* PILLBOX DETAIL FIELDS — Dealer, Maintenance, Warranty, then the rest */}
+          {/* PILLBOX DETAIL FIELDS — Location first (full-width), then the rest */}
           <View style={newStyles.fieldGroup}>
+            <PillRow
+              label="LOCATION"
+              value={tool.location_name || "—"}
+              onPress={tool.location_id ? () => router.push(`/locations`) : undefined}
+            />
             <PillRow
               label="DEALER"
               value={tool.dealer_name || "—"}
@@ -1290,6 +1242,17 @@ export default function ToolDetail() {
             )}
             {!!tool.category_name && <PillRow label="CATEGORY" value={tool.category_name} />}
           </View>
+
+          {/* TAGS — chips below the detail pillboxes */}
+          {(tool.tag_names || []).length > 0 && (
+            <View style={newStyles.tagWrap}>
+              {tool.tag_names.map((t: string) => (
+                <View key={t} style={newStyles.tagChip}>
+                  <Text style={newStyles.tagChipText}>{t}</Text>
+                </View>
+              ))}
+            </View>
+          )}
 
           {/* Set serials (only when the tool is a set) */}
           {tool.is_set && (
@@ -1409,17 +1372,52 @@ export default function ToolDetail() {
           <View style={newStyles.divider} />
           <Text style={newStyles.sectionTitle}>ACTIONS</Text>
 
-          {/* Dealer comms — only if there's a dealer */}
-          {tool.dealer_id && (
-            <View style={{ flexDirection: "row", gap: 8, marginTop: 8 }}>
-              <TouchableOpacity style={newStyles.actionBtn} onPress={() => notifyDealer(tool, "email")}>
-                <Ionicons name="mail" size={16} color={theme.colors.accent} />
-                <Text style={newStyles.actionBtnText}>EMAIL DEALER</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={newStyles.actionBtn} onPress={() => notifyDealer(tool, "sms")}>
-                <Ionicons name="chatbubble" size={16} color={theme.colors.accent} />
-                <Text style={newStyles.actionBtnText}>TEXT DEALER</Text>
-              </TouchableOpacity>
+          {/* Status-change buttons (Check Out/In, Mark Broken, List for Sale, Mark Sold) */}
+          {!tool.is_sold && !tool.is_lost && (
+            <View style={newStyles.actionRow}>
+              {tool.is_checked_out ? (
+                <TouchableOpacity style={newStyles.actionBtn} onPress={doCheckin}>
+                  <Ionicons name="log-in-outline" size={16} color={theme.colors.accent} />
+                  <Text style={newStyles.actionBtnText}>CHECK IN</Text>
+                </TouchableOpacity>
+              ) : (
+                <TouchableOpacity style={newStyles.actionBtn} onPress={() => setShowCheckout(true)}>
+                  <Ionicons name="log-out-outline" size={16} color={theme.colors.accent} />
+                  <Text style={newStyles.actionBtnText}>CHECK OUT</Text>
+                </TouchableOpacity>
+              )}
+              {tool.needs_repair ? (
+                <TouchableOpacity style={newStyles.actionBtn} onPress={markRepaired}>
+                  <Ionicons name="checkmark-done" size={16} color={theme.colors.success} />
+                  <Text style={newStyles.actionBtnText}>MARK FIXED</Text>
+                </TouchableOpacity>
+              ) : (
+                <TouchableOpacity style={newStyles.actionBtn} onPress={openRepair}>
+                  <Ionicons name="build-outline" size={16} color={theme.colors.danger} />
+                  <Text style={newStyles.actionBtnText}>MARK BROKEN</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          )}
+          {!tool.is_sold && !tool.is_lost && (
+            <View style={newStyles.actionRow}>
+              {tool.for_sale ? (
+                <>
+                  <TouchableOpacity style={newStyles.actionBtn} onPress={() => openSaleModal()}>
+                    <Ionicons name="create-outline" size={16} color={theme.colors.accent} />
+                    <Text style={newStyles.actionBtnText}>EDIT LISTING</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={newStyles.actionBtn} onPress={() => setShowMarkSold(true)}>
+                    <Ionicons name="checkmark-circle" size={16} color={theme.colors.success} />
+                    <Text style={newStyles.actionBtnText}>MARK SOLD</Text>
+                  </TouchableOpacity>
+                </>
+              ) : (
+                <TouchableOpacity style={newStyles.actionBtn} onPress={() => openSaleModal()}>
+                  <Ionicons name="pricetag-outline" size={16} color={theme.colors.accent} />
+                  <Text style={newStyles.actionBtnText}>LIST FOR SALE</Text>
+                </TouchableOpacity>
+              )}
             </View>
           )}
 
@@ -2191,11 +2189,13 @@ function PillRow({
   value,
   sub,
   onPress,
+  valueColor,
 }: {
   label: string;
   value: string;
   sub?: string;
   onPress?: () => void;
+  valueColor?: string;
 }) {
   const Wrap: any = onPress ? TouchableOpacity : View;
   return (
@@ -2204,8 +2204,19 @@ function PillRow({
         <Text style={newStyles.pillRowLabel}>{label}</Text>
         {!!sub && <Text style={newStyles.pillRowSub}>{sub}</Text>}
       </View>
-      <View style={newStyles.pillRowValue}>
-        <Text style={newStyles.pillRowValueText} numberOfLines={1}>
+      <View
+        style={[
+          newStyles.pillRowValue,
+          valueColor ? { borderColor: valueColor } : null,
+        ]}
+      >
+        <Text
+          style={[
+            newStyles.pillRowValueText,
+            valueColor ? { color: valueColor } : null,
+          ]}
+          numberOfLines={1}
+        >
           {value || "—"}
         </Text>
       </View>
@@ -3193,6 +3204,11 @@ const newStyles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: 12,
     paddingVertical: 12,
+  },
+  actionRow: {
+    flexDirection: "row",
+    gap: 8,
+    marginTop: 8,
   },
   actionBtnText: {
     color: theme.colors.textPrimary,
