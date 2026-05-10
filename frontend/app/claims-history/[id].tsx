@@ -1,0 +1,295 @@
+import { useCallback, useState } from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  Image,
+  ActivityIndicator,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { Ionicons } from "@expo/vector-icons";
+import { useLocalSearchParams, useRouter, useFocusEffect } from "expo-router";
+import { theme } from "../../src/theme";
+import { api } from "../../src/api";
+import { formatDateUS } from "../../src/dateUtil";
+
+const STATUS_COLORS: Record<string, string> = {
+  broken: theme.colors.danger,
+  awaiting_approval: theme.colors.warning,
+  waiting_replacement: theme.colors.accentSecondary,
+  completed: theme.colors.success,
+  rejected: theme.colors.textMuted,
+};
+
+const STATUS_LABEL: Record<string, string> = {
+  broken: "OPEN",
+  awaiting_approval: "AWAITING APPROVAL",
+  waiting_replacement: "WAITING REPLACEMENT",
+  completed: "COMPLETED",
+  rejected: "REJECTED",
+};
+
+export default function ClaimsHistoryPage() {
+  const { id } = useLocalSearchParams<{ id: string }>();
+  const router = useRouter();
+  const [tool, setTool] = useState<any>(null);
+  const [claims, setClaims] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const load = useCallback(async () => {
+    if (!id) return;
+    setLoading(true);
+    try {
+      const [t, c] = await Promise.all([
+        api.getTool(id),
+        api.listWarrantyClaims({ tool_id: id }),
+      ]);
+      setTool(t);
+      setClaims(Array.isArray(c) ? c : []);
+    } catch (e) {
+      console.error("[claims-history] load failed", e);
+    } finally {
+      setLoading(false);
+    }
+  }, [id]);
+
+  useFocusEffect(
+    useCallback(() => {
+      load();
+    }, [load]),
+  );
+
+  return (
+    <SafeAreaView style={styles.container} edges={["top"]}>
+      <View style={styles.headerBar}>
+        <TouchableOpacity onPress={() => router.back()} hitSlop={10} testID="back-btn">
+          <Ionicons name="arrow-back" size={26} color={theme.colors.textPrimary} />
+        </TouchableOpacity>
+        <View style={styles.headerTitleCol}>
+          <Text style={styles.headerTitle} numberOfLines={1}>
+            CLAIMS HISTORY
+          </Text>
+          {!!tool?.name && (
+            <Text style={styles.headerSub} numberOfLines={1}>
+              {tool.name}
+            </Text>
+          )}
+        </View>
+        <View style={styles.headerCount}>
+          <Text style={styles.headerCountText}>{claims.length}</Text>
+        </View>
+      </View>
+
+      {loading ? (
+        <View style={styles.center}>
+          <ActivityIndicator color={theme.colors.accent} />
+        </View>
+      ) : claims.length === 0 ? (
+        <View style={styles.center}>
+          <Ionicons name="shield-outline" size={48} color={theme.colors.textMuted} />
+          <Text style={styles.emptyTitle}>No claims filed</Text>
+          <Text style={styles.emptyBody}>
+            Warranty and repair claims for this item will appear here.
+          </Text>
+        </View>
+      ) : (
+        <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
+          {claims.map((c: any, idx: number) => {
+            const status = (c.claim_status || "broken").toLowerCase();
+            const color = STATUS_COLORS[status] || theme.colors.textMuted;
+            const label = STATUS_LABEL[status] || status.toUpperCase();
+            return (
+              <TouchableOpacity
+                key={c.id}
+                testID={`claim-${c.id}`}
+                style={styles.card}
+                activeOpacity={0.85}
+                onPress={() => router.push(`/claim/${c.id}`)}
+              >
+                <View style={styles.cardRow}>
+                  <View style={styles.numCol}>
+                    <Text style={styles.num}>#{idx + 1}</Text>
+                  </View>
+                  {c.broken_photo ? (
+                    <Image source={{ uri: c.broken_photo }} style={styles.thumb} />
+                  ) : (
+                    <View style={[styles.thumb, styles.thumbPlaceholder]}>
+                      <Ionicons name="image-outline" size={20} color={theme.colors.textMuted} />
+                    </View>
+                  )}
+                  <View style={{ flex: 1 }}>
+                    <View style={[styles.statusPill, { borderColor: color }]}>
+                      <Text style={[styles.statusText, { color }]}>{label}</Text>
+                    </View>
+                    {!!c.notified_at && (
+                      <Text style={styles.notified}>
+                        Notified: {formatDateUS(c.notified_at)}
+                      </Text>
+                    )}
+                    {!!c.repair_company && (
+                      <Text style={styles.meta}>Company: {c.repair_company}</Text>
+                    )}
+                    {!!c.contact && (
+                      <Text style={styles.meta}>Contact: {c.contact}</Text>
+                    )}
+                    {!!c.expected_completion && (
+                      <Text style={styles.meta}>
+                        Expected back: {formatDateUS(c.expected_completion)}
+                      </Text>
+                    )}
+                    {!!c.completed_at && (
+                      <Text style={styles.meta}>
+                        Closed: {formatDateUS(c.completed_at)}
+                      </Text>
+                    )}
+                  </View>
+                  <Ionicons name="chevron-forward" size={18} color={theme.colors.textMuted} />
+                </View>
+                {!!c.notes && (
+                  <View style={styles.notesBox}>
+                    <Text style={styles.notesLabel}>NOTES</Text>
+                    <Text style={styles.notes}>{c.notes}</Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+      )}
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: theme.colors.bg },
+  headerBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
+  },
+  headerTitleCol: { flex: 1 },
+  headerTitle: {
+    color: theme.colors.textPrimary,
+    fontWeight: "900",
+    fontSize: 14,
+    letterSpacing: 1.4,
+  },
+  headerSub: {
+    color: theme.colors.textMuted,
+    fontSize: 11,
+    fontWeight: "600",
+    marginTop: 2,
+  },
+  headerCount: {
+    backgroundColor: theme.colors.bgSecondary,
+    borderColor: theme.colors.border,
+    borderWidth: 1,
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+  },
+  headerCountText: {
+    color: theme.colors.textPrimary,
+    fontWeight: "800",
+    fontSize: 12,
+  },
+  center: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    padding: 32,
+  },
+  emptyTitle: {
+    color: theme.colors.textPrimary,
+    fontWeight: "800",
+    fontSize: 14,
+    marginTop: 8,
+  },
+  emptyBody: {
+    color: theme.colors.textMuted,
+    fontSize: 12,
+    textAlign: "center",
+    paddingHorizontal: 24,
+  },
+  card: {
+    backgroundColor: theme.colors.bgSecondary,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: 10,
+    padding: 12,
+    marginBottom: 10,
+  },
+  cardRow: { flexDirection: "row", gap: 10, alignItems: "flex-start" },
+  numCol: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: theme.colors.bg,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: theme.colors.accent,
+  },
+  num: {
+    color: theme.colors.accent,
+    fontSize: 9,
+    fontWeight: "900",
+  },
+  thumb: {
+    width: 56,
+    height: 56,
+    borderRadius: 6,
+    backgroundColor: theme.colors.bg,
+  },
+  thumbPlaceholder: {
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  statusPill: {
+    alignSelf: "flex-start",
+    borderWidth: 1,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 4,
+    marginBottom: 4,
+  },
+  statusText: { fontSize: 9, fontWeight: "900", letterSpacing: 1 },
+  notified: {
+    color: theme.colors.accent,
+    fontSize: 11,
+    fontWeight: "900",
+    marginTop: 2,
+  },
+  meta: {
+    color: theme.colors.textSecondary,
+    fontSize: 10,
+    marginTop: 2,
+  },
+  notesBox: {
+    backgroundColor: theme.colors.bg,
+    borderRadius: 6,
+    padding: 8,
+    marginTop: 8,
+  },
+  notesLabel: {
+    color: theme.colors.textMuted,
+    fontSize: 9,
+    fontWeight: "800",
+    letterSpacing: 1.5,
+    marginBottom: 4,
+  },
+  notes: {
+    color: theme.colors.textPrimary,
+    fontSize: 11,
+    lineHeight: 15,
+  },
+});

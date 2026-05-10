@@ -24,7 +24,6 @@ import { api } from "../../src/api";
 import { printReportHtml } from "../../src/printHtml";
 import { confirm } from "../../src/confirm";
 import { compressForPdf, compressManyForPdf } from "../../src/pdfImage";
-import { formatDateTime } from "../../src/dt";
 import { formatDateUS } from "../../src/dateUtil";
 import { DateField } from "../../src/DateField";
 import {
@@ -34,7 +33,6 @@ import {
 import { DocumentsSection } from "../../src/sections/DocumentsSection";
 import { ReceiptsSection } from "../../src/sections/ReceiptsSection";
 import { MaintenanceSection } from "../../src/sections/MaintenanceSection";
-import { ClaimsHistorySection } from "../../src/sections/ClaimsHistorySection";
 import { WarrantySection } from "../../src/sections/WarrantySection";
 import PinchZoomImageViewer from "../../src/components/PinchZoomImageViewer";
 
@@ -1455,8 +1453,12 @@ export default function ToolDetail() {
             >
               <ReceiptsSection receipts={tool.receipts} />
             </AttachmentPill>
+          </View>
 
-            {/* MAINTENANCE pillbox */}
+          {/* ===== SERVICE — Maintenance & Warranty ===== */}
+          <View style={{ marginTop: 16 }}>
+            <Text style={newStyles.sectionTitle}>SERVICE</Text>
+
             <AttachmentPill
               icon="construct-outline"
               label="MAINTENANCE"
@@ -1469,7 +1471,6 @@ export default function ToolDetail() {
               <MaintenanceSection tool={tool} onChange={load} />
             </AttachmentPill>
 
-            {/* WARRANTY pillbox */}
             <AttachmentPill
               icon="shield-checkmark-outline"
               label="WARRANTY"
@@ -1487,43 +1488,42 @@ export default function ToolDetail() {
             </AttachmentPill>
           </View>
 
-          {/* CLAIMS HISTORY (stays as its own section) */}
-          <View style={{ marginTop: 12 }}>
-            <ClaimsHistorySection toolId={tool.id} />
+          {/* ===== HISTORY — Checkout history + Claims history (each opens its own page) ===== */}
+          <View style={{ marginTop: 16 }}>
+            <Text style={newStyles.sectionTitle}>HISTORY</Text>
+
+            <TouchableOpacity
+              testID="open-checkout-history"
+              style={newStyles.historyLink}
+              activeOpacity={0.85}
+              onPress={() => router.push(`/checkout-history/${tool.id}`)}
+            >
+              <Ionicons name="time-outline" size={16} color={theme.colors.accent} />
+              <Text style={newStyles.historyLinkLabel}>CHECKOUT HISTORY</Text>
+              <View style={newStyles.historyCount}>
+                <Text style={newStyles.historyCountText}>
+                  {Array.isArray(tool.checkout_history) ? tool.checkout_history.length : 0}
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={16} color={theme.colors.textMuted} />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              testID="open-claims-history"
+              style={newStyles.historyLink}
+              activeOpacity={0.85}
+              onPress={() => router.push(`/claims-history/${tool.id}`)}
+            >
+              <Ionicons name="shield-outline" size={16} color={theme.colors.accent} />
+              <Text style={newStyles.historyLinkLabel}>CLAIMS HISTORY</Text>
+              <Ionicons name="chevron-forward" size={16} color={theme.colors.textMuted} />
+            </TouchableOpacity>
           </View>
 
           {/* REPORT LOST OR STOLEN */}
           <View style={{ marginTop: 16 }}>
             <ReportLostButton tool={tool} onChange={load} />
           </View>
-
-          {/* CHECKOUT HISTORY collapsed before actions */}
-          {(tool.checkout_history || []).length > 0 && (
-            <View style={{ marginTop: 18 }}>
-              <Text style={newStyles.sectionTitle}>CHECKOUT HISTORY</Text>
-              {tool.checkout_history.slice().reverse().map((h: any, i: number) => (
-                <TouchableOpacity
-                  key={i}
-                  testID={`hist-${i}`}
-                  style={newStyles.histRow}
-                  onPress={() => h.borrower_id && router.push(`/borrower/${h.borrower_id}`)}
-                  disabled={!h.borrower_id}
-                  activeOpacity={0.7}
-                >
-                  <Text style={newStyles.histName}>
-                    {h.borrower_name}{h.borrower_id ? "  ›" : ""}
-                  </Text>
-                  <Text style={newStyles.histDate}>
-                    Out: {formatDateTime(h.checked_out_at)}
-                  </Text>
-                  <Text style={newStyles.histDate}>
-                    In:{"  "}{h.checked_in_at ? formatDateTime(h.checked_in_at) : "—"}
-                  </Text>
-                  {!!h.notes && <Text style={newStyles.histNotes}>{h.notes}</Text>}
-                </TouchableOpacity>
-              ))}
-            </View>
-          )}
 
           {/* ===== BOTTOM ACTION CLUSTER (final section on the page) ===== */}
           <View style={newStyles.divider} />
@@ -3252,27 +3252,27 @@ const newStyles = StyleSheet.create({
     borderColor: theme.colors.border,
     borderWidth: 1,
     borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
     gap: 10,
-    minHeight: 32,
+    minHeight: 28,
   },
   pillRowLabel: {
     color: theme.colors.textPrimary,
     fontWeight: "800",
-    fontSize: 11,
-    letterSpacing: 0.9,
+    fontSize: 9.5,
+    letterSpacing: 0.8,
   },
   pillRowSub: {
     color: theme.colors.textMuted,
     fontWeight: "600",
-    fontSize: 10,
+    fontSize: 9,
     marginTop: 1,
   },
   pillRowValue: {
     backgroundColor: theme.colors.bg,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
     borderRadius: 999,
     borderWidth: 1,
     borderColor: theme.colors.border,
@@ -3281,8 +3281,8 @@ const newStyles = StyleSheet.create({
   pillRowValueText: {
     color: theme.colors.textPrimary,
     fontWeight: "800",
-    fontSize: 11.5,
-    letterSpacing: 0.4,
+    fontSize: 10,
+    letterSpacing: 0.3,
   },
 
   // ---------- DESCRIPTION ----------
@@ -3334,16 +3334,53 @@ const newStyles = StyleSheet.create({
     borderColor: theme.colors.border,
     borderWidth: 1,
     borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    minHeight: 40,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    minHeight: 34,
   },
   locationWideText: {
     flex: 1,
     color: theme.colors.textPrimary,
     fontWeight: "800",
-    fontSize: 13.5,
+    fontSize: 11,
     letterSpacing: 0.3,
+  },
+
+  // ---------- HISTORY LINK ROWS (navigates to a dedicated page) ----------
+  historyLink: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    backgroundColor: theme.colors.bgSecondary,
+    borderColor: theme.colors.border,
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    marginTop: 8,
+  },
+  historyLinkLabel: {
+    flex: 1,
+    color: theme.colors.textPrimary,
+    fontWeight: "800",
+    fontSize: 12,
+    letterSpacing: 1,
+  },
+  historyCount: {
+    minWidth: 28,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 999,
+    backgroundColor: theme.colors.bg,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  historyCountText: {
+    color: theme.colors.textPrimary,
+    fontWeight: "800",
+    fontSize: 11,
   },
 
   // ---------- SERIAL NUMBERS (under Dealer) ----------
