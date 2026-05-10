@@ -148,6 +148,7 @@ async def attach_user_to_context(request: Request, call_next):
         or path == "/api/feedback"
         or path == "/api/guides"
         or path == "/api/revenuecat/webhook"
+        or path.startswith("/api/migration/")
     ):
         return await call_next(request)
     auth = request.headers.get("Authorization", "")
@@ -3380,6 +3381,7 @@ from fastapi.responses import HTMLResponse  # noqa: E402
 
 _GUIDES_DIR = Path(__file__).parent.parent / "memory"
 _GUIDE_FILES = [
+    ("migration", "MIGRATION_GUIDE.md",              "MIGRATION — Take Everything Off This Container"),
     ("apple",      "setup_apple_subscriptions.md", "Apple App Store Connect — Subscription Setup"),
     ("google",     "setup_google_subscriptions.md", "Google Play Console — Subscription Setup"),
     ("revenuecat", "setup_revenuecat.md",           "RevenueCat — Setup"),
@@ -3474,6 +3476,34 @@ async def get_setup_guides():
     documentation for the app owner.
     """
     return HTMLResponse(_render_guides_html())
+
+
+# ---------------------------------------------------------------------------
+# Migration download — token-protected endpoints to download the code +
+# database tarballs created at /app/migration. Token lives in
+# MIGRATION_DOWNLOAD_TOKEN env var. Used when the project owner wants to
+# leave the platform and take their data with them.
+# ---------------------------------------------------------------------------
+from fastapi.responses import FileResponse  # noqa: E402
+
+_MIG_DIR = Path(__file__).parent.parent / "migration"
+
+
+@app.get("/api/migration/{filename}")
+async def migration_download(filename: str, token: str = ""):
+    if not token or token != os.environ.get("MIGRATION_DOWNLOAD_TOKEN", "").strip():
+        raise HTTPException(403, "Invalid or missing token")
+    # Only allow the two specific tarballs
+    if filename not in ("mongo-dump.tar.gz", "toolbox-vault-code.tar.gz"):
+        raise HTTPException(404, "File not available")
+    fpath = _MIG_DIR / filename
+    if not fpath.exists():
+        raise HTTPException(404, "Archive not generated")
+    return FileResponse(
+        path=str(fpath),
+        media_type="application/gzip",
+        filename=filename,
+    )
 
 
 # ---------------------------------------------------------------------------
