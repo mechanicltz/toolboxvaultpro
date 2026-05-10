@@ -36,7 +36,7 @@ import { ReceiptsSection } from "../../src/sections/ReceiptsSection";
 import { MaintenanceSection } from "../../src/sections/MaintenanceSection";
 import { ClaimsHistorySection } from "../../src/sections/ClaimsHistorySection";
 import { WarrantySection } from "../../src/sections/WarrantySection";
-import ImageView from "react-native-image-viewing";
+import PinchZoomImageViewer from "../../src/components/PinchZoomImageViewer";
 
 export default function ToolDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -50,6 +50,7 @@ export default function ToolDetail() {
   const [coBorrowerId, setCoBorrowerId] = useState<string | null>(null);
   const [coNotes, setCoNotes] = useState("");
   const [photoIdx, setPhotoIdx] = useState(0);
+  const [isImageViewerVisible, setIsImageViewerVisible] = useState(false);
 
   // Repair modal
   const todayStr = () => new Date().toISOString().substring(0, 10);
@@ -1161,11 +1162,6 @@ export default function ToolDetail() {
           <Text style={newStyles.headerTitle} numberOfLines={2}>
             {tool.name || "Untitled tool"}
           </Text>
-          {!!tool.serial_number && !tool.is_set && (
-            <Text style={newStyles.headerSerial} numberOfLines={1}>
-              SN  {tool.serial_number}
-            </Text>
-          )}
         </View>
         <View style={newStyles.headerActions}>
           <TouchableOpacity testID="export-pdf-btn" onPress={() => setShowExportPicker(true)} hitSlop={10}>
@@ -1193,7 +1189,7 @@ export default function ToolDetail() {
               testID="photo-thumb"
               style={newStyles.photoFrame}
               activeOpacity={photos.length ? 0.85 : 1}
-              onPress={photos.length ? () => setPhotoIdx(0) : promptAddPhoto}
+              onPress={photos.length ? () => { setPhotoIdx(0); setIsImageViewerVisible(true); } : promptAddPhoto}
             >
               {photos.length > 0 ? (
                 <Image source={{ uri: photos[0] }} style={newStyles.photoImg} />
@@ -1221,19 +1217,60 @@ export default function ToolDetail() {
             </View>
           )}
 
-          {/* PILLBOX DETAIL FIELDS — Location first (full-width), then the rest */}
+          {/* LOCATION — wide pill, NO label (just the location value) */}
+          <TouchableOpacity
+            testID="location-pill"
+            style={newStyles.locationWide}
+            activeOpacity={tool.location_id ? 0.85 : 1}
+            onPress={tool.location_id ? () => router.push(`/locations`) : undefined}
+          >
+            <Ionicons name="location-outline" size={16} color={theme.colors.accent} />
+            <Text style={newStyles.locationWideText} numberOfLines={1}>
+              {tool.location_name || "No location"}
+            </Text>
+            {!!tool.location_id && (
+              <Ionicons name="chevron-forward" size={14} color={theme.colors.textMuted} />
+            )}
+          </TouchableOpacity>
+
+          {/* PILLBOX DETAIL FIELDS — dealer first, then serial numbers, then everything else */}
           <View style={newStyles.fieldGroup}>
-            <PillRow
-              label="LOCATION"
-              value={tool.location_name || "—"}
-              onPress={tool.location_id ? () => router.push(`/locations`) : undefined}
-            />
             <PillRow
               label="DEALER"
               value={tool.dealer_name || "—"}
               sub={tool.purchased_from_agent_name || undefined}
               onPress={tool.dealer_id ? () => router.push(`/dealer/${tool.dealer_id}`) : undefined}
             />
+
+            {/* SERIAL NUMBERS — directly below the Dealer pillbox.
+                One serial per row when more than one exists. */}
+            {(() => {
+              const serials: string[] = tool.is_set
+                ? (Array.isArray(tool.set_serials)
+                    ? tool.set_serials.filter((s: string) => !!s)
+                    : [])
+                : (tool.serial_number ? [String(tool.serial_number)] : []);
+              if (serials.length === 0) return null;
+              return (
+                <View style={newStyles.serialBox} testID="serial-box">
+                  <Text style={newStyles.serialBoxLabel}>
+                    SERIAL NUMBER{serials.length > 1 ? "S" : ""}
+                    {serials.length > 1 ? `  (${serials.length})` : ""}
+                  </Text>
+                  {serials.map((s: string, i: number) => (
+                    <View key={i} style={newStyles.serialRow}>
+                      {serials.length > 1 && (
+                        <Text style={newStyles.serialIdx}>{i + 1}.</Text>
+                      )}
+                      <Text style={newStyles.serialVal} numberOfLines={1}>
+                        {s}
+                      </Text>
+                    </View>
+                  ))}
+                </View>
+              );
+            })()}
+
             <PillRow label="MAINTENANCE" value={maintenanceSummary} />
             <PillRow label="WARRANTY" value={warrantySummary} />
             {!!tool.brand && <PillRow label="BRAND" value={tool.brand} />}
@@ -1252,24 +1289,6 @@ export default function ToolDetail() {
                   <Text style={newStyles.tagChipText}>{t}</Text>
                 </View>
               ))}
-            </View>
-          )}
-
-          {/* Set serials (only when the tool is a set) */}
-          {tool.is_set && (
-            <View style={newStyles.setSerialBox}>
-              <Text style={newStyles.sectionTitle}>
-                SET SERIAL NUMBERS{Array.isArray(tool.set_serials) ? `  (${tool.set_serials.length})` : ""}
-              </Text>
-              {(tool.set_serials || []).map((s: string, i: number) => (
-                <View key={i} style={newStyles.setSerialRow}>
-                  <Text style={newStyles.setSerialIdx}>{i + 1}.</Text>
-                  <Text style={newStyles.setSerialVal}>{s || "—"}</Text>
-                </View>
-              ))}
-              {(!tool.set_serials || tool.set_serials.length === 0) && (
-                <Text style={newStyles.emptyHint}>No serial numbers entered.</Text>
-              )}
             </View>
           )}
 
@@ -2167,6 +2186,14 @@ export default function ToolDetail() {
           </View>
         </View>
       </Modal>
+
+      {/* ===== FULL-SCREEN PHOTO VIEWER (pinch-to-zoom, swipe to dismiss) ===== */}
+      <PinchZoomImageViewer
+        images={(photos || []).map((p: string) => ({ uri: p }))}
+        imageIndex={photoIdx}
+        visible={isImageViewerVisible}
+        onRequestClose={() => setIsImageViewerVisible(false)}
+      />
     </SafeAreaView>
   );
 }
@@ -3097,6 +3124,69 @@ const newStyles = StyleSheet.create({
   // ---------- FIELD GROUP ----------
   fieldGroup: {
     gap: 6,
+  },
+
+  // ---------- LOCATION (wide pill, NO label) ----------
+  locationWide: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: theme.colors.bgSecondary,
+    borderColor: theme.colors.border,
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    minHeight: 40,
+  },
+  locationWideText: {
+    flex: 1,
+    color: theme.colors.textPrimary,
+    fontWeight: "800",
+    fontSize: 13.5,
+    letterSpacing: 0.3,
+  },
+
+  // ---------- SERIAL NUMBERS (under Dealer) ----------
+  serialBox: {
+    backgroundColor: theme.colors.bgSecondary,
+    borderColor: theme.colors.border,
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    gap: 6,
+  },
+  serialBoxLabel: {
+    color: theme.colors.textPrimary,
+    fontWeight: "800",
+    fontSize: 11,
+    letterSpacing: 0.9,
+    marginBottom: 2,
+  },
+  serialRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: theme.colors.bg,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+  },
+  serialIdx: {
+    color: theme.colors.textMuted,
+    fontSize: 11,
+    fontWeight: "800",
+    minWidth: 18,
+  },
+  serialVal: {
+    color: theme.colors.textPrimary,
+    fontWeight: "800",
+    fontSize: 12,
+    letterSpacing: 0.4,
+    flex: 1,
   },
 
   // ---------- SET SERIALS ----------
