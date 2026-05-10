@@ -1069,11 +1069,27 @@ async def _fetch_claims(db, user, options: Dict[str, Any]) -> Dict[str, Any]:
             serial_str = "\n".join([s for s in (t.get("set_serials") or []) if s])
         else:
             serial_str = t.get("serial_number") or ""
+
+        # Photo selection for the report:
+        #   * "history" mode → prefer the photo that was attached *to the claim*
+        #     (i.e. the picture of the broken / completed repair). This is what
+        #     the user wants to see on past-claim PDFs. Falls back to the item
+        #     photo if no claim photo was uploaded.
+        #   * "current" / "all" modes → keep the existing behaviour (tool photo
+        #     first, fall back to whichever claim photo exists).
+        tool_photo_val = it.get("tool_photo") or ""
+        broken_photo_val = it.get("broken_photo") or ""
+        if mode == "history":
+            claim_photo_val = broken_photo_val or tool_photo_val
+        else:
+            claim_photo_val = tool_photo_val or broken_photo_val
+
         rows.append({
             "id": it.get("id"),
             "tool_name": it.get("tool_name") or "",
-            "tool_photo": it.get("tool_photo") or "",
-            "broken_photo": it.get("broken_photo") or "",
+            "tool_photo": tool_photo_val,
+            "broken_photo": broken_photo_val,
+            "claim_photo": claim_photo_val,
             "dealer": it.get("dealer_name") or "—",
             "_dealer_group": it.get("dealer_name") or "(No dealer)",
             "_dealer_id": it.get("dealer_id") or "",
@@ -1770,7 +1786,7 @@ REPORTS: Dict[str, ReportSpec] = {
         icon="construct",
         accent="#FFB300",
         columns=[
-            Column("tool_photo", "Photo", "center", "image"),
+            Column("claim_photo", "Photo", "center", "image"),
             Column("notified_at", "Notified", "left", "date"),
             Column("tool_name", "Tool", "left", "text"),
             Column("serial", "Serial #", "left", "text"),
