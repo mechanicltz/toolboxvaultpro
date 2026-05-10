@@ -7,16 +7,16 @@ import { theme } from "./theme";
 /**
  * Floating "Add Item" shortcut button shown in the top-right of the main
  * tab screens — gives the user a one-tap way to start creating a new tool
- * from anywhere. Hidden on Inventory (which already has its own bottom-
- * right FAB) and on stack/detail screens.
+ * from anywhere. Shown on Home, Inventory, Dealers and More.
+ * Hidden on Claims (different workflow) and on stack/detail screens.
  */
 export function ReportsFab() {
   const router = useRouter();
   const path = usePathname();
   const insets = useSafeAreaInsets();
 
-  // Hide on Inventory (has its own + FAB) and on detail/stack screens.
-  const TAB_PATHS = new Set(["/", "/dealers", "/claims", "/more"]);
+  // Show on these main tab routes only.
+  const TAB_PATHS = new Set(["/", "/inventory", "/dealers", "/more"]);
   if (!TAB_PATHS.has(path || "")) return null;
 
   return (
