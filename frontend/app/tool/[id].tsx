@@ -54,6 +54,8 @@ export default function ToolDetail() {
   const [attachOpen, setAttachOpen] = useState<
     "gallery" | "documents" | "receipts" | "maintenance" | "warranty" | null
   >("gallery");
+  // Tap the QUANTITY pillbox in the photo row to open the stepper.
+  const [showQtyModal, setShowQtyModal] = useState(false);
 
   // Repair modal
   const todayStr = () => new Date().toISOString().substring(0, 10);
@@ -1196,6 +1198,11 @@ export default function ToolDetail() {
                 value={statusInfo.label}
                 valueColor={statusInfo.color}
               />
+              <PillRow
+                label="QUANTITY"
+                value={String(Math.max(1, Number(tool.quantity) || 1))}
+                onPress={() => setShowQtyModal(true)}
+              />
               <PillRow label="PRICE" value={fmtMoney(tool.cost)} />
             </View>
           </View>
@@ -1279,10 +1286,8 @@ export default function ToolDetail() {
             </View>
           )}
 
-          {/* QuantityStepper kept for inventories that need explicit +/- buttons */}
-          <View style={{ marginTop: 8 }}>
-            <QuantityStepper tool={tool} onChange={load} />
-          </View>
+          {/* Quantity stepper is now opened via the QUANTITY pillbox in the
+              photo row above — see <showQtyModal> Modal below. */}
 
           {/* Lost banner — only renders if tool.is_lost */}
           <LostStatusBanner tool={tool} onChange={load} />
@@ -2351,6 +2356,32 @@ export default function ToolDetail() {
         visible={isImageViewerVisible}
         onRequestClose={() => setIsImageViewerVisible(false)}
       />
+
+      {/* ===== QUANTITY EDIT MODAL (opened from QUANTITY pillbox in photo row) ===== */}
+      <Modal
+        visible={showQtyModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowQtyModal(false)}
+      >
+        <View style={styles.modalBg}>
+          <View style={[styles.modalCard, { maxWidth: 360 }]}>
+            <Text style={styles.modalTitle}>QUANTITY</Text>
+            <View style={{ marginVertical: 12 }}>
+              <QuantityStepper tool={tool} onChange={load} />
+            </View>
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={styles.btn}
+                onPress={() => setShowQtyModal(false)}
+                testID="close-qty-modal"
+              >
+                <Text style={styles.btnText}>DONE</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
