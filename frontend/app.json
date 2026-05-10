@@ -19,8 +19,8 @@
       }
     },
     "android": {
-      "package": "app.emergent.assetlocator12533f4c89",
-      "versionCode": 13,
+      "package": "app.emergent.assetlocator128c92565d",
+      "versionCode": 1,
       "edgeToEdgeEnabled": false,
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
