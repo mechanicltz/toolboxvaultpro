@@ -85,6 +85,62 @@ class RedeemPromoBody(BaseModel):
     code: str
 
 
+class CreatePromoBody(BaseModel):
+    """Body for `POST /api/admin/promo-codes`."""
+    code: Optional[str] = None        # auto-generated if blank
+    grant_type: str = "lifetime"      # lifetime | months
+    months: int = 12                  # only used when grant_type == 'months'
+    max_redemptions: int = 1
+    is_active: bool = True
+    notes: str = ""
+
+
+class PatchPromoBody(BaseModel):
+    """Body for `PATCH /api/admin/promo-codes/{id}`. All fields optional."""
+    code: Optional[str] = None
+    grant_type: Optional[str] = None
+    months: Optional[int] = None
+    max_redemptions: Optional[int] = None
+    is_active: Optional[bool] = None
+    notes: Optional[str] = None
+
+
+# =============== Admin helpers ===============
+
+def _admin_emails() -> List[str]:
+    """Comma-separated email allow-list from `ADMIN_EMAILS` env var."""
+    raw = _env("ADMIN_EMAILS")
+    return [e.strip().lower() for e in raw.split(",") if e.strip()]
+
+
+def _user_email(user: Any) -> str:
+    return ((getattr(user, "email", None) or
+             (user.get("email") if isinstance(user, dict) else "")) or "").strip().lower()
+
+
+def _user_id(user: Any) -> Optional[str]:
+    return getattr(user, "id", None) or (user.get("id") if isinstance(user, dict) else None)
+
+
+def _require_admin(user) -> None:
+    """Raise 403 unless the authenticated user is in the ADMIN_EMAILS allow-list."""
+    allow = _admin_emails()
+    if not allow:
+        # Fail closed: if no admins configured, no one can manage codes.
+        raise HTTPException(403, "No admin accounts configured on the server")
+    if _user_email(user) not in allow:
+        raise HTTPException(403, "Admin access required")
+
+
+def _gen_code(prefix: str = "PROMO") -> str:
+    """Generate a short random promo code like `PROMO-A7K9-X2M1`."""
+    import secrets
+    import string
+    pool = string.ascii_uppercase + string.digits
+    chunks = ["".join(secrets.choice(pool) for _ in range(4)) for _ in range(2)]
+    return f"{prefix.upper()}-{'-'.join(chunks)}"
+
+
 # =============== Helpers ===============
 
 async def get_subscription(db, user_id: str) -> SubscriptionState:
@@ -353,6 +409,105 @@ def make_router(db, get_current_user) -> APIRouter:
                 pass
 
         return {"ok": True, "entitlement": sub.entitlement, "is_lifetime": sub.is_lifetime, "expires_at": sub.expires_at}
+
+    # =============== ADMIN: promo code CRUD ===============
+    # All endpoints below require the caller's email to be in ADMIN_EMAILS.
+    # This lets you manage codes from the app itself — no rebuilds needed.
+
+    @router.get("/admin/promo-codes")
+    async def admin_list_promos(user=Depends(get_current_user)):
+        _require_admin(user)
+        rows = await db.promo_codes.find({}, {"_id": 0}).sort("created_at", -1).to_list(length=2000)
+        return rows
+
+    @router.get("/admin/me")
+    async def admin_whoami(user=Depends(get_current_user)):
+        """Light endpoint the app can probe to know whether to show the Admin link."""
+        return {"is_admin": _user_email(user) in _admin_emails(),
+                "email": _user_email(user)}
+
+    @router.post("/admin/promo-codes")
+    async def admin_create_promo(body: CreatePromoBody, user=Depends(get_current_user)):
+        _require_admin(user)
+        import uuid
+
+        code = (body.code or "").strip().upper() or _gen_code("PROMO")
+        if body.grant_type not in ("lifetime", "months"):
+            raise HTTPException(400, "grant_type must be 'lifetime' or 'months'")
+        if body.grant_type == "months" and (body.months or 0) <= 0:
+            raise HTTPException(400, "months must be > 0 when grant_type='months'")
+        if body.max_redemptions < 1:
+            raise HTTPException(400, "max_redemptions must be >= 1")
+
+        # Codes are unique. If a collision happens, error so the admin can retry.
+        existing = await db.promo_codes.find_one({"code": code}, {"_id": 0, "id": 1})
+        if existing:
+            raise HTTPException(409, f"Code '{code}' already exists")
+
+        doc = PromoCode(
+            id=str(uuid.uuid4()),
+            code=code,
+            grant_type=body.grant_type,
+            months=body.months or 0,
+            max_redemptions=body.max_redemptions,
+            is_active=body.is_active,
+            notes=(body.notes or "").strip(),
+        ).dict()
+        await db.promo_codes.insert_one(doc)
+        doc.pop("_id", None)
+        return doc
+
+    @router.patch("/admin/promo-codes/{code_id}")
+    async def admin_update_promo(code_id: str, body: PatchPromoBody, user=Depends(get_current_user)):
+        _require_admin(user)
+        existing = await db.promo_codes.find_one({"id": code_id}, {"_id": 0})
+        if not existing:
+            raise HTTPException(404, "Promo code not found")
+
+        updates: Dict[str, Any] = {}
+        if body.code is not None:
+            new_code = body.code.strip().upper()
+            if not new_code:
+                raise HTTPException(400, "code cannot be empty")
+            if new_code != existing.get("code"):
+                clash = await db.promo_codes.find_one({"code": new_code}, {"_id": 0, "id": 1})
+                if clash:
+                    raise HTTPException(409, f"Another code with name '{new_code}' already exists")
+            updates["code"] = new_code
+        if body.grant_type is not None:
+            if body.grant_type not in ("lifetime", "months"):
+                raise HTTPException(400, "grant_type must be 'lifetime' or 'months'")
+            updates["grant_type"] = body.grant_type
+        if body.months is not None:
+            if body.months < 0:
+                raise HTTPException(400, "months must be >= 0")
+            updates["months"] = body.months
+        if body.max_redemptions is not None:
+            if body.max_redemptions < 1:
+                raise HTTPException(400, "max_redemptions must be >= 1")
+            if body.max_redemptions < existing.get("redeemed_count", 0):
+                raise HTTPException(400, "max_redemptions cannot be lower than current redeemed_count")
+            updates["max_redemptions"] = body.max_redemptions
+        if body.is_active is not None:
+            updates["is_active"] = bool(body.is_active)
+        if body.notes is not None:
+            updates["notes"] = (body.notes or "").strip()
+
+        if not updates:
+            raise HTTPException(400, "No fields to update")
+
+        await db.promo_codes.update_one({"id": code_id}, {"$set": updates})
+        merged = {**existing, **updates}
+        merged.pop("_id", None)
+        return merged
+
+    @router.delete("/admin/promo-codes/{code_id}")
+    async def admin_delete_promo(code_id: str, user=Depends(get_current_user)):
+        _require_admin(user)
+        res = await db.promo_codes.delete_one({"id": code_id})
+        if not res.deleted_count:
+            raise HTTPException(404, "Promo code not found")
+        return {"ok": True, "deleted": code_id}
 
     return router
 

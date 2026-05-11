@@ -2898,3 +2898,64 @@ backend_phase2_subscriptions:
 agent_communication:
   - agent: "testing"
     message: "PHASE 2 REVENUECAT SUBSCRIPTION INTEGRATION — ALL 65/65 GREEN via /app/backend_test_phase2_subscription.py. Every review point confirmed pass: (1) GET /api/subscription returns the correct entitlement+is_lifetime+is_active+free_limit shape for both pro (subtest) and fresh-free users; (2) POST /api/revenuecat/webhook honors the Bearer-token header against REVENUECAT_WEBHOOK_SECRET (no/wrong → 401, correct → 200) and the full lifecycle works — INITIAL_PURCHASE→pro, RENEWAL→pro+will_renew, CANCELLATION→will_renew=false (is_active stays true while expires_at is future), EXPIRATION (past expires_at)→is_active=false, REFUND→entitlement='free' immediately; (3) POST /api/promo/redeem returns 404 for non-existent codes (no codes seeded per spec); (4) GET /api/guides is PUBLIC, returns 200 text/html, ≥30KB; (5) 15-item enforcement on POST /api/tools, POST /api/tools/import (batch counts), and POST /api/wishlist/{id}/convert all return HTTP 402 with the exact structured body {detail:{error:'free_limit_exceeded', limit:15, current:N, message:'…'}} — VERIFIED EXACT KEY NAMES: error / limit / current / message — and webhook upgrade unblocks subsequent creates; (6) regression smoke for subtest is 100% green across /tools, /locations, /dealers, /categories, /tags, /borrowers, /wishlist, /maintenance/upcoming, /warranty-claims/summary, /aggregate, /stats, /health, /auth/login, /auth/register, /auth/forgot-password, plus subtest can still create tools (lifetime-pro bypass works). Constraints honored: did NOT modify subtest's lifetime-pro state, did NOT seed promo_codes, did NOT touch .env. The structured 402 body shape that the frontend depends on is correct. Main agent: summarise and finish."
+
+
+#====================================================================================================
+# Phase A — RevenueCat Promo Code Admin CRUD (NEW)
+#====================================================================================================
+backend_admin_promo_crud:
+  - task: "Admin promo-code CRUD — GET/POST/PATCH/DELETE /api/admin/promo-codes + /api/admin/me + redeem + free-limit bypass"
+    implemented: true
+    working: true
+    file: "/app/backend/subscriptions.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "ALL 66/66 CHECKS PASS via /app/backend_test_promo_admin.py against EXPO_PUBLIC_BACKEND_URL/api. Admin user MechanicLTZ@gmail.com / Test12345! was created via POST /api/auth/register (email matches ADMIN_EMAILS in /app/backend/.env). Non-admin used subtest@example.com / password123.
+
+  (1) GET /api/admin/me — ✓ As admin returns 200 with {is_admin:true, email:'mechanicltz@gmail.com'}. ✓ As non-admin returns 200 with {is_admin:false, email:'subtest@example.com'}. Endpoint correctly does NOT gate by admin (any logged-in user can probe).
+  (2) GET /api/admin/promo-codes — ✓ Admin → 200 returns list. ✓ Non-admin → 403 'Admin access required'.
+  (3) POST /api/admin/promo-codes — ✓ Lifetime variant ({code:'PHASE_A_LIFETIME_XXXXXX', grant_type:'lifetime', max_redemptions:3, notes:'…'}) → 200 with full doc, id auto-assigned (UUID), redeemed_count=0, code upper-cased, all fields persisted. ✓ Months variant ({code:'…', grant_type:'months', months:6}) → 200, months=6 persisted. ✓ Auto-generated code (no code field) → 200, code matches /^PROMO-[A-Z0-9]{4}-[A-Z0-9]{4}$/. ✓ Duplicate code name → 409. ✓ grant_type='months' with months=0 → 400. ✓ max_redemptions=0 → 400. ✓ Non-admin create → 403. ✓ Created codes appear in subsequent GET list.
+  (4) PATCH /api/admin/promo-codes/{id} — ✓ Toggle is_active=false then back to true (both 200, persisted). ✓ Change max_redemptions=10 → 200, persisted. ✓ Change notes='Updated notes' → 200, persisted. ✓ Patch non-existent id → 404 'Promo code not found'. ✓ Rename to an existing code name → 409. ✓ Non-admin patch → 403.
+  (5) POST /api/promo/redeem (existing endpoint regression) — ✓ Registered FRESH user phasea_xxxxxxxx@example.com. Initial GET /api/subscription showed entitlement='free', free_limit=15. ✓ POST /api/promo/redeem {code:lifetime_code_name} → 200 {ok:true, entitlement:'pro', is_lifetime:true, expires_at:'2125-…'}. ✓ Re-redeeming the SAME code by the SAME user → 400 'You have already redeemed this code'. ✓ Unknown code → 404 'Code not found'.
+  (6) GET /api/subscription after redeem — ✓ entitlement='pro', is_lifetime=true, is_active=true, promo_code matches the redeemed code, store='PROMOTIONAL', product_id='promo_lifetime', purchased_at set, expires_at far-future (2125-01-01).
+  (7) Free-tier 15-tool limit BYPASS after promo — ✓ Created 18 tools as the fresh promo user via POST /api/tools (loop). All 18 succeeded with HTTP 200 (no 402 free_limit_exceeded). Confirms enforce_tool_limit() correctly bypasses the cap for is_pro() users. All 18 created tools were cleaned up via DELETE /tools/{id}.
+  (8) DELETE /api/admin/promo-codes/{id} — ✓ Non-admin delete → 403. ✓ Admin delete → 200 with body {ok:true, deleted:<id>}. ✓ Delete the same id again → 404 'Promo code not found'. ✓ Cleanup-delete of remaining 2 created codes → 200. Verified subsequent GET list does NOT contain any of the 3 test codes.
+
+  CLEANUP: All 3 test promo codes deleted; all 18 fresh-user tools deleted; the fresh test user remains (no admin endpoint to delete users — acceptable). subtest@example.com and its lifetime-pro state were NOT modified. /app/backend/.env was not touched. /app/memory/test_credentials.md updated with admin user (MechanicLTZ@gmail.com / Test12345!).
+
+  Backend log during the run shows only 200/400/403/404/409 responses; ZERO 500s, zero tracebacks. The full admin promo-code CRUD + existing redeem + free-limit bypass surface is production-ready. Main agent: summarise and finish."
+
+metadata:
+  created_by: "testing_agent"
+  version: "1.0"
+  test_sequence: 0
+  run_ui: false
+
+test_plan:
+  current_focus:
+    - "Admin promo-code CRUD — GET/POST/PATCH/DELETE /api/admin/promo-codes + /api/admin/me + redeem + free-limit bypass"
+  stuck_tasks: []
+  test_all: false
+  test_priority: "high_first"
+
+agent_communication:
+  - agent: "testing"
+    message: "PHASE A PROMO-CODE ADMIN CRUD — ALL 66/66 GREEN via /app/backend_test_promo_admin.py. Admin user MechanicLTZ@gmail.com / Test12345! created (registered via /api/auth/register; password chosen by tester and recorded in /app/memory/test_credentials.md). ADMIN_EMAILS in /app/backend/.env was already correct.
+
+Verified every requested endpoint:
+  • GET /api/admin/me — returns {is_admin, email} for any logged-in user (admin=true for MechanicLTZ, false for subtest).
+  • GET /api/admin/promo-codes — admin 200 list, non-admin 403.
+  • POST /api/admin/promo-codes — lifetime variant ✓, months variant ✓, auto-generated code (PROMO-XXXX-XXXX) ✓, duplicate-name → 409 ✓, grant_type='months' with months=0 → 400 ✓, max_redemptions=0 → 400 ✓, non-admin → 403 ✓.
+  • PATCH /api/admin/promo-codes/{id} — toggle is_active off/on ✓, change max_redemptions ✓, change notes ✓, missing id → 404 ✓, rename to existing → 409 ✓, non-admin → 403 ✓.
+  • DELETE /api/admin/promo-codes/{id} — admin → 200 {ok:true, deleted:<id>} ✓, delete-missing → 404 ✓, non-admin → 403 ✓.
+
+Existing endpoints verified still working:
+  • POST /api/promo/redeem with a freshly-created admin promo code → 200, sets entitlement='pro', is_lifetime=true; re-redeem → 400 'already redeemed'; unknown code → 404.
+  • GET /api/subscription correctly reflects the promo grant (entitlement='pro', is_lifetime=true, is_active=true, promo_code matches, expires_at=2125-01-01).
+  • Free-tier 15-tool limit BYPASS verified end-to-end: created a fresh user, redeemed lifetime code, then successfully created 18 tools via POST /api/tools — every one returned 200 (no 402 free_limit_exceeded). enforce_tool_limit() correctly bypasses for is_pro() users.
+
+Cleanup: all 3 test promo codes and 18 test tools were deleted. subtest's lifetime-pro state was NOT modified. /app/backend/.env was NOT modified. /app/memory/test_credentials.md was updated to record the new admin user. Backend log during run shows only 200/400/403/404/409 responses — zero 500s, zero tracebacks. Production-ready. Main agent: summarise and finish."
