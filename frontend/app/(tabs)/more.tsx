@@ -204,24 +204,6 @@ export default function MoreScreen() {
           onPress={() => router.push("/feedback")}
         />
 
-        <Row
-          icon="gift-outline"
-          title="Redeem Promo Code"
-          subtitle={isPro ? "You're PRO. Apply another code anytime." : "Have a code? Unlock PRO here."}
-          testID="more-redeem-promo"
-          onPress={() => setShowRedeem(true)}
-        />
-
-        {isAdmin && (
-          <Row
-            icon="shield-checkmark-outline"
-            title="Admin · Promo Codes"
-            subtitle="Mint, edit, disable or delete promo codes"
-            testID="more-admin-promo-codes"
-            onPress={() => router.push("/admin/promo-codes")}
-          />
-        )}
-
         <Text style={styles.sectionLabel}>SYSTEM</Text>
 
         <Row
@@ -558,6 +540,24 @@ export default function MoreScreen() {
           testID="more-personal-info"
           onPress={() => router.push("/personal-info")}
         />
+
+        <Row
+          icon="gift-outline"
+          title="Redeem Promo Code"
+          subtitle={isPro ? "You're PRO. Apply another code anytime." : "Have a code? Unlock PRO here."}
+          testID="more-redeem-promo"
+          onPress={() => setShowRedeem(true)}
+        />
+
+        {isAdmin && (
+          <Row
+            icon="shield-checkmark-outline"
+            title="Admin · Promo Codes"
+            subtitle="Mint, edit, disable or delete promo codes"
+            testID="more-admin-promo-codes"
+            onPress={() => router.push("/admin/promo-codes")}
+          />
+        )}
 
         <Row
           icon="key"
