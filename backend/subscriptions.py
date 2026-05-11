@@ -183,13 +183,29 @@ async def enforce_tool_limit(db, user_id: str, *, additional: int = 1) -> None:
     Raise HTTPException(402) if creating `additional` tools would push the
     user above the FREE tier limit. Pro / lifetime users always pass.
 
+    Sold and lost tools are EXCLUDED from the count — they're not part of
+    the active inventory the user manages, so they shouldn't consume a
+    free-tier slot. This matches the user-visible Inventory listing which
+    hides sold/lost items by default.
+
     `db` is expected to be the *raw* database (not the per-user scoped proxy)
     so we can explicitly count by owner_id.
     """
     if await is_pro(db, user_id):
         return
-    # Count the user's existing tools by owner_id. Mirrors the scoped wrapper.
-    current = await db.tools.count_documents({"owner_id": user_id})
+    # Active tools only — excludes sold + lost.
+    current = await db.tools.count_documents({
+        "owner_id": user_id,
+        "$and": [
+            {"$or": [{"is_sold": {"$ne": True}}, {"is_sold": {"$exists": False}}]},
+            {"$or": [
+                {"lost_status": None},
+                {"lost_status": {"$exists": False}},
+                # Some legacy docs use is_lost boolean
+                {"is_lost": {"$ne": True}},
+            ]},
+        ],
+    })
     if (current + additional) > FREE_TOOL_LIMIT:
         raise HTTPException(
             status_code=402,
