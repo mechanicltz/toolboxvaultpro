@@ -17,8 +17,10 @@ export function ReportsFab() {
 
   // Show on these main tab routes only. Some Expo Router versions return the
   // route-group-prefixed path ("/(tabs)/inventory") so we normalize first.
+  // NOTE: /dealers, /borrowers (contacts), and detail pages get their own
+  // page-specific "Add X" buttons in their own headers, so we exclude them here.
   const p = (path || "").replace("/(tabs)", "") || "/";
-  const TAB_PATHS = new Set(["/", "/inventory", "/dealers", "/more"]);
+  const TAB_PATHS = new Set(["/", "/inventory", "/more"]);
   if (!TAB_PATHS.has(p)) return null;
 
   return (

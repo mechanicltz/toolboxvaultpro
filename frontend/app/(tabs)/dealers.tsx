@@ -91,8 +91,19 @@ export default function DealersScreen() {
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <View style={styles.header}>
-        <Text style={styles.title}>DEALERS</Text>
-        <Text style={styles.subtitle}>Companies & Sales Agents</Text>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.title}>DEALERS</Text>
+          <Text style={styles.subtitle}>Companies & Sales Agents</Text>
+        </View>
+        <TouchableOpacity
+          testID="add-dealer-header-btn"
+          style={styles.headerAddBtn}
+          onPress={() => setShowAdd(true)}
+          activeOpacity={0.85}
+        >
+          <Ionicons name="add" size={16} color="#000" />
+          <Text style={styles.headerAddBtnText}>ADD DEALER</Text>
+        </TouchableOpacity>
       </View>
 
       <FlatList
@@ -164,15 +175,7 @@ export default function DealersScreen() {
         }}
       />
 
-      <TouchableOpacity
-        testID="add-dealer-fab"
-        style={styles.fab}
-        onPress={() => {
-          setShowAdd(true);
-        }}
-      >
-        <Ionicons name="add" size={28} color="#000" />
-      </TouchableOpacity>
+      {/* Add Dealer is now in the header (top-right) — bottom FAB removed. */}
 
       <Modal visible={showAdd} transparent animationType="slide" onRequestClose={() => setShowAdd(false)}>
         <KeyboardAvoidingView
@@ -301,7 +304,29 @@ export default function DealersScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.colors.bg },
-  header: { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 12 },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    paddingBottom: 12,
+  },
+  headerAddBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: theme.colors.accent,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 999,
+  },
+  headerAddBtnText: {
+    color: "#000",
+    fontWeight: "900",
+    fontSize: 11,
+    letterSpacing: 1,
+  },
   title: { color: theme.colors.textPrimary, fontSize: 21, fontWeight: "900", letterSpacing: 2 },
   subtitle: {
     color: theme.colors.accent,

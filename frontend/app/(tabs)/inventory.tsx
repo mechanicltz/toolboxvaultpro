@@ -921,16 +921,10 @@ export default function InventoryScreen() {
           </ScrollView>
         </View>
       ) : (
-        <TouchableOpacity
-          testID="add-tool-fab"
-          style={styles.fab}
-          onPress={() => {
-            router.push("/tool/edit");
-          }}
-          activeOpacity={0.85}
-        >
-          <Ionicons name="add" size={32} color="#000" />
-        </TouchableOpacity>
+        // Bottom-right "+" FAB removed — ADD ITEM lives in the top-right
+        // header (ReportsFab). Keeping the conditional so the lock state
+        // logic above doesn't break, but no FAB is rendered now.
+        null
       )}
 
       {/* Filter: Location picker modal */}

@@ -153,8 +153,19 @@ export default function BorrowersScreen() {
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <View style={styles.header}>
-        <Text style={styles.title}>CONTACTS</Text>
-        <Text style={styles.subtitle}>Borrowers & Checkouts</Text>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.title}>CONTACTS</Text>
+          <Text style={styles.subtitle}>Borrowers & Checkouts</Text>
+        </View>
+        <TouchableOpacity
+          testID="add-contact-header-btn"
+          style={styles.headerAddBtn}
+          onPress={() => setShowAdd(true)}
+          activeOpacity={0.85}
+        >
+          <Ionicons name="add" size={16} color="#000" />
+          <Text style={styles.headerAddBtnText}>ADD CONTACT</Text>
+        </TouchableOpacity>
       </View>
 
       {tools.length > 0 && (
@@ -287,13 +298,7 @@ export default function BorrowersScreen() {
         }}
       />
 
-      <TouchableOpacity
-        testID="add-borrower-fab"
-        style={styles.fab}
-        onPress={() => setShowAdd(true)}
-      >
-        <Ionicons name="person-add" size={26} color="#000" />
-      </TouchableOpacity>
+      {/* Add-contact moved to top-right header. Bottom FAB removed. */}
 
       <Modal visible={showAdd} animationType="slide" transparent onRequestClose={() => setShowAdd(false)}>
         <KeyboardAvoidingView
@@ -487,7 +492,29 @@ function RowContactChips({ raw }: { raw?: string | null }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.colors.bg },
-  header: { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 16 },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    paddingBottom: 16,
+  },
+  headerAddBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: theme.colors.accent,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 999,
+  },
+  headerAddBtnText: {
+    color: "#000",
+    fontWeight: "900",
+    fontSize: 11,
+    letterSpacing: 1,
+  },
   title: {
     color: theme.colors.textPrimary,
     fontSize: 21,
