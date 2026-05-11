@@ -15,6 +15,8 @@ import { AuthProvider, useAuth } from "../src/AuthContext";
 import { ResponsiveContainer } from "../src/ResponsiveContainer";
 import { NetworkProvider, OfflineBanner } from "../src/NetworkProvider";
 import { theme } from "../src/theme";
+import { initRevenueCat, identifyRevenueCatUser } from "../src/revenuecat";
+import { setPaymentRequiredHandler } from "../src/api";
 
 /**
  * Make native (iOS Expo Go / TestFlight) layouts visually match the web
@@ -75,7 +77,37 @@ function AuthGate({ children }: { children: React.ReactNode }) {
 
 function ShellNav() {
   const { user } = useAuth();
+  const router = useRouter();
   const showShell = !!user;
+
+  // Register the 402 (payment required) interceptor exactly once.
+  // When the backend rejects a write because the user hit the free
+  // tier limit, we automatically navigate to the paywall.
+  useEffect(() => {
+    setPaymentRequiredHandler(() => {
+      try { router.push("/paywall"); } catch { /* navigation not ready */ }
+    });
+  }, [router]);
+
+  // Initialize the RevenueCat SDK once after we know who the user is.
+  // On Expo Go / web this is a no-op (stub mode). On native dev/prod
+  // builds it configures the SDK and identifies the user so future
+  // purchases tie back to this account.
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        await initRevenueCat(user.id);
+        if (cancelled) return;
+        await identifyRevenueCatUser(user.id);
+      } catch (e) {
+        console.warn("[RC] init failed", e);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [user]);
+
   return (
     <View style={{ flex: 1 }}>
       <OfflineBanner />
@@ -92,6 +124,7 @@ function ShellNav() {
             <Stack.Screen name="(tabs)" />
             <Stack.Screen name="tool/[id]" />
             <Stack.Screen name="tool/edit" />
+            <Stack.Screen name="paywall" options={{ animation: "slide_from_bottom", presentation: "modal" }} />
           </Stack>
         </ResponsiveContainer>
         {showShell && <ReportsFab />}

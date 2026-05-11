@@ -542,6 +542,18 @@ export default function MoreScreen() {
         />
 
         <Row
+          icon="star-outline"
+          title={isPro ? "Manage Subscription" : "Upgrade to PRO"}
+          subtitle={
+            isPro
+              ? "View / cancel your subscription, or apply codes"
+              : "Unlock unlimited tools and full features"
+          }
+          testID="more-paywall"
+          onPress={() => router.push("/paywall")}
+        />
+
+        <Row
           icon="gift-outline"
           title="Redeem Promo Code"
           subtitle={isPro ? "You're PRO. Apply another code anytime." : "Have a code? Unlock PRO here."}

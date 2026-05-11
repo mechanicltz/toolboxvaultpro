@@ -59,6 +59,14 @@ export function setUnauthorizedHandler(fn: () => void) {
   onUnauthorized = fn;
 }
 
+// Triggered when the backend returns HTTP 402 Payment Required —
+// signals the free-tier limit was reached. The app handler typically
+// navigates to /paywall.
+let onPaymentRequired: ((detail: string) => void) | null = null;
+export function setPaymentRequiredHandler(fn: (detail: string) => void) {
+  onPaymentRequired = fn;
+}
+
 export class ApiError extends Error {
   status: number;
   detail: string;
@@ -165,6 +173,9 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
     } catch {}
     if (!detail) detail = `Request failed: ${res.status}`;
     if (res.status === 401 && onUnauthorized) onUnauthorized();
+    if (res.status === 402 && onPaymentRequired) {
+      onPaymentRequired(detail || "Free tier limit reached");
+    }
     throw new ApiError(res.status, detail);
   }
   // Some endpoints return no body
