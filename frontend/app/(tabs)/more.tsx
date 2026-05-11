@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import {
   View,
   Text,
@@ -22,6 +22,7 @@ import { usePrefs, HOME_ROW_LABELS, HomeRowKey } from "../../src/prefs";
 import { api } from "../../src/api";
 import { useAuth } from "../../src/AuthContext";
 import { APP_VERSION_LABEL } from "../../src/version";
+import { PromoRedeemModal } from "../../src/PromoRedeemModal";
 import {
   requestPermissions as requestNotificationPermissions,
   rescheduleDealerNotifications,
@@ -74,6 +75,45 @@ export default function MoreScreen() {
   const [pwErr, setPwErr] = useState("");
   const [pwOk, setPwOk] = useState("");
   const [timePickerOpen, setTimePickerOpen] = useState(false);
+
+  // Subscription + admin gates.
+  const [sub, setSub] = useState<any>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [showRedeem, setShowRedeem] = useState(false);
+
+  // Refresh subscription + admin status when we land on this screen.
+  const refreshAccountState = useCallback(async () => {
+    try {
+      const s = await api.getSubscription();
+      setSub(s);
+    } catch {
+      // not logged in or backend down — leave defaults
+    }
+    try {
+      const me = await api.adminWhoAmI();
+      setIsAdmin(!!me?.is_admin);
+    } catch {
+      setIsAdmin(false);
+    }
+  }, []);
+  useEffect(() => {
+    refreshAccountState();
+  }, [refreshAccountState]);
+  useFocusEffect(
+    useCallback(() => {
+      refreshAccountState();
+    }, [refreshAccountState]),
+  );
+
+  const isPro = !!(sub?.is_lifetime ||
+    (sub?.entitlement && sub.entitlement !== "free"));
+  const proLabel = sub?.is_lifetime
+    ? "✨ LIFETIME PRO"
+    : sub?.entitlement === "active_subscription"
+      ? "✨ PRO"
+      : sub?.entitlement === "promo_redeemed" && sub?.expires_at
+        ? `PRO until ${new Date(sub.expires_at).toLocaleDateString()}`
+        : "FREE TIER";
 
   // Format hour:minute as "7:00 AM" / "1:30 PM" for the row.
   const formatHourMinute = (h: number, m: number): string => {
@@ -131,6 +171,26 @@ export default function MoreScreen() {
         <Text style={styles.subtitle} numberOfLines={1}>
           {user?.email || "Manage everything"}
         </Text>
+        <View
+          style={[
+            styles.proBadge,
+            { borderColor: isPro ? theme.colors.accent : theme.colors.border },
+          ]}
+        >
+          <Ionicons
+            name={isPro ? "star" : "star-outline"}
+            size={11}
+            color={isPro ? theme.colors.accent : theme.colors.textMuted}
+          />
+          <Text
+            style={[
+              styles.proBadgeText,
+              { color: isPro ? theme.colors.accent : theme.colors.textMuted },
+            ]}
+          >
+            {proLabel}
+          </Text>
+        </View>
         <Text style={styles.versionLine} testID="more-version">
           {APP_VERSION_LABEL}
         </Text>
@@ -143,6 +203,24 @@ export default function MoreScreen() {
           testID="more-feedback"
           onPress={() => router.push("/feedback")}
         />
+
+        <Row
+          icon="gift-outline"
+          title="Redeem Promo Code"
+          subtitle={isPro ? "You're PRO. Apply another code anytime." : "Have a code? Unlock PRO here."}
+          testID="more-redeem-promo"
+          onPress={() => setShowRedeem(true)}
+        />
+
+        {isAdmin && (
+          <Row
+            icon="shield-checkmark-outline"
+            title="Admin · Promo Codes"
+            subtitle="Mint, edit, disable or delete promo codes"
+            testID="more-admin-promo-codes"
+            onPress={() => router.push("/admin/promo-codes")}
+          />
+        )}
 
         <Text style={styles.sectionLabel}>SYSTEM</Text>
 
@@ -702,6 +780,12 @@ export default function MoreScreen() {
           </View>
         </Modal>
       )}
+
+      <PromoRedeemModal
+        visible={showRedeem}
+        onClose={() => setShowRedeem(false)}
+        onRedeemed={refreshAccountState}
+      />
     </SafeAreaView>
   );
 }
@@ -801,6 +885,22 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     letterSpacing: 1.5,
     marginTop: 4,
+  },
+  proBadge: {
+    alignSelf: "flex-start",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    paddingHorizontal: 9,
+    paddingVertical: 3,
+    borderRadius: 999,
+    borderWidth: 1,
+    marginTop: 6,
+  },
+  proBadgeText: {
+    fontSize: 9.5,
+    fontWeight: "900",
+    letterSpacing: 1.2,
   },
   sectionLabel: {
     color: theme.colors.textMuted,
