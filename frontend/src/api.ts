@@ -149,39 +149,62 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
     let detail = "";
     try {
       const t = await res.text();
-      try {
-        const j = JSON.parse(t);
-        // FastAPI/Pydantic 422 returns detail as an array of error objects:
-        // [{type, loc, msg, input, ctx}, ...]. Flatten to a readable string.
-        if (Array.isArray(j?.detail)) {
-          detail = j.detail
-            .map((e: any) => {
-              const loc = Array.isArray(e?.loc)
-                ? e.loc.filter((p: any) => p !== "body").join(".")
-                : "";
-              const msg = e?.msg || "Invalid value";
-              return loc ? `${loc}: ${msg}` : msg;
-            })
-            .join("; ");
-        } else if (typeof j?.detail === "string") {
-          detail = j.detail;
-        } else if (j?.detail && typeof j.detail === "object") {
-          // Single error object form. FastAPI custom paywall errors use
-          // `message` (see subscriptions.enforce_tool_limit); fall back to
-          // `msg` for Pydantic, then a final JSON dump.
-          detail =
-            j.detail.message ||
-            j.detail.msg ||
-            j.detail.error ||
-            JSON.stringify(j.detail);
-        } else if (typeof j?.message === "string") {
-          // FastAPI custom error shape: {"error": "...", "message": "..."}
-          detail = j.message;
+      // If the response body is HTML (e.g. Cloudflare 520 / nginx error
+      // page / outdated backend URL returning a landing page), DON'T leak
+      // the raw markup into a user-facing alert. Translate it to a clean
+      // human message based on the HTTP status.
+      const trimmed = (t || "").trim();
+      const looksLikeHtml =
+        trimmed.startsWith("<!") ||
+        trimmed.startsWith("<html") ||
+        trimmed.startsWith("<HTML") ||
+        trimmed.toLowerCase().includes("<head>") ||
+        trimmed.toLowerCase().includes("<body>");
+      if (looksLikeHtml) {
+        if (res.status >= 500) {
+          detail = "Server is temporarily unreachable. Please try again in a moment.";
+        } else if (res.status === 404) {
+          detail = "That feature is unavailable on this version. Please update the app.";
+        } else if (res.status === 403) {
+          detail = "Access denied.";
         } else {
+          detail = "Something went wrong. Please try again.";
+        }
+      } else {
+        try {
+          const j = JSON.parse(t);
+          // FastAPI/Pydantic 422 returns detail as an array of error objects:
+          // [{type, loc, msg, input, ctx}, ...]. Flatten to a readable string.
+          if (Array.isArray(j?.detail)) {
+            detail = j.detail
+              .map((e: any) => {
+                const loc = Array.isArray(e?.loc)
+                  ? e.loc.filter((p: any) => p !== "body").join(".")
+                  : "";
+                const msg = e?.msg || "Invalid value";
+                return loc ? `${loc}: ${msg}` : msg;
+              })
+              .join("; ");
+          } else if (typeof j?.detail === "string") {
+            detail = j.detail;
+          } else if (j?.detail && typeof j.detail === "object") {
+            // Single error object form. FastAPI custom paywall errors use
+            // `message` (see subscriptions.enforce_tool_limit); fall back to
+            // `msg` for Pydantic, then a final JSON dump.
+            detail =
+              j.detail.message ||
+              j.detail.msg ||
+              j.detail.error ||
+              JSON.stringify(j.detail);
+          } else if (typeof j?.message === "string") {
+            // FastAPI custom error shape: {"error": "...", "message": "..."}
+            detail = j.message;
+          } else {
+            detail = t;
+          }
+        } catch {
           detail = t;
         }
-      } catch {
-        detail = t;
       }
     } catch {}
     if (!detail) detail = `Request failed: ${res.status}`;
