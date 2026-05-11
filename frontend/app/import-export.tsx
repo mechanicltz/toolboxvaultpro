@@ -347,7 +347,16 @@ export default function ImportExportScreen() {
       });
       setImportResult(result);
     } catch (e: any) {
-      Alert.alert("Import failed", e?.message || "Server error during import.");
+      // 402 = free tier limit hit — the global paywall handler in api.ts
+      // already navigated the user there. Don't pile a raw JSON alert on top.
+      if (e?.paymentRequired || e?.status === 402) {
+        // no-op
+      } else {
+        Alert.alert(
+          "Import failed",
+          e?.detail || e?.message || "Server error during import.",
+        );
+      }
     } finally {
       setBusy("");
     }
