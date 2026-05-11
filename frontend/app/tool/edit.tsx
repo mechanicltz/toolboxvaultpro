@@ -815,7 +815,16 @@ export default function ToolEdit() {
         return;
       }
       router.back();
-    } catch (e: any) { Alert.alert("Error", e.message); }
+    } catch (e: any) {
+      // When the backend returns 402 (free-tier limit reached), the global
+      // 402 handler already pushed the user to /paywall — don't pile a raw
+      // JSON alert on top of that.
+      if (e?.paymentRequired || e?.status === 402) {
+        // no-op; paywall is already opening
+      } else {
+        Alert.alert("Error", e?.detail || e?.message || "Could not save tool");
+      }
+    }
     finally { setSaving(false); }
   }, [name, description, brand, model, serial, isSet, setSerials, cost, quantity, purchaseDate, condition, locationId, locationName, category, tags, photos, documents, receipts, isConsumable, consumableInfo, needsRepair, repairInfo, hasWarranty, warranty, dealerId, dealerName, purchasedAgentId, purchasedAgentName, pendingDealerCharge, scanItems, importedItemIdxs, isEdit, id, router]);
 

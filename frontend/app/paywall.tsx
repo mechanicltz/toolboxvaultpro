@@ -28,12 +28,8 @@ import { PromoRedeemModal } from "../src/PromoRedeemModal";
 
 const FEATURES = [
   "Unlimited tools — no 15-item cap",
-  "AI receipt scanning & MSRP lookup",
-  "Customizable PDF reports",
-  "Warranty tracking & claim history",
-  "Maintenance schedules & alerts",
-  "Theft / loss reporting",
-  "All future PRO features",
+  "Priority support",
+  "Support the developer & help the app grow",
 ];
 
 export default function PaywallScreen() {
@@ -159,7 +155,7 @@ export default function PaywallScreen() {
           <Text style={styles.heroSub}>
             {isPro
               ? "You already have PRO — thanks for supporting the app!"
-              : "Unlock unlimited tools and the full feature set"}
+              : "Track unlimited tools. Currently free users are capped at 15."}
           </Text>
         </View>
 

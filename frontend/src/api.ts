@@ -70,6 +70,10 @@ export function setPaymentRequiredHandler(fn: (detail: string) => void) {
 export class ApiError extends Error {
   status: number;
   detail: string;
+  // True when the server returned 402 Payment Required (free-tier limit).
+  // Callers can use this to skip showing their own alert because the
+  // global 402 handler will already have opened the paywall.
+  paymentRequired?: boolean;
   constructor(status: number, detail: string) {
     super(detail || `Request failed: ${status}`);
     this.status = status;
@@ -164,6 +168,9 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
         } else if (j?.detail && typeof j.detail === "object") {
           // Single error object form
           detail = j.detail.msg || JSON.stringify(j.detail);
+        } else if (typeof j?.message === "string") {
+          // FastAPI custom error shape: {"error": "...", "message": "..."}
+          detail = j.message;
         } else {
           detail = t;
         }
@@ -176,7 +183,9 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
     if (res.status === 402 && onPaymentRequired) {
       onPaymentRequired(detail || "Free tier limit reached");
     }
-    throw new ApiError(res.status, detail);
+    const apiErr = new ApiError(res.status, detail);
+    if (res.status === 402) apiErr.paymentRequired = true;
+    throw apiErr;
   }
   // Some endpoints return no body
   const text = await res.text();
