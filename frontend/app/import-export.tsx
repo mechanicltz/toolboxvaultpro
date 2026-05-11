@@ -349,13 +349,28 @@ export default function ImportExportScreen() {
     } catch (e: any) {
       // 402 = free tier limit hit — the global paywall handler in api.ts
       // already navigated the user there. Don't pile a raw JSON alert on top.
-      if (e?.paymentRequired || e?.status === 402) {
-        // no-op
+      // Triple-guard: status flag, payment flag, or any "free_limit_exceeded"
+      // marker in the message (defensive against shape regressions).
+      const detailStr = String(e?.detail || e?.message || "");
+      const isPaywall =
+        e?.paymentRequired === true ||
+        e?.status === 402 ||
+        detailStr.includes("free_limit_exceeded") ||
+        detailStr.includes("Free plan is limited");
+      if (isPaywall) {
+        // no-op — paywall already opened by the global 402 handler
       } else {
-        Alert.alert(
-          "Import failed",
-          e?.detail || e?.message || "Server error during import.",
-        );
+        // Strip any stray JSON braces that might have leaked through.
+        let msg = detailStr || "Server error during import.";
+        if (msg.trim().startsWith("{") && msg.trim().endsWith("}")) {
+          try {
+            const parsed = JSON.parse(msg);
+            msg = parsed.message || parsed.msg || parsed.error || msg;
+          } catch {
+            /* keep original */
+          }
+        }
+        Alert.alert("Import failed", msg);
       }
     } finally {
       setBusy("");

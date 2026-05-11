@@ -166,8 +166,14 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
         } else if (typeof j?.detail === "string") {
           detail = j.detail;
         } else if (j?.detail && typeof j.detail === "object") {
-          // Single error object form
-          detail = j.detail.msg || JSON.stringify(j.detail);
+          // Single error object form. FastAPI custom paywall errors use
+          // `message` (see subscriptions.enforce_tool_limit); fall back to
+          // `msg` for Pydantic, then a final JSON dump.
+          detail =
+            j.detail.message ||
+            j.detail.msg ||
+            j.detail.error ||
+            JSON.stringify(j.detail);
         } else if (typeof j?.message === "string") {
           // FastAPI custom error shape: {"error": "...", "message": "..."}
           detail = j.message;
