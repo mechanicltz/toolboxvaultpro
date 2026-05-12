@@ -15,8 +15,8 @@ import { AuthProvider, useAuth } from "../src/AuthContext";
 import { ResponsiveContainer } from "../src/ResponsiveContainer";
 import { NetworkProvider, OfflineBanner } from "../src/NetworkProvider";
 import { theme } from "../src/theme";
-import { initRevenueCat, identifyRevenueCatUser } from "../src/revenuecat";
-import { setPaymentRequiredHandler } from "../src/api";
+import { initRevenueCat, identifyRevenueCatUser, getCurrentCustomerInfo, buildSyncPayload } from "../src/revenuecat";
+import { setPaymentRequiredHandler, api } from "../src/api";
 
 /**
  * Make native (iOS Expo Go / TestFlight) layouts visually match the web
@@ -101,6 +101,20 @@ function ShellNav() {
         await initRevenueCat(user.id);
         if (cancelled) return;
         await identifyRevenueCatUser(user.id);
+        if (cancelled) return;
+        // After identify, pull the user's current entitlements from RC
+        // and push them to our backend. This unlocks PRO on app boot if
+        // they've already purchased (even from another device, or if a
+        // previous sync was lost). No-op in stub mode.
+        const info = await getCurrentCustomerInfo();
+        const payload = buildSyncPayload(info);
+        if (payload) {
+          try {
+            await api.post("/subscription/sync", payload);
+          } catch (e) {
+            console.warn("[RC] boot sync failed", e);
+          }
+        }
       } catch (e) {
         console.warn("[RC] init failed", e);
       }

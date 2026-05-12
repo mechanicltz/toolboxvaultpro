@@ -22,6 +22,7 @@ import {
   purchasePackage,
   restorePurchases,
   isStubMode,
+  buildSyncPayload,
   type PaywallOffering,
 } from "../src/revenuecat";
 import { PromoRedeemModal } from "../src/PromoRedeemModal";
@@ -73,9 +74,18 @@ export default function PaywallScreen() {
     try {
       const res = await purchasePackage(pkg as any);
       if (res.success) {
-        // RC will notify the backend via webhook. Refresh in case it
-        // already landed; otherwise the next /api/subscription call
-        // returns the updated state.
+        // Tell our backend immediately so the 15-item limit unlocks
+        // without waiting for the RC webhook to land. The customerInfo
+        // payload comes straight from RC's SDK, which fetched the
+        // receipt directly from Apple/Google.
+        const payload = buildSyncPayload(res.customerInfo);
+        if (payload) {
+          try {
+            await api.post("/subscription/sync", payload);
+          } catch (e) {
+            console.warn("[paywall] subscription sync failed", e);
+          }
+        }
         await refreshSub();
         Alert.alert("Welcome to PRO! ✨", "Your subscription is active.");
         router.back();
@@ -98,6 +108,14 @@ export default function PaywallScreen() {
     try {
       const res = await restorePurchases();
       if (res.success) {
+        const payload = buildSyncPayload(res.customerInfo);
+        if (payload) {
+          try {
+            await api.post("/subscription/sync", payload);
+          } catch (e) {
+            console.warn("[paywall] subscription sync failed (restore)", e);
+          }
+        }
         await refreshSub();
         Alert.alert("Restored ✓", "Your previous purchase has been restored.");
         router.back();

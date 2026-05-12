@@ -16,6 +16,7 @@ export type PurchaseResult = {
   entitlement?: string;
   error?: string;
   stub?: boolean; // true when this came from the stub (Expo Go) path
+  customerInfo?: any; // raw RC customerInfo, used to sync the backend
 };
 
 export type PaywallOffering = {
@@ -169,7 +170,11 @@ export async function purchasePackage(
     const res = await _Purchases.purchasePackage(pkg._rawPackage);
     const info = res?.customerInfo || res;
     const proActive = !!info?.entitlements?.active?.pro;
-    return { success: proActive, entitlement: proActive ? "pro" : undefined };
+    return {
+      success: proActive,
+      entitlement: proActive ? "pro" : undefined,
+      customerInfo: info,
+    };
   } catch (e: any) {
     if (e?.userCancelled) {
       return { success: false, error: "Cancelled" };
@@ -189,8 +194,51 @@ export async function restorePurchases(): Promise<PurchaseResult> {
   try {
     const info = await _Purchases.restorePurchases();
     const proActive = !!info?.entitlements?.active?.pro;
-    return { success: proActive, entitlement: proActive ? "pro" : undefined };
+    return {
+      success: proActive,
+      entitlement: proActive ? "pro" : undefined,
+      customerInfo: info,
+    };
   } catch (e: any) {
     return { success: false, error: e?.message || String(e) };
   }
+}
+
+/**
+ * Pull the current customer info from RevenueCat. Used on app boot and
+ * after returning to foreground so we always know if the user is PRO,
+ * even if a purchase happened on another device.
+ */
+export async function getCurrentCustomerInfo(): Promise<any | null> {
+  if (!isRevenueCatReady()) return null;
+  try {
+    return await _Purchases.getCustomerInfo();
+  } catch (e) {
+    console.warn("[RC] getCustomerInfo failed", e);
+    return null;
+  }
+}
+
+/**
+ * Extract a small, JSON-safe payload from a RevenueCat customerInfo
+ * object that the backend `/api/subscription/sync` endpoint expects.
+ * Returns null if there's no `pro` entitlement to report.
+ */
+export function buildSyncPayload(customerInfo: any): any | null {
+  if (!customerInfo) return null;
+  const pro =
+    customerInfo?.entitlements?.active?.pro ||
+    customerInfo?.entitlements?.all?.pro;
+  if (!pro) {
+    return { entitlement_active: false };
+  }
+  return {
+    entitlement_active: !!customerInfo?.entitlements?.active?.pro,
+    expires_at: pro?.expirationDate || pro?.expires_date || null,
+    product_id: pro?.productIdentifier || null,
+    store: pro?.store || null,
+    will_renew: !!pro?.willRenew,
+    period_type: pro?.periodType || null,
+    purchased_at: pro?.latestPurchaseDate || pro?.purchase_date || null,
+  };
 }

@@ -333,6 +333,66 @@ def make_router(db, get_current_user) -> APIRouter:
             "is_active": _is_active(sub),
         }
 
+    @router.post("/subscription/sync")
+    async def sync_subscription(request: Request, user=Depends(get_current_user)):
+        """
+        Client-side entitlement sync. Called by the mobile app right after
+        a successful RevenueCat purchase or on app boot. The app passes the
+        verified `customerInfo` payload from the RC SDK, and we mirror the
+        entitlement state into our subscriptions collection so the
+        free-tier limit unlocks instantly — no webhook round-trip required.
+
+        Body shape (lenient — RC SDK fields):
+          {
+            "entitlement_active": bool,        # true if `pro` entitlement is active
+            "expires_at": str | null,          # ISO8601 or RC millis
+            "product_id": str | null,
+            "store": "APP_STORE" | "PLAY_STORE" | null,
+            "will_renew": bool,
+            "period_type": str | null,
+            "purchased_at": str | null,
+          }
+        """
+        uid = getattr(user, "id", None) or (user.get("id") if isinstance(user, dict) else None)
+        if not uid:
+            raise HTTPException(401, "Unauthorized")
+        body = await request.json()
+
+        sub = await get_subscription(db, uid)
+        # Don't downgrade promo-granted lifetime subscriptions if the app
+        # happens to call sync with no active entitlement (e.g. the user
+        # has a promo and the SDK doesn't see any subscription).
+        if sub.is_lifetime:
+            return {"ok": True, "skipped": "lifetime_promo_already_active", "is_active": True}
+
+        active = bool(body.get("entitlement_active"))
+        # Accept either ISO8601 or millis-since-epoch
+        exp_raw = body.get("expires_at")
+        if isinstance(exp_raw, (int, float)) or (isinstance(exp_raw, str) and exp_raw.isdigit()):
+            sub.expires_at = _coerce_iso(int(exp_raw))
+        elif isinstance(exp_raw, str) and exp_raw:
+            sub.expires_at = exp_raw
+        sub.product_id = body.get("product_id") or sub.product_id
+        sub.store = body.get("store") or sub.store
+        sub.period_type = body.get("period_type") or sub.period_type
+        sub.will_renew = bool(body.get("will_renew", sub.will_renew))
+        sub.purchased_at = body.get("purchased_at") or sub.purchased_at
+        sub.entitlement = "pro" if active else "free"
+        sub.updated_at = _now_iso()
+        sub.is_active = _is_active(sub)
+
+        await db.subscriptions.update_one(
+            {"user_id": uid},
+            {"$set": sub.dict()},
+            upsert=True,
+        )
+        return {
+            "ok": True,
+            "entitlement": sub.entitlement,
+            "is_active": sub.is_active,
+            "expires_at": sub.expires_at,
+        }
+
     @router.post("/revenuecat/webhook")
     async def revenuecat_webhook(
         request: Request,

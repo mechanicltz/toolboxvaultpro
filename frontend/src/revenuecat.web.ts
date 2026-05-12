@@ -55,3 +55,11 @@ export async function restorePurchases(): Promise<PurchaseResult> {
     error: "Restore isn't available on web.",
   };
 }
+
+export async function getCurrentCustomerInfo(): Promise<any | null> {
+  return null;
+}
+
+export function buildSyncPayload(_customerInfo: any): any | null {
+  return null;
+}
