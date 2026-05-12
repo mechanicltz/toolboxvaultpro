@@ -107,13 +107,20 @@ export default function MoreScreen() {
 
   const isPro = !!(sub?.is_lifetime ||
     (sub?.entitlement && sub.entitlement !== "free"));
-  const proLabel = sub?.is_lifetime
-    ? "✨ LIFETIME PRO"
-    : sub?.entitlement === "active_subscription"
-      ? "✨ PRO"
-      : sub?.entitlement === "promo_redeemed" && sub?.expires_at
-        ? `PRO until ${new Date(sub.expires_at).toLocaleDateString()}`
-        : "FREE TIER";
+  // Build the user-facing label. The backend stores entitlement as
+  // "pro" or "free" (see subscriptions.SubscriptionState). Lifetime is
+  // its own flag. We surface a friendly variant for each combination.
+  const proLabel = (() => {
+    if (sub?.is_lifetime) return "✨ LIFETIME PRO";
+    if (sub?.entitlement === "pro" && sub?.is_active) {
+      // Promo grants get the dated form (so the user knows when access ends).
+      if (sub?.promo_code && sub?.expires_at) {
+        return `PRO until ${new Date(sub.expires_at).toLocaleDateString()}`;
+      }
+      return "✨ PRO";
+    }
+    return "FREE TIER";
+  })();
 
   // Format hour:minute as "7:00 AM" / "1:30 PM" for the row.
   const formatHourMinute = (h: number, m: number): string => {

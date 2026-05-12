@@ -3,6 +3,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { api, ApiError, getToken, setToken, setUnauthorizedHandler, bootstrapToken } from "./api";
 import { loadCacheFromDisk, clearCached } from "./cache";
 import { startNetworkWatcher } from "./network";
+import { logoutRevenueCat } from "./revenuecat";
 
 const USER_CACHE_KEY = "tt.auth.user";
 
@@ -155,6 +156,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await writeCachedUser(null);
     // Wipe everything on logout so the next login starts clean.
     await clearCached();
+    // Detach the user from RevenueCat so the next login doesn't inherit
+    // the previous app-user's entitlement state. Best-effort — no-op in
+    // stub / Expo Go.
+    try {
+      await logoutRevenueCat();
+    } catch {
+      /* ignore */
+    }
   }, []);
 
   return (

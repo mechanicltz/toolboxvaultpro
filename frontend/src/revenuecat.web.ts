@@ -60,6 +60,10 @@ export async function getCurrentCustomerInfo(): Promise<any | null> {
   return null;
 }
 
+export async function logoutRevenueCat(): Promise<void> {
+  return;
+}
+
 export function buildSyncPayload(_customerInfo: any): any | null {
   return null;
 }

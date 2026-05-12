@@ -220,6 +220,22 @@ export async function getCurrentCustomerInfo(): Promise<any | null> {
 }
 
 /**
+ * Log out of RevenueCat. Should be called whenever the app user logs out
+ * so a future login on the same device doesn't inherit the previous
+ * user's entitlements (common in dev/testing where multiple app accounts
+ * share one Apple ID — RC SDK will remember the last appUserID
+ * otherwise).
+ */
+export async function logoutRevenueCat(): Promise<void> {
+  if (!isRevenueCatReady()) return;
+  try {
+    await _Purchases.logOut();
+  } catch (e) {
+    // Ignore — logOut throws if the user is already anonymous.
+  }
+}
+
+/**
  * Extract a small, JSON-safe payload from a RevenueCat customerInfo
  * object that the backend `/api/subscription/sync` endpoint expects.
  * Returns null if there's no `pro` entitlement to report.
