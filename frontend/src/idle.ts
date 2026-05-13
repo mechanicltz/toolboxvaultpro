@@ -1,23 +1,36 @@
-// Tracks when the app was last "active" (in the foreground) so other
-// parts of the app can decide whether enough time has passed to replay
-// the intro splash video.
+// Tracks when the app was last "active" so other parts of the app can
+// decide whether to replay the intro splash video.
 //
-// The product spec is: replay the intro every time the app is opened
-// AND it has been inactive for more than 5 minutes (i.e. left in
-// background / killed and reopened).
+// Product spec (refined):
+//   • COLD BOOT — every time the app is launched fresh (killed and
+//     reopened, OS-reboot, first install, etc.) → ALWAYS show the intro.
+//   • RESUME FROM BACKGROUND — only show the intro if the app sat in
+//     the background for more than 5 minutes. Quick context switches
+//     (checking Messages, returning to the app) should NOT replay it.
+//
+// We implement this with a module-level boolean that resets to false on
+// every JS bridge restart (which happens on every cold boot of the
+// native app). The 5-minute logic continues to live in AsyncStorage
+// for background→active transitions.
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const KEY = "tbv.last_active_ts";
 const IDLE_THRESHOLD_MS = 5 * 60 * 1000; // 5 minutes
 
+// In-memory flag — true only after we've already shown the intro at
+// least once in the current process. Reset to false whenever the app
+// is fully killed and relaunched (because JS state evaporates).
+let sessionIntroShown = false;
+
 /**
- * Record that the app is currently active. Call this whenever the user
- * is interacting (or right after the intro finishes) so we don't
- * needlessly re-trigger the splash on quick foreground/background
- * flickers.
+ * Record that the app is currently active and that the intro has been
+ * displayed (or skipped because the 5-min idle rule didn't trigger).
+ * Call this whenever the intro finishes or whenever we decide to skip
+ * it on a quick foreground/background flicker.
  */
 export async function markAppActive(): Promise<void> {
+  sessionIntroShown = true;
   try {
     await AsyncStorage.setItem(KEY, String(Date.now()));
   } catch {
@@ -26,11 +39,19 @@ export async function markAppActive(): Promise<void> {
 }
 
 /**
- * Returns true if the splash intro should play right now — either
- * because the app has never run, or because the last recorded activity
- * was more than IDLE_THRESHOLD_MS ago.
+ * Returns true if the splash intro should play right now.
+ *
+ *   • Cold boot (sessionIntroShown still false)               → true
+ *   • Resume from background after >5 minutes                 → true
+ *   • Anything else (recent foreground/background switch)     → false
  */
 export async function shouldShowIntro(): Promise<boolean> {
+  // Cold boot — JS context is fresh, intro hasn't been shown yet this
+  // process. Always play it.
+  if (!sessionIntroShown) return true;
+
+  // Already shown this session → only replay if the user has been
+  // away for more than IDLE_THRESHOLD_MS.
   try {
     const raw = await AsyncStorage.getItem(KEY);
     if (!raw) return true;
