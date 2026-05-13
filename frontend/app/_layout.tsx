@@ -59,27 +59,17 @@ function AuthGate({ children }: { children: React.ReactNode }) {
   const segments = useSegments();
   const introBootCheckedRef = useRef(false);
   const lastAppStateRef = useRef<AppStateStatus>("active");
-  // showIntro renders the IntroOverlay on top of the app. We control
-  // it as React state (not a route) so it's invariant to Stack mount
-  // timing and isn't affected by AuthContext loading state.
-  const [showIntro, setShowIntro] = useState(false);
-  const [bootDecided, setBootDecided] = useState(false);
+  // showIntro renders the IntroOverlay on top of the app. Initialised
+  // to TRUE so the splash plays on every cold boot — and only on cold
+  // boot, because module-level / component state resets on kill.
+  // After the overlay's video finishes, we set this to false and the
+  // app reveals itself. Foreground/background cycles don't trigger it
+  // unless the JS VM was actually torn down.
+  const [showIntro, setShowIntro] = useState(true);
+  const [bootDecided] = useState(true); // we're already decided
 
-  // On cold boot, decide whether to show the intro splash. Runs exactly
-  // once per app launch.
-  useEffect(() => {
-    if (introBootCheckedRef.current) return;
-    introBootCheckedRef.current = true;
-    (async () => {
-      const show = await shouldShowIntro();
-      if (show) {
-        setShowIntro(true);
-      } else {
-        markAppActive();
-      }
-      setBootDecided(true);
-    })();
-  }, []);
+  // (No async shouldShowIntro check here anymore — the intro just runs
+  // whenever this component first mounts.)
 
   // When the app comes back to the foreground after being away for
   // 5+ minutes, replay the intro. We use AppState rather than a timer
