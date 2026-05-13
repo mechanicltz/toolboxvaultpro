@@ -20,6 +20,7 @@ import { theme } from "../src/theme";
 import { initRevenueCat, identifyRevenueCatUser, getCurrentCustomerInfo, buildSyncPayload } from "../src/revenuecat";
 import { setPaymentRequiredHandler, api } from "../src/api";
 import { shouldShowIntro, markAppActive } from "../src/idle";
+import { IntroOverlay } from "../src/IntroOverlay";
 
 /**
  * Make native (iOS Expo Go / TestFlight) layouts visually match the web
@@ -58,33 +59,27 @@ function AuthGate({ children }: { children: React.ReactNode }) {
   const segments = useSegments();
   const introBootCheckedRef = useRef(false);
   const lastAppStateRef = useRef<AppStateStatus>("active");
-  // Local state — once we've decided whether to show the intro splash,
-  // we can render children. Until then we keep a totally black canvas
-  // up so the user never sees a stray loading spinner before the
-  // animation kicks off.
+  // showIntro renders the IntroOverlay on top of the app. We control
+  // it as React state (not a route) so it's invariant to Stack mount
+  // timing and isn't affected by AuthContext loading state.
+  const [showIntro, setShowIntro] = useState(false);
   const [bootDecided, setBootDecided] = useState(false);
-  const [routeToIntroOnBoot, setRouteToIntroOnBoot] = useState(false);
 
   // On cold boot, decide whether to show the intro splash. Runs exactly
-  // once per app launch. We do this BEFORE letting AuthGate render its
-  // normal contents to avoid flashing the auth spinner on a black
-  // background (which looked like the app was frozen).
+  // once per app launch.
   useEffect(() => {
     if (introBootCheckedRef.current) return;
     introBootCheckedRef.current = true;
     (async () => {
       const show = await shouldShowIntro();
       if (show) {
-        setRouteToIntroOnBoot(true);
-        // Defer router.replace until after the children mount so the
-        // Stack is alive to receive the navigation.
-        setTimeout(() => router.replace("/intro"), 0);
+        setShowIntro(true);
       } else {
         markAppActive();
       }
       setBootDecided(true);
     })();
-  }, [router]);
+  }, []);
 
   // When the app comes back to the foreground after being away for
   // 5+ minutes, replay the intro. We use AppState rather than a timer
@@ -98,41 +93,52 @@ function AuthGate({ children }: { children: React.ReactNode }) {
       if (next === "active" && wasBackground) {
         (async () => {
           const show = await shouldShowIntro();
-          if (show) router.replace("/intro");
+          if (show) setShowIntro(true);
         })();
       }
     };
     const sub = AppState.addEventListener("change", onChange);
     return () => sub.remove();
-  }, [router]);
+  }, []);
 
+  // Auth routing — public vs private routes. Skip while the intro is
+  // showing or while we're still resolving cold-boot state.
   useEffect(() => {
     if (loading) return;
+    if (showIntro) return;
+    if (!bootDecided) return;
     const first = segments[0];
-    if (first === "intro") return; // intro routes itself when done
     const publicRoute = first === "login" || first === "forgot-password";
     if (!user && !publicRoute) {
       router.replace("/login");
     } else if (user && publicRoute) {
       router.replace("/");
     }
-  }, [user, loading, segments, router]);
+  }, [user, loading, segments, router, showIntro, bootDecided]);
+
+  const handleIntroDone = () => {
+    markAppActive();
+    setShowIntro(false);
+  };
 
   // While we're still figuring out whether to play the intro, just
   // show a black canvas — no spinner, no chrome. This avoids the
-  // "frozen loading wheel" effect users were seeing.
+  // "frozen loading wheel" effect that the user previously saw.
   if (!bootDecided) {
     return <View style={{ flex: 1, backgroundColor: "#000" }} />;
   }
 
-  // If we're on the intro route, render children directly (the intro
-  // screen itself is full-black and self-contained).
-  if (segments[0] === "intro" || routeToIntroOnBoot) {
-    return <>{children}</>;
+  // Render the IntroOverlay on top of the regular tree when it's
+  // active. This is a self-contained black-letterboxed video.
+  if (showIntro) {
+    return (
+      <View style={{ flex: 1, backgroundColor: "#000" }}>
+        <IntroOverlay onDone={handleIntroDone} />
+      </View>
+    );
   }
 
-  // Outside of intro: if the auth state is still resolving, show a
-  // small spinner on the app's standard dark background.
+  // Auth resolving — small spinner on the standard dark background.
   if (loading) {
     return (
       <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: theme.colors.bg }}>
