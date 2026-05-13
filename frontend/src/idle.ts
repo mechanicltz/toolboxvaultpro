@@ -1,64 +1,36 @@
-// Tracks when the app was last "active" so other parts of the app can
-// decide whether to replay the intro splash video.
+// Splash intro trigger logic — simplified.
 //
-// Product spec (refined):
-//   • COLD BOOT — every time the app is launched fresh (killed and
-//     reopened, OS-reboot, first install, etc.) → ALWAYS show the intro.
-//   • RESUME FROM BACKGROUND — only show the intro if the app sat in
-//     the background for more than 5 minutes. Quick context switches
-//     (checking Messages, returning to the app) should NOT replay it.
-//
-// We implement this with a module-level boolean that resets to false on
-// every JS bridge restart (which happens on every cold boot of the
-// native app). The 5-minute logic continues to live in AsyncStorage
-// for background→active transitions.
+// Rule: the intro plays exactly once per JS process (i.e. on cold
+// boot). Any subsequent calls during the same process — including
+// foreground/background cycles — return false. Quitting the app from
+// the iOS app switcher (or fully killing Expo Go) destroys the JS
+// VM, so the module-level flag below resets and the intro will play
+// again on the next launch.
 
-import AsyncStorage from "@react-native-async-storage/async-storage";
-
-const KEY = "tbv.last_active_ts";
-const IDLE_THRESHOLD_MS = 5 * 60 * 1000; // 5 minutes
-
-// In-memory flag — true only after we've already shown the intro at
-// least once in the current process. Reset to false whenever the app
-// is fully killed and relaunched (because JS state evaporates).
 let sessionIntroShown = false;
 
+// Eagerly log so we can verify the bundle is fresh after a reload.
+// If you see this exact line in Metro/Expo Go logs and the value is
+// `false`, we know cold-boot detection is working as designed.
+// eslint-disable-next-line no-console
+console.log("[intro] idle module init — sessionIntroShown =", sessionIntroShown);
+
 /**
- * Record that the app is currently active and that the intro has been
- * displayed (or skipped because the 5-min idle rule didn't trigger).
- * Call this whenever the intro finishes or whenever we decide to skip
- * it on a quick foreground/background flicker.
+ * Record that the intro has been shown (or skipped) for the current
+ * process. After this call shouldShowIntro() will return false until
+ * the next cold boot.
  */
-export async function markAppActive(): Promise<void> {
+export function markAppActive(): void {
   sessionIntroShown = true;
-  try {
-    await AsyncStorage.setItem(KEY, String(Date.now()));
-  } catch {
-    /* ignore */
-  }
 }
 
 /**
  * Returns true if the splash intro should play right now.
- *
- *   • Cold boot (sessionIntroShown still false)               → true
- *   • Resume from background after >5 minutes                 → true
- *   • Anything else (recent foreground/background switch)     → false
+ * True on the very first call of each process; false thereafter.
  */
 export async function shouldShowIntro(): Promise<boolean> {
-  // Cold boot — JS context is fresh, intro hasn't been shown yet this
-  // process. Always play it.
-  if (!sessionIntroShown) return true;
-
-  // Already shown this session → only replay if the user has been
-  // away for more than IDLE_THRESHOLD_MS.
-  try {
-    const raw = await AsyncStorage.getItem(KEY);
-    if (!raw) return true;
-    const last = parseInt(raw, 10);
-    if (!Number.isFinite(last)) return true;
-    return Date.now() - last > IDLE_THRESHOLD_MS;
-  } catch {
-    return true;
-  }
+  const result = !sessionIntroShown;
+  // eslint-disable-next-line no-console
+  console.log("[intro] shouldShowIntro() →", result, "(sessionIntroShown:", sessionIntroShown, ")");
+  return result;
 }
