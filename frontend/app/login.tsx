@@ -72,7 +72,7 @@ export default function LoginScreen() {
         >
           <View style={styles.brand}>
             <Image
-              source={require("../assets/images/icon.png")}
+              source={require("../assets/images/icon-transparent.png")}
               style={styles.brandLogo}
               resizeMode="contain"
             />
@@ -253,6 +253,9 @@ const styles = StyleSheet.create({
     height: 110,
     marginBottom: 14,
     borderRadius: 22,
+    overflow: "hidden",
+    backgroundColor: "transparent",
+    resizeMode: "cover",
   },
   logoBox: {
     width: 72,
