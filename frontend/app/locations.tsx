@@ -14,7 +14,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import { useFocusEffect, useRouter } from "expo-router";
+import { useFocusEffect, useRouter, useLocalSearchParams } from "expo-router";
 import { theme } from "../src/theme";
 import { api } from "../src/api";
 import { confirm } from "../src/confirm";
@@ -22,6 +22,11 @@ import { buildLocationTree, LocationNode } from "../src/locationTree";
 
 export default function LocationsTreeScreen() {
   const router = useRouter();
+  // When the user opens this screen from a tool detail page, the source
+  // route includes `?highlight=<location_id>` so we can visually point
+  // at the location currently assigned to that tool. Lives only for the
+  // initial render — purely UX, not editable.
+  const { highlight } = useLocalSearchParams<{ highlight?: string }>();
   const [nodes, setNodes] = useState<LocationNode[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
@@ -146,9 +151,20 @@ export default function LocationsTreeScreen() {
 
   const renderNode = (n: LocationNode) => {
     const isOpen = expanded.has(n.id);
+    const isHighlighted = highlight === n.id;
     return (
       <View key={n.id}>
-        <View style={[styles.row, { paddingLeft: 16 + n.depth * 18 }]}>
+        <View
+          style={[
+            styles.row,
+            { paddingLeft: 16 + n.depth * 18 },
+            isHighlighted && {
+              backgroundColor: theme.colors.accent + "33", // 20% accent
+              borderLeftWidth: 3,
+              borderLeftColor: theme.colors.accent,
+            },
+          ]}
+        >
           {n.children.length > 0 ? (
             <TouchableOpacity testID={`expand-${n.id}`} onPress={() => toggle(n.id)} hitSlop={6}>
               <Ionicons

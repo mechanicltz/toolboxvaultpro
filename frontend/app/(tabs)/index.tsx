@@ -318,7 +318,7 @@ export default function HomeScreen() {
         {/* The customizable scrollable list */}
         <View style={styles.list}>
           {order.map((k) =>
-            visible[k] ? (
+            visible[k] && (k !== "invested" || prefs.show_prices) ? (
               <View key={k}>{ROW_RENDERERS[k]?.()}</View>
             ) : null,
           )}

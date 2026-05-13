@@ -35,6 +35,13 @@ import { ReceiptsSection } from "../../src/sections/ReceiptsSection";
 import { MaintenanceSection } from "../../src/sections/MaintenanceSection";
 import { WarrantySection } from "../../src/sections/WarrantySection";
 import PinchZoomImageViewer from "../../src/components/PinchZoomImageViewer";
+import {
+  pickContactNativeIOS,
+  loadAllDeviceContactsAndroid,
+  isAndroidPickerNeeded,
+  isDeviceContactsAvailable,
+  type PickedContact,
+} from "../../src/deviceContacts";
 
 export default function ToolDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -1141,19 +1148,50 @@ export default function ToolDetail() {
   })();
 
   const maintenanceSummary = (() => {
-    const arr = Array.isArray(tool.maintenance_logs) ? tool.maintenance_logs : [];
-    if (!arr.length) return "Never serviced";
-    const last = arr[arr.length - 1];
-    return last?.scheduled_for
-      ? `Last: ${formatDateUS(last.scheduled_for)}`
-      : "Service logged";
+    // tool.maintenance is the user's configured schedules. tool.maintenance_logs
+    // (if present) is the history of completed services. We surface the
+    // schedule count + last log so the pill is meaningful even before any
+    // actual service entries.
+    const schedules = Array.isArray(tool.maintenance) ? tool.maintenance : [];
+    const logs = Array.isArray(tool.maintenance_logs) ? tool.maintenance_logs : [];
+    if (logs.length) {
+      const last = logs[logs.length - 1];
+      return last?.scheduled_for
+        ? `Last: ${formatDateUS(last.scheduled_for)}`
+        : "Service logged";
+    }
+    if (schedules.length) {
+      const s = schedules[0];
+      return s?.next_due_date
+        ? `Next: ${formatDateUS(s.next_due_date)}`
+        : `${schedules.length} schedule${schedules.length === 1 ? "" : "s"}`;
+    }
+    return "Never serviced";
+  })();
+  // The pill's numeric count: prefer logs (if any), else schedules count.
+  const maintenanceCount = (() => {
+    const logs = Array.isArray(tool.maintenance_logs) ? tool.maintenance_logs : [];
+    if (logs.length) return logs.length;
+    const schedules = Array.isArray(tool.maintenance) ? tool.maintenance : [];
+    return schedules.length;
   })();
   const warrantySummary = (() => {
+    // The backend Warranty model uses `has_warranty` + `coverage_type` +
+    // `expires_at` (see backend/server.py Warranty class). Older code looked
+    // for a bare `type` field that doesn't exist — that's why the pill
+    // always read 0/None even when warranty info was entered.
     const w = tool.warranty || {};
-    if (!w.type && !w.expires_at) return "None";
-    if (w.type === "lifetime") return "Lifetime";
+    const has = !!w.has_warranty;
+    const ct = w.coverage_type || w.type; // legacy field name tolerated
+    if (!has && !ct && !w.expires_at) return "None";
+    if (ct === "lifetime") return "Lifetime";
     if (w.expires_at) return `Until ${formatDateUS(w.expires_at)}`;
-    return w.type ? String(w.type) : "—";
+    return ct ? String(ct) : "Active";
+  })();
+  // Numeric count for the warranty pill — 1 when there's any warranty info.
+  const warrantyCount = (() => {
+    const w = tool.warranty || {};
+    return w.has_warranty || w.coverage_type || w.type || w.expires_at ? 1 : 0;
   })();
 
   return (
@@ -1214,12 +1252,45 @@ export default function ToolDetail() {
             </View>
           )}
 
+          {/* CHECKED OUT BY — when this tool is currently signed out, show
+              who has it and when. Tapping jumps to the borrower's profile. */}
+          {tool.is_checked_out && (() => {
+            const active = Array.isArray(tool.checkout_history)
+              ? [...tool.checkout_history].reverse().find((r: any) => !r?.checked_in_at)
+              : null;
+            if (!active) return null;
+            const target = active.borrower_id
+              ? `/borrower/${active.borrower_id}`
+              : null;
+            return (
+              <TouchableOpacity
+                testID="checked-out-pill"
+                style={newStyles.checkedOutBox}
+                activeOpacity={target ? 0.85 : 1}
+                onPress={target ? () => router.push(target as any) : undefined}
+              >
+                <Ionicons name="person" size={16} color="#000" />
+                <View style={{ flex: 1 }}>
+                  <Text style={newStyles.checkedOutHeader}>
+                    Checked out by: {active.borrower_name || "Unknown"}
+                  </Text>
+                  <Text style={newStyles.checkedOutSub}>
+                    Checked out on: {formatDateUS(active.checked_out_at)}
+                  </Text>
+                </View>
+                {!!target && (
+                  <Ionicons name="chevron-forward" size={14} color="#000" />
+                )}
+              </TouchableOpacity>
+            );
+          })()}
+
           {/* LOCATION — wide pill, NO label (just the location value) */}
           <TouchableOpacity
             testID="location-pill"
             style={newStyles.locationWide}
             activeOpacity={tool.location_id ? 0.85 : 1}
-            onPress={tool.location_id ? () => router.push(`/locations`) : undefined}
+            onPress={tool.location_id ? () => router.push(`/locations?highlight=${encodeURIComponent(tool.location_id)}` as any) : undefined}
           >
             <Ionicons name="location-outline" size={16} color={theme.colors.accent} />
             <Text style={newStyles.locationWideText} numberOfLines={1}>
@@ -1283,32 +1354,59 @@ export default function ToolDetail() {
           {/* Lost banner — only renders if tool.is_lost */}
           <LostStatusBanner tool={tool} onChange={load} />
 
-          {/* Repair detail card — only when broken */}
+          {/* Repair detail card — only when broken. Redesigned per UX
+              feedback: header reads "CLAIM INFORMATION", shows status +
+              notified date, and has two action buttons (Edit Claim /
+              Mark Fixed) instead of a tiny pencil icon. */}
           {tool.needs_repair && (
             <View style={newStyles.repairCard}>
-              <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 10 }}>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 8 }}>
                 <Ionicons name="build" size={18} color={theme.colors.danger} />
-                <View style={{ flex: 1 }}>
-                  <Text style={newStyles.repairTitle}>
-                    {(tool.repair_info?.repair_status || "Repair pending").toUpperCase()}
+                <Text style={newStyles.repairTitle}>CLAIM INFORMATION</Text>
+              </View>
+              <View style={{ marginLeft: 28 }}>
+                <Text style={newStyles.repairLine}>
+                  Status: {(tool.repair_info?.repair_status || "Repair pending").toUpperCase()}
+                </Text>
+                {!!tool.repair_info?.company_notified && (
+                  <Text style={newStyles.repairLine}>At: {tool.repair_info.company_notified}</Text>
+                )}
+                {!!tool.repair_info?.notified_at && (
+                  <Text style={newStyles.repairLine}>
+                    Notified: {formatDateUS(tool.repair_info.notified_at)}
                   </Text>
-                  {!!tool.repair_info?.company_notified && (
-                    <Text style={newStyles.repairLine}>At: {tool.repair_info.company_notified}</Text>
-                  )}
-                  {!!tool.repair_info?.notified_at && (
-                    <Text style={newStyles.repairLine}>Notified: {formatDateUS(tool.repair_info.notified_at)}</Text>
-                  )}
-                  {!!tool.repair_info?.expected_completion && (
-                    <Text style={newStyles.repairLine}>Expected back: {formatDateUS(tool.repair_info.expected_completion)}</Text>
-                  )}
-                  {!!tool.repair_info?.notes && (
-                    <Text style={[newStyles.repairLine, { fontStyle: "italic", marginTop: 6 }]}>
-                      {tool.repair_info.notes}
-                    </Text>
-                  )}
-                </View>
-                <TouchableOpacity onPress={openRepair} hitSlop={10}>
-                  <Ionicons name="create-outline" size={18} color={theme.colors.danger} />
+                )}
+                {!!tool.repair_info?.expected_completion && (
+                  <Text style={newStyles.repairLine}>
+                    Expected back: {formatDateUS(tool.repair_info.expected_completion)}
+                  </Text>
+                )}
+                {!!tool.repair_info?.notes && (
+                  <Text style={[newStyles.repairLine, { fontStyle: "italic", marginTop: 6 }]}>
+                    {tool.repair_info.notes}
+                  </Text>
+                )}
+              </View>
+              <View style={{ flexDirection: "row", gap: 10, marginTop: 14 }}>
+                <TouchableOpacity
+                  style={[newStyles.saleBtn, { backgroundColor: "rgba(0,0,0,0.25)", flex: 1 }]}
+                  onPress={openRepair}
+                  testID="claim-edit"
+                >
+                  <Ionicons name="create-outline" size={14} color={theme.colors.danger} />
+                  <Text style={[newStyles.saleBtnText, { color: theme.colors.danger }]}>
+                    EDIT CLAIM
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[newStyles.saleBtn, { backgroundColor: theme.colors.success, flex: 1 }]}
+                  onPress={markRepaired}
+                  testID="claim-mark-fixed"
+                >
+                  <Ionicons name="checkmark-done" size={14} color="#000" />
+                  <Text style={[newStyles.saleBtnText, { color: "#000" }]}>
+                    MARK FIXED
+                  </Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -1458,7 +1556,7 @@ export default function ToolDetail() {
             <AttachmentPill
               icon="construct-outline"
               label="MAINTENANCE"
-              count={Array.isArray(tool.maintenance_logs) ? tool.maintenance_logs.length : 0}
+              count={maintenanceCount}
               open={attachOpen === "maintenance"}
               onToggle={() =>
                 setAttachOpen(attachOpen === "maintenance" ? null : "maintenance")
@@ -1470,11 +1568,7 @@ export default function ToolDetail() {
             <AttachmentPill
               icon="shield-checkmark-outline"
               label="WARRANTY"
-              count={
-                tool.warranty && (tool.warranty.type || tool.warranty.expires_at)
-                  ? 1
-                  : 0
-              }
+              count={warrantyCount}
               open={attachOpen === "warranty"}
               onToggle={() =>
                 setAttachOpen(attachOpen === "warranty" ? null : "warranty")
@@ -1537,14 +1631,8 @@ export default function ToolDetail() {
             </TouchableOpacity>
 
             {/* DOCUMENTS — expands the Documents pill in Attachments */}
-            <TouchableOpacity
-              testID="action-documents"
-              style={newStyles.actionTile}
-              onPress={() => setAttachOpen("documents")}
-            >
-              <Ionicons name="document-attach-outline" size={20} color={theme.colors.accent} />
-              <Text style={newStyles.actionTileText}>DOCUMENTS</Text>
-            </TouchableOpacity>
+            {/* (DOCUMENTS bottom action removed — users can reach
+                 the Documents pillbox in the Attachments section.) */}
 
             {/* CHECK OUT / CHECK IN (contextual) */}
             {!tool.is_sold && !tool.is_lost && (
@@ -1727,6 +1815,48 @@ export default function ToolDetail() {
               />
             )}
 
+            {/* Import from device contacts — quick way to pull a name from
+                the phone's address book without switching screens. Hidden
+                on web (no contacts API there). On iOS we use the native
+                picker sheet; on Android we use the in-app picker the user
+                might already have if the borrowers tab is open. */}
+            {isDeviceContactsAvailable() && (
+              <TouchableOpacity
+                testID="checkout-import-contact"
+                style={[styles.borrowerPick, { justifyContent: "center", marginTop: 8 }]}
+                onPress={async () => {
+                  if (Platform.OS === "ios") {
+                    const c = await pickContactNativeIOS();
+                    if (c?.name) {
+                      setCoMode("free");
+                      setCoBorrowerId(null);
+                      setCoName(c.name);
+                    }
+                  } else if (isAndroidPickerNeeded()) {
+                    const list = await loadAllDeviceContactsAndroid();
+                    if (list.length) {
+                      // Simple choice — pick the first match a user types.
+                      // Fallback flow: just use the first contact's name.
+                      // A future improvement would show a searchable list.
+                      Alert.alert(
+                        "Pick from contacts",
+                        "On Android, please go to the People tab → Import from Contacts to pick a specific contact. We'll bring you there now.",
+                        [
+                          { text: "Cancel", style: "cancel" },
+                          { text: "Open People", onPress: () => router.push("/(tabs)/borrowers" as any) },
+                        ],
+                      );
+                    }
+                  }
+                }}
+              >
+                <Ionicons name="person-add-outline" size={16} color={theme.colors.accent} />
+                <Text style={[styles.borrowerName, { color: theme.colors.accent, marginLeft: 8 }]}>
+                  IMPORT FROM CONTACTS
+                </Text>
+              </TouchableOpacity>
+            )}
+
             <TextInput
               testID="checkout-notes-input"
               placeholder="Notes (optional)"
@@ -1739,13 +1869,17 @@ export default function ToolDetail() {
 
             <View style={styles.modalActions}>
               <TouchableOpacity
-                style={styles.btnGhost}
+                style={[styles.btnGhost, { flex: 1, paddingHorizontal: 28, paddingVertical: 12 }]}
                 onPress={() => setShowCheckout(false)}
               >
-                <Text style={styles.btnGhostText}>CANCEL</Text>
+                <Text style={[styles.btnGhostText, { fontSize: 14, letterSpacing: 1 }]}>CANCEL</Text>
               </TouchableOpacity>
-              <TouchableOpacity testID="confirm-checkout-btn" style={styles.btn} onPress={doCheckout}>
-                <Text style={styles.btnText}>CHECK OUT</Text>
+              <TouchableOpacity
+                testID="confirm-checkout-btn"
+                style={[styles.btn, { flex: 1, paddingHorizontal: 28, paddingVertical: 12 }]}
+                onPress={doCheckout}
+              >
+                <Text style={[styles.btnText, { fontSize: 14, letterSpacing: 1 }]}>CHECK OUT</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -2377,11 +2511,11 @@ export default function ToolDetail() {
             </View>
             <View style={styles.modalActions}>
               <TouchableOpacity
-                style={styles.btn}
+                style={[styles.btn, { flex: 1, paddingHorizontal: 28, paddingVertical: 12 }]}
                 onPress={() => setShowQtyModal(false)}
                 testID="close-qty-modal"
               >
-                <Text style={styles.btnText}>DONE</Text>
+                <Text style={[styles.btnText, { fontSize: 14, letterSpacing: 1 }]}>DONE</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -3334,6 +3468,30 @@ const newStyles = StyleSheet.create({
     color: theme.colors.textPrimary,
     fontSize: 14,
     lineHeight: 20,
+  },
+
+  // ---------- CHECKED OUT PILL (highlighted, sits below the description
+  // when the tool is currently signed out) ----------
+  checkedOutBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    backgroundColor: theme.colors.accent,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
+  checkedOutHeader: {
+    color: "#000",
+    fontWeight: "900",
+    fontSize: 13,
+    letterSpacing: 0.3,
+  },
+  checkedOutSub: {
+    color: "rgba(0,0,0,0.7)",
+    fontWeight: "700",
+    fontSize: 11,
+    marginTop: 2,
   },
 
   // ---------- TAGS ----------
