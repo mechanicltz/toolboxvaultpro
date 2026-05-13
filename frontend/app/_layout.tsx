@@ -58,21 +58,31 @@ function AuthGate({ children }: { children: React.ReactNode }) {
   const segments = useSegments();
   const introBootCheckedRef = useRef(false);
   const lastAppStateRef = useRef<AppStateStatus>("active");
+  // Local state — once we've decided whether to show the intro splash,
+  // we can render children. Until then we keep a totally black canvas
+  // up so the user never sees a stray loading spinner before the
+  // animation kicks off.
+  const [bootDecided, setBootDecided] = useState(false);
+  const [routeToIntroOnBoot, setRouteToIntroOnBoot] = useState(false);
 
   // On cold boot, decide whether to show the intro splash. Runs exactly
-  // once per app launch. Independent of auth state — the intro plays
-  // for everyone (signed in or not) and routes appropriately when it
-  // finishes.
+  // once per app launch. We do this BEFORE letting AuthGate render its
+  // normal contents to avoid flashing the auth spinner on a black
+  // background (which looked like the app was frozen).
   useEffect(() => {
     if (introBootCheckedRef.current) return;
     introBootCheckedRef.current = true;
     (async () => {
       const show = await shouldShowIntro();
       if (show) {
-        router.replace("/intro");
+        setRouteToIntroOnBoot(true);
+        // Defer router.replace until after the children mount so the
+        // Stack is alive to receive the navigation.
+        setTimeout(() => router.replace("/intro"), 0);
       } else {
-        markAppActive(); // refresh the timestamp on every cold boot
+        markAppActive();
       }
+      setBootDecided(true);
     })();
   }, [router]);
 
@@ -90,9 +100,6 @@ function AuthGate({ children }: { children: React.ReactNode }) {
           const show = await shouldShowIntro();
           if (show) router.replace("/intro");
         })();
-      } else if (next === "background" || next === "inactive") {
-        // Don't update the timestamp on background — that's exactly
-        // the moment we want to start counting toward the 5 min idle.
       }
     };
     const sub = AppState.addEventListener("change", onChange);
@@ -102,9 +109,7 @@ function AuthGate({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (loading) return;
     const first = segments[0];
-    // Intro is a "neutral" route — let it sit on top of any auth state
-    // until the video finishes and routes onward.
-    if (first === "intro") return;
+    if (first === "intro") return; // intro routes itself when done
     const publicRoute = first === "login" || first === "forgot-password";
     if (!user && !publicRoute) {
       router.replace("/login");
@@ -113,13 +118,21 @@ function AuthGate({ children }: { children: React.ReactNode }) {
     }
   }, [user, loading, segments, router]);
 
-  // If we're showing the intro splash, render it WITHOUT the loading
-  // spinner overlay — otherwise the AuthGate's spinner sits on top of
-  // a black screen and looks like the app is frozen while auth boots.
-  if (segments[0] === "intro") {
+  // While we're still figuring out whether to play the intro, just
+  // show a black canvas — no spinner, no chrome. This avoids the
+  // "frozen loading wheel" effect users were seeing.
+  if (!bootDecided) {
+    return <View style={{ flex: 1, backgroundColor: "#000" }} />;
+  }
+
+  // If we're on the intro route, render children directly (the intro
+  // screen itself is full-black and self-contained).
+  if (segments[0] === "intro" || routeToIntroOnBoot) {
     return <>{children}</>;
   }
 
+  // Outside of intro: if the auth state is still resolving, show a
+  // small spinner on the app's standard dark background.
   if (loading) {
     return (
       <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: theme.colors.bg }}>
