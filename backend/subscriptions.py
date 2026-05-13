@@ -502,6 +502,57 @@ def make_router(db, get_current_user) -> APIRouter:
         return {"is_admin": _user_email(user) in _admin_emails(),
                 "email": _user_email(user)}
 
+    @router.post("/admin/nuke-database")
+    async def admin_nuke_database(request: Request, user=Depends(get_current_user)):
+        """
+        ⚠️ DESTRUCTIVE. Drops every collection except the caller's own user
+        record. Requires admin role AND a confirmation token in the body to
+        prevent accidental calls (e.g. by a misbehaving frontend).
+
+        Body: {"confirm": "WIPE-EVERYTHING"}
+
+        Use this once after the schema changes have been deployed to a
+        fresh production environment and you want to reset all data.
+        Returns a per-collection count of what was dropped.
+        """
+        _require_admin(user)
+        body = {}
+        try:
+            body = await request.json()
+        except Exception:
+            body = {}
+        if body.get("confirm") != "WIPE-EVERYTHING":
+            raise HTTPException(
+                400,
+                "Refusing to wipe — pass {\"confirm\": \"WIPE-EVERYTHING\"} in the body.",
+            )
+
+        admin_uid = _user_id(user)
+        admin_email = _user_email(user)
+        report: dict = {}
+
+        # We have to use the underlying motor database, not the scoped helper.
+        # `db` is already a motor Database instance.
+        coll_names = await db.list_collection_names()
+        for name in coll_names:
+            if name == "users":
+                # Preserve only the admin who triggered the nuke so they can
+                # keep logging in. Everything else in users gets dropped.
+                res = await db.users.delete_many({"id": {"$ne": admin_uid}})
+                report[name] = {"deleted": res.deleted_count, "kept_admin": admin_email}
+            else:
+                # All other collections — drop everything.
+                count = await db[name].count_documents({})
+                if count:
+                    await db[name].delete_many({})
+                report[name] = {"deleted": count}
+
+        return {
+            "ok": True,
+            "admin": admin_email,
+            "report": report,
+        }
+
     @router.post("/admin/promo-codes")
     async def admin_create_promo(body: CreatePromoBody, user=Depends(get_current_user)):
         _require_admin(user)
