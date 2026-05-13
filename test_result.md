@@ -3020,3 +3020,32 @@ Existing endpoints verified still working:
   • Free-tier 15-tool limit BYPASS verified end-to-end: created a fresh user, redeemed lifetime code, then successfully created 18 tools via POST /api/tools — every one returned 200 (no 402 free_limit_exceeded). enforce_tool_limit() correctly bypasses for is_pro() users.
 
 Cleanup: all 3 test promo codes and 18 test tools were deleted. subtest's lifetime-pro state was NOT modified. /app/backend/.env was NOT modified. /app/memory/test_credentials.md was updated to record the new admin user. Backend log during run shows only 200/400/403/404/409 responses — zero 500s, zero tracebacks. Production-ready. Main agent: summarise and finish."
+
+#====================================================================================================
+# 12-ITEM USER BUG FIX BATCH — June 2025
+#====================================================================================================
+
+frontend:
+  - task: "Bug #10 — Dealer detail Call + Text (SMS) buttons (main dealer phone + each agent)"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/app/dealer/[id].tsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Added direct CALL + TEXT (SMS) pill buttons next to dealer.phone in the CONTACT section, and CALL/TEXT buttons next to each agent.phone. Email row stays separate. Uses openPhone/openSms/openEmail helpers from contactLinks.ts which wrap Linking.openURL('tel:...'/'sms:...'/'mailto:...'). Borrower detail page already had these via ContactActions — verified no regression."
+
+  - task: "Bug #12 — Standard PDF report receipt photos showing blue '?' broken icon"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/src/pdfImage.ts"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "ROOT CAUSE: ImageManipulator.manipulateAsync() requires a proper URI scheme (file://, data:, http(s)://). Legacy receipts stored as bare base64 strings (no 'data:' prefix) caused manipulateAsync to throw silently — the catch fallback returned the raw base64 — then <img src='<rawbase64>'> rendered as the xhtml2pdf broken-image icon (blue '?'). FIX: Added ensureDataUri() helper that auto-prepends 'data:image/jpeg;base64,' to bare base64 strings. compressForPdf() now normalizes the input BEFORE calling manipulateAsync AND uses the normalized URI as the fallback when manipulation fails. Receipts already saved with 'data:' prefix and file:// URIs are passed through unchanged."

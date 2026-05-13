@@ -21,7 +21,7 @@ import { api } from "../../src/api";
 import { usePrefs } from "../../src/prefs";
 import { confirm } from "../../src/confirm";
 import { formatDateUS } from "../../src/dateUtil";
-import { formatPhone, formatPhonesInText } from "../../src/contactLinks";
+import { formatPhone, formatPhonesInText, openPhone, openSms, openEmail } from "../../src/contactLinks";
 import { BalanceSection } from "../../src/sections/BalanceSection";
 import { ROUTE_FREQUENCIES, DAY_NAMES, routeLabel, nextRouteText } from "../../src/route";
 import { DateField } from "../../src/DateField";
@@ -278,13 +278,36 @@ export default function DealerDetail() {
                 <Text style={styles.agentName}>{a.name}</Text>
               </View>
               {!!a.phone && (
-                <TouchableOpacity onPress={() => callOrEmail(a.phone)}>
-                  <Text style={styles.agentMeta}>📞 {formatPhone(a.phone)}</Text>
-                </TouchableOpacity>
+                <View style={styles.agentContactRow}>
+                  <TouchableOpacity
+                    testID={`agent-call-${a.id}`}
+                    style={styles.agentContactBtn}
+                    onPress={() => openPhone(a.phone)}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons name="call" size={13} color={theme.colors.accent} />
+                    <Text style={styles.agentContactText} numberOfLines={1}>{formatPhone(a.phone)}</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    testID={`agent-text-${a.id}`}
+                    style={[styles.agentContactBtn, styles.agentContactBtnSmall]}
+                    onPress={() => openSms(a.phone)}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons name="chatbubble-ellipses" size={13} color={theme.colors.accent} />
+                    <Text style={styles.agentContactText}>TEXT</Text>
+                  </TouchableOpacity>
+                </View>
               )}
               {!!a.email && (
-                <TouchableOpacity onPress={() => callOrEmail(a.email)}>
-                  <Text style={styles.agentMeta}>✉️ {a.email}</Text>
+                <TouchableOpacity
+                  testID={`agent-email-${a.id}`}
+                  style={styles.agentContactBtn}
+                  onPress={() => openEmail(a.email)}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons name="mail" size={13} color={theme.colors.accent} />
+                  <Text style={styles.agentContactText} numberOfLines={1}>{a.email}</Text>
                 </TouchableOpacity>
               )}
               {!!a.notes && <Text style={styles.agentMeta}>{a.notes}</Text>}
@@ -368,7 +391,30 @@ export default function DealerDetail() {
         </TouchableOpacity>
 
         <Text style={styles.sectionLabel}>CONTACT</Text>
-        <ContactRow icon="call" label={formatPhone(dealer.phone)} onPress={() => callOrEmail(dealer.phone)} />
+        {!!dealer.phone && (
+          <View style={styles.dealerContactPhoneRow}>
+            <TouchableOpacity
+              testID="dealer-call-btn"
+              style={styles.dealerContactBtn}
+              onPress={() => openPhone(dealer.phone)}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="call" size={16} color={theme.colors.accent} />
+              <Text style={styles.dealerContactBtnText} numberOfLines={1}>
+                {formatPhone(dealer.phone)}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              testID="dealer-text-btn"
+              style={[styles.dealerContactBtn, styles.dealerContactBtnSmall]}
+              onPress={() => openSms(dealer.phone)}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="chatbubble-ellipses" size={16} color={theme.colors.accent} />
+              <Text style={styles.dealerContactBtnText}>TEXT</Text>
+            </TouchableOpacity>
+          </View>
+        )}
         <ContactRow icon="globe" label={dealer.website} onPress={() => callOrEmail(dealer.website)} />
         <ContactRow icon="location" label={dealer.address} />
         {!!dealer.notes && (
@@ -854,6 +900,60 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
   },
   contactText: { color: theme.colors.textPrimary, fontSize: 10 },
+  dealerContactPhoneRow: {
+    flexDirection: "row",
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    flexWrap: "wrap",
+  },
+  dealerContactBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: theme.colors.accent,
+    backgroundColor: theme.colors.surface,
+  },
+  dealerContactBtnSmall: {
+    paddingHorizontal: 12,
+  },
+  dealerContactBtnText: {
+    color: theme.colors.textPrimary,
+    fontSize: 11,
+    fontWeight: "800",
+    letterSpacing: 0.5,
+  },
+  agentContactRow: {
+    flexDirection: "row",
+    gap: 6,
+    marginTop: 6,
+    flexWrap: "wrap",
+  },
+  agentContactBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: theme.colors.accent,
+    backgroundColor: theme.colors.surface,
+    marginTop: 4,
+  },
+  agentContactBtnSmall: {
+    paddingHorizontal: 8,
+  },
+  agentContactText: {
+    color: theme.colors.textPrimary,
+    fontSize: 9,
+    fontWeight: "700",
+    letterSpacing: 0.3,
+  },
   agentCard: {
     marginHorizontal: 20,
     marginBottom: 10,
