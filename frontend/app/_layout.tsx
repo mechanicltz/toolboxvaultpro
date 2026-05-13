@@ -113,6 +113,13 @@ function AuthGate({ children }: { children: React.ReactNode }) {
     }
   }, [user, loading, segments, router]);
 
+  // If we're showing the intro splash, render it WITHOUT the loading
+  // spinner overlay — otherwise the AuthGate's spinner sits on top of
+  // a black screen and looks like the app is frozen while auth boots.
+  if (segments[0] === "intro") {
+    return <>{children}</>;
+  }
+
   if (loading) {
     return (
       <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: theme.colors.bg }}>
