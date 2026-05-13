@@ -72,7 +72,8 @@
         {
           "contactsPermission": "Import names and phone numbers from your contacts"
         }
-      ]
+      ],
+      "expo-video"
     ],
     "experiments": {
       "typedRoutes": true
