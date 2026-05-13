@@ -59,17 +59,14 @@ function AuthGate({ children }: { children: React.ReactNode }) {
   const segments = useSegments();
   const introBootCheckedRef = useRef(false);
   const lastAppStateRef = useRef<AppStateStatus>("active");
-  const mountTimeRef = useRef<string>(new Date().toISOString().slice(11, 19));
   // showIntro renders the IntroOverlay on top of the app. Initialised
   // to TRUE so the splash plays on every cold boot — and only on cold
-  // boot, because module-level / component state resets on kill.
-  // After the overlay's video finishes, we set this to false and the
-  // app reveals itself. Foreground/background cycles don't trigger it
-  // unless the JS VM was actually torn down.
+  // boot, because component state resets on kill. After the overlay's
+  // video finishes we set this to false and the app reveals itself.
+  // Foreground/background cycles don't trigger it unless the JS VM was
+  // actually torn down.
   const [showIntro, setShowIntro] = useState(true);
-  const [bootDecided] = useState(true); // we're already decided
-  // eslint-disable-next-line no-console
-  console.log("[intro] AuthGate render — showIntro:", showIntro, "mounted at:", mountTimeRef.current);
+  const [bootDecided] = useState(true);
 
   // (No async shouldShowIntro check here anymore — the intro just runs
   // whenever this component first mounts.)

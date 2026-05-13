@@ -1,19 +1,15 @@
-// Splash intro trigger logic — simplified.
+// Splash intro trigger logic.
 //
-// Rule: the intro plays exactly once per JS process (i.e. on cold
-// boot). Any subsequent calls during the same process — including
-// foreground/background cycles — return false. Quitting the app from
-// the iOS app switcher (or fully killing Expo Go) destroys the JS
-// VM, so the module-level flag below resets and the intro will play
-// again on the next launch.
+// Rule: the intro plays on every cold boot (when AuthGate's React
+// state initializes fresh). The 5-minute background-resume rule is
+// handled via the AppState listener in AuthGate combined with the
+// sessionIntroShown flag below: if the user has already seen the
+// intro this process, returning from a brief background does NOT
+// replay it. Quitting the app from the iOS app switcher destroys the
+// JS VM, so this module reloads fresh and the intro plays again on
+// the next launch.
 
 let sessionIntroShown = false;
-
-// Eagerly log so we can verify the bundle is fresh after a reload.
-// If you see this exact line in Metro/Expo Go logs and the value is
-// `false`, we know cold-boot detection is working as designed.
-// eslint-disable-next-line no-console
-console.log("[intro] idle module init — sessionIntroShown =", sessionIntroShown);
 
 /**
  * Record that the intro has been shown (or skipped) for the current
@@ -29,8 +25,5 @@ export function markAppActive(): void {
  * True on the very first call of each process; false thereafter.
  */
 export async function shouldShowIntro(): Promise<boolean> {
-  const result = !sessionIntroShown;
-  // eslint-disable-next-line no-console
-  console.log("[intro] shouldShowIntro() →", result, "(sessionIntroShown:", sessionIntroShown, ")");
-  return result;
+  return !sessionIntroShown;
 }
