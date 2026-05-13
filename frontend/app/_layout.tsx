@@ -6,8 +6,10 @@ import {
   ActivityIndicator,
   Text as RNText,
   TextInput as RNTextInput,
+  AppState,
+  AppStateStatus,
 } from "react-native";
-import { useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AuroraBackground } from "../src/Aurora";
 import { BottomBar } from "../src/BottomBar";
 import { ReportsFab } from "../src/ReportsFab";
@@ -17,6 +19,7 @@ import { NetworkProvider, OfflineBanner } from "../src/NetworkProvider";
 import { theme } from "../src/theme";
 import { initRevenueCat, identifyRevenueCatUser, getCurrentCustomerInfo, buildSyncPayload } from "../src/revenuecat";
 import { setPaymentRequiredHandler, api } from "../src/api";
+import { shouldShowIntro, markAppActive } from "../src/idle";
 
 /**
  * Make native (iOS Expo Go / TestFlight) layouts visually match the web
@@ -53,10 +56,55 @@ function AuthGate({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
   const router = useRouter();
   const segments = useSegments();
+  const introBootCheckedRef = useRef(false);
+  const lastAppStateRef = useRef<AppStateStatus>("active");
+
+  // On cold boot, decide whether to show the intro splash. Runs exactly
+  // once per app launch. Independent of auth state — the intro plays
+  // for everyone (signed in or not) and routes appropriately when it
+  // finishes.
+  useEffect(() => {
+    if (introBootCheckedRef.current) return;
+    introBootCheckedRef.current = true;
+    (async () => {
+      const show = await shouldShowIntro();
+      if (show) {
+        router.replace("/intro");
+      } else {
+        markAppActive(); // refresh the timestamp on every cold boot
+      }
+    })();
+  }, [router]);
+
+  // When the app comes back to the foreground after being away for
+  // 5+ minutes, replay the intro. We use AppState rather than a timer
+  // so we catch suspend/resume cycles correctly on iOS.
+  useEffect(() => {
+    const onChange = (next: AppStateStatus) => {
+      const wasBackground =
+        lastAppStateRef.current === "background" ||
+        lastAppStateRef.current === "inactive";
+      lastAppStateRef.current = next;
+      if (next === "active" && wasBackground) {
+        (async () => {
+          const show = await shouldShowIntro();
+          if (show) router.replace("/intro");
+        })();
+      } else if (next === "background" || next === "inactive") {
+        // Don't update the timestamp on background — that's exactly
+        // the moment we want to start counting toward the 5 min idle.
+      }
+    };
+    const sub = AppState.addEventListener("change", onChange);
+    return () => sub.remove();
+  }, [router]);
 
   useEffect(() => {
     if (loading) return;
     const first = segments[0];
+    // Intro is a "neutral" route — let it sit on top of any auth state
+    // until the video finishes and routes onward.
+    if (first === "intro") return;
     const publicRoute = first === "login" || first === "forgot-password";
     if (!user && !publicRoute) {
       router.replace("/login");
@@ -135,6 +183,7 @@ function ShellNav() {
             }}
           >
             <Stack.Screen name="login" options={{ animation: "fade" }} />
+            <Stack.Screen name="intro" options={{ animation: "fade", headerShown: false, gestureEnabled: false }} />
             <Stack.Screen name="(tabs)" />
             <Stack.Screen name="tool/[id]" />
             <Stack.Screen name="tool/edit" />
