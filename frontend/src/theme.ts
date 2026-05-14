@@ -42,6 +42,16 @@ export type ColorPalette = {
   highlight: string;
   shadowDeep: string;
   shadowSoft: string;
+  // Solid-color used by `theme.elevation.*` shadow stacks. In dark mode this
+  // is the brand orange so the raised-card shadows actually glow on the
+  // near-black bg (pure-black shadow disappears). In light mode it's plain
+  // black so cards drop a normal dark shadow on the grey-blue page.
+  shadowColor: string;
+  // Shadow stack opacities — dark mode bumps these higher so the orange
+  // glow registers against the dark bg.
+  shadowOpacitySm: number;
+  shadowOpacityMd: number;
+  shadowOpacityLg: number;
   // Gradient endpoints for row/card tops + bottoms — used by LinearGradient
   // overlays so cards keep their 3D feel in both themes.
   rowGradTop: string;
@@ -74,6 +84,12 @@ export const darkPalette: ColorPalette = {
   highlight: "rgba(255, 255, 255, 0.10)",
   shadowDeep: "rgba(0, 0, 0, 0.8)",
   shadowSoft: "rgba(0, 0, 0, 0.5)",
+  // Orange brand-color shadow stack — replaces invisible black shadows on
+  // the near-black dark bg with a subtle orange glow under each raised card.
+  shadowColor: "#F97316",
+  shadowOpacitySm: 0.45,
+  shadowOpacityMd: 0.55,
+  shadowOpacityLg: 0.65,
   rowGradTop: "#1F1F1F",
   rowGradBottom: "#0E0E0E",
   tabBarBg: "#0A0A0A",
@@ -105,6 +121,12 @@ export const lightPalette: ColorPalette = {
   highlight: "rgba(15, 23, 42, 0.06)",
   shadowDeep: "rgba(15, 23, 42, 0.18)",
   shadowSoft: "rgba(15, 23, 42, 0.10)",
+  // Light mode keeps a plain dark navy shadow (no glow needed — already
+  // pops on the grey-blue page bg).
+  shadowColor: "#0F172A",
+  shadowOpacitySm: 0.15,
+  shadowOpacityMd: 0.18,
+  shadowOpacityLg: 0.22,
   rowGradTop: "#FFFFFF",
   rowGradBottom: "#F3F5F8",
   tabBarBg: "#FFFFFF",
@@ -156,75 +178,94 @@ export const theme = {
   spacing: { xs: 4, sm: 8, md: 16, lg: 24, xl: 32, xxl: 48 },
   radii: { none: 0, sm: 4, md: 8, lg: 12, pill: 999 },
   font: { h1: 32, h2: 24, h3: 20, body: 16, sm: 14, xs: 12 },
-  // 3D elevation system — uses dark shadows by default. In light mode, the
-  // shadow colour is automatically overridden by the proxy (because we expose
-  // a `c.shadowSoft` / `c.shadowDeep` that the proxy resolves at access time,
-  // but `Platform.select()` runs once at module-load so shadows are fixed
-  // values here). Cards still pop in both modes because the shadow contrast
-  // against bg/bgSecondary is what matters, and our light bg (#F1F4F8) vs
-  // white cards (#FFFFFF) is enough contrast for the dark shadow to register.
-  elevation: {
-    sm: Platform.select({
-      web: {
-        boxShadow:
-          "0 1px 2px rgba(0, 0, 0, 0.50), 0 3px 6px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.10), inset 0 -1px 0 rgba(0, 0, 0, 0.50)" as any,
-      },
-      default: {
-        shadowColor: "#000",
-        shadowOpacity: 0.45,
-        shadowOffset: { width: 0, height: 2 },
-        shadowRadius: 5,
-        elevation: 4,
-      },
-    }),
-    md: Platform.select({
-      web: {
-        boxShadow:
-          "0 2px 4px rgba(0, 0, 0, 0.55), 0 8px 16px rgba(0, 0, 0, 0.50), 0 16px 32px rgba(0, 0, 0, 0.40), inset 0 1px 0 rgba(255, 255, 255, 0.12), inset 0 -2px 0 rgba(0, 0, 0, 0.50)" as any,
-      },
-      default: {
-        shadowColor: "#000",
-        shadowOpacity: 0.55,
-        shadowOffset: { width: 0, height: 6 },
-        shadowRadius: 12,
-        elevation: 8,
-      },
-    }),
-    lg: Platform.select({
-      web: {
-        boxShadow:
-          "0 4px 8px rgba(0, 0, 0, 0.60), 0 16px 32px rgba(0, 0, 0, 0.55), 0 32px 64px rgba(0, 0, 0, 0.45), inset 0 2px 0 rgba(255, 255, 255, 0.12), inset 0 -3px 0 rgba(0, 0, 0, 0.55)" as any,
-      },
-      default: {
-        shadowColor: "#000",
-        shadowOpacity: 0.65,
-        shadowOffset: { width: 0, height: 14 },
-        shadowRadius: 24,
-        elevation: 14,
-      },
-    }),
-    accent: Platform.select({
-      web: {
-        boxShadow:
-          "0 2px 4px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.25), inset 0 -1px 0 rgba(184, 100, 0, 0.35)" as any,
-      },
-      default: {
-        shadowColor: "#000",
-        shadowOpacity: 0.25,
-        shadowOffset: { width: 0, height: 2 },
-        shadowRadius: 4,
-        elevation: 3,
-      },
-    }),
-    inset: Platform.select({
-      web: {
-        boxShadow:
-          "inset 0 2px 4px rgba(0, 0, 0, 0.6), inset 0 4px 10px rgba(0, 0, 0, 0.4), inset 0 0 0 1px rgba(0, 0, 0, 0.4)" as any,
-      },
-      default: {
-        borderTopWidth: 1,
-        borderTopColor: "rgba(0, 0, 0, 0.6)",
-      },
-    }),
-  },
+  // 3D elevation system — theme-reactive. Each elevation level is a getter
+  // on a Proxy so every access reads `currentPalette.shadowColor` / opacities
+  // at lookup time. In dark mode the shadow is brand orange (so cards glow
+  // against the near-black bg); in light mode it's plain navy/black.
+  // `themedStyles` re-evaluates after each ThemeProvider toggle so the
+  // updated elevation values flow through immediately.
+  elevation: buildElevationProxy(),
 };
+
+// ---------------------------------------------------------------------------
+// Helpers to build the dynamic elevation shadow set. We construct fresh
+// objects on every access so the values track currentPalette.shadowColor.
+// ---------------------------------------------------------------------------
+function hexToRgb(hex: string): { r: number; g: number; b: number } {
+  let h = hex.replace("#", "");
+  if (h.length === 3) h = h.split("").map((c) => c + c).join("");
+  const r = parseInt(h.substring(0, 2), 16);
+  const g = parseInt(h.substring(2, 4), 16);
+  const b = parseInt(h.substring(4, 6), 16);
+  return { r, g, b };
+}
+
+function rgba(hex: string, alpha: number): string {
+  const { r, g, b } = hexToRgb(hex);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+type ElevKey = "sm" | "md" | "lg" | "accent" | "inset";
+
+function makeElevation(key: ElevKey): any {
+  const sh = currentPalette.shadowColor || "#000";
+  if (Platform.OS === "web") {
+    if (key === "sm") {
+      return {
+        boxShadow: `0 1px 2px ${rgba(sh, currentPalette.shadowOpacitySm)}, 0 3px 6px ${rgba(sh, currentPalette.shadowOpacitySm - 0.05)}, inset 0 1px 0 rgba(255, 255, 255, 0.10), inset 0 -1px 0 rgba(0, 0, 0, 0.50)`,
+      };
+    }
+    if (key === "md") {
+      return {
+        boxShadow: `0 2px 4px ${rgba(sh, currentPalette.shadowOpacityMd)}, 0 8px 16px ${rgba(sh, currentPalette.shadowOpacityMd - 0.05)}, 0 16px 32px ${rgba(sh, currentPalette.shadowOpacityMd - 0.15)}, inset 0 1px 0 rgba(255, 255, 255, 0.12), inset 0 -2px 0 rgba(0, 0, 0, 0.50)`,
+      };
+    }
+    if (key === "lg") {
+      return {
+        boxShadow: `0 4px 8px ${rgba(sh, currentPalette.shadowOpacityLg)}, 0 16px 32px ${rgba(sh, currentPalette.shadowOpacityLg - 0.10)}, 0 32px 64px ${rgba(sh, currentPalette.shadowOpacityLg - 0.20)}, inset 0 2px 0 rgba(255, 255, 255, 0.12), inset 0 -3px 0 rgba(0, 0, 0, 0.55)`,
+      };
+    }
+    if (key === "accent") {
+      return {
+        boxShadow: `0 2px 4px ${rgba(sh, 0.35)}, inset 0 1px 0 rgba(255, 255, 255, 0.25), inset 0 -1px 0 ${rgba(sh, 0.35)}`,
+      };
+    }
+    return {
+      boxShadow: "inset 0 2px 4px rgba(0, 0, 0, 0.6), inset 0 4px 10px rgba(0, 0, 0, 0.4), inset 0 0 0 1px rgba(0, 0, 0, 0.4)",
+    };
+  }
+  // Native (iOS / Android) — single shadow color + opacity.
+  if (key === "sm") {
+    return { shadowColor: sh, shadowOpacity: currentPalette.shadowOpacitySm, shadowOffset: { width: 0, height: 2 }, shadowRadius: 5, elevation: 4 };
+  }
+  if (key === "md") {
+    return { shadowColor: sh, shadowOpacity: currentPalette.shadowOpacityMd, shadowOffset: { width: 0, height: 6 }, shadowRadius: 12, elevation: 8 };
+  }
+  if (key === "lg") {
+    return { shadowColor: sh, shadowOpacity: currentPalette.shadowOpacityLg, shadowOffset: { width: 0, height: 14 }, shadowRadius: 24, elevation: 14 };
+  }
+  if (key === "accent") {
+    return { shadowColor: sh, shadowOpacity: 0.35, shadowOffset: { width: 0, height: 2 }, shadowRadius: 4, elevation: 3 };
+  }
+  return { borderTopWidth: 1, borderTopColor: "rgba(0, 0, 0, 0.6)" };
+}
+
+function buildElevationProxy() {
+  return new Proxy(
+    {} as Record<ElevKey, any>,
+    {
+      get(_, key: string) {
+        return makeElevation(key as ElevKey);
+      },
+      has(_, key: string) {
+        return ["sm", "md", "lg", "accent", "inset"].includes(key);
+      },
+      ownKeys() {
+        return ["sm", "md", "lg", "accent", "inset"];
+      },
+      getOwnPropertyDescriptor(_, key: string) {
+        return { enumerable: true, configurable: true, value: makeElevation(key as ElevKey) };
+      },
+    },
+  );
+}

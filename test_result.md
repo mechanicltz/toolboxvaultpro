@@ -3382,3 +3382,61 @@ frontend:
           or `style="light"` (white text) for Dark mode. Moved inside ThemeProvider so the hook works.
           Both modes now have readable status-bar text.
 
+
+#====================================================================================================
+## 2026-05-14 (round 3) — Dark theme: yellow → orange brand + orange-glow elevation shadows
+#====================================================================================================
+frontend:
+  - task: "Re-brand dark theme from yellow to vivid orange"
+    implemented: true
+    files:
+      - app/frontend/src/theme.ts (dark + light palette accents + gradients)
+      - 9 frontend files (hardcoded yellow rgba/hex tints converted)
+      - app/backend/reports.py (PDF HexColor constants)
+      - app/frontend/app/tool/[id].tsx + warranty-claims.tsx (HTML print templates)
+    status_history:
+      - working: true
+        agent: "main"
+        comment: |
+          User requested all yellow brand elements switched to a vivid orange like #F97316. Updated:
+            - darkPalette.accent #FFB300 → #F97316, accentSecondary #F97316 → #EA580C
+            - lightPalette.accent #E69500 → #EA580C (deeper orange, AAA contrast on white)
+            - theme.gradients.accent: ["#FDBA74","#F97316","#C2410C"]
+            - Replaced every hardcoded `rgba(255,179,0,X)` highlight tint with `rgba(249,115,22,X)` across
+              for-sale.tsx, dealer/[id].tsx, (tabs)/borrowers.tsx, (tabs)/inventory.tsx, (tabs)/reports.tsx,
+              tool/edit.tsx, tool/[id].tsx, dealer-claims/[id].tsx, warranty-claims.tsx (20+ occurrences)
+            - reports.py: 11 instances of HexColor("#FFB300") → "#F97316" so generated PDFs match brand
+            - HTML print template gradient stops #FFD54F → #FDBA74, #FF8F00 → #C2410C
+          
+          Verified via screenshot: All accent elements (banner, icons, pills, version label, HOME tab,
+          Adjust buttons, ADD ITEM button) render in vivid orange matching the reference photo.
+
+  - task: "Theme-reactive elevation shadows — orange glow in dark mode"
+    implemented: true
+    file: app/frontend/src/theme.ts
+    status_history:
+      - working: true
+        agent: "main"
+        comment: |
+          User: "for the raised boxes in the dark theme, let's try adding some sort of orange shadow for
+          the raised effect" — because black shadows on the near-black bg were invisible.
+          
+          Replaced the static `Platform.select`-based `theme.elevation` with a Proxy whose `sm/md/lg/
+          accent/inset` getters construct fresh shadow style objects on every access using values from
+          `currentPalette`. Added three new ColorPalette fields:
+            • shadowColor (the solid color used in shadow stacks)
+            • shadowOpacitySm / shadowOpacityMd / shadowOpacityLg
+          
+          Dark palette: shadowColor = #F97316 (orange) with high opacities (0.45/0.55/0.65) so the glow
+          registers on the near-black bg.
+          Light palette: shadowColor = #0F172A (navy) with low opacities (0.15/0.18/0.22) — unchanged
+          visual behaviour on the light bg (the prior dark shadow on grey-blue still pops fine).
+          
+          A small `hexToRgb`/`rgba` helper builds web `boxShadow` strings using rgba(shadowColor, alpha)
+          for each elevation layer; native gets {shadowColor, shadowOpacity, …}. Because `themedStyles`
+          re-runs its factory on every theme toggle, the new shadow values flow through automatically.
+          
+          Verified screenshot in dark mode shows a clear orange halo beneath every raised card —
+          DEALER ACCOUNTS combined box, TOTAL ITEMS, NET WORTH, summary tiles, Next Dealer Route banner,
+          REPORT A BUG card — every elevated container now visibly "rises" off the page.
+
