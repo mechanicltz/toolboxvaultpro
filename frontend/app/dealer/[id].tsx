@@ -27,6 +27,7 @@ import { ROUTE_FREQUENCIES, DAY_NAMES, routeLabel, nextRouteText } from "../../s
 import { DateField } from "../../src/DateField";
 import { useAuth } from "../../src/AuthContext";
 import { themedStyles } from "../../src/themeContext";
+import { BevelCard } from "../../src/components/BevelCard";
 
 import {
   isDeviceContactsAvailable,
@@ -227,7 +228,7 @@ export default function DealerDetail() {
         </View>
 
         {/* Route info banner */}
-        <View style={styles.routeRow}>
+        <BevelCard style={styles.routeRow}>
           <Ionicons name="map" size={18} color={theme.colors.accent} />
           <View style={{ flex: 1 }}>
             <Text style={styles.routeRowLabel}>ROUTE  ·  {routeLabel(dealer)}</Text>
@@ -238,7 +239,7 @@ export default function DealerDetail() {
               <Text style={styles.routeRowEmpty}>No route configured — tap edit to add</Text>
             )}
           </View>
-        </View>
+        </BevelCard>
 
         {/* AGENTS — placed at top per user preference */}
         <View style={styles.sectionHeader}>
@@ -266,7 +267,7 @@ export default function DealerDetail() {
         {allAgents.map((a: any) => {
           const isCurrent = a.id === dealer.current_agent_id;
           return (
-            <View
+            <BevelCard
               key={a.id}
               style={[styles.agentCard, isCurrent && styles.agentCardActive]}
             >
@@ -350,7 +351,7 @@ export default function DealerDetail() {
                   <Text style={[styles.agentActionText, { color: theme.colors.danger }]}>REMOVE</Text>
                 </TouchableOpacity>
               </View>
-            </View>
+            </BevelCard>
           );
         })}
 
@@ -364,7 +365,7 @@ export default function DealerDetail() {
             <Text style={styles.totalPillValue}>${total.toFixed(2)}</Text>
           </View>
         </View>
-        <TouchableOpacity
+        <BevelCard
           testID="view-dealer-tools-btn"
           style={styles.viewToolsBtn}
           onPress={() =>
@@ -390,12 +391,12 @@ export default function DealerDetail() {
             </Text>
           </View>
           <Ionicons name="chevron-forward" size={20} color={theme.colors.textMuted} />
-        </TouchableOpacity>
+        </BevelCard>
 
         <Text style={styles.sectionLabel}>CONTACT</Text>
         {!!dealer.phone && (
           <View style={styles.dealerContactPhoneRow}>
-            <TouchableOpacity
+            <BevelCard
               testID="dealer-call-btn"
               style={styles.dealerContactBtn}
               onPress={() => openPhone(dealer.phone)}
@@ -405,8 +406,8 @@ export default function DealerDetail() {
               <Text style={styles.dealerContactBtnText} numberOfLines={1}>
                 {formatPhone(dealer.phone)}
               </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
+            </BevelCard>
+            <BevelCard
               testID="dealer-text-btn"
               style={[styles.dealerContactBtn, styles.dealerContactBtnSmall]}
               onPress={() => openSms(dealer.phone)}
@@ -414,7 +415,7 @@ export default function DealerDetail() {
             >
               <Ionicons name="chatbubble-ellipses" size={16} color={theme.colors.accent} />
               <Text style={styles.dealerContactBtnText}>TEXT</Text>
-            </TouchableOpacity>
+            </BevelCard>
           </View>
         )}
         <ContactRow icon="globe" label={dealer.website} onPress={() => callOrEmail(dealer.website)} />

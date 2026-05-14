@@ -22,6 +22,7 @@ import { api } from "../src/api";
 import { confirm } from "../src/confirm";
 
 import { themedStyles } from "../src/themeContext";
+import { BevelCard } from "../src/components/BevelCard";
 
 const PRIORITIES = [
   { key: "low", label: "LOW", color: theme.colors.textMuted },
@@ -159,14 +160,14 @@ export default function WishlistScreen() {
           { k: false, label: "OPEN" },
           { k: true, label: "PURCHASED" },
         ].map((t) => (
-          <TouchableOpacity
+          <BevelCard
             key={String(t.k)}
             testID={`wish-tab-${t.k ? "done" : "open"}`}
             style={[styles.tabBtn, showPurchased === t.k && styles.tabBtnActive]}
             onPress={() => setShowPurchased(t.k)}
           >
             <Text style={[styles.tabText, showPurchased === t.k && styles.tabTextActive]}>{t.label}</Text>
-          </TouchableOpacity>
+          </BevelCard>
         ))}
       </View>
 
@@ -187,7 +188,7 @@ export default function WishlistScreen() {
         renderItem={({ item }) => {
           const meta = PRIORITIES.find((p) => p.key === (item.priority || "normal")) || PRIORITIES[1];
           return (
-            <View style={styles.card} testID={`wish-card-${item.id}`}>
+            <BevelCard style={styles.card} testID={`wish-card-${item.id}`}>
               <View style={styles.cardHead}>
                 <Text style={styles.itemName} numberOfLines={2}>
                   {item.name}
@@ -268,7 +269,7 @@ export default function WishlistScreen() {
                   <Text style={styles.toolLinkText}>VIEW TOOL ›</Text>
                 </TouchableOpacity>
               )}
-            </View>
+            </BevelCard>
           );
         }}
       />
@@ -420,10 +421,10 @@ export default function WishlistScreen() {
 
 function Stat({ label, value, color }: { label: string; value: string; color?: string }) {
   return (
-    <View style={styles.statBox}>
+    <BevelCard style={styles.statBox}>
       <Text style={[styles.statValue, color ? { color } : null]}>{value}</Text>
       <Text style={styles.statLabel}>{label}</Text>
-    </View>
+    </BevelCard>
   );
 }
 

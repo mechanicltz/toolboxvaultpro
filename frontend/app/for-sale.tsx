@@ -24,6 +24,7 @@ import { ResponsiveContainer } from "../src/ResponsiveContainer";
 import { useResponsive } from "../src/responsive";
 
 import { themedStyles } from "../src/themeContext";
+import { BevelCard } from "../src/components/BevelCard";
 
 type Tool = any;
 
@@ -207,26 +208,26 @@ export default function ForSaleScreen() {
       <ResponsiveContainer>
         {/* Tabs */}
         <View style={styles.tabRow}>
-          <TouchableOpacity
+          <BevelCard
             testID="tab-listed"
             style={[styles.tabBtn, tab === "listed" && styles.tabBtnActive]}
             onPress={() => setTab("listed")}
           >
             <Ionicons name="pricetag" size={14} color={tab === "listed" ? "#000" : theme.colors.textSecondary} />
             <Text style={[styles.tabText, tab === "listed" && styles.tabTextActive]}>LISTED</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
+          </BevelCard>
+          <BevelCard
             testID="tab-sold"
             style={[styles.tabBtn, tab === "sold" && styles.tabBtnActiveSold]}
             onPress={() => setTab("sold")}
           >
             <Ionicons name="checkmark-circle" size={14} color={tab === "sold" ? "#fff" : theme.colors.textSecondary} />
             <Text style={[styles.tabText, tab === "sold" && { color: "#fff" }]}>SOLD</Text>
-          </TouchableOpacity>
+          </BevelCard>
         </View>
 
         {/* Search */}
-        <View style={styles.searchWrap}>
+        <BevelCard style={styles.searchWrap}>
           <Ionicons name="search" size={16} color={theme.colors.textMuted} />
           <TextInput
             testID="fs-search"
@@ -242,20 +243,20 @@ export default function ForSaleScreen() {
               {filterCount > 0 ? `FILTERS · ${filterCount}` : "FILTERS"}
             </Text>
           </TouchableOpacity>
-        </View>
+        </BevelCard>
 
         {/* Summary */}
         <View style={styles.statsRow}>
-          <View style={styles.statBox}>
+          <BevelCard style={styles.statBox}>
             <Text style={styles.statLabel}>{tab === "listed" ? "LISTED" : "SOLD"}</Text>
             <Text style={styles.statValue}>{totals.count}</Text>
-          </View>
-          <View style={[styles.statBox, { backgroundColor: tab === "sold" ? "rgba(39,174,96,0.10)" : "rgba(249, 115, 22,0.10)" }]}>
+          </BevelCard>
+          <BevelCard style={[styles.statBox, { backgroundColor: tab === "sold" ? "rgba(39,174,96,0.10)" : "rgba(249, 115, 22,0.10)" }]}>
             <Text style={styles.statLabel}>{tab === "listed" ? "ASKING TOTAL" : "SOLD TOTAL"}</Text>
             <Text style={[styles.statValue, { color: tab === "sold" ? "#27AE60" : theme.colors.accent }]}>
               ${totals.value.toFixed(2)}
             </Text>
-          </View>
+          </BevelCard>
         </View>
       </ResponsiveContainer>
 

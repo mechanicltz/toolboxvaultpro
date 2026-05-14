@@ -27,6 +27,7 @@ import { formatDateUS } from "../src/dateUtil";
 import { DateField } from "../src/DateField";
 
 import { themedStyles } from "../src/themeContext";
+import { BevelCard } from "../src/components/BevelCard";
 
 const STATUS_LIST = [
   { key: "broken", label: "Broken", color: theme.colors.danger, icon: "alert-circle" as const },
@@ -621,10 +622,10 @@ export default function WarrantyClaimsScreen() {
 
 function Stat({ label, value, color }: { label: string; value: number; color?: string }) {
   return (
-    <View style={styles.statBox}>
+    <BevelCard style={styles.statBox}>
       <Text style={[styles.statValue, color ? { color } : null]}>{value}</Text>
       <Text style={styles.statLabel}>{label}</Text>
-    </View>
+    </BevelCard>
   );
 }
 
@@ -641,7 +642,7 @@ function ClaimCard({
 }) {
   const meta = statusMeta(claim.claim_status);
   return (
-    <View style={styles.claimCard} testID={`claim-${claim.id}`}>
+    <BevelCard style={styles.claimCard} testID={`claim-${claim.id}`}>
       <TouchableOpacity style={styles.claimHead} onPress={onOpenTool} activeOpacity={0.7}>
         {claim.tool_photo ? (
           <Image source={{ uri: claim.tool_photo }} style={styles.thumb} />
@@ -683,7 +684,7 @@ function ClaimCard({
           <Ionicons name="trash-outline" size={18} color={theme.colors.textMuted} />
         </TouchableOpacity>
       </View>
-    </View>
+    </BevelCard>
   );
 }
 

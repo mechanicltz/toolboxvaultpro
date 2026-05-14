@@ -36,6 +36,7 @@ import { MaintenanceSection } from "../../src/sections/MaintenanceSection";
 import { WarrantySection } from "../../src/sections/WarrantySection";
 import PinchZoomImageViewer from "../../src/components/PinchZoomImageViewer";
 import { themedStyles } from "../../src/themeContext";
+import { BevelCard } from "../../src/components/BevelCard";
 
 import {
   pickContactNativeIOS,
@@ -1347,16 +1348,16 @@ export default function ToolDetail() {
 
           {/* DESCRIPTION — first thing below the photo row (or claim card) */}
           {!!tool.description && (
-            <View style={newStyles.descBox}>
+            <BevelCard style={newStyles.descBox}>
               <Text style={newStyles.descText}>{tool.description}</Text>
-            </View>
+            </BevelCard>
           )}
 
           {/* (CHECKED OUT card was moved to the top of this screen, above
               the description — see block under the photo row.) */}
 
           {/* LOCATION — wide pill, NO label (just the location value) */}
-          <TouchableOpacity
+          <BevelCard
             testID="location-pill"
             style={newStyles.locationWide}
             activeOpacity={tool.location_id ? 0.85 : 1}
@@ -1369,7 +1370,7 @@ export default function ToolDetail() {
             {!!tool.location_id && (
               <Ionicons name="chevron-forward" size={14} color={theme.colors.textMuted} />
             )}
-          </TouchableOpacity>
+          </BevelCard>
 
           {/* PILLBOX DETAIL FIELDS — dealer first, then serial numbers, then everything else */}
           <View style={newStyles.fieldGroup}>
@@ -1389,7 +1390,7 @@ export default function ToolDetail() {
                 : (tool.serial_number ? [String(tool.serial_number)] : []);
               if (serials.length === 0) return null;
               return (
-                <View style={newStyles.serialBox} testID="serial-box">
+                <BevelCard style={newStyles.serialBox} testID="serial-box">
                   <Text style={newStyles.serialBoxLabel}>
                     SERIAL NUMBER{serials.length > 1 ? "S" : ""}
                     {serials.length > 1 ? `  (${serials.length})` : ""}
@@ -1404,7 +1405,7 @@ export default function ToolDetail() {
                       </Text>
                     </View>
                   ))}
-                </View>
+                </BevelCard>
               );
             })()}
 
@@ -1598,7 +1599,7 @@ export default function ToolDetail() {
           <View style={{ marginTop: 16 }}>
             <Text style={newStyles.sectionTitle}>HISTORY</Text>
 
-            <TouchableOpacity
+            <BevelCard
               testID="open-checkout-history"
               style={newStyles.historyLink}
               activeOpacity={0.85}
@@ -1612,9 +1613,9 @@ export default function ToolDetail() {
                 </Text>
               </View>
               <Ionicons name="chevron-forward" size={16} color={theme.colors.textMuted} />
-            </TouchableOpacity>
+            </BevelCard>
 
-            <TouchableOpacity
+            <BevelCard
               testID="open-claims-history"
               style={newStyles.historyLink}
               activeOpacity={0.85}
@@ -1623,7 +1624,7 @@ export default function ToolDetail() {
               <Ionicons name="shield-outline" size={16} color={theme.colors.accent} />
               <Text style={newStyles.historyLinkLabel}>CLAIMS HISTORY</Text>
               <Ionicons name="chevron-forward" size={16} color={theme.colors.textMuted} />
-            </TouchableOpacity>
+            </BevelCard>
           </View>
 
           {/* REPORT LOST OR STOLEN */}
@@ -1637,14 +1638,14 @@ export default function ToolDetail() {
 
           <View style={newStyles.actionGrid}>
             {/* EDIT ITEM */}
-            <TouchableOpacity
+            <BevelCard
               testID="action-edit"
               style={newStyles.actionTile}
               onPress={() => router.push({ pathname: "/tool/edit", params: { id: tool.id } })}
             >
               <Ionicons name="create-outline" size={20} color={theme.colors.accent} />
               <Text style={newStyles.actionTileText}>EDIT</Text>
-            </TouchableOpacity>
+            </BevelCard>
 
             {/* DOCUMENTS — expands the Documents pill in Attachments */}
             {/* (DOCUMENTS bottom action removed — users can reach
@@ -1653,94 +1654,94 @@ export default function ToolDetail() {
             {/* CHECK OUT / CHECK IN (contextual) */}
             {!tool.is_sold && !tool.is_lost && (
               tool.is_checked_out ? (
-                <TouchableOpacity
+                <BevelCard
                   testID="action-checkin"
                   style={newStyles.actionTile}
                   onPress={doCheckin}
                 >
                   <Ionicons name="log-in-outline" size={20} color={theme.colors.accent} />
                   <Text style={newStyles.actionTileText}>CHECK IN</Text>
-                </TouchableOpacity>
+                </BevelCard>
               ) : (
-                <TouchableOpacity
+                <BevelCard
                   testID="action-checkout"
                   style={newStyles.actionTile}
                   onPress={() => setShowCheckout(true)}
                 >
                   <Ionicons name="log-out-outline" size={20} color={theme.colors.accent} />
                   <Text style={newStyles.actionTileText}>CHECK OUT</Text>
-                </TouchableOpacity>
+                </BevelCard>
               )
             )}
 
             {/* MARK BROKEN / MARK FIXED (contextual) */}
             {!tool.is_sold && !tool.is_lost && (
               tool.needs_repair ? (
-                <TouchableOpacity
+                <BevelCard
                   testID="action-fixed"
                   style={newStyles.actionTile}
                   onPress={markRepaired}
                 >
                   <Ionicons name="checkmark-done" size={20} color={theme.colors.success} />
                   <Text style={newStyles.actionTileText}>MARK FIXED</Text>
-                </TouchableOpacity>
+                </BevelCard>
               ) : (
-                <TouchableOpacity
+                <BevelCard
                   testID="action-broken"
                   style={newStyles.actionTile}
                   onPress={openRepair}
                 >
                   <Ionicons name="build-outline" size={20} color={theme.colors.danger} />
                   <Text style={newStyles.actionTileText}>MARK BROKEN</Text>
-                </TouchableOpacity>
+                </BevelCard>
               )
             )}
 
             {/* EXPORT PDF */}
-            <TouchableOpacity
+            <BevelCard
               testID="action-export"
               style={newStyles.actionTile}
               onPress={() => setShowExportPicker(true)}
             >
               <Ionicons name="document-text-outline" size={20} color={theme.colors.accent} />
               <Text style={newStyles.actionTileText}>EXPORT</Text>
-            </TouchableOpacity>
+            </BevelCard>
 
             {/* LIST FOR SALE / EDIT LISTING + MARK SOLD (contextual) */}
             {!tool.is_sold && !tool.is_lost && (
               tool.for_sale ? (
                 <>
-                  <TouchableOpacity
+                  <BevelCard
                     testID="action-edit-listing"
                     style={newStyles.actionTile}
                     onPress={() => openSaleModal()}
                   >
                     <Ionicons name="pricetag" size={20} color={theme.colors.accent} />
                     <Text style={newStyles.actionTileText}>EDIT LISTING</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
+                  </BevelCard>
+                  <BevelCard
                     testID="action-mark-sold"
                     style={newStyles.actionTile}
                     onPress={() => setShowMarkSold(true)}
                   >
                     <Ionicons name="checkmark-circle" size={20} color={theme.colors.success} />
                     <Text style={newStyles.actionTileText}>MARK SOLD</Text>
-                  </TouchableOpacity>
+                  </BevelCard>
                 </>
               ) : (
-                <TouchableOpacity
+                <BevelCard
                   testID="action-list-sale"
                   style={newStyles.actionTile}
                   onPress={() => openSaleModal()}
                 >
                   <Ionicons name="pricetag-outline" size={20} color={theme.colors.accent} />
                   <Text style={newStyles.actionTileText}>LIST FOR SALE</Text>
-                </TouchableOpacity>
+                </BevelCard>
               )
             )}
 
             {/* DELETE — always available, danger styling */}
-            <TouchableOpacity
+            <BevelCard
               testID="action-delete"
               style={[newStyles.actionTile, newStyles.actionTileDanger]}
               onPress={doDelete}
@@ -1749,7 +1750,7 @@ export default function ToolDetail() {
               <Text style={[newStyles.actionTileText, { color: theme.colors.danger }]}>
                 DELETE ITEM
               </Text>
-            </TouchableOpacity>
+            </BevelCard>
           </View>
 
           {/* ===== TAGS — pinned at the very bottom of the page ===== */}
@@ -1758,9 +1759,9 @@ export default function ToolDetail() {
               <Text style={newStyles.sectionTitle}>TAGS</Text>
               <View style={[newStyles.tagWrap, { marginTop: 8 }]}>
                 {tool.tag_names.map((t: string) => (
-                  <View key={t} style={newStyles.tagChip}>
+                  <BevelCard key={t} style={newStyles.tagChip}>
                     <Text style={newStyles.tagChipText}>{t}</Text>
-                  </View>
+                  </BevelCard>
                 ))}
               </View>
             </View>
@@ -1945,7 +1946,7 @@ export default function ToolDetail() {
                   "";
                 if (!displayName) {
                   return (
-                    <View style={styles.dealerLockBox}>
+                    <BevelCard style={styles.dealerLockBox}>
                       <Ionicons
                         name="alert-circle"
                         size={16}
@@ -1955,11 +1956,11 @@ export default function ToolDetail() {
                         No dealer assigned to this tool. Edit the tool to
                         select one.
                       </Text>
-                    </View>
+                    </BevelCard>
                   );
                 }
                 return (
-                  <View style={styles.dealerLockBox}>
+                  <BevelCard style={styles.dealerLockBox}>
                     <Ionicons
                       name="briefcase"
                       size={16}
@@ -1973,7 +1974,7 @@ export default function ToolDetail() {
                       size={13}
                       color={theme.colors.textMuted}
                     />
-                  </View>
+                  </BevelCard>
                 );
               })()}
 
@@ -2132,7 +2133,7 @@ export default function ToolDetail() {
               Choose the type of PDF to generate for this item.
             </Text>
 
-            <TouchableOpacity
+            <BevelCard
               testID="pick-pdf-poster"
               style={pickerStyles.choice}
               onPress={handlePickPoster}
@@ -2148,9 +2149,9 @@ export default function ToolDetail() {
                 </Text>
               </View>
               <Ionicons name="chevron-forward" size={20} color={theme.colors.textSecondary} />
-            </TouchableOpacity>
+            </BevelCard>
 
-            <TouchableOpacity
+            <BevelCard
               testID="pick-pdf-standard"
               style={pickerStyles.choice}
               onPress={handlePickStandard}
@@ -2170,7 +2171,7 @@ export default function ToolDetail() {
                 </Text>
               </View>
               <Ionicons name="chevron-forward" size={20} color={theme.colors.textSecondary} />
-            </TouchableOpacity>
+            </BevelCard>
 
             <TouchableOpacity
               testID="pdf-picker-cancel"
@@ -2192,11 +2193,11 @@ export default function ToolDetail() {
           and any error Alerts can mount normally on top of it. */}
       {pdfBusy ? (
         <View style={pickerStyles.busyOverlay} pointerEvents="auto">
-          <View style={pickerStyles.busyCard}>
+          <BevelCard style={pickerStyles.busyCard}>
             <ActivityIndicator size="large" color={theme.colors.accent} />
             <Text style={pickerStyles.busyText}>Generating PDF…</Text>
             <Text style={pickerStyles.busySub}>This may take a moment for items with photos.</Text>
-          </View>
+          </BevelCard>
         </View>
       ) : null}
 
@@ -2570,7 +2571,7 @@ function AttachmentPill({
 }) {
   return (
     <View style={newStyles.attachWrap}>
-      <TouchableOpacity
+      <BevelCard
         style={newStyles.attachHeader}
         activeOpacity={0.85}
         onPress={onToggle}
@@ -2586,7 +2587,7 @@ function AttachmentPill({
           size={16}
           color={theme.colors.textMuted}
         />
-      </TouchableOpacity>
+      </BevelCard>
       {open && <View style={newStyles.attachBody}>{children}</View>}
     </View>
   );
@@ -2699,7 +2700,7 @@ function QuantityStepper({
   const ext = (Number(tool.cost) || 0) * value;
 
   return (
-    <View style={qsStyles.box}>
+    <BevelCard style={qsStyles.box}>
       <View style={{ flex: 1 }}>
         <Text style={qsStyles.label}>QUANTITY IN STOCK</Text>
         {tool.cost ? (
@@ -2760,7 +2761,7 @@ function QuantityStepper({
           <Ionicons name="add" size={22} color="#000" />
         </TouchableOpacity>
       </View>
-    </View>
+    </BevelCard>
   );
 }
 

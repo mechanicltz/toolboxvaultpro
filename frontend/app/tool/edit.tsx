@@ -19,6 +19,7 @@ import { DateField } from "../../src/DateField";
 import { useAuth } from "../../src/AuthContext";
 
 import { themedStyles } from "../../src/themeContext";
+import { BevelCard } from "../../src/components/BevelCard";
 
 export default function ToolEdit() {
   const { id } = useLocalSearchParams<{ id?: string }>();
@@ -1071,7 +1072,7 @@ export default function ToolEdit() {
 
           {/* Dealer */}
           <Text style={styles.label}>DEALER</Text>
-          <TouchableOpacity testID="pick-dealer-btn" style={styles.pickerRow} onPress={() => setShowDealerPicker(true)}>
+          <BevelCard testID="pick-dealer-btn" style={styles.pickerRow} onPress={() => setShowDealerPicker(true)}>
             <Ionicons name="briefcase" size={18} color={theme.colors.accent} />
             <Text style={[styles.pickerText, !dealerName && { color: theme.colors.textMuted }]}>
               {dealerName || "Select dealer (optional)"}
@@ -1083,7 +1084,7 @@ export default function ToolEdit() {
             ) : (
               <Ionicons name="chevron-forward" size={18} color={theme.colors.textMuted} />
             )}
-          </TouchableOpacity>
+          </BevelCard>
           {dealer && (dealer.agents || []).length > 0 && (
             <>
               <Text style={[styles.label, { fontSize: 7 }]}>PURCHASED FROM AGENT (snapshot)</Text>
@@ -1288,7 +1289,7 @@ export default function ToolEdit() {
                     warranty.coverage_type === opt.t &&
                     (opt.t !== "months" || warranty.length_months === opt.m);
                   return (
-                    <TouchableOpacity
+                    <BevelCard
                       key={opt.lbl}
                       testID={`war-len-${opt.lbl.replace(/\s/g, "-")}`}
                       style={[
@@ -1316,7 +1317,7 @@ export default function ToolEdit() {
                       <Text style={[styles.warrChipText, on && styles.warrChipTextOn]}>
                         {opt.lbl}
                       </Text>
-                    </TouchableOpacity>
+                    </BevelCard>
                   );
                 })}
               </View>
@@ -1421,13 +1422,13 @@ export default function ToolEdit() {
           {/* Documents */}
           <Text style={styles.label}>DOCUMENTS ({documents.length})</Text>
           {documents.map((d, i) => (
-            <View key={i} style={styles.docRow}>
+            <BevelCard key={i} style={styles.docRow}>
               <Ionicons name="document" size={20} color={theme.colors.accent} />
               <Text style={styles.docName} numberOfLines={1}>{d.name}</Text>
               <TouchableOpacity onPress={() => setDocuments((arr) => arr.filter((_, idx) => idx !== i))}>
                 <Ionicons name="close" size={20} color={theme.colors.danger} />
               </TouchableOpacity>
-            </View>
+            </BevelCard>
           ))}
           <TouchableOpacity testID="add-doc-btn" style={styles.docAdd} onPress={pickDocument}>
             <Ionicons name="attach" size={20} color={theme.colors.accent} />
