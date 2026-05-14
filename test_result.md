@@ -3221,3 +3221,36 @@ frontend:
           - Bundle compiles HTTP 200 / 11.3MB.
           - No console errors during theme switch.
           - 57 themedStyles references in bundle (the helper + 47 transformed files + 9 helpers).
+
+#====================================================================================================
+# ROUND 6 — Light-Mode Inventory Row + Bottom Bar Fix + Backend Pinning
+#====================================================================================================
+frontend:
+  - task: "Bug — Inventory row hardcoded dark gradient invisible in light mode"
+    implemented: true
+    file: "/app/frontend/app/(tabs)/inventory.tsx + /app/frontend/src/theme.ts"
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: |
+          Each tool row used a `LinearGradient colors=['#1F1F1F','#0E0E0E']` overlay that was hardcoded dark. In light mode this made every row look dark navy with INVISIBLE dark text on top.
+          FIX: Added `rowGradTop` and `rowGradBottom` to ColorPalette (dark mode = original #1F1F1F/#0E0E0E, light mode = #FFFFFF/#F3F5F8). LinearGradient now reads from `theme.colors.rowGradTop/Bottom`. Rows now pop in both themes with theme.elevation.md shadow contrast.
+
+  - task: "Bug — Bottom tab bar hardcoded dark in light mode"
+    implemented: true
+    file: "/app/frontend/src/BottomBar.tsx + /app/frontend/src/theme.ts"
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "BottomBar used `backgroundColor: 'rgba(15,15,15,0.95)'` hardcoded. Added `tabBarBg` and `tabBarBorder` to palettes (dark: #0A0A0A/#1F1F1F, light: #FFFFFF/#D8DEE6) and rewired BottomBar to use them."
+
+  - task: "Bug — EXPO_PUBLIC_BACKEND_URL keeps getting reverted to preview URL"
+    implemented: true
+    file: "/app/frontend/src/api.ts + /app/frontend/.env"
+    status_history:
+      - working: true
+        agent: "main"
+        comment: |
+          User reported the deployed backend connection broke again (could only login with the preview password 'Testing', not the deployed password 'Blue321!'). Root cause: Emergent container tooling auto-rewrites EXPO_PUBLIC_BACKEND_URL in .env back to the preview URL whenever it regenerates protected vars (EXPO_PACKAGER_PROXY_URL etc.).
+          FIX: Hardened src/api.ts with an explicit deny-list — if EXPO_PUBLIC_BACKEND_URL contains 'asset-locator-12.preview.emergentagent.com', the app ignores it and falls through to the hardcoded PRODUCTION_BACKEND_URL. App is now PINNED to the deployed backend no matter what auto-tooling does to .env.
+          Verified: bundle shows 3 hits of emergent.host + 1 intentional deny-list reference; auth login with Blue321! returns HTTP 200.
