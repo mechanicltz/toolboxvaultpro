@@ -18,6 +18,8 @@ import { theme } from "../src/theme";
 import { api } from "../src/api";
 import { useAuth } from "../src/AuthContext";
 
+import { themedStyles } from "../src/themeContext";
+
 const FILL_DURATION_MS = 7500; // total animation length (5–10s spec → 7.5s)
 const SEGMENT_COUNT = 18; // number of vertical segments visible across the bar
 
@@ -306,12 +308,12 @@ export default function DeleteAccountScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: theme.colors.bg },
+const styles = themedStyles((c) => ({
+  container: { flex: 1, backgroundColor: c.bg },
   body: { flex: 1, padding: 20, justifyContent: "center" },
   warnCard: {
     backgroundColor: "#2a0d0d",
-    borderColor: theme.colors.danger,
+    borderColor: c.danger,
     borderWidth: 2,
     borderRadius: theme.radii.md,
     paddingVertical: 22,
@@ -323,7 +325,7 @@ const styles = StyleSheet.create({
     maxWidth: 380,
   },
   warnTitle: {
-    color: theme.colors.danger,
+    color: c.danger,
     fontWeight: "900",
     fontSize: 16,
     letterSpacing: 3,
@@ -331,13 +333,13 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   warnSub: {
-    color: theme.colors.textPrimary,
+    color: c.textPrimary,
     fontSize: 11,
     lineHeight: 16,
     textAlign: "center",
   },
   warnNote: {
-    color: theme.colors.danger,
+    color: c.danger,
     fontSize: 9,
     fontWeight: "900",
     letterSpacing: 1.5,
@@ -345,25 +347,25 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   label: {
-    color: theme.colors.textMuted,
+    color: c.textMuted,
     fontSize: 8,
     fontWeight: "900",
     letterSpacing: 2,
     marginBottom: 6,
   },
   input: {
-    backgroundColor: theme.colors.bgSecondary,
+    backgroundColor: c.bgSecondary,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: c.border,
     borderRadius: theme.radii.sm,
     paddingHorizontal: 14,
     paddingVertical: 12,
-    color: theme.colors.textPrimary,
+    color: c.textPrimary,
     fontSize: 13,
     marginBottom: 8,
   },
   errText: {
-    color: theme.colors.danger,
+    color: c.danger,
     fontSize: 10,
     fontWeight: "700",
     marginBottom: 8,
@@ -373,7 +375,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
-    backgroundColor: theme.colors.danger,
+    backgroundColor: c.danger,
     paddingVertical: 16,
     borderRadius: theme.radii.md,
     marginTop: 12,
@@ -390,7 +392,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   cancelBtnText: {
-    color: theme.colors.accent,
+    color: c.accent,
     fontSize: 10,
     fontWeight: "900",
     letterSpacing: 2,
@@ -544,10 +546,10 @@ const styles = StyleSheet.create({
     fontFamily: Platform.OS === "ios" ? "Courier" : "monospace",
   },
   progressHint: {
-    color: theme.colors.textMuted,
+    color: c.textMuted,
     fontSize: 9,
     marginTop: 6,
     letterSpacing: 1.5,
     fontWeight: "700",
   },
-});
+}));

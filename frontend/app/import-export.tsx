@@ -19,6 +19,8 @@ import { theme } from "../src/theme";
 import { api } from "../src/api";
 import { parseCsv, parseXlsx, saveBase64 } from "../src/csvIO";
 
+import { themedStyles } from "../src/themeContext";
+
 type ImportField = { id: string; label: string; required?: boolean };
 type ExportField = { id: string; label: string };
 
@@ -862,8 +864,8 @@ export default function ImportExportScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: theme.colors.bg },
+const styles = themedStyles((c) => ({
+  container: { flex: 1, backgroundColor: c.bg },
   header: {
     flexDirection: "row",
     alignItems: "center",
@@ -871,18 +873,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 14,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
+    borderBottomColor: c.border,
   },
   headerTitle: {
-    color: theme.colors.textPrimary,
+    color: c.textPrimary,
     fontSize: 10,
     fontWeight: "900",
     letterSpacing: 2,
   },
   card: {
-    backgroundColor: theme.colors.bgSecondary,
+    backgroundColor: c.bgSecondary,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: c.border,
     borderRadius: 10,
     padding: 16,
     marginBottom: 18,
@@ -894,13 +896,13 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   cardTitle: {
-    color: theme.colors.textPrimary,
+    color: c.textPrimary,
     fontSize: 10,
     fontWeight: "900",
     letterSpacing: 1.5,
   },
   cardBody: {
-    color: theme.colors.textSecondary,
+    color: c.textSecondary,
     fontSize: 10,
     lineHeight: 14,
     marginBottom: 14,
@@ -909,7 +911,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: theme.colors.accent,
+    backgroundColor: c.accent,
     paddingVertical: 14,
     borderRadius: 8,
     gap: 8,
@@ -925,24 +927,24 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: c.border,
     paddingVertical: 12,
     borderRadius: 8,
     gap: 8,
   },
   btnGhostText: {
-    color: theme.colors.textPrimary,
+    color: c.textPrimary,
     fontWeight: "800",
     letterSpacing: 1.5,
     fontSize: 9,
   },
   fileName: {
-    color: theme.colors.textSecondary,
+    color: c.textSecondary,
     marginTop: 10,
     fontSize: 9,
   },
   sectionLabel: {
-    color: theme.colors.textPrimary,
+    color: c.textPrimary,
     fontSize: 9,
     fontWeight: "900",
     letterSpacing: 1.5,
@@ -950,7 +952,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   helper: {
-    color: theme.colors.textSecondary,
+    color: c.textSecondary,
     fontSize: 9,
     marginBottom: 10,
     fontStyle: "italic",
@@ -960,25 +962,25 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingVertical: 8,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.borderSubtle,
+    borderBottomColor: c.borderSubtle,
     gap: 6,
   },
   mapHeader: {
-    color: theme.colors.textPrimary,
+    color: c.textPrimary,
     fontWeight: "700",
     fontSize: 10,
   },
   mapSample: {
-    color: theme.colors.textMuted,
+    color: c.textMuted,
     fontSize: 8,
     fontStyle: "italic",
   },
   mapBtn: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: theme.colors.bg,
+    backgroundColor: c.bg,
     borderWidth: 1,
-    borderColor: theme.colors.accent,
+    borderColor: c.accent,
     paddingHorizontal: 10,
     paddingVertical: 8,
     borderRadius: 6,
@@ -987,16 +989,16 @@ const styles = StyleSheet.create({
     maxWidth: 180,
   },
   mapBtnSkipped: {
-    borderColor: theme.colors.border,
+    borderColor: c.border,
   },
   mapBtnText: {
-    color: theme.colors.textPrimary,
+    color: c.textPrimary,
     fontSize: 9,
     fontWeight: "700",
     flex: 1,
   },
   mapBtnTextSkipped: {
-    color: theme.colors.textMuted,
+    color: c.textMuted,
   },
   previewRow: { flexDirection: "row" },
   previewCell: {
@@ -1004,53 +1006,53 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 6,
     borderRightWidth: 1,
-    borderRightColor: theme.colors.border,
+    borderRightColor: c.border,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.borderSubtle,
-    backgroundColor: theme.colors.bg,
+    borderBottomColor: c.borderSubtle,
+    backgroundColor: c.bg,
   },
   previewHead: {
-    color: theme.colors.textPrimary,
+    color: c.textPrimary,
     fontWeight: "800",
     fontSize: 8,
     letterSpacing: 1,
   },
   previewMap: {
-    color: theme.colors.accent,
+    color: c.accent,
     fontSize: 7,
     marginTop: 2,
   },
   previewVal: {
-    color: theme.colors.textSecondary,
+    color: c.textSecondary,
     fontSize: 8,
     marginTop: 2,
   },
   resultBox: {
     marginTop: 18,
     padding: 12,
-    backgroundColor: theme.colors.bg,
+    backgroundColor: c.bg,
     borderWidth: 1,
-    borderColor: theme.colors.accent,
+    borderColor: c.accent,
     borderRadius: 8,
   },
   resultTitle: {
-    color: theme.colors.textPrimary,
+    color: c.textPrimary,
     fontWeight: "900",
     fontSize: 10,
     letterSpacing: 1,
   },
   resultErr: {
-    color: theme.colors.danger,
+    color: c.danger,
     fontWeight: "800",
     fontSize: 9,
   },
   resultErrLine: {
-    color: theme.colors.textSecondary,
+    color: c.textSecondary,
     fontSize: 8,
     marginTop: 2,
   },
   resultSub: {
-    color: theme.colors.textPrimary,
+    color: c.textPrimary,
     fontSize: 9,
     fontWeight: "800",
     letterSpacing: 0.5,
@@ -1063,7 +1065,7 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
   },
   autoCreatedText: {
-    color: theme.colors.textSecondary,
+    color: c.textSecondary,
     fontSize: 8,
     flex: 1,
   },
@@ -1074,9 +1076,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   modalCard: {
-    backgroundColor: theme.colors.bgSecondary,
+    backgroundColor: c.bgSecondary,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: c.border,
     borderRadius: 10,
     overflow: "hidden",
     maxHeight: "85%",
@@ -1088,10 +1090,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
+    borderBottomColor: c.border,
   },
   modalTitle: {
-    color: theme.colors.textPrimary,
+    color: c.textPrimary,
     fontWeight: "900",
     fontSize: 9,
     letterSpacing: 1.5,
@@ -1103,10 +1105,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.borderSubtle,
+    borderBottomColor: c.borderSubtle,
   },
   modalRowText: {
-    color: theme.colors.textPrimary,
+    color: c.textPrimary,
     fontSize: 10,
   },
   exportFieldsHeader: {
@@ -1118,7 +1120,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   exportFieldsHeading: {
-    color: theme.colors.textPrimary,
+    color: c.textPrimary,
     fontSize: 8,
     fontWeight: "900",
     letterSpacing: 1.5,
@@ -1128,10 +1130,10 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 4,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: c.border,
   },
   exportFieldsBtnText: {
-    color: theme.colors.textPrimary,
+    color: c.textPrimary,
     fontSize: 7,
     fontWeight: "800",
     letterSpacing: 1,
@@ -1149,9 +1151,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: c.border,
     borderRadius: 6,
-    backgroundColor: theme.colors.bg,
+    backgroundColor: c.bg,
     flexBasis: "48%",
     minWidth: 130,
   },
@@ -1160,16 +1162,16 @@ const styles = StyleSheet.create({
     height: 18,
     borderRadius: 4,
     borderWidth: 2,
-    borderColor: theme.colors.border,
+    borderColor: c.border,
     alignItems: "center",
     justifyContent: "center",
   },
   exportCheckOn: {
-    backgroundColor: theme.colors.accent,
-    borderColor: theme.colors.accent,
+    backgroundColor: c.accent,
+    borderColor: c.accent,
   },
   exportFieldLabel: {
-    color: theme.colors.textPrimary,
+    color: c.textPrimary,
     fontSize: 9,
     fontWeight: "700",
     flex: 1,
@@ -1191,11 +1193,11 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 4,
     borderWidth: 1,
-    borderColor: theme.colors.border,
-    backgroundColor: theme.colors.bg,
+    borderColor: c.border,
+    backgroundColor: c.bg,
   },
   smallBtnText: {
-    color: theme.colors.textPrimary,
+    color: c.textPrimary,
     fontSize: 7,
     fontWeight: "800",
     letterSpacing: 1,
@@ -1221,22 +1223,22 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   statusText: {
-    color: theme.colors.textPrimary,
+    color: c.textPrimary,
     fontSize: 9,
     fontWeight: "800",
     letterSpacing: 0.5,
   },
   statusSubText: {
-    color: theme.colors.textSecondary,
+    color: c.textSecondary,
     fontSize: 8,
     flex: 1,
   },
   mapBtnRequired: {
-    borderColor: theme.colors.accent,
+    borderColor: c.accent,
     borderWidth: 2,
   },
   mapBtnDup: {
-    borderColor: theme.colors.warning || "#f59e0b",
+    borderColor: c.warning || "#f59e0b",
   },
   formatToggle: {
     flexDirection: "row",
@@ -1253,15 +1255,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     borderRadius: 6,
     borderWidth: 1,
-    borderColor: theme.colors.border,
-    backgroundColor: theme.colors.bg,
+    borderColor: c.border,
+    backgroundColor: c.bg,
   },
   formatBtnActive: {
-    backgroundColor: theme.colors.accent,
-    borderColor: theme.colors.accent,
+    backgroundColor: c.accent,
+    borderColor: c.accent,
   },
   formatBtnText: {
-    color: theme.colors.textSecondary,
+    color: c.textSecondary,
     fontSize: 8,
     fontWeight: "900",
     letterSpacing: 1.2,
@@ -1269,4 +1271,4 @@ const styles = StyleSheet.create({
   formatBtnTextActive: {
     color: "#000",
   },
-});
+}));

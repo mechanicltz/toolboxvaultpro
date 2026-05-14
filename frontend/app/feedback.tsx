@@ -26,6 +26,8 @@ import { theme } from "../src/theme";
 import { useAuth } from "../src/AuthContext";
 import { api } from "../src/api";
 
+import { themedStyles } from "../src/themeContext";
+
 const DESTINATION_EMAIL = "MechanicVault@gmail.com";
 const APP_VERSION =
   (Constants.expoConfig as any)?.version ||
@@ -330,8 +332,8 @@ export default function FeedbackScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: theme.colors.bg },
+const styles = themedStyles((c) => ({
+  container: { flex: 1, backgroundColor: c.bg },
   header: {
     flexDirection: "row",
     alignItems: "center",
@@ -339,23 +341,23 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
+    borderBottomColor: c.border,
   },
   headerTitle: {
-    color: theme.colors.textPrimary,
+    color: c.textPrimary,
     fontSize: 10,
     fontWeight: "900",
     letterSpacing: 2,
   },
   body: { padding: 16, paddingBottom: 24 },
   intro: {
-    color: theme.colors.textSecondary,
+    color: c.textSecondary,
     fontSize: 10,
     lineHeight: 14,
     marginBottom: 18,
   },
   label: {
-    color: theme.colors.accent,
+    color: c.accent,
     fontSize: 7,
     fontWeight: "900",
     letterSpacing: 1.5,
@@ -363,10 +365,10 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   input: {
-    backgroundColor: theme.colors.bgSecondary,
-    color: theme.colors.textPrimary,
+    backgroundColor: c.bgSecondary,
+    color: c.textPrimary,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: c.border,
     borderRadius: 6,
     paddingHorizontal: 12,
     paddingVertical: 10,
@@ -383,18 +385,18 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 6,
-    backgroundColor: theme.colors.bgSecondary,
+    backgroundColor: c.bgSecondary,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: c.border,
     paddingVertical: 10,
     borderRadius: 6,
   },
   segBtnOn: {
-    backgroundColor: theme.colors.accent,
-    borderColor: theme.colors.accent,
+    backgroundColor: c.accent,
+    borderColor: c.accent,
   },
   segText: {
-    color: theme.colors.textPrimary,
+    color: c.textPrimary,
     fontSize: 10,
     fontWeight: "800",
     letterSpacing: 1,
@@ -409,18 +411,18 @@ const styles = StyleSheet.create({
     width: 22,
     height: 22,
     borderWidth: 2,
-    borderColor: theme.colors.border,
+    borderColor: c.border,
     borderRadius: 4,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: theme.colors.bgSecondary,
+    backgroundColor: c.bgSecondary,
   },
   checkboxOn: {
-    backgroundColor: theme.colors.accent,
-    borderColor: theme.colors.accent,
+    backgroundColor: c.accent,
+    borderColor: c.accent,
   },
   checkLabel: {
-    color: theme.colors.textPrimary,
+    color: c.textPrimary,
     fontSize: 10,
     fontWeight: "700",
     flex: 1,
@@ -432,19 +434,19 @@ const styles = StyleSheet.create({
     gap: 8,
     borderWidth: 1,
     borderStyle: "dashed",
-    borderColor: theme.colors.accent,
+    borderColor: c.accent,
     borderRadius: 6,
     paddingVertical: 16,
-    backgroundColor: theme.colors.bgSecondary,
+    backgroundColor: c.bgSecondary,
   },
   pickBtnText: {
-    color: theme.colors.accent,
+    color: c.accent,
     fontSize: 10,
     fontWeight: "800",
     letterSpacing: 1,
   },
   versionNote: {
-    color: theme.colors.textMuted,
+    color: c.textMuted,
     fontSize: 9,
     fontStyle: "italic",
     marginTop: 16,
@@ -452,16 +454,16 @@ const styles = StyleSheet.create({
   },
   footer: {
     borderTopWidth: 1,
-    borderTopColor: theme.colors.border,
+    borderTopColor: c.border,
     padding: 14,
-    backgroundColor: theme.colors.bg,
+    backgroundColor: c.bg,
   },
   submit: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
-    backgroundColor: theme.colors.accent,
+    backgroundColor: c.accent,
     paddingVertical: 14,
     borderRadius: 8,
   },
@@ -471,4 +473,4 @@ const styles = StyleSheet.create({
     fontWeight: "900",
     letterSpacing: 2,
   },
-});
+}));

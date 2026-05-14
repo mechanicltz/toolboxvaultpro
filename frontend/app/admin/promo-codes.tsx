@@ -20,6 +20,8 @@ import { useRouter, useFocusEffect } from "expo-router";
 import { theme } from "../../src/theme";
 import { api } from "../../src/api";
 
+import { themedStyles } from "../../src/themeContext";
+
 type PromoCode = {
   id: string;
   code: string;
@@ -427,8 +429,8 @@ function PromoEditorModal({
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: theme.colors.bg },
+const styles = themedStyles((c) => ({
+  container: { flex: 1, backgroundColor: c.bg },
   headerBar: {
     flexDirection: "row",
     alignItems: "center",
@@ -436,11 +438,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 10,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
+    borderBottomColor: c.border,
   },
   headerTitle: {
     flex: 1,
-    color: theme.colors.textPrimary,
+    color: c.textPrimary,
     fontWeight: "900",
     letterSpacing: 1.4,
     fontSize: 14,
@@ -449,7 +451,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    backgroundColor: theme.colors.accent,
+    backgroundColor: c.accent,
     paddingHorizontal: 14,
     paddingVertical: 7,
     borderRadius: 999,
@@ -468,19 +470,19 @@ const styles = StyleSheet.create({
     padding: 32,
   },
   emptyTitle: {
-    color: theme.colors.textPrimary,
+    color: c.textPrimary,
     fontWeight: "800",
     fontSize: 14,
     marginTop: 8,
   },
   emptyBody: {
-    color: theme.colors.textMuted,
+    color: c.textMuted,
     fontSize: 12,
     textAlign: "center",
   },
   card: {
-    backgroundColor: theme.colors.bgSecondary,
-    borderColor: theme.colors.border,
+    backgroundColor: c.bgSecondary,
+    borderColor: c.border,
     borderWidth: 1,
     borderRadius: 10,
     padding: 12,
@@ -488,19 +490,19 @@ const styles = StyleSheet.create({
   },
   cardHead: { flexDirection: "row", alignItems: "center", gap: 10 },
   code: {
-    color: theme.colors.textPrimary,
+    color: c.textPrimary,
     fontWeight: "900",
     fontSize: 14,
     letterSpacing: 1.5,
   },
   codeMeta: {
-    color: theme.colors.textSecondary,
+    color: c.textSecondary,
     fontSize: 11,
     marginTop: 3,
     fontWeight: "700",
   },
   notes: {
-    color: theme.colors.textMuted,
+    color: c.textMuted,
     fontSize: 11,
     fontStyle: "italic",
     marginTop: 4,
@@ -510,23 +512,23 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    backgroundColor: theme.colors.bg,
+    backgroundColor: c.bg,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: c.border,
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 8,
   },
-  dangerBtn: { borderColor: theme.colors.danger },
+  dangerBtn: { borderColor: c.danger },
   actionText: {
-    color: theme.colors.textPrimary,
+    color: c.textPrimary,
     fontWeight: "800",
     fontSize: 10,
     letterSpacing: 1,
   },
-});
+}));
 
-const editorStyles = StyleSheet.create({
+const editorStyles = themedStyles((c) => ({
   bg: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.6)",
@@ -538,10 +540,10 @@ const editorStyles = StyleSheet.create({
     width: "100%",
     maxWidth: 440,
     maxHeight: "92%",
-    backgroundColor: theme.colors.bgSecondary,
+    backgroundColor: c.bgSecondary,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: c.border,
   },
   head: {
     flexDirection: "row",
@@ -550,13 +552,13 @@ const editorStyles = StyleSheet.create({
     marginBottom: 12,
   },
   title: {
-    color: theme.colors.textPrimary,
+    color: c.textPrimary,
     fontWeight: "900",
     letterSpacing: 1.5,
     fontSize: 13,
   },
   label: {
-    color: theme.colors.textMuted,
+    color: c.textMuted,
     fontSize: 10,
     fontWeight: "800",
     letterSpacing: 1.2,
@@ -564,16 +566,16 @@ const editorStyles = StyleSheet.create({
     marginBottom: 6,
   },
   hint: {
-    color: theme.colors.textMuted,
+    color: c.textMuted,
     fontSize: 11,
     fontStyle: "italic",
     marginTop: 4,
   },
   input: {
-    backgroundColor: theme.colors.bg,
-    color: theme.colors.textPrimary,
+    backgroundColor: c.bg,
+    color: c.textPrimary,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: c.border,
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 10,
@@ -582,18 +584,18 @@ const editorStyles = StyleSheet.create({
   tabRow: { flexDirection: "row", gap: 6 },
   tab: {
     flex: 1,
-    backgroundColor: theme.colors.bg,
+    backgroundColor: c.bg,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: c.border,
     borderRadius: 8,
     paddingVertical: 10,
     alignItems: "center",
   },
   tabActive: {
-    backgroundColor: theme.colors.accent,
-    borderColor: theme.colors.accent,
+    backgroundColor: c.accent,
+    borderColor: c.accent,
   },
-  tabText: { color: theme.colors.textPrimary, fontWeight: "800", fontSize: 11, letterSpacing: 1 },
+  tabText: { color: c.textPrimary, fontWeight: "800", fontSize: 11, letterSpacing: 1 },
   tabTextActive: { color: "#000" },
   switchRow: {
     flexDirection: "row",
@@ -601,21 +603,21 @@ const editorStyles = StyleSheet.create({
     justifyContent: "space-between",
     marginTop: 14,
     padding: 12,
-    backgroundColor: theme.colors.bg,
+    backgroundColor: c.bg,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: c.border,
     borderRadius: 8,
   },
-  switchLabel: { color: theme.colors.textPrimary, fontWeight: "800", fontSize: 11, letterSpacing: 1 },
+  switchLabel: { color: c.textPrimary, fontWeight: "800", fontSize: 11, letterSpacing: 1 },
   err: {
-    color: theme.colors.danger,
+    color: c.danger,
     fontWeight: "700",
     fontSize: 12,
     marginTop: 12,
     textAlign: "center",
   },
   submit: {
-    backgroundColor: theme.colors.accent,
+    backgroundColor: c.accent,
     height: 48,
     borderRadius: 10,
     alignItems: "center",
@@ -623,4 +625,4 @@ const editorStyles = StyleSheet.create({
     marginTop: 18,
   },
   submitText: { color: "#000", fontWeight: "900", letterSpacing: 2, fontSize: 12 },
-});
+}));

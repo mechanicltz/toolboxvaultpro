@@ -20,6 +20,8 @@ import { api } from "../src/api";
 import { confirm } from "../src/confirm";
 import { buildLocationTree, LocationNode } from "../src/locationTree";
 
+import { themedStyles } from "../src/themeContext";
+
 export default function LocationsTreeScreen() {
   const router = useRouter();
   // When the user opens this screen from a tool detail page, the source
@@ -423,8 +425,8 @@ export default function LocationsTreeScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: theme.colors.bg },
+const styles = themedStyles((c) => ({
+  container: { flex: 1, backgroundColor: c.bg },
   topBar: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -432,9 +434,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
+    borderBottomColor: c.border,
   },
-  title: { color: theme.colors.textPrimary, fontSize: 12, fontWeight: "900", letterSpacing: 2 },
+  title: { color: c.textPrimary, fontSize: 12, fontWeight: "900", letterSpacing: 2 },
   moveOption: {
     flexDirection: "row",
     alignItems: "center",
@@ -442,10 +444,10 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 8,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
+    borderBottomColor: c.border,
   },
   moveOptionText: {
-    color: theme.colors.textPrimary,
+    color: c.textPrimary,
     fontSize: 10,
     flex: 1,
   },
@@ -455,17 +457,17 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingVertical: 12,
     paddingRight: 12,
-    borderBottomColor: theme.colors.borderSubtle,
+    borderBottomColor: c.borderSubtle,
     borderBottomWidth: 1,
   },
-  rowText: { color: theme.colors.textPrimary, fontSize: 11, flex: 1 },
+  rowText: { color: c.textPrimary, fontSize: 11, flex: 1 },
   countBadge: {
-    color: theme.colors.textMuted,
+    color: c.textMuted,
     fontSize: 8,
     fontWeight: "800",
     paddingHorizontal: 6,
     paddingVertical: 2,
-    backgroundColor: theme.colors.surface,
+    backgroundColor: c.surface,
     borderRadius: 2,
   },
   iconBtn: {
@@ -474,26 +476,26 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: c.border,
     borderRadius: 4,
   },
   empty: { alignItems: "center", paddingVertical: 60, paddingHorizontal: 40 },
   emptyTitle: {
-    color: theme.colors.textPrimary,
+    color: c.textPrimary,
     fontSize: 12,
     fontWeight: "900",
     letterSpacing: 2,
     marginTop: 16,
   },
   emptyText: {
-    color: theme.colors.textSecondary,
+    color: c.textSecondary,
     textAlign: "center",
     marginTop: 8,
     marginBottom: 20,
     lineHeight: 14,
   },
   tip: {
-    color: theme.colors.textMuted,
+    color: c.textMuted,
     fontStyle: "italic",
     fontSize: 9,
     padding: 20,
@@ -501,24 +503,24 @@ const styles = StyleSheet.create({
   },
   modalBg: { flex: 1, backgroundColor: "rgba(0,0,0,0.7)", justifyContent: "flex-end" },
   modalCard: {
-    backgroundColor: theme.colors.bgSecondary,
+    backgroundColor: c.bgSecondary,
     padding: 24,
     borderTopWidth: 2,
-    borderTopColor: theme.colors.accent,
+    borderTopColor: c.accent,
   },
   modalTitle: {
-    color: theme.colors.textPrimary,
+    color: c.textPrimary,
     fontSize: 14,
     fontWeight: "900",
     letterSpacing: 2,
     marginBottom: 8,
   },
-  modalParent: { color: theme.colors.accent, fontSize: 9, marginBottom: 12 },
+  modalParent: { color: c.accent, fontSize: 9, marginBottom: 12 },
   input: {
-    backgroundColor: theme.colors.bg,
+    backgroundColor: c.bg,
     borderWidth: 1,
-    borderColor: theme.colors.border,
-    color: theme.colors.textPrimary,
+    borderColor: c.border,
+    color: c.textPrimary,
     paddingHorizontal: 14,
     height: 48,
     borderRadius: 4,
@@ -528,7 +530,7 @@ const styles = StyleSheet.create({
   btn: {
     flex: 1,
     flexDirection: "row",
-    backgroundColor: theme.colors.accent,
+    backgroundColor: c.accent,
     height: 48,
     alignItems: "center",
     justifyContent: "center",
@@ -539,11 +541,11 @@ const styles = StyleSheet.create({
   btnGhost: {
     flex: 1,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: c.border,
     height: 48,
     alignItems: "center",
     justifyContent: "center",
     borderRadius: 4,
   },
-  btnGhostText: { color: theme.colors.textPrimary, fontWeight: "800", letterSpacing: 2, fontSize: 10 },
-});
+  btnGhostText: { color: c.textPrimary, fontWeight: "800", letterSpacing: 2, fontSize: 10 },
+}));

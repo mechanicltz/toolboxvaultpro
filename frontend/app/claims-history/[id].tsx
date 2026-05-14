@@ -15,6 +15,8 @@ import { theme } from "../../src/theme";
 import { api } from "../../src/api";
 import { formatDateUS } from "../../src/dateUtil";
 
+import { themedStyles } from "../../src/themeContext";
+
 const STATUS_COLORS: Record<string, string> = {
   broken: theme.colors.danger,
   awaiting_approval: theme.colors.warning,
@@ -162,8 +164,8 @@ export default function ClaimsHistoryPage() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: theme.colors.bg },
+const styles = themedStyles((c) => ({
+  container: { flex: 1, backgroundColor: c.bg },
   headerBar: {
     flexDirection: "row",
     alignItems: "center",
@@ -171,31 +173,31 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 10,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
+    borderBottomColor: c.border,
   },
   headerTitleCol: { flex: 1 },
   headerTitle: {
-    color: theme.colors.textPrimary,
+    color: c.textPrimary,
     fontWeight: "900",
     fontSize: 14,
     letterSpacing: 1.4,
   },
   headerSub: {
-    color: theme.colors.textMuted,
+    color: c.textMuted,
     fontSize: 11,
     fontWeight: "600",
     marginTop: 2,
   },
   headerCount: {
-    backgroundColor: theme.colors.bgSecondary,
-    borderColor: theme.colors.border,
+    backgroundColor: c.bgSecondary,
+    borderColor: c.border,
     borderWidth: 1,
     borderRadius: 999,
     paddingHorizontal: 12,
     paddingVertical: 4,
   },
   headerCountText: {
-    color: theme.colors.textPrimary,
+    color: c.textPrimary,
     fontWeight: "800",
     fontSize: 12,
   },
@@ -207,21 +209,21 @@ const styles = StyleSheet.create({
     padding: 32,
   },
   emptyTitle: {
-    color: theme.colors.textPrimary,
+    color: c.textPrimary,
     fontWeight: "800",
     fontSize: 14,
     marginTop: 8,
   },
   emptyBody: {
-    color: theme.colors.textMuted,
+    color: c.textMuted,
     fontSize: 12,
     textAlign: "center",
     paddingHorizontal: 24,
   },
   card: {
-    backgroundColor: theme.colors.bgSecondary,
+    backgroundColor: c.bgSecondary,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: c.border,
     borderRadius: 10,
     padding: 12,
     marginBottom: 10,
@@ -231,14 +233,14 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: theme.colors.bg,
+    backgroundColor: c.bg,
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
-    borderColor: theme.colors.accent,
+    borderColor: c.accent,
   },
   num: {
-    color: theme.colors.accent,
+    color: c.accent,
     fontSize: 9,
     fontWeight: "900",
   },
@@ -246,13 +248,13 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 6,
-    backgroundColor: theme.colors.bg,
+    backgroundColor: c.bg,
   },
   thumbPlaceholder: {
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: c.border,
   },
   statusPill: {
     alignSelf: "flex-start",
@@ -264,32 +266,32 @@ const styles = StyleSheet.create({
   },
   statusText: { fontSize: 9, fontWeight: "900", letterSpacing: 1 },
   notified: {
-    color: theme.colors.accent,
+    color: c.accent,
     fontSize: 11,
     fontWeight: "900",
     marginTop: 2,
   },
   meta: {
-    color: theme.colors.textSecondary,
+    color: c.textSecondary,
     fontSize: 10,
     marginTop: 2,
   },
   notesBox: {
-    backgroundColor: theme.colors.bg,
+    backgroundColor: c.bg,
     borderRadius: 6,
     padding: 8,
     marginTop: 8,
   },
   notesLabel: {
-    color: theme.colors.textMuted,
+    color: c.textMuted,
     fontSize: 9,
     fontWeight: "800",
     letterSpacing: 1.5,
     marginBottom: 4,
   },
   notes: {
-    color: theme.colors.textPrimary,
+    color: c.textPrimary,
     fontSize: 11,
     lineHeight: 15,
   },
-});
+}));

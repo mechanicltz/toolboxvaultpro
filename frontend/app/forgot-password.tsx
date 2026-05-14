@@ -28,6 +28,8 @@ import { theme } from "../src/theme";
 import { api, setToken } from "../src/api";
 import { useAuth } from "../src/AuthContext";
 
+import { themedStyles } from "../src/themeContext";
+
 type Step = "request" | "verify";
 
 export default function ForgotPasswordScreen() {
@@ -268,8 +270,8 @@ export default function ForgotPasswordScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: theme.colors.bg },
+const styles = themedStyles((c) => ({
+  container: { flex: 1, backgroundColor: c.bg },
   header: {
     flexDirection: "row",
     alignItems: "center",
@@ -277,23 +279,23 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
+    borderBottomColor: c.border,
   },
   headerTitle: {
-    color: theme.colors.textPrimary,
+    color: c.textPrimary,
     fontSize: 10,
     fontWeight: "900",
     letterSpacing: 2,
   },
   body: { padding: 20, paddingBottom: 40 },
   intro: {
-    color: theme.colors.textSecondary,
+    color: c.textSecondary,
     fontSize: 10,
     lineHeight: 14,
     marginBottom: 22,
   },
   label: {
-    color: theme.colors.accent,
+    color: c.accent,
     fontSize: 7,
     fontWeight: "900",
     letterSpacing: 1.5,
@@ -301,10 +303,10 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   input: {
-    backgroundColor: theme.colors.bgSecondary,
-    color: theme.colors.textPrimary,
+    backgroundColor: c.bgSecondary,
+    color: c.textPrimary,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: c.border,
     borderRadius: 6,
     paddingHorizontal: 12,
     paddingVertical: 12,
@@ -328,7 +330,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
-    backgroundColor: theme.colors.accent,
+    backgroundColor: c.accent,
     paddingVertical: 14,
     borderRadius: 8,
     marginTop: 20,
@@ -339,4 +341,4 @@ const styles = StyleSheet.create({
     fontWeight: "900",
     letterSpacing: 2,
   },
-});
+}));

@@ -15,6 +15,8 @@ import { theme } from "../../../src/theme";
 import { api } from "../../../src/api";
 import { usePrefs } from "../../../src/prefs";
 
+import { themedStyles } from "../../../src/themeContext";
+
 /**
  * Dedicated screen showing every tool that was purchased from a single
  * dealer. Reached from the "View N purchased tools" button on the
@@ -169,8 +171,8 @@ export default function DealerToolsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: theme.colors.bg },
+const styles = themedStyles((c) => ({
+  container: { flex: 1, backgroundColor: c.bg },
   header: {
     flexDirection: "row",
     alignItems: "center",
@@ -178,7 +180,7 @@ const styles = StyleSheet.create({
     paddingTop: 8,
     paddingBottom: 12,
     gap: 8,
-    borderBottomColor: theme.colors.border,
+    borderBottomColor: c.border,
     borderBottomWidth: 1,
   },
   backBtn: {
@@ -187,19 +189,19 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: theme.colors.surface,
+    backgroundColor: c.surface,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: c.border,
   },
   headerOver: {
-    color: theme.colors.textMuted,
+    color: c.textMuted,
     fontSize: 7,
     fontWeight: "800",
     letterSpacing: 1.4,
     marginBottom: 1,
   },
   headerName: {
-    color: theme.colors.textPrimary,
+    color: c.textPrimary,
     fontSize: 14,
     fontWeight: "900",
   },
@@ -214,17 +216,17 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 14,
     borderRadius: 10,
-    backgroundColor: theme.colors.surface,
+    backgroundColor: c.surface,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: c.border,
     alignItems: "flex-start",
   },
   summaryCellAccent: {
-    backgroundColor: theme.colors.accent,
-    borderColor: theme.colors.accent,
+    backgroundColor: c.accent,
+    borderColor: c.accent,
   },
   summaryValue: {
-    color: theme.colors.textPrimary,
+    color: c.textPrimary,
     fontSize: 16,
     fontWeight: "900",
   },
@@ -234,7 +236,7 @@ const styles = StyleSheet.create({
     fontWeight: "900",
   },
   summaryLabel: {
-    color: theme.colors.textMuted,
+    color: c.textMuted,
     fontSize: 7,
     fontWeight: "800",
     letterSpacing: 1.2,
@@ -250,25 +252,25 @@ const styles = StyleSheet.create({
   },
   empty: { flex: 1, alignItems: "center", justifyContent: "center", padding: 32, gap: 10 },
   emptyText: {
-    color: theme.colors.textPrimary,
+    color: c.textPrimary,
     fontWeight: "800",
     fontSize: 11,
     textAlign: "center",
   },
-  emptyHint: { color: theme.colors.textMuted, fontSize: 9, textAlign: "center" },
+  emptyHint: { color: c.textMuted, fontSize: 9, textAlign: "center" },
   row: {
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
-    backgroundColor: theme.colors.surface,
+    backgroundColor: c.surface,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: c.border,
     padding: 10,
     marginBottom: 8,
   },
   rowIndex: {
-    color: theme.colors.textMuted,
+    color: c.textMuted,
     fontSize: 8,
     fontWeight: "800",
     minWidth: 18,
@@ -278,19 +280,19 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 8,
-    backgroundColor: theme.colors.bg,
+    backgroundColor: c.bg,
     alignItems: "center",
     justifyContent: "center",
     overflow: "hidden",
   },
   thumb: { width: "100%", height: "100%", resizeMode: "cover" },
   rowName: {
-    color: theme.colors.textPrimary,
+    color: c.textPrimary,
     fontWeight: "800",
     fontSize: 10,
   },
   rowSub: {
-    color: theme.colors.textSecondary,
+    color: c.textSecondary,
     fontSize: 9,
     marginTop: 2,
   },
@@ -302,7 +304,7 @@ const styles = StyleSheet.create({
     flexWrap: "wrap",
   },
   rowAgent: {
-    color: theme.colors.textMuted,
+    color: c.textMuted,
     fontSize: 8,
     fontWeight: "700",
     flexShrink: 1,
@@ -311,7 +313,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 7,
     paddingVertical: 2,
     borderRadius: 6,
-    backgroundColor: theme.colors.accent,
+    backgroundColor: c.accent,
   },
   qtyPillText: {
     color: "#000",
@@ -320,13 +322,13 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   rowCost: {
-    color: theme.colors.textPrimary,
+    color: c.textPrimary,
     fontSize: 10,
     fontWeight: "800",
   },
   rowUnit: {
-    color: theme.colors.textMuted,
+    color: c.textMuted,
     fontSize: 7,
     marginTop: 1,
   },
-});
+}));

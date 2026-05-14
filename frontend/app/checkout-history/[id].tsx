@@ -14,6 +14,8 @@ import { theme } from "../../src/theme";
 import { api } from "../../src/api";
 import { formatDateTime } from "../../src/dt";
 
+import { themedStyles } from "../../src/themeContext";
+
 export default function CheckoutHistoryPage() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
@@ -116,8 +118,8 @@ export default function CheckoutHistoryPage() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: theme.colors.bg },
+const styles = themedStyles((c) => ({
+  container: { flex: 1, backgroundColor: c.bg },
   headerBar: {
     flexDirection: "row",
     alignItems: "center",
@@ -125,31 +127,31 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 10,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
+    borderBottomColor: c.border,
   },
   headerTitleCol: { flex: 1 },
   headerTitle: {
-    color: theme.colors.textPrimary,
+    color: c.textPrimary,
     fontWeight: "900",
     fontSize: 14,
     letterSpacing: 1.4,
   },
   headerSub: {
-    color: theme.colors.textMuted,
+    color: c.textMuted,
     fontSize: 11,
     fontWeight: "600",
     marginTop: 2,
   },
   headerCount: {
-    backgroundColor: theme.colors.bgSecondary,
-    borderColor: theme.colors.border,
+    backgroundColor: c.bgSecondary,
+    borderColor: c.border,
     borderWidth: 1,
     borderRadius: 999,
     paddingHorizontal: 12,
     paddingVertical: 4,
   },
   headerCountText: {
-    color: theme.colors.textPrimary,
+    color: c.textPrimary,
     fontWeight: "800",
     fontSize: 12,
   },
@@ -161,20 +163,20 @@ const styles = StyleSheet.create({
     padding: 32,
   },
   emptyTitle: {
-    color: theme.colors.textPrimary,
+    color: c.textPrimary,
     fontWeight: "800",
     fontSize: 14,
     marginTop: 8,
   },
   emptyBody: {
-    color: theme.colors.textMuted,
+    color: c.textMuted,
     fontSize: 12,
     textAlign: "center",
     paddingHorizontal: 24,
   },
   row: {
-    backgroundColor: theme.colors.bgSecondary,
-    borderColor: theme.colors.border,
+    backgroundColor: c.bgSecondary,
+    borderColor: c.border,
     borderWidth: 1,
     borderRadius: 10,
     padding: 12,
@@ -187,24 +189,24 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   name: {
-    color: theme.colors.textPrimary,
+    color: c.textPrimary,
     fontWeight: "800",
     fontSize: 13,
     flex: 1,
   },
   line: {
-    color: theme.colors.textPrimary,
+    color: c.textPrimary,
     fontSize: 12,
     marginTop: 2,
   },
   label: {
-    color: theme.colors.textMuted,
+    color: c.textMuted,
     fontWeight: "700",
   },
   notes: {
-    color: theme.colors.textPrimary,
+    color: c.textPrimary,
     fontStyle: "italic",
     fontSize: 12,
     marginTop: 6,
   },
-});
+}));

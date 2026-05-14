@@ -24,6 +24,8 @@ import { api } from "../../src/api";
 import { useAuth } from "../../src/AuthContext";
 import { APP_VERSION_LABEL } from "../../src/version";
 import { PromoRedeemModal } from "../../src/PromoRedeemModal";
+import { themedStyles } from "../../src/themeContext";
+
 import {
   requestPermissions as requestNotificationPermissions,
   rescheduleDealerNotifications,
@@ -878,17 +880,17 @@ export default function MoreScreen() {
   );
 }
 
-const homeRowsModalStyles = StyleSheet.create({
+const homeRowsModalStyles = themedStyles((c) => ({
   backdrop: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.7)",
     justifyContent: "flex-end",
   },
   card: {
-    backgroundColor: theme.colors.bgSecondary,
+    backgroundColor: c.bgSecondary,
     padding: 20,
     borderTopWidth: 2,
-    borderTopColor: theme.colors.accent,
+    borderTopColor: c.accent,
     paddingBottom: 32,
   },
   header: {
@@ -899,20 +901,20 @@ const homeRowsModalStyles = StyleSheet.create({
   },
   title: {
     flex: 1,
-    color: theme.colors.textPrimary,
+    color: c.textPrimary,
     fontSize: 14,
     fontWeight: "900",
     letterSpacing: 2,
   },
   help: {
-    color: theme.colors.textMuted,
+    color: c.textMuted,
     fontSize: 10,
     marginVertical: 12,
     lineHeight: 14,
   },
   doneBtn: {
     marginTop: 16,
-    backgroundColor: theme.colors.accent,
+    backgroundColor: c.accent,
     height: 48,
     borderRadius: 4,
     alignItems: "center",
@@ -924,10 +926,10 @@ const homeRowsModalStyles = StyleSheet.create({
     letterSpacing: 2,
     fontSize: 12,
   },
-});
+}));
 
 
-const pwStyles = StyleSheet.create({
+const pwStyles = themedStyles((c) => ({
   backdrop: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.6)",
@@ -938,11 +940,11 @@ const pwStyles = StyleSheet.create({
   card: {
     width: "100%",
     maxWidth: 440,
-    backgroundColor: theme.colors.bgSecondary,
+    backgroundColor: c.bgSecondary,
     borderRadius: 12,
     padding: 18,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: c.border,
   },
   header: {
     flexDirection: "row",
@@ -952,13 +954,13 @@ const pwStyles = StyleSheet.create({
   },
   title: {
     flex: 1,
-    color: theme.colors.textPrimary,
+    color: c.textPrimary,
     fontSize: 10,
     fontWeight: "900",
     letterSpacing: 1.5,
   },
   label: {
-    color: theme.colors.textSecondary,
+    color: c.textSecondary,
     fontSize: 8,
     fontWeight: "800",
     letterSpacing: 1.5,
@@ -966,17 +968,17 @@ const pwStyles = StyleSheet.create({
     marginBottom: 6,
   },
   input: {
-    backgroundColor: theme.colors.surface,
+    backgroundColor: c.surface,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: c.border,
     borderRadius: 6,
     paddingHorizontal: 12,
     paddingVertical: 10,
-    color: theme.colors.textPrimary,
+    color: c.textPrimary,
     fontSize: 10,
   },
   err: {
-    color: theme.colors.danger,
+    color: c.danger,
     fontSize: 9,
     marginTop: 10,
   },
@@ -987,7 +989,7 @@ const pwStyles = StyleSheet.create({
   },
   primaryBtn: {
     marginTop: 18,
-    backgroundColor: theme.colors.accent,
+    backgroundColor: c.accent,
     borderRadius: 8,
     paddingVertical: 12,
     alignItems: "center",
@@ -998,18 +1000,18 @@ const pwStyles = StyleSheet.create({
     letterSpacing: 1.5,
     fontSize: 10,
   },
-});
+}));
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: theme.colors.bg },
+const styles = themedStyles((c) => ({
+  container: { flex: 1, backgroundColor: c.bg },
   header: {
     paddingHorizontal: 20,
     paddingTop: 12,
     paddingBottom: 12,
   },
-  title: { color: theme.colors.textPrimary, fontSize: 14, fontWeight: "900", letterSpacing: 2.5 },
+  title: { color: c.textPrimary, fontSize: 14, fontWeight: "900", letterSpacing: 2.5 },
   subtitle: {
-    color: theme.colors.accent,
+    color: c.accent,
     fontSize: 8,
     fontWeight: "700",
     letterSpacing: 2,
@@ -1017,7 +1019,7 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   versionLine: {
-    color: theme.colors.textMuted,
+    color: c.textMuted,
     fontSize: 10,
     fontWeight: "700",
     letterSpacing: 1.5,
@@ -1040,7 +1042,7 @@ const styles = StyleSheet.create({
     letterSpacing: 1.2,
   },
   sectionLabel: {
-    color: theme.colors.textMuted,
+    color: c.textMuted,
     fontSize: 8,
     fontWeight: "800",
     letterSpacing: 2,
@@ -1053,7 +1055,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 20,
     paddingVertical: 14,
-    borderBottomColor: theme.colors.borderSubtle,
+    borderBottomColor: c.borderSubtle,
     borderBottomWidth: 1,
     gap: 12,
   },
@@ -1062,22 +1064,22 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 20,
     paddingVertical: 14,
-    borderBottomColor: theme.colors.borderSubtle,
+    borderBottomColor: c.borderSubtle,
     borderBottomWidth: 1,
     gap: 12,
   },
   iconBox: {
     width: 36,
     height: 36,
-    backgroundColor: theme.colors.surface,
+    backgroundColor: c.surface,
     alignItems: "center",
     justifyContent: "center",
     borderRadius: 4,
   },
-  rowTitle: { color: theme.colors.textPrimary, fontWeight: "700", fontSize: 11 },
-  rowSub: { color: theme.colors.textSecondary, fontSize: 9, marginTop: 2 },
+  rowTitle: { color: c.textPrimary, fontWeight: "700", fontSize: 11 },
+  rowSub: { color: c.textSecondary, fontSize: 9, marginTop: 2 },
   timeValue: {
-    color: theme.colors.accent,
+    color: c.accent,
     fontSize: 13,
     fontWeight: "800",
     letterSpacing: 0.5,
@@ -1087,12 +1089,12 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(0,0,0,0.5)",
   },
   timeModalSheet: {
-    backgroundColor: theme.colors.bg,
+    backgroundColor: c.bg,
     borderTopLeftRadius: 14,
     borderTopRightRadius: 14,
     paddingBottom: 28,
     borderTopWidth: 1,
-    borderTopColor: theme.colors.border,
+    borderTopColor: c.border,
   },
   timeModalHeader: {
     flexDirection: "row",
@@ -1101,21 +1103,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: 18,
     paddingVertical: 14,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
+    borderBottomColor: c.border,
   },
   timeModalTitle: {
-    color: theme.colors.textPrimary,
+    color: c.textPrimary,
     fontWeight: "800",
     fontSize: 13,
     letterSpacing: 1,
   },
   timeModalCancel: {
-    color: theme.colors.textSecondary,
+    color: c.textSecondary,
     fontSize: 13,
     fontWeight: "600",
   },
   timeModalDone: {
-    color: theme.colors.accent,
+    color: c.accent,
     fontSize: 13,
     fontWeight: "800",
   },
@@ -1123,7 +1125,7 @@ const styles = StyleSheet.create({
     minWidth: 24,
     height: 24,
     borderRadius: 12,
-    backgroundColor: theme.colors.accent,
+    backgroundColor: c.accent,
     paddingHorizontal: 7,
     alignItems: "center",
     justifyContent: "center",
@@ -1141,19 +1143,19 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     paddingHorizontal: 14,
     paddingVertical: 12,
-    backgroundColor: theme.colors.surface,
+    backgroundColor: c.surface,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: theme.colors.borderSubtle,
+    borderColor: c.borderSubtle,
   },
   homeRowsTitle: {
-    color: theme.colors.accent,
+    color: c.accent,
     fontSize: 8,
     fontWeight: "900",
     letterSpacing: 1.5,
   },
   homeRowsHelp: {
-    color: theme.colors.textSecondary,
+    color: c.textSecondary,
     fontSize: 8,
     marginTop: 4,
     marginBottom: 8,
@@ -1164,7 +1166,7 @@ const styles = StyleSheet.create({
     gap: 10,
     paddingVertical: 8,
     borderTopWidth: 1,
-    borderTopColor: theme.colors.borderSubtle,
+    borderTopColor: c.borderSubtle,
   },
   homeRowMoveCol: {
     flexDirection: "column",
@@ -1176,14 +1178,14 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: c.border,
     borderRadius: 4,
-    backgroundColor: theme.colors.bg,
+    backgroundColor: c.bg,
   },
   homeRowToggleLabel: {
     flex: 1,
-    color: theme.colors.textPrimary,
+    color: c.textPrimary,
     fontSize: 10,
     fontWeight: "600",
   },
-});
+}));

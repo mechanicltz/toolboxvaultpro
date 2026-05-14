@@ -2,6 +2,8 @@ import { View, Text, StyleSheet, ScrollView } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { theme } from "./theme";
 
+import { themedStyles } from "./themeContext";
+
 export function SummaryHeader({
   agg,
   showPrices,
@@ -90,25 +92,25 @@ function Group({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles((c) => ({
   box: {
-    backgroundColor: theme.colors.bgSecondary,
+    backgroundColor: c.bgSecondary,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: c.border,
     paddingVertical: 10,
     paddingHorizontal: 12,
     marginHorizontal: 20,
     marginBottom: 8,
     borderRadius: theme.radii.md,
-    borderLeftColor: theme.colors.accent,
+    borderLeftColor: c.accent,
     borderLeftWidth: 3,
     ...(theme.elevation.md as object),
   },
   statsRow: { flexDirection: "row", justifyContent: "space-around" },
   stat: { alignItems: "center" },
-  statValue: { color: theme.colors.textPrimary, fontWeight: "900", fontSize: 14 },
+  statValue: { color: c.textPrimary, fontWeight: "900", fontSize: 14 },
   statLabel: {
-    color: theme.colors.textMuted,
+    color: c.textMuted,
     fontSize: 7,
     fontWeight: "800",
     letterSpacing: 1,
@@ -125,11 +127,11 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   groupTitle: {
-    color: theme.colors.accent,
+    color: c.accent,
     fontSize: 7,
     fontWeight: "800",
     letterSpacing: 1,
   },
-  groupItem: { color: theme.colors.textPrimary, fontSize: 8, marginVertical: 1 },
-  groupCount: { color: theme.colors.textMuted, fontWeight: "700" },
-});
+  groupItem: { color: c.textPrimary, fontSize: 8, marginVertical: 1 },
+  groupCount: { color: c.textMuted, fontWeight: "700" },
+}));

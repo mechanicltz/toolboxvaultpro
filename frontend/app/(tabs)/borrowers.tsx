@@ -19,6 +19,8 @@ import { theme } from "../../src/theme";
 import { api } from "../../src/api";
 import { confirm } from "../../src/confirm";
 import { parseContacts, openEmail, openPhone, openSms } from "../../src/contactLinks";
+import { themedStyles } from "../../src/themeContext";
+
 import {
   isDeviceContactsAvailable,
   isAndroidPickerNeeded,
@@ -490,8 +492,8 @@ function RowContactChips({ raw }: { raw?: string | null }) {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: theme.colors.bg },
+const styles = themedStyles((c) => ({
+  container: { flex: 1, backgroundColor: c.bg },
   header: {
     flexDirection: "row",
     alignItems: "center",
@@ -506,7 +508,7 @@ const styles = StyleSheet.create({
     gap: 4,
     backgroundColor: "rgba(15,15,15,0.9)",
     borderWidth: 1,
-    borderColor: theme.colors.accent,
+    borderColor: c.accent,
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 5,
@@ -517,19 +519,19 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   headerAddBtnText: {
-    color: theme.colors.accent,
+    color: c.accent,
     fontSize: 7,
     fontWeight: "900",
     letterSpacing: 1.2,
   },
   title: {
-    color: theme.colors.textPrimary,
+    color: c.textPrimary,
     fontSize: 21,
     fontWeight: "900",
     letterSpacing: 2,
   },
   subtitle: {
-    color: theme.colors.accent,
+    color: c.accent,
     fontSize: 8,
     fontWeight: "700",
     letterSpacing: 2,
@@ -538,7 +540,7 @@ const styles = StyleSheet.create({
   },
   section: { paddingHorizontal: 20, paddingVertical: 8 },
   sectionLabel: {
-    color: theme.colors.textMuted,
+    color: c.textMuted,
     fontSize: 8,
     fontWeight: "800",
     letterSpacing: 2,
@@ -547,15 +549,15 @@ const styles = StyleSheet.create({
   checkedOutRow: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: theme.colors.bgSecondary,
+    backgroundColor: c.bgSecondary,
     borderLeftWidth: 3,
-    borderLeftColor: theme.colors.accentSecondary,
+    borderLeftColor: c.accentSecondary,
     paddingHorizontal: 12,
     paddingVertical: 10,
     marginBottom: 6,
   },
-  checkedOutTool: { color: theme.colors.textPrimary, fontWeight: "700", fontSize: 10 },
-  checkedOutBy: { color: theme.colors.textSecondary, fontSize: 9, marginTop: 2 },
+  checkedOutTool: { color: c.textPrimary, fontWeight: "700", fontSize: 10 },
+  checkedOutBy: { color: c.textSecondary, fontSize: 9, marginTop: 2 },
   rowChipsWrap: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -574,15 +576,15 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: theme.colors.accent,
-    backgroundColor: theme.colors.surface,
+    borderColor: c.accent,
+    backgroundColor: c.surface,
     maxWidth: "100%",
   },
   rowChipIcon: {
     paddingHorizontal: 6,
   },
   rowChipText: {
-    color: theme.colors.textPrimary,
+    color: c.textPrimary,
     fontSize: 8,
     fontWeight: "700",
     flexShrink: 1,
@@ -592,20 +594,20 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 20,
     paddingVertical: 14,
-    borderBottomColor: theme.colors.borderSubtle,
+    borderBottomColor: c.borderSubtle,
     borderBottomWidth: 1,
     gap: 12,
   },
   editRow: {
     backgroundColor: "rgba(255,179,0,0.06)",
     borderLeftWidth: 3,
-    borderLeftColor: theme.colors.accent,
+    borderLeftColor: c.accent,
   },
   editInput: {
-    backgroundColor: theme.colors.bg,
+    backgroundColor: c.bg,
     borderWidth: 1,
-    borderColor: theme.colors.accent,
-    color: theme.colors.textPrimary,
+    borderColor: c.accent,
+    color: c.textPrimary,
     paddingHorizontal: 10,
     paddingVertical: 8,
     borderRadius: 4,
@@ -619,22 +621,22 @@ const styles = StyleSheet.create({
   avatar: {
     width: 44,
     height: 44,
-    backgroundColor: theme.colors.surface,
+    backgroundColor: c.surface,
     borderWidth: 1,
-    borderColor: theme.colors.accent,
+    borderColor: c.accent,
     alignItems: "center",
     justifyContent: "center",
     borderRadius: 4,
   },
   avatarText: {
-    color: theme.colors.accent,
+    color: c.accent,
     fontWeight: "900",
     fontSize: 14,
   },
-  rowTitle: { color: theme.colors.textPrimary, fontWeight: "700", fontSize: 12 },
-  rowSub: { color: theme.colors.textSecondary, fontSize: 9, marginTop: 2 },
+  rowTitle: { color: c.textPrimary, fontWeight: "700", fontSize: 12 },
+  rowSub: { color: c.textSecondary, fontSize: 9, marginTop: 2 },
   rowMeta: {
-    color: theme.colors.textMuted,
+    color: c.textMuted,
     fontSize: 8,
     fontWeight: "700",
     letterSpacing: 1,
@@ -643,7 +645,7 @@ const styles = StyleSheet.create({
   },
   empty: { alignItems: "center", paddingVertical: 40, paddingHorizontal: 40 },
   emptyText: {
-    color: theme.colors.textSecondary,
+    color: c.textSecondary,
     textAlign: "center",
     marginTop: 12,
   },
@@ -653,7 +655,7 @@ const styles = StyleSheet.create({
     right: 24,
     width: 56,
     height: 56,
-    backgroundColor: theme.colors.accent,
+    backgroundColor: c.accent,
     alignItems: "center",
     justifyContent: "center",
     borderRadius: 4,
@@ -664,23 +666,23 @@ const styles = StyleSheet.create({
     justifyContent: "flex-end",
   },
   modalCard: {
-    backgroundColor: theme.colors.bgSecondary,
+    backgroundColor: c.bgSecondary,
     padding: 24,
     borderTopWidth: 2,
-    borderTopColor: theme.colors.accent,
+    borderTopColor: c.accent,
   },
   modalTitle: {
-    color: theme.colors.textPrimary,
+    color: c.textPrimary,
     fontSize: 14,
     fontWeight: "900",
     letterSpacing: 2,
     marginBottom: 16,
   },
   input: {
-    backgroundColor: theme.colors.bg,
+    backgroundColor: c.bg,
     borderWidth: 1,
-    borderColor: theme.colors.border,
-    color: theme.colors.textPrimary,
+    borderColor: c.border,
+    color: c.textPrimary,
     paddingHorizontal: 14,
     height: 48,
     borderRadius: 4,
@@ -690,7 +692,7 @@ const styles = StyleSheet.create({
   modalActions: { flexDirection: "row", gap: 12, marginTop: 8 },
   btn: {
     flex: 1,
-    backgroundColor: theme.colors.accent,
+    backgroundColor: c.accent,
     height: 48,
     alignItems: "center",
     justifyContent: "center",
@@ -705,14 +707,14 @@ const styles = StyleSheet.create({
   btnGhost: {
     flex: 1,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: c.border,
     height: 48,
     alignItems: "center",
     justifyContent: "center",
     borderRadius: 4,
   },
   btnGhostText: {
-    color: theme.colors.textPrimary,
+    color: c.textPrimary,
     fontWeight: "800",
     letterSpacing: 2,
     fontSize: 10,
@@ -725,23 +727,23 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderWidth: 1,
     borderStyle: "dashed",
-    borderColor: theme.colors.accent,
+    borderColor: c.accent,
     borderRadius: 6,
     marginBottom: 12,
   },
   importBtnText: {
-    color: theme.colors.accent,
+    color: c.accent,
     fontWeight: "900",
     fontSize: 9,
     letterSpacing: 1.5,
   },
   pickerBg: {
     flex: 1,
-    backgroundColor: theme.colors.bg,
+    backgroundColor: c.bg,
   },
   pickerCard: {
     flex: 1,
-    backgroundColor: theme.colors.bg,
+    backgroundColor: c.bg,
   },
   pickerHeader: {
     flexDirection: "row",
@@ -750,19 +752,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
+    borderBottomColor: c.border,
   },
   pickerTitle: {
-    color: theme.colors.textPrimary,
+    color: c.textPrimary,
     fontSize: 10,
     fontWeight: "900",
     letterSpacing: 2,
   },
   pickerSearch: {
-    backgroundColor: theme.colors.bgSecondary,
+    backgroundColor: c.bgSecondary,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-    color: theme.colors.textPrimary,
+    borderBottomColor: c.border,
+    color: c.textPrimary,
     paddingHorizontal: 16,
     paddingVertical: 14,
     fontSize: 11,
@@ -774,7 +776,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     gap: 12,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.borderSubtle,
+    borderBottomColor: c.borderSubtle,
   },
   pickerEmpty: {
     flex: 1,
@@ -784,7 +786,7 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   pickerEmptyText: {
-    color: theme.colors.textSecondary,
+    color: c.textSecondary,
     textAlign: "center",
   },
-});
+}));

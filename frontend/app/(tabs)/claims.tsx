@@ -18,6 +18,8 @@ import { formatDateUS as fmtDate } from "../../src/dateUtil";
 import { getCached, setCached } from "../../src/cache";
 import { formatPhone } from "../../src/contactLinks";
 
+import { themedStyles } from "../../src/themeContext";
+
 type Mode = "dealers" | "all-open";
 
 export default function ClaimsScreen() {
@@ -436,21 +438,21 @@ function Stat({ label, value, color }: { label: string; value: number; color?: s
 }
 
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: theme.colors.bg },
+const styles = themedStyles((c) => ({
+  container: { flex: 1, backgroundColor: c.bg },
   statRow: {
     flexDirection: "row",
     gap: 6,
     paddingHorizontal: 12,
     paddingVertical: 10,
-    borderBottomColor: theme.colors.border,
+    borderBottomColor: c.border,
     borderBottomWidth: 1,
   },
   statBox: {
     flex: 1,
-    backgroundColor: theme.colors.bgSecondary,
+    backgroundColor: c.bgSecondary,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: c.border,
     paddingVertical: 10,
     alignItems: "center",
     borderRadius: 4,
@@ -458,17 +460,17 @@ const styles = StyleSheet.create({
   statValue: {
     fontSize: 14,
     fontWeight: "900",
-    color: theme.colors.textPrimary,
+    color: c.textPrimary,
   },
   statLabel: {
     fontSize: 7,
     fontWeight: "800",
     letterSpacing: 1,
-    color: theme.colors.textMuted,
+    color: c.textMuted,
     marginTop: 2,
   },
   notifiedLine: {
-    color: theme.colors.accent,
+    color: c.accent,
     fontSize: 8,
     fontWeight: "800",
     marginTop: 3,
@@ -477,10 +479,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
+    borderBottomColor: c.border,
   },
-  title: { color: theme.colors.textPrimary, fontSize: 16, fontWeight: "900", letterSpacing: 4 },
-  subtitle: { color: theme.colors.accent, fontSize: 7, fontWeight: "700", letterSpacing: 2, marginTop: 4 },
+  title: { color: c.textPrimary, fontSize: 16, fontWeight: "900", letterSpacing: 4 },
+  subtitle: { color: c.accent, fontSize: 7, fontWeight: "700", letterSpacing: 2, marginTop: 4 },
   modeRow: { flexDirection: "row", gap: 8, paddingHorizontal: 16, paddingVertical: 12 },
   modeChip: {
     flexDirection: "row",
@@ -489,12 +491,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 9,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: c.border,
     borderRadius: theme.radii.pill,
   },
-  modeChipOn: { backgroundColor: theme.colors.accent, borderColor: theme.colors.accent },
+  modeChipOn: { backgroundColor: c.accent, borderColor: c.accent },
   modeText: {
-    color: theme.colors.textSecondary,
+    color: c.textSecondary,
     fontWeight: "800",
     fontSize: 8,
     letterSpacing: 1.2,
@@ -505,21 +507,21 @@ const styles = StyleSheet.create({
     marginBottom: 6,
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: theme.colors.bgSecondary,
+    backgroundColor: c.bgSecondary,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: c.border,
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 4,
     gap: 8,
   },
-  searchInput: { flex: 1, color: theme.colors.textPrimary, fontSize: 10 },
-  empty: { color: theme.colors.textMuted, fontStyle: "italic", paddingVertical: 16 },
+  searchInput: { flex: 1, color: c.textPrimary, fontSize: 10 },
+  empty: { color: c.textMuted, fontStyle: "italic", paddingVertical: 16 },
   dealerRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
-    backgroundColor: theme.colors.bgSecondary,
+    backgroundColor: c.bgSecondary,
     padding: 12,
     borderRadius: 4,
     marginBottom: 8,
@@ -528,12 +530,12 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: theme.colors.bg,
+    backgroundColor: c.bg,
     alignItems: "center",
     justifyContent: "center",
   },
-  dealerName: { color: theme.colors.textPrimary, fontWeight: "900", fontSize: 10, letterSpacing: 0.5 },
-  dealerSub: { color: theme.colors.textMuted, fontSize: 8, marginTop: 3 },
+  dealerName: { color: c.textPrimary, fontWeight: "900", fontSize: 10, letterSpacing: 0.5 },
+  dealerSub: { color: c.textMuted, fontSize: 8, marginTop: 3 },
   countRow: { marginVertical: 2 },
   countPill: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10 },
   countText: { fontWeight: "900", fontSize: 7, letterSpacing: 0.5 },
@@ -545,9 +547,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
     marginBottom: 6,
   },
-  groupTitle: { color: theme.colors.textPrimary, fontWeight: "900", fontSize: 9, letterSpacing: 1.5 },
+  groupTitle: { color: c.textPrimary, fontWeight: "900", fontSize: 9, letterSpacing: 1.5 },
   groupCount: {
-    backgroundColor: theme.colors.danger,
+    backgroundColor: c.danger,
     paddingHorizontal: 7,
     paddingVertical: 2,
     borderRadius: 10,
@@ -558,7 +560,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
-    backgroundColor: theme.colors.bgSecondary,
+    backgroundColor: c.bgSecondary,
     padding: 10,
     borderRadius: 4,
     marginBottom: 6,
@@ -566,14 +568,14 @@ const styles = StyleSheet.create({
   itemThumb: {
     width: 38,
     height: 38,
-    backgroundColor: theme.colors.bg,
+    backgroundColor: c.bg,
     borderRadius: 4,
     alignItems: "center",
     justifyContent: "center",
     overflow: "hidden",
   },
   itemImg: { width: "100%", height: "100%" },
-  itemName: { color: theme.colors.textPrimary, fontWeight: "800", fontSize: 10 },
+  itemName: { color: c.textPrimary, fontWeight: "800", fontSize: 10 },
   statusPill: {
     alignSelf: "flex-start",
     paddingHorizontal: 6,
@@ -583,4 +585,4 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   statusText: { fontWeight: "900", fontSize: 7, letterSpacing: 0.5 },
-});
+}));

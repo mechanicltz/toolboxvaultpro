@@ -16,6 +16,8 @@ import { theme } from "../theme";
 import { api } from "../api";
 import { DateField } from "../DateField";
 
+import { themedStyles } from "../themeContext";
+
 export function PaymentModal({
   visible,
   dealer,
@@ -198,18 +200,18 @@ export function PaymentModal({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles((c) => ({
   bg: { flex: 1, backgroundColor: "rgba(0,0,0,0.7)", justifyContent: "center", padding: 20 },
   card: {
-    backgroundColor: theme.colors.bgSecondary,
+    backgroundColor: c.bgSecondary,
     padding: 22,
     borderRadius: theme.radii.md,
     borderTopWidth: 2,
-    borderTopColor: theme.colors.accent,
+    borderTopColor: c.accent,
   },
-  title: { color: theme.colors.textPrimary, fontSize: 14, fontWeight: "900", letterSpacing: 1 },
+  title: { color: c.textPrimary, fontSize: 14, fontWeight: "900", letterSpacing: 1 },
   subtitle: {
-    color: theme.colors.accent,
+    color: c.accent,
     fontSize: 8,
     fontWeight: "800",
     letterSpacing: 2,
@@ -222,13 +224,13 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     marginVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.borderSubtle,
+    borderBottomColor: c.borderSubtle,
   },
-  balLabel: { color: theme.colors.textMuted, fontSize: 8, fontWeight: "700" },
-  balVal: { color: theme.colors.textPrimary, fontSize: 12, fontWeight: "900" },
+  balLabel: { color: c.textMuted, fontSize: 8, fontWeight: "700" },
+  balVal: { color: c.textPrimary, fontSize: 12, fontWeight: "900" },
   segment: {
     flexDirection: "row",
-    backgroundColor: theme.colors.bg,
+    backgroundColor: c.bg,
     borderRadius: 6,
     padding: 3,
     marginBottom: 14,
@@ -242,11 +244,11 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: 4,
   },
-  segBtnActive: { backgroundColor: theme.colors.accent },
-  segText: { color: theme.colors.textSecondary, fontWeight: "800", letterSpacing: 1.5, fontSize: 9 },
+  segBtnActive: { backgroundColor: c.accent },
+  segText: { color: c.textSecondary, fontWeight: "800", letterSpacing: 1.5, fontSize: 9 },
   segTextActive: { color: "#000" },
   label: {
-    color: theme.colors.textMuted,
+    color: c.textMuted,
     fontSize: 8,
     fontWeight: "800",
     letterSpacing: 1.5,
@@ -254,10 +256,10 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   input: {
-    backgroundColor: theme.colors.bg,
+    backgroundColor: c.bg,
     borderWidth: 1,
-    borderColor: theme.colors.border,
-    color: theme.colors.textPrimary,
+    borderColor: c.border,
+    color: c.textPrimary,
     paddingHorizontal: 12,
     paddingVertical: 12,
     borderRadius: 4,
@@ -267,19 +269,19 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 46,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: c.border,
     alignItems: "center",
     justifyContent: "center",
     borderRadius: theme.radii.sm,
   },
-  btnGhostText: { color: theme.colors.textPrimary, fontWeight: "800", letterSpacing: 2 },
+  btnGhostText: { color: c.textPrimary, fontWeight: "800", letterSpacing: 2 },
   btnPrimary: {
     flex: 2,
     height: 46,
-    backgroundColor: theme.colors.accent,
+    backgroundColor: c.accent,
     alignItems: "center",
     justifyContent: "center",
     borderRadius: theme.radii.sm,
   },
   btnPrimaryText: { color: "#000", fontWeight: "900", letterSpacing: 2, fontSize: 10 },
-});
+}));

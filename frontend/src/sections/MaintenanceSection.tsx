@@ -19,6 +19,8 @@ import { DateField } from "../DateField";
 import { confirm } from "../confirm";
 import { formatDateUS } from "../dateUtil";
 
+import { themedStyles } from "../themeContext";
+
 const TYPES = ["Calibration", "Service", "Inspection", "Cleaning", "Custom"];
 
 function daysUntil(iso: string): number {
@@ -512,7 +514,7 @@ function HistoryModal({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles((c) => ({
   section: { marginTop: 18 },
   headerRow: {
     flexDirection: "row",
@@ -521,7 +523,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   sectionLabel: {
-    color: theme.colors.textPrimary,
+    color: c.textPrimary,
     fontSize: 9,
     fontWeight: "900",
     letterSpacing: 2,
@@ -530,7 +532,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 5,
-    backgroundColor: theme.colors.accent,
+    backgroundColor: c.accent,
     paddingHorizontal: 12,
     paddingVertical: 7,
     borderRadius: 4,
@@ -542,7 +544,7 @@ const styles = StyleSheet.create({
     letterSpacing: 1.5,
   },
   empty: {
-    color: theme.colors.textMuted,
+    color: c.textMuted,
     fontSize: 9,
     fontStyle: "italic",
     paddingVertical: 8,
@@ -551,26 +553,26 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     paddingVertical: 12,
     paddingHorizontal: 12,
-    backgroundColor: theme.colors.bgSecondary,
+    backgroundColor: c.bgSecondary,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: c.border,
     borderRadius: 4,
     marginBottom: 8,
     gap: 8,
   },
   rowTitle: {
-    color: theme.colors.textPrimary,
+    color: c.textPrimary,
     fontSize: 10,
     fontWeight: "800",
     letterSpacing: 1,
   },
   rowMeta: {
-    color: theme.colors.textSecondary,
+    color: c.textSecondary,
     fontSize: 8,
     marginTop: 4,
   },
   rowNotes: {
-    color: theme.colors.textMuted,
+    color: c.textMuted,
     fontSize: 9,
     fontStyle: "italic",
     marginTop: 4,
@@ -593,7 +595,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     paddingHorizontal: 10,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: c.border,
     borderRadius: 3,
   },
   smBtnText: {
@@ -608,22 +610,22 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   modalCard: {
-    backgroundColor: theme.colors.bgSecondary,
+    backgroundColor: c.bgSecondary,
     padding: 20,
     borderRadius: theme.radii.md,
     borderTopWidth: 2,
-    borderTopColor: theme.colors.accent,
+    borderTopColor: c.accent,
     maxHeight: "94%",
   },
   modalTitle: {
-    color: theme.colors.textPrimary,
+    color: c.textPrimary,
     fontSize: 12,
     fontWeight: "900",
     letterSpacing: 2,
     marginBottom: 14,
   },
   label: {
-    color: theme.colors.textMuted,
+    color: c.textMuted,
     fontSize: 8,
     fontWeight: "800",
     letterSpacing: 1.5,
@@ -631,10 +633,10 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   input: {
-    backgroundColor: theme.colors.bg,
+    backgroundColor: c.bg,
     borderWidth: 1,
-    borderColor: theme.colors.border,
-    color: theme.colors.textPrimary,
+    borderColor: c.border,
+    color: c.textPrimary,
     paddingHorizontal: 12,
     paddingVertical: 10,
     borderRadius: 4,
@@ -645,16 +647,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: c.border,
     borderRadius: theme.radii.pill,
-    backgroundColor: theme.colors.bg,
+    backgroundColor: c.bg,
   },
   chipOn: {
-    backgroundColor: theme.colors.accent,
-    borderColor: theme.colors.accent,
+    backgroundColor: c.accent,
+    borderColor: c.accent,
   },
   chipText: {
-    color: theme.colors.textSecondary,
+    color: c.textSecondary,
     fontSize: 9,
     fontWeight: "700",
   },
@@ -663,7 +665,7 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 44,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: c.border,
     alignItems: "center",
     justifyContent: "center",
     borderRadius: theme.radii.sm,
@@ -683,14 +685,14 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     borderRadius: 16,
-    backgroundColor: theme.colors.bg,
+    backgroundColor: c.bg,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: c.border,
   },
   historyCloseBtn: {
     marginTop: 14,
     height: 46,
-    backgroundColor: theme.colors.accent,
+    backgroundColor: c.accent,
     alignItems: "center",
     justifyContent: "center",
     borderRadius: theme.radii.sm,
@@ -702,14 +704,14 @@ const styles = StyleSheet.create({
     letterSpacing: 2,
   },
   btnGhostText: {
-    color: theme.colors.textPrimary,
+    color: c.textPrimary,
     fontWeight: "800",
     letterSpacing: 2,
   },
   btnPrimary: {
     flex: 2,
     height: 44,
-    backgroundColor: theme.colors.accent,
+    backgroundColor: c.accent,
     alignItems: "center",
     justifyContent: "center",
     borderRadius: theme.radii.sm,
@@ -723,28 +725,28 @@ const styles = StyleSheet.create({
   histRow: {
     paddingVertical: 10,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.borderSubtle,
+    borderBottomColor: c.borderSubtle,
   },
   histDate: {
-    color: theme.colors.textPrimary,
+    color: c.textPrimary,
     fontWeight: "800",
     fontSize: 10,
   },
   histCost: {
-    color: theme.colors.accent,
+    color: c.accent,
     fontWeight: "800",
     fontSize: 9,
     marginTop: 2,
   },
   histLine: {
-    color: theme.colors.textSecondary,
+    color: c.textSecondary,
     fontSize: 9,
     marginTop: 2,
   },
   histNotes: {
-    color: theme.colors.textMuted,
+    color: c.textMuted,
     fontSize: 9,
     fontStyle: "italic",
     marginTop: 4,
   },
-});
+}));

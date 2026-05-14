@@ -17,6 +17,8 @@ import { api } from "../../src/api";
 import { formatDateUS, formatDateTimeUS } from "../../src/dateUtil";
 import { formatPhonesInText } from "../../src/contactLinks";
 
+import { themedStyles } from "../../src/themeContext";
+
 const STATUS_COLORS: Record<string, string> = {
   broken: theme.colors.danger,
   awaiting_approval: theme.colors.warning,
@@ -203,8 +205,8 @@ function Section({ label, children }: { label: string; children: React.ReactNode
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: theme.colors.bg },
+const styles = themedStyles((c) => ({
+  container: { flex: 1, backgroundColor: c.bg },
   loading: { flex: 1, alignItems: "center", justifyContent: "center" },
   header: {
     flexDirection: "row",
@@ -213,16 +215,16 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     gap: 12,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
+    borderBottomColor: c.border,
   },
   title: {
-    color: theme.colors.textPrimary,
+    color: c.textPrimary,
     fontSize: 12,
     fontWeight: "900",
     letterSpacing: 2,
   },
   subtitle: {
-    color: theme.colors.accent,
+    color: c.accent,
     fontSize: 7,
     fontWeight: "700",
     letterSpacing: 2,
@@ -235,7 +237,7 @@ const styles = StyleSheet.create({
     padding: 14,
     borderWidth: 1,
     borderRadius: 6,
-    backgroundColor: theme.colors.bgSecondary,
+    backgroundColor: c.bgSecondary,
     marginBottom: 14,
   },
   statusDot: { width: 12, height: 12, borderRadius: 6 },
@@ -244,51 +246,51 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
-    backgroundColor: theme.colors.bgSecondary,
+    backgroundColor: c.bgSecondary,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: c.border,
     borderRadius: 6,
     padding: 12,
     marginBottom: 14,
   },
   toolPhoto: { width: 60, height: 60, borderRadius: 4 },
   toolPhotoPh: {
-    backgroundColor: theme.colors.bg,
+    backgroundColor: c.bg,
     alignItems: "center",
     justifyContent: "center",
   },
   toolName: {
-    color: theme.colors.textPrimary,
+    color: c.textPrimary,
     fontSize: 12,
     fontWeight: "900",
   },
   toolMeta: {
-    color: theme.colors.textMuted,
+    color: c.textMuted,
     fontSize: 8,
     marginTop: 2,
   },
   section: { marginBottom: 14 },
   sectionLabel: {
-    color: theme.colors.textMuted,
+    color: c.textMuted,
     fontSize: 7,
     fontWeight: "800",
     letterSpacing: 1.5,
     marginBottom: 5,
   },
   sectionBody: {
-    backgroundColor: theme.colors.bgSecondary,
+    backgroundColor: c.bgSecondary,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: c.border,
     borderRadius: 4,
     padding: 12,
   },
   value: {
-    color: theme.colors.textPrimary,
+    color: c.textPrimary,
     fontSize: 10,
     fontWeight: "700",
   },
   linkText: {
-    color: theme.colors.accent,
+    color: c.accent,
     fontSize: 8,
     fontWeight: "900",
     letterSpacing: 1,
@@ -302,32 +304,32 @@ const styles = StyleSheet.create({
   },
   dateBox: {
     flexBasis: "48%",
-    backgroundColor: theme.colors.bgSecondary,
+    backgroundColor: c.bgSecondary,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: c.border,
     borderRadius: 4,
     padding: 10,
   },
   dateLabel: {
-    color: theme.colors.textMuted,
+    color: c.textMuted,
     fontSize: 7,
     fontWeight: "800",
     letterSpacing: 1.5,
   },
   dateValue: {
-    color: theme.colors.textPrimary,
+    color: c.textPrimary,
     fontSize: 10,
     fontWeight: "700",
     marginTop: 4,
   },
   dateValueHi: {
-    color: theme.colors.accent,
+    color: c.accent,
     fontSize: 10,
     fontWeight: "900",
     marginTop: 4,
   },
   notes: {
-    color: theme.colors.textPrimary,
+    color: c.textPrimary,
     fontSize: 10,
     lineHeight: 14,
   },
@@ -335,6 +337,6 @@ const styles = StyleSheet.create({
     width: "100%",
     height: 240,
     borderRadius: 4,
-    backgroundColor: theme.colors.bg,
+    backgroundColor: c.bg,
   },
-});
+}));

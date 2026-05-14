@@ -4,6 +4,8 @@ import { useRouter, usePathname } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { theme } from "./theme";
 
+import { themedStyles } from "./themeContext";
+
 /**
  * Floating "Add Item" shortcut button shown in the top-right of the main
  * tab screens — gives the user a one-tap way to start creating a new tool
@@ -38,7 +40,7 @@ export function ReportsFab() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles((c) => ({
   wrap: {
     position: "absolute",
     right: 12,
@@ -52,7 +54,7 @@ const styles = StyleSheet.create({
     gap: 4,
     backgroundColor: "rgba(15,15,15,0.9)",
     borderWidth: 1,
-    borderColor: theme.colors.accent,
+    borderColor: c.accent,
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 5,
@@ -63,9 +65,9 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   text: {
-    color: theme.colors.accent,
+    color: c.accent,
     fontSize: 7,
     fontWeight: "900",
     letterSpacing: 1.2,
   },
-});
+}));

@@ -21,6 +21,8 @@ import { confirm } from "../../src/confirm";
 import { formatDateUS as fmtDate } from "../../src/dateUtil";
 import { formatPhonesInText } from "../../src/contactLinks";
 
+import { themedStyles } from "../../src/themeContext";
+
 type Tab = "open" | "completed";
 
 const REPAIR_STATUSES = [
@@ -413,10 +415,10 @@ export default function DealerClaimsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: theme.colors.bg },
+const styles = themedStyles((c) => ({
+  container: { flex: 1, backgroundColor: c.bg },
   notifiedHighlight: {
-    color: theme.colors.accent,
+    color: c.accent,
     fontSize: 10,
     fontWeight: "900",
     marginTop: 4,
@@ -424,23 +426,23 @@ const styles = StyleSheet.create({
   },
   modalBg: { flex: 1, backgroundColor: "rgba(0,0,0,0.7)", justifyContent: "flex-end" },
   modalCard: {
-    backgroundColor: theme.colors.bgSecondary,
+    backgroundColor: c.bgSecondary,
     paddingHorizontal: 18,
     paddingVertical: 22,
     borderTopWidth: 2,
-    borderTopColor: theme.colors.accent,
+    borderTopColor: c.accent,
     borderTopLeftRadius: 14,
     borderTopRightRadius: 14,
   },
   modalTitle: {
-    color: theme.colors.textPrimary,
+    color: c.textPrimary,
     fontSize: 12,
     fontWeight: "900",
     letterSpacing: 2,
     marginBottom: 4,
   },
   modalSubtitle: {
-    color: theme.colors.accent,
+    color: c.accent,
     fontSize: 9,
     fontWeight: "700",
     marginBottom: 14,
@@ -452,31 +454,31 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     paddingHorizontal: 14,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: c.border,
     borderRadius: 6,
     marginBottom: 8,
-    backgroundColor: theme.colors.bg,
+    backgroundColor: c.bg,
   },
   statusOptionActive: {
     backgroundColor: "rgba(255,179,0,0.12)",
-    borderColor: theme.colors.accent,
+    borderColor: c.accent,
   },
   statusOptionText: {
-    color: theme.colors.textPrimary,
+    color: c.textPrimary,
     fontWeight: "700",
     fontSize: 10,
   },
-  statusOptionTextActive: { color: theme.colors.accent, fontWeight: "900" },
+  statusOptionTextActive: { color: c.accent, fontWeight: "900" },
   cancelBtn: {
     marginTop: 6,
     paddingVertical: 14,
     alignItems: "center",
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: c.border,
     borderRadius: 6,
   },
   cancelBtnText: {
-    color: theme.colors.textPrimary,
+    color: c.textPrimary,
     fontWeight: "900",
     letterSpacing: 2,
   },
@@ -487,12 +489,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 10,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
+    borderBottomColor: c.border,
     gap: 8,
   },
   backBtn: { padding: 8 },
-  title: { color: theme.colors.textPrimary, fontSize: 14, fontWeight: "900", letterSpacing: 1 },
-  subtitle: { color: theme.colors.accent, fontSize: 7, fontWeight: "700", letterSpacing: 1.5, marginTop: 2 },
+  title: { color: c.textPrimary, fontSize: 14, fontWeight: "900", letterSpacing: 1 },
+  subtitle: { color: c.accent, fontSize: 7, fontWeight: "700", letterSpacing: 1.5, marginTop: 2 },
   dealerBtn: {
     flexDirection: "row",
     alignItems: "center",
@@ -500,10 +502,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 7,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: c.border,
     borderRadius: 4,
   },
-  dealerBtnText: { color: theme.colors.accent, fontWeight: "900", fontSize: 7, letterSpacing: 1 },
+  dealerBtnText: { color: c.accent, fontWeight: "900", fontSize: 7, letterSpacing: 1 },
   tabRow: {
     flexDirection: "row",
     gap: 8,
@@ -515,36 +517,36 @@ const styles = StyleSheet.create({
     paddingVertical: 11,
     alignItems: "center",
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: c.border,
     borderRadius: 4,
   },
-  tabChipOn: { backgroundColor: theme.colors.accent, borderColor: theme.colors.accent },
-  tabText: { color: theme.colors.textSecondary, fontWeight: "900", fontSize: 9, letterSpacing: 1 },
+  tabChipOn: { backgroundColor: c.accent, borderColor: c.accent },
+  tabText: { color: c.textSecondary, fontWeight: "900", fontSize: 9, letterSpacing: 1 },
   tabTextOn: { color: "#000" },
   emptyState: { alignItems: "center", padding: 40, gap: 12 },
-  emptyTitle: { color: theme.colors.textPrimary, fontWeight: "900", letterSpacing: 1.5, fontSize: 10 },
-  emptyText: { color: theme.colors.textMuted, fontSize: 9, textAlign: "center", lineHeight: 14 },
+  emptyTitle: { color: c.textPrimary, fontWeight: "900", letterSpacing: 1.5, fontSize: 10 },
+  emptyText: { color: c.textMuted, fontSize: 9, textAlign: "center", lineHeight: 14 },
   card: {
-    backgroundColor: theme.colors.bgSecondary,
+    backgroundColor: c.bgSecondary,
     borderRadius: 6,
     padding: 12,
     marginBottom: 10,
     borderLeftWidth: 3,
-    borderLeftColor: theme.colors.danger,
+    borderLeftColor: c.danger,
   },
   cardHead: { flexDirection: "row", alignItems: "center", gap: 12 },
   thumb: {
     width: 56,
     height: 56,
-    backgroundColor: theme.colors.bg,
+    backgroundColor: c.bg,
     borderRadius: 4,
     alignItems: "center",
     justifyContent: "center",
     overflow: "hidden",
   },
   thumbImg: { width: "100%", height: "100%" },
-  itemName: { color: theme.colors.textPrimary, fontWeight: "900", fontSize: 11, letterSpacing: 0.3 },
-  itemMeta: { color: theme.colors.textMuted, fontSize: 8, marginTop: 2 },
+  itemName: { color: c.textPrimary, fontWeight: "900", fontSize: 11, letterSpacing: 0.3 },
+  itemMeta: { color: c.textMuted, fontSize: 8, marginTop: 2 },
   statusPill: {
     alignSelf: "flex-start",
     paddingHorizontal: 7,
@@ -555,13 +557,13 @@ const styles = StyleSheet.create({
   },
   statusText: { fontWeight: "900", fontSize: 7, letterSpacing: 0.5 },
   notes: {
-    color: theme.colors.textSecondary,
+    color: c.textSecondary,
     fontSize: 9,
     fontStyle: "italic",
     marginTop: 8,
     paddingLeft: 8,
     borderLeftWidth: 2,
-    borderLeftColor: theme.colors.border,
+    borderLeftColor: c.border,
   },
   actionRow: { flexDirection: "row", gap: 6, marginTop: 10 },
   actionBtn: {
@@ -571,8 +573,8 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 5,
     paddingVertical: 9,
-    backgroundColor: theme.colors.danger,
+    backgroundColor: c.danger,
     borderRadius: 4,
   },
   actionText: { color: "#fff", fontWeight: "900", fontSize: 8, letterSpacing: 1 },
-});
+}));

@@ -15,6 +15,8 @@ import { theme } from "./theme";
 import { api } from "./api";
 import { buildLocationTree, flattenLocationTree } from "./locationTree";
 
+import { themedStyles } from "./themeContext";
+
 type Item = { id: string; name: string };
 
 /* ---------------------------- shared modal shell ---------------------------- */
@@ -551,14 +553,14 @@ export function LocationPicker({
 
 /* ---------------------------- styles ---------------------------- */
 
-const styles = StyleSheet.create({
+const styles = themedStyles((c) => ({
   triggerRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
-    backgroundColor: theme.colors.bgSecondary,
+    backgroundColor: c.bgSecondary,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: c.border,
     paddingHorizontal: 14,
     paddingVertical: 12,
     borderRadius: 4,
@@ -566,7 +568,7 @@ const styles = StyleSheet.create({
   },
   triggerText: {
     flex: 1,
-    color: theme.colors.textPrimary,
+    color: c.textPrimary,
     fontSize: 10,
     fontWeight: "600",
   },
@@ -574,7 +576,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
-    backgroundColor: theme.colors.accent,
+    backgroundColor: c.accent,
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 4,
@@ -587,13 +589,13 @@ const styles = StyleSheet.create({
     justifyContent: "flex-end",
   },
   modalSheet: {
-    backgroundColor: theme.colors.bg,
+    backgroundColor: c.bg,
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
     paddingBottom: 24,
     maxHeight: "85%",
     borderTopWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: c.border,
   },
   modalHeader: {
     flexDirection: "row",
@@ -602,10 +604,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 14,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
+    borderBottomColor: c.border,
   },
   modalTitle: {
-    color: theme.colors.textPrimary,
+    color: c.textPrimary,
     fontSize: 10,
     fontWeight: "900",
     letterSpacing: 1.5,
@@ -617,14 +619,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 10,
     margin: 12,
-    backgroundColor: theme.colors.bgSecondary,
+    backgroundColor: c.bgSecondary,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: c.border,
   },
   searchInput: {
     flex: 1,
-    color: theme.colors.textPrimary,
+    color: c.textPrimary,
     fontSize: 10,
     padding: 0,
   },
@@ -638,19 +640,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.borderSubtle,
+    borderBottomColor: c.borderSubtle,
   },
   rowActive: {
-    backgroundColor: theme.colors.accent,
+    backgroundColor: c.accent,
   },
   rowText: {
     flex: 1,
-    color: theme.colors.textPrimary,
+    color: c.textPrimary,
     fontSize: 10,
     fontWeight: "600",
   },
   empty: {
-    color: theme.colors.textMuted,
+    color: c.textMuted,
     fontSize: 9,
     fontStyle: "italic",
     paddingHorizontal: 16,
@@ -664,7 +666,7 @@ const styles = StyleSheet.create({
     gap: 8,
     margin: 12,
     paddingVertical: 13,
-    backgroundColor: theme.colors.accent,
+    backgroundColor: c.accent,
     borderRadius: 8,
   },
   createBtnText: {
@@ -673,4 +675,4 @@ const styles = StyleSheet.create({
     fontWeight: "900",
     letterSpacing: 0.6,
   },
-});
+}));

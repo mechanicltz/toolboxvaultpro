@@ -20,6 +20,8 @@ import { theme } from "../theme";
 import { api } from "../api";
 import { confirm } from "../confirm";
 
+import { themedStyles } from "../themeContext";
+
 const MAX_BYTES = 5 * 1024 * 1024; // 5 MB
 
 function iconForMime(mime: string): { name: any; color: string } {
@@ -666,7 +668,7 @@ export function DocumentsSection({
   );
 }
 
-const vstyles = StyleSheet.create({
+const vstyles = themedStyles((c) => ({
   overlay: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.92)",
@@ -674,16 +676,16 @@ const vstyles = StyleSheet.create({
   bar: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: theme.colors.surface,
+    backgroundColor: c.surface,
     paddingHorizontal: 12,
     paddingVertical: 10,
     gap: 10,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
+    borderBottomColor: c.border,
   },
   title: {
     flex: 1,
-    color: theme.colors.textPrimary,
+    color: c.textPrimary,
     fontSize: 10,
     fontWeight: "700",
   },
@@ -691,7 +693,7 @@ const vstyles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    backgroundColor: theme.colors.accent,
+    backgroundColor: c.accent,
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 6,
@@ -703,7 +705,7 @@ const vstyles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     borderRadius: 6,
-    backgroundColor: theme.colors.bgSecondary,
+    backgroundColor: c.bgSecondary,
   },
   frameWrap: {
     flex: 1,
@@ -719,20 +721,20 @@ const vstyles = StyleSheet.create({
     gap: 12,
   },
   errorTitle: {
-    color: theme.colors.textPrimary,
+    color: c.textPrimary,
     fontSize: 12,
     fontWeight: "800",
     marginTop: 8,
   },
   errorMsg: {
-    color: theme.colors.textMuted,
+    color: c.textMuted,
     fontSize: 10,
     textAlign: "center",
     lineHeight: 14,
   },
-});
+}));
 
-const styles = StyleSheet.create({
+const styles = themedStyles((c) => ({
   section: { marginTop: 18 },
   headerRow: {
     flexDirection: "row",
@@ -741,7 +743,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   sectionLabel: {
-    color: theme.colors.textPrimary,
+    color: c.textPrimary,
     fontSize: 9,
     fontWeight: "900",
     letterSpacing: 2,
@@ -750,7 +752,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 5,
-    backgroundColor: theme.colors.accent,
+    backgroundColor: c.accent,
     paddingHorizontal: 12,
     paddingVertical: 7,
     borderRadius: 4,
@@ -762,7 +764,7 @@ const styles = StyleSheet.create({
     letterSpacing: 1.5,
   },
   empty: {
-    color: theme.colors.textMuted,
+    color: c.textMuted,
     fontSize: 9,
     fontStyle: "italic",
     paddingVertical: 8,
@@ -772,21 +774,21 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingVertical: 10,
     paddingHorizontal: 10,
-    backgroundColor: theme.colors.bgSecondary,
+    backgroundColor: c.bgSecondary,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: c.border,
     borderRadius: 4,
     marginBottom: 6,
     gap: 6,
   },
   docName: {
-    color: theme.colors.textPrimary,
+    color: c.textPrimary,
     fontSize: 10,
     fontWeight: "700",
   },
   docMeta: {
-    color: theme.colors.textMuted,
+    color: c.textMuted,
     fontSize: 8,
     marginTop: 2,
   },
-});
+}));

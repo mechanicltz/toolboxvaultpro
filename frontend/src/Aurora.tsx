@@ -2,6 +2,8 @@ import React from "react";
 import { View, StyleSheet } from "react-native";
 import { theme } from "./theme";
 
+import { themedStyles } from "./themeContext";
+
 /**
  * Simple solid dark background for predictable readability.
  * Aurora ornamental glow removed — depth comes from card elevation, not the bg.
@@ -18,16 +20,16 @@ export function GlassCard({ children, style }: { children: React.ReactNode; styl
   return <View style={[cardStyles.card, style]}>{children}</View>;
 }
 
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: theme.colors.bg },
-});
+const styles = themedStyles((c) => ({
+  root: { flex: 1, backgroundColor: c.bg },
+}));
 
-const cardStyles = StyleSheet.create({
+const cardStyles = themedStyles((c) => ({
   card: {
-    backgroundColor: theme.colors.surface,
+    backgroundColor: c.surface,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: c.border,
     borderRadius: theme.radii.md,
     overflow: "hidden",
   },
-});
+}));

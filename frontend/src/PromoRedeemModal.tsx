@@ -15,6 +15,8 @@ import { Ionicons } from "@expo/vector-icons";
 import { theme } from "./theme";
 import { api } from "./api";
 
+import { themedStyles } from "./themeContext";
+
 export function PromoRedeemModal({
   visible,
   onClose,
@@ -138,7 +140,7 @@ export function PromoRedeemModal({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles((c) => ({
   backdrop: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.6)",
@@ -149,10 +151,10 @@ const styles = StyleSheet.create({
   card: {
     width: "100%",
     maxWidth: 380,
-    backgroundColor: theme.colors.bgSecondary,
+    backgroundColor: c.bgSecondary,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: c.border,
     padding: 18,
   },
   header: {
@@ -162,21 +164,21 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   title: {
-    color: theme.colors.textPrimary,
+    color: c.textPrimary,
     fontWeight: "900",
     letterSpacing: 1.5,
     fontSize: 13,
   },
   label: {
-    color: theme.colors.textMuted,
+    color: c.textMuted,
     fontSize: 12,
     marginBottom: 8,
   },
   input: {
-    backgroundColor: theme.colors.bg,
-    color: theme.colors.textPrimary,
+    backgroundColor: c.bg,
+    color: c.textPrimary,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: c.border,
     borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: Platform.OS === "ios" ? 12 : 10,
@@ -190,27 +192,27 @@ const styles = StyleSheet.create({
     gap: 8,
     backgroundColor: "rgba(220,38,38,0.10)",
     borderWidth: 1,
-    borderColor: theme.colors.danger,
+    borderColor: c.danger,
     borderRadius: 8,
     padding: 10,
     marginBottom: 10,
     alignItems: "center",
   },
-  errText: { color: theme.colors.danger, fontWeight: "700", fontSize: 12, flex: 1 },
+  errText: { color: c.danger, fontWeight: "700", fontSize: 12, flex: 1 },
   okBox: {
     flexDirection: "row",
     gap: 8,
     backgroundColor: "rgba(46,160,67,0.12)",
     borderWidth: 1,
-    borderColor: theme.colors.success,
+    borderColor: c.success,
     borderRadius: 8,
     padding: 10,
     marginBottom: 10,
     alignItems: "center",
   },
-  okText: { color: theme.colors.success, fontWeight: "800", fontSize: 12, flex: 1 },
+  okText: { color: c.success, fontWeight: "800", fontSize: 12, flex: 1 },
   submit: {
-    backgroundColor: theme.colors.accent,
+    backgroundColor: c.accent,
     height: 46,
     borderRadius: 10,
     alignItems: "center",
@@ -222,4 +224,4 @@ const styles = StyleSheet.create({
     letterSpacing: 2,
     fontSize: 12,
   },
-});
+}));

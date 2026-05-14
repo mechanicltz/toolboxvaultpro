@@ -8,6 +8,8 @@ import { api } from "../../src/api";
 import { formatDateTime } from "../../src/dt";
 import { parseContacts, openEmail, openPhone, openSms } from "../../src/contactLinks";
 
+import { themedStyles } from "../../src/themeContext";
+
 export default function BorrowerHistory() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
@@ -289,8 +291,8 @@ function ContactActions({ raw }: { raw?: string | null }) {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: theme.colors.bg },
+const styles = themedStyles((c) => ({
+  container: { flex: 1, backgroundColor: c.bg },
   topBar: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -298,18 +300,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
+    borderBottomColor: c.border,
   },
-  title: { color: theme.colors.textPrimary, fontSize: 12, fontWeight: "900", letterSpacing: 2, flex: 1, textAlign: "center" },
+  title: { color: c.textPrimary, fontSize: 12, fontWeight: "900", letterSpacing: 2, flex: 1, textAlign: "center" },
   heroBox: { alignItems: "center", paddingVertical: 16 },
   bigAvatar: {
-    width: 70, height: 70, backgroundColor: theme.colors.surface,
-    borderWidth: 2, borderColor: theme.colors.accent,
+    width: 70, height: 70, backgroundColor: c.surface,
+    borderWidth: 2, borderColor: c.accent,
     alignItems: "center", justifyContent: "center", borderRadius: 4,
   },
-  bigAvatarText: { color: theme.colors.accent, fontWeight: "900", fontSize: 16, letterSpacing: 2 },
-  bigName: { color: theme.colors.textPrimary, fontSize: 16, fontWeight: "900", letterSpacing: 1, marginTop: 12 },
-  contact: { color: theme.colors.textSecondary, fontSize: 10, marginTop: 4 },
+  bigAvatarText: { color: c.accent, fontWeight: "900", fontSize: 16, letterSpacing: 2 },
+  bigName: { color: c.textPrimary, fontSize: 16, fontWeight: "900", letterSpacing: 1, marginTop: 12 },
+  contact: { color: c.textSecondary, fontSize: 10, marginTop: 4 },
   actionsWrap: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -331,72 +333,72 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: theme.colors.accent,
-    backgroundColor: theme.colors.surface,
+    borderColor: c.accent,
+    backgroundColor: c.surface,
   },
   actionBtnSmall: {
     paddingHorizontal: 10,
   },
   actionText: {
-    color: theme.colors.textPrimary,
+    color: c.textPrimary,
     fontSize: 10,
     fontWeight: "700",
   },
   statGrid: { flexDirection: "row", flexWrap: "wrap", paddingHorizontal: 14, marginVertical: 12, gap: 8 },
   cell: {
     flex: 1, minWidth: 90, paddingVertical: 12,
-    borderWidth: 1, borderColor: theme.colors.border,
-    backgroundColor: theme.colors.bgSecondary,
+    borderWidth: 1, borderColor: c.border,
+    backgroundColor: c.bgSecondary,
     alignItems: "center", borderRadius: 4,
   },
-  cellValue: { color: theme.colors.textPrimary, fontWeight: "900", fontSize: 16 },
+  cellValue: { color: c.textPrimary, fontWeight: "900", fontSize: 16 },
   cellLabel: {
-    color: theme.colors.textMuted, fontSize: 7,
+    color: c.textMuted, fontSize: 7,
     fontWeight: "800", letterSpacing: 1, marginTop: 2, textTransform: "uppercase",
   },
   sectionLabel: {
-    color: theme.colors.textMuted, fontSize: 8, fontWeight: "800",
+    color: c.textMuted, fontSize: 8, fontWeight: "800",
     letterSpacing: 2, paddingHorizontal: 20, paddingTop: 16, paddingBottom: 8,
   },
   row: {
     flexDirection: "row", alignItems: "center", gap: 10,
     paddingHorizontal: 16, paddingVertical: 12,
-    borderBottomColor: theme.colors.borderSubtle, borderBottomWidth: 1,
-    backgroundColor: theme.colors.bgSecondary,
+    borderBottomColor: c.borderSubtle, borderBottomWidth: 1,
+    backgroundColor: c.bgSecondary,
     marginHorizontal: 14, marginBottom: 6, borderRadius: 4,
   },
   rank: {
     width: 28, height: 28, alignItems: "center", justifyContent: "center",
-    backgroundColor: theme.colors.surface, borderRadius: 4,
+    backgroundColor: c.surface, borderRadius: 4,
   },
-  rankText: { color: theme.colors.accent, fontWeight: "900", fontSize: 10 },
+  rankText: { color: c.accent, fontWeight: "900", fontSize: 10 },
   thumb: {
     width: 36, height: 36, borderRadius: 4, overflow: "hidden",
-    backgroundColor: theme.colors.surface,
+    backgroundColor: c.surface,
     alignItems: "center", justifyContent: "center",
   },
-  rowName: { color: theme.colors.textPrimary, fontWeight: "700", fontSize: 10 },
-  rowMeta: { color: theme.colors.textSecondary, fontSize: 8, marginTop: 2 },
-  rowNotes: { color: theme.colors.textMuted, fontStyle: "italic", fontSize: 8, marginTop: 4 },
+  rowName: { color: c.textPrimary, fontWeight: "700", fontSize: 10 },
+  rowMeta: { color: c.textSecondary, fontSize: 8, marginTop: 2 },
+  rowNotes: { color: c.textMuted, fontStyle: "italic", fontSize: 8, marginTop: 4 },
   countPill: {
     flexDirection: "row", alignItems: "center", gap: 2,
     paddingHorizontal: 10, paddingVertical: 6,
-    backgroundColor: theme.colors.accent, borderRadius: 4,
+    backgroundColor: c.accent, borderRadius: 4,
   },
   countNum: { color: "#000", fontWeight: "900", fontSize: 10 },
   countLbl: { color: "#000", fontWeight: "900", fontSize: 8 },
   histRow: {
     flexDirection: "row", gap: 10,
     paddingHorizontal: 20, paddingVertical: 10,
-    borderBottomColor: theme.colors.borderSubtle, borderBottomWidth: 1,
+    borderBottomColor: c.borderSubtle, borderBottomWidth: 1,
   },
   dot: {
     width: 10, height: 10, borderRadius: 5,
-    backgroundColor: theme.colors.accent, marginTop: 6,
+    backgroundColor: c.accent, marginTop: 6,
   },
-  histTool: { color: theme.colors.textPrimary, fontWeight: "700", fontSize: 10 },
-  histTime: { color: theme.colors.textSecondary, fontSize: 8, marginTop: 2 },
-  empty: { color: theme.colors.textMuted, fontStyle: "italic", padding: 20, textAlign: "center" },
+  histTool: { color: c.textPrimary, fontWeight: "700", fontSize: 10 },
+  histTime: { color: c.textSecondary, fontSize: 8, marginTop: 2 },
+  empty: { color: c.textMuted, fontStyle: "italic", padding: 20, textAlign: "center" },
   editPill: {
     flexDirection: "row",
     alignItems: "center",
@@ -405,12 +407,12 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: theme.colors.accent,
-    backgroundColor: theme.colors.surface,
+    borderColor: c.accent,
+    backgroundColor: c.surface,
     marginTop: 12,
   },
   editPillText: {
-    color: theme.colors.accent,
+    color: c.accent,
     fontWeight: "900",
     fontSize: 10,
     letterSpacing: 1.2,
@@ -421,20 +423,20 @@ const styles = StyleSheet.create({
     justifyContent: "flex-end",
   },
   modalCard: {
-    backgroundColor: theme.colors.bgSecondary,
+    backgroundColor: c.bgSecondary,
     padding: 24,
     borderTopWidth: 2,
-    borderTopColor: theme.colors.accent,
+    borderTopColor: c.accent,
   },
   modalTitle: {
-    color: theme.colors.textPrimary,
+    color: c.textPrimary,
     fontSize: 14,
     fontWeight: "900",
     letterSpacing: 2,
     marginBottom: 16,
   },
   modalLabel: {
-    color: theme.colors.textMuted,
+    color: c.textMuted,
     fontSize: 8,
     fontWeight: "800",
     letterSpacing: 1.5,
@@ -442,10 +444,10 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   modalInput: {
-    backgroundColor: theme.colors.bg,
+    backgroundColor: c.bg,
     borderWidth: 1,
-    borderColor: theme.colors.border,
-    color: theme.colors.textPrimary,
+    borderColor: c.border,
+    color: c.textPrimary,
     paddingHorizontal: 14,
     paddingVertical: 12,
     minHeight: 48,
@@ -454,7 +456,7 @@ const styles = StyleSheet.create({
   },
   modalBtn: {
     flex: 1,
-    backgroundColor: theme.colors.accent,
+    backgroundColor: c.accent,
     height: 48,
     alignItems: "center",
     justifyContent: "center",
@@ -464,11 +466,11 @@ const styles = StyleSheet.create({
   modalBtnGhost: {
     flex: 1,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: c.border,
     height: 48,
     alignItems: "center",
     justifyContent: "center",
     borderRadius: 4,
   },
-  modalBtnGhostText: { color: theme.colors.textPrimary, fontWeight: "800", letterSpacing: 2, fontSize: 11 },
-});
+  modalBtnGhostText: { color: c.textPrimary, fontWeight: "800", letterSpacing: 2, fontSize: 11 },
+}));

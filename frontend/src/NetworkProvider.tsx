@@ -5,6 +5,8 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { isOnline, startNetworkWatcher, subscribeOnline } from "./network";
 import { theme } from "./theme";
 
+import { themedStyles } from "./themeContext";
+
 type NetCtx = { online: boolean };
 const NetContext = createContext<NetCtx>({ online: true });
 
@@ -45,9 +47,9 @@ export function OfflineBanner() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles((c) => ({
   banner: {
-    backgroundColor: theme.colors.danger,
+    backgroundColor: c.danger,
     paddingBottom: 6,
     paddingHorizontal: 12,
     flexDirection: "row",
@@ -61,4 +63,4 @@ const styles = StyleSheet.create({
     fontSize: 8,
     letterSpacing: 1.5,
   },
-});
+}));

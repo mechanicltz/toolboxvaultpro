@@ -12,6 +12,8 @@ import { Ionicons } from "@expo/vector-icons";
 import { theme } from "./theme";
 import { formatDateUS, parseDateUS, todayISO } from "./dateUtil";
 
+import { themedStyles } from "./themeContext";
+
 /**
  * Cross-platform date field. Always displays/inputs in MM/DD/YYYY (US).
  * Stored value is YYYY-MM-DD ISO under the hood.
@@ -214,11 +216,11 @@ function NativePickerModal({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles((c) => ({
   input: {
-    backgroundColor: theme.colors.bgSecondary,
+    backgroundColor: c.bgSecondary,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: c.border,
     paddingHorizontal: 14,
     paddingVertical: 12,
     borderRadius: 4,
@@ -235,14 +237,14 @@ const styles = StyleSheet.create({
     padding: 24,
   },
   modalCard: {
-    backgroundColor: theme.colors.bgSecondary,
+    backgroundColor: c.bgSecondary,
     padding: 20,
     borderRadius: theme.radii.md,
     borderTopWidth: 2,
-    borderTopColor: theme.colors.accent,
+    borderTopColor: c.accent,
   },
   modalTitle: {
-    color: theme.colors.textPrimary,
+    color: c.textPrimary,
     fontSize: 12,
     fontWeight: "900",
     letterSpacing: 2,
@@ -253,7 +255,7 @@ const styles = StyleSheet.create({
     height: 44,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: theme.colors.accent,
+    backgroundColor: c.accent,
     borderRadius: theme.radii.sm,
   },
   btnText: { color: "#000", fontWeight: "800", letterSpacing: 2 },
@@ -263,12 +265,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: c.border,
     borderRadius: theme.radii.sm,
   },
   btnGhostText: {
-    color: theme.colors.textPrimary,
+    color: c.textPrimary,
     fontWeight: "800",
     letterSpacing: 2,
   },
-});
+}));

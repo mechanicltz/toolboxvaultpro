@@ -14,6 +14,8 @@ import { api } from "../api";
 import { confirm } from "../confirm";
 import { PaymentModal } from "./PaymentModal";
 
+import { themedStyles } from "../themeContext";
+
 export function BalanceSection({
   dealer,
   onChange,
@@ -166,9 +168,9 @@ function BalanceCard({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles((c) => ({
   sectionLabel: {
-    color: theme.colors.textPrimary,
+    color: c.textPrimary,
     fontSize: 9,
     fontWeight: "900",
     letterSpacing: 2,
@@ -177,18 +179,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   balCard: {
-    backgroundColor: theme.colors.bgSecondary,
+    backgroundColor: c.bgSecondary,
     padding: 16,
     marginHorizontal: 16,
     marginBottom: 10,
     borderRadius: theme.radii.md,
     borderLeftWidth: 3,
-    borderLeftColor: theme.colors.success,
+    borderLeftColor: c.success,
   },
-  balLabel: { color: theme.colors.textPrimary, fontSize: 8, fontWeight: "900", letterSpacing: 2 },
-  histLink: { color: theme.colors.accent, fontSize: 7, fontWeight: "900", letterSpacing: 1 },
+  balLabel: { color: c.textPrimary, fontSize: 8, fontWeight: "900", letterSpacing: 2 },
+  histLink: { color: c.accent, fontSize: 7, fontWeight: "900", letterSpacing: 1 },
   balAmount: { fontSize: 21, fontWeight: "900", marginTop: 8 },
-  balSub: { color: theme.colors.textMuted, fontSize: 8, marginTop: 2 },
+  balSub: { color: c.textMuted, fontSize: 8, marginTop: 2 },
   payBtn: {
     flex: 1,
     flexDirection: "row",
@@ -196,7 +198,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 6,
     paddingVertical: 10,
-    backgroundColor: theme.colors.accent,
+    backgroundColor: c.accent,
     borderRadius: 4,
   },
   payText: { color: "#000", fontWeight: "900", fontSize: 8, letterSpacing: 1 },
@@ -208,42 +210,42 @@ const styles = StyleSheet.create({
     gap: 6,
     paddingVertical: 10,
     borderWidth: 1,
-    borderColor: theme.colors.danger,
+    borderColor: c.danger,
     borderRadius: 4,
   },
-  chargeText: { color: theme.colors.danger, fontWeight: "900", fontSize: 8, letterSpacing: 1 },
+  chargeText: { color: c.danger, fontWeight: "900", fontSize: 8, letterSpacing: 1 },
   modalBg: { flex: 1, backgroundColor: "rgba(0,0,0,0.7)", justifyContent: "flex-end" },
   modalSheet: {
-    backgroundColor: theme.colors.bgSecondary,
+    backgroundColor: c.bgSecondary,
     padding: 20,
     borderTopLeftRadius: 12,
     borderTopRightRadius: 12,
     borderTopWidth: 2,
-    borderTopColor: theme.colors.accent,
+    borderTopColor: c.accent,
     maxHeight: "85%",
   },
-  modalTitle: { color: theme.colors.textPrimary, fontSize: 10, fontWeight: "900", letterSpacing: 2, marginBottom: 12 },
-  empty: { color: theme.colors.textMuted, fontStyle: "italic", padding: 16, textAlign: "center" },
+  modalTitle: { color: c.textPrimary, fontSize: 10, fontWeight: "900", letterSpacing: 2, marginBottom: 12 },
+  empty: { color: c.textMuted, fontStyle: "italic", padding: 16, textAlign: "center" },
   txRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.borderSubtle,
+    borderBottomColor: c.borderSubtle,
   },
-  txIconBox: { width: 36, height: 36, alignItems: "center", justifyContent: "center", backgroundColor: theme.colors.bg, borderRadius: 18 },
-  txAmount: { color: theme.colors.textPrimary, fontWeight: "900", fontSize: 12 },
-  txMeta: { color: theme.colors.textMuted, fontSize: 8, fontWeight: "700", marginTop: 2, letterSpacing: 0.5 },
-  txNote: { color: theme.colors.textSecondary, fontSize: 9, marginTop: 3, fontStyle: "italic" },
+  txIconBox: { width: 36, height: 36, alignItems: "center", justifyContent: "center", backgroundColor: c.bg, borderRadius: 18 },
+  txAmount: { color: c.textPrimary, fontWeight: "900", fontSize: 12 },
+  txMeta: { color: c.textMuted, fontSize: 8, fontWeight: "700", marginTop: 2, letterSpacing: 0.5 },
+  txNote: { color: c.textSecondary, fontSize: 9, marginTop: 3, fontStyle: "italic" },
   btnGhost: {
     height: 44,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: c.border,
     alignItems: "center",
     justifyContent: "center",
     borderRadius: theme.radii.sm,
     marginTop: 12,
   },
-  btnGhostText: { color: theme.colors.textPrimary, fontWeight: "800", letterSpacing: 2 },
-});
+  btnGhostText: { color: c.textPrimary, fontWeight: "800", letterSpacing: 2 },
+}));

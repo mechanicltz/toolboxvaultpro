@@ -12,6 +12,8 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { theme } from "../theme";
 
+import { themedStyles } from "../themeContext";
+
 interface Props {
   receipts?: string[];
 }
@@ -142,7 +144,7 @@ export function ReceiptsSection({ receipts }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles((c) => ({
   headerRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -151,13 +153,13 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   sectionLabel: {
-    color: theme.colors.textMuted,
+    color: c.textMuted,
     fontSize: 9,
     fontWeight: "900",
     letterSpacing: 2,
   },
   viewLink: {
-    color: theme.colors.accent,
+    color: c.accent,
     fontSize: 9,
     fontWeight: "900",
     letterSpacing: 1.5,
@@ -176,7 +178,7 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     backgroundColor: "#000",
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: c.border,
   },
   thumbBadge: {
     position: "absolute",
@@ -185,7 +187,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 3,
-    backgroundColor: theme.colors.accent,
+    backgroundColor: c.accent,
     paddingHorizontal: 5,
     paddingVertical: 2,
     borderRadius: 999,
@@ -208,7 +210,7 @@ const styles = StyleSheet.create({
     paddingBottom: 10,
   },
   lightboxTitle: {
-    color: theme.colors.accent,
+    color: c.accent,
     fontSize: 11,
     fontWeight: "900",
     letterSpacing: 2,
@@ -251,4 +253,4 @@ const styles = StyleSheet.create({
     paddingBottom: 24,
     letterSpacing: 1,
   },
-});
+}));

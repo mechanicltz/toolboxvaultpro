@@ -17,6 +17,8 @@ import { useRouter } from "expo-router";
 import { theme } from "../src/theme";
 import { useAuth } from "../src/AuthContext";
 
+import { themedStyles } from "../src/themeContext";
+
 export default function LoginScreen() {
   const router = useRouter();
   const { login, register } = useAuth();
@@ -244,8 +246,8 @@ export default function LoginScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: theme.colors.bg },
+const styles = themedStyles((c) => ({
+  container: { flex: 1, backgroundColor: c.bg },
   scroll: { padding: 24, flexGrow: 1, justifyContent: "center" },
   brand: { alignItems: "center", marginBottom: 28 },
   brandLogo: {
@@ -260,8 +262,8 @@ const styles = StyleSheet.create({
   logoBox: {
     width: 72,
     height: 72,
-    backgroundColor: theme.colors.surface,
-    borderColor: theme.colors.glassBorder,
+    backgroundColor: c.surface,
+    borderColor: c.glassBorder,
     borderWidth: 1,
     borderRadius: 14,
     alignItems: "center",
@@ -269,13 +271,13 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   brandTitle: {
-    color: theme.colors.textPrimary,
+    color: c.textPrimary,
     fontWeight: "900",
     fontSize: 16,
     letterSpacing: 3,
   },
   brandSub: {
-    color: theme.colors.textMuted,
+    color: c.textMuted,
     fontSize: 8,
     fontWeight: "700",
     marginTop: 4,
@@ -283,40 +285,40 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
   },
   card: {
-    backgroundColor: theme.colors.surface,
+    backgroundColor: c.surface,
     borderRadius: 14,
     padding: 18,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: c.border,
   },
   tabs: {
     flexDirection: "row",
-    backgroundColor: theme.colors.bgSecondary,
+    backgroundColor: c.bgSecondary,
     borderRadius: 10,
     padding: 4,
     marginBottom: 18,
   },
   tab: { flex: 1, paddingVertical: 10, alignItems: "center", borderRadius: 8 },
-  tabActive: { backgroundColor: theme.colors.accent },
-  tabText: { color: theme.colors.textMuted, fontWeight: "800", fontSize: 9, letterSpacing: 1 },
+  tabActive: { backgroundColor: c.accent },
+  tabText: { color: c.textMuted, fontWeight: "800", fontSize: 9, letterSpacing: 1 },
   tabTextActive: { color: "#000" },
   field: { marginBottom: 14 },
   label: {
-    color: theme.colors.textMuted,
+    color: c.textMuted,
     fontWeight: "800",
     fontSize: 8,
     letterSpacing: 1.5,
     marginBottom: 6,
   },
   input: {
-    backgroundColor: theme.colors.bgSecondary,
+    backgroundColor: c.bgSecondary,
     borderRadius: 8,
     paddingHorizontal: 14,
     paddingVertical: 12,
-    color: theme.colors.textPrimary,
+    color: c.textPrimary,
     fontSize: 11,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: c.border,
   },
   inputRow: { flexDirection: "row", alignItems: "center", gap: 6 },
   eye: {
@@ -324,10 +326,10 @@ const styles = StyleSheet.create({
     height: 44,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: theme.colors.bgSecondary,
+    backgroundColor: c.bgSecondary,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: c.border,
   },
   errBox: {
     flexDirection: "row",
@@ -340,9 +342,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "rgba(239,68,68,0.3)",
   },
-  errText: { color: theme.colors.danger, fontSize: 10, flex: 1 },
+  errText: { color: c.danger, fontSize: 10, flex: 1 },
   submitBtn: {
-    backgroundColor: theme.colors.accent,
+    backgroundColor: c.accent,
     paddingVertical: 14,
     borderRadius: 10,
     flexDirection: "row",
@@ -353,10 +355,10 @@ const styles = StyleSheet.create({
   },
   submitText: { color: "#000", fontWeight: "900", fontSize: 10, letterSpacing: 1.5 },
   hint: {
-    color: theme.colors.textMuted,
+    color: c.textMuted,
     fontSize: 8,
     textAlign: "center",
     marginTop: 14,
     lineHeight: 12,
   },
-});
+}));

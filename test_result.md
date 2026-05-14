@@ -3190,3 +3190,34 @@ frontend:
       - working: "NA"
         agent: "main"
         comment: "Added 3 new option types to OptionField union + renderer switch: borrower_multi (BorrowerMultiDropdown), category_multi (CategoryMultiDropdown), number (decimal-pad TextInput). Updated applySpec() init logic. Verified in bundle: BorrowerMultiDropdown (6 hits), CategoryMultiDropdown (6 hits), opt-num- (1 hit)."
+
+#====================================================================================================
+# ROUND 5 — Light / Dark Mode System
+#====================================================================================================
+frontend:
+  - task: "Light/Dark mode toggle — runtime theme switching"
+    implemented: true
+    files:
+      - "/app/frontend/src/theme.ts"
+      - "/app/frontend/src/themeContext.tsx"
+      - "/app/frontend/app/_layout.tsx"
+      - "/app/frontend/app/(tabs)/more.tsx"
+      - "47 additional .tsx files (mass-transformed via /tmp/themify.py)"
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: |
+          Built a full light/dark theme system:
+          1. theme.ts exposes darkPalette + lightPalette + currentPalette + applyPalette(). theme.colors is now a Proxy that reads from currentPalette at access-time, so inline JSX color props (e.g. `color={theme.colors.accent}`) update automatically on theme switch.
+          2. themeContext.tsx: ThemeProvider (hydrates saved mode from AsyncStorage), useThemeMode() hook, useColors() hook, themedStyles() helper for module-level static `const styles = ...` blocks.
+          3. _layout.tsx wraps the app in ThemeProvider.
+          4. more.tsx adds the Light mode Switch row directly below WARRANTY EXPIRE ALERTS (per user request).
+          5. /tmp/themify.py mass-transformed 47 frontend files: every StyleSheet.create({...}) block that referenced theme.colors was rewritten to themedStyles((c) => ({...})) with internal theme.colors.X → c.X substitution and an auto-injected themedStyles import.
+          6. Light palette per user request: soft cool grey-blue bg (#F1F4F8) NOT pure white. Cards #FFFFFF for raised contrast. Dark near-black text (#0F172A). Industrial yellow accent kept.
+          
+          VERIFIED in browser:
+          - DARK mode login screen renders correctly (yellow on black, white text).
+          - LIGHT mode login screen renders correctly (yellow on grey-blue, dark text, white card).
+          - Bundle compiles HTTP 200 / 11.3MB.
+          - No console errors during theme switch.
+          - 57 themedStyles references in bundle (the helper + 47 transformed files + 9 helpers).

@@ -16,6 +16,8 @@ import { theme } from "../../src/theme";
 import { api } from "../../src/api";
 import { confirm } from "../../src/confirm";
 
+import { themedStyles } from "../../src/themeContext";
+
 type Kind = "categories" | "tags" | "locations";
 
 const TITLES: Record<Kind, string> = {
@@ -203,8 +205,8 @@ export default function ManageScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: theme.colors.bg },
+const styles = themedStyles((c) => ({
+  container: { flex: 1, backgroundColor: c.bg },
   topBar: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -212,16 +214,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
+    borderBottomColor: c.border,
   },
-  title: { color: theme.colors.textPrimary, fontSize: 14, fontWeight: "900", letterSpacing: 2 },
+  title: { color: c.textPrimary, fontSize: 14, fontWeight: "900", letterSpacing: 2 },
   addRow: { flexDirection: "row", padding: 16, gap: 8 },
   input: {
     flex: 1,
-    backgroundColor: theme.colors.bgSecondary,
+    backgroundColor: c.bgSecondary,
     borderWidth: 1,
-    borderColor: theme.colors.border,
-    color: theme.colors.textPrimary,
+    borderColor: c.border,
+    color: c.textPrimary,
     paddingHorizontal: 14,
     height: 48,
     borderRadius: theme.radii.md,
@@ -231,7 +233,7 @@ const styles = StyleSheet.create({
   addBtn: {
     width: 48,
     height: 48,
-    backgroundColor: theme.colors.accent,
+    backgroundColor: c.accent,
     alignItems: "center",
     justifyContent: "center",
     borderRadius: theme.radii.md,
@@ -241,9 +243,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
-    backgroundColor: theme.colors.bgSecondary,
+    backgroundColor: c.bgSecondary,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: c.border,
     paddingHorizontal: 14,
     paddingVertical: 12,
     marginHorizontal: 16,
@@ -251,13 +253,13 @@ const styles = StyleSheet.create({
     borderRadius: theme.radii.md,
     ...(theme.elevation.md as object),
   },
-  rowText: { color: theme.colors.textPrimary, fontSize: 11, fontWeight: "600" },
+  rowText: { color: c.textPrimary, fontSize: 11, fontWeight: "600" },
   editInput: {
     flex: 1,
-    backgroundColor: theme.colors.surfaceAlt,
+    backgroundColor: c.surfaceAlt,
     borderWidth: 1,
-    borderColor: theme.colors.accent,
-    color: theme.colors.textPrimary,
+    borderColor: c.accent,
+    color: c.textPrimary,
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: theme.radii.sm,
@@ -267,5 +269,5 @@ const styles = StyleSheet.create({
     paddingHorizontal: 6,
     paddingVertical: 4,
   },
-  empty: { color: theme.colors.textMuted, fontStyle: "italic", padding: 24, textAlign: "center" },
-});
+  empty: { color: c.textMuted, fontStyle: "italic", padding: 24, textAlign: "center" },
+}));

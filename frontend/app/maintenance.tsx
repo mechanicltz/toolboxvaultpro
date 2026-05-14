@@ -15,6 +15,8 @@ import { theme } from "../src/theme";
 import { api } from "../src/api";
 import { formatDateUS } from "../src/dateUtil";
 
+import { themedStyles } from "../src/themeContext";
+
 function daysUntil(iso: string): number {
   if (!iso) return 9999;
   const target = new Date(iso + "T00:00:00").getTime();
@@ -182,29 +184,29 @@ export default function MaintenanceScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: theme.colors.bg },
+const styles = themedStyles((c) => ({
+  container: { flex: 1, backgroundColor: c.bg },
   topBar: {
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 12,
     paddingVertical: 10,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
+    borderBottomColor: c.border,
   },
   backBtn: { padding: 8 },
-  title: { color: theme.colors.textPrimary, fontSize: 14, fontWeight: "900", letterSpacing: 2 },
-  subtitle: { color: theme.colors.accent, fontSize: 7, fontWeight: "700", letterSpacing: 1.5, marginTop: 2 },
+  title: { color: c.textPrimary, fontSize: 14, fontWeight: "900", letterSpacing: 2 },
+  subtitle: { color: c.accent, fontSize: 7, fontWeight: "700", letterSpacing: 1.5, marginTop: 2 },
   statRow: { flexDirection: "row", padding: 12, gap: 8 },
   statCard: {
     flex: 1,
-    backgroundColor: theme.colors.bgSecondary,
+    backgroundColor: c.bgSecondary,
     padding: 12,
     borderLeftWidth: 3,
     borderRadius: 4,
   },
   statValue: { fontSize: 18, fontWeight: "900" },
-  statLabel: { color: theme.colors.textMuted, fontSize: 7, fontWeight: "800", letterSpacing: 1.2, marginTop: 2 },
+  statLabel: { color: c.textMuted, fontSize: 7, fontWeight: "800", letterSpacing: 1.2, marginTop: 2 },
   horizonRow: {
     flexDirection: "row",
     paddingHorizontal: 16,
@@ -215,49 +217,49 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: c.border,
     borderRadius: theme.radii.pill,
   },
   horizonChipOn: {
-    backgroundColor: theme.colors.accent,
-    borderColor: theme.colors.accent,
+    backgroundColor: c.accent,
+    borderColor: c.accent,
   },
-  horizonText: { color: theme.colors.textSecondary, fontWeight: "800", fontSize: 9, letterSpacing: 1 },
+  horizonText: { color: c.textSecondary, fontWeight: "800", fontSize: 9, letterSpacing: 1 },
   horizonTextOn: { color: "#000" },
   empty: { alignItems: "center", paddingVertical: 60, gap: 12 },
-  emptyTitle: { color: theme.colors.textPrimary, fontWeight: "900", letterSpacing: 2, fontSize: 10 },
-  emptyText: { color: theme.colors.textMuted, fontSize: 9, textAlign: "center", lineHeight: 14, paddingHorizontal: 30 },
+  emptyTitle: { color: c.textPrimary, fontWeight: "900", letterSpacing: 2, fontSize: 10 },
+  emptyText: { color: c.textMuted, fontSize: 9, textAlign: "center", lineHeight: 14, paddingHorizontal: 30 },
   itemCard: {
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
     padding: 12,
-    backgroundColor: theme.colors.bgSecondary,
+    backgroundColor: c.bgSecondary,
     borderRadius: 4,
     marginBottom: 8,
-    borderLeftColor: theme.colors.border,
+    borderLeftColor: c.border,
     borderLeftWidth: 1,
   },
   thumb: {
     width: 50,
     height: 50,
-    backgroundColor: theme.colors.bg,
+    backgroundColor: c.bg,
     borderRadius: 4,
     alignItems: "center",
     justifyContent: "center",
     overflow: "hidden",
   },
   thumbImg: { width: "100%", height: "100%" },
-  itemTool: { color: theme.colors.textPrimary, fontWeight: "800", fontSize: 10 },
-  itemType: { color: theme.colors.accent, fontSize: 8, fontWeight: "700", marginTop: 3, letterSpacing: 0.5 },
-  itemDate: { color: theme.colors.textMuted, fontSize: 8, marginTop: 3 },
+  itemTool: { color: c.textPrimary, fontWeight: "800", fontSize: 10 },
+  itemType: { color: c.accent, fontSize: 8, fontWeight: "700", marginTop: 3, letterSpacing: 0.5 },
+  itemDate: { color: c.textMuted, fontSize: 8, marginTop: 3 },
   daysBadge: {
     paddingHorizontal: 10,
     paddingVertical: 6,
-    backgroundColor: theme.colors.bg,
+    backgroundColor: c.bg,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: c.border,
     borderRadius: 4,
   },
-  daysText: { color: theme.colors.textPrimary, fontWeight: "900", fontSize: 8, letterSpacing: 0.5 },
-});
+  daysText: { color: c.textPrimary, fontWeight: "900", fontSize: 8, letterSpacing: 0.5 },
+}));

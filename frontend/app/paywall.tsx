@@ -27,6 +27,8 @@ import {
 } from "../src/revenuecat";
 import { PromoRedeemModal } from "../src/PromoRedeemModal";
 
+import { themedStyles } from "../src/themeContext";
+
 const FEATURES = [
   "Unlimited tools — no 15-item cap",
   "Priority support",
@@ -303,8 +305,8 @@ export default function PaywallScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: theme.colors.bg },
+const styles = themedStyles((c) => ({
+  container: { flex: 1, backgroundColor: c.bg },
   headerBar: {
     flexDirection: "row",
     alignItems: "center",
@@ -312,10 +314,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 10,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
+    borderBottomColor: c.border,
   },
   headerTitle: {
-    color: theme.colors.textPrimary,
+    color: c.textPrimary,
     fontWeight: "900",
     letterSpacing: 2,
     fontSize: 13,
@@ -329,19 +331,19 @@ const styles = StyleSheet.create({
     width: 60,
     height: 60,
     borderRadius: 30,
-    backgroundColor: theme.colors.accent,
+    backgroundColor: c.accent,
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 6,
   },
   heroTitle: {
-    color: theme.colors.textPrimary,
+    color: c.textPrimary,
     fontSize: 18,
     fontWeight: "900",
     letterSpacing: 1.5,
   },
   heroSub: {
-    color: theme.colors.textSecondary,
+    color: c.textSecondary,
     fontSize: 12,
     fontWeight: "600",
     textAlign: "center",
@@ -354,20 +356,20 @@ const styles = StyleSheet.create({
     padding: 10,
     backgroundColor: "rgba(245,158,11,0.12)",
     borderWidth: 1,
-    borderColor: theme.colors.accent,
+    borderColor: c.accent,
     borderRadius: 10,
     marginBottom: 12,
   },
   stubBannerText: {
     flex: 1,
-    color: theme.colors.textPrimary,
+    color: c.textPrimary,
     fontSize: 11,
     fontWeight: "600",
   },
   features: { gap: 8, marginTop: 4 },
   featureRow: { flexDirection: "row", alignItems: "center", gap: 10 },
   featureText: {
-    color: theme.colors.textPrimary,
+    color: c.textPrimary,
     fontSize: 13,
     fontWeight: "600",
     flex: 1,
@@ -376,15 +378,15 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
-    backgroundColor: theme.colors.bgSecondary,
+    backgroundColor: c.bgSecondary,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: c.border,
     borderRadius: 14,
     padding: 16,
     marginTop: 10,
   },
   planCardFeatured: {
-    borderColor: theme.colors.accent,
+    borderColor: c.accent,
     borderWidth: 2,
     position: "relative",
   },
@@ -392,7 +394,7 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: -10,
     right: 14,
-    backgroundColor: theme.colors.accent,
+    backgroundColor: c.accent,
     borderRadius: 999,
     paddingHorizontal: 10,
     paddingVertical: 3,
@@ -404,24 +406,24 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
   },
   planTitle: {
-    color: theme.colors.textPrimary,
+    color: c.textPrimary,
     fontWeight: "900",
     letterSpacing: 1.5,
     fontSize: 11,
     marginBottom: 4,
   },
   planPrice: {
-    color: theme.colors.textPrimary,
+    color: c.textPrimary,
     fontSize: 20,
     fontWeight: "900",
   },
   planPeriod: {
-    color: theme.colors.textMuted,
+    color: c.textMuted,
     fontSize: 12,
     fontWeight: "700",
   },
   planSub: {
-    color: theme.colors.textMuted,
+    color: c.textMuted,
     fontSize: 11,
     marginTop: 3,
     fontWeight: "600",
@@ -437,24 +439,24 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
-    backgroundColor: theme.colors.bgSecondary,
+    backgroundColor: c.bgSecondary,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: c.border,
     borderRadius: 10,
     paddingVertical: 12,
   },
   actionBtnText: {
-    color: theme.colors.textPrimary,
+    color: c.textPrimary,
     fontWeight: "800",
     fontSize: 10.5,
     letterSpacing: 1.2,
   },
   terms: {
-    color: theme.colors.textMuted,
+    color: c.textMuted,
     fontSize: 10,
     textAlign: "center",
     marginTop: 22,
     lineHeight: 14,
     paddingHorizontal: 12,
   },
-});
+}));

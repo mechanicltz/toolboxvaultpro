@@ -19,6 +19,8 @@ import { DateField } from "../DateField";
 import { confirm } from "../confirm";
 import { formatDateUS } from "../dateUtil";
 
+import { themedStyles } from "../themeContext";
+
 export function LostStatusBanner({
   tool,
   onChange,
@@ -291,9 +293,9 @@ export function ReportLostModal({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles((c) => ({
   banner: {
-    backgroundColor: theme.colors.danger,
+    backgroundColor: c.danger,
     padding: 14,
     marginHorizontal: 16,
     marginVertical: 8,
@@ -336,14 +338,14 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 6,
     borderWidth: 1,
-    borderColor: theme.colors.danger,
+    borderColor: c.danger,
     paddingVertical: 10,
     paddingHorizontal: 14,
     borderRadius: 4,
     marginTop: 12,
   },
   outlineBtnText: {
-    color: theme.colors.danger,
+    color: c.danger,
     fontWeight: "800",
     letterSpacing: 1.5,
     fontSize: 9,
@@ -355,15 +357,15 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   modalCard: {
-    backgroundColor: theme.colors.bgSecondary,
+    backgroundColor: c.bgSecondary,
     padding: 20,
     borderRadius: theme.radii.md,
     borderTopWidth: 2,
-    borderTopColor: theme.colors.danger,
+    borderTopColor: c.danger,
     maxHeight: "94%",
   },
   modalTitle: {
-    color: theme.colors.textPrimary,
+    color: c.textPrimary,
     fontSize: 12,
     fontWeight: "900",
     letterSpacing: 2,
@@ -371,7 +373,7 @@ const styles = StyleSheet.create({
   },
   segment: {
     flexDirection: "row",
-    backgroundColor: theme.colors.bg,
+    backgroundColor: c.bg,
     borderRadius: 6,
     padding: 3,
     marginBottom: 14,
@@ -383,17 +385,17 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   segBtnActive: {
-    backgroundColor: theme.colors.danger,
+    backgroundColor: c.danger,
   },
   segText: {
-    color: theme.colors.textSecondary,
+    color: c.textSecondary,
     fontWeight: "800",
     letterSpacing: 1.5,
     fontSize: 9,
   },
   segTextActive: { color: "#fff" },
   label: {
-    color: theme.colors.textMuted,
+    color: c.textMuted,
     fontSize: 8,
     fontWeight: "800",
     letterSpacing: 1.5,
@@ -401,10 +403,10 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   input: {
-    backgroundColor: theme.colors.bg,
+    backgroundColor: c.bg,
     borderWidth: 1,
-    borderColor: theme.colors.border,
-    color: theme.colors.textPrimary,
+    borderColor: c.border,
+    color: c.textPrimary,
     paddingHorizontal: 12,
     paddingVertical: 10,
     borderRadius: 4,
@@ -414,20 +416,20 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 44,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: c.border,
     alignItems: "center",
     justifyContent: "center",
     borderRadius: theme.radii.sm,
   },
   btnGhostText: {
-    color: theme.colors.textPrimary,
+    color: c.textPrimary,
     fontWeight: "800",
     letterSpacing: 2,
   },
   btnDanger: {
     flex: 2,
     height: 44,
-    backgroundColor: theme.colors.danger,
+    backgroundColor: c.danger,
     alignItems: "center",
     justifyContent: "center",
     borderRadius: theme.radii.sm,
@@ -440,4 +442,4 @@ const styles = StyleSheet.create({
     letterSpacing: 2,
     fontSize: 10,
   },
-});
+}));

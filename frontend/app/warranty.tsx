@@ -7,6 +7,8 @@ import { theme } from "../src/theme";
 import { api } from "../src/api";
 import { formatDateUS } from "../src/dateUtil";
 
+import { themedStyles } from "../src/themeContext";
+
 export default function WarrantyScreen() {
   const router = useRouter();
   const [data, setData] = useState<{ expiring: any[]; expired: any[] }>({ expiring: [], expired: [] });
@@ -72,8 +74,8 @@ export default function WarrantyScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: theme.colors.bg },
+const styles = themedStyles((c) => ({
+  container: { flex: 1, backgroundColor: c.bg },
   topBar: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -81,11 +83,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
+    borderBottomColor: c.border,
   },
-  title: { color: theme.colors.textPrimary, fontSize: 12, fontWeight: "900", letterSpacing: 2 },
+  title: { color: c.textPrimary, fontSize: 12, fontWeight: "900", letterSpacing: 2 },
   sectionLabel: {
-    color: theme.colors.textMuted,
+    color: c.textMuted,
     fontSize: 8,
     fontWeight: "800",
     letterSpacing: 2,
@@ -100,8 +102,8 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderLeftWidth: 4,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.borderSubtle,
-    backgroundColor: theme.colors.bgSecondary,
+    borderBottomColor: c.borderSubtle,
+    backgroundColor: c.bgSecondary,
     marginHorizontal: 16,
     marginBottom: 6,
     gap: 12,
@@ -109,13 +111,13 @@ const styles = StyleSheet.create({
   thumb: {
     width: 44,
     height: 44,
-    backgroundColor: theme.colors.surface,
+    backgroundColor: c.surface,
     borderRadius: 4,
     overflow: "hidden",
     alignItems: "center",
     justifyContent: "center",
   },
-  toolName: { color: theme.colors.textPrimary, fontWeight: "700", fontSize: 10 },
-  toolMeta: { color: theme.colors.warning, fontWeight: "800", fontSize: 8, letterSpacing: 1, marginTop: 2 },
-  empty: { color: theme.colors.textMuted, fontStyle: "italic", padding: 24, textAlign: "center" },
-});
+  toolName: { color: c.textPrimary, fontWeight: "700", fontSize: 10 },
+  toolMeta: { color: c.warning, fontWeight: "800", fontSize: 8, letterSpacing: 1, marginTop: 2 },
+  empty: { color: c.textMuted, fontStyle: "italic", padding: 24, textAlign: "center" },
+}));

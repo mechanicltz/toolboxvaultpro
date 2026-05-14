@@ -19,6 +19,8 @@ import { theme } from "../src/theme";
 import { api } from "../src/api";
 import { formatPhone } from "../src/contactLinks";
 
+import { themedStyles } from "../src/themeContext";
+
 type Profile = {
   name: string;
   address: string;
@@ -339,8 +341,8 @@ function Field({
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: theme.colors.bg },
+const styles = themedStyles((c) => ({
+  container: { flex: 1, backgroundColor: c.bg },
   loading: { flex: 1, alignItems: "center", justifyContent: "center" },
   header: {
     flexDirection: "row",
@@ -348,17 +350,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     gap: 12,
-    borderBottomColor: theme.colors.border,
+    borderBottomColor: c.border,
     borderBottomWidth: 1,
   },
   title: {
-    color: theme.colors.textPrimary,
+    color: c.textPrimary,
     fontSize: 12,
     fontWeight: "900",
     letterSpacing: 2,
   },
   subtitle: {
-    color: theme.colors.accent,
+    color: c.accent,
     fontSize: 7,
     fontWeight: "700",
     letterSpacing: 2,
@@ -368,36 +370,36 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
-    backgroundColor: theme.colors.bgSecondary,
+    backgroundColor: c.bgSecondary,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: c.border,
     borderRadius: 6,
     padding: 14,
     marginBottom: 4,
   },
   toggleLabel: {
-    color: theme.colors.textPrimary,
+    color: c.textPrimary,
     fontWeight: "900",
     letterSpacing: 1.5,
     fontSize: 9,
   },
   toggleHint: {
-    color: theme.colors.textMuted,
+    color: c.textMuted,
     fontSize: 8,
     marginTop: 4,
   },
   fieldLabel: {
-    color: theme.colors.textMuted,
+    color: c.textMuted,
     fontSize: 7,
     fontWeight: "800",
     letterSpacing: 1.5,
     marginBottom: 5,
   },
   input: {
-    backgroundColor: theme.colors.bgSecondary,
+    backgroundColor: c.bgSecondary,
     borderWidth: 1,
-    borderColor: theme.colors.border,
-    color: theme.colors.textPrimary,
+    borderColor: c.border,
+    color: c.textPrimary,
     paddingHorizontal: 14,
     paddingVertical: 11,
     minHeight: 46,
@@ -406,12 +408,12 @@ const styles = StyleSheet.create({
   },
   divider: {
     height: 1,
-    backgroundColor: theme.colors.border,
+    backgroundColor: c.border,
     marginTop: 24,
     marginBottom: 6,
   },
   sectionTitle: {
-    color: theme.colors.accent,
+    color: c.accent,
     fontSize: 8,
     fontWeight: "900",
     letterSpacing: 2,
@@ -430,26 +432,26 @@ const styles = StyleSheet.create({
     paddingBottom: 16,
     backgroundColor: "rgba(15,15,15,0.96)",
     borderTopWidth: 1,
-    borderTopColor: theme.colors.border,
+    borderTopColor: c.border,
   },
   btnGhost: {
     flex: 1,
     height: 50,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: c.border,
     alignItems: "center",
     justifyContent: "center",
     borderRadius: 6,
   },
   btnGhostText: {
-    color: theme.colors.textPrimary,
+    color: c.textPrimary,
     fontWeight: "900",
     letterSpacing: 2,
   },
   btnPrimary: {
     flex: 2,
     height: 50,
-    backgroundColor: theme.colors.accent,
+    backgroundColor: c.accent,
     alignItems: "center",
     justifyContent: "center",
     borderRadius: 6,
@@ -460,4 +462,4 @@ const styles = StyleSheet.create({
     letterSpacing: 2,
     fontSize: 10,
   },
-});
+}));

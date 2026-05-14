@@ -16,6 +16,8 @@ import { useRouter, usePathname } from "expo-router";
 import { theme } from "./theme";
 import { useResponsive, CONTENT_MAX_WIDTH_WIDE } from "./responsive";
 
+import { themedStyles } from "./themeContext";
+
 // ----------------------------------------------------------------------------
 // ANDROID NAV-BAR SAFE PADDING
 // ----------------------------------------------------------------------------
@@ -223,11 +225,11 @@ export function BottomBar() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles((c) => ({
   bar: {
     flexDirection: "row",
     backgroundColor: "rgba(15, 15, 15, 0.95)",
-    borderTopColor: theme.colors.border,
+    borderTopColor: c.border,
     borderTopWidth: 1,
     height: Platform.OS === "ios" ? 80 : 64,
     paddingTop: 8,
@@ -255,25 +257,25 @@ const styles = StyleSheet.create({
     justifyContent: "flex-end",
   },
   sheet: {
-    backgroundColor: theme.colors.bgSecondary,
+    backgroundColor: c.bgSecondary,
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
     paddingTop: 8,
     paddingBottom: Platform.OS === "ios" ? 32 : 18,
     paddingHorizontal: 14,
-    borderTopColor: theme.colors.border,
+    borderTopColor: c.border,
     borderTopWidth: 1,
   },
   sheetHandle: {
     width: 44,
     height: 4,
     borderRadius: 2,
-    backgroundColor: theme.colors.border,
+    backgroundColor: c.border,
     alignSelf: "center",
     marginBottom: 12,
   },
   sheetTitle: {
-    color: theme.colors.textMuted,
+    color: c.textMuted,
     fontSize: 8,
     fontWeight: "800",
     letterSpacing: 2,
@@ -288,25 +290,25 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: theme.colors.border,
-    backgroundColor: theme.colors.bg,
+    borderColor: c.border,
+    backgroundColor: c.bg,
     marginBottom: 8,
   },
   sheetIcon: {
     width: 40,
     height: 40,
     borderRadius: 8,
-    backgroundColor: theme.colors.surface,
+    backgroundColor: c.surface,
     alignItems: "center",
     justifyContent: "center",
   },
   sheetRowTitle: {
-    color: theme.colors.textPrimary,
+    color: c.textPrimary,
     fontWeight: "800",
     fontSize: 11,
   },
   sheetRowSub: {
-    color: theme.colors.textSecondary,
+    color: c.textSecondary,
     fontSize: 8,
     marginTop: 2,
   },
@@ -316,9 +318,9 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   sheetCancelText: {
-    color: theme.colors.textMuted,
+    color: c.textMuted,
     fontWeight: "800",
     fontSize: 9,
     letterSpacing: 2,
   },
-});
+}));

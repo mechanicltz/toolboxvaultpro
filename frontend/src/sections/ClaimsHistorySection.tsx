@@ -6,6 +6,8 @@ import { theme } from "../theme";
 import { api } from "../api";
 import { formatDateUS } from "../dateUtil";
 
+import { themedStyles } from "../themeContext";
+
 const STATUS_COLORS: Record<string, string> = {
   broken: theme.colors.danger,
   awaiting_approval: theme.colors.warning,
@@ -118,24 +120,24 @@ export function ClaimsHistorySection({ toolId }: { toolId: string }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles((c) => ({
   wrap: { paddingHorizontal: 18, paddingTop: 18 },
   head: { flexDirection: "row", alignItems: "center", marginBottom: 10 },
   title: {
-    color: theme.colors.textPrimary,
+    color: c.textPrimary,
     fontSize: 10,
     fontWeight: "900",
     letterSpacing: 2,
   },
   sub: {
-    color: theme.colors.textMuted,
+    color: c.textMuted,
     fontSize: 7,
     fontWeight: "700",
     letterSpacing: 1.5,
     marginTop: 2,
   },
   countBadge: {
-    backgroundColor: theme.colors.danger,
+    backgroundColor: c.danger,
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 12,
@@ -144,9 +146,9 @@ const styles = StyleSheet.create({
   },
   countBadgeText: { color: "#fff", fontSize: 9, fontWeight: "900" },
   card: {
-    backgroundColor: theme.colors.bgSecondary,
+    backgroundColor: c.bgSecondary,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: c.border,
     borderRadius: 6,
     padding: 12,
     marginBottom: 8,
@@ -156,14 +158,14 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: theme.colors.bg,
+    backgroundColor: c.bg,
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
-    borderColor: theme.colors.accent,
+    borderColor: c.accent,
   },
   num: {
-    color: theme.colors.accent,
+    color: c.accent,
     fontSize: 8,
     fontWeight: "900",
   },
@@ -171,7 +173,7 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 4,
-    backgroundColor: theme.colors.bg,
+    backgroundColor: c.bg,
   },
   statusPill: {
     alignSelf: "flex-start",
@@ -183,32 +185,32 @@ const styles = StyleSheet.create({
   },
   statusText: { fontSize: 7, fontWeight: "900", letterSpacing: 1 },
   notifiedHi: {
-    color: theme.colors.accent,
+    color: c.accent,
     fontSize: 10,
     fontWeight: "900",
     marginTop: 2,
   },
   meta: {
-    color: theme.colors.textSecondary,
+    color: c.textSecondary,
     fontSize: 8,
     marginTop: 2,
   },
   notesBox: {
-    backgroundColor: theme.colors.bg,
+    backgroundColor: c.bg,
     borderRadius: 4,
     padding: 8,
     marginTop: 8,
   },
   notesLabel: {
-    color: theme.colors.textMuted,
+    color: c.textMuted,
     fontSize: 7,
     fontWeight: "800",
     letterSpacing: 1.5,
     marginBottom: 4,
   },
   notes: {
-    color: theme.colors.textPrimary,
+    color: c.textPrimary,
     fontSize: 9,
     lineHeight: 14,
   },
-});
+}));

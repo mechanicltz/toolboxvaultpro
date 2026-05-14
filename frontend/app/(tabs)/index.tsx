@@ -20,6 +20,8 @@ import { getCached, setCached } from "../../src/cache";
 import { usePrefs } from "../../src/prefs";
 import { APP_VERSION_LABEL } from "../../src/version";
 
+import { themedStyles } from "../../src/themeContext";
+
 export default function HomeScreen() {
   const router = useRouter();
   const { prefs } = usePrefs();
@@ -472,8 +474,8 @@ function DealerBalanceRow({
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: theme.colors.bg },
+const styles = themedStyles((c) => ({
+  container: { flex: 1, backgroundColor: c.bg },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -481,25 +483,25 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 14,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
+    borderBottomColor: c.border,
     gap: 8,
   },
   title: {
-    color: theme.colors.textPrimary,
+    color: c.textPrimary,
     fontSize: 14,
     fontWeight: "900",
     letterSpacing: 2.5,
     flexShrink: 1,
   },
   subtitle: {
-    color: theme.colors.accent,
+    color: c.accent,
     fontSize: 8,
     fontWeight: "700",
     letterSpacing: 1.5,
     marginTop: 3,
   },
   versionLine: {
-    color: theme.colors.textMuted,
+    color: c.textMuted,
     fontSize: 10,
     fontWeight: "700",
     letterSpacing: 1.5,
@@ -511,9 +513,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
-    backgroundColor: `${theme.colors.accent}15`,
+    backgroundColor: `${c.accent}15`,
     borderWidth: 1,
-    borderColor: theme.colors.accent,
+    borderColor: c.accent,
     borderLeftWidth: 5,
     borderRadius: 10,
     paddingHorizontal: 14,
@@ -524,20 +526,20 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: theme.colors.bg,
+    backgroundColor: c.bg,
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
-    borderColor: theme.colors.accent,
+    borderColor: c.accent,
   },
   routeBannerLabel: {
-    color: theme.colors.accent,
+    color: c.accent,
     fontSize: 7,
     fontWeight: "900",
     letterSpacing: 1.4,
   },
   routeBannerText: {
-    color: theme.colors.textPrimary,
+    color: c.textPrimary,
     fontSize: 11,
     fontWeight: "800",
     marginTop: 2,
@@ -554,27 +556,27 @@ const styles = StyleSheet.create({
     gap: 12,
     paddingHorizontal: 14,
     paddingVertical: 12,
-    backgroundColor: theme.colors.bgSecondary,
+    backgroundColor: c.bgSecondary,
     borderRadius: 10,
   },
   rowIcon: {
     width: 34,
     height: 34,
     borderRadius: 17,
-    backgroundColor: theme.colors.bg,
+    backgroundColor: c.bg,
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: c.border,
   },
   rowLabel: {
-    color: theme.colors.textPrimary,
+    color: c.textPrimary,
     fontSize: 11,
     fontWeight: "800",
     letterSpacing: 0.3,
   },
   rowSub: {
-    color: theme.colors.textMuted,
+    color: c.textMuted,
     fontSize: 8,
     fontWeight: "600",
     marginTop: 3,
@@ -583,23 +585,23 @@ const styles = StyleSheet.create({
   rowValuePill: {
     paddingHorizontal: 10,
     paddingVertical: 4,
-    backgroundColor: theme.colors.bg,
+    backgroundColor: c.bg,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: c.border,
     minWidth: 76,
     alignItems: "center",
     marginLeft: 8,
   },
   rowValue: {
-    color: theme.colors.textPrimary,
+    color: c.textPrimary,
     fontSize: 10,
     fontWeight: "900",
   },
 
   /* Dealer rows (two-line) — nested inside the OWED TO DEALERS card */
   emptyInline: {
-    color: theme.colors.textMuted,
+    color: c.textMuted,
     fontSize: 10,
     fontStyle: "italic",
     paddingHorizontal: 14,
@@ -607,13 +609,13 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   owedCluster: {
-    backgroundColor: theme.colors.bgSecondary,
+    backgroundColor: c.bgSecondary,
     borderRadius: 10,
     overflow: "hidden",
   },
   owedDivider: {
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: theme.colors.border,
+    borderBottomColor: c.border,
   },
   dealerRow: {
     flexDirection: "row",
@@ -624,13 +626,13 @@ const styles = StyleSheet.create({
   },
   dealerName: {
     flex: 1,
-    color: theme.colors.textPrimary,
+    color: c.textPrimary,
     fontSize: 11,
     fontWeight: "800",
     letterSpacing: 0.3,
   },
   dealerTotal: {
-    color: theme.colors.textPrimary,
+    color: c.textPrimary,
     fontSize: 11,
     fontWeight: "900",
     minWidth: 64,
@@ -639,22 +641,22 @@ const styles = StyleSheet.create({
   dealerBalancePill: {
     paddingHorizontal: 10,
     paddingVertical: 4,
-    backgroundColor: theme.colors.bg,
+    backgroundColor: c.bg,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: c.border,
     minWidth: 76,
     alignItems: "center",
   },
   dealerBalancePillText: {
-    color: theme.colors.textPrimary,
+    color: c.textPrimary,
     fontSize: 10,
     fontWeight: "900",
   },
   dealerAdjustPill: {
     paddingHorizontal: 10,
     paddingVertical: 4,
-    backgroundColor: theme.colors.accent,
+    backgroundColor: c.accent,
     borderRadius: 999,
   },
   dealerAdjustText: {
@@ -674,26 +676,26 @@ const styles = StyleSheet.create({
     marginTop: 16,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: theme.colors.border,
-    backgroundColor: theme.colors.bgSecondary,
+    borderColor: c.border,
+    backgroundColor: c.bgSecondary,
   },
   feedbackTitle: {
-    color: theme.colors.textPrimary,
+    color: c.textPrimary,
     fontSize: 9,
     fontWeight: "900",
     letterSpacing: 1,
   },
   feedbackSub: {
-    color: theme.colors.textMuted,
+    color: c.textMuted,
     fontSize: 9,
     fontWeight: "600",
     marginTop: 3,
   },
   tip: {
-    color: theme.colors.textMuted,
+    color: c.textMuted,
     fontSize: 8,
     textAlign: "center",
     fontStyle: "italic",
     marginTop: 14,
   },
-});
+}));

@@ -4,6 +4,8 @@ import { useRouter } from "expo-router";
 import { theme } from "../theme";
 import { formatDateUS } from "../dateUtil";
 
+import { themedStyles } from "../themeContext";
+
 const COVERAGE_LABEL: Record<string, string> = {
   months: "TIME-LIMITED",
   limited: "LIMITED COVERAGE",
@@ -149,7 +151,7 @@ function Row({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles((c) => ({
   wrap: { paddingHorizontal: 18, paddingTop: 18 },
   head: {
     flexDirection: "row",
@@ -158,13 +160,13 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   title: {
-    color: theme.colors.textPrimary,
+    color: c.textPrimary,
     fontSize: 10,
     fontWeight: "900",
     letterSpacing: 2,
   },
   sub: {
-    color: theme.colors.textMuted,
+    color: c.textMuted,
     fontSize: 7,
     fontWeight: "700",
     letterSpacing: 1.5,
@@ -182,24 +184,24 @@ const styles = StyleSheet.create({
     letterSpacing: 1.2,
   },
   card: {
-    backgroundColor: theme.colors.bgSecondary,
+    backgroundColor: c.bgSecondary,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: c.border,
     borderRadius: 6,
     padding: 12,
   },
   emptyCard: {
-    backgroundColor: theme.colors.bgSecondary,
+    backgroundColor: c.bgSecondary,
     borderWidth: 1,
     borderStyle: "dashed",
-    borderColor: theme.colors.border,
+    borderColor: c.border,
     borderRadius: 6,
     padding: 16,
     alignItems: "center",
     gap: 12,
   },
   emptyText: {
-    color: theme.colors.textMuted,
+    color: c.textMuted,
     fontSize: 10,
     fontStyle: "italic",
   },
@@ -208,13 +210,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 8,
     borderWidth: 1,
-    borderColor: theme.colors.accent,
+    borderColor: c.accent,
     paddingHorizontal: 14,
     paddingVertical: 9,
     borderRadius: 4,
   },
   addBtnText: {
-    color: theme.colors.accent,
+    color: c.accent,
     fontWeight: "900",
     letterSpacing: 1.5,
     fontSize: 8,
@@ -225,16 +227,16 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingVertical: 6,
     borderBottomWidth: 1,
-    borderBottomColor: theme.colors.borderSubtle,
+    borderBottomColor: c.borderSubtle,
   },
   rowLabel: {
-    color: theme.colors.textMuted,
+    color: c.textMuted,
     fontSize: 7,
     fontWeight: "800",
     letterSpacing: 1.5,
   },
   rowValue: {
-    color: theme.colors.textPrimary,
+    color: c.textPrimary,
     fontSize: 10,
     fontWeight: "700",
   },
@@ -242,17 +244,17 @@ const styles = StyleSheet.create({
     marginTop: 8,
     paddingTop: 8,
     borderTopWidth: 1,
-    borderTopColor: theme.colors.borderSubtle,
+    borderTopColor: c.borderSubtle,
   },
   termsLabel: {
-    color: theme.colors.textMuted,
+    color: c.textMuted,
     fontSize: 7,
     fontWeight: "800",
     letterSpacing: 1.5,
     marginBottom: 4,
   },
   termsText: {
-    color: theme.colors.textSecondary,
+    color: c.textSecondary,
     fontSize: 9,
     lineHeight: 13,
   },
@@ -266,9 +268,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 6,
   },
   editLinkText: {
-    color: theme.colors.accent,
+    color: c.accent,
     fontSize: 7,
     fontWeight: "900",
     letterSpacing: 1.5,
   },
-});
+}));
