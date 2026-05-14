@@ -3254,3 +3254,24 @@ frontend:
           User reported the deployed backend connection broke again (could only login with the preview password 'Testing', not the deployed password 'Blue321!'). Root cause: Emergent container tooling auto-rewrites EXPO_PUBLIC_BACKEND_URL in .env back to the preview URL whenever it regenerates protected vars (EXPO_PACKAGER_PROXY_URL etc.).
           FIX: Hardened src/api.ts with an explicit deny-list — if EXPO_PUBLIC_BACKEND_URL contains 'asset-locator-12.preview.emergentagent.com', the app ignores it and falls through to the hardcoded PRODUCTION_BACKEND_URL. App is now PINNED to the deployed backend no matter what auto-tooling does to .env.
           Verified: bundle shows 3 hits of emergent.host + 1 intentional deny-list reference; auth login with Blue321! returns HTTP 200.
+
+#====================================================================================================
+# ROUND 7 — Raised "Wishlist-Style" Cards Everywhere
+#====================================================================================================
+frontend:
+  - task: "Apply theme.elevation.md to all card/tile/pill style blocks"
+    implemented: true
+    files: "34 files mass-transformed via /tmp/elevate.py"
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: |
+          User loved the raised/3D look of the Wish List stat tiles (theme.elevation.md shadow stack) and asked for it everywhere — pillboxes, list rows, buttons, etc.
+          
+          BUILT /tmp/elevate.py — a smart Python transformer that finds every style block matching the "card pattern" (backgroundColor: c.bgSecondary/c.surface/c.surfaceAlt + borderColor + padding) and is MISSING elevation, then injects `...(theme.elevation.md as object),` before the closing brace. Skips header/topBar/modalBg/sticky/aurora keys that shouldn't have shadows.
+          
+          Auto-injected the `theme` import in any file where it was missing. Affected 34 files spanning every tab + every dialog + every section.
+          
+          VERIFIED: Bundle compiles HTTP 200, 15.5MB. theme.elevation.md appears 98 times in bundle (was 14 before script). Login screen in light mode shows clear elevated card with shadow underneath; yellow pill buttons have a 3D popping look. Both themes preserved.
+          
+          File list: login, feedback, for-sale, paywall, wishlist, import-export, delete-account, forgot-password, warranty-claims, personal-info, claims-history/[id], dealer/[id], dealer/[id]/tools, (tabs)/claims, (tabs)/index, (tabs)/more, (tabs)/borrowers, (tabs)/inventory, (tabs)/dealers, (tabs)/reports, admin/promo-codes, claim/[id], tool/edit, tool/[id], borrower/[id], manage/[kind], checkout-history/[id], src/Pickers, src/DateField, src/PromoRedeemModal, src/sections/DocumentsSection, src/sections/MaintenanceSection, src/sections/WarrantySection, src/sections/ClaimsHistorySection.
