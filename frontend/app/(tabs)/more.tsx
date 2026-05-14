@@ -193,9 +193,16 @@ export default function MoreScreen() {
   // Build the user-facing label. The backend stores entitlement as
   // "pro" or "free" (see subscriptions.SubscriptionState). Lifetime is
   // its own flag. We surface a friendly variant for each combination.
+  // IMPORTANT: This label must match the `isPro` calculation above so
+  // that the header pill stays consistent with what the rest of the
+  // app sees (paywall, gated features, etc.). Previously we *also*
+  // required `is_active === true` here, which caused the badge to
+  // show "FREE TIER" for accounts that are pro per entitlement but
+  // whose `is_active` flag had drifted (e.g. a promo unlock that
+  // didn't roundtrip through RevenueCat).
   const proLabel = (() => {
     if (sub?.is_lifetime) return "✨ LIFETIME PRO";
-    if (sub?.entitlement === "pro" && sub?.is_active) {
+    if (isPro) {
       // Promo grants get the dated form (so the user knows when access ends).
       if (sub?.promo_code && sub?.expires_at) {
         return `PRO until ${new Date(sub.expires_at).toLocaleDateString()}`;
