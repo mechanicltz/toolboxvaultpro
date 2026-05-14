@@ -14,6 +14,7 @@ import { AuroraBackground } from "../src/Aurora";
 import { BottomBar } from "../src/BottomBar";
 import { ReportsFab } from "../src/ReportsFab";
 import { AuthProvider, useAuth } from "../src/AuthContext";
+import { BiometricLockGate } from "../src/BiometricLockGate";
 import { ResponsiveContainer } from "../src/ResponsiveContainer";
 import { NetworkProvider, OfflineBanner } from "../src/NetworkProvider";
 import { theme } from "../src/theme";
@@ -231,7 +232,9 @@ export default function RootLayout() {
           <NetworkProvider>
             <AuroraBackground>
               <AuthGate>
-                <ShellNav />
+                <BiometricLockGate>
+                  <ShellNav />
+                </BiometricLockGate>
               </AuthGate>
             </AuroraBackground>
           </NetworkProvider>
