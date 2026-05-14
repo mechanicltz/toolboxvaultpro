@@ -3275,3 +3275,40 @@ frontend:
           VERIFIED: Bundle compiles HTTP 200, 15.5MB. theme.elevation.md appears 98 times in bundle (was 14 before script). Login screen in light mode shows clear elevated card with shadow underneath; yellow pill buttons have a 3D popping look. Both themes preserved.
           
           File list: login, feedback, for-sale, paywall, wishlist, import-export, delete-account, forgot-password, warranty-claims, personal-info, claims-history/[id], dealer/[id], dealer/[id]/tools, (tabs)/claims, (tabs)/index, (tabs)/more, (tabs)/borrowers, (tabs)/inventory, (tabs)/dealers, (tabs)/reports, admin/promo-codes, claim/[id], tool/edit, tool/[id], borrower/[id], manage/[kind], checkout-history/[id], src/Pickers, src/DateField, src/PromoRedeemModal, src/sections/DocumentsSection, src/sections/MaintenanceSection, src/sections/WarrantySection, src/sections/ClaimsHistorySection.
+
+
+#====================================================================================================
+## 2026-05-14 — Manual Elevation Fix for Dealers / Borrowers / Home Dealer Sub-Rows
+#====================================================================================================
+frontend:
+  - task: "Add elevation to Dealer + Borrower list rows + Home dealer sub-rows"
+    implemented: true
+    files:
+      - app/frontend/app/(tabs)/dealers.tsx (row + rowGrid styles)
+      - app/frontend/app/(tabs)/borrowers.tsx (row style)
+      - app/frontend/app/(tabs)/index.tsx (row + dealerRow styles, owedCluster flattened)
+    status_history:
+      - working: true
+        agent: "main"
+        comment: |
+          The mass-elevate.py script (previous run) missed list row styles that used borderBottomWidth dividers
+          instead of card-style background+borderRadius. User reported "Where the eased look is implemented it
+          looks great, where it's not looks bad." Specifically Dealers list, Borrowers list, and dealer sub-rows
+          on Home tab were still flat.
+
+          MANUAL FIX:
+          1. dealers.tsx → styles.row: dropped `borderBottomWidth`, added `backgroundColor: c.bgSecondary`,
+             `marginHorizontal: 16`, `marginTop: 12`, `borderRadius`, `borderWidth/borderColor`, and
+             `...(theme.elevation.md as object)`. Adjusted `rowGrid` for grid-view mode to keep the
+             elevation but reset marginHorizontal so columnWrapperStyle controls horizontal layout.
+          2. borrowers.tsx → styles.row: same elevated-card treatment.
+          3. index.tsx → styles.row (summary tiles) and styles.dealerRow (dealer balance sub-rows) both
+             get the elevated treatment. `owedCluster` was flattened (removed shared bg + overflow:hidden,
+             replaced with `gap: 8`) so each child dealer row now floats as its own raised card.
+
+          VERIFIED: Screenshot in dark mode shows TOTAL ITEMS, NET WORTH, CHECKED OUT, MAINTENANCE DUE,
+          OPEN CLAIMS, DEALER ACCOUNTS, and every dealer sub-row (Matco/Mac Tools/Other/Electronics/Snap-On)
+          all rendered as individual raised 3D cards with proper gaps. Dealers tab and Contacts/Borrowers
+          tab also show beautifully elevated list rows matching the Wishlist aesthetic the user loved.
+
+          NO REGRESSION: All other screens still use existing themed styles; no API contract changes.

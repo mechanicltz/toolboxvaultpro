@@ -558,6 +558,9 @@ const styles = themedStyles((c) => ({
     paddingVertical: 12,
     backgroundColor: c.bgSecondary,
     borderRadius: 10,
+    borderWidth: 1,
+    borderColor: c.borderSubtle,
+    ...(theme.elevation.md as object),
   },
   rowIcon: {
     width: 34,
@@ -609,20 +612,21 @@ const styles = themedStyles((c) => ({
     textAlign: "center",
   },
   owedCluster: {
-    backgroundColor: c.bgSecondary,
-    borderRadius: 10,
-    overflow: "hidden",
+    gap: 8,
   },
   owedDivider: {
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: c.border,
   },
   dealerRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
     paddingHorizontal: 14,
-    paddingVertical: 10,
+    paddingVertical: 12,
+    backgroundColor: c.bgSecondary,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: c.borderSubtle,
+    ...(theme.elevation.md as object),
   },
   dealerName: {
     flex: 1,
