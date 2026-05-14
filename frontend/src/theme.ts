@@ -250,11 +250,20 @@ function makeElevation(key: ElevKey): any {
     if (Platform.OS === "web") {
       return {
         ...bevelBase,
+        // CSS linear-gradient surface — gives every elevated pillbox the
+        // same metallic 145° fade the NET WORTH tile gets via LinearGradient.
+        backgroundColor: currentPalette.rowGradTop,
+        backgroundImage: `linear-gradient(145deg, ${currentPalette.rowGradTop}, ${currentPalette.rowGradBottom})`,
         boxShadow: `4px 4px 0 ${currentPalette.bevelDrop}, 6px 6px 12px ${currentPalette.bevelDrop}`,
       };
     }
     return {
       ...bevelBase,
+      // Native: no CSS gradient — use the brighter `rowGradTop` shade so
+      // every pillbox at least matches the top half of the gradient on iOS
+      // / Android (closest cross-platform approximation without wrapping
+      // every card in a LinearGradient component).
+      backgroundColor: currentPalette.rowGradTop,
       shadowColor: "#000",
       shadowOpacity: 0.55,
       shadowOffset: { width: 3, height: 5 },
