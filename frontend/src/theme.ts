@@ -229,12 +229,11 @@ type ElevKey = "sm" | "md" | "lg" | "accent" | "inset";
 function makeElevation(key: ElevKey): any {
   const sh = currentPalette.shadowColor || "#000";
   // ─────────────────────────────────────────────────────────────────────────
-  // Bevel-3D treatment baked into `md`. Every existing card/row that spreads
-  // `theme.elevation.md` now automatically gets the chiseled raised look:
-  //   • lighter top + left edge (highlight)
-  //   • darker bottom + right edge (shadow)
-  //   • visible offset outer drop shadow lifting the tile off the bg
-  // Uniform 2px border widths keep corner mitering clean.
+  // `md` keeps the bevel-border + drop-shadow approximation for any legacy
+  // styles that still spread `theme.elevation.md` directly. New components
+  // should use the <BevelCard /> wrapper from `src/components/BevelCard.tsx`
+  // which renders a true LinearGradient surface on top of these borders so
+  // the look matches across web AND native iOS / Android.
   // ─────────────────────────────────────────────────────────────────────────
   if (key === "md") {
     const bevelBase = {
@@ -250,8 +249,6 @@ function makeElevation(key: ElevKey): any {
     if (Platform.OS === "web") {
       return {
         ...bevelBase,
-        // CSS linear-gradient surface — gives every elevated pillbox the
-        // same metallic 145° fade the NET WORTH tile gets via LinearGradient.
         backgroundColor: currentPalette.rowGradTop,
         backgroundImage: `linear-gradient(145deg, ${currentPalette.rowGradTop}, ${currentPalette.rowGradBottom})`,
         boxShadow: `4px 4px 0 ${currentPalette.bevelDrop}, 6px 6px 12px ${currentPalette.bevelDrop}`,
@@ -259,10 +256,6 @@ function makeElevation(key: ElevKey): any {
     }
     return {
       ...bevelBase,
-      // Native: no CSS gradient — use the brighter `rowGradTop` shade so
-      // every pillbox at least matches the top half of the gradient on iOS
-      // / Android (closest cross-platform approximation without wrapping
-      // every card in a LinearGradient component).
       backgroundColor: currentPalette.rowGradTop,
       shadowColor: "#000",
       shadowOpacity: 0.55,

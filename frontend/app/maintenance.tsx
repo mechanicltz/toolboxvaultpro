@@ -16,6 +16,7 @@ import { api } from "../src/api";
 import { formatDateUS } from "../src/dateUtil";
 
 import { themedStyles } from "../src/themeContext";
+import { BevelCard } from "../src/components/BevelCard";
 
 function daysUntil(iso: string): number {
   if (!iso) return 9999;
@@ -129,7 +130,7 @@ export default function MaintenanceScreen() {
             const isOverdue = it.is_overdue;
             const isUrgent = !isOverdue && days <= 30;
             return (
-              <TouchableOpacity
+              <BevelCard
                 key={`${it.tool_id}-${it.schedule_id}`}
                 testID={`mnt-${it.schedule_id}`}
                 style={[
@@ -175,7 +176,7 @@ export default function MaintenanceScreen() {
                     {isOverdue ? `${Math.abs(days)}D OVERDUE` : `${days}D`}
                   </Text>
                 </View>
-              </TouchableOpacity>
+              </BevelCard>
             );
           })
         )}

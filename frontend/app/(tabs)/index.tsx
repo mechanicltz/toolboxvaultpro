@@ -23,6 +23,7 @@ import { usePrefs } from "../../src/prefs";
 import { APP_VERSION_LABEL } from "../../src/version";
 
 import { themedStyles } from "../../src/themeContext";
+import { BevelCard } from "../../src/components/BevelCard";
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -185,7 +186,6 @@ export default function HomeScreen() {
         label="NET WORTH"
         value={`$${totalInvested.toFixed(2)}`}
         valueColor={theme.colors.success}
-        bevel
       />
     ),
     checked_out: () => (
@@ -389,7 +389,6 @@ function SummaryRow({
   rightSlot,
   valueColor,
   nested,
-  bevel,
 }: {
   icon: any;
   label: string;
@@ -404,16 +403,7 @@ function SummaryRow({
    * ACCOUNTS cluster which groups one header + N sub-rows into one card).
    */
   nested?: boolean;
-  /**
-   * When TRUE, renders the row with a sharp-bevel 3D treatment — angled
-   * linear-gradient background plus an inset top-left highlight + inset
-   * bottom-right inner shadow + crisp stair-step drop shadow. Used by the
-   * NET WORTH tile per user request as a style test for one pillbox.
-   */
-  bevel?: boolean;
 }) {
-  const Wrapper: any = onPress ? TouchableOpacity : View;
-  const rowStyle = nested ? styles.rowNested : bevel ? styles.rowBevel : styles.row;
   const innerContent = (
     <>
       <View style={styles.rowIcon}>
@@ -448,32 +438,22 @@ function SummaryRow({
       ) : null)}
     </>
   );
-  if (bevel) {
-    // 145deg gradient — light grey top-left → darker bottom-right (light mode)
-    // or near-black top-left → black bottom-right (dark mode). The
-    // rowGradTop / rowGradBottom palette keys already track theme.
+  // Nested rows (used inside the DEALER ACCOUNTS combined card) skip the
+  // raised treatment — they sit flat inside their parent card.
+  if (nested) {
+    const Wrapper: any = onPress ? TouchableOpacity : View;
     return (
-      <View style={rowStyle}>
-        <LinearGradient
-          colors={[theme.colors.rowGradTop, theme.colors.rowGradBottom]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.bevelGradient}
-        />
-        <Wrapper
-          style={styles.bevelInner}
-          onPress={onPress}
-          activeOpacity={0.7}
-        >
-          {innerContent}
-        </Wrapper>
-      </View>
+      <Wrapper style={styles.rowNested} onPress={onPress} activeOpacity={0.65}>
+        {innerContent}
+      </Wrapper>
     );
   }
+  // All other summary rows render through BevelCard so the gradient surface
+  // + bevel borders + drop shadow match the NET WORTH style universally.
   return (
-    <Wrapper style={rowStyle} onPress={onPress} activeOpacity={0.65}>
+    <BevelCard style={styles.rowOuter} onPress={onPress}>
       {innerContent}
-    </Wrapper>
+    </BevelCard>
   );
 }
 
@@ -616,6 +596,16 @@ const styles = themedStyles((c) => ({
     paddingHorizontal: 14,
     paddingVertical: 12,
     backgroundColor: "transparent",
+  },
+  // Layout-only style for SummaryRow when rendered through BevelCard. The
+  // BevelCard supplies the gradient surface + borders + drop shadow — this
+  // block just controls inner flex layout & padding.
+  rowOuter: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
   },
   /* Sharp Bevel 3D — the OUTER pillbox gets a chiseled bevel: thicker
      lighter top + left edge (highlight catching light from the top), thicker

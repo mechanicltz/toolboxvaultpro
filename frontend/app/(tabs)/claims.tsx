@@ -19,6 +19,7 @@ import { getCached, setCached } from "../../src/cache";
 import { formatPhone } from "../../src/contactLinks";
 
 import { themedStyles } from "../../src/themeContext";
+import { BevelCard } from "../../src/components/BevelCard";
 
 type Mode = "dealers" | "all-open";
 
@@ -214,7 +215,7 @@ export default function ClaimsScreen() {
                     ? theme.colors.success
                     : theme.colors.accentSecondary;
                 return (
-                  <TouchableOpacity
+                  <BevelCard
                     key={`cur-${t.id}`}
                     style={styles.itemRow}
                     onPress={() => router.push(`/tool/${t.id}`)}
@@ -237,7 +238,7 @@ export default function ClaimsScreen() {
                       </View>
                     </View>
                     <Ionicons name="chevron-forward" size={16} color={theme.colors.textMuted} />
-                  </TouchableOpacity>
+                  </BevelCard>
                 );
               })
             )}
@@ -253,7 +254,7 @@ export default function ClaimsScreen() {
               <Text style={[styles.empty, { paddingVertical: 12 }]}>No history matches.</Text>
             ) : (
               matchedArchived.map((c: any) => (
-                <TouchableOpacity
+                <BevelCard
                   key={`arch-${c.id}`}
                   style={styles.itemRow}
                   onPress={() => router.push(`/claim/${c.id}`)}
@@ -280,7 +281,7 @@ export default function ClaimsScreen() {
                     </View>
                   </View>
                   <Ionicons name="chevron-forward" size={16} color={theme.colors.textMuted} />
-                </TouchableOpacity>
+                </BevelCard>
               ))
             )}
           </>
@@ -295,7 +296,7 @@ export default function ClaimsScreen() {
                 const opened = Math.max(liveOpened, summaryEntry?.open || 0);
                 const done = summaryEntry?.completed || 0;
                 return (
-                  <TouchableOpacity
+                  <BevelCard
                     key={d.id}
                     testID={`claim-dealer-${d.id}`}
                     style={styles.dealerRow}
@@ -330,7 +331,7 @@ export default function ClaimsScreen() {
                       </View>
                     </View>
                     <Ionicons name="chevron-forward" size={18} color={theme.colors.textMuted} />
-                  </TouchableOpacity>
+                  </BevelCard>
                 );
               })
             )}
@@ -387,7 +388,7 @@ export default function ClaimsScreen() {
                           ? theme.colors.success
                           : theme.colors.accentSecondary;
                       return (
-                        <TouchableOpacity
+                        <BevelCard
                           key={t.id}
                           testID={`open-tool-${t.id}`}
                           style={styles.itemRow}
@@ -416,7 +417,7 @@ export default function ClaimsScreen() {
                             </View>
                           </View>
                           <Ionicons name="chevron-forward" size={16} color={theme.colors.textMuted} />
-                        </TouchableOpacity>
+                        </BevelCard>
                       );
                     })}
                   </View>

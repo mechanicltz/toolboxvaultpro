@@ -20,6 +20,7 @@ import { api } from "../../src/api";
 import { confirm } from "../../src/confirm";
 import { parseContacts, openEmail, openPhone, openSms } from "../../src/contactLinks";
 import { themedStyles } from "../../src/themeContext";
+import { BevelCard } from "../../src/components/BevelCard";
 
 import {
   isDeviceContactsAvailable,
@@ -251,7 +252,7 @@ export default function BorrowersScreen() {
             );
           }
           return (
-            <TouchableOpacity
+            <BevelCard
               testID={`borrower-row-${item.id}`}
               style={styles.row}
               onPress={() => router.push(`/borrower/${item.id}`)}
@@ -295,7 +296,7 @@ export default function BorrowersScreen() {
               >
                 <Ionicons name="trash-outline" size={20} color={theme.colors.danger} />
               </TouchableOpacity>
-            </TouchableOpacity>
+            </BevelCard>
           );
         }}
       />
@@ -445,7 +446,7 @@ function RowContactChips({ raw }: { raw?: string | null }) {
     <View style={styles.rowChipsWrap}>
       {phones.map((p) => (
         <View key={`pgrp-${p}`} style={styles.rowChipPair}>
-          <TouchableOpacity
+          <BevelCard
             testID={`row-call-${p}`}
             style={styles.rowChip}
             onPress={(e: any) => {
@@ -457,8 +458,8 @@ function RowContactChips({ raw }: { raw?: string | null }) {
           >
             <Ionicons name="call" size={12} color={theme.colors.accent} />
             <Text style={styles.rowChipText} numberOfLines={1}>{p}</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
+          </BevelCard>
+          <BevelCard
             testID={`row-text-${p}`}
             style={[styles.rowChip, styles.rowChipIcon]}
             onPress={(e: any) => {
@@ -469,11 +470,11 @@ function RowContactChips({ raw }: { raw?: string | null }) {
             hitSlop={6}
           >
             <Ionicons name="chatbubble-ellipses" size={12} color={theme.colors.accent} />
-          </TouchableOpacity>
+          </BevelCard>
         </View>
       ))}
       {emails.map((em) => (
-        <TouchableOpacity
+        <BevelCard
           key={`e-${em}`}
           testID={`row-email-${em}`}
           style={styles.rowChip}
@@ -486,7 +487,7 @@ function RowContactChips({ raw }: { raw?: string | null }) {
         >
           <Ionicons name="mail" size={12} color={theme.colors.accent} />
           <Text style={styles.rowChipText} numberOfLines={1}>{em}</Text>
-        </TouchableOpacity>
+        </BevelCard>
       ))}
     </View>
   );

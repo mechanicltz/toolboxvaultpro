@@ -25,6 +25,7 @@ import { useAuth } from "../../src/AuthContext";
 import { APP_VERSION_LABEL } from "../../src/version";
 import { PromoRedeemModal } from "../../src/PromoRedeemModal";
 import { themedStyles } from "../../src/themeContext";
+import { BevelCard } from "../../src/components/BevelCard";
 
 import {
   requestPermissions as requestNotificationPermissions,
@@ -44,7 +45,7 @@ type RowProps = {
 };
 
 const Row = ({ icon, title, subtitle, onPress, testID, badge, badgeColor }: RowProps) => (
-  <TouchableOpacity testID={testID} style={styles.row} onPress={onPress} activeOpacity={0.7}>
+  <BevelCard testID={testID} style={styles.row} onPress={onPress} activeOpacity={0.7}>
     <View style={styles.iconBox}>
       <Ionicons name={icon} size={20} color={theme.colors.accent} />
     </View>
@@ -63,7 +64,7 @@ const Row = ({ icon, title, subtitle, onPress, testID, badge, badgeColor }: RowP
       </View>
     )}
     <Ionicons name="chevron-forward" size={18} color={theme.colors.textMuted} />
-  </TouchableOpacity>
+  </BevelCard>
 );
 
 export default function MoreScreen() {
@@ -437,7 +438,7 @@ export default function MoreScreen() {
 
         {prefs.dealer_notifications_enabled && (
           <>
-            <TouchableOpacity
+            <BevelCard
               style={styles.toggleRow}
               onPress={() => setTimePickerOpen(true)}
               testID="notif-time-row"
@@ -457,7 +458,7 @@ export default function MoreScreen() {
                   prefs.dealer_notification_minute,
                 )}
               </Text>
-            </TouchableOpacity>
+            </BevelCard>
 
             <View style={styles.toggleRow}>
               <View style={styles.iconBox}>
@@ -490,7 +491,7 @@ export default function MoreScreen() {
               />
             </View>
 
-            <TouchableOpacity
+            <BevelCard
               style={styles.toggleRow}
               testID="notif-test-row"
               onPress={async () => {
@@ -522,7 +523,7 @@ export default function MoreScreen() {
                 size={16}
                 color={theme.colors.textMuted}
               />
-            </TouchableOpacity>
+            </BevelCard>
           </>
         )}
 
@@ -580,7 +581,7 @@ export default function MoreScreen() {
           }}
         />
 
-        <TouchableOpacity
+        <BevelCard
           style={styles.row}
           onPress={() => logout()}
           activeOpacity={0.7}
@@ -594,9 +595,9 @@ export default function MoreScreen() {
             <Text style={styles.rowSub}>{user?.email || ""}</Text>
           </View>
           <Ionicons name="chevron-forward" size={18} color={theme.colors.textMuted} />
-        </TouchableOpacity>
+        </BevelCard>
 
-        <TouchableOpacity
+        <BevelCard
           style={styles.row}
           activeOpacity={0.7}
           testID="more-delete-account"
@@ -628,7 +629,7 @@ export default function MoreScreen() {
             </Text>
           </View>
           <Ionicons name="chevron-forward" size={18} color={theme.colors.textMuted} />
-        </TouchableOpacity>
+        </BevelCard>
       </ScrollView>
 
       {/* Home Screen Rows modal — pick which rows show on Home and reorder them */}

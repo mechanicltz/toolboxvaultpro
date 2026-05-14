@@ -29,6 +29,7 @@ import { useAuth } from "../../src/AuthContext";
 import { useResponsive } from "../../src/responsive";
 
 import { themedStyles } from "../../src/themeContext";
+import { BevelCard } from "../../src/components/BevelCard";
 
 type Filter = "all" | "available" | "out" | "consumables" | "lost" | "maintenance" | "for_sale";
 
@@ -676,7 +677,7 @@ export default function InventoryScreen() {
           const isLost = item?.lost_status?.is_lost;
           const isStolen = isLost && item?.lost_status?.type === "stolen";
           return (
-            <TouchableOpacity
+            <BevelCard
               testID={`tool-card-${item.id}`}
               style={[
                 styles.row,
@@ -849,7 +850,7 @@ export default function InventoryScreen() {
                   )}
                 </View>
               )}
-            </TouchableOpacity>
+            </BevelCard>
           );
         }}
       />

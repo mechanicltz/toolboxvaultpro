@@ -28,6 +28,7 @@ import { rescheduleDealerNotifications } from "../../src/notifications";
 import { formatPhone, openPhone, openSms } from "../../src/contactLinks";
 
 import { themedStyles } from "../../src/themeContext";
+import { BevelCard } from "../../src/components/BevelCard";
 
 export default function DealersScreen() {
   const router = useRouter();
@@ -131,7 +132,7 @@ export default function DealersScreen() {
             (item.agents || []).find((a: any) => a.id === item.current_agent_id) || null;
           const isLocked = lockedDealerIds.has(item.id);
           return (
-            <TouchableOpacity
+            <BevelCard
               testID={`dealer-card-${item.id}`}
               style={[
                 styles.row,
@@ -203,7 +204,7 @@ export default function DealersScreen() {
                 <Ionicons name="trash-outline" size={18} color={theme.colors.danger} />
               </TouchableOpacity>
               <Ionicons name="chevron-forward" size={20} color={theme.colors.textMuted} />
-            </TouchableOpacity>
+            </BevelCard>
           );
         }}
       />
