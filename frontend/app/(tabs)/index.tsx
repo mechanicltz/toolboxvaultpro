@@ -7,9 +7,11 @@ import {
   TouchableOpacity,
   RefreshControl,
   Alert,
+  Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
 import { useRouter, useFocusEffect } from "expo-router";
 import { theme } from "../../src/theme";
 import { api } from "../../src/api";
@@ -183,6 +185,7 @@ export default function HomeScreen() {
         label="NET WORTH"
         value={`$${totalInvested.toFixed(2)}`}
         valueColor={theme.colors.success}
+        bevel
       />
     ),
     checked_out: () => (
@@ -386,6 +389,7 @@ function SummaryRow({
   rightSlot,
   valueColor,
   nested,
+  bevel,
 }: {
   icon: any;
   label: string;
@@ -400,10 +404,18 @@ function SummaryRow({
    * ACCOUNTS cluster which groups one header + N sub-rows into one card).
    */
   nested?: boolean;
+  /**
+   * When TRUE, renders the row with a sharp-bevel 3D treatment — angled
+   * linear-gradient background plus an inset top-left highlight + inset
+   * bottom-right inner shadow + crisp stair-step drop shadow. Used by the
+   * NET WORTH tile per user request as a style test for one pillbox.
+   */
+  bevel?: boolean;
 }) {
   const Wrapper: any = onPress ? TouchableOpacity : View;
-  return (
-    <Wrapper style={nested ? styles.rowNested : styles.row} onPress={onPress} activeOpacity={0.65}>
+  const rowStyle = nested ? styles.rowNested : bevel ? styles.rowBevel : styles.row;
+  const innerContent = (
+    <>
       <View style={styles.rowIcon}>
         <Ionicons name={icon} size={18} color={theme.colors.accent} />
       </View>
@@ -434,6 +446,33 @@ function SummaryRow({
           style={{ marginLeft: 8 }}
         />
       ) : null)}
+    </>
+  );
+  if (bevel) {
+    // 145deg gradient — light grey top-left → darker bottom-right (light mode)
+    // or near-black top-left → black bottom-right (dark mode). The
+    // rowGradTop / rowGradBottom palette keys already track theme.
+    return (
+      <View style={rowStyle}>
+        <LinearGradient
+          colors={[theme.colors.rowGradTop, theme.colors.rowGradBottom]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.bevelGradient}
+        />
+        <Wrapper
+          style={styles.bevelInner}
+          onPress={onPress}
+          activeOpacity={0.7}
+        >
+          {innerContent}
+        </Wrapper>
+      </View>
+    );
+  }
+  return (
+    <Wrapper style={rowStyle} onPress={onPress} activeOpacity={0.65}>
+      {innerContent}
     </Wrapper>
   );
 }
@@ -577,6 +616,65 @@ const styles = themedStyles((c) => ({
     paddingHorizontal: 14,
     paddingVertical: 12,
     backgroundColor: "transparent",
+  },
+  /* Sharp Bevel 3D — adapted from user's Grok reference. Same outer size
+     as `row` so layout doesn't shift. The outer View provides the crisp
+     stair-step drop shadow + 1px border + radius; the LinearGradient is
+     positioned absolute behind the content to render the 145deg fill; the
+     bevelInner overlay carries the inset top-left highlight + bottom-right
+     inner edge via web boxShadow / native borderTop+borderLeft tinting. */
+  rowBevel: {
+    position: "relative",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: c.border,
+    overflow: "hidden",
+    ...(Platform.select({
+      web: {
+        boxShadow:
+          "4px 4px 0 rgba(0, 0, 0, 0.55), 6px 6px 0 rgba(0, 0, 0, 0.40), inset 3px 3px 0 rgba(255, 255, 255, 0.10), inset -3px -3px 0 rgba(0, 0, 0, 0.45)" as any,
+      },
+      default: {
+        shadowColor: "#000",
+        shadowOpacity: 0.85,
+        shadowOffset: { width: 4, height: 4 },
+        shadowRadius: 0,
+        elevation: 6,
+      },
+    }) as object),
+  },
+  bevelGradient: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  bevelInner: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    // Native fallback for the inset highlight/shadow — slightly lighter top
+    // and left borders, darker bottom and right borders, so the row reads
+    // as a beveled raised tile even without web inset box-shadow.
+    ...(Platform.OS !== "web"
+      ? {
+          borderTopWidth: 1.5,
+          borderLeftWidth: 1.5,
+          borderTopColor: "rgba(255, 255, 255, 0.18)",
+          borderLeftColor: "rgba(255, 255, 255, 0.12)",
+          borderBottomWidth: 1.5,
+          borderRightWidth: 1.5,
+          borderBottomColor: "rgba(0, 0, 0, 0.55)",
+          borderRightColor: "rgba(0, 0, 0, 0.55)",
+        }
+      : {}),
   },
   rowIcon: {
     width: 34,
