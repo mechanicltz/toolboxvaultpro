@@ -208,6 +208,33 @@ export default function MoreScreen() {
         </Text>
       </View>
       <ScrollView contentContainerStyle={{ paddingBottom: 100 }}>
+        {/* Light / Dark mode toggle — placed at top of the More tab so
+            users can flip themes without scrolling. */}
+        <View style={styles.toggleRow}>
+          <View style={styles.iconBox}>
+            <Ionicons
+              name={themeMode === "light" ? "sunny" : "moon"}
+              size={20}
+              color={theme.colors.accent}
+            />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.rowTitle}>Light mode</Text>
+            <Text style={styles.rowSub}>
+              {themeMode === "light"
+                ? "Soft grey-blue background, dark text"
+                : "Industrial dark workshop look"}
+            </Text>
+          </View>
+          <Switch
+            testID="toggle-light-mode"
+            value={themeMode === "light"}
+            onValueChange={(v) => setThemeMode(v ? "light" : "dark")}
+            trackColor={{ true: theme.colors.accent, false: theme.colors.border }}
+            thumbColor="#fff"
+          />
+        </View>
+
         <Row
           icon="chatbubble-ellipses"
           title="Report a Bug · Request a Feature"
@@ -359,32 +386,8 @@ export default function MoreScreen() {
           />
         </View>
 
-        {/* Light / Dark mode toggle — sits directly under WARRANTY EXPIRE
-            ALERTS per user request. Stored in AsyncStorage by ThemeProvider. */}
-        <View style={styles.toggleRow}>
-          <View style={styles.iconBox}>
-            <Ionicons
-              name={themeMode === "light" ? "sunny" : "moon"}
-              size={20}
-              color={theme.colors.accent}
-            />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.rowTitle}>Light mode</Text>
-            <Text style={styles.rowSub}>
-              {themeMode === "light"
-                ? "Soft grey-blue background, dark text"
-                : "Industrial dark workshop look"}
-            </Text>
-          </View>
-          <Switch
-            testID="toggle-light-mode"
-            value={themeMode === "light"}
-            onValueChange={(v) => setThemeMode(v ? "light" : "dark")}
-            trackColor={{ true: theme.colors.accent, false: theme.colors.border }}
-            thumbColor="#fff"
-          />
-        </View>
+        {/* Light / Dark mode toggle has moved to the TOP of the More tab
+            (see beginning of ScrollView). */}
 
         <Text style={styles.sectionLabel}>NOTIFICATIONS</Text>
 
