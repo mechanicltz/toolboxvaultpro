@@ -21,6 +21,7 @@ import { initRevenueCat, identifyRevenueCatUser, getCurrentCustomerInfo, buildSy
 import { setPaymentRequiredHandler, api } from "../src/api";
 import { shouldShowIntro, markAppActive } from "../src/idle";
 import { IntroOverlay } from "../src/IntroOverlay";
+import { ThemeProvider, useColors, useThemeMode } from "../src/themeContext";
 
 /**
  * Make native (iOS Expo Go / TestFlight) layouts visually match the web
@@ -215,17 +216,19 @@ function ShellNav() {
 
 export default function RootLayout() {
   return (
-    <GestureHandlerRootView style={{ flex: 1, backgroundColor: "#0A0A0A" }}>
+    <GestureHandlerRootView style={{ flex: 1, backgroundColor: theme.colors.bg }}>
       <StatusBar style="light" />
-      <AuthProvider>
-        <NetworkProvider>
-          <AuroraBackground>
-            <AuthGate>
-              <ShellNav />
-            </AuthGate>
-          </AuroraBackground>
-        </NetworkProvider>
-      </AuthProvider>
+      <ThemeProvider>
+        <AuthProvider>
+          <NetworkProvider>
+            <AuroraBackground>
+              <AuthGate>
+                <ShellNav />
+              </AuthGate>
+            </AuroraBackground>
+          </NetworkProvider>
+        </AuthProvider>
+      </ThemeProvider>
     </GestureHandlerRootView>
   );
 }

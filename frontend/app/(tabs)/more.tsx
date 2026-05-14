@@ -18,6 +18,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter, useFocusEffect } from "expo-router";
 import { theme } from "../../src/theme";
+import { useThemeMode } from "../../src/themeContext";
 import { usePrefs, HOME_ROW_LABELS, HomeRowKey } from "../../src/prefs";
 import { api } from "../../src/api";
 import { useAuth } from "../../src/AuthContext";
@@ -76,6 +77,7 @@ export default function MoreScreen() {
   const [pwOk, setPwOk] = useState("");
   const [timePickerOpen, setTimePickerOpen] = useState(false);
   const [homeRowsModal, setHomeRowsModal] = useState(false);
+  const { mode: themeMode, setMode: setThemeMode } = useThemeMode();
 
   // Subscription + admin gates.
   const [sub, setSub] = useState<any>(null);
@@ -350,6 +352,33 @@ export default function MoreScreen() {
             testID="toggle-warranty-alerts"
             value={prefs.warranty_alerts}
             onValueChange={(v) => update({ warranty_alerts: v })}
+            trackColor={{ true: theme.colors.accent, false: theme.colors.border }}
+            thumbColor="#fff"
+          />
+        </View>
+
+        {/* Light / Dark mode toggle — sits directly under WARRANTY EXPIRE
+            ALERTS per user request. Stored in AsyncStorage by ThemeProvider. */}
+        <View style={styles.toggleRow}>
+          <View style={styles.iconBox}>
+            <Ionicons
+              name={themeMode === "light" ? "sunny" : "moon"}
+              size={20}
+              color={theme.colors.accent}
+            />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.rowTitle}>Light mode</Text>
+            <Text style={styles.rowSub}>
+              {themeMode === "light"
+                ? "Soft grey-blue background, dark text"
+                : "Industrial dark workshop look"}
+            </Text>
+          </View>
+          <Switch
+            testID="toggle-light-mode"
+            value={themeMode === "light"}
+            onValueChange={(v) => setThemeMode(v ? "light" : "dark")}
             trackColor={{ true: theme.colors.accent, false: theme.colors.border }}
             thumbColor="#fff"
           />
