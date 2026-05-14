@@ -124,8 +124,12 @@ export async function tryBiometricLogin(
     const result = await LocalAuthentication.authenticateAsync({
       promptMessage: promptMessage || `Unlock Toolbox Vault with ${status.label}`,
       cancelLabel: "Use Password",
-      disableDeviceFallback: false,
-      fallbackLabel: "Use Passcode",
+      // CRITICAL: Disable the iOS "Enter iPhone Passcode" fallback. If
+      // Face ID fails, we want the user routed back to our own password
+      // screen — NOT to the OS device-passcode dialog (which confuses
+      // users into entering their account password and getting locked
+      // out of iOS).
+      disableDeviceFallback: true,
     });
     if (!result.success) return null;
     const email = await SecureStore.getItemAsync(SECURE_KEY_EMAIL);
