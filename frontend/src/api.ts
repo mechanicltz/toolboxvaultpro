@@ -10,8 +10,19 @@ import { showOfflineAlert } from "./offlineGuard";
 // every fetch was going to `undefined/api/tools` and silently 404ing.
 const PRODUCTION_BACKEND_URL = "https://asset-locator-12.emergent.host";
 const _ENV_BASE = process.env.EXPO_PUBLIC_BACKEND_URL;
+
+// Per user directive (May 2026): the dev/preview Emergent backend gets
+// auto-rewritten back into the .env by Emergent's tooling, which silently
+// re-points the app at an empty preview MongoDB. To prevent the entire app
+// from flipping back to the empty preview DB whenever this happens, we
+// IGNORE the preview URL even if it's currently in EXPO_PUBLIC_BACKEND_URL
+// and pin every client (Expo Go + every EAS build) to the deployed instance.
+const _PREVIEW_URL = "asset-locator-12.preview.emergentagent.com";
 const BASE =
-  _ENV_BASE && _ENV_BASE !== "undefined" && _ENV_BASE.startsWith("http")
+  _ENV_BASE &&
+  _ENV_BASE !== "undefined" &&
+  _ENV_BASE.startsWith("http") &&
+  !_ENV_BASE.includes(_PREVIEW_URL)
     ? _ENV_BASE
     : PRODUCTION_BACKEND_URL;
 const TOKEN_KEY = "tt.auth.token";
