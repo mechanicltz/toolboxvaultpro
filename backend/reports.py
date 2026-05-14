@@ -858,6 +858,43 @@ def render_pdf(spec: ReportSpec, cols: List[Column],
 
     if body_factory is not None:
         story.extend(body_factory(st))
+    elif fetch_result.get("page_break_per_group"):
+        # Render one table per group with a PageBreak between groups — used
+        # for the dealer report so each dealer starts on a fresh page.
+        group_key = fetch_result.get("group_by") or "_dealer_group"
+        ordered_groups = fetch_result.get("ordered_groups") or []
+        rows_by_group: Dict[str, List[Dict[str, Any]]] = {}
+        for r in rows:
+            if r.get("_section_header"):
+                continue
+            rows_by_group.setdefault(r.get(group_key, ""), []).append(r)
+        # Group names not in ordered_groups: append at the end.
+        all_groups = list(ordered_groups) + [
+            g for g in rows_by_group.keys() if g not in ordered_groups
+        ]
+        first = True
+        for g in all_groups:
+            grows = rows_by_group.get(g) or []
+            if not grows:
+                continue
+            if not first:
+                story.append(PageBreak())
+            first = False
+            # Group label header in the report's accent color
+            story.append(
+                Paragraph(
+                    esc(str(g).upper()),
+                    ParagraphStyle(
+                        "group_header",
+                        fontName="Helvetica-Bold",
+                        fontSize=14,
+                        leading=18,
+                        spaceAfter=6,
+                        textColor=colors.HexColor(spec.accent),
+                    ),
+                )
+            )
+            story.append(_data_table(cols, grows, spec.accent, st))
     else:
         story.append(_data_table(cols, rows, spec.accent, st))
 
@@ -1159,6 +1196,7 @@ async def _fetch_claims(db, user, options: Dict[str, Any]) -> Dict[str, Any]:
         "group_by": "_dealer_group",
         "group_label": "Dealer",
         "ordered_groups": ordered_dealers,
+        "page_break_per_group": True,
     }
 
 
@@ -1503,7 +1541,11 @@ def _make_account_factory(per_dealer: List[Dict[str, Any]]):
             "rA", parent=st["small_bold_right"], textColor=red,
         )
 
-        for d in per_dealer:
+        for idx, d in enumerate(per_dealer):
+            # User request: each dealer starts on its own page so reports
+            # can be printed and handed out per-dealer.
+            if idx > 0:
+                out.append(PageBreak())
             out.append(Spacer(1, 4))
             # Section header
             sect = Table([[_para(esc(d["name"].upper()), ParagraphStyle(
@@ -1654,6 +1696,217 @@ def _make_account_factory(per_dealer: List[Dict[str, Any]]):
 # Column catalogs + report registry
 # ---------------------------------------------------------------------------
 
+# ---- CHECKED-OUT REPORT --------------------------------------------------------
+
+async def _fetch_checked_out(db, user, options: Dict[str, Any]) -> Dict[str, Any]:
+    """Build the Checked-Out Items report.
+
+    Filters:
+      - status: "current" (still out) | "returned" | "both"
+      - borrower_ids: list of borrower IDs (empty = all people)
+      - location_id, tag_ids, category_ids, dealer_ids: same shape as inventory
+      - date_from / date_to: filter on checkout date
+    """
+    status = (options.get("status") or "both").lower()
+    borrower_ids = options.get("borrower_ids") or []
+    location_id = options.get("location_id") or ""
+    tag_ids = options.get("tag_ids") or []
+    category_ids = options.get("category_ids") or []
+    dealer_ids = options.get("dealer_ids") or []
+    start = options.get("date_from") or ""
+    end = options.get("date_to") or ""
+
+    q: Dict[str, Any] = {}
+    # Pre-filter tools by location/tags/categories/dealers to keep query light.
+    if location_id:
+        all_ids = [location_id]
+        children = await db.locations.find(
+            {"parent_id": location_id}, {"_id": 0, "id": 1}
+        ).to_list(5000)
+        all_ids += [c["id"] for c in children]
+        q["location_id"] = {"$in": all_ids}
+    if tag_ids:
+        q["tag_ids"] = {"$in": tag_ids}
+    if category_ids:
+        q["category_id"] = {"$in": category_ids}
+    if dealer_ids:
+        q["dealer_id"] = {"$in": dealer_ids}
+
+    tools = await db.tools.find(q, {"_id": 0}).to_list(20000)
+
+    rows: List[Dict[str, Any]] = []
+    for t in tools:
+        base = _normalise_tool_row(t)
+        records: List[Dict[str, Any]] = []
+        # Active checkout (still out) lives in current_checkout
+        cc = t.get("current_checkout")
+        if cc and t.get("is_checked_out"):
+            records.append({**cc, "_active": True})
+        # Past checkouts in checkout_history
+        for h in (t.get("checkout_history") or []):
+            if h.get("checked_in_at"):
+                records.append({**h, "_active": False})
+        for rec in records:
+            is_active = bool(rec.get("_active"))
+            # Status filter
+            if status == "current" and not is_active:
+                continue
+            if status == "returned" and is_active:
+                continue
+            # Borrower multi-select filter
+            if borrower_ids and rec.get("borrower_id") not in borrower_ids:
+                continue
+            # Date range filter on checkout date
+            if start or end:
+                if not in_range(rec.get("checked_out_at"), start, end):
+                    continue
+            checked_out_at = rec.get("checked_out_at") or ""
+            checked_in_at = rec.get("checked_in_at") or ""
+            days_out = ""
+            try:
+                from datetime import datetime, timezone
+                if checked_out_at:
+                    out_dt = datetime.fromisoformat(checked_out_at.replace("Z", "+00:00"))
+                    end_dt = (
+                        datetime.fromisoformat(checked_in_at.replace("Z", "+00:00"))
+                        if checked_in_at
+                        else datetime.now(timezone.utc)
+                    )
+                    delta = end_dt - out_dt
+                    days_out = str(max(0, int(delta.total_seconds() // 86400)))
+            except Exception:
+                days_out = ""
+            rows.append({
+                **base,
+                "borrower_name": rec.get("borrower_name") or "—",
+                "borrower_id": rec.get("borrower_id") or "",
+                "checked_out_at": checked_out_at[:10] if checked_out_at else "",
+                "checked_in_at": checked_in_at[:10] if checked_in_at else "",
+                "days_out": days_out,
+                "checkout_notes": rec.get("notes") or "",
+                "checkout_status": "OUT" if is_active else "RETURNED",
+                "_borrower_group": rec.get("borrower_name") or "(Unknown)",
+            })
+
+    # Sort: still-out first, then by checkout_out_at desc.
+    rows.sort(key=lambda r: (0 if r["checkout_status"] == "OUT" else 1, r["checked_out_at"]), reverse=False)
+
+    n_out = sum(1 for r in rows if r["checkout_status"] == "OUT")
+    n_returned = sum(1 for r in rows if r["checkout_status"] == "RETURNED")
+    stats = [
+        ("Records", str(len(rows)), False),
+        ("Still Out", str(n_out), True),
+        ("Returned", str(n_returned), False),
+    ]
+    return {
+        "rows": rows,
+        "stats": stats,
+        "subtitle": _date_range_subtitle(start, end),
+    }
+
+
+# ---- LOST / STOLEN REPORT ------------------------------------------------------
+
+async def _fetch_lost_stolen(db, user, options: Dict[str, Any]) -> Dict[str, Any]:
+    """Build the Lost/Stolen Items report.
+
+    Per user request: recovered items are EXCLUDED by default.
+    Filters:
+      - type: "lost" | "stolen" | "both"
+      - location_id, tag_ids, category_ids, dealer_ids
+      - price_min / price_max
+      - date_from / date_to (on reported_date)
+      - include_recovered: bool (defaults False)
+    """
+    type_filter = (options.get("type") or "both").lower()
+    location_id = options.get("location_id") or ""
+    tag_ids = options.get("tag_ids") or []
+    category_ids = options.get("category_ids") or []
+    dealer_ids = options.get("dealer_ids") or []
+    price_min = options.get("price_min")
+    price_max = options.get("price_max")
+    start = options.get("date_from") or ""
+    end = options.get("date_to") or ""
+    include_recovered = bool(options.get("include_recovered"))
+
+    q: Dict[str, Any] = {"lost_status.is_lost": True} if not include_recovered \
+        else {"lost_status": {"$ne": None}}
+    if location_id:
+        all_ids = [location_id]
+        children = await db.locations.find(
+            {"parent_id": location_id}, {"_id": 0, "id": 1}
+        ).to_list(5000)
+        all_ids += [c["id"] for c in children]
+        q["location_id"] = {"$in": all_ids}
+    if tag_ids:
+        q["tag_ids"] = {"$in": tag_ids}
+    if category_ids:
+        q["category_id"] = {"$in": category_ids}
+    if dealer_ids:
+        q["dealer_id"] = {"$in": dealer_ids}
+
+    tools = await db.tools.find(q, {"_id": 0}).to_list(20000)
+
+    rows: List[Dict[str, Any]] = []
+    for t in tools:
+        ls = t.get("lost_status") or {}
+        if not ls:
+            continue
+        # When including recovered items, still keep only records that were
+        # ever lost/stolen (have a reported_date).
+        if not include_recovered and not ls.get("is_lost"):
+            continue
+        rec_type = (ls.get("type") or "lost").lower()
+        if type_filter != "both" and rec_type != type_filter:
+            continue
+        # Date filter on reported_date
+        if start or end:
+            if not in_range(ls.get("reported_date"), start, end):
+                continue
+        base = _normalise_tool_row(t)
+        unit_cost = float(base.get("unit_cost") or 0)
+        if price_min is not None and unit_cost < float(price_min):
+            continue
+        if price_max is not None and unit_cost > float(price_max):
+            continue
+        rows.append({
+            **base,
+            "loss_type": rec_type.upper(),
+            "reported_date": ls.get("reported_date") or "",
+            "police_report": ls.get("police_report_number") or "",
+            "insurance_company": ls.get("insurance_company") or "",
+            "insurance_claim": ls.get("insurance_claim_number") or "",
+            "loss_notes": ls.get("notes") or "",
+            "is_recovered": bool(ls.get("recovered_at")),
+            "recovered_at": (ls.get("recovered_at") or "")[:10],
+            "_type_group": rec_type.title(),
+        })
+
+    rows.sort(key=lambda r: (r.get("_type_group", ""), r.get("reported_date") or ""), reverse=False)
+
+    n_lost = sum(1 for r in rows if r["loss_type"] == "LOST")
+    n_stolen = sum(1 for r in rows if r["loss_type"] == "STOLEN")
+    total_value = sum(float(r.get("cost") or 0) for r in rows)
+    stats = [
+        ("Records", str(len(rows)), False),
+        ("Lost", str(n_lost), False),
+        ("Stolen", str(n_stolen), True),
+    ]
+    stats2 = [
+        ("Total Reported Value", fmt_money(total_value), True),
+    ]
+    return {
+        "rows": rows,
+        "stats": stats,
+        "stats2": stats2,
+        "subtitle": _date_range_subtitle(start, end),
+    }
+
+
+# ---------------------------------------------------------------------------
+# Column catalogs (continued)
+# ---------------------------------------------------------------------------
+
 _TOOL_COLUMNS = [
     Column("photo", "Photo", "center", "image"),
     Column("name", "Name", "left", "text"),
@@ -1687,6 +1940,38 @@ _SALES_COLUMNS = [
     Column("cost", "Buy Price", "right", "money"),
     Column("price", "Price", "right", "money"),
     Column("profit", "Profit", "right", "money"),
+]
+
+_CHECKED_OUT_COLUMNS = [
+    Column("photo", "Photo", "center", "image"),
+    Column("name", "Tool", "left", "text"),
+    Column("brand", "Brand", "left", "text"),
+    Column("serial", "Serial #", "left", "text"),
+    Column("location", "Location", "left", "text"),
+    Column("borrower_name", "Borrower", "left", "text"),
+    Column("checked_out_at", "Out On", "left", "date"),
+    Column("checked_in_at", "Returned", "left", "date"),
+    Column("days_out", "Days", "right", "number"),
+    Column("checkout_status", "Status", "left", "text"),
+    Column("checkout_notes", "Notes", "left", "text"),
+    Column("cost", "Value", "right", "money"),
+]
+
+_LOST_STOLEN_COLUMNS = [
+    Column("photo", "Photo", "center", "image"),
+    Column("name", "Tool", "left", "text"),
+    Column("brand", "Brand", "left", "text"),
+    Column("serial", "Serial #", "left", "text"),
+    Column("category", "Category", "left", "text"),
+    Column("location", "Last Location", "left", "text"),
+    Column("dealer", "Dealer", "left", "text"),
+    Column("loss_type", "Type", "left", "text"),
+    Column("reported_date", "Reported", "left", "date"),
+    Column("police_report", "Police #", "left", "text"),
+    Column("insurance_company", "Insurance Co.", "left", "text"),
+    Column("insurance_claim", "Claim #", "left", "text"),
+    Column("loss_notes", "Notes", "left", "text"),
+    Column("cost", "Value", "right", "money"),
 ]
 
 
@@ -1812,6 +2097,61 @@ REPORTS: Dict[str, ReportSpec] = {
             {"id": "dealer_ids", "type": "dealer_multi", "label": "Dealers"},
             {"id": "date_from", "type": "date", "label": "From"},
             {"id": "date_to", "type": "date", "label": "To"},
+        ],
+    ),
+    "checked_out": ReportSpec(
+        id="checked_out",
+        title="Checked-Out Items Report",
+        description="Tools that are (or were) signed out to borrowers. Filter by date range, location, tags, dealer, and one or more people.",
+        icon="people",
+        accent="#FFB300",
+        columns=_CHECKED_OUT_COLUMNS,
+        default_columns=["photo", "name", "serial", "borrower_name", "checked_out_at", "checked_in_at", "days_out", "checkout_status"],
+        fetch=_fetch_checked_out,
+        options_schema=[
+            {"id": "status", "type": "segmented", "label": "Status",
+             "choices": [
+                 {"id": "current", "label": "Still Out"},
+                 {"id": "returned", "label": "Returned"},
+                 {"id": "both", "label": "Both"},
+             ],
+             "default": "current"},
+            {"id": "borrower_ids", "type": "borrower_multi", "label": "People"},
+            {"id": "location_id", "type": "location", "label": "Location"},
+            {"id": "tag_ids", "type": "tag_multi", "label": "Tags"},
+            {"id": "category_ids", "type": "category_multi", "label": "Categories"},
+            {"id": "dealer_ids", "type": "dealer_multi", "label": "Dealers"},
+            {"id": "date_from", "type": "date", "label": "Checked Out From"},
+            {"id": "date_to", "type": "date", "label": "Checked Out To"},
+        ],
+    ),
+    "lost_stolen": ReportSpec(
+        id="lost_stolen",
+        title="Lost / Stolen Items Report",
+        description="Items reported lost or stolen, with police-report and insurance details. Recovered items are excluded unless you toggle them on.",
+        icon="alert-circle",
+        accent="#FFB300",
+        columns=_LOST_STOLEN_COLUMNS,
+        default_columns=["photo", "name", "serial", "loss_type", "reported_date", "police_report", "insurance_claim", "cost"],
+        fetch=_fetch_lost_stolen,
+        options_schema=[
+            {"id": "type", "type": "segmented", "label": "Type",
+             "choices": [
+                 {"id": "lost", "label": "Lost"},
+                 {"id": "stolen", "label": "Stolen"},
+                 {"id": "both", "label": "Both"},
+             ],
+             "default": "both"},
+            {"id": "location_id", "type": "location", "label": "Last Location"},
+            {"id": "tag_ids", "type": "tag_multi", "label": "Tags"},
+            {"id": "category_ids", "type": "category_multi", "label": "Categories"},
+            {"id": "dealer_ids", "type": "dealer_multi", "label": "Dealers"},
+            {"id": "price_min", "type": "number", "label": "Min Unit Value"},
+            {"id": "price_max", "type": "number", "label": "Max Unit Value"},
+            {"id": "date_from", "type": "date", "label": "Reported From"},
+            {"id": "date_to", "type": "date", "label": "Reported To"},
+            {"id": "include_recovered", "type": "toggle",
+             "label": "Include recovered items", "default": False},
         ],
     ),
 }

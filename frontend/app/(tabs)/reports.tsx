@@ -36,6 +36,7 @@ type ColumnSpec = {
 type OptionField =
   | { id: string; type: "toggle"; label: string; default?: boolean }
   | { id: string; type: "text"; label: string }
+  | { id: string; type: "number"; label: string }
   | { id: string; type: "date"; label: string }
   | { id: string; type: "select"; label: string; choices: string[] }
   | { id: string; type: "location"; label: string }
@@ -43,6 +44,8 @@ type OptionField =
   | { id: string; type: "dealer_single"; label: string }
   | { id: string; type: "tag_multi"; label: string }
   | { id: string; type: "brand_multi"; label: string }
+  | { id: string; type: "borrower_multi"; label: string }
+  | { id: string; type: "category_multi"; label: string }
   | {
       id: string;
       type: "segmented";
@@ -133,9 +136,12 @@ export default function ReportsHubScreen() {
       else if (
         f.type === "dealer_multi" ||
         f.type === "tag_multi" ||
-        f.type === "brand_multi"
+        f.type === "brand_multi" ||
+        f.type === "borrower_multi" ||
+        f.type === "category_multi"
       )
         initOpts[f.id] = [];
+      else if (f.type === "number") initOpts[f.id] = undefined;
       else initOpts[f.id] = "";
     }
     setOptions(initOpts);
@@ -622,6 +628,36 @@ function OptionRow({
   if (field.type === "brand_multi") {
     return <BrandMultiDropdown value={value || []} onChange={onChange} label={field.label} />;
   }
+  if (field.type === "borrower_multi") {
+    return <BorrowerMultiDropdown value={value || []} onChange={onChange} label={field.label} />;
+  }
+  if (field.type === "category_multi") {
+    return <CategoryMultiDropdown value={value || []} onChange={onChange} label={field.label} />;
+  }
+  if (field.type === "number") {
+    return (
+      <View style={styles.optionField}>
+        <Text style={styles.optionLabel}>{field.label}</Text>
+        <TextInput
+          testID={`opt-num-${field.id}`}
+          style={styles.numberInput}
+          placeholder="—"
+          placeholderTextColor={theme.colors.textMuted}
+          value={value === undefined || value === null || value === "" ? "" : String(value)}
+          onChangeText={(v) => {
+            // Strip non-numeric characters except '.' and '-'
+            const cleaned = v.replace(/[^0-9.\-]/g, "");
+            if (cleaned === "") onChange(undefined);
+            else {
+              const n = parseFloat(cleaned);
+              onChange(isNaN(n) ? undefined : n);
+            }
+          }}
+          keyboardType="decimal-pad"
+        />
+      </View>
+    );
+  }
   return null;
 }
 
@@ -1001,6 +1037,62 @@ function BrandMultiDropdown({
   );
 }
 
+function BorrowerMultiDropdown({
+  value, onChange, label,
+}: { value: string[]; onChange: (v: string[]) => void; label: string }) {
+  const [borrowers, setBorrowers] = useState<{ id: string; name: string }[]>([]);
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    let alive = true;
+    api.get("/borrowers").then((r: any) => {
+      if (alive) {
+        setBorrowers(r || []);
+        setLoading(false);
+      }
+    }).catch(() => { if (alive) setLoading(false); });
+    return () => { alive = false; };
+  }, []);
+  return (
+    <MultiSelectDropdown
+      label={label}
+      value={value}
+      onChange={onChange}
+      loading={loading}
+      allLabel={borrowers.length ? "All People" : "No people yet"}
+      items={borrowers.map((b) => ({ id: b.id, label: b.name }))}
+      testIdPrefix="opt-people"
+    />
+  );
+}
+
+function CategoryMultiDropdown({
+  value, onChange, label,
+}: { value: string[]; onChange: (v: string[]) => void; label: string }) {
+  const [cats, setCats] = useState<{ id: string; name: string }[]>([]);
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    let alive = true;
+    api.get("/categories").then((r: any) => {
+      if (alive) {
+        setCats(r || []);
+        setLoading(false);
+      }
+    }).catch(() => { if (alive) setLoading(false); });
+    return () => { alive = false; };
+  }, []);
+  return (
+    <MultiSelectDropdown
+      label={label}
+      value={value}
+      onChange={onChange}
+      loading={loading}
+      allLabel={cats.length ? "All Categories" : "No categories yet"}
+      items={cats.map((c) => ({ id: c.id, label: c.name }))}
+      testIdPrefix="opt-categories"
+    />
+  );
+}
+
 function ActionCard({
   icon,
   title,
@@ -1163,6 +1255,17 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.border,
+  },
+  numberInput: {
+    marginTop: 6,
+    backgroundColor: theme.colors.bgSecondary,
+    color: theme.colors.textPrimary,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    fontSize: 12,
   },
   input: {
     marginTop: 6,

@@ -3127,3 +3127,66 @@ frontend:
       - working: "NA"
         agent: "main"
         comment: "USER PROOF: borrower 'Pizza Factory' had contact='\\u200e+1 (763) 263-7676'. The U+200E LEFT-TO-RIGHT MARK that iOS Contacts auto-inserts before phone numbers was NOT in the PHONE_RE allow-list ([+]?[\\s().\\-\\d]{5,}), so parseContacts() returned [] for phones, ContactActions fell into the 'unparseable raw text' branch, and zero buttons rendered. FIX: added stripInvisibles() that pre-cleans U+200B–U+200F, U+202A–U+202E, U+2060, U+2066–U+2069, U+FEFF, and normalizes U+00A0 to a regular space. Verified against the live deployed data — '\\u200e+1 (763) 263-7676' now yields phones=['763-263-7676'] cleanly."
+
+#====================================================================================================
+# ROUND 4 — Display Refactor + Inventory Sort + 2 New Reports
+#====================================================================================================
+
+frontend:
+  - task: "New #2 — More → Display: Home Screen Rows collapsed into clickable Row + popup"
+    implemented: true
+    file: "/app/frontend/app/(tabs)/more.tsx"
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Replaced inline always-expanded homeRowsCard with a Row pillbox 'Home Screen Rows' → opens a bottom-sheet Modal containing the existing reorder/visibility toggles + a DONE button. Verified in bundle (11 mentions of homeRowsModal/HOME SCREEN ROWS)."
+
+  - task: "Bug a — Inventory sort: no-date items always sort LAST"
+    implemented: true
+    file: "/app/frontend/app/(tabs)/inventory.tsx"
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Replaced the date_asc/date_desc fallback-to-created_at sort with partitionByDate(): items with a real purchase_date go first (sorted asc or desc as picked), undated items appended at the end in stable order. Verified in bundle."
+
+backend:
+  - task: "Bug b — Dealer Account Report: page break per dealer"
+    implemented: true
+    file: "/app/backend/reports.py"
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Added PageBreak() before each dealer (after the first) in _make_account_factory. Each dealer now starts on a fresh page. Smoke-tested: HTTP 200, 2234 byte PDF."
+
+  - task: "Bug b extra — Warranty Claims Report: page break per dealer group"
+    implemented: true
+    file: "/app/backend/reports.py"
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Added fetch_result['page_break_per_group'] = True hint in _fetch_claims. render_pdf detects the flag and renders one Table per group (with a colored group header) separated by PageBreak()."
+
+  - task: "Bug c — NEW Checked-Out Items Report (PDF + CSV)"
+    implemented: true
+    file: "/app/backend/reports.py"
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Added _fetch_checked_out, _CHECKED_OUT_COLUMNS, and 'checked_out' ReportSpec. Pulls from tools.current_checkout + tools.checkout_history. Filters: status (still-out/returned/both), borrower_ids multi, location_id, tag_ids, category_ids, dealer_ids, date_from/date_to. Computes days_out per record. Smoke-tested PDF (HTTP 200, 2263 bytes) and CSV (HTTP 200, header row present)."
+
+  - task: "Bug d — NEW Lost/Stolen Items Report (PDF + CSV)"
+    implemented: true
+    file: "/app/backend/reports.py"
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Added _fetch_lost_stolen, _LOST_STOLEN_COLUMNS, and 'lost_stolen' ReportSpec. Filters: type (lost/stolen/both), location, tags, categories, dealers, price_min/max, date_from/date_to, include_recovered (defaults False per user). Recovered items excluded by default. Smoke-tested PDF (HTTP 200, 2323 bytes) and CSV with price filters."
+
+frontend:
+  - task: "Reports UI — new option field types (borrower_multi, category_multi, number)"
+    implemented: true
+    file: "/app/frontend/app/(tabs)/reports.tsx"
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Added 3 new option types to OptionField union + renderer switch: borrower_multi (BorrowerMultiDropdown), category_multi (CategoryMultiDropdown), number (decimal-pad TextInput). Updated applySpec() init logic. Verified in bundle: BorrowerMultiDropdown (6 hits), CategoryMultiDropdown (6 hits), opt-num- (1 hit)."

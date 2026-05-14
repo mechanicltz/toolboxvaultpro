@@ -325,21 +325,33 @@ export default function InventoryScreen() {
     };
     // Copy before sort so we don't mutate the master `tools` array.
     const sorted = [...out];
+    // For date sorts: items WITHOUT a purchase_date should ALWAYS appear last,
+    // regardless of asc/desc direction (per user request — Round 4 fix a).
+    // We partition the list, sort the dated items, and append the no-date
+    // items at the end in their original order.
+    const partitionByDate = (cmp: (a: any, b: any) => number): any[] => {
+      const dated: any[] = [];
+      const undated: any[] = [];
+      for (const t of sorted) {
+        if (_toTime(t.purchase_date) > 0) dated.push(t);
+        else undated.push(t);
+      }
+      dated.sort(cmp);
+      return [...dated, ...undated];
+    };
     switch (sortBy) {
-      case "date_asc":
-        sorted.sort(
-          (a: any, b: any) =>
-            (_toTime(a.purchase_date) || _toTime(a.created_at)) -
-            (_toTime(b.purchase_date) || _toTime(b.created_at)),
+      case "date_asc": {
+        const result = partitionByDate(
+          (a: any, b: any) => _toTime(a.purchase_date) - _toTime(b.purchase_date),
         );
-        break;
-      case "date_desc":
-        sorted.sort(
-          (a: any, b: any) =>
-            (_toTime(b.purchase_date) || _toTime(b.created_at)) -
-            (_toTime(a.purchase_date) || _toTime(a.created_at)),
+        return result;
+      }
+      case "date_desc": {
+        const result = partitionByDate(
+          (a: any, b: any) => _toTime(b.purchase_date) - _toTime(a.purchase_date),
         );
-        break;
+        return result;
+      }
       case "alpha":
         sorted.sort((a: any, b: any) =>
           String(a.name || "").localeCompare(

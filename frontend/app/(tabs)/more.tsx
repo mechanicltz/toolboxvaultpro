@@ -75,6 +75,7 @@ export default function MoreScreen() {
   const [pwErr, setPwErr] = useState("");
   const [pwOk, setPwOk] = useState("");
   const [timePickerOpen, setTimePickerOpen] = useState(false);
+  const [homeRowsModal, setHomeRowsModal] = useState(false);
 
   // Subscription + admin gates.
   const [sub, setSub] = useState<any>(null);
@@ -292,63 +293,16 @@ export default function MoreScreen() {
 
         <Text style={styles.sectionLabel}>DISPLAY</Text>
 
-        {/* Home screen rows — pick which summary rows to show on Home and re-order them */}
-        <View style={styles.homeRowsCard}>
-          <Text style={styles.homeRowsTitle}>HOME SCREEN ROWS</Text>
-          <Text style={styles.homeRowsHelp}>
-            Toggle visibility · use ↑↓ to reorder. Top of the list shows first on Home.
-          </Text>
-          {prefs.home_row_order.map((k, idx) => {
-            const isFirst = idx === 0;
-            const isLast = idx === prefs.home_row_order.length - 1;
-            const moveUp = () => {
-              if (isFirst) return;
-              const next = [...prefs.home_row_order];
-              [next[idx - 1], next[idx]] = [next[idx], next[idx - 1]];
-              update({ home_row_order: next });
-            };
-            const moveDown = () => {
-              if (isLast) return;
-              const next = [...prefs.home_row_order];
-              [next[idx + 1], next[idx]] = [next[idx], next[idx + 1]];
-              update({ home_row_order: next });
-            };
-            return (
-              <View key={k} style={styles.homeRowToggle}>
-                <View style={styles.homeRowMoveCol}>
-                  <TouchableOpacity
-                    testID={`home-row-up-${k}`}
-                    onPress={moveUp}
-                    disabled={isFirst}
-                    style={[styles.homeRowMoveBtn, isFirst && { opacity: 0.25 }]}
-                    hitSlop={6}
-                  >
-                    <Ionicons name="chevron-up" size={16} color={theme.colors.accent} />
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    testID={`home-row-down-${k}`}
-                    onPress={moveDown}
-                    disabled={isLast}
-                    style={[styles.homeRowMoveBtn, isLast && { opacity: 0.25 }]}
-                    hitSlop={6}
-                  >
-                    <Ionicons name="chevron-down" size={16} color={theme.colors.accent} />
-                  </TouchableOpacity>
-                </View>
-                <Text style={styles.homeRowToggleLabel}>{HOME_ROW_LABELS[k]}</Text>
-                <Switch
-                  testID={`home-row-${k}`}
-                  value={prefs.home_rows[k]}
-                  onValueChange={(v) =>
-                    update({ home_rows: { ...prefs.home_rows, [k]: v } })
-                  }
-                  trackColor={{ true: theme.colors.accent, false: theme.colors.border }}
-                  thumbColor="#fff"
-                />
-              </View>
-            );
-          })}
-        </View>
+        {/* Home Screen Rows — collapsed into a pillbox row that opens a
+            modal containing the reorder/visibility list. (Was previously an
+            inline always-expanded card — user feedback Round 4.) */}
+        <Row
+          icon="grid"
+          title="Home Screen Rows"
+          subtitle="Choose which rows show on Home & reorder them"
+          testID="more-home-rows"
+          onPress={() => setHomeRowsModal(true)}
+        />
 
         <View style={styles.toggleRow}>
           <View style={styles.iconBox}>
@@ -643,6 +597,92 @@ export default function MoreScreen() {
         </TouchableOpacity>
       </ScrollView>
 
+      {/* Home Screen Rows modal — pick which rows show on Home and reorder them */}
+      <Modal
+        visible={homeRowsModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setHomeRowsModal(false)}
+      >
+        <View style={homeRowsModalStyles.backdrop}>
+          <View style={homeRowsModalStyles.card}>
+            <View style={homeRowsModalStyles.header}>
+              <Ionicons name="grid" size={20} color={theme.colors.accent} />
+              <Text style={homeRowsModalStyles.title}>HOME SCREEN ROWS</Text>
+              <TouchableOpacity
+                onPress={() => setHomeRowsModal(false)}
+                hitSlop={10}
+                testID="home-rows-close"
+              >
+                <Ionicons name="close" size={22} color={theme.colors.textPrimary} />
+              </TouchableOpacity>
+            </View>
+            <Text style={homeRowsModalStyles.help}>
+              Toggle visibility · use ↑↓ to reorder. Top of the list shows first on Home.
+            </Text>
+            <ScrollView style={{ maxHeight: 500 }}>
+              {prefs.home_row_order.map((k, idx) => {
+                const isFirst = idx === 0;
+                const isLast = idx === prefs.home_row_order.length - 1;
+                const moveUp = () => {
+                  if (isFirst) return;
+                  const next = [...prefs.home_row_order];
+                  [next[idx - 1], next[idx]] = [next[idx], next[idx - 1]];
+                  update({ home_row_order: next });
+                };
+                const moveDown = () => {
+                  if (isLast) return;
+                  const next = [...prefs.home_row_order];
+                  [next[idx + 1], next[idx]] = [next[idx], next[idx + 1]];
+                  update({ home_row_order: next });
+                };
+                return (
+                  <View key={k} style={styles.homeRowToggle}>
+                    <View style={styles.homeRowMoveCol}>
+                      <TouchableOpacity
+                        testID={`home-row-up-${k}`}
+                        onPress={moveUp}
+                        disabled={isFirst}
+                        style={[styles.homeRowMoveBtn, isFirst && { opacity: 0.25 }]}
+                        hitSlop={6}
+                      >
+                        <Ionicons name="chevron-up" size={16} color={theme.colors.accent} />
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        testID={`home-row-down-${k}`}
+                        onPress={moveDown}
+                        disabled={isLast}
+                        style={[styles.homeRowMoveBtn, isLast && { opacity: 0.25 }]}
+                        hitSlop={6}
+                      >
+                        <Ionicons name="chevron-down" size={16} color={theme.colors.accent} />
+                      </TouchableOpacity>
+                    </View>
+                    <Text style={styles.homeRowToggleLabel}>{HOME_ROW_LABELS[k]}</Text>
+                    <Switch
+                      testID={`home-row-${k}`}
+                      value={prefs.home_rows[k]}
+                      onValueChange={(v) =>
+                        update({ home_rows: { ...prefs.home_rows, [k]: v } })
+                      }
+                      trackColor={{ true: theme.colors.accent, false: theme.colors.border }}
+                      thumbColor="#fff"
+                    />
+                  </View>
+                );
+              })}
+            </ScrollView>
+            <TouchableOpacity
+              style={homeRowsModalStyles.doneBtn}
+              onPress={() => setHomeRowsModal(false)}
+              testID="home-rows-done"
+            >
+              <Text style={homeRowsModalStyles.doneBtnText}>DONE</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
       {/* Change Password Modal */}
       <Modal
         visible={pwOpen}
@@ -808,6 +848,55 @@ export default function MoreScreen() {
     </SafeAreaView>
   );
 }
+
+const homeRowsModalStyles = StyleSheet.create({
+  backdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.7)",
+    justifyContent: "flex-end",
+  },
+  card: {
+    backgroundColor: theme.colors.bgSecondary,
+    padding: 20,
+    borderTopWidth: 2,
+    borderTopColor: theme.colors.accent,
+    paddingBottom: 32,
+  },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    marginBottom: 4,
+  },
+  title: {
+    flex: 1,
+    color: theme.colors.textPrimary,
+    fontSize: 14,
+    fontWeight: "900",
+    letterSpacing: 2,
+  },
+  help: {
+    color: theme.colors.textMuted,
+    fontSize: 10,
+    marginVertical: 12,
+    lineHeight: 14,
+  },
+  doneBtn: {
+    marginTop: 16,
+    backgroundColor: theme.colors.accent,
+    height: 48,
+    borderRadius: 4,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  doneBtnText: {
+    color: "#000",
+    fontWeight: "900",
+    letterSpacing: 2,
+    fontSize: 12,
+  },
+});
+
 
 const pwStyles = StyleSheet.create({
   backdrop: {
