@@ -250,7 +250,7 @@ export default function ForSaleScreen() {
             <Text style={styles.statLabel}>{tab === "listed" ? "LISTED" : "SOLD"}</Text>
             <Text style={styles.statValue}>{totals.count}</Text>
           </View>
-          <View style={[styles.statBox, { backgroundColor: tab === "sold" ? "rgba(39,174,96,0.10)" : "rgba(255,179,0,0.10)" }]}>
+          <View style={[styles.statBox, { backgroundColor: tab === "sold" ? "rgba(39,174,96,0.10)" : "rgba(249, 115, 22,0.10)" }]}>
             <Text style={styles.statLabel}>{tab === "listed" ? "ASKING TOTAL" : "SOLD TOTAL"}</Text>
             <Text style={[styles.statValue, { color: tab === "sold" ? "#27AE60" : theme.colors.accent }]}>
               ${totals.value.toFixed(2)}

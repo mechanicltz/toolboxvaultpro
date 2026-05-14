@@ -1441,7 +1441,7 @@ const styles = themedStyles((c) => ({
     gap: 10,
   },
   dropdownRowSelected: {
-    backgroundColor: "rgba(255,179,0,0.08)",
+    backgroundColor: "rgba(249, 115, 22,0.08)",
   },
   dropdownRowText: {
     color: c.textPrimary,

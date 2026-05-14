@@ -52,16 +52,16 @@ export type ColorPalette = {
   tabBarBorder: string;
 };
 
-// Original Industrial Dark — yellow/black workshop with 3D depth.
+// Original Industrial Dark — orange/black workshop with 3D depth.
 export const darkPalette: ColorPalette = {
   bg: "#0A0A0A",
   bgSecondary: "#1A1A1A",
   surface: "#0F0F0F",
   surfaceAlt: "#171717",
-  glass: "rgba(255, 179, 0, 0.06)",
-  glassBorder: "rgba(255, 179, 0, 0.18)",
-  accent: "#FFB300",
-  accentSecondary: "#F97316",
+  glass: "rgba(249, 115, 22, 0.08)",
+  glassBorder: "rgba(249, 115, 22, 0.22)",
+  accent: "#F97316",
+  accentSecondary: "#EA580C",
   textPrimary: "#FFFFFF",
   textSecondary: "#E5E5E5",
   textMuted: "#737373",
@@ -89,10 +89,10 @@ export const lightPalette: ColorPalette = {
   bgSecondary: "#FFFFFF",     // raised cards
   surface: "#FFFFFF",         // input fields / chips
   surfaceAlt: "#E9EDF3",      // alternate surface (table stripes, etc.)
-  glass: "rgba(255, 179, 0, 0.10)",
-  glassBorder: "rgba(255, 179, 0, 0.30)",
-  accent: "#E69500",          // slightly darker yellow for contrast on white
-  accentSecondary: "#EA580C",
+  glass: "rgba(234, 88, 12, 0.10)",
+  glassBorder: "rgba(234, 88, 12, 0.30)",
+  accent: "#EA580C",          // deep orange — high contrast on white
+  accentSecondary: "#C2410C",
   textPrimary: "#0F172A",     // near-black
   textSecondary: "#334155",
   textMuted: "#64748B",
@@ -147,7 +147,7 @@ export const theme = {
   colors: colorsProxy,
   gradients: {
     base: ["#0A0A0A", "#181818", "#0A0A0A"],
-    accent: ["#FFD54F", "#FFB300", "#FF8F00"],
+    accent: ["#FDBA74", "#F97316", "#C2410C"],
     danger: ["#F87171", "#DC2626"],
     success: ["#34D399", "#059669"],
     surface: ["#202020", "#0F0F0F"],

@@ -232,19 +232,19 @@ export default function WarrantyClaimsScreen() {
 
       const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><style>
         body{font-family:Helvetica;margin:24px;color:#111}
-        h1{font-size:24px;letter-spacing:2px;text-transform:uppercase;border-bottom:3px solid #FFB300;padding-bottom:8px;margin-bottom:8px}
+        h1{font-size:24px;letter-spacing:2px;text-transform:uppercase;border-bottom:3px solid #F97316;padding-bottom:8px;margin-bottom:8px}
         .meta{color:#666;font-size:11px;text-transform:uppercase;letter-spacing:1px;margin-bottom:16px}
         .totalCard{display:inline-block;width:23%;border:1px solid #ddd;padding:10px;border-radius:4px;margin-right:1%;vertical-align:top}
         .totalLabel{font-size:9px;color:#666;text-transform:uppercase;letter-spacing:1.5px}
         .totalValue{font-size:22px;font-weight:900;margin-top:4px}
-        h2{font-size:16px;letter-spacing:1px;text-transform:uppercase;margin:18px 0 6px;color:#FFB300}
+        h2{font-size:16px;letter-spacing:1px;text-transform:uppercase;margin:18px 0 6px;color:#F97316}
         h3{font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:#666;margin:14px 0 6px}
         .count{display:inline-block;font-size:10px;font-weight:800;padding:3px 8px;border:1px solid;border-radius:2px;letter-spacing:1px;margin-right:6px}
         .count.open{color:#dc2626;border-color:#dc2626}
         .count.done{color:#16a34a;border-color:#16a34a}
         .muted{color:#999;font-style:italic;font-size:12px}
         table{width:100%;border-collapse:collapse;font-size:11px;margin-bottom:8px}
-        th{background:#111;color:#FFB300;text-align:left;padding:6px;font-size:9px;letter-spacing:1px}
+        th{background:#111;color:#F97316;text-align:left;padding:6px;font-size:9px;letter-spacing:1px}
         td{padding:6px;border-bottom:1px solid #eee;vertical-align:top}
         .pill{display:inline-block;padding:2px 6px;font-size:9px;font-weight:700;letter-spacing:0.5px;border-radius:2px}
         hr{border:none;border-top:1px solid #ddd;margin:18px 0}
@@ -596,7 +596,7 @@ export default function WarrantyClaimsScreen() {
                   testID={`pick-status-${s.key}`}
                   style={[
                     styles.pickRow,
-                    active && { backgroundColor: "rgba(255,179,0,0.1)", borderColor: s.color },
+                    active && { backgroundColor: "rgba(249, 115, 22,0.1)", borderColor: s.color },
                   ]}
                   onPress={() => pickerForClaim && setStatus(pickerForClaim, s.key)}
                 >

@@ -1443,7 +1443,7 @@ const styles = themedStyles((c) => ({
   },
   locationFilterBtnActive: {
     borderColor: c.accent,
-    backgroundColor: "rgba(255,179,0,0.08)",
+    backgroundColor: "rgba(249, 115, 22,0.08)",
   },
   locationFilterText: {
     flex: 1,
@@ -1612,7 +1612,7 @@ const styles = themedStyles((c) => ({
     borderBottomColor: c.borderSubtle,
   },
   locOptionActive: {
-    backgroundColor: "rgba(255,179,0,0.1)",
+    backgroundColor: "rgba(249, 115, 22,0.1)",
   },
   locOptName: {
     color: c.textPrimary,

@@ -874,7 +874,7 @@ export default function ToolDetail() {
     vertical-align: middle;
   }
   td.brand-mark {
-    color: #FFB300;
+    color: #F97316;
     font-size: 11pt;
     font-weight: bold;
     letter-spacing: 4pt;
@@ -922,7 +922,7 @@ export default function ToolDetail() {
     text-align: center;
   }
   .hero-rule {
-    border-bottom: 4pt solid #FFB300;
+    border-bottom: 4pt solid #F97316;
     margin-top: 6pt;
     margin-bottom: 18pt;
     height: 1pt;
@@ -936,7 +936,7 @@ export default function ToolDetail() {
   }
   table.section-band td {
     background-color: #111111;
-    color: #FFB300;
+    color: #F97316;
     padding: 5pt 12pt;
     font-size: 9pt;
     font-weight: bold;
@@ -981,7 +981,7 @@ export default function ToolDetail() {
   }
   table.desc-box td.bar {
     width: 4pt;
-    background-color: #FFB300;
+    background-color: #F97316;
     padding: 0;
   }
   table.desc-box td.body {
@@ -1012,7 +1012,7 @@ export default function ToolDetail() {
   table.history { width: 100%; }
   table.history th {
     background-color: #111111;
-    color: #FFB300;
+    color: #F97316;
     text-align: left;
     padding: 7pt 10pt;
     font-size: 8.5pt;
@@ -1043,7 +1043,7 @@ export default function ToolDetail() {
     font-size: 16pt;
     font-weight: bold;
     color: #111111;
-    border-bottom: 3pt solid #FFB300;
+    border-bottom: 3pt solid #F97316;
     padding-bottom: 6pt;
     margin-bottom: 4pt;
     letter-spacing: 1.5pt;
@@ -3088,7 +3088,7 @@ const styles = themedStyles((c) => ({
     paddingVertical: 4,
     borderWidth: 1,
     borderColor: c.accent,
-    backgroundColor: "rgba(255,179,0,0.15)",
+    backgroundColor: "rgba(249, 115, 22,0.15)",
     borderRadius: 2,
   },
   tagText: { color: c.accent, fontSize: 8, fontWeight: "700", letterSpacing: 0.5 },
@@ -3134,7 +3134,7 @@ const styles = themedStyles((c) => ({
   histNotes: { color: c.textMuted, fontSize: 9, marginTop: 4, fontStyle: "italic" },
   consumableBox: {
     marginTop: 16, padding: 12, borderWidth: 1,
-    borderColor: c.accent, backgroundColor: "rgba(255,179,0,0.08)", borderRadius: 4,
+    borderColor: c.accent, backgroundColor: "rgba(249, 115, 22,0.08)", borderRadius: 4,
   },
   warrantyBox: {
     marginTop: 12, padding: 12, borderWidth: 1,
@@ -3256,7 +3256,7 @@ const styles = themedStyles((c) => ({
     marginBottom: 6,
     borderRadius: 4,
   },
-  borrowerPickActive: { borderColor: c.accent, backgroundColor: "rgba(255,179,0,0.1)" },
+  borrowerPickActive: { borderColor: c.accent, backgroundColor: "rgba(249, 115, 22,0.1)" },
   borrowerName: { color: c.textPrimary, fontWeight: "600", fontSize: 10 },
   input: {
     backgroundColor: c.bg,
@@ -3504,7 +3504,7 @@ const newStyles = themedStyles((c) => ({
   // immediately under the photo, above the description — styled like the
   // red claim card but with a soft yellow tint per user request) ----------
   checkedOutCard: {
-    backgroundColor: "rgba(255, 179, 0, 0.10)",
+    backgroundColor: "rgba(249, 115, 22, 0.10)",
     borderColor: c.accent,
     borderWidth: 1,
     borderRadius: 12,

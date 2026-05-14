@@ -978,7 +978,7 @@ const styles = themedStyles((c) => ({
   agentCardActive: {
     borderColor: c.accent,
     borderLeftWidth: 4,
-    backgroundColor: "rgba(255,179,0,0.06)",
+    backgroundColor: "rgba(249, 115, 22,0.06)",
   },
   agentActions: {
     flexDirection: "row",
@@ -1008,7 +1008,7 @@ const styles = themedStyles((c) => ({
     paddingHorizontal: 16,
     borderWidth: 1,
     borderColor: c.accent,
-    backgroundColor: "rgba(255,179,0,0.08)",
+    backgroundColor: "rgba(249, 115, 22,0.08)",
     borderRadius: 4,
   },
   currentBadge: {

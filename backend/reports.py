@@ -1380,7 +1380,7 @@ def _make_sales_per_item_factory(rows: List[Dict[str, Any]], mode: str,
             ]))
             page_flow.append(head)
             page_flow.append(Spacer(1, 6))
-            page_flow.append(_hr("#FFB300", 1.5))
+            page_flow.append(_hr("#F97316", 1.5))
             page_flow.append(Spacer(1, 10))
 
             # Photo
@@ -1550,7 +1550,7 @@ def _make_account_factory(per_dealer: List[Dict[str, Any]]):
             # Section header
             sect = Table([[_para(esc(d["name"].upper()), ParagraphStyle(
                 "sect_inner", fontName="Helvetica-Bold", fontSize=11,
-                leading=13, textColor=colors.HexColor("#FFB300"),
+                leading=13, textColor=colors.HexColor("#F97316"),
             ))]], colWidths=[PAGE_W])
             sect.setStyle(TableStyle([
                 ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#111")),
@@ -1572,7 +1572,7 @@ def _make_account_factory(per_dealer: List[Dict[str, Any]]):
                 ))]], colWidths=[PAGE_W])
                 sub.setStyle(TableStyle([
                     ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#fff8e6")),
-                    ("LINEBEFORE", (0, 0), (0, 0), 3, colors.HexColor("#FFB300")),
+                    ("LINEBEFORE", (0, 0), (0, 0), 3, colors.HexColor("#F97316")),
                     ("LEFTPADDING", (0, 0), (-1, -1), 8),
                     ("RIGHTPADDING", (0, 0), (-1, -1), 8),
                     ("TOPPADDING", (0, 0), (-1, -1), 4),
@@ -1679,7 +1679,7 @@ def _make_account_factory(per_dealer: List[Dict[str, Any]]):
                         ))
                 # footer
                 tx_style += [
-                    ("LINEABOVE", (0, -1), (-1, -1), 1.2, colors.HexColor("#FFB300")),
+                    ("LINEABOVE", (0, -1), (-1, -1), 1.2, colors.HexColor("#F97316")),
                     ("BACKGROUND", (0, -1), (-1, -1), colors.HexColor("#fff8e6")),
                     ("SPAN", (1, -1), (3, -1)),
                 ]
@@ -1981,7 +1981,7 @@ REPORTS: Dict[str, ReportSpec] = {
         title="Insurance Inventory Report",
         description="A formatted inventory of every tool, with values and personal info — for insurance carriers.",
         icon="shield-checkmark",
-        accent="#FFB300",
+        accent="#F97316",
         columns=_TOOL_COLUMNS,
         default_columns=["photo", "name", "quantity", "brand", "serial", "cost"],
         fetch=_fetch_insurance,
@@ -1998,7 +1998,7 @@ REPORTS: Dict[str, ReportSpec] = {
         title="Inventory Report",
         description="Full or filtered list of your tools, by location, tag, brand, condition, or date range.",
         icon="cube",
-        accent="#FFB300",
+        accent="#F97316",
         columns=_TOOL_COLUMNS,
         default_columns=["photo", "name", "quantity", "brand", "serial", "cost"],
         fetch=_fetch_inventory,
@@ -2020,7 +2020,7 @@ REPORTS: Dict[str, ReportSpec] = {
         title="Sales Report",
         description="Items currently for sale, or items already sold, with prices and dates.",
         icon="pricetag",
-        accent="#FFB300",
+        accent="#F97316",
         columns=_SALES_COLUMNS,
         default_columns=["sale_date", "name", "quantity", "brand", "cost", "price"],
         fetch=_fetch_sales,
@@ -2049,7 +2049,7 @@ REPORTS: Dict[str, ReportSpec] = {
         title="Dealer Account Report",
         description="Per-dealer balances, payments and new charges across both Credit and Truck accounts.",
         icon="wallet",
-        accent="#FFB300",
+        accent="#F97316",
         columns=[
             Column("date", "Date", "left", "date"),
             Column("type", "Type", "left", "text"),
@@ -2069,7 +2069,7 @@ REPORTS: Dict[str, ReportSpec] = {
         title="Warranty Claims Report",
         description="Open and historical warranty / repair claims, filterable by dealer and date range. Grouped by dealer (newest first).",
         icon="construct",
-        accent="#FFB300",
+        accent="#F97316",
         columns=[
             Column("claim_photo", "Photo", "center", "image"),
             Column("notified_at", "Notified", "left", "date"),
@@ -2104,7 +2104,7 @@ REPORTS: Dict[str, ReportSpec] = {
         title="Checked-Out Items Report",
         description="Tools that are (or were) signed out to borrowers. Filter by date range, location, tags, dealer, and one or more people.",
         icon="people",
-        accent="#FFB300",
+        accent="#F97316",
         columns=_CHECKED_OUT_COLUMNS,
         default_columns=["photo", "name", "serial", "borrower_name", "checked_out_at", "checked_in_at", "days_out", "checkout_status"],
         fetch=_fetch_checked_out,
@@ -2130,7 +2130,7 @@ REPORTS: Dict[str, ReportSpec] = {
         title="Lost / Stolen Items Report",
         description="Items reported lost or stolen, with police-report and insurance details. Recovered items are excluded unless you toggle them on.",
         icon="alert-circle",
-        accent="#FFB300",
+        accent="#F97316",
         columns=_LOST_STOLEN_COLUMNS,
         default_columns=["photo", "name", "serial", "loss_type", "reported_date", "police_report", "insurance_claim", "cost"],
         fetch=_fetch_lost_stolen,

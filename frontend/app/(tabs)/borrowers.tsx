@@ -604,7 +604,7 @@ const styles = themedStyles((c) => ({
     ...(theme.elevation.md as object),
   },
   editRow: {
-    backgroundColor: "rgba(255,179,0,0.06)",
+    backgroundColor: "rgba(249, 115, 22,0.06)",
     borderLeftWidth: 3,
     borderLeftColor: c.accent,
   },

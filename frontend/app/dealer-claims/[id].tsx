@@ -460,7 +460,7 @@ const styles = themedStyles((c) => ({
     backgroundColor: c.bg,
   },
   statusOptionActive: {
-    backgroundColor: "rgba(255,179,0,0.12)",
+    backgroundColor: "rgba(249, 115, 22,0.12)",
     borderColor: c.accent,
   },
   statusOptionText: {

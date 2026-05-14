@@ -2068,7 +2068,7 @@ const styles = themedStyles((c) => ({
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    backgroundColor: "rgba(255,179,0,0.08)",
+    backgroundColor: "rgba(249, 115, 22,0.08)",
     borderLeftWidth: 3,
     borderLeftColor: c.accent,
     paddingHorizontal: 12,
