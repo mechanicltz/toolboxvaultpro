@@ -219,7 +219,7 @@ export default function MoreScreen() {
             />
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={styles.rowTitle}>Light mode</Text>
+            <Text style={styles.rowTitle}>Light / Dark Theme</Text>
             <Text style={styles.rowSub}>
               {themeMode === "light"
                 ? "Soft grey-blue background, dark text"

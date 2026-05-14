@@ -84,12 +84,12 @@ export const darkPalette: ColorPalette = {
   highlight: "rgba(255, 255, 255, 0.10)",
   shadowDeep: "rgba(0, 0, 0, 0.8)",
   shadowSoft: "rgba(0, 0, 0, 0.5)",
-  // Light-grey shadow stack — gives raised cards a soft cool halo against
-  // the near-black bg without the colored-glow vibe.
-  shadowColor: "#A3A3A3",
-  shadowOpacitySm: 0.30,
-  shadowOpacityMd: 0.40,
-  shadowOpacityLg: 0.50,
+  // Pure black shadow stack — classic invisible-on-dark behaviour but
+  // matches the spec the user prefers.
+  shadowColor: "#000000",
+  shadowOpacitySm: 0.45,
+  shadowOpacityMd: 0.55,
+  shadowOpacityLg: 0.65,
   rowGradTop: "#1F1F1F",
   rowGradBottom: "#0E0E0E",
   tabBarBg: "#0A0A0A",
