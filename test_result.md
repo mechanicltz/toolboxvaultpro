@@ -3078,3 +3078,40 @@ frontend:
       - working: "NA"
         agent: "main"
         comment: "Added testID `dealer-row-call-{id}` and `dealer-row-text-{id}` pill buttons inline on each dealer card (mirrors the borrowers list). Buttons use stopPropagation so they don't navigate into the dealer detail. Verified in compiled bundle."
+
+#====================================================================================================
+# ROUND 3 — Targeted Re-fixes from User Feedback (June 2025)
+#====================================================================================================
+
+frontend:
+  - task: "Bug #9 RE-RE-FIX — Checked-out card moved above description + soft-yellow card styling"
+    implemented: true
+    file: "/app/frontend/app/tool/[id].tsx"
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Moved the checked-out block to the same slot as the claim-info card (immediately under photo, above description). Restyled to match the claim card shape — border + title + lines — but using soft yellow (rgba(255,179,0,0.10)) instead of solid yellow. Still tappable to jump to borrower profile."
+
+  - task: "Bug #10 RE-FIX — Edit button on borrower detail page"
+    implemented: true
+    file: "/app/frontend/app/borrower/[id].tsx"
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Added Edit pencil in the top bar AND an EDIT CONTACT pill below the contact actions. Tapping either opens a bottom-sheet modal with NAME + PHONE/EMAIL inputs that calls api.updateBorrower(id, ...) and refreshes. Existing Call/Text/Email pill buttons from ContactActions remain intact."
+
+  - task: "NEW #1 — Status pillbox shows only 'CHECKED OUT' (no borrower name)"
+    implemented: true
+    file: "/app/frontend/app/tool/[id].tsx"
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Changed statusInfo() return value from `OUT — ${borrowerNameUpper}` to just `CHECKED OUT`. Borrower info still surfaces in the soft-yellow card above the description (and on the dedicated borrower profile)."
+
+  - task: "NEW #3 — Larger MARK BROKEN / CANCEL buttons in repair modal"
+    implemented: true
+    file: "/app/frontend/app/tool/[id].tsx"
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Added flex:1 + height:54 + fontSize:12 to both CANCEL and MARK BROKEN buttons in the repair modal so they fill the available width and read clearly."

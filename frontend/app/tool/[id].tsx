@@ -1141,7 +1141,7 @@ export default function ToolDetail() {
     if (tool.for_sale) return { label: `FOR SALE  ${fmtMoney(tool.sale_price)}`, color: theme.colors.accent };
     if (tool.needs_repair) return { label: "BROKEN", color: theme.colors.danger };
     if (tool.is_checked_out) return {
-      label: `OUT — ${tool.current_checkout?.borrower_name?.toUpperCase() || ""}`,
+      label: "CHECKED OUT",
       color: theme.colors.accentSecondary,
     };
     return { label: "AVAILABLE", color: theme.colors.success };
@@ -1302,22 +1302,15 @@ export default function ToolDetail() {
             </View>
           )}
 
-          {/* DESCRIPTION — first thing below the photo row (or claim card) */}
-          {!!tool.description && (
-            <View style={newStyles.descBox}>
-              <Text style={newStyles.descText}>{tool.description}</Text>
-            </View>
-          )}
-
-          {/* CHECKED OUT BY — when this tool is currently signed out, show
-              who has it and when. Tapping jumps to the borrower's profile.
-              Reads from `current_checkout` (where the active record lives
-              while is_checked_out=true). */}
+          {/* CHECKED OUT — shown in the SAME slot as the claim card
+              (immediately under the photo, above the description) and styled
+              like the claim card but in soft yellow. Tap to jump to the
+              borrower's profile. Reads from `current_checkout` (where the
+              active record lives while is_checked_out=true). */}
           {tool.is_checked_out && (() => {
             const active = tool.current_checkout || (Array.isArray(tool.checkout_history)
               ? [...tool.checkout_history].reverse().find((r: any) => !r?.checked_in_at)
               : null);
-            if (!active) return null;
             if (!active) return null;
             const target = active.borrower_id
               ? `/borrower/${active.borrower_id}`
@@ -1325,25 +1318,40 @@ export default function ToolDetail() {
             return (
               <TouchableOpacity
                 testID="checked-out-pill"
-                style={newStyles.checkedOutBox}
+                style={newStyles.checkedOutCard}
                 activeOpacity={target ? 0.85 : 1}
                 onPress={target ? () => router.push(target as any) : undefined}
               >
-                <Ionicons name="person" size={16} color="#000" />
-                <View style={{ flex: 1 }}>
-                  <Text style={newStyles.checkedOutHeader}>
-                    Checked out by: {active.borrower_name || "Unknown"}
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 8 }}>
+                  <Ionicons name="person" size={18} color={theme.colors.accent} />
+                  <Text style={newStyles.checkedOutTitle}>CHECKED OUT</Text>
+                  {!!target && (
+                    <View style={{ flex: 1, alignItems: "flex-end" }}>
+                      <Ionicons name="chevron-forward" size={14} color={theme.colors.accent} />
+                    </View>
+                  )}
+                </View>
+                <View style={{ marginLeft: 28 }}>
+                  <Text style={newStyles.checkedOutLine}>
+                    By: {active.borrower_name || "Unknown"}
                   </Text>
-                  <Text style={newStyles.checkedOutSub}>
-                    Checked out on: {formatDateUS(active.checked_out_at)}
+                  <Text style={newStyles.checkedOutLine}>
+                    On: {formatDateUS(active.checked_out_at)}
                   </Text>
                 </View>
-                {!!target && (
-                  <Ionicons name="chevron-forward" size={14} color="#000" />
-                )}
               </TouchableOpacity>
             );
           })()}
+
+          {/* DESCRIPTION — first thing below the photo row (or claim card) */}
+          {!!tool.description && (
+            <View style={newStyles.descBox}>
+              <Text style={newStyles.descText}>{tool.description}</Text>
+            </View>
+          )}
+
+          {/* (CHECKED OUT card was moved to the top of this screen, above
+              the description — see block under the photo row.) */}
 
           {/* LOCATION — wide pill, NO label (just the location value) */}
           <TouchableOpacity
@@ -2083,17 +2091,17 @@ export default function ToolDetail() {
 
             <View style={styles.modalActions}>
               <TouchableOpacity
-                style={styles.btnGhost}
+                style={[styles.btnGhost, { flex: 1, height: 54 }]}
                 onPress={() => setShowRepair(false)}
               >
-                <Text style={styles.btnGhostText}>CANCEL</Text>
+                <Text style={[styles.btnGhostText, { fontSize: 12 }]}>CANCEL</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 testID="confirm-repair-btn"
-                style={[styles.btn, { backgroundColor: theme.colors.danger }]}
+                style={[styles.btn, { backgroundColor: theme.colors.danger, flex: 1, height: 54 }]}
                 onPress={saveRepair}
               >
-                <Text style={[styles.btnText, { color: theme.colors.textPrimary }]}>
+                <Text style={[styles.btnText, { color: theme.colors.textPrimary, fontSize: 12 }]}>
                   {tool.needs_repair ? "SAVE" : "MARK BROKEN"}
                 </Text>
               </TouchableOpacity>
@@ -3476,8 +3484,30 @@ const newStyles = StyleSheet.create({
     lineHeight: 20,
   },
 
-  // ---------- CHECKED OUT PILL (highlighted, sits below the description
-  // when the tool is currently signed out) ----------
+  // ---------- CHECKED OUT CARD (sits in the same slot as the claim card —
+  // immediately under the photo, above the description — styled like the
+  // red claim card but with a soft yellow tint per user request) ----------
+  checkedOutCard: {
+    backgroundColor: "rgba(255, 179, 0, 0.10)",
+    borderColor: theme.colors.accent,
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 12,
+  },
+  checkedOutTitle: {
+    color: theme.colors.accent,
+    fontWeight: "900",
+    fontSize: 12,
+    letterSpacing: 0.8,
+  },
+  checkedOutLine: {
+    color: theme.colors.textPrimary,
+    fontSize: 12,
+    marginTop: 4,
+  },
+
+  // ---------- (legacy) CHECKED OUT PILL — kept for back-compat in case
+  // any other screen still references these style keys ----------
   checkedOutBox: {
     flexDirection: "row",
     alignItems: "center",

@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react";
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image } from "react-native";
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Modal, TextInput, KeyboardAvoidingView, Platform } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
@@ -12,6 +12,9 @@ export default function BorrowerHistory() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const [data, setData] = useState<any>(null);
+  const [editing, setEditing] = useState(false);
+  const [editForm, setEditForm] = useState<{ name: string; contact: string }>({ name: "", contact: "" });
+  const [saving, setSaving] = useState(false);
 
   const load = useCallback(async () => {
     if (!id) return;
@@ -24,6 +27,29 @@ export default function BorrowerHistory() {
   }, [id, router]);
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
+
+  const openEditModal = () => {
+    if (!data?.borrower) return;
+    setEditForm({
+      name: data.borrower.name || "",
+      contact: data.borrower.contact || "",
+    });
+    setEditing(true);
+  };
+
+  const saveEdit = async () => {
+    if (!id) return;
+    const name = (editForm.name || "").trim();
+    if (!name) return;
+    setSaving(true);
+    try {
+      await api.updateBorrower(id, { name, contact: (editForm.contact || "").trim() });
+      setEditing(false);
+      await load();
+    } finally {
+      setSaving(false);
+    }
+  };
 
   if (!data) {
     return (
@@ -41,7 +67,9 @@ export default function BorrowerHistory() {
           <Ionicons name="arrow-back" size={26} color={theme.colors.textPrimary} />
         </TouchableOpacity>
         <Text style={styles.title} numberOfLines={1}>{b.name.toUpperCase()}</Text>
-        <View style={{ width: 26 }} />
+        <TouchableOpacity testID="edit-borrower-btn" onPress={openEditModal} hitSlop={10}>
+          <Ionicons name="create-outline" size={24} color={theme.colors.textPrimary} />
+        </TouchableOpacity>
       </View>
 
       <ScrollView contentContainerStyle={{ paddingBottom: 60 }}>
@@ -53,6 +81,15 @@ export default function BorrowerHistory() {
           </View>
           <Text style={styles.bigName}>{b.name}</Text>
           <ContactActions raw={b.contact} />
+          <TouchableOpacity
+            testID="edit-borrower-pill-btn"
+            style={styles.editPill}
+            onPress={openEditModal}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="create-outline" size={14} color={theme.colors.accent} />
+            <Text style={styles.editPillText}>EDIT CONTACT</Text>
+          </TouchableOpacity>
         </View>
 
         <View style={styles.statGrid}>
@@ -142,6 +179,56 @@ export default function BorrowerHistory() {
           ))
         )}
       </ScrollView>
+
+      {/* Edit contact modal */}
+      <Modal visible={editing} transparent animationType="slide" onRequestClose={() => setEditing(false)}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          style={styles.modalBg}
+        >
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>EDIT CONTACT</Text>
+            <Text style={styles.modalLabel}>NAME</Text>
+            <TextInput
+              testID="edit-borrower-name-input"
+              placeholder="Contact name"
+              placeholderTextColor={theme.colors.textMuted}
+              value={editForm.name}
+              onChangeText={(v) => setEditForm({ ...editForm, name: v })}
+              style={styles.modalInput}
+              autoFocus
+            />
+            <Text style={styles.modalLabel}>PHONE / EMAIL</Text>
+            <TextInput
+              testID="edit-borrower-contact-input"
+              placeholder="555-867-5309 / jim@example.com"
+              placeholderTextColor={theme.colors.textMuted}
+              value={editForm.contact}
+              onChangeText={(v) => setEditForm({ ...editForm, contact: v })}
+              style={styles.modalInput}
+              multiline
+            />
+            <View style={{ flexDirection: "row", gap: 10, marginTop: 16 }}>
+              <TouchableOpacity
+                testID="edit-borrower-cancel-btn"
+                style={styles.modalBtnGhost}
+                onPress={() => setEditing(false)}
+                disabled={saving}
+              >
+                <Text style={styles.modalBtnGhostText}>CANCEL</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                testID="edit-borrower-save-btn"
+                style={[styles.modalBtn, (!editForm.name.trim() || saving) && { opacity: 0.5 }]}
+                onPress={saveEdit}
+                disabled={!editForm.name.trim() || saving}
+              >
+                <Text style={styles.modalBtnText}>{saving ? "SAVING…" : "SAVE"}</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -310,4 +397,78 @@ const styles = StyleSheet.create({
   histTool: { color: theme.colors.textPrimary, fontWeight: "700", fontSize: 10 },
   histTime: { color: theme.colors.textSecondary, fontSize: 8, marginTop: 2 },
   empty: { color: theme.colors.textMuted, fontStyle: "italic", padding: 20, textAlign: "center" },
+  editPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: theme.colors.accent,
+    backgroundColor: theme.colors.surface,
+    marginTop: 12,
+  },
+  editPillText: {
+    color: theme.colors.accent,
+    fontWeight: "900",
+    fontSize: 10,
+    letterSpacing: 1.2,
+  },
+  modalBg: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.7)",
+    justifyContent: "flex-end",
+  },
+  modalCard: {
+    backgroundColor: theme.colors.bgSecondary,
+    padding: 24,
+    borderTopWidth: 2,
+    borderTopColor: theme.colors.accent,
+  },
+  modalTitle: {
+    color: theme.colors.textPrimary,
+    fontSize: 14,
+    fontWeight: "900",
+    letterSpacing: 2,
+    marginBottom: 16,
+  },
+  modalLabel: {
+    color: theme.colors.textMuted,
+    fontSize: 8,
+    fontWeight: "800",
+    letterSpacing: 1.5,
+    marginTop: 8,
+    marginBottom: 6,
+  },
+  modalInput: {
+    backgroundColor: theme.colors.bg,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    color: theme.colors.textPrimary,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    minHeight: 48,
+    borderRadius: 4,
+    fontSize: 12,
+  },
+  modalBtn: {
+    flex: 1,
+    backgroundColor: theme.colors.accent,
+    height: 48,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 4,
+  },
+  modalBtnText: { color: "#000", fontWeight: "900", letterSpacing: 2, fontSize: 11 },
+  modalBtnGhost: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    height: 48,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 4,
+  },
+  modalBtnGhostText: { color: theme.colors.textPrimary, fontWeight: "800", letterSpacing: 2, fontSize: 11 },
 });
