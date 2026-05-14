@@ -48,6 +48,26 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const PHONE_RE = /^[+]?[\s().\-\d]{5,}$/;
 
 /**
+ * Strip invisible Unicode formatting characters (bidi marks, zero-width
+ * spaces, BOMs, etc.) that iOS Contacts and Android contact pickers love to
+ * prepend to phone numbers. Without this, a phone like "\u200e+1 (763)
+ * 263-7676" (very common when pasted from iOS Contacts) was completely
+ * unrecognised by parseContacts() and the Call/Text buttons never rendered.
+ */
+function stripInvisibles(s: string): string {
+  return s.replace(
+    // U+200B–U+200F (ZWSP, ZWNJ, ZWJ, LRM, RLM)
+    // U+202A–U+202E (bidi formatting overrides)
+    // U+2060 (word joiner)
+    // U+2066–U+2069 (bidi isolates)
+    // U+FEFF (BOM)
+    // U+00A0 (non-breaking space → normalize to plain space below)
+    /[\u200B-\u200F\u202A-\u202E\u2060\u2066-\u2069\uFEFF]/g,
+    "",
+  ).replace(/\u00A0/g, " ");
+}
+
+/**
  * Extract every email address and phone number from a free-form contact string.
  * Users often type "John 555-123-4567 / john@example.com" — we want to detect
  * both pieces and let the user pick.
@@ -57,7 +77,7 @@ export function parseContacts(raw?: string | null): {
   phones: string[];
 } {
   if (!raw) return { emails: [], phones: [] };
-  const text = String(raw);
+  const text = stripInvisibles(String(raw));
   const emails: string[] = [];
   const phones: string[] = [];
 

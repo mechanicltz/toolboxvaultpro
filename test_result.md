@@ -3115,3 +3115,15 @@ frontend:
       - working: "NA"
         agent: "main"
         comment: "Added flex:1 + height:54 + fontSize:12 to both CANCEL and MARK BROKEN buttons in the repair modal so they fill the available width and read clearly."
+
+#====================================================================================================
+# Bug #10 — ACTUAL ROOT CAUSE FIX
+#====================================================================================================
+frontend:
+  - task: "Bug #10 ROOT-CAUSE — Phone parser was tripping on invisible iOS bidi marks"
+    implemented: true
+    file: "/app/frontend/src/contactLinks.ts"
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "USER PROOF: borrower 'Pizza Factory' had contact='\\u200e+1 (763) 263-7676'. The U+200E LEFT-TO-RIGHT MARK that iOS Contacts auto-inserts before phone numbers was NOT in the PHONE_RE allow-list ([+]?[\\s().\\-\\d]{5,}), so parseContacts() returned [] for phones, ContactActions fell into the 'unparseable raw text' branch, and zero buttons rendered. FIX: added stripInvisibles() that pre-cleans U+200B–U+200F, U+202A–U+202E, U+2060, U+2066–U+2069, U+FEFF, and normalizes U+00A0 to a regular space. Verified against the live deployed data — '\\u200e+1 (763) 263-7676' now yields phones=['763-263-7676'] cleanly."
