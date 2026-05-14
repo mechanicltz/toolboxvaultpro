@@ -169,7 +169,9 @@ export default function MoreScreen() {
       // Validate the password against the backend before saving.
       try {
         if (!user?.email) throw new Error("No active user");
-        const ok = await api.login(user.email, pw).catch(() => null);
+        const ok = await api
+          .login({ email: user.email, password: pw })
+          .catch(() => null);
         if (!ok) {
           Alert.alert("Wrong password", "Please try again.");
           return;
