@@ -228,15 +228,44 @@ type ElevKey = "sm" | "md" | "lg" | "accent" | "inset";
 
 function makeElevation(key: ElevKey): any {
   const sh = currentPalette.shadowColor || "#000";
+  // ─────────────────────────────────────────────────────────────────────────
+  // Bevel-3D treatment baked into `md`. Every existing card/row that spreads
+  // `theme.elevation.md` now automatically gets the chiseled raised look:
+  //   • lighter top + left edge (highlight)
+  //   • darker bottom + right edge (shadow)
+  //   • visible offset outer drop shadow lifting the tile off the bg
+  // Uniform 2px border widths keep corner mitering clean.
+  // ─────────────────────────────────────────────────────────────────────────
+  if (key === "md") {
+    const bevelBase = {
+      borderTopWidth: 2,
+      borderLeftWidth: 2,
+      borderBottomWidth: 2,
+      borderRightWidth: 2,
+      borderTopColor: currentPalette.bevelHighlight,
+      borderLeftColor: currentPalette.bevelHighlight,
+      borderBottomColor: currentPalette.bevelShadow,
+      borderRightColor: currentPalette.bevelShadow,
+    };
+    if (Platform.OS === "web") {
+      return {
+        ...bevelBase,
+        boxShadow: `4px 4px 0 ${currentPalette.bevelDrop}, 6px 6px 12px ${currentPalette.bevelDrop}`,
+      };
+    }
+    return {
+      ...bevelBase,
+      shadowColor: "#000",
+      shadowOpacity: 0.55,
+      shadowOffset: { width: 3, height: 5 },
+      shadowRadius: 6,
+      elevation: 8,
+    };
+  }
   if (Platform.OS === "web") {
     if (key === "sm") {
       return {
         boxShadow: `0 1px 2px ${rgba(sh, currentPalette.shadowOpacitySm)}, 0 3px 6px ${rgba(sh, currentPalette.shadowOpacitySm - 0.05)}, inset 0 1px 0 rgba(255, 255, 255, 0.10), inset 0 -1px 0 rgba(0, 0, 0, 0.50)`,
-      };
-    }
-    if (key === "md") {
-      return {
-        boxShadow: `0 2px 4px ${rgba(sh, currentPalette.shadowOpacityMd)}, 0 8px 16px ${rgba(sh, currentPalette.shadowOpacityMd - 0.05)}, 0 16px 32px ${rgba(sh, currentPalette.shadowOpacityMd - 0.15)}, inset 0 1px 0 rgba(255, 255, 255, 0.12), inset 0 -2px 0 rgba(0, 0, 0, 0.50)`,
       };
     }
     if (key === "lg") {

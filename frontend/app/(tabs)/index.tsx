@@ -630,10 +630,12 @@ const styles = themedStyles((c) => ({
     paddingHorizontal: 14,
     paddingVertical: 12,
     borderRadius: 12,
+    // Uniform 2px borders on every side — only the COLOURS differ — so the
+    // corner mitering stays clean.
     borderTopWidth: 2,
     borderLeftWidth: 2,
-    borderBottomWidth: 2.5,
-    borderRightWidth: 2.5,
+    borderBottomWidth: 2,
+    borderRightWidth: 2,
     borderTopColor: c.bevelHighlight,
     borderLeftColor: c.bevelHighlight,
     borderBottomColor: c.bevelShadow,
