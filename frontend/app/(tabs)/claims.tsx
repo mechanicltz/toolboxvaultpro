@@ -453,9 +453,10 @@ const styles = themedStyles((c) => ({
     backgroundColor: c.bgSecondary,
     borderWidth: 1,
     borderColor: c.border,
-    paddingVertical: 10,
+    paddingVertical: 14,
     alignItems: "center",
-    borderRadius: 4,
+    borderRadius: 8,
+    ...(theme.elevation.md as object),
   },
   statValue: {
     fontSize: 14,
