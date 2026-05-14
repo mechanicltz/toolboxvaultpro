@@ -443,8 +443,6 @@ const styles = themedStyles((c) => ({
     borderWidth: 1,
     borderColor: c.accent,
     backgroundColor: c.surface,
-  
-    ...(theme.elevation.md as object),
   },
   rowContactBtnSmall: {
     paddingHorizontal: 8,

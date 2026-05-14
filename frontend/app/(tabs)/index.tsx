@@ -250,6 +250,7 @@ export default function HomeScreen() {
           label="DEALER ACCOUNTS"
           value={`$${totalOwed.toFixed(2)}`}
           onPress={() => router.push("/dealers")}
+          nested
         />
         {dealersAll.length === 0 ? (
           <Text style={styles.emptyInline}>No dealers yet.</Text>
@@ -384,6 +385,7 @@ function SummaryRow({
   onPress,
   rightSlot,
   valueColor,
+  nested,
 }: {
   icon: any;
   label: string;
@@ -392,10 +394,16 @@ function SummaryRow({
   onPress?: () => void;
   rightSlot?: ReactNode;
   valueColor?: string;
+  /**
+   * When TRUE, suppresses the card-style background/border/elevation on the
+   * row so it can sit inside another raised container (used by the DEALER
+   * ACCOUNTS cluster which groups one header + N sub-rows into one card).
+   */
+  nested?: boolean;
 }) {
   const Wrapper: any = onPress ? TouchableOpacity : View;
   return (
-    <Wrapper style={styles.row} onPress={onPress} activeOpacity={0.65}>
+    <Wrapper style={nested ? styles.rowNested : styles.row} onPress={onPress} activeOpacity={0.65}>
       <View style={styles.rowIcon}>
         <Ionicons name={icon} size={18} color={theme.colors.accent} />
       </View>
@@ -562,6 +570,14 @@ const styles = themedStyles((c) => ({
     borderColor: c.borderSubtle,
     ...(theme.elevation.md as object),
   },
+  rowNested: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    backgroundColor: "transparent",
+  },
   rowIcon: {
     width: 34,
     height: 34,
@@ -612,9 +628,16 @@ const styles = themedStyles((c) => ({
     textAlign: "center",
   },
   owedCluster: {
-    gap: 8,
+    backgroundColor: c.bgSecondary,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: c.borderSubtle,
+    overflow: "hidden",
+    ...(theme.elevation.md as object),
   },
   owedDivider: {
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: c.border,
   },
   dealerRow: {
     flexDirection: "row",
@@ -622,11 +645,6 @@ const styles = themedStyles((c) => ({
     gap: 8,
     paddingHorizontal: 14,
     paddingVertical: 12,
-    backgroundColor: c.bgSecondary,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: c.borderSubtle,
-    ...(theme.elevation.md as object),
   },
   dealerName: {
     flex: 1,

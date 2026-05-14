@@ -214,11 +214,19 @@ function ShellNav() {
   );
 }
 
+// Theme-aware status bar. Reads the live theme mode from context so it
+// flips between "light" (white text — used on dark bg) and "dark" (black
+// text — used on light bg) at the moment the user toggles themes.
+function ThemedStatusBar() {
+  const { mode } = useThemeMode();
+  return <StatusBar style={mode === "light" ? "dark" : "light"} />;
+}
+
 export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1, backgroundColor: theme.colors.bg }}>
-      <StatusBar style="light" />
       <ThemeProvider>
+        <ThemedStatusBar />
         <AuthProvider>
           <NetworkProvider>
             <AuroraBackground>

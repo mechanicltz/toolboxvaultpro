@@ -3312,3 +3312,73 @@ frontend:
           tab also show beautifully elevated list rows matching the Wishlist aesthetic the user loved.
 
           NO REGRESSION: All other screens still use existing themed styles; no API contract changes.
+
+#====================================================================================================
+## 2026-05-14 (round 2) — Round-2 elevation polish + grouped Dealer Accounts + theme-aware StatusBar
+#====================================================================================================
+frontend:
+  - task: "Group DEALER ACCOUNTS + sub-rows into a single elevated box (Home)"
+    implemented: true
+    files: app/frontend/app/(tabs)/index.tsx
+    status_history:
+      - working: true
+        agent: "main"
+        comment: |
+          User wanted DEALER ACCOUNTS + all dealer sub-rows on the Home summary back inside ONE combined
+          card (not 6 separate cards as my previous fix produced). Re-introduced `owedCluster` as the
+          elevated card container (bgSecondary + border + radius + overflow:hidden + elevation.md) and
+          added a `nested` prop to SummaryRow that switches to a flat `rowNested` style (no bg/border/
+          elevation, transparent) when used inside another raised container. DEALER ACCOUNTS now renders
+          as the header of one bordered card with dealer sub-rows beneath separated by hairline dividers.
+
+  - task: "Elevate flat list rows in More tab, Claims tab, Maintenance, Dealer-detail"
+    implemented: true
+    files:
+      - app/frontend/app/(tabs)/more.tsx (row + toggleRow)
+      - app/frontend/app/(tabs)/claims.tsx (dealerRow + itemRow)
+      - app/frontend/app/maintenance.tsx (itemCard)
+      - app/frontend/app/dealer/[id].tsx (toolRow)
+    status_history:
+      - working: true
+        agent: "main"
+        comment: |
+          User noted "lists still are flat boxes" — confirmed several list-row styles still used
+          borderBottomWidth dividers instead of the elevated-card pattern. Converted each to the
+          standard elevated treatment: bgSecondary background, marginHorizontal:16, marginTop:10,
+          borderRadius theme.radii.md, 1px borderSubtle, plus theme.elevation.md spread.
+          
+          More tab rows (Wish List, Inventory for Sale, Warranty Alerts, Maintenance, Reports,
+          Import/Export, Categories, Tags, Locations…) now all render as individual raised cards.
+          Claims tab (dealer + item lists), Maintenance screen item cards, and Dealer-detail tool
+          rows likewise. Verified via screenshots in dark mode — entire app now consistent with the
+          Wishlist aesthetic.
+
+  - task: "Remove elevation on inline call/text buttons in dealer + borrower LIST views"
+    implemented: true
+    files:
+      - app/frontend/app/(tabs)/dealers.tsx (rowContactBtn)
+      - app/frontend/app/(tabs)/borrowers.tsx (rowChip)
+    status_history:
+      - working: true
+        agent: "main"
+        comment: |
+          User: "the photo number and text button don't need the raised look on the list area but in
+          the contact description area those are ok." Stripped `theme.elevation.md` from rowContactBtn
+          (dealers list row inline buttons) and rowChip (borrowers/contacts list row inline buttons).
+          Kept these pills bordered-only on the list. Detail-page contact buttons use different style
+          blocks and retain their elevation untouched.
+
+  - task: "Theme-aware StatusBar (white text on dark / dark text on light)"
+    implemented: true
+    file: app/frontend/app/_layout.tsx
+    status_history:
+      - working: true
+        agent: "main"
+        comment: |
+          User reported the phone status bar (clock, signal, battery) was hard to read because it was
+          rendering white on the light theme background. The `<StatusBar style="light" />` was
+          hardcoded. Replaced it with a `<ThemedStatusBar />` component that reads `useThemeMode()`
+          from ThemeContext and renders `style="dark"` (dark text) when the user picks Light mode,
+          or `style="light"` (white text) for Dark mode. Moved inside ThemeProvider so the hook works.
+          Both modes now have readable status-bar text.
+
