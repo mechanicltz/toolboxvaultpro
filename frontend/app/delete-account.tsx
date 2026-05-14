@@ -363,6 +363,8 @@ const styles = themedStyles((c) => ({
     color: c.textPrimary,
     fontSize: 13,
     marginBottom: 8,
+  
+    ...(theme.elevation.md as object),
   },
   errText: {
     color: c.danger,

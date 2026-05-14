@@ -220,6 +220,8 @@ const styles = themedStyles((c) => ({
     borderWidth: 1,
     borderColor: c.border,
     alignItems: "flex-start",
+  
+    ...(theme.elevation.md as object),
   },
   summaryCellAccent: {
     backgroundColor: c.accent,
@@ -268,6 +270,8 @@ const styles = themedStyles((c) => ({
     borderColor: c.border,
     padding: 10,
     marginBottom: 8,
+  
+    ...(theme.elevation.md as object),
   },
   rowIndex: {
     color: c.textMuted,

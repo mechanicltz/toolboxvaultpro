@@ -565,6 +565,8 @@ const styles = themedStyles((c) => ({
     paddingVertical: 12,
     borderRadius: 4,
     minHeight: 48,
+  
+    ...(theme.elevation.md as object),
   },
   triggerText: {
     flex: 1,
@@ -623,6 +625,8 @@ const styles = themedStyles((c) => ({
     borderRadius: 8,
     borderWidth: 1,
     borderColor: c.border,
+  
+    ...(theme.elevation.md as object),
   },
   searchInput: {
     flex: 1,

@@ -384,6 +384,8 @@ const styles = themedStyles((c) => ({
     borderRadius: 14,
     padding: 16,
     marginTop: 10,
+  
+    ...(theme.elevation.md as object),
   },
   planCardFeatured: {
     borderColor: c.accent,
@@ -444,6 +446,8 @@ const styles = themedStyles((c) => ({
     borderColor: c.border,
     borderRadius: 10,
     paddingVertical: 12,
+  
+    ...(theme.elevation.md as object),
   },
   actionBtnText: {
     color: c.textPrimary,

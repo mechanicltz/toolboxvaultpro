@@ -152,6 +152,8 @@ const styles = themedStyles((c) => ({
     borderRadius: 6,
     padding: 12,
     marginBottom: 8,
+  
+    ...(theme.elevation.md as object),
   },
   row: { flexDirection: "row", gap: 10, alignItems: "flex-start" },
   numCol: {

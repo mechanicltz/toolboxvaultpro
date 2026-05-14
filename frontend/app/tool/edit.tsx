@@ -1897,6 +1897,8 @@ const styles = themedStyles((c) => ({
     backgroundColor: c.bgSecondary, borderWidth: 1, borderColor: c.border,
     color: c.textPrimary, paddingHorizontal: 14, paddingVertical: 12,
     minHeight: 48, borderRadius: 4, fontSize: 11,
+  
+    ...(theme.elevation.md as object),
   },
   row2: { flexDirection: "row", gap: 10 },
   helper: { color: c.textMuted, fontStyle: "italic", fontSize: 10 },
@@ -1921,6 +1923,8 @@ const styles = themedStyles((c) => ({
     flexDirection: "row", alignItems: "center", gap: 12,
     backgroundColor: c.bgSecondary, borderWidth: 1, borderColor: c.border,
     paddingHorizontal: 14, paddingVertical: 12, borderRadius: 4,
+  
+    ...(theme.elevation.md as object),
   },
   pickerText: { color: c.textPrimary, flex: 1, fontWeight: "600", fontSize: 10 },
   toggleRow: {
@@ -1948,6 +1952,8 @@ const styles = themedStyles((c) => ({
     flexDirection: "row", alignItems: "center", gap: 10,
     backgroundColor: c.bgSecondary, borderWidth: 1, borderColor: c.border,
     paddingHorizontal: 12, paddingVertical: 10, marginBottom: 6, borderRadius: 4,
+  
+    ...(theme.elevation.md as object),
   },
   docName: { color: c.textPrimary, flex: 1, fontSize: 10 },
   docAdd: {
@@ -2041,6 +2047,8 @@ const styles = themedStyles((c) => ({
     backgroundColor: c.bgSecondary,
     minWidth: 56,
     alignItems: "center",
+  
+    ...(theme.elevation.md as object),
   },
   warrChipOn: {
     backgroundColor: c.accent,

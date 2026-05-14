@@ -149,6 +149,8 @@ const styles = themedStyles((c) => ({
     borderRadius: 999,
     paddingHorizontal: 12,
     paddingVertical: 4,
+  
+    ...(theme.elevation.md as object),
   },
   headerCountText: {
     color: c.textPrimary,
@@ -181,6 +183,8 @@ const styles = themedStyles((c) => ({
     borderRadius: 10,
     padding: 12,
     marginBottom: 10,
+  
+    ...(theme.elevation.md as object),
   },
   rowHead: {
     flexDirection: "row",

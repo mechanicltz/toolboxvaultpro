@@ -515,6 +515,8 @@ const styles = themedStyles((c) => ({
     paddingVertical: 8,
     borderRadius: 4,
     gap: 8,
+  
+    ...(theme.elevation.md as object),
   },
   searchInput: { flex: 1, color: c.textPrimary, fontSize: 10 },
   empty: { color: c.textMuted, fontStyle: "italic", paddingVertical: 16 },

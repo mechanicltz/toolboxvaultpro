@@ -189,6 +189,8 @@ const styles = themedStyles((c) => ({
     borderColor: c.border,
     borderRadius: 6,
     padding: 12,
+  
+    ...(theme.elevation.md as object),
   },
   emptyCard: {
     backgroundColor: c.bgSecondary,
@@ -199,6 +201,8 @@ const styles = themedStyles((c) => ({
     padding: 16,
     alignItems: "center",
     gap: 12,
+  
+    ...(theme.elevation.md as object),
   },
   emptyText: {
     color: c.textMuted,

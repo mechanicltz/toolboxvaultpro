@@ -156,6 +156,8 @@ const styles = themedStyles((c) => ({
     borderWidth: 1,
     borderColor: c.border,
     padding: 18,
+  
+    ...(theme.elevation.md as object),
   },
   header: {
     flexDirection: "row",

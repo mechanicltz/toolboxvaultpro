@@ -780,6 +780,8 @@ const styles = themedStyles((c) => ({
     borderRadius: 4,
     marginBottom: 6,
     gap: 6,
+  
+    ...(theme.elevation.md as object),
   },
   docName: {
     color: c.textPrimary,

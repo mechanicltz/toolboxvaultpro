@@ -229,6 +229,8 @@ const styles = themedStyles((c) => ({
     justifyContent: "space-between",
     minHeight: 48,
     gap: 8,
+  
+    ...(theme.elevation.md as object),
   },
   modalBg: {
     flex: 1,

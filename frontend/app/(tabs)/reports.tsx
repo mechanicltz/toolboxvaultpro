@@ -1183,6 +1183,8 @@ const styles = themedStyles((c) => ({
     marginBottom: 10,
     borderWidth: 1,
     borderColor: c.border,
+  
+    ...(theme.elevation.md as object),
   },
   typeIcon: {
     width: 44,
@@ -1268,6 +1270,8 @@ const styles = themedStyles((c) => ({
     borderWidth: 1,
     borderColor: c.border,
     fontSize: 12,
+  
+    ...(theme.elevation.md as object),
   },
   input: {
     marginTop: 6,
@@ -1279,6 +1283,8 @@ const styles = themedStyles((c) => ({
     borderWidth: 1,
     borderColor: c.border,
     fontSize: 10,
+  
+    ...(theme.elevation.md as object),
   },
   segmentedRow: {
     flexDirection: "row",
@@ -1306,6 +1312,8 @@ const styles = themedStyles((c) => ({
     borderWidth: 1,
     borderColor: c.border,
     backgroundColor: c.bgSecondary,
+  
+    ...(theme.elevation.md as object),
   },
   chipOn: { backgroundColor: c.accent, borderColor: c.accent },
   chipText: { color: c.textPrimary, fontSize: 8, fontWeight: "700" },
@@ -1356,6 +1364,8 @@ const styles = themedStyles((c) => ({
     paddingVertical: 12,
     borderRadius: 6,
     marginTop: 8,
+  
+    ...(theme.elevation.md as object),
   },
   dropdownBtnText: {
     color: c.textPrimary,
@@ -1505,6 +1515,8 @@ const styles = themedStyles((c) => ({
     borderWidth: 2,
     borderColor: c.border,
     backgroundColor: c.bgSecondary,
+  
+    ...(theme.elevation.md as object),
   },
   formatCardOn: { backgroundColor: c.accent, borderColor: c.accent },
   formatTitle: {
@@ -1538,6 +1550,8 @@ const styles = themedStyles((c) => ({
     marginBottom: 10,
     borderWidth: 1,
     borderColor: c.border,
+  
+    ...(theme.elevation.md as object),
   },
   actionIcon: {
     width: 40,
@@ -1556,6 +1570,8 @@ const styles = themedStyles((c) => ({
     borderRadius: 8,
     borderWidth: 1,
     borderColor: c.border,
+  
+    ...(theme.elevation.md as object),
   },
   summaryHead: {
     color: c.textPrimary,

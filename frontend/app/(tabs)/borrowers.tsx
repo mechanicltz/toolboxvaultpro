@@ -579,6 +579,8 @@ const styles = themedStyles((c) => ({
     borderColor: c.accent,
     backgroundColor: c.surface,
     maxWidth: "100%",
+  
+    ...(theme.elevation.md as object),
   },
   rowChipIcon: {
     paddingHorizontal: 6,

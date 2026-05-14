@@ -264,6 +264,8 @@ const styles = themedStyles((c) => ({
     paddingVertical: 6,
     borderRadius: theme.radii.sm,
     fontSize: 10,
+  
+    ...(theme.elevation.md as object),
   },
   iconAction: {
     paddingHorizontal: 6,

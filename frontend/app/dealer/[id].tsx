@@ -705,6 +705,8 @@ const styles = themedStyles((c) => ({
     marginHorizontal: 16,
     marginBottom: 8,
     borderRadius: 4,
+  
+    ...(theme.elevation.md as object),
   },
   routeRowLabel: {
     color: c.textPrimary,
@@ -823,6 +825,8 @@ const styles = themedStyles((c) => ({
     borderWidth: 1,
     borderColor: c.border,
     backgroundColor: c.surface,
+  
+    ...(theme.elevation.md as object),
   },
   viewToolsIcon: {
     width: 40,
@@ -919,6 +923,8 @@ const styles = themedStyles((c) => ({
     borderWidth: 1,
     borderColor: c.accent,
     backgroundColor: c.surface,
+  
+    ...(theme.elevation.md as object),
   },
   dealerContactBtnSmall: {
     paddingHorizontal: 12,
@@ -946,6 +952,8 @@ const styles = themedStyles((c) => ({
     borderColor: c.accent,
     backgroundColor: c.surface,
     marginTop: 4,
+  
+    ...(theme.elevation.md as object),
   },
   agentContactBtnSmall: {
     paddingHorizontal: 8,
@@ -964,6 +972,8 @@ const styles = themedStyles((c) => ({
     borderColor: c.border,
     backgroundColor: c.bgSecondary,
     borderRadius: 4,
+  
+    ...(theme.elevation.md as object),
   },
   agentCardActive: {
     borderColor: c.accent,

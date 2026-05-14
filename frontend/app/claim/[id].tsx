@@ -252,6 +252,8 @@ const styles = themedStyles((c) => ({
     borderRadius: 6,
     padding: 12,
     marginBottom: 14,
+  
+    ...(theme.elevation.md as object),
   },
   toolPhoto: { width: 60, height: 60, borderRadius: 4 },
   toolPhotoPh: {
@@ -283,6 +285,8 @@ const styles = themedStyles((c) => ({
     borderColor: c.border,
     borderRadius: 4,
     padding: 12,
+  
+    ...(theme.elevation.md as object),
   },
   value: {
     color: c.textPrimary,
@@ -309,6 +313,8 @@ const styles = themedStyles((c) => ({
     borderColor: c.border,
     borderRadius: 4,
     padding: 10,
+  
+    ...(theme.elevation.md as object),
   },
   dateLabel: {
     color: c.textMuted,

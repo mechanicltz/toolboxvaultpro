@@ -767,6 +767,8 @@ const styles = themedStyles((c) => ({
     borderRadius: 4,
     padding: 10,
     gap: 8,
+  
+    ...(theme.elevation.md as object),
   },
   claimHead: { flexDirection: "row", alignItems: "center", gap: 10 },
   thumb: { width: 44, height: 44, borderRadius: 4, borderWidth: 1, borderColor: c.border },

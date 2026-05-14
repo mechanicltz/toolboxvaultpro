@@ -1267,6 +1267,8 @@ const styles = themedStyles((c) => ({
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 6,
+  
+    ...(theme.elevation.md as object),
   },
   headerBtnText: {
     color: c.textPrimary,
@@ -1432,6 +1434,8 @@ const styles = themedStyles((c) => ({
     backgroundColor: c.surface,
     borderWidth: 1,
     borderColor: c.border,
+  
+    ...(theme.elevation.md as object),
   },
   filterHalf: {
     flex: 1,

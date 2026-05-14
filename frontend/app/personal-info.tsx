@@ -376,6 +376,8 @@ const styles = themedStyles((c) => ({
     borderRadius: 6,
     padding: 14,
     marginBottom: 4,
+  
+    ...(theme.elevation.md as object),
   },
   toggleLabel: {
     color: c.textPrimary,
@@ -405,6 +407,8 @@ const styles = themedStyles((c) => ({
     minHeight: 46,
     borderRadius: 4,
     fontSize: 10,
+  
+    ...(theme.elevation.md as object),
   },
   divider: {
     height: 1,

@@ -335,6 +335,8 @@ const styles = themedStyles((c) => ({
     borderWidth: 1,
     borderColor: c.accent,
     backgroundColor: c.surface,
+  
+    ...(theme.elevation.md as object),
   },
   actionBtnSmall: {
     paddingHorizontal: 10,
@@ -350,6 +352,8 @@ const styles = themedStyles((c) => ({
     borderWidth: 1, borderColor: c.border,
     backgroundColor: c.bgSecondary,
     alignItems: "center", borderRadius: 4,
+  
+    ...(theme.elevation.md as object),
   },
   cellValue: { color: c.textPrimary, fontWeight: "900", fontSize: 16 },
   cellLabel: {
@@ -410,6 +414,8 @@ const styles = themedStyles((c) => ({
     borderColor: c.accent,
     backgroundColor: c.surface,
     marginTop: 12,
+  
+    ...(theme.elevation.md as object),
   },
   editPillText: {
     color: c.accent,

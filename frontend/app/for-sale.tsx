@@ -408,6 +408,8 @@ const styles = themedStyles((c) => ({
     borderColor: c.border,
     paddingVertical: 10,
     borderRadius: 8,
+  
+    ...(theme.elevation.md as object),
   },
   tabBtnActive: { backgroundColor: c.accent, borderColor: c.accent },
   tabBtnActiveSold: { backgroundColor: "#27AE60", borderColor: "#27AE60" },
@@ -425,6 +427,8 @@ const styles = themedStyles((c) => ({
     marginHorizontal: 16,
     marginTop: 12,
     paddingVertical: 4,
+  
+    ...(theme.elevation.md as object),
   },
   searchInput: {
     flex: 1,
@@ -450,6 +454,8 @@ const styles = themedStyles((c) => ({
     borderColor: c.border,
     borderRadius: 8,
     padding: 10,
+  
+    ...(theme.elevation.md as object),
   },
   statLabel: { color: c.textMuted, fontSize: 7, fontWeight: "800", letterSpacing: 1.5 },
   statValue: { color: c.textPrimary, fontSize: 14, fontWeight: "900", marginTop: 2 },

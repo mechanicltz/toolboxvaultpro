@@ -678,6 +678,8 @@ const styles = themedStyles((c) => ({
     borderWidth: 1,
     borderColor: c.border,
     backgroundColor: c.bgSecondary,
+  
+    ...(theme.elevation.md as object),
   },
   feedbackTitle: {
     color: c.textPrimary,

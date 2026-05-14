@@ -945,6 +945,8 @@ const pwStyles = themedStyles((c) => ({
     padding: 18,
     borderWidth: 1,
     borderColor: c.border,
+  
+    ...(theme.elevation.md as object),
   },
   header: {
     flexDirection: "row",
@@ -976,6 +978,8 @@ const pwStyles = themedStyles((c) => ({
     paddingVertical: 10,
     color: c.textPrimary,
     fontSize: 10,
+  
+    ...(theme.elevation.md as object),
   },
   err: {
     color: c.danger,
@@ -1147,6 +1151,8 @@ const styles = themedStyles((c) => ({
     borderRadius: 8,
     borderWidth: 1,
     borderColor: c.borderSubtle,
+  
+    ...(theme.elevation.md as object),
   },
   homeRowsTitle: {
     color: c.accent,

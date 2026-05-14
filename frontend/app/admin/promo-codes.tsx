@@ -487,6 +487,8 @@ const styles = themedStyles((c) => ({
     borderRadius: 10,
     padding: 12,
     marginBottom: 10,
+  
+    ...(theme.elevation.md as object),
   },
   cardHead: { flexDirection: "row", alignItems: "center", gap: 10 },
   code: {

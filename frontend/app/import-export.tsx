@@ -888,6 +888,8 @@ const styles = themedStyles((c) => ({
     borderRadius: 10,
     padding: 16,
     marginBottom: 18,
+  
+    ...(theme.elevation.md as object),
   },
   cardHeader: {
     flexDirection: "row",

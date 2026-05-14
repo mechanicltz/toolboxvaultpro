@@ -290,6 +290,8 @@ const styles = themedStyles((c) => ({
     padding: 18,
     borderWidth: 1,
     borderColor: c.border,
+  
+    ...(theme.elevation.md as object),
   },
   tabs: {
     flexDirection: "row",
@@ -319,6 +321,8 @@ const styles = themedStyles((c) => ({
     fontSize: 11,
     borderWidth: 1,
     borderColor: c.border,
+  
+    ...(theme.elevation.md as object),
   },
   inputRow: { flexDirection: "row", alignItems: "center", gap: 6 },
   eye: {

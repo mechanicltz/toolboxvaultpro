@@ -449,6 +449,8 @@ const styles = themedStyles((c) => ({
   tabBtn: {
     flex: 1, paddingVertical: 8, borderWidth: 1, borderColor: c.border,
     borderRadius: theme.radii.md, alignItems: "center", backgroundColor: c.bgSecondary,
+  
+    ...(theme.elevation.md as object),
   },
   tabBtnActive: { backgroundColor: c.accent, borderColor: c.accent },
   tabText: { color: c.textSecondary, fontSize: 9, fontWeight: "800", letterSpacing: 1.5 },
@@ -511,6 +513,8 @@ const styles = themedStyles((c) => ({
     borderWidth: 1, borderColor: c.border,
     color: c.textPrimary, paddingHorizontal: 12, paddingVertical: 10,
     borderRadius: theme.radii.sm, fontSize: 10,
+  
+    ...(theme.elevation.md as object),
   },
   prioChip: {
     flex: 1, paddingHorizontal: 6, paddingVertical: 10,

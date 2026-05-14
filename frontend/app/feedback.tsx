@@ -373,6 +373,8 @@ const styles = themedStyles((c) => ({
     paddingHorizontal: 12,
     paddingVertical: 10,
     fontSize: 11,
+  
+    ...(theme.elevation.md as object),
   },
   textarea: { minHeight: 120, paddingTop: 10 },
   segmented: {
@@ -390,6 +392,8 @@ const styles = themedStyles((c) => ({
     borderColor: c.border,
     paddingVertical: 10,
     borderRadius: 6,
+  
+    ...(theme.elevation.md as object),
   },
   segBtnOn: {
     backgroundColor: c.accent,
@@ -438,6 +442,8 @@ const styles = themedStyles((c) => ({
     borderRadius: 6,
     paddingVertical: 16,
     backgroundColor: c.bgSecondary,
+  
+    ...(theme.elevation.md as object),
   },
   pickBtnText: {
     color: c.accent,

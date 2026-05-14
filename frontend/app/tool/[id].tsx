@@ -2777,6 +2777,8 @@ const qsStyles = themedStyles((c) => ({
     borderWidth: 1,
     borderColor: c.border,
     backgroundColor: c.surface,
+  
+    ...(theme.elevation.md as object),
   },
   label: {
     color: c.textMuted,
@@ -2961,6 +2963,8 @@ const styles = themedStyles((c) => ({
     paddingHorizontal: 14,
     paddingVertical: 12,
     marginTop: 10,
+  
+    ...(theme.elevation.md as object),
   },
   detailRowLabel: {
     color: c.textMuted,
@@ -2995,6 +2999,8 @@ const styles = themedStyles((c) => ({
     paddingVertical: 12,
     marginTop: 12,
     marginBottom: 6,
+  
+    ...(theme.elevation.md as object),
   },
   listForSaleCtaText: {
     flex: 1,
@@ -3198,6 +3204,8 @@ const styles = themedStyles((c) => ({
     paddingHorizontal: 12,
     paddingVertical: 10,
     marginBottom: 8,
+  
+    ...(theme.elevation.md as object),
   },
   dealerLockName: {
     flex: 1,
@@ -3353,6 +3361,8 @@ const newStyles = themedStyles((c) => ({
     paddingHorizontal: 12,
     paddingVertical: 8,
     gap: 8,
+  
+    ...(theme.elevation.md as object),
   },
   statusDot: {
     width: 9,
@@ -3442,6 +3452,8 @@ const newStyles = themedStyles((c) => ({
     paddingVertical: 6,
     gap: 10,
     minHeight: 28,
+  
+    ...(theme.elevation.md as object),
   },
   pillRowLabel: {
     color: c.textPrimary,
@@ -3479,6 +3491,8 @@ const newStyles = themedStyles((c) => ({
     borderRadius: 12,
     paddingHorizontal: 14,
     paddingVertical: 12,
+  
+    ...(theme.elevation.md as object),
   },
   descText: {
     color: c.textPrimary,
@@ -3545,6 +3559,8 @@ const newStyles = themedStyles((c) => ({
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 999,
+  
+    ...(theme.elevation.md as object),
   },
   tagChipText: {
     color: c.textPrimary,
@@ -3570,6 +3586,8 @@ const newStyles = themedStyles((c) => ({
     paddingHorizontal: 10,
     paddingVertical: 6,
     minHeight: 28,
+  
+    ...(theme.elevation.md as object),
   },
   locationWideText: {
     flex: 1,
@@ -3592,6 +3610,8 @@ const newStyles = themedStyles((c) => ({
     paddingVertical: 6,
     marginTop: 8,
     minHeight: 28,
+  
+    ...(theme.elevation.md as object),
   },
   historyLinkLabel: {
     flex: 1,
@@ -3626,6 +3646,8 @@ const newStyles = themedStyles((c) => ({
     paddingHorizontal: 10,
     paddingVertical: 8,
     gap: 4,
+  
+    ...(theme.elevation.md as object),
   },
   serialBoxLabel: {
     color: c.textPrimary,
@@ -3668,6 +3690,8 @@ const newStyles = themedStyles((c) => ({
     paddingHorizontal: 12,
     paddingVertical: 12,
     gap: 6,
+  
+    ...(theme.elevation.md as object),
   },
   setSerialRow: {
     flexDirection: "row",
@@ -3765,6 +3789,8 @@ const newStyles = themedStyles((c) => ({
     borderWidth: 1,
     borderRadius: 12,
     paddingVertical: 12,
+  
+    ...(theme.elevation.md as object),
   },
   actionRow: {
     flexDirection: "row",
@@ -3797,6 +3823,8 @@ const newStyles = themedStyles((c) => ({
     borderRadius: 12,
     paddingVertical: 14,
     paddingHorizontal: 6,
+  
+    ...(theme.elevation.md as object),
   },
   actionTileDanger: {
     borderColor: c.danger,
@@ -3825,6 +3853,8 @@ const newStyles = themedStyles((c) => ({
     paddingHorizontal: 10,
     paddingVertical: 6,
     minHeight: 28,
+  
+    ...(theme.elevation.md as object),
   },
   attachHeaderLabel: {
     flex: 1,
@@ -3906,6 +3936,8 @@ const newStyles = themedStyles((c) => ({
     padding: 10,
     marginTop: 6,
     gap: 2,
+  
+    ...(theme.elevation.md as object),
   },
   histName: {
     color: c.textPrimary,
@@ -3936,6 +3968,8 @@ const pickerStyles = themedStyles((c) => ({
     borderColor: c.border,
     borderRadius: 12,
     marginBottom: 10,
+  
+    ...(theme.elevation.md as object),
   },
   iconCircle: {
     width: 40,
@@ -3966,6 +4000,8 @@ const pickerStyles = themedStyles((c) => ({
     paddingHorizontal: 36,
     alignItems: "center",
     minWidth: 240,
+  
+    ...(theme.elevation.md as object),
   },
   busyOverlay: {
     // Absolute, in-tree overlay (NOT a Modal). On iOS, only one presented
