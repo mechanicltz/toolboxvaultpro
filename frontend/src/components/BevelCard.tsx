@@ -75,14 +75,14 @@ export function BevelCard({
     ...(Platform.select({
       web: {
         // Stair-step sharp drop shadow + soft glow halo around it.
-        boxShadow: `4px 4px 0 ${c.bevelDrop}, 6px 6px 12px ${c.bevelDrop}` as any,
+        boxShadow: `5px 5px 0 ${c.bevelDrop}, 8px 8px 16px ${c.bevelDrop}` as any,
       },
       default: {
         shadowColor: "#000",
-        shadowOpacity: 0.55,
-        shadowOffset: { width: 3, height: 5 },
-        shadowRadius: 6,
-        elevation: 8,
+        shadowOpacity: 0.6,
+        shadowOffset: { width: 4, height: 6 },
+        shadowRadius: 8,
+        elevation: 10,
       },
     }) as object),
   };

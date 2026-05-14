@@ -211,7 +211,7 @@ export default function MoreScreen() {
       <ScrollView contentContainerStyle={{ paddingBottom: 100 }}>
         {/* Light / Dark mode toggle — placed at top of the More tab so
             users can flip themes without scrolling. */}
-        <View style={styles.toggleRow}>
+        <BevelCard style={styles.toggleRow}>
           <View style={styles.iconBox}>
             <Ionicons
               name={themeMode === "light" ? "sunny" : "moon"}
@@ -234,7 +234,7 @@ export default function MoreScreen() {
             trackColor={{ true: theme.colors.accent, false: theme.colors.border }}
             thumbColor="#fff"
           />
-        </View>
+        </BevelCard>
 
         <Row
           icon="chatbubble-ellipses"
@@ -336,7 +336,7 @@ export default function MoreScreen() {
           onPress={() => setHomeRowsModal(true)}
         />
 
-        <View style={styles.toggleRow}>
+        <BevelCard style={styles.toggleRow}>
           <View style={styles.iconBox}>
             <Ionicons name="cash" size={20} color={theme.colors.accent} />
           </View>
@@ -351,9 +351,9 @@ export default function MoreScreen() {
             trackColor={{ true: theme.colors.accent, false: theme.colors.border }}
             thumbColor="#fff"
           />
-        </View>
+        </BevelCard>
 
-        <View style={styles.toggleRow}>
+        <BevelCard style={styles.toggleRow}>
           <View style={styles.iconBox}>
             <Ionicons name="stats-chart" size={20} color={theme.colors.accent} />
           </View>
@@ -368,9 +368,9 @@ export default function MoreScreen() {
             trackColor={{ true: theme.colors.accent, false: theme.colors.border }}
             thumbColor="#fff"
           />
-        </View>
+        </BevelCard>
 
-        <View style={styles.toggleRow}>
+        <BevelCard style={styles.toggleRow}>
           <View style={styles.iconBox}>
             <Ionicons name="notifications" size={20} color={theme.colors.accent} />
           </View>
@@ -385,14 +385,14 @@ export default function MoreScreen() {
             trackColor={{ true: theme.colors.accent, false: theme.colors.border }}
             thumbColor="#fff"
           />
-        </View>
+        </BevelCard>
 
         {/* Light / Dark mode toggle has moved to the TOP of the More tab
             (see beginning of ScrollView). */}
 
         <Text style={styles.sectionLabel}>NOTIFICATIONS</Text>
 
-        <View style={styles.toggleRow} testID="notif-toggle-row">
+        <BevelCard style={styles.toggleRow} testID="notif-toggle-row">
           <View style={styles.iconBox}>
             <Ionicons name="notifications" size={20} color={theme.colors.accent} />
           </View>
@@ -434,7 +434,7 @@ export default function MoreScreen() {
             trackColor={{ true: theme.colors.accent, false: theme.colors.border }}
             thumbColor="#fff"
           />
-        </View>
+        </BevelCard>
 
         {prefs.dealer_notifications_enabled && (
           <>
@@ -460,7 +460,7 @@ export default function MoreScreen() {
               </Text>
             </BevelCard>
 
-            <View style={styles.toggleRow}>
+            <BevelCard style={styles.toggleRow}>
               <View style={styles.iconBox}>
                 <Ionicons name="calendar" size={20} color={theme.colors.accent} />
               </View>
@@ -489,7 +489,7 @@ export default function MoreScreen() {
                 trackColor={{ true: theme.colors.accent, false: theme.colors.border }}
                 thumbColor="#fff"
               />
-            </View>
+            </BevelCard>
 
             <BevelCard
               style={styles.toggleRow}

@@ -15,6 +15,7 @@ import { confirm } from "../confirm";
 import { PaymentModal } from "./PaymentModal";
 
 import { themedStyles } from "../themeContext";
+import { BevelCard } from "../components/BevelCard";
 
 export function BalanceSection({
   dealer,
@@ -143,7 +144,7 @@ function BalanceCard({
 }) {
   const owed = balance > 0;
   return (
-    <View style={[styles.balCard, owed && { borderLeftColor: theme.colors.danger }]}>
+    <BevelCard style={[styles.balCard, owed && { borderLeftColor: theme.colors.danger }]}>
       <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
         <Text style={styles.balLabel}>{label}</Text>
         <TouchableOpacity onPress={onHistory}>
@@ -164,7 +165,7 @@ function BalanceCard({
           <Text style={styles.chargeText}>ADD CHARGE</Text>
         </TouchableOpacity>
       </View>
-    </View>
+    </BevelCard>
   );
 }
 
