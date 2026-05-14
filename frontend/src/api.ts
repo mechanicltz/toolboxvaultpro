@@ -8,7 +8,7 @@ import { showOfflineAlert } from "./offlineGuard";
 // the app must still hit the real backend instead of `undefined/api/...`.
 // This was the root cause of the "TestFlight shows 4 phantom tools" bug —
 // every fetch was going to `undefined/api/tools` and silently 404ing.
-const PRODUCTION_BACKEND_URL = "https://asset-locator-12.preview.emergentagent.com";
+const PRODUCTION_BACKEND_URL = "https://asset-locator-12.emergent.host";
 const _ENV_BASE = process.env.EXPO_PUBLIC_BACKEND_URL;
 const BASE =
   _ENV_BASE && _ENV_BASE !== "undefined" && _ENV_BASE.startsWith("http")

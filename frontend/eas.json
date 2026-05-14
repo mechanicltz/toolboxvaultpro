@@ -7,18 +7,18 @@
       "developmentClient": true,
       "distribution": "internal",
       "env": {
-        "EXPO_PUBLIC_BACKEND_URL": "https://asset-locator-12.preview.emergentagent.com"
+        "EXPO_PUBLIC_BACKEND_URL": "https://asset-locator-12.emergent.host"
       }
     },
     "preview": {
       "distribution": "internal",
       "env": {
-        "EXPO_PUBLIC_BACKEND_URL": "https://asset-locator-12.preview.emergentagent.com"
+        "EXPO_PUBLIC_BACKEND_URL": "https://asset-locator-12.emergent.host"
       }
     },
     "production": {
       "env": {
-        "EXPO_PUBLIC_BACKEND_URL": "https://asset-locator-12.preview.emergentagent.com"
+        "EXPO_PUBLIC_BACKEND_URL": "https://asset-locator-12.emergent.host"
       }
     }
   },
