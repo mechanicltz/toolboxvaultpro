@@ -617,12 +617,11 @@ const styles = themedStyles((c) => ({
     paddingVertical: 12,
     backgroundColor: "transparent",
   },
-  /* Sharp Bevel 3D — adapted from user's Grok reference. Same outer size
-     as `row` so layout doesn't shift. The outer View provides the crisp
-     stair-step drop shadow + 1px border + radius; the LinearGradient is
-     positioned absolute behind the content to render the 145deg fill; the
-     bevelInner overlay carries the inset top-left highlight + bottom-right
-     inner edge via web boxShadow / native borderTop+borderLeft tinting. */
+  /* Sharp Bevel 3D — the OUTER pillbox gets a chiseled bevel: thicker
+     lighter top + left edge (highlight catching light from the top), thicker
+     darker bottom + right edge (drop-off shadow). A visible offset outer
+     drop shadow lifts the whole tile off the page. Layout dimensions stay
+     identical to the standard `row` style. */
   rowBevel: {
     position: "relative",
     flexDirection: "row",
@@ -631,20 +630,25 @@ const styles = themedStyles((c) => ({
     paddingHorizontal: 14,
     paddingVertical: 12,
     borderRadius: 12,
-    borderWidth: 1,
-    borderColor: c.border,
+    borderTopWidth: 2,
+    borderLeftWidth: 2,
+    borderBottomWidth: 2.5,
+    borderRightWidth: 2.5,
+    borderTopColor: c.bevelHighlight,
+    borderLeftColor: c.bevelHighlight,
+    borderBottomColor: c.bevelShadow,
+    borderRightColor: c.bevelShadow,
     overflow: "hidden",
     ...(Platform.select({
       web: {
-        boxShadow:
-          "4px 4px 0 rgba(0, 0, 0, 0.55), 6px 6px 0 rgba(0, 0, 0, 0.40), inset 3px 3px 0 rgba(255, 255, 255, 0.10), inset -3px -3px 0 rgba(0, 0, 0, 0.45)" as any,
+        boxShadow: `4px 4px 0 ${c.bevelDrop}, 6px 6px 12px ${c.bevelDrop}` as any,
       },
       default: {
         shadowColor: "#000",
-        shadowOpacity: 0.85,
-        shadowOffset: { width: 4, height: 4 },
-        shadowRadius: 0,
-        elevation: 6,
+        shadowOpacity: 0.55,
+        shadowOffset: { width: 3, height: 5 },
+        shadowRadius: 6,
+        elevation: 8,
       },
     }) as object),
   },
@@ -660,21 +664,6 @@ const styles = themedStyles((c) => ({
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
-    // Native fallback for the inset highlight/shadow — slightly lighter top
-    // and left borders, darker bottom and right borders, so the row reads
-    // as a beveled raised tile even without web inset box-shadow.
-    ...(Platform.OS !== "web"
-      ? {
-          borderTopWidth: 1.5,
-          borderLeftWidth: 1.5,
-          borderTopColor: "rgba(255, 255, 255, 0.18)",
-          borderLeftColor: "rgba(255, 255, 255, 0.12)",
-          borderBottomWidth: 1.5,
-          borderRightWidth: 1.5,
-          borderBottomColor: "rgba(0, 0, 0, 0.55)",
-          borderRightColor: "rgba(0, 0, 0, 0.55)",
-        }
-      : {}),
   },
   rowIcon: {
     width: 34,

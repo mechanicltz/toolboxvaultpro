@@ -56,6 +56,14 @@ export type ColorPalette = {
   // overlays so cards keep their 3D feel in both themes.
   rowGradTop: string;
   rowGradBottom: string;
+  // Sharp Bevel 3D treatment used by SummaryRow bevel mode. The highlight is
+  // the lighter colour that paints the TOP+LEFT outer edges of the pillbox
+  // (mimics light catching the top), and `bevelShadow` paints the
+  // BOTTOM+RIGHT edges (gives the "fall-off" shadow under the lip). The
+  // outer offset shadow color is `bevelDrop`.
+  bevelHighlight: string;
+  bevelShadow: string;
+  bevelDrop: string;
   // Bottom tab bar background — adapts to theme (dark stays workshop-dark,
   // light becomes pure white with a top border).
   tabBarBg: string;
@@ -90,8 +98,13 @@ export const darkPalette: ColorPalette = {
   shadowOpacitySm: 0.45,
   shadowOpacityMd: 0.55,
   shadowOpacityLg: 0.65,
-  rowGradTop: "#1F1F1F",
-  rowGradBottom: "#0E0E0E",
+  rowGradTop: "#2A2A2A",
+  rowGradBottom: "#0B0B0B",
+  // Dark-mode bevel — lighter top/left edge (light catching the lip), darker
+  // bottom/right edge (drop-off shadow). Outer drop shadow is true black.
+  bevelHighlight: "rgba(255, 255, 255, 0.22)",
+  bevelShadow: "rgba(0, 0, 0, 0.85)",
+  bevelDrop: "rgba(0, 0, 0, 0.65)",
   tabBarBg: "#0A0A0A",
   tabBarBorder: "#1F1F1F",
 };
@@ -128,7 +141,13 @@ export const lightPalette: ColorPalette = {
   shadowOpacityMd: 0.18,
   shadowOpacityLg: 0.22,
   rowGradTop: "#FFFFFF",
-  rowGradBottom: "#F3F5F8",
+  rowGradBottom: "#E0E0E0",
+  // Light-mode bevel — matches the Grok reference: bright white top/left
+  // highlight + light-grey bottom/right shadow, with a grey stair-step
+  // outer drop shadow.
+  bevelHighlight: "#FFFFFF",
+  bevelShadow: "#A8A8A8",
+  bevelDrop: "rgba(0, 0, 0, 0.22)",
   tabBarBg: "#FFFFFF",
   tabBarBorder: "#D8DEE6",
 };
