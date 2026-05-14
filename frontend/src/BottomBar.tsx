@@ -228,8 +228,8 @@ export function BottomBar() {
 const styles = themedStyles((c) => ({
   bar: {
     flexDirection: "row",
-    backgroundColor: "rgba(15, 15, 15, 0.95)",
-    borderTopColor: c.border,
+    backgroundColor: c.tabBarBg,
+    borderTopColor: c.tabBarBorder,
     borderTopWidth: 1,
     height: Platform.OS === "ios" ? 80 : 64,
     paddingTop: 8,

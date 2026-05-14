@@ -696,7 +696,7 @@ export default function InventoryScreen() {
               activeOpacity={0.7}
             >
               <LinearGradient
-                colors={["#1F1F1F", "#0E0E0E"]}
+                colors={[theme.colors.rowGradTop, theme.colors.rowGradBottom]}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 0, y: 1 }}
                 style={StyleSheet.absoluteFillObject}

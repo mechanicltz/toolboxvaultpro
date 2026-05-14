@@ -42,6 +42,14 @@ export type ColorPalette = {
   highlight: string;
   shadowDeep: string;
   shadowSoft: string;
+  // Gradient endpoints for row/card tops + bottoms — used by LinearGradient
+  // overlays so cards keep their 3D feel in both themes.
+  rowGradTop: string;
+  rowGradBottom: string;
+  // Bottom tab bar background — adapts to theme (dark stays workshop-dark,
+  // light becomes pure white with a top border).
+  tabBarBg: string;
+  tabBarBorder: string;
 };
 
 // Original Industrial Dark — yellow/black workshop with 3D depth.
@@ -66,6 +74,10 @@ export const darkPalette: ColorPalette = {
   highlight: "rgba(255, 255, 255, 0.10)",
   shadowDeep: "rgba(0, 0, 0, 0.8)",
   shadowSoft: "rgba(0, 0, 0, 0.5)",
+  rowGradTop: "#1F1F1F",
+  rowGradBottom: "#0E0E0E",
+  tabBarBg: "#0A0A0A",
+  tabBarBorder: "#1F1F1F",
 };
 
 // Light palette — soft cool grey-blue (NOT pure white per user request).
@@ -93,6 +105,10 @@ export const lightPalette: ColorPalette = {
   highlight: "rgba(15, 23, 42, 0.06)",
   shadowDeep: "rgba(15, 23, 42, 0.18)",
   shadowSoft: "rgba(15, 23, 42, 0.10)",
+  rowGradTop: "#FFFFFF",
+  rowGradBottom: "#F3F5F8",
+  tabBarBg: "#FFFFFF",
+  tabBarBorder: "#D8DEE6",
 };
 
 // Mutable container — ThemeProvider swaps this object in place when the user
@@ -140,7 +156,13 @@ export const theme = {
   spacing: { xs: 4, sm: 8, md: 16, lg: 24, xl: 32, xxl: 48 },
   radii: { none: 0, sm: 4, md: 8, lg: 12, pill: 999 },
   font: { h1: 32, h2: 24, h3: 20, body: 16, sm: 14, xs: 12 },
-  // 3D elevation system — kept dark since shadows look the same in light mode.
+  // 3D elevation system — uses dark shadows by default. In light mode, the
+  // shadow colour is automatically overridden by the proxy (because we expose
+  // a `c.shadowSoft` / `c.shadowDeep` that the proxy resolves at access time,
+  // but `Platform.select()` runs once at module-load so shadows are fixed
+  // values here). Cards still pop in both modes because the shadow contrast
+  // against bg/bgSecondary is what matters, and our light bg (#F1F4F8) vs
+  // white cards (#FFFFFF) is enough contrast for the dark shadow to register.
   elevation: {
     sm: Platform.select({
       web: {
