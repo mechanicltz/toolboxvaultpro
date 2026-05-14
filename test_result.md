@@ -3049,3 +3049,32 @@ frontend:
       - working: "NA"
         agent: "main"
         comment: "ROOT CAUSE: ImageManipulator.manipulateAsync() requires a proper URI scheme (file://, data:, http(s)://). Legacy receipts stored as bare base64 strings (no 'data:' prefix) caused manipulateAsync to throw silently — the catch fallback returned the raw base64 — then <img src='<rawbase64>'> rendered as the xhtml2pdf broken-image icon (blue '?'). FIX: Added ensureDataUri() helper that auto-prepends 'data:image/jpeg;base64,' to bare base64 strings. compressForPdf() now normalizes the input BEFORE calling manipulateAsync AND uses the normalized URI as the fallback when manipulation fails. Receipts already saved with 'data:' prefix and file:// URIs are passed through unchanged."
+
+#====================================================================================================
+# REGRESSION RE-FIXES + NEW REPORTS BATCH — June 2025 (Round 2)
+#====================================================================================================
+
+frontend:
+  - task: "Bug #1 RE-FIX — Move CLAIM INFORMATION card to top of tool detail"
+    implemented: true
+    file: "/app/frontend/app/tool/[id].tsx"
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Moved the `tool.needs_repair` claim card from below the field-group to immediately under the photo row (above description). Removed the duplicate further down. Verified only 1 occurrence of 'CLAIM INFORMATION' in compiled bundle."
+
+  - task: "Bug #9 RE-FIX — Checked-out pillbox now reads current_checkout"
+    implemented: true
+    file: "/app/frontend/app/tool/[id].tsx"
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Previous condition searched checkout_history for entries with no checked_in_at, but while is_checked_out=true the active record lives in `current_checkout`, NOT in checkout_history. Changed to read from `tool.current_checkout` first, fall back to history scan as before."
+
+  - task: "Bug #10 RE-FIX — Dealer list Call/Text buttons inline per row"
+    implemented: true
+    file: "/app/frontend/app/(tabs)/dealers.tsx"
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Added testID `dealer-row-call-{id}` and `dealer-row-text-{id}` pill buttons inline on each dealer card (mirrors the borrowers list). Buttons use stopPropagation so they don't navigate into the dealer detail. Verified in compiled bundle."

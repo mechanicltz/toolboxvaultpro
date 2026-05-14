@@ -1245,7 +1245,64 @@ export default function ToolDetail() {
             </View>
           </View>
 
-          {/* DESCRIPTION — first thing below the photo row */}
+          {/* CLAIM INFORMATION — when this tool is broken/in-repair, show
+              the claim card FIRST (right under the photo, before anything
+              else). Per user request: this is the most important banner. */}
+          {tool.needs_repair && (
+            <View style={newStyles.repairCard}>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 8 }}>
+                <Ionicons name="build" size={18} color={theme.colors.danger} />
+                <Text style={newStyles.repairTitle}>CLAIM INFORMATION</Text>
+              </View>
+              <View style={{ marginLeft: 28 }}>
+                <Text style={newStyles.repairLine}>
+                  Status: {(tool.repair_info?.repair_status || "Repair pending").toUpperCase()}
+                </Text>
+                {!!tool.repair_info?.company_notified && (
+                  <Text style={newStyles.repairLine}>At: {tool.repair_info.company_notified}</Text>
+                )}
+                {!!tool.repair_info?.notified_at && (
+                  <Text style={newStyles.repairLine}>
+                    Notified: {formatDateUS(tool.repair_info.notified_at)}
+                  </Text>
+                )}
+                {!!tool.repair_info?.expected_completion && (
+                  <Text style={newStyles.repairLine}>
+                    Expected back: {formatDateUS(tool.repair_info.expected_completion)}
+                  </Text>
+                )}
+                {!!tool.repair_info?.notes && (
+                  <Text style={[newStyles.repairLine, { fontStyle: "italic", marginTop: 6 }]}>
+                    {tool.repair_info.notes}
+                  </Text>
+                )}
+              </View>
+              <View style={{ flexDirection: "row", gap: 10, marginTop: 14 }}>
+                <TouchableOpacity
+                  style={[newStyles.saleBtn, { backgroundColor: "rgba(0,0,0,0.25)", flex: 1 }]}
+                  onPress={openRepair}
+                  testID="claim-edit"
+                >
+                  <Ionicons name="create-outline" size={14} color={theme.colors.danger} />
+                  <Text style={[newStyles.saleBtnText, { color: theme.colors.danger }]}>
+                    EDIT CLAIM
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[newStyles.saleBtn, { backgroundColor: theme.colors.success, flex: 1 }]}
+                  onPress={markRepaired}
+                  testID="claim-mark-fixed"
+                >
+                  <Ionicons name="checkmark-done" size={14} color="#000" />
+                  <Text style={[newStyles.saleBtnText, { color: "#000" }]}>
+                    MARK FIXED
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
+
+          {/* DESCRIPTION — first thing below the photo row (or claim card) */}
           {!!tool.description && (
             <View style={newStyles.descBox}>
               <Text style={newStyles.descText}>{tool.description}</Text>
@@ -1253,11 +1310,14 @@ export default function ToolDetail() {
           )}
 
           {/* CHECKED OUT BY — when this tool is currently signed out, show
-              who has it and when. Tapping jumps to the borrower's profile. */}
+              who has it and when. Tapping jumps to the borrower's profile.
+              Reads from `current_checkout` (where the active record lives
+              while is_checked_out=true). */}
           {tool.is_checked_out && (() => {
-            const active = Array.isArray(tool.checkout_history)
+            const active = tool.current_checkout || (Array.isArray(tool.checkout_history)
               ? [...tool.checkout_history].reverse().find((r: any) => !r?.checked_in_at)
-              : null;
+              : null);
+            if (!active) return null;
             if (!active) return null;
             const target = active.borrower_id
               ? `/borrower/${active.borrower_id}`
@@ -1354,63 +1414,9 @@ export default function ToolDetail() {
           {/* Lost banner — only renders if tool.is_lost */}
           <LostStatusBanner tool={tool} onChange={load} />
 
-          {/* Repair detail card — only when broken. Redesigned per UX
-              feedback: header reads "CLAIM INFORMATION", shows status +
-              notified date, and has two action buttons (Edit Claim /
-              Mark Fixed) instead of a tiny pencil icon. */}
-          {tool.needs_repair && (
-            <View style={newStyles.repairCard}>
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 8 }}>
-                <Ionicons name="build" size={18} color={theme.colors.danger} />
-                <Text style={newStyles.repairTitle}>CLAIM INFORMATION</Text>
-              </View>
-              <View style={{ marginLeft: 28 }}>
-                <Text style={newStyles.repairLine}>
-                  Status: {(tool.repair_info?.repair_status || "Repair pending").toUpperCase()}
-                </Text>
-                {!!tool.repair_info?.company_notified && (
-                  <Text style={newStyles.repairLine}>At: {tool.repair_info.company_notified}</Text>
-                )}
-                {!!tool.repair_info?.notified_at && (
-                  <Text style={newStyles.repairLine}>
-                    Notified: {formatDateUS(tool.repair_info.notified_at)}
-                  </Text>
-                )}
-                {!!tool.repair_info?.expected_completion && (
-                  <Text style={newStyles.repairLine}>
-                    Expected back: {formatDateUS(tool.repair_info.expected_completion)}
-                  </Text>
-                )}
-                {!!tool.repair_info?.notes && (
-                  <Text style={[newStyles.repairLine, { fontStyle: "italic", marginTop: 6 }]}>
-                    {tool.repair_info.notes}
-                  </Text>
-                )}
-              </View>
-              <View style={{ flexDirection: "row", gap: 10, marginTop: 14 }}>
-                <TouchableOpacity
-                  style={[newStyles.saleBtn, { backgroundColor: "rgba(0,0,0,0.25)", flex: 1 }]}
-                  onPress={openRepair}
-                  testID="claim-edit"
-                >
-                  <Ionicons name="create-outline" size={14} color={theme.colors.danger} />
-                  <Text style={[newStyles.saleBtnText, { color: theme.colors.danger }]}>
-                    EDIT CLAIM
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[newStyles.saleBtn, { backgroundColor: theme.colors.success, flex: 1 }]}
-                  onPress={markRepaired}
-                  testID="claim-mark-fixed"
-                >
-                  <Ionicons name="checkmark-done" size={14} color="#000" />
-                  <Text style={[newStyles.saleBtnText, { color: "#000" }]}>
-                    MARK FIXED
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          )}
+          {/* CLAIM INFORMATION card was moved to the top of this screen
+              (immediately under the photo, above the description) per user
+              request — this block is intentionally not duplicated here. */}
 
           {/* Sale listing detail (when for sale, shows the listing controls) */}
           {tool.for_sale && !tool.is_sold && (

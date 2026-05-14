@@ -25,6 +25,7 @@ import { getCached, setCached } from "../../src/cache";
 import { useAuth } from "../../src/AuthContext";
 import { useResponsive } from "../../src/responsive";
 import { rescheduleDealerNotifications } from "../../src/notifications";
+import { formatPhone, openPhone, openSms } from "../../src/contactLinks";
 
 export default function DealersScreen() {
   const router = useRouter();
@@ -155,6 +156,36 @@ export default function DealersScreen() {
                   {prefs.show_prices ? `  ·  $${s.total.toFixed(2)}` : ""}
                   {`  ·  ${routeLabel(item)}`}
                 </Text>
+                {!!item.phone && (
+                  <View style={styles.rowContactBtns}>
+                    <TouchableOpacity
+                      testID={`dealer-row-call-${item.id}`}
+                      style={styles.rowContactBtn}
+                      onPress={(e) => {
+                        (e as any)?.stopPropagation?.();
+                        openPhone(item.phone);
+                      }}
+                      activeOpacity={0.7}
+                    >
+                      <Ionicons name="call" size={12} color={theme.colors.accent} />
+                      <Text style={styles.rowContactBtnText} numberOfLines={1}>
+                        {formatPhone(item.phone)}
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      testID={`dealer-row-text-${item.id}`}
+                      style={[styles.rowContactBtn, styles.rowContactBtnSmall]}
+                      onPress={(e) => {
+                        (e as any)?.stopPropagation?.();
+                        openSms(item.phone);
+                      }}
+                      activeOpacity={0.7}
+                    >
+                      <Ionicons name="chatbubble-ellipses" size={12} color={theme.colors.accent} />
+                      <Text style={styles.rowContactBtnText}>TEXT</Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
               </View>
               <TouchableOpacity
                 testID={`delete-dealer-row-${item.id}`}
@@ -386,6 +417,32 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     letterSpacing: 1,
     marginTop: 4,
+  },
+  rowContactBtns: {
+    flexDirection: "row",
+    gap: 6,
+    marginTop: 6,
+    flexWrap: "wrap",
+  },
+  rowContactBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: theme.colors.accent,
+    backgroundColor: theme.colors.surface,
+  },
+  rowContactBtnSmall: {
+    paddingHorizontal: 8,
+  },
+  rowContactBtnText: {
+    color: theme.colors.textPrimary,
+    fontSize: 9,
+    fontWeight: "700",
+    letterSpacing: 0.3,
   },
   rowDeleteBtn: {
     width: 36,
