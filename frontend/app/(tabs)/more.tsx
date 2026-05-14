@@ -19,6 +19,12 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter, useFocusEffect } from "expo-router";
 import { theme } from "../../src/theme";
 import { useThemeMode } from "../../src/themeContext";
+import {
+  getBiometricStatus,
+  enableBiometric,
+  disableBiometric,
+  type BiometricStatus,
+} from "../../src/biometric";
 import { usePrefs, HOME_ROW_LABELS, HomeRowKey } from "../../src/prefs";
 import { api } from "../../src/api";
 import { useAuth } from "../../src/AuthContext";
@@ -110,6 +116,75 @@ export default function MoreScreen() {
       refreshAccountState();
     }, [refreshAccountState]),
   );
+
+  // Biometric (Face ID / Touch ID) status — re-read on focus so any
+  // change made elsewhere is reflected here. Disabling on web is fine
+  // since the helpers no-op on that platform.
+  const [bioStatus, setBioStatus] = useState<BiometricStatus | null>(null);
+  const refreshBio = useCallback(async () => {
+    setBioStatus(await getBiometricStatus());
+  }, []);
+  useEffect(() => {
+    refreshBio();
+  }, [refreshBio]);
+  useFocusEffect(
+    useCallback(() => {
+      refreshBio();
+    }, [refreshBio]),
+  );
+
+  const handleToggleBiometric = async (next: boolean) => {
+    if (!bioStatus) return;
+    if (next) {
+      // Turning ON — we need the user's password to store in SecureStore.
+      // Prompt for it inline.
+      let pw = "";
+      const askPassword = () =>
+        new Promise<string | null>((resolve) => {
+          Alert.prompt(
+            `Enable ${bioStatus.label}?`,
+            `Confirm your password to enable ${bioStatus.label} sign-in.`,
+            [
+              { text: "Cancel", style: "cancel", onPress: () => resolve(null) },
+              {
+                text: "Enable",
+                onPress: (v) => resolve((v || "").trim() || null),
+              },
+            ],
+            "secure-text",
+          );
+        });
+      // Alert.prompt is iOS-only; on Android we route through the
+      // login screen by signing out instead.
+      if (Platform.OS !== "ios") {
+        Alert.alert(
+          `Enable ${bioStatus.label}`,
+          `To enable ${bioStatus.label} on Android, please sign out and the app will offer the prompt on your next sign-in.`,
+          [{ text: "OK" }],
+        );
+        return;
+      }
+      pw = (await askPassword()) || "";
+      if (!pw) return;
+      // Validate the password against the backend before saving.
+      try {
+        if (!user?.email) throw new Error("No active user");
+        const ok = await api.login(user.email, pw).catch(() => null);
+        if (!ok) {
+          Alert.alert("Wrong password", "Please try again.");
+          return;
+        }
+        await enableBiometric(user.email, pw);
+        await refreshBio();
+        Alert.alert(`${bioStatus.label} enabled`, "You'll be signed in automatically next time.");
+      } catch (e: any) {
+        Alert.alert("Couldn't enable", e?.message || "Try again.");
+      }
+    } else {
+      await disableBiometric();
+      await refreshBio();
+    }
+  };
 
   const isPro = !!(sub?.is_lifetime ||
     (sub?.entitlement && sub.entitlement !== "free"));
@@ -580,6 +655,47 @@ export default function MoreScreen() {
             setPwOpen(true);
           }}
         />
+
+        {/* Biometric (Face ID / Touch ID / Fingerprint) sign-in toggle —
+            only shown on native builds when the device has hardware +
+            an enrolled biometric. Disabling wipes the saved credentials
+            from the OS Keychain / Keystore. */}
+        {bioStatus && bioStatus.hasHardware ? (
+          <BevelCard style={styles.toggleRow} testID="more-biometric-toggle">
+            <View style={styles.iconBox}>
+              <Ionicons
+                name={
+                  bioStatus.label.toLowerCase().includes("face")
+                    ? "scan"
+                    : bioStatus.label.toLowerCase().includes("touch") ||
+                      bioStatus.label.toLowerCase().includes("finger")
+                    ? "finger-print"
+                    : "lock-closed"
+                }
+                size={20}
+                color={theme.colors.accent}
+              />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.rowTitle}>{bioStatus.label} Sign-In</Text>
+              <Text style={styles.rowSub}>
+                {!bioStatus.isEnrolled
+                  ? `Set up ${bioStatus.label} in your device settings first`
+                  : bioStatus.enabled
+                  ? `Auto-unlock the app with ${bioStatus.label}`
+                  : `Skip the password — sign in with ${bioStatus.label}`}
+              </Text>
+            </View>
+            <Switch
+              testID="toggle-biometric"
+              value={bioStatus.enabled}
+              disabled={!bioStatus.isEnrolled}
+              onValueChange={handleToggleBiometric}
+              trackColor={{ true: theme.colors.accent, false: theme.colors.border }}
+              thumbColor="#fff"
+            />
+          </BevelCard>
+        ) : null}
 
         <BevelCard
           style={styles.row}

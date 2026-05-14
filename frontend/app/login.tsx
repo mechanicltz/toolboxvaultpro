@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -10,12 +10,20 @@ import {
   ScrollView,
   ActivityIndicator,
   Image,
+  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { theme } from "../src/theme";
 import { useAuth } from "../src/AuthContext";
+import {
+  getBiometricStatus,
+  tryBiometricLogin,
+  enableBiometric,
+  hasBeenPromptedForBiometric,
+  markBiometricPrompted,
+} from "../src/biometric";
 
 import { themedStyles } from "../src/themeContext";
 
@@ -31,6 +39,95 @@ export default function LoginScreen() {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const [info, setInfo] = useState("");
+
+  // Biometric state — drives whether we show the Face ID / Touch ID
+  // button and which label to use (Face ID vs Touch ID vs Fingerprint).
+  const [bio, setBio] = useState<{ enabled: boolean; label: string; hasHardware: boolean; isEnrolled: boolean } | null>(null);
+  const autoPromptedRef = useRef(false);
+
+  // On mount, read biometric status. If the user has previously opted in,
+  // immediately fire the biometric prompt so they don't have to type
+  // anything (auto-prompt every time the login screen appears after intro).
+  useEffect(() => {
+    (async () => {
+      const s = await getBiometricStatus();
+      setBio({ enabled: s.enabled, label: s.label, hasHardware: s.hasHardware, isEnrolled: s.isEnrolled });
+      if (s.enabled && s.hasHardware && s.isEnrolled && !autoPromptedRef.current) {
+        autoPromptedRef.current = true;
+        await runBiometricLogin();
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  /**
+   * Prompt with Face ID / Touch ID. On success, retrieve the saved
+   * credentials and complete a normal backend login (so the user gets
+   * a fresh JWT/session).
+   */
+  const runBiometricLogin = async () => {
+    if (busy) return;
+    setErr("");
+    setInfo("");
+    const creds = await tryBiometricLogin();
+    if (!creds) return; // user cancelled or unavailable
+    setBusy(true);
+    try {
+      await login(creds.email, creds.password);
+    } catch (e: any) {
+      // Saved password no longer valid — surface a sensible error and
+      // let the user type it manually.
+      setErr(
+        "Saved credentials didn't work. Please sign in with your password to refresh them.",
+      );
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  /**
+   * Called after a SUCCESSFUL password login. If the device has
+   * biometric hardware enrolled but the user has never been asked,
+   * offer to enable it. Marks "prompted" either way so we don't keep
+   * pestering.
+   */
+  const maybeOfferBiometricEnrol = async (mail: string, pw: string) => {
+    if (Platform.OS === "web") return;
+    try {
+      const s = await getBiometricStatus();
+      if (!s.hasHardware || !s.isEnrolled) return;
+      if (s.enabled) return; // already on
+      const asked = await hasBeenPromptedForBiometric();
+      if (asked) return;
+      // Use a native two-button alert.
+      Alert.alert(
+        `Enable ${s.label}?`,
+        `Sign in to Toolbox Vault with ${s.label} from now on — no need to type your password.`,
+        [
+          {
+            text: "Not now",
+            style: "cancel",
+            onPress: () => {
+              markBiometricPrompted();
+            },
+          },
+          {
+            text: `Enable ${s.label}`,
+            onPress: async () => {
+              try {
+                await enableBiometric(mail, pw);
+                setBio({ ...s, enabled: true });
+              } catch {
+                // ignore — user can enable later from More tab
+              }
+            },
+          },
+        ],
+      );
+    } catch {
+      /* ignore */
+    }
+  };
 
   const submit = async () => {
     if (busy) return;
@@ -52,8 +149,11 @@ export default function LoginScreen() {
               result.promoError,
           );
         }
+        // Offer biometric enrolment after fresh sign-up too.
+        await maybeOfferBiometricEnrol(email, password);
       } else {
         await login(email, password);
+        await maybeOfferBiometricEnrol(email, password);
       }
     } catch (e: any) {
       setErr(e?.detail || e?.message || "Something went wrong");
@@ -222,6 +322,31 @@ export default function LoginScreen() {
               )}
             </TouchableOpacity>
 
+            {mode === "login" && bio?.enabled && bio.hasHardware && bio.isEnrolled ? (
+              <TouchableOpacity
+                style={styles.bioBtn}
+                onPress={runBiometricLogin}
+                disabled={busy}
+                testID="auth-biometric"
+              >
+                <Ionicons
+                  name={
+                    bio.label.toLowerCase().includes("face")
+                      ? "scan"
+                      : bio.label.toLowerCase().includes("touch") ||
+                        bio.label.toLowerCase().includes("finger")
+                      ? "finger-print"
+                      : "lock-closed"
+                  }
+                  size={18}
+                  color={theme.colors.accent}
+                />
+                <Text style={styles.bioBtnText}>
+                  SIGN IN WITH {bio.label.toUpperCase()}
+                </Text>
+              </TouchableOpacity>
+            ) : null}
+
             {mode === "login" && (
               <TouchableOpacity
                 onPress={() => router.push("/forgot-password")}
@@ -358,6 +483,24 @@ const styles = themedStyles((c) => ({
     marginTop: 6,
   },
   submitText: { color: "#000", fontWeight: "900", fontSize: 10, letterSpacing: 1.5 },
+  bioBtn: {
+    backgroundColor: "transparent",
+    borderWidth: 1.5,
+    borderColor: c.accent,
+    paddingVertical: 12,
+    borderRadius: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    marginTop: 10,
+  },
+  bioBtnText: {
+    color: c.accent,
+    fontWeight: "900",
+    fontSize: 10,
+    letterSpacing: 1.5,
+  },
   hint: {
     color: c.textMuted,
     fontSize: 8,

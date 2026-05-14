@@ -15,7 +15,8 @@
         "NSCameraUsageDescription": "Take photos of your tools",
         "NSPhotoLibraryUsageDescription": "Add photos of tools from your gallery",
         "NSPhotoLibraryAddUsageDescription": "Save tool photos to your library",
-        "NSContactsUsageDescription": "Import names and phone numbers from your contacts"
+        "NSContactsUsageDescription": "Import names and phone numbers from your contacts",
+        "NSFaceIDUsageDescription": "Sign in to your account with Face ID"
       }
     },
     "android": {

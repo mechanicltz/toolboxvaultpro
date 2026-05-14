@@ -156,6 +156,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await writeCachedUser(null);
     // Wipe everything on logout so the next login starts clean.
     await clearCached();
+    // Wipe stored biometric credentials so that signing back in as a
+    // different user can't auto-unlock with the previous user's saved
+    // password. The user can re-enable biometric on their next sign-in.
+    try {
+      const { disableBiometric } = await import("./biometric");
+      await disableBiometric();
+    } catch {
+      /* ignore */
+    }
     // Detach the user from RevenueCat so the next login doesn't inherit
     // the previous app-user's entitlement state. Best-effort — no-op in
     // stub / Expo Go.
