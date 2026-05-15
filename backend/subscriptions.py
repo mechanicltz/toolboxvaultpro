@@ -411,6 +411,42 @@ def make_router(db, get_current_user) -> APIRouter:
             "expires_at": sub.expires_at,
         }
 
+    # =====================================================================
+    # TEMPORARY DEV ENDPOINT — REMOVE BEFORE FINAL APP STORE / PLAY STORE
+    # SUBMISSION. Lets the authenticated user forcibly downgrade their own
+    # subscription back to "free" for sandbox testing. This is needed
+    # because Apple's StoreKit sandbox + RevenueCat manage-subscription
+    # links route to the real subscriptions UI, which can't cancel the
+    # fake/test subscription — leaving the developer permanently "PRO".
+    # =====================================================================
+    @router.post("/dev/downgrade-to-free")
+    async def dev_downgrade_to_free(user=Depends(get_current_user)):
+        uid = getattr(user, "id", None) or (user.get("id") if isinstance(user, dict) else None)
+        if not uid:
+            raise HTTPException(401, "Unauthorized")
+        sub = await get_subscription(db, uid)
+        sub.entitlement = "free"
+        sub.is_active = False
+        sub.is_lifetime = False
+        sub.will_renew = False
+        sub.promo_code = None
+        # Mark expired in the past so any cached "is_active" check fails.
+        sub.expires_at = "2020-01-01T00:00:00+00:00"
+        sub.unsubscribe_detected_at = _now_iso()
+        sub.updated_at = _now_iso()
+        await db.subscriptions.update_one(
+            {"user_id": uid},
+            {"$set": sub.dict()},
+            upsert=True,
+        )
+        return {
+            "ok": True,
+            "entitlement": sub.entitlement,
+            "is_active": sub.is_active,
+            "is_lifetime": sub.is_lifetime,
+            "expires_at": sub.expires_at,
+        }
+
     @router.post("/revenuecat/webhook")
     async def revenuecat_webhook(
         request: Request,

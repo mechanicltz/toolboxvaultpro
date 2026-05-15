@@ -2489,16 +2489,24 @@ async def get_stats():
     }}}]
     agg = await db.tools.aggregate(pipeline).to_list(1)
     total_value = agg[0]["total_value"] if agg else 0
-    # Warranty expiring within 60 days
+    # Warranty expiring within 60 days — exclude tools that are sold,
+    # lost, or stolen since warranty alerts on those items are noise
+    # (the user no longer has/cares about the item).
     soon = (datetime.now(timezone.utc) + timedelta(days=60)).date().isoformat()
     today = datetime.now(timezone.utc).date().isoformat()
+    _warranty_active_filter = {
+        "is_sold": {"$ne": True},
+        "lost_status.is_lost": {"$ne": True},
+    }
     expiring = await db.tools.count_documents({
         "warranty.has_warranty": True,
         "warranty.expiry_date": {"$gte": today, "$lte": soon},
+        **_warranty_active_filter,
     })
     expired = await db.tools.count_documents({
         "warranty.has_warranty": True,
         "warranty.expiry_date": {"$lt": today, "$ne": ""},
+        **_warranty_active_filter,
     })
     return {
         "total_tools": total,
@@ -2522,8 +2530,17 @@ async def warranty_alerts(days: int = 60):
     today = datetime.now(timezone.utc).date()
     soon = (today + timedelta(days=days)).isoformat()
     today_iso = today.isoformat()
+    # Pull only ACTIVE tools — exclude sold, lost, or stolen items so
+    # they don't clutter the warranty alert list. Users don't want
+    # warranty reminders on items they no longer own or have written
+    # off as lost/stolen.
     items = await db.tools.find(
-        {"warranty.has_warranty": True, "warranty.expiry_date": {"$ne": ""}},
+        {
+            "warranty.has_warranty": True,
+            "warranty.expiry_date": {"$ne": ""},
+            "is_sold": {"$ne": True},
+            "lost_status.is_lost": {"$ne": True},
+        },
         {"_id": 0, "id": 1, "name": 1, "warranty": 1, "photos": 1},
     ).to_list(5000)
     expiring = []

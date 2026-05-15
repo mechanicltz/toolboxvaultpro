@@ -715,6 +715,65 @@ export default function MoreScreen() {
           </BevelCard>
         ) : null}
 
+        {/* ===================================================================
+            TEMPORARY DEV-ONLY: Downgrade to Free
+            -------------------------------------------------------------------
+            Lets the developer force their own subscription back to FREE so
+            they can re-test the paywall / 15-item cap / upgrade flow without
+            having to cancel a sandbox subscription (Apple's "Manage
+            Subscription" routes to the real subs UI, which can't cancel the
+            sandbox test sub). REMOVE THIS BLOCK BEFORE FINAL APP STORE
+            SUBMISSION.
+            =================================================================== */}
+        {isPro && (
+          <BevelCard
+            style={styles.row}
+            testID="more-dev-downgrade"
+            activeOpacity={0.7}
+            onPress={() => {
+              Alert.alert(
+                "Downgrade to Free?",
+                "TESTING ONLY — this forcibly downgrades your subscription to the free tier so you can test the paywall / 15-item cap. Continue?",
+                [
+                  { text: "Cancel", style: "cancel" },
+                  {
+                    text: "Downgrade",
+                    style: "destructive",
+                    onPress: async () => {
+                      try {
+                        await api.post("/dev/downgrade-to-free", {});
+                        await refreshAccountState();
+                        Alert.alert(
+                          "Downgraded",
+                          "You're now on the free tier. Restart the app to re-test the paywall flow.",
+                        );
+                      } catch (e: any) {
+                        Alert.alert(
+                          "Could not downgrade",
+                          e?.message || "Try again.",
+                        );
+                      }
+                    },
+                  },
+                ],
+              );
+            }}
+          >
+            <View style={styles.iconBox}>
+              <Ionicons name="bug" size={20} color={theme.colors.warning} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.rowTitle, { color: theme.colors.warning }]}>
+                DEV: Downgrade to Free
+              </Text>
+              <Text style={styles.rowSub}>
+                Testing only — bypasses Apple sandbox to drop back to free tier
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={theme.colors.textMuted} />
+          </BevelCard>
+        )}
+
         <BevelCard
           style={styles.row}
           onPress={() => logout()}

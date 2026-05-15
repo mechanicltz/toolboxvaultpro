@@ -580,9 +580,9 @@ const styles = themedStyles((c) => ({
   row: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
+    gap: 10,
     paddingHorizontal: 14,
-    paddingVertical: 12,
+    paddingVertical: 10,
     backgroundColor: c.bgSecondary,
     borderRadius: 10,
     borderWidth: 1,
@@ -592,9 +592,9 @@ const styles = themedStyles((c) => ({
   rowNested: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
+    gap: 10,
     paddingHorizontal: 14,
-    paddingVertical: 12,
+    paddingVertical: 10,
     backgroundColor: "transparent",
   },
   // Layout-only style for SummaryRow when rendered through BevelCard. The
@@ -603,9 +603,9 @@ const styles = themedStyles((c) => ({
   rowOuter: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
+    gap: 10,
     paddingHorizontal: 14,
-    paddingVertical: 12,
+    paddingVertical: 10,
   },
   /* Sharp Bevel 3D — the OUTER pillbox gets a chiseled bevel: thicker
      lighter top + left edge (highlight catching light from the top), thicker
@@ -658,9 +658,9 @@ const styles = themedStyles((c) => ({
     gap: 12,
   },
   rowIcon: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     backgroundColor: c.bg,
     alignItems: "center",
     justifyContent: "center",
@@ -669,7 +669,7 @@ const styles = themedStyles((c) => ({
   },
   rowLabel: {
     color: c.textPrimary,
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: "800",
     letterSpacing: 0.3,
   },
@@ -677,23 +677,23 @@ const styles = themedStyles((c) => ({
     color: c.textMuted,
     fontSize: 8,
     fontWeight: "600",
-    marginTop: 3,
+    marginTop: 2,
     letterSpacing: 0.3,
   },
   rowValuePill: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
     backgroundColor: c.bg,
     borderRadius: 999,
     borderWidth: 1,
     borderColor: c.border,
-    minWidth: 76,
+    minWidth: 64,
     alignItems: "center",
-    marginLeft: 8,
+    marginLeft: 6,
   },
   rowValue: {
     color: c.textPrimary,
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: "900",
   },
 
