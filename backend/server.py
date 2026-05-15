@@ -143,7 +143,14 @@ class _ScopedCollection:
         return await self._base.count_documents(self._scope(q))
 
     def aggregate(self, pipeline):
-        scoped = [{"$match": {"owner_id": self._uid}}, *list(pipeline)]
+        match = {"owner_id": self._uid}
+        visible = free_visible_tool_ids_var.get()
+        if visible is not None:
+            if self._name == "tools":
+                match["id"] = {"$in": list(visible)}
+            elif self._name in TOOL_REF_COLLECTIONS:
+                match["tool_id"] = {"$in": list(visible)}
+        scoped = [{"$match": match}, *list(pipeline)]
         return self._base.aggregate(scoped)
 
 
