@@ -2517,22 +2517,63 @@ export default function ToolDetail() {
       <Modal
         visible={showQtyModal}
         transparent
-        animationType="fade"
+        animationType="slide"
         onRequestClose={() => setShowQtyModal(false)}
       >
         <View style={styles.modalBg}>
-          <View style={[styles.modalCard, { maxWidth: 360 }]}>
-            <Text style={styles.modalTitle}>QUANTITY</Text>
-            <View style={{ marginVertical: 12 }}>
+          <View style={styles.modalCard}>
+            <View style={styles.modalHeader}>
+              <Ionicons name="layers-outline" size={18} color={theme.colors.accent} />
+              <Text style={[styles.modalTitle, { fontSize: 13, letterSpacing: 1.6 }]}>
+                ADJUST QUANTITY
+              </Text>
+              <TouchableOpacity
+                onPress={() => setShowQtyModal(false)}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                testID="close-qty-modal-x"
+              >
+                <Ionicons name="close" size={22} color={theme.colors.textMuted} />
+              </TouchableOpacity>
+            </View>
+
+            <Text
+              style={{
+                color: theme.colors.textSecondary,
+                fontSize: 12,
+                lineHeight: 18,
+                marginBottom: 14,
+              }}
+            >
+              Set how many units of this item you have in stock. Tap the number to
+              type a value directly, or use the +/− buttons.
+            </Text>
+
+            <View style={{ marginBottom: 16 }}>
               <QuantityStepper tool={tool} onChange={load} />
             </View>
+
             <View style={styles.modalActions}>
               <TouchableOpacity
-                style={[styles.btn, { flex: 1, paddingHorizontal: 28, paddingVertical: 12 }]}
+                style={[
+                  styles.modalBtn,
+                  {
+                    flex: 1,
+                    backgroundColor: theme.colors.accent,
+                    paddingVertical: 14,
+                  },
+                ]}
                 onPress={() => setShowQtyModal(false)}
                 testID="close-qty-modal"
+                activeOpacity={0.85}
               >
-                <Text style={[styles.btnText, { fontSize: 14, letterSpacing: 1 }]}>DONE</Text>
+                <Text
+                  style={[
+                    styles.modalBtnText,
+                    { color: "#000", fontSize: 12, letterSpacing: 1.5 },
+                  ]}
+                >
+                  DONE
+                </Text>
               </TouchableOpacity>
             </View>
           </View>
