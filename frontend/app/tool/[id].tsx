@@ -55,6 +55,11 @@ export default function ToolDetail() {
   const [showCheckout, setShowCheckout] = useState(false);
   const [coMode, setCoMode] = useState<"saved" | "free">("saved");
   const [coName, setCoName] = useState("");
+  /** Phone (or any contact string — email is also fine) typed in the FREE
+   *  TEXT mode of the checkout modal. When non-empty AND we're in free-text
+   *  mode, doCheckout() persists this person into the borrowers list as a
+   *  side-effect so they show up under FROM LIST next time. */
+  const [coPhone, setCoPhone] = useState("");
   const [coBorrowerId, setCoBorrowerId] = useState<string | null>(null);
   const [coNotes, setCoNotes] = useState("");
   const [photoIdx, setPhotoIdx] = useState(0);
@@ -278,13 +283,47 @@ export default function ToolDetail() {
       return;
     }
     try {
+      // If the user typed a NEW person via FREE TEXT, persist them into
+      // the borrowers list as a side effect so they show up under FROM
+      // LIST on the next checkout — this is what users expect when they
+      // enter someone manually or import from device contacts.
+      let resolvedId: string | null = coMode === "saved" ? coBorrowerId : null;
+      if (coMode === "free") {
+        try {
+          // Reuse an existing borrower with the same name (case-insensitive)
+          // when possible — otherwise we'd keep creating duplicate "John"s
+          // every time the user checks something out to him.
+          const existing = borrowers.find(
+            (b: any) => (b.name || "").trim().toLowerCase() === name.toLowerCase(),
+          );
+          if (existing) {
+            resolvedId = existing.id;
+            // If we now have a phone AND the existing borrower has no
+            // contact info, backfill it — silently improves the contact
+            // list over time.
+            if (coPhone.trim() && !(existing.contact || "").trim()) {
+              await api
+                .updateBorrower(existing.id, { name: existing.name, contact: coPhone.trim() })
+                .catch(() => null);
+            }
+          } else {
+            const created: any = await api
+              .createBorrower({ name, contact: coPhone.trim() })
+              .catch(() => null);
+            if (created?.id) resolvedId = created.id;
+          }
+        } catch {
+          /* non-fatal — fall back to anonymous free-text checkout */
+        }
+      }
       await api.checkoutTool(tool.id, {
         borrower_name: name,
-        borrower_id: coMode === "saved" ? coBorrowerId : null,
+        borrower_id: resolvedId,
         notes: coNotes,
       });
       setShowCheckout(false);
       setCoName("");
+      setCoPhone("");
       setCoBorrowerId(null);
       setCoNotes("");
       load();
@@ -1899,9 +1938,17 @@ export default function ToolDetail() {
                   if (Platform.OS === "ios") {
                     const c = await pickContactNativeIOS();
                     if (c?.name) {
+                      // Switch to FREE TEXT mode and prefill BOTH name and
+                      // phone — the FREE TEXT branch's submit handler
+                      // (doCheckout, above) will then persist this person
+                      // into the borrowers list so they survive into the
+                      // FROM LIST tab on the next checkout. This single
+                      // path makes "import a contact" actually save the
+                      // contact, which is what users assume happens.
                       setCoMode("free");
                       setCoBorrowerId(null);
                       setCoName(c.name);
+                      setCoPhone(c.phone || "");
                     }
                   } else if (isAndroidPickerNeeded()) {
                     const list = await loadAllDeviceContactsAndroid();
