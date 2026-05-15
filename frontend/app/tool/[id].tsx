@@ -163,15 +163,32 @@ export default function ToolDetail() {
     broken_photo: "",
   });
 
-  const pickBrokenPhoto = async () => {
+  // Pick the photo of the broken/damaged item for a repair claim.
+  // Supports BOTH "camera" (take a new photo right now) and "library"
+  // (pick an existing one). Previously this was library-only which
+  // was surprising — most repair flows involve the user holding the
+  // broken part in their hand, not browsing the camera roll.
+  const pickBrokenPhoto = async (src: "camera" | "library" = "library") => {
     try {
-      const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (!perm.granted) return;
-      const res = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        quality: 0.6,
-        base64: true,
-      });
+      const perm =
+        src === "camera"
+          ? await ImagePicker.requestCameraPermissionsAsync()
+          : await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!perm.granted) {
+        Alert.alert(
+          "Permission needed",
+          `Please grant ${src === "camera" ? "camera" : "photo library"} access.`,
+        );
+        return;
+      }
+      const opts: any = { quality: 0.6, base64: true };
+      const res =
+        src === "camera"
+          ? await ImagePicker.launchCameraAsync(opts)
+          : await ImagePicker.launchImageLibraryAsync({
+              ...opts,
+              mediaTypes: ImagePicker.MediaTypeOptions.Images,
+            });
       if (!res.canceled && res.assets?.[0]) {
         const a = res.assets[0];
         const data =
@@ -2055,33 +2072,77 @@ export default function ToolDetail() {
                   </TouchableOpacity>
                 </View>
               ) : (
-                <TouchableOpacity
-                  testID="pick-broken-photo-btn"
-                  onPress={pickBrokenPhoto}
+                /* Two-button row so the user can EITHER snap a fresh photo
+                   with the camera (most common when something just broke)
+                   OR pick an existing one from the library. */
+                <View
                   style={{
-                    height: 80,
-                    borderWidth: 1,
-                    borderStyle: "dashed",
-                    borderColor: theme.colors.accent,
-                    borderRadius: 6,
-                    alignItems: "center",
-                    justifyContent: "center",
                     flexDirection: "row",
                     gap: 8,
                     marginBottom: 8,
                   }}
                 >
-                  <Ionicons name="camera" size={20} color={theme.colors.accent} />
-                  <Text
+                  <TouchableOpacity
+                    testID="take-broken-photo-btn"
+                    onPress={() => pickBrokenPhoto("camera")}
                     style={{
-                      color: theme.colors.accent,
-                      fontWeight: "900",
-                      letterSpacing: 1.5,
+                      flex: 1,
+                      height: 80,
+                      borderWidth: 1,
+                      borderStyle: "dashed",
+                      borderColor: theme.colors.accent,
+                      borderRadius: 6,
+                      alignItems: "center",
+                      justifyContent: "center",
+                      flexDirection: "row",
+                      gap: 6,
                     }}
                   >
-                    ADD PHOTO
-                  </Text>
-                </TouchableOpacity>
+                    <Ionicons name="camera" size={20} color={theme.colors.accent} />
+                    <Text
+                      style={{
+                        color: theme.colors.accent,
+                        fontWeight: "900",
+                        letterSpacing: 1.3,
+                        fontSize: 11,
+                      }}
+                    >
+                      TAKE PHOTO
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    testID="pick-broken-photo-btn"
+                    onPress={() => pickBrokenPhoto("library")}
+                    style={{
+                      flex: 1,
+                      height: 80,
+                      borderWidth: 1,
+                      borderStyle: "dashed",
+                      borderColor: theme.colors.accent,
+                      borderRadius: 6,
+                      alignItems: "center",
+                      justifyContent: "center",
+                      flexDirection: "row",
+                      gap: 6,
+                    }}
+                  >
+                    <Ionicons
+                      name="images"
+                      size={20}
+                      color={theme.colors.accent}
+                    />
+                    <Text
+                      style={{
+                        color: theme.colors.accent,
+                        fontWeight: "900",
+                        letterSpacing: 1.3,
+                        fontSize: 11,
+                      }}
+                    >
+                      LIBRARY
+                    </Text>
+                  </TouchableOpacity>
+                </View>
               )}
 
               {!tool.needs_repair && tool.is_checked_out && (
