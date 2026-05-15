@@ -908,17 +908,17 @@ export default function ToolEdit() {
             value={description} onChangeText={setDescription}
             style={[styles.input, { height: 90, textAlignVertical: "top" }]} multiline />
 
-          <View style={styles.row2}>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.label}>BRAND</Text>
-              <TextInput testID="brand-input" placeholder="DeWalt" placeholderTextColor={theme.colors.textMuted}
-                value={brand} onChangeText={setBrand} style={styles.input} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.label}>MODEL</Text>
-              <TextInput testID="model-input" placeholder="DCD777" placeholderTextColor={theme.colors.textMuted}
-                value={model} onChangeText={setModel} style={styles.input} />
-            </View>
+          {/* BRAND now sits alone on its row. The legacy "MODEL" text input
+              (e.g. "DCD777") was removed at the user's request — every tool
+              uses the consolidated multi-value MODEL NUMBER block below
+              instead. The internal `model` field is still kept in state so
+              that existing tools imported via CSV or migrated from older
+              builds don't silently lose data on save; new tools simply
+              leave it blank. */}
+          <View>
+            <Text style={styles.label}>BRAND</Text>
+            <TextInput testID="brand-input" placeholder="DeWalt" placeholderTextColor={theme.colors.textMuted}
+              value={brand} onChangeText={setBrand} style={styles.input} />
           </View>
 
           {/* IS-A-SET toggle */}
@@ -1712,7 +1712,11 @@ export default function ToolEdit() {
                 {[
                   { key: "name", label: "NAME", placeholder: "Cordless drill", keyboard: "default" },
                   { key: "brand", label: "BRAND", placeholder: "DeWalt", keyboard: "default" },
-                  { key: "model", label: "MODEL", placeholder: "DCD777", keyboard: "default" },
+                  // "MODEL" (brand-product-model) field intentionally
+                  // omitted — see edit-screen comment near the BRAND
+                  // input. Receipts that previously suggested a model
+                  // code should write it into the MODEL # / Part #
+                  // field instead.
                   { key: "serial_number", label: "MODEL #  /  PART #  /  SKU", placeholder: "e.g. 56789-A", keyboard: "default" },
                   { key: "cost", label: "COST ($)", placeholder: "0.00", keyboard: "decimal-pad" },
                   { key: "quantity", label: "QUANTITY", placeholder: "1", keyboard: "number-pad" },

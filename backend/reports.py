@@ -1414,10 +1414,11 @@ def _make_sales_per_item_factory(rows: List[Dict[str, Any]], mode: str,
                 page_flow.append(_para(esc(notes), st["muted"]))
                 page_flow.append(Spacer(1, 8))
 
-            # Specs grid (2-col)
+            # Specs grid (2-col). "Model" (brand-product-model) pair
+            # removed — every tool uses the consolidated "Model #"
+            # identifier below.
             pairs = [
                 ("Brand", r.get("brand")),
-                ("Model", r.get("model")),
                 ("Model #", r.get("serial")),
                 ("Condition", r.get("condition")),
                 ("Original Cost", fmt_money(r.get("cost")) if r.get("cost") else ""),
@@ -1911,7 +1912,9 @@ _TOOL_COLUMNS = [
     Column("photo", "Photo", "center", "image"),
     Column("name", "Name", "left", "text"),
     Column("brand", "Brand", "left", "text"),
-    Column("model", "Model", "left", "text"),
+    # Legacy "Model" column removed — the consolidated "Model #" column
+    # below (key=serial) is the single identifier surface across the app
+    # after the user-requested rename.
     Column("serial", "Model #", "left", "text"),
     Column("category", "Category", "left", "text"),
     Column("location", "Location", "left", "text"),
@@ -1929,7 +1932,7 @@ _SALES_COLUMNS = [
     Column("photo", "Photo", "center", "image"),
     Column("name", "Name", "left", "text"),
     Column("brand", "Brand", "left", "text"),
-    Column("model", "Model", "left", "text"),
+    # Same consolidation as _TOOL_COLUMNS — single "Model #" column.
     Column("serial", "Model #", "left", "text"),
     Column("dealer", "Dealer", "left", "text"),
     Column("location", "Location", "left", "text"),

@@ -491,7 +491,8 @@ export default function ToolDetail() {
     // proper template — never just "2 lines".
     const specRows: { label: string; value: string }[] = [];
     if (F.brand) specRows.push({ label: "Brand", value: tool.brand || "" });
-    if (F.model) specRows.push({ label: "Model", value: tool.model || "" });
+    // "Model" row intentionally omitted — the for-sale flyer now uses
+    // the consolidated Model # / Part # field instead.
     if (F.serial)
       specRows.push({ label: "Model #", value: tool.serial_number || "" });
     if (F.condition)
@@ -844,7 +845,8 @@ export default function ToolDetail() {
     // Build spec rows (only show populated fields)
     const specPairs: { label: string; value: string }[] = [];
     if (tool.brand) specPairs.push({ label: "Brand", value: String(tool.brand) });
-    if (tool.model) specPairs.push({ label: "Model", value: String(tool.model) });
+    // Legacy "Model" pair no longer emitted on receipt-style spec sheets
+    // — see consolidation comment in the for-sale flyer renderer above.
     if (tool.serial_number) specPairs.push({ label: "Model #", value: String(tool.serial_number) });
     if (tool.condition) specPairs.push({ label: "Condition", value: String(tool.condition) });
     if (tool.category_name) specPairs.push({ label: "Category", value: String(tool.category_name) });
@@ -1458,7 +1460,11 @@ export default function ToolDetail() {
             })()}
 
             {!!tool.brand && <PillRow label="BRAND" value={tool.brand} />}
-            {!!tool.model && <PillRow label="MODEL" value={tool.model} />}
+            {/* Legacy "MODEL" pillbox removed — every tool now uses the
+                consolidated MODEL NUMBER block above. The internal
+                `tool.model` field may still be populated from old data /
+                CSV imports, but we no longer surface it on the detail
+                screen to avoid duplicating the model-identifier UI. */}
             {!!tool.purchase_date && (
               <PillRow label="PURCHASED" value={formatDateUS(tool.purchase_date)} />
             )}
@@ -2319,8 +2325,9 @@ export default function ToolDetail() {
                 { k: "name", label: "Item name" },
                 { k: "price", label: "Asking price (large box)" },
                 { k: "brand", label: "Brand" },
-                { k: "model", label: "Model" },
-                { k: "serial", label: "Serial / Part #" },
+                // "Model" (brand-product-model) row removed — every tool
+                // now uses a single consolidated "Model #" identifier.
+                { k: "serial", label: "Model #" },
                 { k: "condition", label: "Condition" },
                 { k: "category", label: "Category" },
                 { k: "purchase_date", label: "Original purchase date" },
