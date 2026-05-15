@@ -18,6 +18,45 @@ const SECURE_KEY_PASSWORD = "tt.biometric.password";
 // without unlocking the secure store.
 const FLAG_ENABLED = "tt.biometric.enabled"; // "1" when the user has opted in
 const FLAG_PROMPTED = "tt.biometric.prompted"; // "1" once we've offered the prompt at least once
+// Epoch-millis timestamp written every time we successfully complete
+// an OS biometric prompt. The BiometricLockGate's AppState listener
+// reads this and SUPPRESSES the re-lock if the prompt closed within
+// the last ~3 seconds — otherwise the inactive→active transition
+// that follows a system biometric dialog would immediately re-lock
+// the user out, creating an unbreakable loop.
+const FLAG_LAST_UNLOCK = "tt.biometric.last_unlock";
+
+/**
+ * How long (ms) to suppress automatic re-locks after a successful
+ * biometric prompt. Long enough to swallow the iOS inactive→active
+ * transition (~1-2s), short enough that an actual background session
+ * still re-prompts.
+ */
+export const RELOCK_SUPPRESS_WINDOW_MS = 3000;
+
+/**
+ * Returns true if we authenticated within the last
+ * RELOCK_SUPPRESS_WINDOW_MS milliseconds. Callers should skip
+ * re-locking the app in that window.
+ */
+export async function isWithinUnlockGrace(): Promise<boolean> {
+  try {
+    const raw = await AsyncStorage.getItem(FLAG_LAST_UNLOCK);
+    if (!raw) return false;
+    const t = parseInt(raw, 10);
+    if (!isFinite(t)) return false;
+    return Date.now() - t < RELOCK_SUPPRESS_WINDOW_MS;
+  } catch {
+    return false;
+  }
+}
+
+/** Stamp the last-unlock timestamp to now. */
+export async function markUnlocked(): Promise<void> {
+  try {
+    await AsyncStorage.setItem(FLAG_LAST_UNLOCK, String(Date.now()));
+  } catch {}
+}
 
 export interface BiometricStatus {
   /** Device has biometric hardware (Touch ID / Face ID / Fingerprint sensor). */
@@ -81,9 +120,42 @@ export async function markBiometricPrompted(): Promise<void> {
  * `tryBiometricLogin()` will be able to unlock them. We store the
  * password rather than the token so the user can re-authenticate
  * against the backend (tokens may expire/rotate, passwords don't).
+ *
+ * IMPORTANT: After saving creds we immediately call
+ * `LocalAuthentication.authenticateAsync` once. This forces iOS /
+ * Android to show its OS-level permission dialog ("Allow this app to
+ * use Face ID?") right now, instead of deferring it to the next app
+ * launch. Without this the user toggles biometric ON in Settings,
+ * the app says "enabled", but nothing actually happens until they
+ * cold-relaunch — which is confusing.
+ *
+ * Returns `true` if the OS auth succeeded and creds were saved.
+ * Returns `false` if the user cancelled the prompt (creds are NOT
+ * saved in that case, so the toggle remains OFF).
  */
-export async function enableBiometric(email: string, password: string): Promise<void> {
-  if (Platform.OS === "web") return;
+export async function enableBiometric(email: string, password: string): Promise<boolean> {
+  if (Platform.OS === "web") return false;
+  // Step 1: Fire the OS prompt FIRST. This:
+  //   • Triggers the one-time iOS "Allow Face ID" permission grant
+  //   • Confirms the user can actually authenticate with their face/finger
+  //     before we commit any state to disk
+  try {
+    const status = await getBiometricStatus();
+    const label = status.label || "Biometrics";
+    const result = await LocalAuthentication.authenticateAsync({
+      promptMessage: `Confirm ${label} to enable sign-in`,
+      cancelLabel: "Cancel",
+      disableDeviceFallback: true,
+    });
+    if (!result.success) {
+      // User cancelled or auth failed — leave everything off so the
+      // UI toggle correctly reflects "not enabled".
+      return false;
+    }
+  } catch {
+    return false;
+  }
+  // Step 2: Persist the credentials + flag now that OS auth passed.
   await SecureStore.setItemAsync(SECURE_KEY_EMAIL, email, {
     keychainAccessible: SecureStore.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
   });
@@ -92,6 +164,12 @@ export async function enableBiometric(email: string, password: string): Promise<
   });
   await AsyncStorage.setItem(FLAG_ENABLED, "1");
   await AsyncStorage.setItem(FLAG_PROMPTED, "1");
+  // Mark the moment we last unlocked so the BiometricLockGate's
+  // AppState listener can ignore the inactive→active transition that
+  // follows the OS prompt closing (otherwise the gate would
+  // immediately re-lock the user out).
+  await AsyncStorage.setItem(FLAG_LAST_UNLOCK, String(Date.now()));
+  return true;
 }
 
 /**
@@ -135,6 +213,9 @@ export async function tryBiometricLogin(
     const email = await SecureStore.getItemAsync(SECURE_KEY_EMAIL);
     const password = await SecureStore.getItemAsync(SECURE_KEY_PASSWORD);
     if (!email || !password) return null;
+    // Stamp the unlock timestamp so the BiometricLockGate ignores the
+    // inactive→active AppState event that follows the prompt closing.
+    await markUnlocked();
     return { email, password };
   } catch {
     return null;

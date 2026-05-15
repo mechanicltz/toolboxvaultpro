@@ -29,11 +29,12 @@ import {
   getBiometricStatus,
   tryBiometricLogin,
   disableBiometric,
+  isWithinUnlockGrace,
 } from "./biometric";
 import { useAuth } from "./AuthContext";
 
 export function BiometricLockGate({ children }: { children: React.ReactNode }) {
-  const { user, logout, login } = useAuth();
+  const { user, logout } = useAuth();
   const [locked, setLocked] = useState(false);
   const [label, setLabel] = useState("Face ID");
   const [busy, setBusy] = useState(false);
@@ -45,6 +46,13 @@ export function BiometricLockGate({ children }: { children: React.ReactNode }) {
   // don't fire the prompt twice if AppState transitions happen during
   // mount.
   const coldLaunchHandledRef = useRef(false);
+  // Tracks whether the app has been in `background` since the last
+  // time it was `active`. iOS doesn't transition cleanly
+  // background→active — it inserts an `inactive` step in between, so
+  // a simple "prev state" check is wrong. Instead we set this flag
+  // to true the moment we see background, and read+clear it when we
+  // see the next active transition.
+  const sawBackgroundRef = useRef(false);
 
   // Re-read the biometric opt-in flag.
   const refreshEnabled = useCallback(async () => {
@@ -66,20 +74,48 @@ export function BiometricLockGate({ children }: { children: React.ReactNode }) {
       if (coldLaunchHandledRef.current) return;
       coldLaunchHandledRef.current = true;
       const on = await refreshEnabled();
-      if (on && user) {
+      // If the user JUST unlocked (e.g. enabled biometric from More
+      // moments ago, which runs an authenticateAsync), skip the
+      // initial lock to avoid a redundant prompt.
+      if (on && user && !(await isWithinUnlockGrace())) {
         setLocked(true);
       }
     })();
   }, [user, refreshEnabled]);
 
-  // Foreground: re-prompt every time the app comes back from background.
+  // Foreground re-lock — but ONLY if the app actually came back from
+  // BACKGROUND, not just from `inactive`. iOS uses `inactive` when:
+  //   • the user pulls down Notification Center
+  //   • the system shows a permission/biometric dialog
+  //   • the user takes a screenshot
+  //   • a phone call comes in briefly
+  // None of those should re-lock the app — only an actual
+  // background→active transition (user re-opened the app) should.
+  //
+  // iOS quirk: the transition sequence on resume from background is
+  //   background → inactive → active
+  // ...so we cannot just check `prev === "background"` on the active
+  // event (prev will be "inactive"). Instead we track whether we've
+  // ever seen "background" since the last "active", and consult that
+  // flag when active fires.
   useEffect(() => {
     const sub = AppState.addEventListener("change", async (next: AppStateStatus) => {
-      if (next === "active") {
-        const on = await refreshEnabled();
-        if (on && user) {
-          setLocked(true);
-        }
+      if (next === "background") {
+        sawBackgroundRef.current = true;
+        return;
+      }
+      if (next !== "active") return;
+      // Only treat this resume as a real re-foreground if we
+      // genuinely went to background since last time.
+      const wasBackgrounded = sawBackgroundRef.current;
+      sawBackgroundRef.current = false;
+      if (!wasBackgrounded) return;
+      // Additional safety net: if a biometric prompt JUST succeeded
+      // (within the suppress window), don't immediately re-lock.
+      if (await isWithinUnlockGrace()) return;
+      const on = await refreshEnabled();
+      if (on && user) {
+        setLocked(true);
       }
     });
     return () => sub.remove();
@@ -88,27 +124,27 @@ export function BiometricLockGate({ children }: { children: React.ReactNode }) {
   // When locked → fire the biometric prompt. On success, unlock. On
   // cancel, keep the lock overlay up so the user can either retry or
   // tap "Use password".
+  //
+  // NOTE: We do NOT re-call `login()` after a successful unlock. The
+  // user's JWT in AsyncStorage is already valid (otherwise AuthGate
+  // would have routed them to /login). Re-running login() would:
+  //   • cause a redundant network round-trip
+  //   • re-render the entire auth tree, which together with the
+  //     simultaneous AppState `active` event was the root cause of the
+  //     "Face ID succeeds → screen flickers → locks again" infinite
+  //     loop reported by users.
   const runUnlock = useCallback(async () => {
     if (busy) return;
     setBusy(true);
     try {
       const creds = await tryBiometricLogin(`Unlock Toolbox Vault with ${label}`);
       if (creds) {
-        // Optional: refresh the JWT against the backend in case the
-        // saved session expired while the app was backgrounded. This
-        // keeps the user logged in cleanly. Failures fall back to the
-        // login screen.
-        try {
-          await login(creds.email, creds.password);
-        } catch {
-          /* token still works; ignore */
-        }
         setLocked(false);
       }
     } finally {
       setBusy(false);
     }
-  }, [busy, label, login]);
+  }, [busy, label]);
 
   useEffect(() => {
     if (locked) {

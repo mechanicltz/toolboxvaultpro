@@ -176,9 +176,24 @@ export default function MoreScreen() {
           Alert.alert("Wrong password", "Please try again.");
           return;
         }
-        await enableBiometric(user.email, pw);
+        // enableBiometric() now ALSO fires an OS biometric prompt
+        // immediately. This is what triggers iOS to show its one-time
+        // "Allow Toolbox Vault to use Face ID?" permission dialog, and
+        // confirms the user's face/finger before we commit anything
+        // to storage. If they cancel, leave the toggle off.
+        const ok2 = await enableBiometric(user.email, pw);
         await refreshBio();
-        Alert.alert(`${bioStatus.label} enabled`, "You'll be signed in automatically next time.");
+        if (ok2) {
+          Alert.alert(
+            `${bioStatus.label} enabled`,
+            `You'll be signed in automatically with ${bioStatus.label} next time.`,
+          );
+        } else {
+          Alert.alert(
+            `${bioStatus.label} not enabled`,
+            `We couldn't confirm your ${bioStatus.label}. Try again, or check that ${bioStatus.label} is set up in your phone's settings.`,
+          );
+        }
       } catch (e: any) {
         Alert.alert("Couldn't enable", e?.message || "Try again.");
       }
