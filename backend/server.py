@@ -39,17 +39,77 @@ EMERGENT_LLM_KEY = os.environ.get('EMERGENT_LLM_KEY', '')
 # ---------- Per-request user context ----------
 current_user_id_var: ContextVar[Optional[str]] = ContextVar("current_user_id", default=None)
 
+# When the current user is FREE-tier with > 15 tools, this is the set of
+# tool ids they're allowed to see (the 15 oldest). For PRO / lifetime users
+# OR free users with <= 15 tools this stays None and the proxy applies no
+# extra filter. Computed once per request in the middleware after auth.
+free_visible_tool_ids_var: ContextVar[Optional[set]] = ContextVar(
+    "free_visible_tool_ids", default=None,
+)
+
+# Collections that store rows referencing a tool via `tool_id`. When the
+# free-tier filter is active, queries against these collections are also
+# narrowed so a free user never sees a claim / maintenance entry / etc.
+# tied to a hidden tool. Anything not in this set falls back to the
+# normal owner_id-only scope.
+TOOL_REF_COLLECTIONS = {
+    "claims",
+    "claim_events",
+    "claim_payments",
+    "maintenance",
+    "maintenance_logs",
+    "checkouts",
+    "checkout_history",
+    "warranty_claims",
+    "photos",
+    "documents",
+    "tool_history",
+    "tool_changes",
+}
+
 
 class _ScopedCollection:
     """Wraps a Motor collection so all queries/inserts are auto-filtered by owner_id."""
 
-    def __init__(self, base, user_id: str):
+    def __init__(self, base, user_id: str, name: str = ""):
         self._base = base
         self._uid = user_id
+        self._name = name
 
     def _scope(self, q=None):
         q = dict(q or {})
         q["owner_id"] = self._uid
+        # Free-tier per-request lockdown — only applied to the `tools`
+        # collection itself (id-based) and to tables that reference a
+        # tool via `tool_id`. PRO users always have None here so nothing
+        # changes for them.
+        visible = free_visible_tool_ids_var.get()
+        if visible is not None:
+            if self._name == "tools":
+                # Merge with any existing `id` filter the caller supplied.
+                if "id" in q:
+                    existing = q["id"]
+                    if isinstance(existing, str):
+                        if existing not in visible:
+                            # Force the query to return nothing — caller asked
+                            # for a specific tool that's hidden.
+                            q["id"] = {"$in": []}
+                    elif isinstance(existing, dict) and "$in" in existing:
+                        q["id"] = {"$in": [i for i in existing["$in"] if i in visible]}
+                    # else: leave more complex operators alone
+                else:
+                    q["id"] = {"$in": list(visible)}
+            elif self._name in TOOL_REF_COLLECTIONS:
+                # Same merging logic but on `tool_id` field.
+                if "tool_id" in q:
+                    existing = q["tool_id"]
+                    if isinstance(existing, str):
+                        if existing not in visible:
+                            q["tool_id"] = {"$in": []}
+                    elif isinstance(existing, dict) and "$in" in existing:
+                        q["tool_id"] = {"$in": [i for i in existing["$in"] if i in visible]}
+                else:
+                    q["tool_id"] = {"$in": list(visible)}
         return q
 
     def find(self, q=None, *args, **kw):
@@ -94,7 +154,7 @@ class _DBProxy:
         coll = real_db[name]
         uid = current_user_id_var.get()
         if uid:
-            return _ScopedCollection(coll, uid)
+            return _ScopedCollection(coll, uid, name=name)
         return coll
 
     def __getitem__(self, name):
@@ -162,10 +222,32 @@ async def attach_user_to_context(request: Request, call_next):
     except Exception:
         return JSONResponse({"detail": "Invalid token"}, status_code=401)
     token_var = current_user_id_var.set(uid)
+    visible_var = None
     try:
+        # Free-tier visibility cap — must be computed BEFORE handlers run
+        # so the _ScopedCollection proxy can read it. Skipped for fast
+        # endpoints that don't touch tools to keep auth-only requests
+        # snappy. Errors here are swallowed so they never break a
+        # request — pessimistic mode = no filter (PRO behaviour).
+        try:
+            from subscriptions import is_pro as _is_pro
+            if not await _is_pro(real_db, uid):
+                # Count first; if <= 15, no filter needed.
+                cnt = await real_db.tools.count_documents({"owner_id": uid})
+                if cnt > 15:
+                    cursor = real_db.tools.find(
+                        {"owner_id": uid},
+                        {"id": 1, "_id": 0},
+                    ).sort("created_at", 1).limit(15)
+                    ids = {doc["id"] async for doc in cursor if "id" in doc}
+                    visible_var = free_visible_tool_ids_var.set(ids)
+        except Exception:
+            pass
         return await call_next(request)
     finally:
         current_user_id_var.reset(token_var)
+        if visible_var is not None:
+            free_visible_tool_ids_var.reset(visible_var)
 
 
 api_router = APIRouter(prefix="/api")
