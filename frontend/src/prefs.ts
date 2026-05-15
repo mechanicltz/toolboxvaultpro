@@ -36,21 +36,24 @@ const DEFAULT_HOME_ROWS: HomeRowVis = {
   total_items: true,
   invested: true,
   checked_out: true,
-  selling: false,
-  wishlist: false,
-  lost: false,
+  selling: true,
+  wishlist: true,
+  lost: true,
   maintenance: true,
   open_claims: true,
   owed_to_dealers: true,
 };
 
+// Order requested by the user: Dealer Accounts first (the big revenue-card
+// block), then the rolled-up numeric metrics in priority of "things you
+// actually want to glance at every day", then the longer-tail buckets.
 const DEFAULT_HOME_ROW_ORDER: HomeRowKey[] = [
+  "owed_to_dealers",
   "total_items",
   "invested",
   "checked_out",
-  "maintenance",
   "open_claims",
-  "owed_to_dealers",
+  "maintenance",
   "selling",
   "wishlist",
   "lost",

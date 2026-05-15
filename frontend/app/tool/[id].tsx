@@ -2652,9 +2652,11 @@ function PillRow({
   onPress?: () => void;
   valueColor?: string;
 }) {
-  const Wrap: any = onPress ? TouchableOpacity : View;
   return (
-    <Wrap style={newStyles.pillRow} {...(onPress ? { onPress, activeOpacity: 0.85 } : {})}>
+    <BevelCard
+      style={newStyles.pillRow}
+      {...(onPress ? { onPress, activeOpacity: 0.85 } : {})}
+    >
       <View style={{ flex: 1 }}>
         <Text style={newStyles.pillRowLabel}>{label}</Text>
         {!!sub && <Text style={newStyles.pillRowSub}>{sub}</Text>}
@@ -2683,7 +2685,7 @@ function PillRow({
           style={{ marginLeft: 4 }}
         />
       )}
-    </Wrap>
+    </BevelCard>
   );
 }
 
@@ -3484,18 +3486,16 @@ const newStyles = themedStyles((c) => ({
 
   // ---------- PILLBOX ROW (used in PillRow component) ----------
   pillRow: {
+    /* Surface (gradient + bevel borders + drop shadow) comes from
+       <BevelCard>. We only describe the inner flex layout here so the
+       gradient isn't obliterated by a flat bgSecondary fill. */
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: c.bgSecondary,
-    borderColor: c.border,
-    borderWidth: 1,
-    borderRadius: 12,
     paddingHorizontal: 10,
     paddingVertical: 6,
     gap: 10,
     minHeight: 28,
-  
-    ...(theme.elevation.md as object),
+    marginBottom: 6,
   },
   pillRowLabel: {
     color: c.textPrimary,
@@ -3885,18 +3885,15 @@ const newStyles = themedStyles((c) => ({
     marginTop: 8,
   },
   attachHeader: {
+    /* Surface (gradient + bevel borders + drop shadow) comes from
+       <BevelCard>. Strip the flat bgSecondary fill so the gradient
+       actually shows through. */
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
-    backgroundColor: c.bgSecondary,
-    borderColor: c.border,
-    borderWidth: 1,
-    borderRadius: 12,
     paddingHorizontal: 10,
     paddingVertical: 6,
     minHeight: 28,
-  
-    ...(theme.elevation.md as object),
   },
   attachHeaderLabel: {
     flex: 1,

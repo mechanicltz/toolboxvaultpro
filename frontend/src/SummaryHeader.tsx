@@ -8,10 +8,15 @@ export function SummaryHeader({
   agg,
   showPrices,
   compact,
+  openClaims,
 }: {
   agg: any;
   showPrices: boolean;
   compact?: boolean;
+  /** Number of currently-open warranty/repair claims. Surfaced as a stat in
+   *  the top-right of the header. Replaces the old TAGS count (which was
+   *  rarely actionable). */
+  openClaims?: number;
 }) {
   if (!agg) return null;
   const breakdown = (obj: Record<string, number>) => {
@@ -40,7 +45,11 @@ export function SummaryHeader({
         {(agg.needs_repair ?? 0) > 0 && (
           <Stat label="Repair" value={String(agg.needs_repair)} color={theme.colors.danger} />
         )}
-        <Stat label="Tags" value={String(agg.tag_count ?? 0)} />
+        <Stat
+          label="Claims"
+          value={String(openClaims ?? 0)}
+          color={(openClaims ?? 0) > 0 ? theme.colors.danger : undefined}
+        />
       </View>
       {!compact && (
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 8 }}>

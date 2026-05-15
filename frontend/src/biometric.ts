@@ -28,11 +28,17 @@ const FLAG_LAST_UNLOCK = "tt.biometric.last_unlock";
 
 /**
  * How long (ms) to suppress automatic re-locks after a successful
- * biometric prompt. Long enough to swallow the iOS inactive→active
- * transition (~1-2s), short enough that an actual background session
- * still re-prompts.
+ * biometric prompt. Long enough to swallow:
+ *   • the iOS inactive→active transition (~1-2s)
+ *   • the full login-screen biometric flow → API roundtrip → router
+ *     push → AuthGate render → BiometricLockGate mount cycle, which
+ *     on cold start can take 10-15s on a slow network and would
+ *     otherwise immediately re-prompt the user for a SECOND face
+ *     scan right after the first one succeeded.
+ * Short enough that a real backgrounded session (>30s) still
+ * re-prompts as expected.
  */
-export const RELOCK_SUPPRESS_WINDOW_MS = 3000;
+export const RELOCK_SUPPRESS_WINDOW_MS = 30_000;
 
 /**
  * Returns true if we authenticated within the last

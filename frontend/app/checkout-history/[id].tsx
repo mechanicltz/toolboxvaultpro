@@ -15,6 +15,7 @@ import { api } from "../../src/api";
 import { formatDateTime } from "../../src/dt";
 
 import { themedStyles } from "../../src/themeContext";
+import { BevelCard } from "../../src/components/BevelCard";
 
 export default function CheckoutHistoryPage() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -81,7 +82,7 @@ export default function CheckoutHistoryPage() {
       ) : (
         <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
           {history.map((h: any, i: number) => (
-            <TouchableOpacity
+            <BevelCard
               key={i}
               testID={`hist-${i}`}
               style={styles.row}
@@ -110,7 +111,7 @@ export default function CheckoutHistoryPage() {
                 {h.checked_in_at ? formatDateTime(h.checked_in_at) : "— currently out"}
               </Text>
               {!!h.notes && <Text style={styles.notes}>{h.notes}</Text>}
-            </TouchableOpacity>
+            </BevelCard>
           ))}
         </ScrollView>
       )}

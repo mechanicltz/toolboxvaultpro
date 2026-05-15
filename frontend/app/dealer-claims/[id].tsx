@@ -22,6 +22,7 @@ import { formatDateUS as fmtDate } from "../../src/dateUtil";
 import { formatPhonesInText } from "../../src/contactLinks";
 
 import { themedStyles } from "../../src/themeContext";
+import { BevelCard } from "../../src/components/BevelCard";
 
 type Tab = "open" | "completed";
 
@@ -215,24 +216,26 @@ export default function DealerClaimsScreen() {
       </View>
 
       <View style={styles.tabRow}>
-        <TouchableOpacity
+        <BevelCard
           testID="tab-open"
           style={[styles.tabChip, tab === "open" && styles.tabChipOn]}
           onPress={() => setTab("open")}
+          activeOpacity={0.8}
         >
           <Text style={[styles.tabText, tab === "open" && styles.tabTextOn]}>
             OPEN ({open.length})
           </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
+        </BevelCard>
+        <BevelCard
           testID="tab-completed"
           style={[styles.tabChip, tab === "completed" && styles.tabChipOn]}
           onPress={() => setTab("completed")}
+          activeOpacity={0.8}
         >
           <Text style={[styles.tabText, tab === "completed" && styles.tabTextOn]}>
             COMPLETED ({completed.length})
           </Text>
-        </TouchableOpacity>
+        </BevelCard>
       </View>
 
       <ScrollView
@@ -270,7 +273,7 @@ export default function DealerClaimsScreen() {
                 : theme.colors.accentSecondary;
             const photo = t.repair_info?.broken_photo || t.photos?.[0];
             return (
-              <View
+              <BevelCard
                 key={t._archivedClaim ? `claim-${t.claim_id || t.id}` : `tool-${t.id}`}
                 style={styles.card}
               >
@@ -359,7 +362,7 @@ export default function DealerClaimsScreen() {
                     </TouchableOpacity>
                   </View>
                 )}
-              </View>
+              </BevelCard>
             );
           })
         )}
@@ -527,12 +530,12 @@ const styles = themedStyles((c) => ({
   emptyTitle: { color: c.textPrimary, fontWeight: "900", letterSpacing: 1.5, fontSize: 10 },
   emptyText: { color: c.textMuted, fontSize: 9, textAlign: "center", lineHeight: 14 },
   card: {
-    backgroundColor: c.bgSecondary,
-    borderRadius: 6,
     padding: 12,
     marginBottom: 10,
-    borderLeftWidth: 3,
-    borderLeftColor: c.danger,
+    /* Surface gradient + borders now come from <BevelCard>. The red
+       left-border accent (3 px) was a visual indicator for OPEN repairs;
+       it competed with BevelCard's bevel highlight, so we removed it. The
+       status pill inside the row already conveys urgency. */
   },
   cardHead: { flexDirection: "row", alignItems: "center", gap: 12 },
   thumb: {

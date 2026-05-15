@@ -16,6 +16,7 @@ import { api } from "../../../src/api";
 import { usePrefs } from "../../../src/prefs";
 
 import { themedStyles } from "../../../src/themeContext";
+import { BevelCard } from "../../../src/components/BevelCard";
 
 /**
  * Dedicated screen showing every tool that was purchased from a single
@@ -112,7 +113,7 @@ export default function DealerToolsScreen() {
             const ext = (Number(t.cost) || 0) * qty;
             const photo = t.photos?.[0];
             return (
-              <TouchableOpacity
+              <BevelCard
                 key={t.id}
                 testID={`dealer-tool-${t.id}`}
                 style={styles.row}
@@ -162,7 +163,7 @@ export default function DealerToolsScreen() {
                   size={18}
                   color={theme.colors.textMuted}
                 />
-              </TouchableOpacity>
+              </BevelCard>
             );
           }}
         />

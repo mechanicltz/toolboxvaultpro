@@ -44,7 +44,12 @@ export function subscribeOnline(fn: (online: boolean) => void): () => void {
 //      OFFLINE_DEBOUNCE_MS window. Brief blips (<2s) are absorbed.
 //   3. Going ONLINE is instant — the user shouldn't wait for the banner to
 //      disappear once the connection is verified.
-const OFFLINE_DEBOUNCE_MS = 2500;
+// Increased from 2.5s → 6s. When iOS app-switches happen, NetInfo can fire
+// transient `offline` events for up to 4-5 seconds while the network stack
+// re-handshakes (especially after backgrounding for a while or on cellular).
+// 6 seconds reliably absorbs those without making the user wait noticeably
+// longer for a real disconnect.
+const OFFLINE_DEBOUNCE_MS = 6000;
 let pendingOfflineTimer: ReturnType<typeof setTimeout> | null = null;
 
 function clearPendingOffline() {

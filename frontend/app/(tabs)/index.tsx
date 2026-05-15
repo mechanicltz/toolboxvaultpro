@@ -248,10 +248,13 @@ export default function HomeScreen() {
     },
     owed_to_dealers: () => (
       <View style={styles.owedCluster}>
+        {/* Header: clickable, navigates to dealers list. The dollar total
+            no longer lives here — it's pulled to the bottom of the cluster
+            below for clearer "subtotal" semantics. */}
         <SummaryRow
           icon="wallet"
           label="DEALER ACCOUNTS"
-          value={`$${totalOwed.toFixed(2)}`}
+          value=""
           onPress={() => router.push("/dealers")}
           nested
         />
@@ -273,6 +276,13 @@ export default function HomeScreen() {
               />
             </View>
           ))
+        )}
+        {/* Subtotal pinned at the bottom of the cluster */}
+        {dealersAll.length > 0 && (
+          <View style={styles.owedTotalRow}>
+            <Text style={styles.owedTotalLabel}>TOTAL</Text>
+            <Text style={styles.owedTotalValue}>${totalOwed.toFixed(2)}</Text>
+          </View>
         )}
       </View>
     ),
@@ -717,6 +727,31 @@ const styles = themedStyles((c) => ({
   owedDivider: {
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: c.border,
+  },
+  /* Subtotal row pinned to the bottom of the DEALER ACCOUNTS cluster — sums
+     up everything owed across all dealers above. Styled like a footer
+     summary so it visually anchors the list. */
+  owedTotalRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    backgroundColor: c.bg,
+    borderTopWidth: 1,
+    borderTopColor: c.border,
+  },
+  owedTotalLabel: {
+    color: c.textMuted,
+    fontSize: 10,
+    fontWeight: "800",
+    letterSpacing: 1.5,
+  },
+  owedTotalValue: {
+    color: c.accent,
+    fontSize: 14,
+    fontWeight: "900",
+    letterSpacing: 0.3,
   },
   dealerRow: {
     flexDirection: "row",

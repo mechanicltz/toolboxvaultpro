@@ -104,21 +104,111 @@ export default function InventoryScreen() {
 
   // Status picker (replaces the horizontal chip scroller)
   const [showStatusPicker, setShowStatusPicker] = useState(false);
+
+  // ---------------------------------------------------------------------------
+  // Filter COUNTS — how many tools would match each picker option if it were
+  // the only filter applied. Surfaced in the picker labels as e.g.
+  // "AVAILABLE (12)" / "Garage (4)" / "Power Tools (3)" so the user can see
+  // at a glance how many items are in each bucket WITHOUT applying the filter
+  // first. Each map is computed on the raw `tools` master list so the numbers
+  // are independent of other active filters.
+  // ---------------------------------------------------------------------------
+  const filterCounts = useMemo(() => {
+    const status: Record<string, number> = {
+      all: tools.length,
+      available: 0,
+      out: 0,
+      consumables: 0,
+      for_sale: 0,
+      lost: 0,
+      maintenance: 0,
+    };
+    // Location counts include descendants — picking "Garage" with sub-locations
+    // "Top Drawer" and "Bottom Drawer" should show the SUM, not just direct.
+    // Build a parent→all-descendants map first.
+    const childrenByParent: Record<string, string[]> = {};
+    for (const l of allLocations) {
+      if (l.parent_id) {
+        if (!childrenByParent[l.parent_id]) childrenByParent[l.parent_id] = [];
+        childrenByParent[l.parent_id].push(l.id);
+      }
+    }
+    const descendantIds = (rootId: string): Set<string> => {
+      const out = new Set<string>([rootId]);
+      const queue = [rootId];
+      while (queue.length) {
+        const cur = queue.shift()!;
+        for (const cid of childrenByParent[cur] || []) {
+          if (!out.has(cid)) {
+            out.add(cid);
+            queue.push(cid);
+          }
+        }
+      }
+      return out;
+    };
+    const location: Record<string, number> = {};
+    const tag: Record<string, number> = {};
+    for (const t of tools) {
+      if (!t?.is_checked_out) status.available++;
+      else status.out++;
+      if (t?.is_consumable) status.consumables++;
+      if (t?.for_sale && !t?.is_sold) status.for_sale++;
+      if (t?.lost_status?.is_lost) status.lost++;
+      if (Array.isArray(t?.maintenance) && t.maintenance.length > 0) status.maintenance++;
+      if (Array.isArray(t?.tag_ids)) {
+        for (const tid of t.tag_ids) tag[tid] = (tag[tid] || 0) + 1;
+      }
+    }
+    // Location counts: for each location L, count tools whose location_id is
+    // in descendantIds(L). This is O(L * T) which is fine for typical sizes
+    // (sub-thousand of each) — runs instantly.
+    for (const loc of allLocations) {
+      const set = descendantIds(loc.id);
+      let n = 0;
+      for (const t of tools) {
+        if (t?.location_id && set.has(t.location_id)) n++;
+      }
+      location[loc.id] = n;
+    }
+    return { status, location, tag };
+  }, [tools, allLocations]);
+
   const STATUS_OPTIONS = useMemo(
     () => [
-      { k: "all", label: "ALL", icon: "apps" as const },
-      { k: "available", label: "AVAILABLE", icon: "checkmark-circle" as const },
-      { k: "out", label: "CHECKED OUT", icon: "log-out" as const },
+      { k: "all", label: `ALL (${filterCounts.status.all})`, icon: "apps" as const },
+      {
+        k: "available",
+        label: `AVAILABLE (${filterCounts.status.available})`,
+        icon: "checkmark-circle" as const,
+      },
+      {
+        k: "out",
+        label: `CHECKED OUT (${filterCounts.status.out})`,
+        icon: "log-out" as const,
+      },
       {
         k: "maintenance",
-        label: maintDueCount > 0 ? `MAINTENANCE (${maintDueCount})` : "MAINTENANCE",
+        label: `MAINTENANCE (${filterCounts.status.maintenance})`,
         icon: "build" as const,
       },
-      { k: "consumables", label: "CONSUMABLES", icon: "cube" as const },
-      { k: "for_sale", label: "FOR SALE", icon: "pricetag" as const },
-      { k: "lost", label: "LOST / STOLEN", icon: "alert-circle" as const },
+      {
+        k: "consumables",
+        label: `CONSUMABLES (${filterCounts.status.consumables})`,
+        icon: "cube" as const,
+      },
+      {
+        k: "for_sale",
+        label: `FOR SALE (${filterCounts.status.for_sale})`,
+        icon: "pricetag" as const,
+      },
+      {
+        k: "lost",
+        label: `LOST / STOLEN (${filterCounts.status.lost})`,
+        icon: "alert-circle" as const,
+      },
     ],
-    [maintDueCount],
+    [filterCounts],
   );
   const statusLabel =
     STATUS_OPTIONS.find((o) => o.k === filter)?.label || "ALL";
@@ -607,7 +697,7 @@ export default function InventoryScreen() {
       </View>
 
       {prefs.show_details_summary && agg && (
-        <SummaryHeader agg={agg} showPrices={prefs.show_prices} />
+        <SummaryHeader agg={agg} showPrices={prefs.show_prices} openClaims={openClaims} />
       )}
 
       <FlatList
@@ -993,6 +1083,7 @@ export default function InventoryScreen() {
               </TouchableOpacity>
               {flattenLocationTree(buildLocationTree(allLocations)).map((n) => {
                 const isActive = locationFilter === n.id;
+                const cnt = filterCounts.location[n.id] || 0;
                 return (
                   <TouchableOpacity
                     key={n.id}
@@ -1013,7 +1104,7 @@ export default function InventoryScreen() {
                       color={isActive ? theme.colors.accent : theme.colors.accent}
                     />
                     <Text style={[styles.locOptName, isActive && { color: theme.colors.accent }]}>
-                      {n.name}
+                      {n.name} ({cnt})
                     </Text>
                   </TouchableOpacity>
                 );
@@ -1086,7 +1177,7 @@ export default function InventoryScreen() {
                         {isActive && <Ionicons name="checkmark" size={12} color="#000" />}
                       </View>
                       <Text style={[styles.locOptName, isActive && { color: theme.colors.accent }]}>
-                        {t.name}
+                        {t.name} ({filterCounts.tag[t.id] || 0})
                       </Text>
                     </TouchableOpacity>
                   );

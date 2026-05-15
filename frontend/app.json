@@ -2,7 +2,7 @@
   "expo": {
     "name": "Toolbox Vault",
     "slug": "frontend",
-    "version": "1.3.0",
+    "version": "1.3.1",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "frontend",
@@ -10,7 +10,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "app.emergent.assetlocator128c92565d",
-      "buildNumber": "20",
+      "buildNumber": "21",
       "infoPlist": {
         "NSCameraUsageDescription": "Take photos of your tools",
         "NSPhotoLibraryUsageDescription": "Add photos of tools from your gallery",
