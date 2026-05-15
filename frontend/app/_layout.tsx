@@ -1,6 +1,7 @@
 import { Stack, useRouter, useSegments } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { SafeAreaProvider } from "react-native-safe-area-context";
 import {
   View,
   ActivityIndicator,
@@ -226,20 +227,27 @@ function ThemedStatusBar() {
 export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1, backgroundColor: theme.colors.bg }}>
-      <ThemeProvider>
-        <ThemedStatusBar />
-        <AuthProvider>
-          <NetworkProvider>
-            <AuroraBackground>
-              <AuthGate>
-                <BiometricLockGate>
-                  <ShellNav />
-                </BiometricLockGate>
-              </AuthGate>
-            </AuroraBackground>
-          </NetworkProvider>
-        </AuthProvider>
-      </ThemeProvider>
+      {/* SafeAreaProvider MUST wrap everything that uses <SafeAreaView> or
+          useSafeAreaInsets — without it, both fall back to 0 insets on
+          iOS which makes top-bars and back buttons render UNDER the
+          status bar / Dynamic Island / notch. (Symptom: "screens extend
+          above my phone's clock so I can't tap back".) */}
+      <SafeAreaProvider>
+        <ThemeProvider>
+          <ThemedStatusBar />
+          <AuthProvider>
+            <NetworkProvider>
+              <AuroraBackground>
+                <AuthGate>
+                  <BiometricLockGate>
+                    <ShellNav />
+                  </BiometricLockGate>
+                </AuthGate>
+              </AuroraBackground>
+            </NetworkProvider>
+          </AuthProvider>
+        </ThemeProvider>
+      </SafeAreaProvider>
     </GestureHandlerRootView>
   );
 }

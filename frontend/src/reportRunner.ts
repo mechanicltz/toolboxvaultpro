@@ -56,16 +56,26 @@ async function renderToFile(req: RenderRequest): Promise<RenderedFile> {
   };
   if (token) headers.Authorization = `Bearer ${token}`;
 
-  const resp = await fetch(url, {
-    method: "POST",
-    headers,
-    body: JSON.stringify({
-      report_type: req.reportType,
-      format: req.format,
-      columns: req.columns,
-      options: req.options || {},
-    }),
-  });
+  let resp: Response;
+  try {
+    resp = await fetch(url, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({
+        report_type: req.reportType,
+        format: req.format,
+        columns: req.columns,
+        options: req.options || {},
+      }),
+    });
+  } catch (netErr: any) {
+    // Network reachability failure — surface as something clearer than
+    // the platform's default "Network request failed" which users have
+    // misread as "404" in the past.
+    throw new Error(
+      `Network error reaching ${url} (${netErr?.message || netErr}). Check your connection and try again.`,
+    );
+  }
   if (!resp.ok) {
     let detail = "";
     try {
@@ -78,7 +88,12 @@ async function renderToFile(req: RenderRequest): Promise<RenderedFile> {
         /* ignore */
       }
     }
-    throw new Error(`Server returned ${resp.status} ${detail}`.trim());
+    // Include the full URL + report type so the support ticket can pinpoint
+    // exactly which endpoint and which report failed (was hard to debug
+    // when the error was just "404").
+    throw new Error(
+      `Report failed (${req.reportType} ${req.format}) — server ${resp.status} at ${url}${detail ? `: ${detail}` : ""}`,
+    );
   }
 
   const fallbackName = `${req.reportType}-${Date.now()}.${req.format}`;

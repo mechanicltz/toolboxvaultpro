@@ -216,7 +216,7 @@ export default function DealerClaimsScreen() {
       </View>
 
       <View style={styles.tabRow}>
-        <BevelCard
+        <TouchableOpacity
           testID="tab-open"
           style={[styles.tabChip, tab === "open" && styles.tabChipOn]}
           onPress={() => setTab("open")}
@@ -225,8 +225,8 @@ export default function DealerClaimsScreen() {
           <Text style={[styles.tabText, tab === "open" && styles.tabTextOn]}>
             OPEN ({open.length})
           </Text>
-        </BevelCard>
-        <BevelCard
+        </TouchableOpacity>
+        <TouchableOpacity
           testID="tab-completed"
           style={[styles.tabChip, tab === "completed" && styles.tabChipOn]}
           onPress={() => setTab("completed")}
@@ -235,7 +235,7 @@ export default function DealerClaimsScreen() {
           <Text style={[styles.tabText, tab === "completed" && styles.tabTextOn]}>
             COMPLETED ({completed.length})
           </Text>
-        </BevelCard>
+        </TouchableOpacity>
       </View>
 
       <ScrollView

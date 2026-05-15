@@ -1,11 +1,12 @@
 import { useCallback, useState } from "react";
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image } from "react-native";
+import { View, Text, ScrollView, TouchableOpacity, Image } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect, useRouter } from "expo-router";
 import { theme } from "../src/theme";
 import { api } from "../src/api";
 import { formatDateUS } from "../src/dateUtil";
+import { BevelCard } from "../src/components/BevelCard";
 
 import { themedStyles } from "../src/themeContext";
 
@@ -22,13 +23,15 @@ export default function WarrantyScreen() {
 
   const renderItem = (t: any, kind: "expiring" | "expired") => {
     const ex = t.warranty?.expiry_date || "";
+    const accent = kind === "expired" ? theme.colors.danger : theme.colors.warning;
     return (
-      <TouchableOpacity
+      <BevelCard
         key={t.id}
         testID={`warranty-${t.id}`}
-        style={[styles.row, { borderLeftColor: kind === "expired" ? theme.colors.danger : theme.colors.warning }]}
+        style={styles.row}
         onPress={() => router.push(`/tool/${t.id}`)}
       >
+        <View style={[styles.kindBar, { backgroundColor: accent }]} />
         <View style={styles.thumb}>
           {t.photos?.[0] ? (
             <Image source={{ uri: t.photos[0] }} style={{ width: "100%", height: "100%" }} />
@@ -38,12 +41,12 @@ export default function WarrantyScreen() {
         </View>
         <View style={{ flex: 1 }}>
           <Text style={styles.toolName}>{t.name}</Text>
-          <Text style={styles.toolMeta}>
+          <Text style={[styles.toolMeta, { color: accent }]}>
             {kind === "expired" ? "EXPIRED" : "EXPIRING"} · {formatDateUS(ex)}
           </Text>
         </View>
         <Ionicons name="chevron-forward" size={18} color={theme.colors.textMuted} />
-      </TouchableOpacity>
+      </BevelCard>
     );
   };
 
@@ -96,17 +99,24 @@ const styles = themedStyles((c) => ({
     paddingBottom: 8,
   },
   row: {
+    /* Surface (gradient + bevel borders + drop shadow) comes from
+       <BevelCard>. We just describe layout + margins here. The
+       per-item red/yellow indicator now lives in a 4px left-edge bar
+       inside the card (see `kindBar` below) instead of borderLeftColor
+       on the container — that would have fought BevelCard's bevel. */
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 16,
     paddingVertical: 12,
-    borderLeftWidth: 4,
-    borderBottomWidth: 1,
-    borderBottomColor: c.borderSubtle,
-    backgroundColor: c.bgSecondary,
+    paddingRight: 16,
     marginHorizontal: 16,
-    marginBottom: 6,
+    marginBottom: 8,
     gap: 12,
+    overflow: "hidden",
+  },
+  kindBar: {
+    width: 4,
+    alignSelf: "stretch",
+    marginRight: 8,
   },
   thumb: {
     width: 44,

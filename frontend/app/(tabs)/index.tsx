@@ -425,19 +425,24 @@ function SummaryRow({
         </Text>
         {sub ? <Text style={styles.rowSub}>{sub}</Text> : null}
       </View>
-      <View
-        style={[
-          styles.rowValuePill,
-          valueColor ? { borderColor: valueColor } : null,
-        ]}
-      >
-        <Text
-          style={[styles.rowValue, valueColor ? { color: valueColor } : null]}
-          numberOfLines={1}
+      {/* Skip the value pill when there's no value — otherwise a hollow
+          empty pillbox renders next to the label (e.g. the DEALER
+          ACCOUNTS header which intentionally has no header-level total). */}
+      {value !== "" && value != null ? (
+        <View
+          style={[
+            styles.rowValuePill,
+            valueColor ? { borderColor: valueColor } : null,
+          ]}
         >
-          {value}
-        </Text>
-      </View>
+          <Text
+            style={[styles.rowValue, valueColor ? { color: valueColor } : null]}
+            numberOfLines={1}
+          >
+            {value}
+          </Text>
+        </View>
+      ) : null}
       {rightSlot ? rightSlot : (onPress ? (
         <Ionicons
           name="chevron-forward"
@@ -729,16 +734,16 @@ const styles = themedStyles((c) => ({
     borderBottomColor: c.border,
   },
   /* Subtotal row pinned to the bottom of the DEALER ACCOUNTS cluster — sums
-     up everything owed across all dealers above. Styled like a footer
-     summary so it visually anchors the list. */
+     up everything owed across all dealers above. Transparent background so
+     it inherits the parent gradient surface (no jarring darker rectangle). */
   owedTotalRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 14,
     paddingVertical: 10,
-    backgroundColor: c.bg,
-    borderTopWidth: 1,
+    backgroundColor: "transparent",
+    borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: c.border,
   },
   owedTotalLabel: {

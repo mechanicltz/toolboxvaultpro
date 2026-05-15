@@ -160,14 +160,15 @@ export default function WishlistScreen() {
           { k: false, label: "OPEN" },
           { k: true, label: "PURCHASED" },
         ].map((t) => (
-          <BevelCard
+          <TouchableOpacity
             key={String(t.k)}
             testID={`wish-tab-${t.k ? "done" : "open"}`}
             style={[styles.tabBtn, showPurchased === t.k && styles.tabBtnActive]}
             onPress={() => setShowPurchased(t.k)}
+            activeOpacity={0.8}
           >
             <Text style={[styles.tabText, showPurchased === t.k && styles.tabTextActive]}>{t.label}</Text>
-          </BevelCard>
+          </TouchableOpacity>
         ))}
       </View>
 
