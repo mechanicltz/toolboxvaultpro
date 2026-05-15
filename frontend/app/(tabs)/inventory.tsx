@@ -69,6 +69,11 @@ export default function InventoryScreen() {
   const [openClaims, setOpenClaims] = useState(0);
   const [maintDueCount, setMaintDueCount] = useState(0);
   const [maintToolIds, setMaintToolIds] = useState<Set<string>>(new Set());
+  // Subscription state — used to render the "subscription expired,
+  // hidden N items" upgrade banner at the END of the list when
+  // free-tier visibility cap is active. Loaded lazily; null while
+  // pending so the banner doesn't flash on initial render.
+  const [hiddenCount, setHiddenCount] = useState(0);
 
   // Bulk select mode
   const [selectMode, setSelectMode] = useState(false);
@@ -243,7 +248,7 @@ export default function InventoryScreen() {
     // below, so changing them is instant — no network round-trip.
     const params: any = { search: search || undefined };
     try {
-      const [t, a, w, cs, locs, tags, mu] = await Promise.all([
+      const [t, a, w, cs, locs, tags, mu, sub] = await Promise.all([
         api.listTools(params),
         api.aggregate({}),
         prefs.warranty_alerts ? api.warrantyAlerts(60) : Promise.resolve({ expiring: [], expired: [] }),
@@ -251,6 +256,7 @@ export default function InventoryScreen() {
         api.listLocations().catch(() => []),
         api.listTags().catch(() => []),
         api.upcomingMaintenance(60).catch(() => ({ overdue: [], due_soon: [] })),
+        api.getSubscription().catch(() => null),
       ]);
       const mItems: any[] = (mu as any)?.items || [];
       const mIds = new Set<string>(mItems.map((x: any) => x.tool_id));
@@ -263,6 +269,7 @@ export default function InventoryScreen() {
       setMaintDueCount(mItems.length);
       setAllLocations(locs);
       setAllTags(tags);
+      setHiddenCount((sub as any)?.hidden_tool_count || 0);
     } catch (e) {
       console.error(e);
     }
@@ -623,6 +630,28 @@ export default function InventoryScreen() {
         maxToRenderPerBatch={6}
         windowSize={5}
         updateCellsBatchingPeriod={40}
+        ListFooterComponent={
+          hiddenCount > 0 ? (
+            <TouchableOpacity
+              testID="upgrade-banner"
+              activeOpacity={0.85}
+              onPress={() => router.push("/paywall")}
+              style={styles.upgradeBanner}
+            >
+              <View style={styles.upgradeIconWrap}>
+                <Ionicons name="lock-closed" size={22} color={theme.colors.accent} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.upgradeTitle}>SUBSCRIPTION ENDED</Text>
+                <Text style={styles.upgradeSub}>
+                  {hiddenCount} more {hiddenCount === 1 ? "tool is" : "tools are"} hidden.
+                  Tap to renew PRO and restore everything.
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color={theme.colors.accent} />
+            </TouchableOpacity>
+          ) : null
+        }
         ListEmptyComponent={
           <View style={styles.empty}>
             <Ionicons
@@ -747,12 +776,9 @@ export default function InventoryScreen() {
                       </Text>
                     </View>
                   )}
-                  {!isLost && item.is_checked_out && (
-                    <View style={styles.checkedOutBadge}>
-                      <Ionicons name="swap-horizontal" size={10} color="#fff" />
-                      <Text style={styles.lostBadgeText}>CHECKED OUT</Text>
-                    </View>
-                  )}
+                  {/* Status pill removed — the small round IN/OUT dot on
+                      the right of the row already conveys checked-out
+                      state. Showing both was redundant. */}
                 </View>
                 <Text style={styles.rowSub} numberOfLines={1}>
                   {item.location_name || "No location"}
@@ -1772,5 +1798,42 @@ const styles = themedStyles((c) => ({
   },
   fabLocked: {
     backgroundColor: c.warning,
+  },
+  upgradeBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    marginHorizontal: 16,
+    marginTop: 14,
+    marginBottom: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    borderRadius: 12,
+    backgroundColor: c.bgSecondary,
+    borderWidth: 1.5,
+    borderColor: c.accent,
+    ...(theme.elevation.md as object),
+  },
+  upgradeIconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: c.accent + "22",
+    borderWidth: 1,
+    borderColor: c.accent + "55",
+  },
+  upgradeTitle: {
+    color: c.accent,
+    fontWeight: "900",
+    fontSize: 11,
+    letterSpacing: 1.2,
+    marginBottom: 2,
+  },
+  upgradeSub: {
+    color: c.textPrimary,
+    fontSize: 12,
+    lineHeight: 16,
   },
 }));

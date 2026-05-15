@@ -327,10 +327,28 @@ def make_router(db, get_current_user) -> APIRouter:
     async def my_subscription(user=Depends(get_current_user)):
         uid = getattr(user, "id", None) or (user.get("id") if isinstance(user, dict) else None)
         sub = await get_subscription(db, uid)
+        # Compute the user's REAL (unfiltered) tool count so the client can
+        # decide whether to show the "subscription expired — N hidden items"
+        # banner at the end of a capped list. We use the raw db here (not
+        # the per-user proxy) to bypass the free-tier visibility cap that
+        # otherwise narrows queries to 15.
+        try:
+            total_owned = await db.tools.count_documents({"owner_id": uid})
+        except Exception:
+            total_owned = 0
+        active = _is_active(sub)
         return {
             **sub.dict(),
             "free_limit": FREE_TOOL_LIMIT,
-            "is_active": _is_active(sub),
+            "is_active": active,
+            "total_tools_owned": total_owned,
+            # Convenience: how many tools are HIDDEN behind the paywall right
+            # now. > 0 means the client should render the upgrade banner.
+            "hidden_tool_count": (
+                max(0, total_owned - FREE_TOOL_LIMIT)
+                if not active and total_owned > FREE_TOOL_LIMIT
+                else 0
+            ),
         }
 
     @router.post("/subscription/sync")
