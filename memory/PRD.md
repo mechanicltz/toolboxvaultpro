@@ -29,3 +29,22 @@ Modern industrial dark theme — black background, yellow/orange accents (`#FFB3
 
 ## Smart Enhancement
 Total inventory **value** rollups by dealer/category/search context — answers "how much did I spend with Matco?" or "what's my power tools investment?" instantly.
+
+---
+
+## Backlog — Future Features (not yet built)
+
+### Combine / Bundle Items (requested 2026-05-15)
+Let the user select several existing tools and group them into a single
+"bundle" that has its own identity in the app:
+- **Unique Bundle Model #** assigned to the parent bundle
+- Listed as a **bundle** (not as individual items) in the inventory list
+- Reported as a bundle in PDF / CSV exports
+- Individual member items still trackable / inspectable from inside the bundle
+- Likely a new top-level filter: `BUNDLES` alongside CONSUMABLES / FOR SALE / etc.
+- Open design questions to confirm with user before building:
+  - Can a tool belong to MULTIPLE bundles, or only one?
+  - When a bundle is sold/lost/checked-out, are all members auto-marked the same way?
+  - Should the bundle's photo be a montage of member photos, or a separately uploaded "hero" image?
+  - Does the bundle have its own cost field, or is it the sum of member costs?
+
