@@ -25,6 +25,15 @@ const BASE =
   !_ENV_BASE.includes(_PREVIEW_URL)
     ? _ENV_BASE
     : PRODUCTION_BACKEND_URL;
+
+/**
+ * Exported so other modules (e.g. reportRunner.ts) hit the SAME backend
+ * `api.ts` does — without this, reportRunner was reading the raw
+ * EXPO_PUBLIC_BACKEND_URL which still points to the preview environment,
+ * so login authenticated against production but PDF generation tried to
+ * use a preview-DB token → 401 "User not found".
+ */
+export const API_BASE = BASE;
 const TOKEN_KEY = "tt.auth.token";
 
 let memToken: string | null = null;

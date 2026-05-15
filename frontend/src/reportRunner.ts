@@ -14,10 +14,15 @@ import { Platform } from "react-native";
 import * as FileSystem from "expo-file-system/legacy";
 import * as Sharing from "expo-sharing";
 import * as MailComposer from "expo-mail-composer";
-import { getToken } from "./api";
+import { getToken, API_BASE } from "./api";
 
-const BACKEND =
-  (process.env.EXPO_PUBLIC_BACKEND_URL || "").replace(/\/+$/, "") || "";
+// Single source of truth for the backend URL — shared with api.ts so login
+// and report generation always hit the same backend (and therefore the same
+// MongoDB). Previously reportRunner read EXPO_PUBLIC_BACKEND_URL directly,
+// which on certain builds returns the preview URL even though api.ts pins
+// to production — causing every report to fail with 401 "User not found"
+// (a token from production's DB sent to preview's DB).
+const BACKEND = API_BASE.replace(/\/+$/, "");
 
 export type ReportFormat = "pdf" | "csv";
 export type ReportAction = "view" | "email" | "save";
