@@ -64,7 +64,7 @@ export default function PaywallScreen() {
     })();
   }, [refreshSub]);
 
-  const isPro = !!(sub?.is_lifetime || (sub?.entitlement && sub.entitlement !== "free"));
+  const isPro = !!(sub?.is_lifetime || sub?.is_active);
 
   const doPurchase = async (kind: "monthly" | "annual") => {
     const pkg = kind === "monthly" ? offering.monthly : offering.annual;

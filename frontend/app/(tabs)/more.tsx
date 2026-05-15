@@ -188,18 +188,12 @@ export default function MoreScreen() {
     }
   };
 
-  const isPro = !!(sub?.is_lifetime ||
-    (sub?.entitlement && sub.entitlement !== "free"));
-  // Build the user-facing label. The backend stores entitlement as
-  // "pro" or "free" (see subscriptions.SubscriptionState). Lifetime is
-  // its own flag. We surface a friendly variant for each combination.
-  // IMPORTANT: This label must match the `isPro` calculation above so
-  // that the header pill stays consistent with what the rest of the
-  // app sees (paywall, gated features, etc.). Previously we *also*
-  // required `is_active === true` here, which caused the badge to
-  // show "FREE TIER" for accounts that are pro per entitlement but
-  // whose `is_active` flag had drifted (e.g. a promo unlock that
-  // didn't roundtrip through RevenueCat).
+  // Source of truth for "is the user PRO right now?" — uses the backend's
+  // computed `is_active` (which honours expires_at / lifetime / will_renew).
+  // Both this badge AND the paywall + redeem-promo screen MUST use the same
+  // rule or the user sees contradictory state (e.g. "FREE TIER" on More but
+  // "You already have PRO" on the paywall when their RC sub has expired).
+  const isPro = !!(sub?.is_lifetime || sub?.is_active);
   const proLabel = (() => {
     if (sub?.is_lifetime) return "✨ LIFETIME PRO";
     if (isPro) {
