@@ -312,7 +312,7 @@ const styles = themedStyles((c) => ({
     paddingVertical: 12,
     fontSize: 11,
   
-    ...(theme.elevation.md as object),
+    ...(theme.elevation.input as object),
   },
   codeInput: {
     fontSize: 19,

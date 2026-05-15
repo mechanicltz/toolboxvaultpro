@@ -1102,7 +1102,7 @@ const pwStyles = themedStyles((c) => ({
     color: c.textPrimary,
     fontSize: 10,
   
-    ...(theme.elevation.md as object),
+    ...(theme.elevation.input as object),
   },
   err: {
     color: c.danger,

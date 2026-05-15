@@ -515,7 +515,7 @@ const styles = themedStyles((c) => ({
     color: c.textPrimary, paddingHorizontal: 12, paddingVertical: 10,
     borderRadius: theme.radii.sm, fontSize: 10,
   
-    ...(theme.elevation.md as object),
+    ...(theme.elevation.input as object),
   },
   prioChip: {
     flex: 1, paddingHorizontal: 6, paddingVertical: 10,

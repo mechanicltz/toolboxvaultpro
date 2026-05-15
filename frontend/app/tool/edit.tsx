@@ -1899,7 +1899,7 @@ const styles = themedStyles((c) => ({
     color: c.textPrimary, paddingHorizontal: 14, paddingVertical: 12,
     minHeight: 48, borderRadius: 4, fontSize: 11,
   
-    ...(theme.elevation.md as object),
+    ...(theme.elevation.input as object),
   },
   row2: { flexDirection: "row", gap: 10 },
   helper: { color: c.textMuted, fontStyle: "italic", fontSize: 10 },

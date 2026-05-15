@@ -1271,7 +1271,7 @@ const styles = themedStyles((c) => ({
     borderColor: c.border,
     fontSize: 12,
   
-    ...(theme.elevation.md as object),
+    ...(theme.elevation.input as object),
   },
   input: {
     marginTop: 6,
@@ -1284,7 +1284,7 @@ const styles = themedStyles((c) => ({
     borderColor: c.border,
     fontSize: 10,
   
-    ...(theme.elevation.md as object),
+    ...(theme.elevation.input as object),
   },
   segmentedRow: {
     flexDirection: "row",

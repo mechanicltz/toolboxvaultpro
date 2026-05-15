@@ -224,7 +224,7 @@ function rgba(hex: string, alpha: number): string {
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
 
-type ElevKey = "sm" | "md" | "lg" | "accent" | "inset";
+type ElevKey = "sm" | "md" | "lg" | "accent" | "inset" | "input";
 
 function makeElevation(key: ElevKey): any {
   const sh = currentPalette.shadowColor || "#000";
@@ -263,6 +263,15 @@ function makeElevation(key: ElevKey): any {
       shadowRadius: 6,
       elevation: 8,
     };
+  }
+  // ─────────────────────────────────────────────────────────────────────────
+  // `input` is a deliberately FLAT variant used by TextInput fields. They
+  // skip the bevel borders + drop shadow so they read as a writable field,
+  // not a pillbox. Use `theme.elevation.input` instead of `.md` in any
+  // text-field style block.
+  // ─────────────────────────────────────────────────────────────────────────
+  if (key === "input") {
+    return {};
   }
   if (Platform.OS === "web") {
     if (key === "sm") {

@@ -447,7 +447,7 @@ const styles = themedStyles((c) => ({
     borderWidth: 1,
     borderColor: c.border,
   
-    ...(theme.elevation.md as object),
+    ...(theme.elevation.input as object),
   },
   inputRow: { flexDirection: "row", alignItems: "center", gap: 6 },
   eye: {

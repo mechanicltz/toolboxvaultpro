@@ -230,7 +230,7 @@ const styles = themedStyles((c) => ({
     minHeight: 48,
     gap: 8,
   
-    ...(theme.elevation.md as object),
+    ...(theme.elevation.input as object),
   },
   modalBg: {
     flex: 1,

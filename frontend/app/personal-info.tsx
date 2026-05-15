@@ -408,7 +408,7 @@ const styles = themedStyles((c) => ({
     borderRadius: 4,
     fontSize: 10,
   
-    ...(theme.elevation.md as object),
+    ...(theme.elevation.input as object),
   },
   divider: {
     height: 1,

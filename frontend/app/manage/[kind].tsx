@@ -265,7 +265,7 @@ const styles = themedStyles((c) => ({
     borderRadius: theme.radii.sm,
     fontSize: 10,
   
-    ...(theme.elevation.md as object),
+    ...(theme.elevation.input as object),
   },
   iconAction: {
     paddingHorizontal: 6,

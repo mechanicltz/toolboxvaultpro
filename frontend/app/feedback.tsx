@@ -374,7 +374,7 @@ const styles = themedStyles((c) => ({
     paddingVertical: 10,
     fontSize: 11,
   
-    ...(theme.elevation.md as object),
+    ...(theme.elevation.input as object),
   },
   textarea: { minHeight: 120, paddingTop: 10 },
   segmented: {
