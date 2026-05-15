@@ -1298,6 +1298,37 @@ export default function ToolDetail() {
                 )}
               </View>
               <View style={{ flexDirection: "row", gap: 10, marginTop: 14 }}>
+                {/* Quick-contact actions — wire the dealer's email / phone
+                    straight into the OS mailer / SMS app, mirroring the
+                    same flow available on the dealer-claims page. Auto-
+                    marks the claim as "Reported" the moment the user
+                    triggers contact (see notifyDealer in this file). */}
+                <TouchableOpacity
+                  style={[
+                    newStyles.saleBtn,
+                    { backgroundColor: theme.colors.accent, flex: 1 },
+                  ]}
+                  onPress={() => notifyDealer(tool, "email")}
+                  testID="claim-email-dealer"
+                  activeOpacity={0.85}
+                >
+                  <Ionicons name="mail" size={14} color="#000" />
+                  <Text style={[newStyles.saleBtnText, { color: "#000" }]}>EMAIL</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[
+                    newStyles.saleBtn,
+                    { backgroundColor: theme.colors.accent, flex: 1 },
+                  ]}
+                  onPress={() => notifyDealer(tool, "sms")}
+                  testID="claim-text-dealer"
+                  activeOpacity={0.85}
+                >
+                  <Ionicons name="chatbubble" size={14} color="#000" />
+                  <Text style={[newStyles.saleBtnText, { color: "#000" }]}>TEXT</Text>
+                </TouchableOpacity>
+              </View>
+              <View style={{ flexDirection: "row", gap: 10, marginTop: 10 }}>
                 <TouchableOpacity
                   style={[newStyles.saleBtn, { backgroundColor: "rgba(0,0,0,0.25)", flex: 1 }]}
                   onPress={openRepair}
