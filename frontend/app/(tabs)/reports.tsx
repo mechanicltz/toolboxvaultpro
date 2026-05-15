@@ -4,7 +4,7 @@
  * Backed by /api/reports/spec + /api/reports/render — the wizard never
  * has to know report internals.
  */
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   View,
   Text,
@@ -88,21 +88,23 @@ export default function ReportsHubScreen() {
   const [running, setRunning] = useState<ReportAction | null>(null);
   const presetApplied = useRef(false);
 
-  // Fetch report catalog once
-  useEffect(() => {
-    let active = true;
-    (async () => {
-      try {
-        const res = await api.get("/reports/spec");
-        if (active) setSpecs((res.reports || []) as ReportSpec[]);
-      } catch (e: any) {
-        Alert.alert("Error", "Could not load report types: " + (e?.message || ""));
-      }
-    })();
-    return () => {
-      active = false;
-    };
+  // Fetch report catalog once. If the backend is unreachable we surface the
+  // problem inline (specs stays null → loading spinner persists with a quiet
+  // retry button) instead of a blocking iOS modal — fewer interruptions when
+  // the user has spotty connectivity / the backend hiccups for a moment.
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const fetchSpecs = useCallback(async () => {
+    setLoadError(null);
+    try {
+      const res = await api.get("/reports/spec");
+      setSpecs((res.reports || []) as ReportSpec[]);
+    } catch (e: any) {
+      setLoadError(e?.message || "Failed to load report types");
+    }
   }, []);
+  useEffect(() => {
+    fetchSpecs();
+  }, [fetchSpecs]);
 
   // Reset to step 1 on focus (don't carry stale state if user navigates away
   // and back). Apply preset (e.g. "sales" from the for-sale screen) once.
@@ -184,7 +186,61 @@ export default function ReportsHubScreen() {
       <SafeAreaView style={styles.container}>
         <Header title="REPORTS" onBack={() => router.back()} />
         <View style={styles.center}>
-          <ActivityIndicator color={theme.colors.accent} />
+          {loadError ? (
+            <>
+              <Ionicons
+                name="cloud-offline-outline"
+                size={42}
+                color={theme.colors.textMuted}
+                style={{ marginBottom: 14 }}
+              />
+              <Text
+                style={{
+                  color: theme.colors.textSecondary,
+                  fontSize: 13,
+                  textAlign: "center",
+                  marginBottom: 4,
+                  paddingHorizontal: 24,
+                }}
+              >
+                Can't reach the server right now.
+              </Text>
+              <Text
+                style={{
+                  color: theme.colors.textMuted,
+                  fontSize: 11,
+                  textAlign: "center",
+                  marginBottom: 20,
+                  paddingHorizontal: 32,
+                }}
+              >
+                {loadError}
+              </Text>
+              <TouchableOpacity
+                testID="reports-retry"
+                style={{
+                  paddingHorizontal: 22,
+                  paddingVertical: 10,
+                  borderRadius: 8,
+                  backgroundColor: theme.colors.accent,
+                }}
+                onPress={fetchSpecs}
+              >
+                <Text
+                  style={{
+                    color: "#000",
+                    fontWeight: "900",
+                    letterSpacing: 1.5,
+                    fontSize: 12,
+                  }}
+                >
+                  RETRY
+                </Text>
+              </TouchableOpacity>
+            </>
+          ) : (
+            <ActivityIndicator color={theme.colors.accent} />
+          )}
         </View>
       </SafeAreaView>
     );

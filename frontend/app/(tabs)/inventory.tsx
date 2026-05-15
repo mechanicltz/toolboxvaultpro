@@ -360,8 +360,13 @@ export default function InventoryScreen() {
       setAllLocations(locs);
       setAllTags(tags);
       setHiddenCount((sub as any)?.hidden_tool_count || 0);
-    } catch (e) {
-      console.error(e);
+    } catch (e: any) {
+      // Backend / network failure — DON'T spam the LogBox/console.error red
+      // overlay in dev (the user already gets the OfflineBanner up top, and
+      // shouldCacheGet inside api.ts transparently serves cached lists for
+      // these endpoints). Only log under console.warn so it stays visible in
+      // logs without triggering the iOS error redbox.
+      console.warn("[inventory load]", e?.message || String(e));
     }
   }, [search, prefs.warranty_alerts]);
 
