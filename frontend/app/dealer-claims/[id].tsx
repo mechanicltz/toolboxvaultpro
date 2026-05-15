@@ -146,7 +146,7 @@ export default function DealerClaimsScreen() {
       const lines = [
         `Hello ${greetName}, I have a repair/warranty tool.`,
         `Tool: ${t.name}`,
-        `Serial Number: ${t.serial_number || "N/A"}`,
+        `Model Number: ${t.serial_number || "N/A"}`,
         `Purchase date: ${fmtDate(t.purchase_date) || "N/A"}`,
       ];
       if (t.repair_info?.broken_photo) {

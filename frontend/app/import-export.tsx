@@ -46,7 +46,28 @@ function guessField(header: string, fields: ImportField[]): string {
     make: "brand",
     manufacturer: "brand",
     model: "model",
-    modelnumber: "model",
+    // "Model Number" / "Part Number" / "SKU" — these are the receipt-side
+    // alphanumeric identifiers that we historically called `serial_number`
+    // internally. After the app-wide rename of "Serial Number" → "Model
+    // Number", CSV exports use "Model #" as the column header. We map
+    // every common variant ("model number", "model no", "part number",
+    // "part no", "sku", "catalog", "item #", plus the legacy "serial",
+    // "sn", etc.) to the same internal `serial_number` field so the
+    // import roundtrip works regardless of the source CSV's wording.
+    modelnumber: "serial_number",
+    modelno: "serial_number",
+    modelnum: "serial_number",
+    "model#": "serial_number",
+    partnumber: "serial_number",
+    partno: "serial_number",
+    partnum: "serial_number",
+    "part#": "serial_number",
+    itemnumber: "serial_number",
+    itemno: "serial_number",
+    "item#": "serial_number",
+    sku: "serial_number",
+    catalog: "serial_number",
+    catalognumber: "serial_number",
     serial: "serial_number",
     serialnumber: "serial_number",
     sn: "serial_number",

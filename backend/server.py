@@ -1320,7 +1320,7 @@ _IMPORT_FIELDS = [
     {"id": "name", "label": "Name *", "required": True},
     {"id": "brand", "label": "Brand"},
     {"id": "model", "label": "Model"},
-    {"id": "serial_number", "label": "Serial number"},
+    {"id": "serial_number", "label": "Model number"},
     {"id": "quantity", "label": "Quantity"},
     {"id": "cost", "label": "Cost (per unit)"},
     {"id": "description", "label": "Description / Notes"},
@@ -1345,7 +1345,7 @@ _EXPORT_FIELDS: List[Dict[str, Any]] = [
     {"id": "name", "label": "Name"},
     {"id": "brand", "label": "Brand"},
     {"id": "model", "label": "Model"},
-    {"id": "serial_number", "label": "Serial number"},
+    {"id": "serial_number", "label": "Model number"},
     {"id": "quantity", "label": "Quantity"},
     {"id": "cost", "label": "Cost"},
     {"id": "category", "label": "Category"},
@@ -3335,7 +3335,7 @@ async def ai_receipt_scan(payload: ReceiptScanRequest):
             '      "name": "<short product/tool name from the Description column>",\n'
             '      "brand": "<manufacturer / brand — often the same as the dealer for branded receipts>",\n'
             '      "model": "<model number / model name>",\n'
-            '      "serial_number": "<serial #, part #, item #, sku, catalog # — see note below>",\n'
+            '      "serial_number": "<model #, part #, item #, sku, catalog # — see note below>",\n'
             '      "cost": <number, no currency symbols>,\n'
             '      "quantity": <integer, default 1>,\n'
             '      "description": "<very brief 1-sentence description>"\n'

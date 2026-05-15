@@ -924,7 +924,7 @@ export default function ToolEdit() {
           {/* IS-A-SET toggle */}
           <View style={styles.toggleRow}>
             <Ionicons name="cube" size={20} color={theme.colors.accent} />
-            <Text style={styles.toggleText}>THIS IS A SET (multiple serial numbers)</Text>
+            <Text style={styles.toggleText}>THIS IS A SET (multiple model numbers)</Text>
             <Switch
               testID="toggle-is-set"
               value={isSet}
@@ -940,7 +940,7 @@ export default function ToolEdit() {
           {!isSet ? (
             <View style={styles.row2}>
               <View style={{ flex: 1 }}>
-                <Text style={styles.label}>SERIAL #</Text>
+                <Text style={styles.label}>MODEL #</Text>
                 <TextInput testID="serial-input" placeholder="ABC-1234" placeholderTextColor={theme.colors.textMuted}
                   value={serial} onChangeText={setSerial} style={styles.input} />
               </View>
@@ -972,7 +972,7 @@ export default function ToolEdit() {
                 </View>
               </View>
               <View style={styles.subSection}>
-                <Text style={[styles.label, { marginTop: 0 }]}>SERIAL NUMBERS (one per item in the set)</Text>
+                <Text style={[styles.label, { marginTop: 0 }]}>MODEL NUMBERS (one per item in the set)</Text>
                 {setSerials.map((s, idx) => (
                   <View
                     key={idx}
@@ -983,7 +983,7 @@ export default function ToolEdit() {
                     </Text>
                     <TextInput
                       testID={`set-serial-input-${idx}`}
-                      placeholder={`Serial # for item ${idx + 1}`}
+                      placeholder={`Model # for item ${idx + 1}`}
                       placeholderTextColor={theme.colors.textMuted}
                       value={s}
                       onChangeText={(v) => {
@@ -1030,7 +1030,7 @@ export default function ToolEdit() {
                 >
                   <Ionicons name="add" size={18} color={theme.colors.accent} />
                   <Text style={{ color: theme.colors.accent, fontWeight: "800", letterSpacing: 1 }}>
-                    ADD SERIAL NUMBER
+                    ADD MODEL NUMBER
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -1703,7 +1703,7 @@ export default function ToolEdit() {
                 </Text>
               </View>
               <Text style={[styles.helper, { marginBottom: 8 }]}>
-                Toggle each field to control what's filled in. Edit any value below — the AI guess is just a starting point. Receipt labels like "Part #", "Item #", "SKU" usually map to Serial #.
+                Toggle each field to control what's filled in. Edit any value below — the AI guess is just a starting point. Receipt labels like "Part #", "Item #", "SKU" usually map to Model #.
               </Text>
               <ScrollView keyboardShouldPersistTaps="handled" style={{ maxHeight: 540 }}>
                 {!!scanImageUri && (
@@ -1713,7 +1713,7 @@ export default function ToolEdit() {
                   { key: "name", label: "NAME", placeholder: "Cordless drill", keyboard: "default" },
                   { key: "brand", label: "BRAND", placeholder: "DeWalt", keyboard: "default" },
                   { key: "model", label: "MODEL", placeholder: "DCD777", keyboard: "default" },
-                  { key: "serial_number", label: "SERIAL #  /  PART #  /  SKU", placeholder: "e.g. 56789-A", keyboard: "default" },
+                  { key: "serial_number", label: "MODEL #  /  PART #  /  SKU", placeholder: "e.g. 56789-A", keyboard: "default" },
                   { key: "cost", label: "COST ($)", placeholder: "0.00", keyboard: "decimal-pad" },
                   { key: "quantity", label: "QUANTITY", placeholder: "1", keyboard: "number-pad" },
                   { key: "purchase_date", label: "PURCHASE DATE (YYYY-MM-DD)", placeholder: "2025-06-15", keyboard: "default" },

@@ -744,7 +744,7 @@ def _build_receipt_pages(
     """Build flowable list for the appended receipt pages.
 
     Each page has:
-      - A header line: "RECEIPT #<i> · <ITEM-NO> — <TOOL NAME> · Serial: <SERIAL>"
+      - A header line: "RECEIPT #<i> · <ITEM-NO> — <TOOL NAME> · Model: <MODEL>"
       - The receipt image, fitted to the available page area.
 
     receipts_meta: list of {item_no, tool_name, serial, image_b64}.
@@ -810,7 +810,7 @@ def _build_receipt_pages(
             f" &mdash; {esc(m.get('tool_name') or '(unnamed)')}"
         )
         sub_html = (
-            f"Serial: <b>{esc(m.get('serial') or '—')}</b>"
+            f"Model: <b>{esc(m.get('serial') or '—')}</b>"
             f"&nbsp;&nbsp;|&nbsp;&nbsp;Receipt {m.get('receipt_idx', 1)} of {m.get('receipt_total', 1)} for this item"
         )
         flow.append(Paragraph(title_html, header_style))
@@ -1418,7 +1418,7 @@ def _make_sales_per_item_factory(rows: List[Dict[str, Any]], mode: str,
             pairs = [
                 ("Brand", r.get("brand")),
                 ("Model", r.get("model")),
-                ("Serial #", r.get("serial")),
+                ("Model #", r.get("serial")),
                 ("Condition", r.get("condition")),
                 ("Original Cost", fmt_money(r.get("cost")) if r.get("cost") else ""),
                 ("Purchased", fmt_date_us(r.get("purchase_date"))),
@@ -1912,7 +1912,7 @@ _TOOL_COLUMNS = [
     Column("name", "Name", "left", "text"),
     Column("brand", "Brand", "left", "text"),
     Column("model", "Model", "left", "text"),
-    Column("serial", "Serial #", "left", "text"),
+    Column("serial", "Model #", "left", "text"),
     Column("category", "Category", "left", "text"),
     Column("location", "Location", "left", "text"),
     Column("dealer", "Dealer", "left", "text"),
@@ -1930,7 +1930,7 @@ _SALES_COLUMNS = [
     Column("name", "Name", "left", "text"),
     Column("brand", "Brand", "left", "text"),
     Column("model", "Model", "left", "text"),
-    Column("serial", "Serial #", "left", "text"),
+    Column("serial", "Model #", "left", "text"),
     Column("dealer", "Dealer", "left", "text"),
     Column("location", "Location", "left", "text"),
     Column("condition", "Condition", "left", "text"),
@@ -1946,7 +1946,7 @@ _CHECKED_OUT_COLUMNS = [
     Column("photo", "Photo", "center", "image"),
     Column("name", "Tool", "left", "text"),
     Column("brand", "Brand", "left", "text"),
-    Column("serial", "Serial #", "left", "text"),
+    Column("serial", "Model #", "left", "text"),
     Column("location", "Location", "left", "text"),
     Column("borrower_name", "Borrower", "left", "text"),
     Column("checked_out_at", "Out On", "left", "date"),
@@ -1961,7 +1961,7 @@ _LOST_STOLEN_COLUMNS = [
     Column("photo", "Photo", "center", "image"),
     Column("name", "Tool", "left", "text"),
     Column("brand", "Brand", "left", "text"),
-    Column("serial", "Serial #", "left", "text"),
+    Column("serial", "Model #", "left", "text"),
     Column("category", "Category", "left", "text"),
     Column("location", "Last Location", "left", "text"),
     Column("dealer", "Dealer", "left", "text"),
@@ -2074,7 +2074,7 @@ REPORTS: Dict[str, ReportSpec] = {
             Column("claim_photo", "Photo", "center", "image"),
             Column("notified_at", "Notified", "left", "date"),
             Column("tool_name", "Tool", "left", "text"),
-            Column("serial", "Serial #", "left", "text"),
+            Column("serial", "Model #", "left", "text"),
             Column("dealer", "Dealer", "left", "text"),
             Column("status", "Status", "left", "text"),
             Column("repair_company", "Repair Co.", "left", "text"),

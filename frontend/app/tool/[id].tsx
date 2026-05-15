@@ -342,7 +342,7 @@ export default function ToolDetail() {
       const lines = [
         `Hello ${greetName}, I have a repair/warranty tool.`,
         `Tool: ${t.name}`,
-        `Serial Number: ${t.serial_number || "N/A"}`,
+        `Model Number: ${t.serial_number || "N/A"}`,
         `Purchase date: ${formatDateUS(t.purchase_date) || "N/A"}`,
       ];
       if (t.repair_info?.broken_photo) {
@@ -493,7 +493,7 @@ export default function ToolDetail() {
     if (F.brand) specRows.push({ label: "Brand", value: tool.brand || "" });
     if (F.model) specRows.push({ label: "Model", value: tool.model || "" });
     if (F.serial)
-      specRows.push({ label: "Serial #", value: tool.serial_number || "" });
+      specRows.push({ label: "Model #", value: tool.serial_number || "" });
     if (F.condition)
       specRows.push({ label: "Condition", value: tool.condition || "" });
     if (F.category)
@@ -831,7 +831,7 @@ export default function ToolDetail() {
               (r: string, i: number) => `
               <pdf:nextpage/>
               <div class="rcpt-header">RECEIPT ${i + 1} OF ${receipts.length}</div>
-              <div class="rcpt-sub"><b>${esc(tool.name) || "(unnamed)"}</b> &middot; Serial: <b>${esc(tool.serial_number) || "—"}</b></div>
+              <div class="rcpt-sub"><b>${esc(tool.name) || "(unnamed)"}</b> &middot; Model: <b>${esc(tool.serial_number) || "—"}</b></div>
               <div class="rcpt-img-wrap"><img class="rcpt-img" src="${r}"/></div>`,
             )
             .join("")
@@ -845,7 +845,7 @@ export default function ToolDetail() {
     const specPairs: { label: string; value: string }[] = [];
     if (tool.brand) specPairs.push({ label: "Brand", value: String(tool.brand) });
     if (tool.model) specPairs.push({ label: "Model", value: String(tool.model) });
-    if (tool.serial_number) specPairs.push({ label: "Serial #", value: String(tool.serial_number) });
+    if (tool.serial_number) specPairs.push({ label: "Model #", value: String(tool.serial_number) });
     if (tool.condition) specPairs.push({ label: "Condition", value: String(tool.condition) });
     if (tool.category_name) specPairs.push({ label: "Category", value: String(tool.category_name) });
     if (tool.location_name) specPairs.push({ label: "Location", value: String(tool.location_name) });
@@ -1420,7 +1420,7 @@ export default function ToolDetail() {
             )}
           </BevelCard>
 
-          {/* PILLBOX DETAIL FIELDS — dealer first, then serial numbers, then everything else */}
+          {/* PILLBOX DETAIL FIELDS — dealer first, then model numbers, then everything else */}
           <View style={newStyles.fieldGroup}>
             <PillRow label="DEALER"
               value={tool.dealer_name || "—"}
@@ -1428,7 +1428,7 @@ export default function ToolDetail() {
               onPress={tool.dealer_id ? () => router.push(`/dealer/${tool.dealer_id}`) : undefined}
             />
 
-            {/* SERIAL NUMBERS — directly below the Dealer pillbox.
+            {/* MODEL NUMBERS — directly below the Dealer pillbox.
                 One serial per row when more than one exists. */}
             {(() => {
               const serials: string[] = tool.is_set
@@ -1440,7 +1440,7 @@ export default function ToolDetail() {
               return (
                 <BevelCard style={newStyles.serialBox} testID="serial-box">
                   <Text style={newStyles.serialBoxLabel}>
-                    SERIAL NUMBER{serials.length > 1 ? "S" : ""}
+                    MODEL NUMBER{serials.length > 1 ? "S" : ""}
                     {serials.length > 1 ? `  (${serials.length})` : ""}
                   </Text>
                   {serials.map((s: string, i: number) => (
@@ -3771,7 +3771,7 @@ const newStyles = themedStyles((c) => ({
     fontSize: 10,
   },
 
-  // ---------- SERIAL NUMBERS (under Dealer) ----------
+  // ---------- MODEL NUMBERS (under Dealer) ----------
   serialBox: {
     backgroundColor: c.bgSecondary,
     borderColor: c.border,
