@@ -48,3 +48,46 @@ Let the user select several existing tools and group them into a single
   - Should the bundle's photo be a montage of member photos, or a separately uploaded "hero" image?
   - Does the bundle have its own cost field, or is it the sum of member costs?
 
+
+### Admin Broadcast Notices (requested 2026-05-15)
+Admin-authored in-app popup messages that auto-show to every user the next
+time they open the app — once per user per notice.
+
+**Admin side (new "Notices" menu inside the existing Admin section):**
+- List view of all notices (active + archived)
+- Add / Edit / Delete a notice with: title, body text, severity (info / warning /
+  critical), optional expiry date, audience filter (everyone vs free-only vs
+  subscribed-only — future), active/inactive toggle
+- Each notice gets a UUID `notice_id` and `created_at` timestamp
+
+**User side:**
+- On every app launch (after auth bootstrap + biometric unlock), call
+  `GET /api/notices/pending`. Backend returns all ACTIVE notices that the
+  user hasn't acknowledged yet.
+- For each pending notice → show a styled modal (BevelCard background, severity
+  color, title, body, single ACKNOWLEDGE button)
+- ACKNOWLEDGE → `POST /api/notices/{id}/ack` → backend writes the user_id +
+  notice_id to a `notice_acks` collection so it never re-fires for that user
+- Non-admin users see each notice exactly ONCE, regardless of how many devices
+  / reinstalls (acks are stored server-side keyed by user_id, not on-device)
+
+**Admin side never sees the popup** even if they have unacked notices — admins
+already know what they posted.
+
+**Backend collections to add:**
+- `notices`: {id, title, body, severity, created_at, expires_at, active, audience}
+- `notice_acks`: {user_id, notice_id, acked_at} (compound unique index on
+  user_id + notice_id)
+
+**Endpoints to add:**
+- `GET    /api/admin/notices`       — list all (admin)
+- `POST   /api/admin/notices`       — create (admin)
+- `PATCH  /api/admin/notices/{id}`  — edit (admin)
+- `DELETE /api/admin/notices/{id}`  — delete (admin)
+- `GET    /api/notices/pending`     — list unacked active notices for the
+                                       current user (all auth users)
+- `POST   /api/notices/{id}/ack`    — mark acked for current user (all auth)
+
+**Estimated effort:** ~4-6 hours backend + frontend + admin UI. Low complexity,
+high impact for emergency comms / changelog blasts.
+
