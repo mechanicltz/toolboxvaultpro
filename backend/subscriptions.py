@@ -556,6 +556,28 @@ def make_router(db, get_current_user) -> APIRouter:
         return {"is_admin": _user_email(user) in _admin_emails(),
                 "email": _user_email(user)}
 
+    @router.get("/admin/user-stats")
+    async def admin_user_stats(user=Depends(get_current_user)):
+        """Admin-only counts of free vs subscribed accounts. Surfaced next
+        to the version badge on the Home screen so the admin can glance
+        at the user base size without leaving the app.
+
+        Definitions:
+          • subscribed = any user whose subscription is currently active
+            (entitlement != "free" AND is_active == true). This includes
+            lifetime promo redemptions and active StoreKit / Play renewals.
+          • free = total registered users - subscribed users.
+            Users with NO subscription document yet are counted as free
+            (everyone starts on the free tier).
+        """
+        _require_admin(user)
+        total_users = await db.users.count_documents({})
+        subscribed = await db.subscriptions.count_documents(
+            {"is_active": True, "entitlement": {"$ne": "free"}}
+        )
+        free = max(0, total_users - subscribed)
+        return {"free": free, "subscribed": subscribed, "total": total_users}
+
     @router.post("/admin/promo-codes")
     async def admin_create_promo(body: CreatePromoBody, user=Depends(get_current_user)):
         _require_admin(user)

@@ -40,6 +40,13 @@ export default function HomeScreen() {
     getCached("claims_summary", { totals: { open: 0 } }),
   );
   const [refreshing, setRefreshing] = useState(false);
+  /** Admin-only counts of free vs subscribed accounts. `null` for non-admins
+   *  (the /admin/user-stats endpoint returns 403, we swallow it). When set,
+   *  the home header shows "FREE: N   SUB: N" next to the version label. */
+  const [userStats, setUserStats] = useState<{
+    free: number;
+    subscribed: number;
+  } | null>(null);
   const [paymentTarget, setPaymentTarget] = useState<{
     dealer: any;
     account: "credit" | "personal";
@@ -89,6 +96,16 @@ export default function HomeScreen() {
       setDealers(setCached("dealers", d));
       setMnt(setCached("home_mnt", m));
       setClaims(setCached("claims_summary", c));
+      // Probe the admin-only user-stats endpoint. Non-admins get 403/401
+      // and we silently leave userStats null → the badge stays hidden.
+      try {
+        const us = await api.get("/admin/user-stats");
+        if (us && typeof us.free === "number" && typeof us.subscribed === "number") {
+          setUserStats({ free: us.free, subscribed: us.subscribed });
+        }
+      } catch {
+        /* not admin — fine, just don't render the badge */
+      }
     } catch {
       /* ignore */
     }
@@ -294,9 +311,24 @@ export default function HomeScreen() {
         <View>
           <Text style={styles.title}>TOOLBOX VAULT</Text>
           <Text style={styles.subtitle}>SUMMARY</Text>
-          <Text style={styles.versionLine} testID="home-version">
-            {APP_VERSION_LABEL}
-          </Text>
+          <View style={{ flexDirection: "row", alignItems: "center", flexWrap: "wrap" }}>
+            <Text style={styles.versionLine} testID="home-version">
+              {APP_VERSION_LABEL}
+            </Text>
+            {/* Admin-only at-a-glance user-base counter.
+                Free vs subscribed counts come from /api/admin/user-stats which
+                is gated to ADMIN_EMAILS — non-admins simply never see this row
+                because the fetch silently fails. Auto-refreshes on every home
+                pull-to-refresh via the same `load()` cycle. */}
+            {userStats && (
+              <Text
+                style={[styles.versionLine, { marginLeft: 8 }]}
+                testID="home-admin-userstats"
+              >
+                FREE: {userStats.free}   SUB: {userStats.subscribed}
+              </Text>
+            )}
+          </View>
         </View>
       </View>
 
