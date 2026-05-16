@@ -338,28 +338,42 @@ export default function InventoryScreen() {
     // below, so changing them is instant — no network round-trip.
     const params: any = { search: search || undefined };
     try {
+      // Same preserve-on-error pattern as index.tsx — if any individual
+      // sub-fetch fails (transient 520 / network blip / NetInfo
+      // false-offline), we skip the corresponding state update instead
+      // of overwriting it with an empty array. Otherwise the filter
+      // pickers (locations / tags) and the claims badge briefly go
+      // blank during the failure, then snap back on the next refresh —
+      // exactly the "my data disappears for a second" symptom users
+      // reported.
+      const KEEP = Symbol("keep-previous");
+      const keep = () => KEEP as unknown;
       const [t, a, w, cs, locs, tags, mu, sub] = await Promise.all([
         api.listTools(params),
         api.aggregate({}),
-        prefs.warranty_alerts ? api.warrantyAlerts(60) : Promise.resolve({ expiring: [], expired: [] }),
-        api.warrantyClaimsSummary().catch(() => ({ totals: { open: 0 } })),
-        api.listLocations().catch(() => []),
-        api.listTags().catch(() => []),
-        api.upcomingMaintenance(60).catch(() => ({ overdue: [], due_soon: [] })),
-        api.getSubscription().catch(() => null),
+        prefs.warranty_alerts
+          ? api.warrantyAlerts(60)
+          : Promise.resolve({ expiring: [], expired: [] }),
+        api.warrantyClaimsSummary().catch(keep),
+        api.listLocations().catch(keep),
+        api.listTags().catch(keep),
+        api.upcomingMaintenance(60).catch(keep),
+        api.getSubscription().catch(keep),
       ]);
-      const mItems: any[] = (mu as any)?.items || [];
-      const mIds = new Set<string>(mItems.map((x: any) => x.tool_id));
-      setMaintToolIds(mIds);
+      const mItems: any[] = mu !== KEEP ? ((mu as any)?.items || []) : [];
+      if (mu !== KEEP) {
+        const mIds = new Set<string>(mItems.map((x: any) => x.tool_id));
+        setMaintToolIds(mIds);
+        setMaintDueCount(mItems.length);
+      }
       // Raw master list — client-side filters apply to this.
       setTools(setCached("inv_tools", t));
       setAgg(setCached("inv_agg", a));
       setWarningCount((w.expiring?.length || 0) + (w.expired?.length || 0));
-      setOpenClaims(cs?.totals?.open || 0);
-      setMaintDueCount(mItems.length);
-      setAllLocations(locs);
-      setAllTags(tags);
-      setHiddenCount((sub as any)?.hidden_tool_count || 0);
+      if (cs !== KEEP) setOpenClaims((cs as any)?.totals?.open || 0);
+      if (locs !== KEEP) setAllLocations(locs as any[]);
+      if (tags !== KEEP) setAllTags(tags as any[]);
+      if (sub !== KEEP) setHiddenCount((sub as any)?.hidden_tool_count || 0);
     } catch (e: any) {
       // Backend / network failure — DON'T spam the LogBox/console.error red
       // overlay in dev (the user already gets the OfflineBanner up top, and

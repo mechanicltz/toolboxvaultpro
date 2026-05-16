@@ -76,26 +76,41 @@ export default function HomeScreen() {
 
   const load = useCallback(async () => {
     try {
+      // ---------------------------------------------------------------
+      // PRESERVE-ON-ERROR PATTERN — the previous version of this code
+      // used `.catch(() => [])` / `.catch(() => ({}))` for each call,
+      // which on ANY transient network failure (Cloudflare 520, NetInfo
+      // false-offline, server reload, request abort, etc.) would WIPE
+      // the user's data: the empty/fallback value got written into
+      // BOTH React state AND the persistent disk cache, so the user
+      // saw their tool list go blank for a few seconds until the next
+      // successful fetch. (Confirmed via user feedback: "every once in
+      // a while it will remove all my tools and information but after
+      // I close the app and reopen it all of it comes back.")
+      //
+      // The fix: when a sub-fetch rejects, we return the sentinel
+      // `__KEEP` and skip the corresponding state/cache update entirely
+      // — keeping whatever was previously rendered. The user will see
+      // stale data for a tick instead of a flash of empty state.
+      // ---------------------------------------------------------------
+      const KEEP = Symbol("keep-previous");
+      const keep = () => KEEP as unknown;
       const [s, a, t, w, d, m, c] = await Promise.all([
-        api.getStats().catch(() => ({})),
-        api.aggregate({}).catch(() => ({})),
-        api.listTools({}).catch(() => []),
-        api.listWishlist().catch(() => []),
-        api.listDealers().catch(() => []),
-        api
-          .upcomingMaintenance(30)
-          .catch(() => ({ overdue: 0, due_soon: 0, total: 0 })),
-        api
-          .warrantyClaimsSummary()
-          .catch(() => ({ totals: { open: 0 } })),
+        api.getStats().catch(keep),
+        api.aggregate({}).catch(keep),
+        api.listTools({}).catch(keep),
+        api.listWishlist().catch(keep),
+        api.listDealers().catch(keep),
+        api.upcomingMaintenance(30).catch(keep),
+        api.warrantyClaimsSummary().catch(keep),
       ]);
-      setStats(setCached("home_stats", s));
-      setAgg(setCached("home_agg", a));
-      setTools(setCached("tools", t));
-      setWishlist(setCached("wishlist", w));
-      setDealers(setCached("dealers", d));
-      setMnt(setCached("home_mnt", m));
-      setClaims(setCached("claims_summary", c));
+      if (s !== KEEP) setStats(setCached("home_stats", s));
+      if (a !== KEEP) setAgg(setCached("home_agg", a));
+      if (t !== KEEP) setTools(setCached("tools", t as any[]));
+      if (w !== KEEP) setWishlist(setCached("wishlist", w as any[]));
+      if (d !== KEEP) setDealers(setCached("dealers", d as any[]));
+      if (m !== KEEP) setMnt(setCached("home_mnt", m));
+      if (c !== KEEP) setClaims(setCached("claims_summary", c));
       // Probe the admin-only user-stats endpoint. Non-admins get 403/401
       // and we silently leave userStats null → the badge stays hidden.
       try {
