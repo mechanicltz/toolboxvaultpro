@@ -26,6 +26,7 @@ import { confirm } from "../../src/confirm";
 import { ReportLostModal } from "../../src/sections/LostStatusSection";
 import { buildLocationTree, flattenLocationTree } from "../../src/locationTree";
 import { useAuth } from "../../src/AuthContext";
+import { useSubscriptionChange } from "../../src/subscriptionEvents";
 import { useResponsive } from "../../src/responsive";
 
 import { themedStyles } from "../../src/themeContext";
@@ -501,6 +502,10 @@ export default function InventoryScreen() {
       load();
     }, [load]),
   );
+
+  // Audit #10: re-fetch when subscription state flips Free→PRO so previously
+  // hidden tools appear instantly (no need to navigate away & back).
+  useSubscriptionChange(useCallback(() => { load(); }, [load]));
 
   // Re-fetch only when the search query changes (debounced).
   // Status / location / tag / sort changes are handled instantly client-side

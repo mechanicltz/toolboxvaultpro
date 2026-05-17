@@ -333,6 +333,44 @@ export const api = {
   adminDeletePromoCode: (id: string) =>
     request<any>(`/admin/promo-codes/${id}`, { method: "DELETE" }),
 
+  // Admin · Database backups (audit #17)
+  adminBackupConfig: () =>
+    request<{
+      schedule: string;
+      schedule_human: string;
+      next_run_at: string;
+      next_run_in_seconds: number;
+      max_retained: number;
+      collections_backed_up: string[];
+    }>(`/admin/backups/config`),
+  adminListBackups: () =>
+    request<{
+      id: string;
+      created_at: string;
+      size_bytes: number;
+      size_human: string;
+      trigger: string;
+      collections: string[];
+      document_count: number;
+    }[]>(`/admin/backups`),
+  adminTriggerBackup: () =>
+    request<{
+      id: string;
+      created_at: string;
+      size_bytes: number;
+      size_human: string;
+      trigger: string;
+      collections: string[];
+      document_count: number;
+    }>(`/admin/backups/run`, { method: "POST" }),
+  adminDeleteBackup: (id: string) =>
+    request<{ ok: boolean; deleted_id: string }>(`/admin/backups/${id}`, {
+      method: "DELETE",
+    }),
+  // Helper for the download URL — frontend opens this in a new tab / share sheet.
+  adminBackupDownloadUrl: (id: string): string =>
+    `${API_BASE}/api/admin/backups/${id}/download`,
+
   forgotPassword: (data: { email: string }) =>
     request<{ ok: boolean; message: string }>(`/auth/forgot-password`, {
       method: "POST",

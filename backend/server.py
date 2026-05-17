@@ -3580,6 +3580,28 @@ from subscriptions import make_router as _make_subscriptions_router  # noqa: E40
 
 app.include_router(_make_subscriptions_router(real_db, get_current_user))
 
+# ---------------------------------------------------------------------------
+# Database backups (audit #17): admin endpoints + monthly scheduler.
+# ---------------------------------------------------------------------------
+from backups import (  # noqa: E402
+    make_backup_router as _make_backup_router,
+    start_backup_scheduler as _start_backup_scheduler,
+)
+from subscriptions import _require_admin as _require_admin_for_backups  # noqa: E402
+
+_make_backup_router(
+    api_router,
+    lambda: real_db,
+    get_current_user,
+    _require_admin_for_backups,
+)
+
+
+@app.on_event("startup")
+async def _kick_off_backup_scheduler() -> None:
+    """Idempotently start the monthly DB backup task on every boot."""
+    _start_backup_scheduler(lambda: real_db)
+
 
 # ---------------------------------------------------------------------------
 # Setup-Guides viewer (/api/guides)
@@ -4003,6 +4025,16 @@ INDEX_PLAN = [
     ("tools",                [("owner_id", 1), ("status", 1)],         {"name": "owner_status_idx"}),
     ("tools",                [("owner_id", 1), ("location_id", 1)],    {"name": "owner_location_idx"}),
     ("tools",                [("owner_id", 1), ("for_sale", 1)],       {"name": "owner_for_sale_idx"}),
+    # Audit #16: hot-path compound indexes for filters/alerts that currently
+    # do collection scans within owner_id partition. Each saves a partition
+    # scan on lists that grow with tool count.
+    ("tools",                [("owner_id", 1), ("is_sold", 1)],        {"name": "owner_is_sold_idx"}),
+    ("tools",                [("owner_id", 1), ("lost_status.is_lost", 1)], {"name": "owner_lost_idx"}),
+    ("tools",                [("owner_id", 1), ("is_sold", 1), ("lost_status.is_lost", 1)], {"name": "owner_active_idx"}),
+    ("tools",                [("owner_id", 1), ("warranty_until", 1)], {"name": "owner_warranty_idx"}),
+    ("tools",                [("owner_id", 1), ("created_at", 1)],     {"name": "owner_created_idx"}),
+    ("tools",                [("owner_id", 1), ("brand", 1)],          {"name": "owner_brand_idx"}),
+    ("tools",                [("owner_id", 1), ("checked_out", 1)],    {"name": "owner_checked_out_idx"}),
     ("tools",                [("id", 1)],                              {"unique": True, "name": "tool_id_unique"}),
     ("locations",            [("owner_id", 1)],                        {"name": "owner_id_idx"}),
     ("locations",            [("owner_id", 1), ("parent_id", 1)],      {"name": "owner_parent_idx"}),

@@ -1,6 +1,6 @@
 // Paywall screen — shown when a free user hits the 15-item limit (auto via
 // the 402 interceptor) or when the user opts in from More → Manage Subscription.
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   View,
   Text,
@@ -26,6 +26,7 @@ import {
   type PaywallOffering,
 } from "../src/revenuecat";
 import { PromoRedeemModal } from "../src/PromoRedeemModal";
+import { notifySubscriptionChanged } from "../src/subscriptionEvents";
 
 import { themedStyles } from "../src/themeContext";
 
@@ -43,6 +44,18 @@ export default function PaywallScreen() {
   const [stub, setStub] = useState(false);
   const [sub, setSub] = useState<any>(null);
   const [showRedeem, setShowRedeem] = useState(false);
+  // Audit #11: track the post-redeem auto-close timer so it can't fire after
+  // the screen has been manually closed by the user.
+  const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (closeTimerRef.current) {
+        clearTimeout(closeTimerRef.current);
+        closeTimerRef.current = null;
+      }
+    };
+  }, []);
 
   const refreshSub = useCallback(async () => {
     try {
@@ -89,6 +102,7 @@ export default function PaywallScreen() {
           }
         }
         await refreshSub();
+        notifySubscriptionChanged();
         Alert.alert("Welcome to PRO! ✨", "Your subscription is active.");
         router.back();
       } else if (res.stub) {
@@ -119,6 +133,7 @@ export default function PaywallScreen() {
           }
         }
         await refreshSub();
+        notifySubscriptionChanged();
         Alert.alert("Restored ✓", "Your previous purchase has been restored.");
         router.back();
       } else if (res.stub) {
@@ -321,8 +336,9 @@ export default function PaywallScreen() {
         onClose={() => setShowRedeem(false)}
         onRedeemed={async () => {
           await refreshSub();
+          notifySubscriptionChanged();
           // Allow the success state to be visible briefly, then close paywall.
-          setTimeout(() => router.back(), 1400);
+          closeTimerRef.current = setTimeout(() => router.back(), 1400);
         }}
       />
     </SafeAreaView>

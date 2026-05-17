@@ -24,6 +24,7 @@ import { APP_VERSION_LABEL } from "../../src/version";
 
 import { themedStyles } from "../../src/themeContext";
 import { BevelCard } from "../../src/components/BevelCard";
+import { useSubscriptionChange } from "../../src/subscriptionEvents";
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -131,6 +132,12 @@ export default function HomeScreen() {
       load();
     }, [load]),
   );
+
+  // Audit #10: when a free user upgrades to PRO mid-session (via paywall
+  // purchase, restore, or promo redeem) the backend immediately unlocks all
+  // their tools. We re-fetch here so the previously-hidden tools appear
+  // without requiring the user to navigate away and back.
+  useSubscriptionChange(useCallback(() => { load(); }, [load]));
 
   const onRefresh = async () => {
     setRefreshing(true);

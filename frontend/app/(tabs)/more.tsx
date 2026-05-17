@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -93,6 +93,17 @@ export default function MoreScreen() {
   const [sub, setSub] = useState<any>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [showRedeem, setShowRedeem] = useState(false);
+  // Audit #11: track the auto-close timer for the change-password modal so
+  // it can't fire setState after this screen unmounts.
+  const pwCloseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    return () => {
+      if (pwCloseTimerRef.current) {
+        clearTimeout(pwCloseTimerRef.current);
+        pwCloseTimerRef.current = null;
+      }
+    };
+  }, []);
 
   // Refresh subscription + admin status when we land on this screen.
   const refreshAccountState = useCallback(async () => {
@@ -247,7 +258,7 @@ export default function MoreScreen() {
       setPwOk("Password changed.");
       setPwNew("");
       setPwConfirm("");
-      setTimeout(() => {
+      pwCloseTimerRef.current = setTimeout(() => {
         setPwOpen(false);
         setPwOk("");
       }, 1200);
@@ -658,6 +669,16 @@ export default function MoreScreen() {
             subtitle="Mint, edit, disable or delete promo codes"
             testID="more-admin-promo-codes"
             onPress={() => router.push("/admin/promo-codes")}
+          />
+        )}
+
+        {isAdmin && (
+          <Row
+            icon="cloud-download-outline"
+            title="Admin · Database Backups"
+            subtitle="Monthly auto-backups · manual triggers · downloads"
+            testID="more-admin-backups"
+            onPress={() => router.push("/admin/backups")}
           />
         )}
 
