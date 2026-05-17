@@ -91,3 +91,10 @@ already know what they posted.
 **Estimated effort:** ~4-6 hours backend + frontend + admin UI. Low complexity,
 high impact for emergency comms / changelog blasts.
 
+
+### TODO — Confirmed for next session (added 2026-05-16)
+1. **Bump version for next build** — user said "1.3.1" but current is already 1.3.1; assumed they meant **v1.3.2 / build 22**. CONFIRM with user before bumping.
+2. **Terms of Service + Privacy Policy hosting** — produce both as polished Markdown/HTML, walk user through hosting on GitHub Pages (free) so they have real public HTTPS URLs to paste into App Store Connect + Google Play Console. Must satisfy BOTH stores' content requirements (subscription disclosure, IAP terms, contact email, data-handling section).
+3. **Add Terms link inside the paywall and More tab** — user will hand over the public URL after step 2. Targets: `app/paywall.tsx` (subscription terms-of-use link required by Apple), `app/(tabs)/more.tsx` Account section (Terms + Privacy rows).
+4. **Remove the DEV Downgrade button + endpoint** — delete the row in `app/(tabs)/more.tsx` (search "DEV: Downgrade to Free") AND the backend endpoint in `subscriptions.py` (search `/dev/downgrade-to-free`). Both have prominent inline comments saying REMOVE BEFORE SUBMISSION.
+
