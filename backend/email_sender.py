@@ -33,6 +33,9 @@ def send_email(
     body_plain: str,
     body_html: Optional[str] = None,
     reply_to: Optional[str] = None,
+    attachment_base64: Optional[str] = None,
+    attachment_filename: str = "screenshot.png",
+    attachment_mime: str = "image/png",
 ) -> bool:
     """Send an email via Gmail SMTP. Returns True on success, False otherwise.
 
@@ -61,6 +64,21 @@ def send_email(
     msg.set_content(body_plain)
     if body_html:
         msg.add_alternative(body_html, subtype="html")
+
+    # Attach screenshot if provided (for bug reports with attached photos).
+    if attachment_base64:
+        try:
+            import base64 as _b64
+            raw = _b64.b64decode(attachment_base64)
+            maintype, _, subtype = attachment_mime.partition("/")
+            msg.add_attachment(
+                raw,
+                maintype=maintype or "image",
+                subtype=subtype or "png",
+                filename=attachment_filename,
+            )
+        except Exception as _e:
+            logger.warning("Failed to attach base64 image: %s", _e)
 
     # Gmail app-passwords are shown with spaces for readability; SMTP accepts
     # them with or without. Strip for safety.
@@ -124,6 +142,7 @@ def send_feedback_email(
     is_feature: bool = False,
     platform: str = "",
     app_version: str = "",
+    screenshot_base64: Optional[str] = None,
 ) -> bool:
     """Send a feedback / bug report / feature request email to the operator.
 
@@ -184,4 +203,7 @@ def send_feedback_email(
         body_plain,
         body_html,
         reply_to=from_email.strip() or None,
+        attachment_base64=screenshot_base64,
+        attachment_filename="screenshot.png",
+        attachment_mime="image/png",
     )

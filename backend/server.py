@@ -3760,6 +3760,9 @@ class FeedbackRequest(BaseModel):
     app_version: Optional[str] = ""
     # Honeypot — bots fill hidden fields; humans don't.
     website: Optional[str] = ""
+    # Optional screenshot — user-attached PNG/JPEG image, base64-encoded.
+    # Frontend caps at ~1 MB before sending to keep payload manageable.
+    screenshot_base64: Optional[str] = None
 
 
 def _feedback_rate_limit(ip: str) -> bool:
@@ -3812,6 +3815,11 @@ async def submit_feedback(payload: FeedbackRequest, request: Request):
             "Too many messages from this device. Please try again in a few minutes.",
         )
 
+    # Cap screenshot at 2 MB raw (~2.7 MB base64) to keep DB and email sane.
+    screenshot_b64 = payload.screenshot_base64 or None
+    if screenshot_b64 and len(screenshot_b64) > 3_500_000:
+        screenshot_b64 = None  # silently drop oversized; user already submitted
+
     # Persist a record (so operator has a searchable log even if email fails)
     record = {
         "id": str(uuid.uuid4()),
@@ -3824,6 +3832,8 @@ async def submit_feedback(payload: FeedbackRequest, request: Request):
         "is_feature": bool(payload.is_feature),
         "app_version": (payload.app_version or "").strip(),
         "ip": client_ip,
+        "has_screenshot": bool(screenshot_b64),
+        "screenshot_base64": screenshot_b64,
         "created_at": now_iso(),
     }
     try:
@@ -3844,6 +3854,7 @@ async def submit_feedback(payload: FeedbackRequest, request: Request):
             is_feature=bool(payload.is_feature),
             platform=(payload.platform or ""),
             app_version=(payload.app_version or ""),
+            screenshot_base64=screenshot_b64,
         )
     except Exception as e:
         logging.error("send_feedback_email raised: %s", e)

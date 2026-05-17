@@ -16,6 +16,12 @@ import { themedStyles } from "../themeContext";
 
 interface Props {
   receipts?: string[];
+  /**
+   * Optional add-receipt callback. When provided, an "ADD" pill is shown
+   * even with zero receipts so the user can attach them right from the
+   * tool detail page (user report #4).
+   */
+  onAdd?: () => void;
 }
 
 const { width: SCREEN_W } = Dimensions.get("window");
@@ -27,28 +33,59 @@ const { width: SCREEN_W } = Dimensions.get("window");
  * receipt-scanner / "ADD RECEIPT" flow). Tapping any thumbnail opens a
  * fullscreen, horizontally-swipeable lightbox.
  */
-export function ReceiptsSection({ receipts }: Props) {
+export function ReceiptsSection({ receipts, onAdd }: Props) {
   const list = Array.isArray(receipts) ? receipts.filter(Boolean) : [];
   const [open, setOpen] = useState(false);
   const [idx, setIdx] = useState(0);
 
-  if (list.length === 0) return null;
+  // Even with zero receipts, render an "ADD RECEIPT" pill if onAdd was passed.
+  if (list.length === 0) {
+    if (!onAdd) return null;
+    return (
+      <View>
+        <View style={styles.headerRow}>
+          <Text style={styles.sectionLabel}>RECEIPTS</Text>
+        </View>
+        <TouchableOpacity
+          style={styles.addPill}
+          onPress={onAdd}
+          activeOpacity={0.8}
+          testID="add-receipt-empty"
+        >
+          <Ionicons name="receipt-outline" size={16} color={theme.colors.accent} />
+          <Text style={styles.addPillText}>ADD RECEIPT</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   return (
     <View>
       <View style={styles.headerRow}>
         <Text style={styles.sectionLabel}>RECEIPTS ({list.length})</Text>
-        <TouchableOpacity
-          testID="view-receipts-link"
-          onPress={() => {
-            setIdx(0);
-            setOpen(true);
-          }}
-          activeOpacity={0.7}
-          hitSlop={6}
-        >
-          <Text style={styles.viewLink}>VIEW ALL ›</Text>
-        </TouchableOpacity>
+        <View style={{ flexDirection: "row", gap: 14, alignItems: "center" }}>
+          {onAdd && (
+            <TouchableOpacity
+              testID="add-receipt-header"
+              onPress={onAdd}
+              activeOpacity={0.7}
+              hitSlop={6}
+            >
+              <Text style={styles.viewLink}>+ ADD</Text>
+            </TouchableOpacity>
+          )}
+          <TouchableOpacity
+            testID="view-receipts-link"
+            onPress={() => {
+              setIdx(0);
+              setOpen(true);
+            }}
+            activeOpacity={0.7}
+            hitSlop={6}
+          >
+            <Text style={styles.viewLink}>VIEW ALL ›</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       <ScrollView
@@ -196,6 +233,26 @@ const styles = themedStyles((c) => ({
     color: "#000",
     fontSize: 8,
     fontWeight: "900",
+  },
+  addPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderStyle: "dashed",
+    borderColor: c.accent,
+    backgroundColor: c.surface,
+    marginTop: 6,
+  },
+  addPillText: {
+    color: c.accent,
+    fontSize: 12,
+    fontWeight: "800",
+    letterSpacing: 0.5,
   },
   lightboxBg: {
     flex: 1,

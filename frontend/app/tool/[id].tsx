@@ -249,6 +249,48 @@ export default function ToolDetail() {
     ]);
   };
 
+  // User report #4: receipts can now be added directly from the detail page
+  // (used to require opening the edit screen). Mirrors addToolPhoto.
+  const addToolReceipt = async (src: "camera" | "library") => {
+    try {
+      const perm =
+        src === "camera"
+          ? await ImagePicker.requestCameraPermissionsAsync()
+          : await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!perm.granted) {
+        Alert.alert(
+          "Permission needed",
+          `Please grant ${src === "camera" ? "camera" : "photo library"} access.`,
+        );
+        return;
+      }
+      const opts: any = { quality: 0.7, allowsEditing: false, base64: true };
+      const res =
+        src === "camera"
+          ? await ImagePicker.launchCameraAsync(opts)
+          : await ImagePicker.launchImageLibraryAsync({
+              ...opts,
+              mediaTypes: ImagePicker.MediaTypeOptions.Images,
+            });
+      if (res.canceled || !res.assets?.[0]) return;
+      const a = res.assets[0];
+      const data = a.base64 ? `data:image/jpeg;base64,${a.base64}` : a.uri;
+      const next = [...(tool?.receipts || []), data];
+      await api.updateTool(tool.id, { receipts: next });
+      load();
+    } catch (e: any) {
+      Alert.alert("Error", e.message || "Could not add receipt");
+    }
+  };
+
+  const promptAddReceipt = () => {
+    Alert.alert("Add a receipt", "Choose source", [
+      { text: "Take Photo", onPress: () => addToolReceipt("camera") },
+      { text: "Choose from Library", onPress: () => addToolReceipt("library") },
+      { text: "Cancel", style: "cancel" },
+    ]);
+  };
+
   const load = useCallback(async () => {
     if (!id) return;
     try {
@@ -382,7 +424,8 @@ export default function ToolDetail() {
         return;
       }
 
-      // Exact template requested
+      // Exact template requested. User report #7: if a photo is attached to
+      // the claim we ACTUALLY attach it now (used to just mention it in text).
       const greetName = agent?.name || dealer.name;
       const lines = [
         `Hello ${greetName}, I have a repair/warranty tool.`,
@@ -390,24 +433,79 @@ export default function ToolDetail() {
         `Model Number: ${t.serial_number || "N/A"}`,
         `Purchase date: ${formatDateUS(t.purchase_date) || "N/A"}`,
       ];
-      if (t.repair_info?.broken_photo) {
-        lines.push(`(A photo of the broken item is available.)`);
-      }
-      const subject = encodeURIComponent(`Repair / Warranty: ${t.name}`);
-      const body = encodeURIComponent(lines.join("\n"));
+      const subject = `Repair / Warranty: ${t.name}`;
+      const bodyText = lines.join("\n");
+      const photoB64 = t.repair_info?.broken_photo || "";
 
-      let url = "";
+      // Helper: write the base64 broken-photo to a temp file so it can be
+      // passed to MailComposer / Sharing as a file:// URI.
+      const photoFileUri = await (async () => {
+        if (!photoB64) return null;
+        try {
+          const FileSystem = await import("expo-file-system");
+          // Strip "data:image/jpeg;base64," prefix if present.
+          const stripped = photoB64.replace(/^data:image\/[a-zA-Z]+;base64,/, "");
+          const path = `${FileSystem.cacheDirectory}claim-${t.id}.jpg`;
+          await FileSystem.writeAsStringAsync(path, stripped, {
+            encoding: FileSystem.EncodingType.Base64,
+          });
+          return path;
+        } catch (_e) {
+          return null;
+        }
+      })();
+
       if (mode === "email") {
-        url = `mailto:${email}?subject=${subject}&body=${body}`;
+        // Use expo-mail-composer — supports attachments natively on iOS/Android.
+        const MailComposer = await import("expo-mail-composer");
+        const available = await MailComposer.isAvailableAsync();
+        if (available) {
+          await MailComposer.composeAsync({
+            recipients: [email],
+            subject,
+            body: bodyText,
+            attachments: photoFileUri ? [photoFileUri] : undefined,
+          });
+        } else {
+          // Fallback to mailto: (no attachment possible, but at least drafts).
+          const subEnc = encodeURIComponent(subject);
+          const bodyEnc = encodeURIComponent(
+            bodyText + (photoB64 ? "\n\n(A photo of the broken item is available — open this draft in your Mail app to receive it as an attachment.)" : ""),
+          );
+          const url = `mailto:${email}?subject=${subEnc}&body=${bodyEnc}`;
+          if (Platform.OS === "web") {
+            (globalThis as any).window.location.href = url;
+          } else {
+            await Linking.openURL(url);
+          }
+        }
       } else {
-        url = `sms:${phone}?body=${body}`;
+        // SMS path. iOS/Android SMS URLs can't attach images directly. If we
+        // have a photo, route through the share sheet (Sharing.shareAsync)
+        // which lets the user pick Messages and pre-fills the photo + text.
+        // Without a photo, just open the SMS draft URL as before.
+        if (photoFileUri) {
+          const Sharing = await import("expo-sharing");
+          if (await Sharing.isAvailableAsync()) {
+            await Sharing.shareAsync(photoFileUri, {
+              mimeType: "image/jpeg",
+              dialogTitle: bodyText, // shown on some platforms
+              UTI: "public.jpeg",
+            });
+          } else {
+            const url = `sms:${phone}?body=${encodeURIComponent(bodyText)}`;
+            await Linking.openURL(url);
+          }
+        } else {
+          const url = `sms:${phone}?body=${encodeURIComponent(bodyText)}`;
+          if (Platform.OS === "web") {
+            (globalThis as any).window.location.href = url;
+          } else {
+            await Linking.openURL(url);
+          }
+        }
       }
-      if (Platform.OS === "web") {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (globalThis as any).window.location.href = url;
-      } else {
-        await Linking.openURL(url);
-      }
+
       // Auto-mark as Reported once notified
       const cur = t.repair_info?.repair_status || "Not Reported";
       if (cur === "Not Reported") {
@@ -1670,7 +1768,10 @@ export default function ToolDetail() {
                 setAttachOpen(attachOpen === "receipts" ? null : "receipts")
               }
             >
-              <ReceiptsSection receipts={tool.receipts} />
+              <ReceiptsSection
+                receipts={tool.receipts}
+                onAdd={promptAddReceipt}
+              />
             </AttachmentPill>
           </View>
 

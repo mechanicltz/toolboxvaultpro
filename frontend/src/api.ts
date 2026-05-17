@@ -391,6 +391,7 @@ export const api = {
     is_feature?: boolean;
     app_version?: string;
     website?: string;
+    screenshot_base64?: string;
   }) =>
     request<{ ok: boolean; message: string }>(`/feedback`, {
       method: "POST",

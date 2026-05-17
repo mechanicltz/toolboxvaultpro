@@ -17,10 +17,12 @@ import {
   KeyboardAvoidingView,
   ActivityIndicator,
   Alert,
+  Image,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
+import * as ImagePicker from "expo-image-picker";
 import Constants from "expo-constants";
 import { theme } from "../src/theme";
 import { useAuth } from "../src/AuthContext";
@@ -49,7 +51,41 @@ export default function FeedbackScreen() {
   const [message, setMessage] = useState<string>("");
   const [isBug, setIsBug] = useState<boolean>(false);
   const [isFeature, setIsFeature] = useState<boolean>(false);
+  // User report #2: allow attaching a screenshot when reporting a bug.
+  const [screenshot, setScreenshot] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState<boolean>(false);
+
+  const pickScreenshot = async () => {
+    try {
+      const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!perm.granted) {
+        Alert.alert(
+          "Permission needed",
+          "Allow photo library access to attach a screenshot.",
+        );
+        return;
+      }
+      const res = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        quality: 0.6,
+        base64: true,
+        allowsEditing: false,
+      });
+      if (res.canceled || !res.assets?.[0]?.base64) return;
+      // Cap at ~2 MB raw (~2.7 MB base64). If oversized, warn user.
+      const b64 = res.assets[0].base64;
+      if (b64.length > 2_700_000) {
+        Alert.alert(
+          "Screenshot too large",
+          "Please pick a smaller image (under ~2 MB).",
+        );
+        return;
+      }
+      setScreenshot(b64);
+    } catch (e: any) {
+      Alert.alert("Could not attach", String(e?.message || e));
+    }
+  };
 
   // Prefill from logged-in user
   useEffect(() => {
@@ -115,6 +151,7 @@ export default function FeedbackScreen() {
         is_bug: isBug,
         is_feature: isFeature,
         app_version: APP_VERSION,
+        screenshot_base64: screenshot || undefined,
       });
       Alert.alert(
         "Message sent",
@@ -301,6 +338,38 @@ export default function FeedbackScreen() {
             testID="feedback-message"
           />
 
+          {/* Screenshot attach (user report #2) */}
+          <Text style={styles.label}>SCREENSHOT (OPTIONAL)</Text>
+          <Text style={styles.helperNote}>
+            If you&apos;re reporting a bug, attach a screenshot showing it.
+          </Text>
+          {screenshot ? (
+            <View style={styles.screenshotWrap}>
+              <Image
+                source={{ uri: `data:image/png;base64,${screenshot}` }}
+                style={styles.screenshotPreview}
+                resizeMode="cover"
+              />
+              <TouchableOpacity
+                style={styles.screenshotRemove}
+                onPress={() => setScreenshot(null)}
+                testID="feedback-screenshot-remove"
+              >
+                <Ionicons name="close-circle" size={22} color="#fff" />
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <TouchableOpacity
+              style={styles.attachBtn}
+              onPress={pickScreenshot}
+              activeOpacity={0.8}
+              testID="feedback-screenshot-attach"
+            >
+              <Ionicons name="image-outline" size={18} color={theme.colors.accent} />
+              <Text style={styles.attachBtnText}>Attach Screenshot</Text>
+            </TouchableOpacity>
+          )}
+
           {/* Version footer (informational) */}
           <Text style={styles.versionNote}>
             App version {APP_VERSION} will be included automatically.
@@ -457,6 +526,49 @@ const styles = themedStyles((c) => ({
     fontStyle: "italic",
     marginTop: 16,
     textAlign: "center",
+  },
+  helperNote: {
+    color: c.textMuted,
+    fontSize: 11,
+    lineHeight: 15,
+    marginBottom: 8,
+  },
+  attachBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingVertical: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: c.accent,
+    backgroundColor: c.surface,
+  },
+  attachBtnText: {
+    color: c.accent,
+    fontWeight: "700",
+    fontSize: 13,
+    letterSpacing: 0.4,
+  },
+  screenshotWrap: {
+    borderRadius: 10,
+    overflow: "hidden",
+    position: "relative",
+    borderWidth: 1,
+    borderColor: c.border,
+  },
+  screenshotPreview: {
+    width: "100%",
+    height: 180,
+    backgroundColor: c.surfaceAlt,
+  },
+  screenshotRemove: {
+    position: "absolute",
+    top: 6,
+    right: 6,
+    backgroundColor: "rgba(0,0,0,0.6)",
+    borderRadius: 12,
+    padding: 2,
   },
   footer: {
     borderTopWidth: 1,
