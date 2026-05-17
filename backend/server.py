@@ -391,6 +391,7 @@ class Agent(BaseModel):
     name: str
     phone: Optional[str] = ""
     email: Optional[str] = ""
+    location: Optional[str] = ""  # e.g. "North Houston", "Route 12", etc.
     notes: Optional[str] = ""
     started_at: str = Field(default_factory=now_iso)
     ended_at: Optional[str] = None  # when this agent stopped being current
@@ -400,6 +401,7 @@ class AgentCreate(BaseModel):
     name: str
     phone: Optional[str] = ""
     email: Optional[str] = ""
+    location: Optional[str] = ""
     notes: Optional[str] = ""
 
 
@@ -410,6 +412,10 @@ class Dealer(BaseModel):
     website: Optional[str] = ""
     address: Optional[str] = ""
     notes: Optional[str] = ""
+    # Additional company contact channels (free-form: phone, email, URL, or note)
+    warranty_contact: Optional[str] = ""
+    tech_support_contact: Optional[str] = ""
+    customer_support_contact: Optional[str] = ""
     route_frequency: Optional[str] = "N/A"  # Weekly | Bi-weekly | Monthly | N/A
     route_day_of_week: Optional[str] = ""  # Mon | Tue | Wed | Thu | Fri | Sat | Sun (when frequency is Weekly/Bi-weekly)
     route_anchor_date: Optional[str] = ""  # YYYY-MM-DD anchor used to compute next visit (mainly for Bi-weekly/Monthly)
@@ -445,6 +451,9 @@ class DealerCreate(BaseModel):
     website: Optional[str] = ""
     address: Optional[str] = ""
     notes: Optional[str] = ""
+    warranty_contact: Optional[str] = ""
+    tech_support_contact: Optional[str] = ""
+    customer_support_contact: Optional[str] = ""
     route_frequency: Optional[str] = "N/A"
     route_day_of_week: Optional[str] = ""
     route_anchor_date: Optional[str] = ""
@@ -456,6 +465,9 @@ class DealerUpdate(BaseModel):
     website: Optional[str] = None
     address: Optional[str] = None
     notes: Optional[str] = None
+    warranty_contact: Optional[str] = None
+    tech_support_contact: Optional[str] = None
+    customer_support_contact: Optional[str] = None
     route_frequency: Optional[str] = None
     route_day_of_week: Optional[str] = None
     route_anchor_date: Optional[str] = None
@@ -1235,6 +1247,7 @@ async def update_agent(dealer_id: str, agent_id: str, payload: AgentCreate):
             a["name"] = payload.name
             a["phone"] = payload.phone or ""
             a["email"] = payload.email or ""
+            a["location"] = payload.location or ""
             a["notes"] = payload.notes or ""
             found = True
             break

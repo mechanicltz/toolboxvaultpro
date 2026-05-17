@@ -206,6 +206,9 @@ export default function DealerDetail() {
                 website: dealer.website || "",
                 address: dealer.address || "",
                 notes: dealer.notes || "",
+                warranty_contact: dealer.warranty_contact || "",
+                tech_support_contact: dealer.tech_support_contact || "",
+                customer_support_contact: dealer.customer_support_contact || "",
                 route_frequency: dealer.route_frequency || "N/A",
                 route_day_of_week: dealer.route_day_of_week || "",
                 route_anchor_date: dealer.route_anchor_date || "",
@@ -248,7 +251,7 @@ export default function DealerDetail() {
             testID="add-agent-btn"
             style={styles.addBtn}
             onPress={() => {
-              setAgentForm({ name: "", phone: "", email: "", notes: "" });
+              setAgentForm({ name: "", phone: "", email: "", location: "", notes: "" });
             }}
           >
             <Ionicons
@@ -271,7 +274,7 @@ export default function DealerDetail() {
               key={a.id}
               style={[styles.agentCard, isCurrent && styles.agentCardActive]}
             >
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                 {isCurrent && (
                   <View style={styles.currentBadge}>
                     <Ionicons name="star" size={10} color="#000" />
@@ -279,6 +282,14 @@ export default function DealerDetail() {
                   </View>
                 )}
                 <Text style={styles.agentName}>{a.name}</Text>
+                {!!a.location && (
+                  <View style={styles.locationPill}>
+                    <Ionicons name="location" size={10} color={theme.colors.accent} />
+                    <Text style={styles.locationPillText} numberOfLines={1}>
+                      {a.location}
+                    </Text>
+                  </View>
+                )}
               </View>
               {!!a.phone && (
                 <View style={styles.agentContactRow}>
@@ -326,6 +337,7 @@ export default function DealerDetail() {
                     name: a.name || "",
                     phone: a.phone || "",
                     email: a.email || "",
+                    location: a.location || "",
                     notes: a.notes || "",
                   })}
                 >
@@ -355,77 +367,104 @@ export default function DealerDetail() {
           );
         })}
 
-        {/* TOOLS PURCHASED — collapsed into a button that opens the full list */}
-        <View style={styles.toolsHeader}>
-          <Text style={styles.sectionLabelStrong}>
-            TOOLS PURCHASED FROM {dealer.name.toUpperCase()}
-          </Text>
-          <View style={styles.totalPill}>
-            <Text style={styles.totalPillLabel}>TOTAL SPENT</Text>
-            <Text style={styles.totalPillValue}>${total.toFixed(2)}</Text>
-          </View>
+        {/* TOOLS PURCHASED + COMPANY DETAILS — grouped together so contact info reads first, tools follow */}
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionLabelStrong}>COMPANY DETAILS</Text>
         </View>
-        <BevelCard
-          testID="view-dealer-tools-btn"
-          style={styles.viewToolsBtn}
-          onPress={() =>
-            router.push(`/dealer/${id}/tools?name=${encodeURIComponent(dealer.name)}`)
-          }
-          activeOpacity={0.85}
-        >
-          <View style={styles.viewToolsIcon}>
-            <Ionicons name="construct" size={20} color={theme.colors.accent} />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.viewToolsTitle}>
-              {tools.length === 0
-                ? "No tools assigned yet"
-                : tools.length === 1
-                ? "View 1 purchased tool"
-                : `View ${tools.length} purchased tools`}
-            </Text>
-            <Text style={styles.viewToolsSub}>
-              {tools.length === 0
-                ? "Assign a dealer to a tool to see it here"
-                : `Tap to browse the full list  ·  Total $${total.toFixed(2)}`}
-            </Text>
-          </View>
-          <Ionicons name="chevron-forward" size={20} color={theme.colors.textMuted} />
-        </BevelCard>
+        <BevelCard style={styles.companyCard}>
+          {!!dealer.phone && (
+            <View style={styles.dealerContactPhoneRow}>
+              <BevelCard
+                testID="dealer-call-btn"
+                style={styles.dealerContactBtn}
+                onPress={() => openPhone(dealer.phone)}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="call" size={16} color={theme.colors.accent} />
+                <Text style={styles.dealerContactBtnText} numberOfLines={1}>
+                  {formatPhone(dealer.phone)}
+                </Text>
+              </BevelCard>
+              <BevelCard
+                testID="dealer-text-btn"
+                style={[styles.dealerContactBtn, styles.dealerContactBtnSmall]}
+                onPress={() => openSms(dealer.phone)}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="chatbubble-ellipses" size={16} color={theme.colors.accent} />
+                <Text style={styles.dealerContactBtnText}>TEXT</Text>
+              </BevelCard>
+            </View>
+          )}
+          <ContactRow icon="globe" label={dealer.website} onPress={() => callOrEmail(dealer.website)} />
+          <ContactRow icon="location" label={dealer.address} />
 
-        <Text style={styles.sectionLabel}>CONTACT</Text>
-        {!!dealer.phone && (
-          <View style={styles.dealerContactPhoneRow}>
-            <BevelCard
-              testID="dealer-call-btn"
-              style={styles.dealerContactBtn}
-              onPress={() => openPhone(dealer.phone)}
-              activeOpacity={0.7}
-            >
-              <Ionicons name="call" size={16} color={theme.colors.accent} />
-              <Text style={styles.dealerContactBtnText} numberOfLines={1}>
-                {formatPhone(dealer.phone)}
+          {/* Department contact channels */}
+          <DepartmentRow
+            icon="shield-checkmark"
+            label="Warranty Dept"
+            value={dealer.warranty_contact}
+            onPress={() => callOrEmail(dealer.warranty_contact)}
+          />
+          <DepartmentRow
+            icon="construct"
+            label="Tech Support"
+            value={dealer.tech_support_contact}
+            onPress={() => callOrEmail(dealer.tech_support_contact)}
+          />
+          <DepartmentRow
+            icon="headset"
+            label="Customer Support"
+            value={dealer.customer_support_contact}
+            onPress={() => callOrEmail(dealer.customer_support_contact)}
+          />
+
+          {!!dealer.notes && (
+            <View style={[styles.contactRow, { alignItems: "flex-start", borderBottomWidth: 0 }]}>
+              <Ionicons name="document-text-outline" size={18} color={theme.colors.accent} />
+              <Text style={[styles.contactText, { flex: 1 }]}>{dealer.notes}</Text>
+            </View>
+          )}
+
+          {/* Nested: Tools Purchased — visually part of Company Details */}
+          <View style={styles.companyDivider} />
+          <View style={styles.toolsHeader}>
+            <Text style={[styles.sectionLabelStrong, { paddingHorizontal: 0, paddingTop: 4 }]}>
+              TOOLS PURCHASED
+            </Text>
+            <View style={styles.totalPill}>
+              <Text style={styles.totalPillLabel}>TOTAL SPENT</Text>
+              <Text style={styles.totalPillValue}>${total.toFixed(2)}</Text>
+            </View>
+          </View>
+          <BevelCard
+            testID="view-dealer-tools-btn"
+            style={[styles.viewToolsBtn, { marginHorizontal: 0 }]}
+            onPress={() =>
+              router.push(`/dealer/${id}/tools?name=${encodeURIComponent(dealer.name)}`)
+            }
+            activeOpacity={0.85}
+          >
+            <View style={styles.viewToolsIcon}>
+              <Ionicons name="construct" size={20} color={theme.colors.accent} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.viewToolsTitle}>
+                {tools.length === 0
+                  ? "No tools assigned yet"
+                  : tools.length === 1
+                  ? "View 1 purchased tool"
+                  : `View ${tools.length} purchased tools`}
               </Text>
-            </BevelCard>
-            <BevelCard
-              testID="dealer-text-btn"
-              style={[styles.dealerContactBtn, styles.dealerContactBtnSmall]}
-              onPress={() => openSms(dealer.phone)}
-              activeOpacity={0.7}
-            >
-              <Ionicons name="chatbubble-ellipses" size={16} color={theme.colors.accent} />
-              <Text style={styles.dealerContactBtnText}>TEXT</Text>
-            </BevelCard>
-          </View>
-        )}
-        <ContactRow icon="globe" label={dealer.website} onPress={() => callOrEmail(dealer.website)} />
-        <ContactRow icon="location" label={dealer.address} />
-        {!!dealer.notes && (
-          <View style={[styles.contactRow, { alignItems: "flex-start" }]}>
-            <Ionicons name="document-text-outline" size={18} color={theme.colors.accent} />
-            <Text style={[styles.contactText, { flex: 1 }]}>{dealer.notes}</Text>
-          </View>
-        )}
+              <Text style={styles.viewToolsSub}>
+                {tools.length === 0
+                  ? "Assign a dealer to a tool to see it here"
+                  : `Tap to browse the full list  ·  Total $${total.toFixed(2)}`}
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color={theme.colors.textMuted} />
+          </BevelCard>
+        </BevelCard>
 
         {/* Payment Accounts — moved to bottom */}
         <BalanceSection dealer={dealer} onChange={load} />
@@ -436,16 +475,25 @@ export default function DealerDetail() {
         <View style={styles.modalBg}>
           <ScrollView style={styles.modalCard} keyboardShouldPersistTaps="handled">
             <Text style={styles.modalTitle}>EDIT DEALER</Text>
-            {(["name", "phone", "website", "address", "notes"] as const).map((k) => (
+            {([
+              { k: "name", placeholder: "Dealer name", multiline: false },
+              { k: "phone", placeholder: "Main phone", multiline: false },
+              { k: "website", placeholder: "Website", multiline: false },
+              { k: "address", placeholder: "Address", multiline: false },
+              { k: "warranty_contact", placeholder: "Warranty Dept (phone, email, or URL)", multiline: false },
+              { k: "tech_support_contact", placeholder: "Tech Support Dept (phone, email, or URL)", multiline: false },
+              { k: "customer_support_contact", placeholder: "Customer Support (phone, email, or URL)", multiline: false },
+              { k: "notes", placeholder: "Notes", multiline: true },
+            ] as const).map((f) => (
               <TextInput
-                key={k}
-                testID={`edit-dealer-${k}`}
-                placeholder={k.charAt(0).toUpperCase() + k.slice(1)}
+                key={f.k}
+                testID={`edit-dealer-${f.k}`}
+                placeholder={f.placeholder}
                 placeholderTextColor={theme.colors.textMuted}
-                style={[styles.input, k === "notes" && { height: 80 }]}
-                value={editForm[k] || ""}
-                onChangeText={(v) => setEditForm({ ...editForm, [k]: v })}
-                multiline={k === "notes"}
+                style={[styles.input, f.multiline && { height: 80 }]}
+                value={editForm[f.k] || ""}
+                onChangeText={(v) => setEditForm({ ...editForm, [f.k]: v })}
+                multiline={f.multiline}
               />
             ))}
 
@@ -557,16 +605,22 @@ export default function DealerDetail() {
                 <Text style={styles.importBtnText}>IMPORT FROM CONTACTS</Text>
               </TouchableOpacity>
             )}
-            {(["name", "phone", "email", "notes"] as const).map((k) => (
+            {([
+              { k: "name", placeholder: "Name", multiline: false },
+              { k: "phone", placeholder: "Phone", multiline: false },
+              { k: "email", placeholder: "Email", multiline: false },
+              { k: "location", placeholder: "Location / Territory (e.g. North Houston)", multiline: false },
+              { k: "notes", placeholder: "Notes", multiline: true },
+            ] as const).map((f) => (
               <TextInput
-                key={k}
-                testID={`agent-${k}`}
-                placeholder={k.charAt(0).toUpperCase() + k.slice(1)}
+                key={f.k}
+                testID={`agent-${f.k}`}
+                placeholder={f.placeholder}
                 placeholderTextColor={theme.colors.textMuted}
-                style={[styles.input, k === "notes" && { height: 80 }]}
-                value={agentForm?.[k] || ""}
-                onChangeText={(v) => setAgentForm({ ...agentForm, [k]: v })}
-                multiline={k === "notes"}
+                style={[styles.input, f.multiline && { height: 80 }]}
+                value={agentForm?.[f.k] || ""}
+                onChangeText={(v) => setAgentForm({ ...agentForm, [f.k]: v })}
+                multiline={f.multiline}
               />
             ))}
             <View style={{ flexDirection: "row", gap: 10 }}>
@@ -656,6 +710,40 @@ function Cell({ label, value }: { label: string; value: string }) {
       <Text style={styles.cellValue}>{value}</Text>
       <Text style={styles.cellLabel}>{label}</Text>
     </View>
+  );
+}
+
+function DepartmentRow({
+  icon,
+  label,
+  value,
+  onPress,
+}: {
+  icon: any;
+  label: string;
+  value?: string;
+  onPress?: () => void;
+}) {
+  if (!value) return null;
+  const isLinky = /@/.test(value) || /^https?:/i.test(value) || /\d/.test(value);
+  return (
+    <TouchableOpacity
+      style={styles.contactRow}
+      onPress={onPress}
+      disabled={!onPress || !isLinky}
+      activeOpacity={0.7}
+    >
+      <Ionicons name={icon} size={18} color={theme.colors.accent} />
+      <View style={{ flex: 1 }}>
+        <Text style={styles.deptRowLabel}>{label.toUpperCase()}</Text>
+        <Text style={styles.deptRowValue} numberOfLines={2}>
+          {value}
+        </Text>
+      </View>
+      {isLinky && onPress && (
+        <Ionicons name="chevron-forward" size={16} color={theme.colors.textMuted} />
+      )}
+    </TouchableOpacity>
   );
 }
 
@@ -1167,5 +1255,56 @@ const styles = themedStyles((c) => ({
   pickerEmptyText: {
     color: c.textSecondary,
     textAlign: "center",
+  },
+  // Company Details card (groups contact rows + nested tools-purchased button)
+  companyCard: {
+    marginHorizontal: 16,
+    marginTop: 4,
+    marginBottom: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+    backgroundColor: c.bgSecondary,
+    borderWidth: 1,
+    borderColor: c.border,
+    borderRadius: 8,
+    ...(theme.elevation.md as object),
+  },
+  companyDivider: {
+    height: 1,
+    backgroundColor: c.border,
+    marginVertical: 12,
+    marginHorizontal: 4,
+  },
+  // Per-department contact row label/value (warranty / tech / customer support)
+  deptRowLabel: {
+    color: c.textMuted,
+    fontSize: 7,
+    fontWeight: "800",
+    letterSpacing: 1.5,
+    marginBottom: 2,
+  },
+  deptRowValue: {
+    color: c.textPrimary,
+    fontSize: 11,
+    fontWeight: "600",
+  },
+  // Agent territory / location pill shown on the agent card
+  locationPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: c.bg,
+    borderWidth: 1,
+    borderColor: c.accent,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 999,
+    maxWidth: 200,
+  },
+  locationPillText: {
+    color: c.accent,
+    fontSize: 9,
+    fontWeight: "800",
+    letterSpacing: 0.5,
   },
 }));

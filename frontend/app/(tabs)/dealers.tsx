@@ -38,7 +38,7 @@ export default function DealersScreen() {
   const [dealers, setDealers] = useState<any[]>(() => getCached("dealers", []));
   const [tools, setTools] = useState<any[]>(() => getCached("tools", []));
   const [showAdd, setShowAdd] = useState(false);
-  const [form, setForm] = useState<any>({ name: "", phone: "", website: "", address: "", notes: "", route_frequency: "N/A", route_day_of_week: "", route_anchor_date: "" });
+  const [form, setForm] = useState<any>({ name: "", phone: "", website: "", address: "", notes: "", warranty_contact: "", tech_support_contact: "", customer_support_contact: "", route_frequency: "N/A", route_day_of_week: "", route_anchor_date: "" });
 
   const lockedDealerIds = useMemo(() => new Set<string>(), []);
 
@@ -75,7 +75,7 @@ export default function DealersScreen() {
     if (!form.name?.trim()) return;
     const payload = { ...form, name: form.name.trim() };
     const d = await api.createDealer(payload);
-    setForm({ name: "", phone: "", website: "", address: "", notes: "", route_frequency: "N/A", route_day_of_week: "", route_anchor_date: "" });
+    setForm({ name: "", phone: "", website: "", address: "", notes: "", warranty_contact: "", tech_support_contact: "", customer_support_contact: "", route_frequency: "N/A", route_day_of_week: "", route_anchor_date: "" });
     setShowAdd(false);
     router.push(`/dealer/${d.id}`);
   };
@@ -220,9 +220,12 @@ export default function DealersScreen() {
             <Text style={styles.modalTitle}>NEW DEALER</Text>
             {([
               { k: "name", placeholder: "Dealer name (e.g. Matco)*", focus: true, multiline: false },
-              { k: "phone", placeholder: "Phone", focus: false, multiline: false },
+              { k: "phone", placeholder: "Main phone", focus: false, multiline: false },
               { k: "website", placeholder: "Website", focus: false, multiline: false },
               { k: "address", placeholder: "Address", focus: false, multiline: false },
+              { k: "warranty_contact", placeholder: "Warranty Dept (phone / email / URL)", focus: false, multiline: false },
+              { k: "tech_support_contact", placeholder: "Tech Support Dept (phone / email / URL)", focus: false, multiline: false },
+              { k: "customer_support_contact", placeholder: "Customer Support (phone / email / URL)", focus: false, multiline: false },
               { k: "notes", placeholder: "Notes", focus: false, multiline: true },
             ] as const).map((f) => (
               <TextInput
@@ -320,7 +323,7 @@ export default function DealersScreen() {
                 style={styles.btnGhost}
                 onPress={() => {
                   setShowAdd(false);
-                  setForm({ name: "", phone: "", website: "", address: "", notes: "", route_frequency: "N/A", route_day_of_week: "", route_anchor_date: "" });
+                  setForm({ name: "", phone: "", website: "", address: "", notes: "", warranty_contact: "", tech_support_contact: "", customer_support_contact: "", route_frequency: "N/A", route_day_of_week: "", route_anchor_date: "" });
                 }}
               >
                 <Text style={styles.btnGhostText}>CANCEL</Text>

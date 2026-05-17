@@ -208,6 +208,7 @@ backend_v130_b20:
 
 agent_communication:
   - agent: "testing"
+    message: "DEALER + AGENT FIELD ADDITIONS — ALL GREEN (31/31 PASS) via /app/backend_test_dealer_agent_fields.py against http://localhost:8001/api with admin MechanicLTZ@gmail.com / Blue321!. All 5 review scenarios verified end-to-end:\n\n  TEST A — POST /api/dealers with name + warranty_contact + tech_support_contact + customer_support_contact → 200, response echoes all 3 new fields exactly (warranty_contact='warranty@fieldtest.com', tech_support_contact='555-TECH-911', customer_support_contact='https://fieldtest.com/support'). GET /api/dealers/{id} confirms persistence in Mongo. ✓\n\n  TEST B — Partial update PUT /api/dealers/{id} with only {warranty_contact: 'new-warranty@fieldtest.com'} → 200. Response shows warranty_contact updated to new value; tech_support_contact + customer_support_contact + name + phone all UNCHANGED. The update_dealer handler at server.py L1208 correctly uses `payload.dict()` and filters out None values, so omitted fields are NOT wiped. ✓\n\n  TEST C — POST /api/dealers/{id}/agents body {name:'Jordan Hayes', phone:'555-0200', email:'jordan@fieldtest.com', location:'North Houston Route', notes:'Tuesdays only'} → 200. Returned dealer.agents[0] has location='North Houston Route' echoed back, plus name/phone/email/notes all correct. ✓\n\n  TEST D — PUT /api/dealers/{id}/agents/{agent_id} with location:'South Houston Route' → 200. Response shows agent.location updated to new value while name/email/phone/notes preserved. Follow-up GET /api/dealers/{id} confirms agent.location persisted to MongoDB. The update_agent handler at server.py L1250 correctly applies `a['location'] = payload.location or ''`. ✓\n\n  TEST E — DELETE /api/dealers/{id} → 200 {ok:true}. Follow-up GET → 404. Cleanup verified — no test residue in DB. ✓\n\n  No regressions observed on touched endpoints. Backend log clean — only the test's expected 200s/404. The Dealer Pydantic model at server.py L408-427 now has all 3 new optional string fields, DealerCreate (L448-459) and DealerUpdate (L462-473) include them, and Agent (L389-397) + AgentCreate (L400-405) both carry `location: Optional[str] = ''`. The dealer + agent model field additions are fully working. Main agent: summarise and finish."\n  - agent: "testing"
     message: "DB BACKUP MODULE RETEST — ALL GREEN (52/52 PASS) via /app/backend_test_db_backup.py against http://localhost:8001/api. The wiring fix works: backups.make_backup_router() now builds its own APIRouter(prefix='/api') and server.py calls app.include_router(_make_backup_router(...)) AFTER existing routers. /openapi.json confirms all 5 routes registered (GET /api/admin/backups, POST /api/admin/backups/run, GET /api/admin/backups/config, GET /api/admin/backups/{backup_id}/download, DELETE /api/admin/backups/{backup_id}).\n\nAll 7 review objectives verified end-to-end with MechanicLTZ@gmail.com / Blue321! (admin) and a fresh backupnonadmin_<uuid>@example.com / Pass1234! (non-admin): (1) Boot log line present. (2) Non-admin gets 403 on all 5 endpoints. (3) Admin happy path: GET /config → 200 (max_retained=12, 16 collections, schedule=monthly), initial GET list → [], POST /run → 200 with full create response, follow-up GET list → 1 entry matching id. (4) Download: Content-Type=application/gzip, Content-Disposition matches 'attachment; filename=\"toolbox-vault-backup-*.json.gz\"', gzip decompressed + parsed as JSON dict with all 5 expected keys (users, tools, locations, dealers, subscriptions). (5) DELETE returns 200 + {ok:true}, list goes back to [], double-delete returns 404. (6) Retention: 3 manual runs → 3 unique IDs in list, newest-first chronological. (7) /api/health 200, /api/admin/user-stats 200, /api/admin/promo-codes 200, /api/revenuecat/webhook 200 — no regression.\n\nCLEANUP: backups collection is verified empty via direct mongo count_documents({})==0 at end of run. Also deleted the 3 test backupnonadmin_<uuid> users from this run's invocations via direct mongo. Synthetic RC webhook subscription cleaned. No residue. Backend log clean throughout — no 5xx, no tracebacks. Main agent: backend DB backup module is fully working. Summarise and finish."
   - agent: "testing"
     message: "DB BACKUP MODULE (audit #17) — CRITICAL WIRING BUG (PREVIOUS RUN — NOW FIXED). All 5 admin backup endpoints return HTTP 404 because the routes are added to `api_router` AFTER `app.include_router(api_router)` has already been executed. Confirmed via direct OpenAPI inspection: `curl http://localhost:8001/openapi.json` lists ZERO backup paths.\n\nFIX (one-line in /app/backend/server.py): Move the `_make_backup_router(api_router, lambda: real_db, get_current_user, _require_admin_for_backups)` block (currently at L3586-3597) to BEFORE the `app.include_router(api_router)` at L3572. Alternatively, refactor /app/backend/backups.py:make_backup_router() to build its own `APIRouter(prefix='/api')` and `app.include_router(...)` that, the same pattern subscriptions.py:make_router() uses successfully at server.py L3581.\n\nWHAT WORKS:\n  ✅ Backup scheduler boot log present: '2026-05-17 06:42:12,855 - backups - INFO - Backup scheduler started (monthly, 1st @ 03:00 UTC, keep last 12)' in /var/log/supervisor/backend.err.log.\n  ✅ /app/backend/backups.py module logic is sound — BACKUP_COLLECTIONS has all 16 collections, gzip+base64 encoding + retention prune + _require_admin gating look correct on inspection.\n  ✅ Regression: existing endpoints all healthy — GET /api/health 200, GET /api/admin/user-stats (admin) 200, GET /api/admin/promo-codes (admin) 200, POST /api/revenuecat/webhook (correct secret) 200.\n\nWHAT CANNOT BE VERIFIED until the wiring fix is applied: 403 gating, GET config, POST run, GET list, GET download (Content-Type + Content-Disposition + gzip integrity), DELETE, retention. All ready in /app/backend_test_db_backup.py — re-run after fix.\n\nCREDENTIAL NOTE: review request said use test@test.com / Blue321! as non-admin but that account's password is NOT Blue321! in this DB (401 on login). Test harness registered a fresh non-admin (backupnonadmin_<random>@example.com / Pass1234!) — this was harmless. Main agent may want to either reset test@test.com's password or update test_credentials.md to reflect the correct non-admin credentials.\n\nCLEANUP: backups collection is empty (no test rows residue — endpoints never accepted writes). Synthetic RC webhook subscription doc was deleted.\n\nMain agent: apply the one-line router-ordering fix to server.py, then ask for re-test."
@@ -3534,4 +3535,129 @@ frontend:
           Verified screenshot in dark mode shows a clear orange halo beneath every raised card —
           DEALER ACCOUNTS combined box, TOTAL ITEMS, NET WORTH, summary tiles, Next Dealer Route banner,
           REPORT A BUG card — every elevated container now visibly "rises" off the page.
+
+
+
+#====================================================================================================
+## 2026-05-17 — Dealer COMPANY DETAILS restructure + Agent location field + 3 dept contact fields
+#====================================================================================================
+backend:
+  - task: "Add `location` field to Agent + AgentCreate models, persist in add_agent and update_agent"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: |
+          Added `location: Optional[str] = ""` to both Agent and AgentCreate Pydantic models.
+          Updated `update_agent` endpoint to persist a["location"] = payload.location or "".
+          `add_agent` already used Agent(**payload.dict()) so it picks up location automatically.
+          NEEDS VERIFICATION: POST /api/dealers/{id}/agents with {name, phone, email, location, notes}
+          should persist + return the location on subsequent GET /api/dealers/{id}. Same for PUT.
+
+  - task: "Add warranty_contact / tech_support_contact / customer_support_contact to Dealer models"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: |
+          Added three optional string fields to Dealer, DealerCreate, and DealerUpdate models:
+          warranty_contact, tech_support_contact, customer_support_contact.
+          Free-form text — user can put phone, email, or URL in each.
+          NEEDS VERIFICATION: POST /api/dealers with all 3 new fields + GET /api/dealers/{id} should
+          return them. PUT /api/dealers/{id} with partial update on any one field should persist.
+
+frontend:
+  - task: "Dealer detail: rename CONTACT -> COMPANY DETAILS, bold header, move above Tools Purchased, nest Tools Purchased inside"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/app/dealer/[id].tsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: |
+          AGENTS section unchanged at top. After agents, new COMPANY DETAILS section uses the same
+          bold `sectionLabelStrong` styling as AGENTS. Phone/Website/Address rows + 3 new department
+          contact rows (DepartmentRow component shows label + value with chevron when tappable) +
+          notes row, all wrapped inside a single BevelCard. After a divider line, Tools Purchased
+          header + tools-list button are nested inside the same Company Details card.
+          Will be visually verified by user.
+
+  - task: "Dealer agent card: show location as a pill next to the name"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/app/dealer/[id].tsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: |
+          Added `locationPill` style (rounded, accent-bordered, with location icon) inside the agent
+          card header row, beside the agent name. Only renders when a.location is non-empty.
+          Card-header View now has flexWrap so pill wraps below name on small screens.
+
+  - task: "Agent add/edit modal: new Location text field"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/app/dealer/[id].tsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: |
+          Inserted a "Location / Territory" TextInput between Email and Notes in both add-agent and
+          edit-agent flows. agentForm initial state + edit-load `setAgentForm({ id, name, phone,
+          email, location, notes })` both populated.
+
+  - task: "Dealer create + edit modals: new Warranty / Tech Support / Customer Support fields"
+    implemented: true
+    working: "NA"
+    files:
+      - "/app/frontend/app/(tabs)/dealers.tsx"
+      - "/app/frontend/app/dealer/[id].tsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: |
+          Both NEW DEALER (dealers.tsx) and EDIT DEALER (dealer/[id].tsx) modals now have three
+          additional inputs between Address and Notes: warranty_contact, tech_support_contact,
+          customer_support_contact. Form initial state + reset blocks updated. Values pass through
+          existing generic api.createDealer / api.updateDealer.
+
+metadata:
+  test_focus:
+    - "Add `location` field to Agent + AgentCreate models, persist in add_agent and update_agent"
+    - "Add warranty_contact / tech_support_contact / customer_support_contact to Dealer models"
+  agent_communications:
+    - from: "main"
+      to: "testing"
+      message: |
+        Please verify backend dealer & agent model changes:
+        1) POST /api/dealers with payload containing warranty_contact, tech_support_contact,
+           customer_support_contact -> creates dealer with all 3 fields returned.
+        2) PUT /api/dealers/{id} partial update of just warranty_contact -> persists, other fields
+           remain intact.
+        3) POST /api/dealers/{id}/agents with name + location -> agent created with location echoed
+           back in subsequent GET /api/dealers/{id}.
+        4) PUT /api/dealers/{id}/agents/{agent_id} with updated location -> persists.
+        Use admin creds from /app/memory/test_credentials.md.
 
