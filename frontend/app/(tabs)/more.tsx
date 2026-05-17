@@ -12,6 +12,7 @@ import {
   Platform,
   KeyboardAvoidingView,
   Alert,
+  Linking,
 } from "react-native";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -714,6 +715,46 @@ export default function MoreScreen() {
             />
           </BevelCard>
         ) : null}
+
+        <BevelCard
+          style={styles.row}
+          onPress={() =>
+            Linking.openURL(
+              "https://mechanicltz.github.io/toolboxvault-legal/terms.html",
+            )
+          }
+          activeOpacity={0.7}
+          testID="more-terms"
+        >
+          <View style={styles.iconBox}>
+            <Ionicons name="document-text" size={20} color={theme.colors.accent} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.rowTitle}>Terms of Use</Text>
+            <Text style={styles.rowSub}>EULA · subscription terms</Text>
+          </View>
+          <Ionicons name="open-outline" size={18} color={theme.colors.textMuted} />
+        </BevelCard>
+
+        <BevelCard
+          style={styles.row}
+          onPress={() =>
+            Linking.openURL(
+              "https://mechanicltz.github.io/toolboxvault-legal/privacy.html",
+            )
+          }
+          activeOpacity={0.7}
+          testID="more-privacy"
+        >
+          <View style={styles.iconBox}>
+            <Ionicons name="lock-closed" size={20} color={theme.colors.accent} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.rowTitle}>Privacy Policy</Text>
+            <Text style={styles.rowSub}>How we handle your data</Text>
+          </View>
+          <Ionicons name="open-outline" size={18} color={theme.colors.textMuted} />
+        </BevelCard>
 
         <BevelCard
           style={styles.row}

@@ -112,10 +112,23 @@ metadata:
 
 test_plan:
   current_focus:
-    - "RevenueCat integration — verify webhook auth + secret key wiring after .env update"
+    - "App Store legal links — embed Terms of Use + Privacy Policy in Paywall and More tab"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
+
+frontend_legal_links:
+  - task: "Embed Terms of Use + Privacy Policy links in Paywall and More tab"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/app/paywall.tsx, /app/frontend/app/(tabs)/more.tsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "User hosted Terms + Privacy on GitHub Pages at https://mechanicltz.github.io/toolboxvault-legal/terms.html and /privacy.html. Wired both into (1) Paywall — added a centered row below the auto-renew disclosure with two TouchableOpacity links opening via Linking.openURL — required by Apple for in-app subscriptions. (2) More tab — added two rows (Terms of Use + Privacy Policy) before Sign Out, using existing BevelCard pattern with document-text and lock-closed Ionicons. Linking import added to more.tsx. Frontend restarted. No backend changes. User testing on device pending. Apple/Google App Store metadata still needs to be updated by user to use privacy.html (NOT index.html)."
 
 backend_revenuecat_integration_verification:
   - task: "RevenueCat /api/revenuecat/webhook + /api/subscription/sync + REVENUECAT_SECRET_KEY load"

@@ -290,6 +290,30 @@ export default function PaywallScreen() {
           end of the current period. You can cancel any time from your{"\n"}
           {Platform.OS === "ios" ? "Apple ID subscriptions page" : "Google Play subscriptions page"}.
         </Text>
+
+        <View style={styles.legalRow}>
+          <TouchableOpacity
+            onPress={() =>
+              Linking.openURL(
+                "https://mechanicltz.github.io/toolboxvault-legal/terms.html",
+              )
+            }
+            testID="paywall-terms-link"
+          >
+            <Text style={styles.legalLink}>Terms of Use</Text>
+          </TouchableOpacity>
+          <Text style={styles.legalDot}>•</Text>
+          <TouchableOpacity
+            onPress={() =>
+              Linking.openURL(
+                "https://mechanicltz.github.io/toolboxvault-legal/privacy.html",
+              )
+            }
+            testID="paywall-privacy-link"
+          >
+            <Text style={styles.legalLink}>Privacy Policy</Text>
+          </TouchableOpacity>
+        </View>
       </ScrollView>
 
       <PromoRedeemModal
@@ -462,5 +486,25 @@ const styles = themedStyles((c) => ({
     marginTop: 22,
     lineHeight: 14,
     paddingHorizontal: 12,
+  },
+  legalRow: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 8,
+    marginTop: 14,
+    marginBottom: 4,
+  },
+  legalLink: {
+    color: c.accent,
+    fontSize: 11,
+    fontWeight: "700",
+    textDecorationLine: "underline",
+    letterSpacing: 0.3,
+  },
+  legalDot: {
+    color: c.textMuted,
+    fontSize: 11,
+    fontWeight: "700",
   },
 }));
