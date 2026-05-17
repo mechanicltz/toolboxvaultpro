@@ -183,7 +183,7 @@ export default function PaywallScreen() {
           <View style={styles.stubBanner}>
             <Ionicons name="information-circle" size={16} color={theme.colors.accent} />
             <Text style={styles.stubBannerText}>
-              You're on a dev build. Purchases won't process real money — use Redeem Promo Code below to test PRO features.
+              Subscriptions can only be purchased in the iOS or Android app. You can use Redeem Promo Code below to unlock PRO features here.
             </Text>
           </View>
         )}

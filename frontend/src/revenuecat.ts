@@ -67,7 +67,7 @@ export function isStubMode(): boolean {
 export async function initRevenueCat(userId?: string): Promise<void> {
   _isExpoGo = _detectExpoGo();
   if (_isExpoGo) {
-    console.log("[RC] Expo Go detected — running in STUB mode.");
+    console.warn("[RC] Expo Go detected — running in STUB mode.");
     _ready = false;
     return;
   }
@@ -96,7 +96,7 @@ export async function initRevenueCat(userId?: string): Promise<void> {
       appUserID: userId || null,
     });
     _ready = true;
-    console.log("[RC] SDK configured.");
+    console.warn("[RC] SDK configured.");
   } catch (e) {
     console.warn("[RC] configure failed", e);
     _ready = false;
