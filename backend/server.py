@@ -196,6 +196,68 @@ def to_public(u: User) -> UserPublic:
 PUBLIC_PATHS = ("/api/auth/", "/api/health", "/api/", "/api/feedback")
 
 
+# ---------------------------------------------------------------------------
+# Generic in-memory rate limiter (used by auth, AI, PDF and feedback endpoints)
+# ---------------------------------------------------------------------------
+# We deliberately keep this in-process and dependency-free. The data is a dict
+# of dicts: { "bucket_name": { "key": [timestamp, ...] } }. "key" is whichever
+# identifier we want to limit on (user_id, IP, etc).
+#
+# Rationale for not using slowapi/redis:
+#   - Single worker today; if we scale to N workers each one will allow ~N×
+#     the limit. That's acceptable for our threat model (brute force, AI cost
+#     protection) and avoids the operational overhead of running Redis.
+#   - Trivially testable.
+_rate_limit_buckets: Dict[str, Dict[str, List[float]]] = {}
+
+
+def _client_ip(request: Request) -> str:
+    """Best-effort client IP, honouring X-Forwarded-For from K8s ingress."""
+    xff = (request.headers.get("x-forwarded-for") or "").split(",")[0].strip()
+    return xff or (request.client.host if request.client else "unknown")
+
+
+def _rate_limit(
+    bucket: str,
+    key: str,
+    *,
+    max_count: int,
+    window_seconds: int,
+) -> bool:
+    """Return True if the request is *under* the limit (allowed),
+    False if rate-limited. Caller should raise HTTPException(429) on False.
+    """
+    import time as _time
+    now = _time.time()
+    cutoff = now - window_seconds
+    by_key = _rate_limit_buckets.setdefault(bucket, {})
+    recent = [t for t in by_key.get(key, []) if t > cutoff]
+    if len(recent) >= max_count:
+        by_key[key] = recent
+        return False
+    recent.append(now)
+    by_key[key] = recent
+    return True
+
+
+def _enforce_rate_limit(
+    bucket: str,
+    key: str,
+    *,
+    max_count: int,
+    window_seconds: int,
+    message: str,
+) -> None:
+    """Convenience wrapper — raises HTTPException(429) if over the limit."""
+    if not _rate_limit(
+        bucket,
+        key,
+        max_count=max_count,
+        window_seconds=window_seconds,
+    ):
+        raise HTTPException(429, message)
+
+
 app = FastAPI()
 
 
@@ -2880,7 +2942,15 @@ async def _claim_orphan_data(user_id: str):
 
 
 @auth_router.post("/register", response_model=AuthResponse)
-async def register(payload: RegisterRequest):
+async def register(payload: RegisterRequest, request: Request):
+    # Rate limit: 3 new accounts per IP per hour (anti-spam).
+    _enforce_rate_limit(
+        "auth.register",
+        _client_ip(request),
+        max_count=3,
+        window_seconds=3600,
+        message="Too many sign-up attempts from this device. Please try again later.",
+    )
     email = payload.email.strip().lower()
     existing = await real_db.users.find_one({"email": email}, {"_id": 0})
     if existing:
@@ -2903,6 +2973,14 @@ async def login(request: Request):
     (bad email format, unknown email, wrong password) so that an attacker
     cannot enumerate which emails are registered.
     """
+    # Rate limit: 5 login attempts per IP per minute (anti brute-force).
+    _enforce_rate_limit(
+        "auth.login",
+        _client_ip(request),
+        max_count=5,
+        window_seconds=60,
+        message="Too many login attempts. Please wait a minute and try again.",
+    )
     try:
         payload = await request.json()
     except Exception:
@@ -2966,13 +3044,21 @@ def _generate_reset_code() -> str:
 
 
 @auth_router.post("/forgot-password")
-async def forgot_password(payload: ForgotPasswordRequest):
+async def forgot_password(payload: ForgotPasswordRequest, request: Request):
     """Send a 6-digit password reset code to the user's email.
 
     Always returns 200 with the same message regardless of whether the email
     exists in our system. This prevents email-enumeration attacks. The
     email is only sent when the user actually exists.
     """
+    # Rate limit: 3 reset-code requests per IP per hour (anti email-bombing).
+    _enforce_rate_limit(
+        "auth.forgot",
+        _client_ip(request),
+        max_count=3,
+        window_seconds=3600,
+        message="Too many reset code requests. Please try again in an hour.",
+    )
     email = (payload.email or "").strip().lower()
     generic_response = {
         "ok": True,
@@ -3016,10 +3102,18 @@ async def forgot_password(payload: ForgotPasswordRequest):
 
 
 @auth_router.post("/reset-password", response_model=AuthResponse)
-async def reset_password(payload: ResetPasswordRequest):
+async def reset_password(payload: ResetPasswordRequest, request: Request):
     """Verify the 6-digit code and set a new password. On success, returns a
     fresh auth token so the user is logged in immediately.
     """
+    # Rate limit: 5 reset attempts per IP per minute (anti code brute-force).
+    _enforce_rate_limit(
+        "auth.reset",
+        _client_ip(request),
+        max_count=5,
+        window_seconds=60,
+        message="Too many reset attempts. Please wait a minute and try again.",
+    )
     email = (payload.email or "").strip().lower()
     code = (payload.code or "").strip()
     new_password = payload.new_password or ""
@@ -3267,7 +3361,7 @@ def _normalize_date(s: str) -> str:
 
 
 @api_router.post("/ai/receipt-scan", response_model=ReceiptScanResponse)
-async def ai_receipt_scan(payload: ReceiptScanRequest):
+async def ai_receipt_scan(payload: ReceiptScanRequest, user: User = Depends(get_current_user)):
     """Send the receipt image to GPT-4o vision and extract structured fields.
     Returns best-guess values that the user reviews/edits in the mapping UI
     before they are committed to a tool record.
@@ -3275,6 +3369,15 @@ async def ai_receipt_scan(payload: ReceiptScanRequest):
     Supports multi-item receipts: the response includes a list of items so the
     frontend can prompt the user to pick which one to add.
     """
+    # Rate limit: 30 AI receipt scans per user per hour (protect LLM budget).
+    _enforce_rate_limit(
+        "ai.receipt_scan",
+        user.id,
+        max_count=30,
+        window_seconds=3600,
+        message="You have used the AI receipt scanner a lot in the last hour. "
+        "Please try again later.",
+    )
     import base64
     import json
     import re
@@ -3458,10 +3561,10 @@ async def ai_receipt_scan(payload: ReceiptScanRequest):
 
 
 @api_router.post("/ocr/receipt", response_model=ReceiptScanResponse)
-async def ocr_receipt_alias(payload: ReceiptScanRequest):
+async def ocr_receipt_alias(payload: ReceiptScanRequest, user: User = Depends(get_current_user)):
     """Alias for /api/ai/receipt-scan — kept for forward-compatibility with
     any older clients or tooling that hits the simpler `/ocr/receipt` path."""
-    return await ai_receipt_scan(payload)
+    return await ai_receipt_scan(payload, user)
 
 
 
@@ -3828,6 +3931,15 @@ async def render_pdf(
     Body: { "html": "<...>", "filename": "report.pdf" }
     Returns: application/pdf with Content-Disposition attachment.
     """
+    # Rate limit: 20 PDF renders per user per hour (protect server CPU).
+    _enforce_rate_limit(
+        "pdf.render",
+        user.id,
+        max_count=20,
+        window_seconds=3600,
+        message="You have generated a lot of PDFs in the last hour. "
+        "Please wait a bit before generating more.",
+    )
     html = payload.get("html") or ""
     filename = payload.get("filename") or "report.pdf"
     if not html:

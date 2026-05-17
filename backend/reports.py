@@ -2189,6 +2189,16 @@ def make_reports_router(api_router: APIRouter, get_db, get_current_user) -> None
     @api_router.post("/reports/render")
     async def reports_render(payload: Dict[str, Any] = Body(...),
                              user=Depends(get_current_user)):
+        # Rate limit: 20 reports per user per hour (protect server CPU).
+        from server import _enforce_rate_limit  # local import to avoid cycle
+        _enforce_rate_limit(
+            "reports.render",
+            user.id,
+            max_count=20,
+            window_seconds=3600,
+            message="You have generated a lot of reports in the last hour. "
+            "Please wait a bit before generating more.",
+        )
         rt = payload.get("report_type") or ""
         spec = REPORTS.get(rt)
         if not spec:
