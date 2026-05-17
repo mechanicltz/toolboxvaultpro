@@ -15,6 +15,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
+import * as Clipboard from "expo-clipboard";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { theme } from "../../src/theme";
 import { api } from "../../src/api";
@@ -274,14 +275,16 @@ export default function DealerDetail() {
               key={a.id}
               style={[styles.agentCard, isCurrent && styles.agentCardActive]}
             >
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                {isCurrent && (
-                  <View style={styles.currentBadge}>
-                    <Ionicons name="star" size={10} color="#000" />
-                    <Text style={styles.currentBadgeText}>CURRENT</Text>
-                  </View>
-                )}
-                <Text style={styles.agentName}>{a.name}</Text>
+              <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 8, flex: 1, flexWrap: "wrap" }}>
+                  {isCurrent && (
+                    <View style={styles.currentBadge}>
+                      <Ionicons name="star" size={10} color="#000" />
+                      <Text style={styles.currentBadgeText}>CURRENT</Text>
+                    </View>
+                  )}
+                  <Text style={styles.agentName}>{a.name}</Text>
+                </View>
                 {!!a.location && (
                   <View style={styles.locationPill}>
                     <Ionicons name="location" size={10} color={theme.colors.accent} />
@@ -397,7 +400,15 @@ export default function DealerDetail() {
             </View>
           )}
           <ContactRow icon="globe" label={dealer.website} onPress={() => callOrEmail(dealer.website)} />
-          <ContactRow icon="location" label={dealer.address} />
+          <CopyableRow
+            icon="location"
+            label={dealer.address}
+            onCopy={async () => {
+              if (!dealer.address) return;
+              await Clipboard.setStringAsync(dealer.address);
+              Alert.alert("Copied", "Address copied to clipboard.");
+            }}
+          />
 
           {/* Department contact channels */}
           <DepartmentRow
@@ -770,6 +781,33 @@ function ContactRow({
   );
 }
 
+function CopyableRow({
+  icon,
+  label,
+  onCopy,
+}: {
+  icon: any;
+  label?: string;
+  onCopy: () => void;
+}) {
+  if (!label) return null;
+  return (
+    <TouchableOpacity
+      style={styles.contactRow}
+      onPress={onCopy}
+      activeOpacity={0.7}
+      accessibilityLabel="Tap to copy"
+    >
+      <Ionicons name={icon} size={18} color={theme.colors.accent} />
+      <Text style={[styles.contactText, { flex: 1 }]}>{label}</Text>
+      <View style={styles.copyChip}>
+        <Ionicons name="copy-outline" size={13} color={theme.colors.accent} />
+        <Text style={styles.copyChipText}>COPY</Text>
+      </View>
+    </TouchableOpacity>
+  );
+}
+
 const styles = themedStyles((c) => ({
   container: { flex: 1, backgroundColor: c.bg },
   topBar: {
@@ -943,24 +981,28 @@ const styles = themedStyles((c) => ({
     paddingRight: 20,
   },
   totalPill: {
-    backgroundColor: c.accent,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    backgroundColor: "rgba(249, 115, 22, 0.10)",
+    borderWidth: 1,
+    borderColor: c.accent,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
     borderRadius: 4,
+    flexDirection: "row",
     alignItems: "center",
+    gap: 6,
     marginTop: 12,
   },
   totalPillLabel: {
-    color: "#000",
+    color: c.accent,
     fontSize: 7,
-    fontWeight: "900",
-    letterSpacing: 1.2,
+    fontWeight: "800",
+    letterSpacing: 1,
   },
   totalPillValue: {
-    color: "#000",
-    fontSize: 10,
+    color: c.accent,
+    fontSize: 9,
     fontWeight: "900",
-    letterSpacing: 0.5,
+    letterSpacing: 0.3,
   },
   sectionHeader: {
     flexDirection: "row",
@@ -1306,5 +1348,22 @@ const styles = themedStyles((c) => ({
     fontSize: 9,
     fontWeight: "800",
     letterSpacing: 0.5,
+  },
+  copyChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    borderWidth: 1,
+    borderColor: c.accent,
+    backgroundColor: "rgba(249, 115, 22, 0.10)",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 999,
+  },
+  copyChipText: {
+    color: c.accent,
+    fontSize: 8,
+    fontWeight: "900",
+    letterSpacing: 1,
   },
 }));
