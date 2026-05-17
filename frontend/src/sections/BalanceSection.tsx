@@ -9,6 +9,7 @@ import {
   Modal,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
 import { theme } from "../theme";
 import { api } from "../api";
 import { confirm } from "../confirm";
@@ -24,8 +25,19 @@ export function BalanceSection({
   dealer: any;
   onChange: () => void;
 }) {
+  const router = useRouter();
   const [target, setTarget] = useState<{ account: "credit" | "personal"; type: "payment" | "charge" } | null>(null);
   const [historyOpen, setHistoryOpen] = useState<"credit" | "personal" | null>(null);
+
+  // User report #8: replace the in-app history modal trigger with a direct
+  // jump to the Dealer Account Report wizard for THIS dealer, landing on the
+  // format-picker step.
+  const openDealerReport = () => {
+    router.push({
+      pathname: "/(tabs)/reports",
+      params: { preset: "account", dealer_id: dealer?.id || "", step: "format" },
+    } as any);
+  };
 
   const credit = Number(dealer?.credit_balance || 0);
   const personal = Number(dealer?.personal_balance || 0);
@@ -55,7 +67,7 @@ export function BalanceSection({
         balance={credit}
         onPay={() => setTarget({ account: "credit", type: "payment" })}
         onCharge={() => setTarget({ account: "credit", type: "charge" })}
-        onHistory={() => setHistoryOpen("credit")}
+        onHistory={openDealerReport}
         history={transactionsForAccount("credit")}
       />
       <BalanceCard
@@ -63,7 +75,7 @@ export function BalanceSection({
         balance={personal}
         onPay={() => setTarget({ account: "personal", type: "payment" })}
         onCharge={() => setTarget({ account: "personal", type: "charge" })}
-        onHistory={() => setHistoryOpen("personal")}
+        onHistory={openDealerReport}
         history={transactionsForAccount("personal")}
       />
 
@@ -147,8 +159,8 @@ function BalanceCard({
     <BevelCard style={[styles.balCard, owed && { borderLeftColor: theme.colors.danger }]}>
       <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
         <Text style={styles.balLabel}>{label}</Text>
-        <TouchableOpacity onPress={onHistory}>
-          <Text style={styles.histLink}>HISTORY ({history.length})</Text>
+        <TouchableOpacity onPress={onHistory} testID={`open-report-${label.replace(/\s/g, "-")}`}>
+          <Text style={styles.histLink}>OPEN REPORT ›</Text>
         </TouchableOpacity>
       </View>
       <Text style={[styles.balAmount, { color: owed ? theme.colors.danger : theme.colors.success }]}>

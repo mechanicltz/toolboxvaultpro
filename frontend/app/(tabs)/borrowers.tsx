@@ -174,17 +174,38 @@ export default function BorrowersScreen() {
       {tools.length > 0 && (
         <View style={styles.section}>
           <Text style={styles.sectionLabel}>CURRENTLY CHECKED OUT</Text>
-          {tools.map((t) => (
-            <View key={t.id} style={styles.checkedOutRow}>
-              <Ionicons name="alert-circle" size={16} color={theme.colors.accentSecondary} />
-              <View style={{ flex: 1, marginLeft: 8 }}>
-                <Text style={styles.checkedOutTool}>{t.name}</Text>
-                <Text style={styles.checkedOutBy}>
-                  with {t.current_checkout?.borrower_name}
-                </Text>
+          {tools.map((t) => {
+            const dateStr = (() => {
+              const iso = t.current_checkout?.checked_out_at || t.checked_out_at;
+              if (!iso) return "";
+              try {
+                const d = new Date(iso);
+                return d.toLocaleDateString(undefined, {
+                  month: "short",
+                  day: "numeric",
+                  year: "2-digit",
+                });
+              } catch {
+                return "";
+              }
+            })();
+            return (
+              <View key={t.id} style={styles.checkedOutRow}>
+                <Ionicons name="alert-circle" size={16} color={theme.colors.accentSecondary} />
+                <View style={{ flex: 1, marginLeft: 8 }}>
+                  <Text style={styles.checkedOutTool}>{t.name}</Text>
+                  <Text style={styles.checkedOutBy}>
+                    with {t.current_checkout?.borrower_name}
+                  </Text>
+                </View>
+                {!!dateStr && (
+                  <View style={styles.checkedOutDatePill} testID={`checkout-date-${t.id}`}>
+                    <Text style={styles.checkedOutDateText}>{dateStr}</Text>
+                  </View>
+                )}
               </View>
-            </View>
-          ))}
+            );
+          })}
         </View>
       )}
 
@@ -559,6 +580,21 @@ const styles = themedStyles((c) => ({
   },
   checkedOutTool: { color: c.textPrimary, fontWeight: "700", fontSize: 10 },
   checkedOutBy: { color: c.textSecondary, fontSize: 9, marginTop: 2 },
+  checkedOutDatePill: {
+    backgroundColor: c.bgSecondary,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: c.divider,
+    marginLeft: 8,
+  },
+  checkedOutDateText: {
+    color: c.textPrimary,
+    fontSize: 10,
+    fontWeight: "700",
+    letterSpacing: 0.3,
+  },
   rowChipsWrap: {
     flexDirection: "row",
     flexWrap: "wrap",

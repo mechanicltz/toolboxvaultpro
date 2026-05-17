@@ -1547,6 +1547,14 @@ export default function ToolDetail() {
                   <Text style={[newStyles.saleBtnText, { color: theme.colors.accent }]}>EDIT</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
+                  style={[newStyles.saleBtn, { backgroundColor: "#000" }]}
+                  onPress={() => setShowPosterBuilder(true)}
+                  testID="for-sale-poster-btn"
+                >
+                  <Ionicons name="megaphone" size={12} color={theme.colors.accent} />
+                  <Text style={[newStyles.saleBtnText, { color: theme.colors.accent }]}>POSTER</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
                   style={[newStyles.saleBtn, { backgroundColor: "rgba(0,0,0,0.15)" }]}
                   onPress={async () => {
                     try {
@@ -1562,7 +1570,7 @@ export default function ToolDetail() {
                 </TouchableOpacity>
                 <TouchableOpacity style={[newStyles.saleBtn, { backgroundColor: theme.colors.success }]} onPress={() => setShowMarkSold(true)}>
                   <Ionicons name="checkmark-circle" size={12} color="#fff" />
-                  <Text style={[newStyles.saleBtnText, { color: "#fff" }]}>MARK SOLD</Text>
+                  <Text style={[newStyles.saleBtnText, { color: "#fff" }]}>SOLD</Text>
                 </TouchableOpacity>
               </View>
             </View>

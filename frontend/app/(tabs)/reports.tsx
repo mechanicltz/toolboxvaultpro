@@ -78,7 +78,7 @@ const MAX_PDF_COLUMNS = 6;
 
 export default function ReportsHubScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ preset?: string }>();
+  const params = useLocalSearchParams<{ preset?: string; dealer_id?: string; step?: string }>();
   const [specs, setSpecs] = useState<ReportSpec[] | null>(null);
   const [step, setStep] = useState<WizardStep>("type");
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -115,12 +115,20 @@ export default function ReportsHubScreen() {
           const sp = specs.find((s) => s.id === params.preset);
           if (sp) {
             applySpec(sp);
-            setStep("options");
+            // Pre-fill dealer filter if provided in the deep-link.
+            if (params.dealer_id) {
+              setOptions((prev) => ({
+                ...prev,
+                dealer_ids: [params.dealer_id],
+              }));
+            }
+            // Allow caller to deep-link directly to the format/preview step.
+            setStep((params.step as WizardStep) || "options");
             presetApplied.current = true;
           }
         }
       },
-      [params.preset, specs],
+      [params.preset, params.dealer_id, params.step, specs],
     ),
   );
 
