@@ -92,6 +92,50 @@ already know what they posted.
 high impact for emergency comms / changelog blasts.
 
 
+### Expanded Import Selections (requested 2026-06)
+Add additional first-class **Import From…** sources beyond the current
+Receipt OCR / CSV flows. Each source would parse order history / receipts
+into Toolbox Vault tools (name, cost, purchase date, dealer, photo if
+available) so users can bulk-onboard years of past purchases.
+
+**Candidate sources to scope:**
+- **Amazon** (order history export / forwarded order emails)
+- **Harbor Freight** (account order history / emailed receipts)
+- **Home Depot** (online order history / Pro Xtra account export)
+- **Lowe's** (MyLowe's account order history)
+- **Northern Tool** (account order history)
+- **Snap-On / Matco / Mac Tools** (dealer truck invoices — may overlap with
+  existing dealer flow)
+- **eBay** (purchase history for used tool buyers)
+- **Generic email-forwarding inbox** (`imports@toolboxvault.app` → parse any
+  forwarded receipt email with AI)
+
+**Implementation approaches to evaluate:**
+1. **Email-forward + AI parse** (lowest effort, broadest coverage) — user
+   forwards any receipt to a dedicated inbox, GPT-4o parses it into a draft
+   tool. Works for ALL retailers without per-site scrapers.
+2. **CSV / JSON upload per retailer** — user downloads their order history
+   from the retailer's website and uploads the file; we have a per-retailer
+   parser. More reliable but requires the user to do the export step.
+3. **OAuth / API integrations** — only Amazon has an SP-API and it's
+   merchant-only; not viable for consumers. SKIP.
+4. **Screen-scrape with the user's logged-in session** — fragile, ToS risk.
+   AVOID.
+
+**Recommended MVP path:** Option 1 (email-forward + AI) for v1.x, then add
+per-retailer CSV parsers (Option 2) for the top-2 retailers by user demand.
+
+**Open questions for user when we pick this up:**
+- Which retailers do you personally use most? (drives priority order)
+- OK with a dedicated forwarding email address as the primary intake, or do
+  you want a "paste email body" textarea inside the app instead?
+- Should imported items go straight into the inventory, or land in a
+  "Pending Import — review & approve" tray first?
+
+**Estimated effort:** 1–2 days for the email-forward MVP + 1 day per
+retailer-specific CSV parser.
+
+
 ### TODO — Confirmed for next session (added 2026-05-16)
 1. **Bump version for next build** — user said "1.3.1" but current is already 1.3.1; assumed they meant **v1.3.2 / build 22**. CONFIRM with user before bumping.
 2. **Terms of Service + Privacy Policy hosting** — produce both as polished Markdown/HTML, walk user through hosting on GitHub Pages (free) so they have real public HTTPS URLs to paste into App Store Connect + Google Play Console. Must satisfy BOTH stores' content requirements (subscription disclosure, IAP terms, contact email, data-handling section).
