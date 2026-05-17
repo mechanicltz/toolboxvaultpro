@@ -69,17 +69,24 @@ export function BiometricLockGate({ children }: { children: React.ReactNode }) {
   // Cold-launch: lock immediately if biometric is on AND there's a
   // signed-in user (no point biometric-locking the login screen — it
   // already handles auto-prompt via its own useEffect).
+  //
+  // BUG FIX (user report #10): we used to mark the cold-launch flag
+  // BEFORE checking `user`. Since AuthContext loads the user from
+  // AsyncStorage asynchronously, the FIRST render had user=null. We'd
+  // set `coldLaunchHandledRef.current = true`, return without locking,
+  // and on the NEXT render (when user populated) the effect re-ran but
+  // bailed out early at the ref check — so the lock NEVER fired even
+  // though the user was signed in. Now we wait for the user to be
+  // non-null before declaring the cold launch handled.
   useEffect(() => {
     (async () => {
       if (coldLaunchHandledRef.current) return;
-      coldLaunchHandledRef.current = true;
+      if (!user) return; // wait for AuthContext to finish loading
       const on = await refreshEnabled();
-      // If the user JUST unlocked (e.g. enabled biometric from More
-      // moments ago, which runs an authenticateAsync), skip the
-      // initial lock to avoid a redundant prompt.
-      if (on && user && !(await isWithinUnlockGrace())) {
+      if (on && !(await isWithinUnlockGrace())) {
         setLocked(true);
       }
+      coldLaunchHandledRef.current = true;
     })();
   }, [user, refreshEnabled]);
 

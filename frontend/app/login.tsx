@@ -90,6 +90,14 @@ export default function LoginScreen() {
    * biometric hardware enrolled but the user has never been asked,
    * offer to enable it. Marks "prompted" either way so we don't keep
    * pestering.
+   *
+   * BUG FIX (user report #10): we used to fire Alert.alert immediately
+   * after `login()` resolved. But `login()` synchronously sets the
+   * user state, which makes AuthGate re-render and navigate AWAY from
+   * the login screen on the next paint. iOS sometimes drops the
+   * pending Alert in that transition, so the user never saw the
+   * "Enable Face ID?" prompt. Deferring by ~700ms gives the navigator
+   * time to settle so the alert fires from a stable UI context.
    */
   const maybeOfferBiometricEnrol = async (mail: string, pw: string) => {
     if (Platform.OS === "web") return;
@@ -99,31 +107,32 @@ export default function LoginScreen() {
       if (s.enabled) return; // already on
       const asked = await hasBeenPromptedForBiometric();
       if (asked) return;
-      // Use a native two-button alert.
-      Alert.alert(
-        `Enable ${s.label}?`,
-        `Sign in to Toolbox Vault with ${s.label} from now on — no need to type your password.`,
-        [
-          {
-            text: "Not now",
-            style: "cancel",
-            onPress: () => {
-              markBiometricPrompted();
+      // Defer the alert past the post-login navigation transition.
+      setTimeout(() => {
+        Alert.alert(
+          `Enable ${s.label}?`,
+          `Sign in to Toolbox Vault with ${s.label} from now on — no need to type your password.`,
+          [
+            {
+              text: "Not now",
+              style: "cancel",
+              onPress: () => {
+                markBiometricPrompted();
+              },
             },
-          },
-          {
-            text: `Enable ${s.label}`,
-            onPress: async () => {
-              try {
-                await enableBiometric(mail, pw);
-                setBio({ ...s, enabled: true });
-              } catch {
-                // ignore — user can enable later from More tab
-              }
+            {
+              text: `Enable ${s.label}`,
+              onPress: async () => {
+                try {
+                  await enableBiometric(mail, pw);
+                } catch {
+                  // ignore — user can enable later from More tab
+                }
+              },
             },
-          },
-        ],
-      );
+          ],
+        );
+      }, 700);
     } catch {
       /* ignore */
     }
