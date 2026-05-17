@@ -12,7 +12,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { theme } from "./theme";
 import { formatDateUS, parseDateUS, todayISO } from "./dateUtil";
 
-import { themedStyles } from "./themeContext";
+import { themedStyles, useThemeMode, useColors } from "./themeContext";
 
 /**
  * Cross-platform date field. Always displays/inputs in MM/DD/YYYY (US).
@@ -148,6 +148,12 @@ function NativePickerModal({
   // Lazy import to avoid web bundle issues
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   const DateTimePicker = require("@react-native-community/datetimepicker").default;
+  // Sync the iOS spinner picker with the user's chosen theme. Previously this
+  // was hardcoded to "dark" — in Light mode the highlighted month became
+  // black-on-light-gray and was unreadable. (User report #5.)
+  const { mode } = useThemeMode();
+  const colors = useColors();
+  const isDark = mode === "dark";
 
   const initDate = (() => {
     const d = new Date(initial);
@@ -192,8 +198,8 @@ function NativePickerModal({
             value={picked}
             mode="date"
             display="spinner"
-            themeVariant="dark"
-            textColor={theme.colors.textPrimary}
+            themeVariant={isDark ? "dark" : "light"}
+            textColor={colors.textPrimary}
             onChange={(_event: any, date?: Date) => {
               if (date) setPicked(date);
             }}

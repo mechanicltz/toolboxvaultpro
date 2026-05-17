@@ -480,7 +480,7 @@ export default function MoreScreen() {
             <Ionicons name="notifications" size={20} color={theme.colors.accent} />
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={styles.rowTitle}>Warranty expiry alerts</Text>
+            <Text style={styles.rowTitle}>Warranty Expiring Alerts</Text>
             <Text style={styles.rowSub}>Banner on inventory tab</Text>
           </View>
           <Switch

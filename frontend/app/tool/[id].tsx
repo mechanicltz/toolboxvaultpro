@@ -31,6 +31,7 @@ import {
   ReportLostButton,
 } from "../../src/sections/LostStatusSection";
 import { DocumentsSection } from "../../src/sections/DocumentsSection";
+import { LocationPicker } from "../../src/Pickers";
 import { ReceiptsSection } from "../../src/sections/ReceiptsSection";
 import { MaintenanceSection } from "../../src/sections/MaintenanceSection";
 import { WarrantySection } from "../../src/sections/WarrantySection";
@@ -94,6 +95,11 @@ export default function ToolDetail() {
   // PDF type picker modal (replaces Alert.alert which is broken on RN Web)
   const [showExportPicker, setShowExportPicker] = useState(false);
   const [pdfBusy, setPdfBusy] = useState(false);
+  // Location picker — opened when user taps the LOCATION pill so they can
+  // reassign THIS TOOL to a different existing location. (User report #3:
+  // previously the pill navigated to /locations which let the user re-parent
+  // the location ITSELF, not the tool. Confusing & destructive.)
+  const [showLocationPicker, setShowLocationPicker] = useState(false);
   type PosterFieldKey =
     | "photo"
     | "price"
@@ -1445,20 +1451,21 @@ export default function ToolDetail() {
           {/* (CHECKED OUT card was moved to the top of this screen, above
               the description — see block under the photo row.) */}
 
-          {/* LOCATION — wide pill, NO label (just the location value) */}
+          {/* LOCATION — wide pill. Tap to reassign this tool to a different
+              existing location (does NOT open the locations management page,
+              which lets users re-parent locations — that was the source of
+              user report #3). */}
           <BevelCard
             testID="location-pill"
             style={newStyles.locationWide}
-            activeOpacity={tool.location_id ? 0.85 : 1}
-            onPress={tool.location_id ? () => router.push(`/locations?highlight=${encodeURIComponent(tool.location_id)}` as any) : undefined}
+            activeOpacity={0.85}
+            onPress={() => setShowLocationPicker(true)}
           >
             <Ionicons name="location-outline" size={16} color={theme.colors.accent} />
             <Text style={newStyles.locationWideText} numberOfLines={1}>
-              {tool.location_name || "No location"}
+              {tool.location_name || "No location · tap to assign"}
             </Text>
-            {!!tool.location_id && (
-              <Ionicons name="chevron-forward" size={14} color={theme.colors.textMuted} />
-            )}
+            <Ionicons name="create-outline" size={14} color={theme.colors.textMuted} />
           </BevelCard>
 
           {/* PILLBOX DETAIL FIELDS — dealer first, then model numbers, then everything else */}
@@ -2415,6 +2422,59 @@ export default function ToolDetail() {
                 <Text style={styles.btnPrimaryText}>GENERATE POSTER</Text>
               </TouchableOpacity>
             </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Location Picker Modal — assigns this tool to a different existing
+          location. Does NOT touch the location tree itself (user report #3). */}
+      <Modal
+        visible={showLocationPicker}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowLocationPicker(false)}
+      >
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalCard}>
+            <View style={styles.modalHeader}>
+              <Ionicons name="location" size={20} color={theme.colors.accent} />
+              <Text style={styles.modalTitle}>MOVE TO LOCATION</Text>
+              <TouchableOpacity
+                onPress={() => setShowLocationPicker(false)}
+                hitSlop={10}
+              >
+                <Ionicons name="close" size={22} color={theme.colors.textPrimary} />
+              </TouchableOpacity>
+            </View>
+            <Text style={[styles.helper, { marginBottom: 12 }]}>
+              Pick a different location for this item. Your location tree is
+              not changed.
+            </Text>
+            <LocationPicker
+              locationId={tool.location_id || null}
+              locationName={tool.location_name || ""}
+              onChange={async (newId, _newPath) => {
+                try {
+                  await api.updateTool(tool.id, {
+                    location_id: newId || null,
+                  });
+                  setShowLocationPicker(false);
+                  load();
+                } catch (e: any) {
+                  Alert.alert(
+                    "Could not move item",
+                    String(e?.message || e),
+                  );
+                }
+              }}
+            />
+            <TouchableOpacity
+              testID="location-picker-cancel"
+              style={[styles.btnGhost, { marginTop: 14 }]}
+              onPress={() => setShowLocationPicker(false)}
+            >
+              <Text style={styles.btnGhostText}>CANCEL</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </Modal>
