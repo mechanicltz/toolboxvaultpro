@@ -199,12 +199,15 @@ def start_backup_scheduler(get_db):
 
 
 def make_backup_router(
-    router: APIRouter,
     get_db,
     get_current_user,
     require_admin,
-) -> None:
-    """Register admin-only backup endpoints on `router`."""
+) -> APIRouter:
+    """Build an admin-only `/api/admin/backups/*` router. Mirrors the pattern
+    used by `subscriptions.make_router(...)`: returns a fully-built router so
+    the caller can `app.include_router(...)` it once.
+    """
+    router = APIRouter(prefix="/api")
 
     @router.get("/admin/backups")
     async def list_backups(user=Depends(get_current_user)):
@@ -238,6 +241,22 @@ def make_backup_router(
         db = get_db()
         row = await _create_backup_doc(db, trigger="manual")
         return row
+
+    @router.get("/admin/backups/config")
+    async def backup_config(user=Depends(get_current_user)):
+        """Tell the admin UI when the next scheduled backup will run and
+        what the retention policy looks like, so the user can plan ahead."""
+        require_admin(user)
+        seconds = await _seconds_until_next_run()
+        next_run = datetime.now(timezone.utc) + timedelta(seconds=seconds)
+        return {
+            "schedule": "monthly",
+            "schedule_human": "1st of every month at 03:00 UTC",
+            "next_run_at": next_run.isoformat(),
+            "next_run_in_seconds": int(seconds),
+            "max_retained": MAX_BACKUPS_RETAINED,
+            "collections_backed_up": BACKUP_COLLECTIONS,
+        }
 
     @router.get("/admin/backups/{backup_id}/download")
     async def download_backup(backup_id: str, user=Depends(get_current_user)):
@@ -278,18 +297,4 @@ def make_backup_router(
             raise HTTPException(404, "Backup not found")
         return {"ok": True, "deleted_id": backup_id}
 
-    @router.get("/admin/backups/config")
-    async def backup_config(user=Depends(get_current_user)):
-        """Tell the admin UI when the next scheduled backup will run and
-        what the retention policy looks like, so the user can plan ahead."""
-        require_admin(user)
-        seconds = await _seconds_until_next_run()
-        next_run = datetime.now(timezone.utc) + timedelta(seconds=seconds)
-        return {
-            "schedule": "monthly",
-            "schedule_human": "1st of every month at 03:00 UTC",
-            "next_run_at": next_run.isoformat(),
-            "next_run_in_seconds": int(seconds),
-            "max_retained": MAX_BACKUPS_RETAINED,
-            "collections_backed_up": BACKUP_COLLECTIONS,
-        }
+    return router

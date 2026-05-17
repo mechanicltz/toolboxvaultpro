@@ -3589,11 +3589,12 @@ from backups import (  # noqa: E402
 )
 from subscriptions import _require_admin as _require_admin_for_backups  # noqa: E402
 
-_make_backup_router(
-    api_router,
-    lambda: real_db,
-    get_current_user,
-    _require_admin_for_backups,
+app.include_router(
+    _make_backup_router(
+        lambda: real_db,
+        get_current_user,
+        _require_admin_for_backups,
+    )
 )
 
 
