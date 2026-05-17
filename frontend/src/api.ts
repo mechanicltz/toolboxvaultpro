@@ -3,35 +3,30 @@ import { apiCacheKey, getCached, hasCached, setCached } from "./cache";
 import { isOnline, OfflineError } from "./network";
 import { showOfflineAlert } from "./offlineGuard";
 
-// Defensive fallback: if EXPO_PUBLIC_BACKEND_URL is somehow missing in the
-// production build (e.g. eas.json env not set, or EAS Secrets misconfigured)
-// the app must still hit the real backend instead of `undefined/api/...`.
-// This was the root cause of the "TestFlight shows 4 phantom tools" bug —
-// every fetch was going to `undefined/api/tools` and silently 404ing.
-const PRODUCTION_BACKEND_URL = "https://asset-locator-12.emergent.host";
+// Backend URL is read from EXPO_PUBLIC_BACKEND_URL.
+// - In Expo Go dev: read from /app/frontend/.env (set to production URL).
+// - In EAS builds (TestFlight, App Store): read from eas.json build profiles.
+// All three EAS profiles AND the dev .env point to the same production
+// backend (asset-locator-12.emergent.host), so every client hits one
+// single backend — no preview-vs-prod split-brain.
 const _ENV_BASE = process.env.EXPO_PUBLIC_BACKEND_URL;
-
-// Per user directive (May 2026): the dev/preview Emergent backend gets
-// auto-rewritten back into the .env by Emergent's tooling, which silently
-// re-points the app at an empty preview MongoDB. To prevent the entire app
-// from flipping back to the empty preview DB whenever this happens, we
-// IGNORE the preview URL even if it's currently in EXPO_PUBLIC_BACKEND_URL
-// and pin every client (Expo Go + every EAS build) to the deployed instance.
-const _PREVIEW_URL = "asset-locator-12.preview.emergentagent.com";
 const BASE =
-  _ENV_BASE &&
-  _ENV_BASE !== "undefined" &&
-  _ENV_BASE.startsWith("http") &&
-  !_ENV_BASE.includes(_PREVIEW_URL)
+  _ENV_BASE && _ENV_BASE !== "undefined" && _ENV_BASE.startsWith("http")
     ? _ENV_BASE
-    : PRODUCTION_BACKEND_URL;
+    : "";
+
+if (!BASE) {
+  // Fail loud at boot if env var is missing — better than silent 404s.
+  // eslint-disable-next-line no-console
+  console.warn(
+    "[api] EXPO_PUBLIC_BACKEND_URL is missing or invalid. API calls will fail.",
+  );
+}
 
 /**
  * Exported so other modules (e.g. reportRunner.ts) hit the SAME backend
  * `api.ts` does — without this, reportRunner was reading the raw
- * EXPO_PUBLIC_BACKEND_URL which still points to the preview environment,
- * so login authenticated against production but PDF generation tried to
- * use a preview-DB token → 401 "User not found".
+ * EXPO_PUBLIC_BACKEND_URL and could end up at a different host.
  */
 export const API_BASE = BASE;
 const TOKEN_KEY = "tt.auth.token";
