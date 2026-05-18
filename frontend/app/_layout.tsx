@@ -20,10 +20,11 @@ import { ResponsiveContainer } from "../src/ResponsiveContainer";
 import { NetworkProvider, OfflineBanner } from "../src/NetworkProvider";
 import { theme } from "../src/theme";
 import { initRevenueCat, identifyRevenueCatUser, getCurrentCustomerInfo, buildSyncPayload } from "../src/revenuecat";
-import { setPaymentRequiredHandler, api } from "../src/api";
+import { setPaymentRequiredHandler, api, abortAllInFlight } from "../src/api";
 import { shouldShowIntro, markAppActive } from "../src/idle";
 import { IntroOverlay } from "../src/IntroOverlay";
 import { ThemeProvider, useColors, useThemeMode } from "../src/themeContext";
+import { notifyAppResume } from "../src/appLifecycle";
 
 /**
  * Make native (iOS Expo Go / TestFlight) layouts visually match the web
@@ -77,6 +78,11 @@ function AuthGate({ children }: { children: React.ReactNode }) {
   // When the app comes back to the foreground after being away for
   // 5+ minutes, replay the intro. We use AppState rather than a timer
   // so we catch suspend/resume cycles correctly on iOS.
+  //
+  // ALSO: on EVERY background→active transition (regardless of duration),
+  // abort any in-flight fetch() and broadcast an "app resumed" event.
+  // This kills iOS-suspended sockets that were hanging the Inventory /
+  // Dealers loading spinners after the app was backgrounded mid-request.
   useEffect(() => {
     const onChange = (next: AppStateStatus) => {
       const wasBackground =
@@ -84,6 +90,15 @@ function AuthGate({ children }: { children: React.ReactNode }) {
         lastAppStateRef.current === "inactive";
       lastAppStateRef.current = next;
       if (next === "active" && wasBackground) {
+        // 1) Yank every pending fetch immediately so screens stop showing
+        //    a forever-spinning loader. The screens' load() functions
+        //    swallow AbortError gracefully (cache fallback).
+        abortAllInFlight("app-resumed");
+        // 2) Tell the top screens (Inventory / Dealers / Home) to refetch
+        //    on a fresh socket so the user sees current data right away.
+        //    Listeners are registered via useAppResume(load).
+        notifyAppResume();
+        // 3) 5-minute idle intro replay (existing behaviour).
         (async () => {
           const show = await shouldShowIntro();
           if (show) setShowIntro(true);

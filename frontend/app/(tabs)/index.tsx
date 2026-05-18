@@ -25,6 +25,7 @@ import { APP_VERSION_LABEL } from "../../src/version";
 import { themedStyles } from "../../src/themeContext";
 import { BevelCard } from "../../src/components/BevelCard";
 import { useSubscriptionChange } from "../../src/subscriptionEvents";
+import { useAppResume } from "../../src/appLifecycle";
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -132,6 +133,11 @@ export default function HomeScreen() {
       load();
     }, [load]),
   );
+
+  // iOS suspends in-flight fetches when the app is backgrounded; on resume,
+  // _layout.tsx aborts them and broadcasts here so the home summary doesn't
+  // sit forever on stale/spinner state.
+  useAppResume(useCallback(() => { load(); }, [load]));
 
   // Audit #10: when a free user upgrades to PRO mid-session (via paywall
   // purchase, restore, or promo redeem) the backend immediately unlocks all

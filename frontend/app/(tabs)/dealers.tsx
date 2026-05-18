@@ -26,6 +26,7 @@ import { useAuth } from "../../src/AuthContext";
 import { useResponsive } from "../../src/responsive";
 import { rescheduleDealerNotifications } from "../../src/notifications";
 import { formatPhone, openPhone, openSms } from "../../src/contactLinks";
+import { useAppResume } from "../../src/appLifecycle";
 
 import { themedStyles } from "../../src/themeContext";
 import { BevelCard } from "../../src/components/BevelCard";
@@ -70,6 +71,10 @@ export default function DealersScreen() {
       load();
     }, [load])
   );
+
+  // Refetch on iOS background→foreground so a suspended fetch doesn't hang
+  // the dealers list. abortAllInFlight() runs in _layout.tsx just before.
+  useAppResume(useCallback(() => { load(); }, [load]));
 
   const create = async () => {
     if (!form.name?.trim()) return;

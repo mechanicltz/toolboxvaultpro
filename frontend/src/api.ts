@@ -31,6 +31,46 @@ if (!BASE) {
 export const API_BASE = BASE;
 const TOKEN_KEY = "tt.auth.token";
 
+// ---------------------------------------------------------------------------
+// In-flight request tracking + 20s hard timeout per fetch.
+//
+// PROBLEM (TestFlight 1.3.1): on iOS, when the app is sent to the background
+// mid-fetch, the underlying socket gets suspended. When the user brings the
+// app back to the foreground, the fetch() promise NEVER resolves and NEVER
+// rejects — it hangs forever. Result: the Inventory / Dealers screen shows a
+// permanent loading state until the user force-kills the app.
+//
+// FIX: every fetch is wrapped in an AbortController with a 20-second timeout.
+// All live controllers are tracked in `_inFlight` so that the AppState
+// listener in app/_layout.tsx can call `abortAllInFlight()` the moment the
+// app comes back to active, instantly killing any zombie requests and
+// letting screens retry against a healthy socket.
+// ---------------------------------------------------------------------------
+const REQUEST_TIMEOUT_MS = 20_000;
+const _inFlight = new Set<AbortController>();
+
+/**
+ * Abort every pending fetch right now. Safe to call multiple times.
+ * Called by the AppState listener when the app comes back from background
+ * so that any iOS-suspended requests fail fast instead of hanging forever.
+ */
+export function abortAllInFlight(reason: string = "app-resumed"): void {
+  if (_inFlight.size === 0) return;
+  // Snapshot first; aborting a controller triggers its handler which removes
+  // itself from the set, so iterating the live set would skip entries.
+  const snap = Array.from(_inFlight);
+  _inFlight.clear();
+  for (const ctrl of snap) {
+    try {
+      // Pass a reason for easier log filtering.
+      // Note: older RN runtimes ignore the reason arg, which is fine.
+      ctrl.abort(reason as any);
+    } catch {
+      /* best effort */
+    }
+  }
+}
+
 let memToken: string | null = null;
 
 export async function getToken(): Promise<string | null> {
@@ -145,10 +185,29 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   if (token) headers["Authorization"] = `Bearer ${token}`;
 
   let res: Response;
+  // Hard timeout via AbortController so iOS-suspended requests can't hang
+  // forever. The controller is registered in _inFlight so the AppState
+  // listener can yank it the moment the app comes back to foreground.
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => {
+    try {
+      ctrl.abort("timeout" as any);
+    } catch {
+      /* best effort */
+    }
+  }, REQUEST_TIMEOUT_MS);
+  _inFlight.add(ctrl);
   try {
-    res = await fetch(`${BASE}/api${path}`, { ...options, headers });
-  } catch (e) {
+    res = await fetch(`${BASE}/api${path}`, {
+      ...options,
+      headers,
+      signal: ctrl.signal,
+    });
+  } catch (e: any) {
     // Network failure path — for GETs we silently fall back to cache.
+    // Includes AbortError (timeout / app-resume) which behaves the same
+    // as a normal offline event from the screen's point of view: pull
+    // cached data, no red error.
     if (method === "GET" && shouldCacheGet(path) && hasCached(apiCacheKey(path))) {
       return getCached(apiCacheKey(path), undefined as any);
     }
@@ -159,6 +218,9 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
       throw new OfflineError();
     }
     throw e;
+  } finally {
+    clearTimeout(timer);
+    _inFlight.delete(ctrl);
   }
   if (!res.ok) {
     let detail = "";

@@ -27,6 +27,7 @@ import { ReportLostModal } from "../../src/sections/LostStatusSection";
 import { buildLocationTree, flattenLocationTree } from "../../src/locationTree";
 import { useAuth } from "../../src/AuthContext";
 import { useSubscriptionChange } from "../../src/subscriptionEvents";
+import { useAppResume } from "../../src/appLifecycle";
 import { useResponsive } from "../../src/responsive";
 
 import { themedStyles } from "../../src/themeContext";
@@ -502,6 +503,10 @@ export default function InventoryScreen() {
       load();
     }, [load]),
   );
+
+  // When the app comes back from background (iOS suspends in-flight fetches
+  // that otherwise hang the UI), re-trigger the load on a fresh socket.
+  useAppResume(useCallback(() => { load(); }, [load]));
 
   // Audit #10: re-fetch when subscription state flips Free→PRO so previously
   // hidden tools appear instantly (no need to navigate away & back).
