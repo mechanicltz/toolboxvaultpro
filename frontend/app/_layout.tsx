@@ -136,17 +136,10 @@ function AuthGate({ children }: { children: React.ReactNode }) {
     return <View style={{ flex: 1, backgroundColor: "#000" }} />;
   }
 
-  // Render the IntroOverlay on top of the regular tree when it's
-  // active. This is a self-contained black-letterboxed video.
-  if (showIntro) {
-    return (
-      <View style={{ flex: 1, backgroundColor: "#000" }}>
-        <IntroOverlay onDone={handleIntroDone} />
-      </View>
-    );
-  }
-
-  // Auth resolving — small spinner on the standard dark background.
+  // Auth still resolving on cold launch — small spinner. This only
+  // ever fires at the very start of the session (before children mount
+  // for the first time), so an early return here is safe and won't
+  // cause the Stack to unmount mid-session.
   if (loading) {
     return (
       <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: theme.colors.bg }}>
@@ -154,7 +147,34 @@ function AuthGate({ children }: { children: React.ReactNode }) {
       </View>
     );
   }
-  return <>{children}</>;
+
+  // Render the IntroOverlay on top of the regular tree as an OVERLAY so
+  // the navigation stack stays mounted. If we returned <IntroOverlay/>
+  // alone here (early return) the entire Stack would unmount and remount
+  // when the intro finished — that's what was sending users back to the
+  // Home tab every time the 5-min idle splash replayed after backgrounding.
+  // Now the user lands back on whatever screen they were viewing.
+  return (
+    <>
+      {children}
+      {showIntro && (
+        <View
+          pointerEvents="auto"
+          style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: "#000",
+            zIndex: 10000,
+          }}
+        >
+          <IntroOverlay onDone={handleIntroDone} />
+        </View>
+      )}
+    </>
+  );
 }
 
 function ShellNav() {

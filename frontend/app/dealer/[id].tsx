@@ -250,130 +250,6 @@ export default function DealerDetail() {
           </View>
         </BevelCard>
 
-        {/* AGENTS — placed at top per user preference */}
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionLabelStrong}>AGENTS ({(dealer.agents || []).length})</Text>
-          <TouchableOpacity
-            testID="add-agent-btn"
-            style={styles.addBtn}
-            onPress={() => {
-              setAgentForm({ name: "", phone: "", email: "", location: "", notes: "" });
-            }}
-          >
-            <Ionicons
-              name="add"
-              size={16}
-              color={theme.colors.accent}
-            />
-            <Text style={styles.addBtnText}>
-              ADD
-            </Text>
-          </TouchableOpacity>
-        </View>
-        {allAgents.length === 0 && (
-          <Text style={styles.empty}>No agents yet. Add one to get started.</Text>
-        )}
-        {allAgents.map((a: any) => {
-          const isCurrent = a.id === dealer.current_agent_id;
-          return (
-            <BevelCard
-              key={a.id}
-              style={[styles.agentCard, isCurrent && styles.agentCardActive]}
-            >
-              <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
-                <View style={{ flexDirection: "row", alignItems: "center", gap: 8, flex: 1, flexWrap: "wrap" }}>
-                  {isCurrent && (
-                    <View style={styles.currentBadge}>
-                      <Ionicons name="star" size={10} color="#000" />
-                      <Text style={styles.currentBadgeText}>CURRENT</Text>
-                    </View>
-                  )}
-                  <Text style={styles.agentName}>{a.name}</Text>
-                </View>
-                {!!a.location && (
-                  <View style={styles.locationPill}>
-                    <Ionicons name="location" size={10} color={theme.colors.accent} />
-                    <Text style={styles.locationPillText} numberOfLines={1}>
-                      {a.location}
-                    </Text>
-                  </View>
-                )}
-              </View>
-              {!!a.phone && (
-                <View style={styles.agentContactRow}>
-                  <TouchableOpacity
-                    testID={`agent-call-${a.id}`}
-                    style={styles.agentContactBtn}
-                    onPress={() => openPhone(a.phone)}
-                    activeOpacity={0.7}
-                  >
-                    <Ionicons name="call" size={13} color={theme.colors.accent} />
-                    <Text style={styles.agentContactText} numberOfLines={1}>{formatPhone(a.phone)}</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    testID={`agent-text-${a.id}`}
-                    style={[styles.agentContactBtn, styles.agentContactBtnSmall]}
-                    onPress={() => openSms(a.phone)}
-                    activeOpacity={0.7}
-                  >
-                    <Ionicons name="chatbubble-ellipses" size={13} color={theme.colors.accent} />
-                    <Text style={styles.agentContactText}>TEXT</Text>
-                  </TouchableOpacity>
-                </View>
-              )}
-              {!!a.email && (
-                <TouchableOpacity
-                  testID={`agent-email-${a.id}`}
-                  style={styles.agentContactBtn}
-                  onPress={() => openEmail(a.email)}
-                  activeOpacity={0.7}
-                >
-                  <Ionicons name="mail" size={13} color={theme.colors.accent} />
-                  <Text style={styles.agentContactText} numberOfLines={1}>{a.email}</Text>
-                </TouchableOpacity>
-              )}
-              {!!a.notes && <Text style={styles.agentMeta}>{a.notes}</Text>}
-              {a.ended_at && !isCurrent && (
-                <Text style={styles.agentMeta}>Ended: {formatDateUS(a.ended_at)}</Text>
-              )}
-              <View style={styles.agentActions}>
-                <TouchableOpacity
-                  testID={`edit-agent-${a.id}`}
-                  style={styles.agentActionBtn}
-                  onPress={() => setAgentForm({
-                    id: a.id,
-                    name: a.name || "",
-                    phone: a.phone || "",
-                    email: a.email || "",
-                    location: a.location || "",
-                    notes: a.notes || "",
-                  })}
-                >
-                  <Ionicons name="create-outline" size={16} color={theme.colors.accent} />
-                  <Text style={styles.agentActionText}>EDIT</Text>
-                </TouchableOpacity>
-                {!isCurrent && (
-                  <TouchableOpacity
-                    testID={`set-current-${a.id}`}
-                    style={styles.agentActionBtn}
-                    onPress={() => setCurrent(a.id)}
-                  >
-                    <Ionicons name="star-outline" size={16} color={theme.colors.accent} />
-                    <Text style={styles.agentActionText}>SET CURRENT</Text>
-                  </TouchableOpacity>
-                )}
-                <TouchableOpacity
-                  testID={`remove-agent-${a.id}`}
-                  style={[styles.agentActionBtn, { borderColor: theme.colors.danger }]}
-                  onPress={() => removeAgent(a.id, a.name)}
-                >
-                  <Ionicons name="trash-outline" size={16} color={theme.colors.danger} />
-                  <Text style={[styles.agentActionText, { color: theme.colors.danger }]}>REMOVE</Text>
-                </TouchableOpacity>
-              </View>
-            </BevelCard>
-          );
-        })}
 
         {/* TOOLS PURCHASED + COMPANY DETAILS — grouped together so contact info reads first, tools follow */}
         <View style={styles.sectionHeader}>
@@ -449,7 +325,6 @@ export default function DealerDetail() {
               TOOLS PURCHASED
             </Text>
             <View style={styles.totalPill}>
-              <Text style={styles.totalPillLabel}>TOTAL SPENT</Text>
               <Text style={styles.totalPillValue}>${total.toFixed(2)}</Text>
             </View>
           </View>
@@ -484,6 +359,144 @@ export default function DealerDetail() {
 
         {/* Payment Accounts — moved to bottom */}
         <BalanceSection dealer={dealer} onChange={load} />
+
+        {/* AGENTS — moved below Company Details + Balances so the company-level info reads first */}
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionLabelStrong}>AGENTS ({(dealer.agents || []).length})</Text>
+          <TouchableOpacity
+            testID="add-agent-btn"
+            style={styles.addBtn}
+            onPress={() => {
+              setAgentForm({ name: "", phone: "", email: "", location: "", notes: "" });
+            }}
+          >
+            <Ionicons
+              name="add"
+              size={16}
+              color={theme.colors.accent}
+            />
+            <Text style={styles.addBtnText}>
+              ADD
+            </Text>
+          </TouchableOpacity>
+        </View>
+        {allAgents.length === 0 && (
+          <Text style={styles.empty}>No agents yet. Add one to get started.</Text>
+        )}
+        {allAgents.map((a: any) => {
+          const isCurrent = a.id === dealer.current_agent_id;
+          return (
+            <BevelCard
+              key={a.id}
+              style={[styles.agentCard, isCurrent && styles.agentCardActive]}
+            >
+              {isCurrent ? (
+                <>
+                  {/* Current agent: badge + location pill on row 1, name drops to row 2 for readability. */}
+                  <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+                    <View style={styles.currentBadge}>
+                      <Ionicons name="star" size={10} color="#000" />
+                      <Text style={styles.currentBadgeText}>CURRENT</Text>
+                    </View>
+                    {!!a.location && (
+                      <View style={styles.locationPill}>
+                        <Ionicons name="location" size={10} color={theme.colors.accent} />
+                        <Text style={styles.locationPillText} numberOfLines={1}>
+                          {a.location}
+                        </Text>
+                      </View>
+                    )}
+                  </View>
+                  <Text style={[styles.agentName, { marginTop: 6 }]}>{a.name}</Text>
+                </>
+              ) : (
+                <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+                  <Text style={[styles.agentName, { flex: 1, marginTop: 0 }]}>{a.name}</Text>
+                  {!!a.location && (
+                    <View style={styles.locationPill}>
+                      <Ionicons name="location" size={10} color={theme.colors.accent} />
+                      <Text style={styles.locationPillText} numberOfLines={1}>
+                        {a.location}
+                      </Text>
+                    </View>
+                  )}
+                </View>
+              )}
+              {!!a.phone && (
+                <View style={styles.agentContactRow}>
+                  <TouchableOpacity
+                    testID={`agent-call-${a.id}`}
+                    style={styles.agentContactBtn}
+                    onPress={() => openPhone(a.phone)}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons name="call" size={13} color={theme.colors.accent} />
+                    <Text style={styles.agentContactText} numberOfLines={1}>{formatPhone(a.phone)}</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    testID={`agent-text-${a.id}`}
+                    style={[styles.agentContactBtn, styles.agentContactBtnSmall]}
+                    onPress={() => openSms(a.phone)}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons name="chatbubble-ellipses" size={13} color={theme.colors.accent} />
+                    <Text style={styles.agentContactText}>TEXT</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+              {!!a.email && (
+                <TouchableOpacity
+                  testID={`agent-email-${a.id}`}
+                  style={styles.agentContactBtn}
+                  onPress={() => openEmail(a.email)}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons name="mail" size={13} color={theme.colors.accent} />
+                  <Text style={styles.agentContactText} numberOfLines={1}>{a.email}</Text>
+                </TouchableOpacity>
+              )}
+              {!!a.notes && <Text style={styles.agentMeta}>{a.notes}</Text>}
+              {a.ended_at && !isCurrent && (
+                <Text style={styles.agentMeta}>Ended: {formatDateUS(a.ended_at)}</Text>
+              )}
+              <View style={styles.agentActions}>
+                <TouchableOpacity
+                  testID={`edit-agent-${a.id}`}
+                  style={styles.agentActionBtn}
+                  onPress={() => setAgentForm({
+                    id: a.id,
+                    name: a.name || "",
+                    phone: a.phone || "",
+                    email: a.email || "",
+                    location: a.location || "",
+                    notes: a.notes || "",
+                  })}
+                >
+                  <Ionicons name="create-outline" size={16} color={theme.colors.accent} />
+                  <Text style={styles.agentActionText}>EDIT</Text>
+                </TouchableOpacity>
+                {!isCurrent && (
+                  <TouchableOpacity
+                    testID={`set-current-${a.id}`}
+                    style={styles.agentActionBtn}
+                    onPress={() => setCurrent(a.id)}
+                  >
+                    <Ionicons name="star-outline" size={16} color={theme.colors.accent} />
+                    <Text style={styles.agentActionText}>SET CURRENT</Text>
+                  </TouchableOpacity>
+                )}
+                <TouchableOpacity
+                  testID={`remove-agent-${a.id}`}
+                  style={[styles.agentActionBtn, { borderColor: theme.colors.danger }]}
+                  onPress={() => removeAgent(a.id, a.name)}
+                >
+                  <Ionicons name="trash-outline" size={16} color={theme.colors.danger} />
+                  <Text style={[styles.agentActionText, { color: theme.colors.danger }]}>REMOVE</Text>
+                </TouchableOpacity>
+              </View>
+            </BevelCard>
+          );
+        })}
       </ScrollView>
 
       {/* Edit dealer modal */}

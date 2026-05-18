@@ -13,14 +13,17 @@ import {
   Alert,
   RefreshControl,
   KeyboardAvoidingView,
+  Share,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter, useFocusEffect } from "expo-router";
+import * as MailComposer from "expo-mail-composer";
 import { useAppResume } from "../src/appLifecycle";
 import { theme } from "../src/theme";
 import { api } from "../src/api";
 import { confirm } from "../src/confirm";
+import { useAuth } from "../src/AuthContext";
 
 import { themedStyles } from "../src/themeContext";
 import { BevelCard } from "../src/components/BevelCard";
@@ -33,12 +36,18 @@ const PRIORITIES = [
 
 export default function WishlistScreen() {
   const router = useRouter();
+  const { user } = useAuth();
   const [items, setItems] = useState<any[]>([]);
   const [showPurchased, setShowPurchased] = useState(false);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [editing, setEditing] = useState<any | null>(null);
   const [dealers, setDealers] = useState<any[]>([]);
+
+  // Multi-select mode for bulk email/share. When ON, tapping a card
+  // toggles its selection instead of opening the link.
+  const [selectMode, setSelectMode] = useState(false);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
 
   const load = useCallback(async () => {
     try {
@@ -130,6 +139,188 @@ export default function WishlistScreen() {
     load();
   };
 
+  // -------------------------------------------------------------------
+  // SHARING — single item + bulk email
+  // -------------------------------------------------------------------
+
+  const toggleSelected = (id: string) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const cancelSelectMode = () => {
+    setSelectMode(false);
+    setSelected(new Set());
+  };
+
+  const escapeHtml = (s: string) =>
+    String(s ?? "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+
+  // Plain-text version of an item — used by SMS share + as the email
+  // fallback for clients that don't render HTML.
+  const itemToPlainText = (it: any): string => {
+    const lines: string[] = [];
+    lines.push(`🔧 ${it.name}`);
+    if (it.price) lines.push(`Price: $${Number(it.price).toFixed(2)}`);
+    if (it.dealer_name) lines.push(`Dealer: ${it.dealer_name}`);
+    const meta = PRIORITIES.find((p) => p.key === (it.priority || "normal"))?.label;
+    if (meta && meta !== "NORMAL") lines.push(`Priority: ${meta}`);
+    if (it.description) lines.push(`\n${it.description}`);
+    if (it.notes) lines.push(`Notes: ${it.notes}`);
+    if (it.url) {
+      let u = it.url.trim();
+      if (!/^https?:\/\//i.test(u)) u = "https://" + u;
+      lines.push(`\n${u}`);
+    }
+    return lines.join("\n");
+  };
+
+  // Pretty HTML email — used for both single-item and bulk wishlist
+  // exports. Styled with inline CSS so it renders identically in Gmail,
+  // Outlook, Apple Mail, etc.
+  const itemsToHtml = (list: any[], title: string): string => {
+    const rows = list
+      .map((it) => {
+        let url = (it.url || "").trim();
+        if (url && !/^https?:\/\//i.test(url)) url = "https://" + url;
+        const prio = PRIORITIES.find((p) => p.key === (it.priority || "normal"));
+        const prioBadge = prio
+          ? `<span style="display:inline-block;padding:2px 8px;font-size:10px;font-weight:700;letter-spacing:1px;border:1px solid ${prio.color};color:${prio.color};border-radius:3px;margin-left:6px;">${prio.label}</span>`
+          : "";
+        const price = it.price
+          ? `<div style="color:#f97316;font-size:16px;font-weight:800;margin-top:6px;">$${Number(it.price).toFixed(2)}</div>`
+          : "";
+        const dealer = it.dealer_name
+          ? `<div style="color:#666;font-size:11px;font-weight:600;letter-spacing:0.5px;text-transform:uppercase;margin-top:4px;">${escapeHtml(it.dealer_name)}</div>`
+          : "";
+        const desc = it.description
+          ? `<p style="color:#333;font-size:13px;line-height:1.5;margin:10px 0 0;">${escapeHtml(it.description)}</p>`
+          : "";
+        const notes = it.notes
+          ? `<p style="color:#888;font-size:12px;font-style:italic;margin:6px 0 0;">${escapeHtml(it.notes)}</p>`
+          : "";
+        const link = url
+          ? `<div style="margin-top:12px;"><a href="${escapeHtml(url)}" style="display:inline-block;padding:8px 14px;background:#f97316;color:#fff;text-decoration:none;font-size:12px;font-weight:700;letter-spacing:1px;border-radius:4px;">VIEW PRODUCT &rarr;</a></div>`
+          : "";
+        return `
+          <tr><td style="padding:18px;border-bottom:1px solid #eaeaea;">
+            <div style="font-size:15px;font-weight:700;color:#1a1a1a;">${escapeHtml(it.name)}${prioBadge}</div>
+            ${price}
+            ${dealer}
+            ${desc}
+            ${notes}
+            ${link}
+          </td></tr>
+        `;
+      })
+      .join("");
+
+    const userLabel = user?.name || user?.email || "Toolbox Vault user";
+    const sentDate = new Date().toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+    return `<!DOCTYPE html>
+<html><head><meta charset="utf-8" /></head>
+<body style="margin:0;padding:0;background:#f4f4f4;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+  <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background:#f4f4f4;padding:24px 0;">
+    <tr><td align="center">
+      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="600" style="background:#fff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.08);">
+        <tr><td style="background:#0d0d0d;padding:24px;text-align:center;">
+          <div style="color:#f97316;font-size:11px;font-weight:800;letter-spacing:3px;">TOOLBOX VAULT</div>
+          <div style="color:#fff;font-size:22px;font-weight:800;letter-spacing:1px;margin-top:6px;">${escapeHtml(title)}</div>
+          <div style="color:#999;font-size:11px;margin-top:6px;">Shared by ${escapeHtml(userLabel)} &middot; ${sentDate}</div>
+        </td></tr>
+        ${rows}
+        <tr><td style="background:#fafafa;padding:18px;text-align:center;color:#999;font-size:10px;letter-spacing:0.5px;">
+          Sent from the Toolbox Vault app &middot; Track tools, dealers &amp; receipts in one place.
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body></html>`;
+  };
+
+  // Per-item native share sheet (lets the user pick text / email / etc.).
+  const shareItem = async (it: any) => {
+    try {
+      const message = itemToPlainText(it);
+      await Share.share({
+        title: it.name,
+        message,
+      });
+    } catch (e: any) {
+      Alert.alert("Couldn't share", e?.message || "Try again.");
+    }
+  };
+
+  // Per-item email — opens Mail compose with a pretty HTML body.
+  const emailItem = async (it: any) => {
+    try {
+      const available = await MailComposer.isAvailableAsync();
+      if (!available) {
+        Alert.alert("Mail unavailable", "No mail account is configured on this device.");
+        return;
+      }
+      await MailComposer.composeAsync({
+        subject: `Wishlist: ${it.name}`,
+        body: itemsToHtml([it], `Tool I'm Looking At`),
+        isHtml: true,
+      });
+    } catch (e: any) {
+      Alert.alert("Couldn't open mail", e?.message || "Try again.");
+    }
+  };
+
+  // Bulk email — composes a single email containing every SELECTED item.
+  const emailSelected = async () => {
+    const chosen = items.filter((i) => selected.has(i.id));
+    if (chosen.length === 0) {
+      Alert.alert("Nothing selected", "Tap one or more items, then try again.");
+      return;
+    }
+    try {
+      const available = await MailComposer.isAvailableAsync();
+      if (!available) {
+        Alert.alert("Mail unavailable", "No mail account is configured on this device.");
+        return;
+      }
+      await MailComposer.composeAsync({
+        subject: `My Tool Wishlist (${chosen.length} item${chosen.length === 1 ? "" : "s"})`,
+        body: itemsToHtml(chosen, "My Tool Wishlist"),
+        isHtml: true,
+      });
+      cancelSelectMode();
+    } catch (e: any) {
+      Alert.alert("Couldn't open mail", e?.message || "Try again.");
+    }
+  };
+
+  // Helper opened from the per-item ··· menu. iOS doesn't ship with an
+  // ActionSheet API in expo-go's stub, so we use Alert with buttons.
+  const shareSheet = (it: any) => {
+    Alert.alert(
+      "Share this wish",
+      it.name,
+      [
+        { text: "Text / Share Sheet", onPress: () => shareItem(it) },
+        { text: "Email (HTML)", onPress: () => emailItem(it) },
+        { text: "Cancel", style: "cancel" },
+      ],
+      { cancelable: true }
+    );
+  };
+
   const convert = async (item: any) => {
     if (!(await confirm("Convert to tool?", `Add "${item.name}" to your inventory and mark as purchased.`, "Convert"))) return;
     try {
@@ -144,13 +335,41 @@ export default function WishlistScreen() {
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <View style={styles.topBar}>
-        <TouchableOpacity testID="wishlist-back" onPress={() => router.back()} hitSlop={10}>
-          <Ionicons name="arrow-back" size={26} color={theme.colors.textPrimary} />
+        <TouchableOpacity testID="wishlist-back" onPress={() => (selectMode ? cancelSelectMode() : router.back())} hitSlop={10}>
+          <Ionicons name={selectMode ? "close" : "arrow-back"} size={26} color={theme.colors.textPrimary} />
         </TouchableOpacity>
         <View style={{ flex: 1, marginLeft: 12 }}>
-          <Text style={styles.title}>WISH LIST</Text>
-          <Text style={styles.subtitle}>Tools you want · saved links</Text>
+          <Text style={styles.title}>{selectMode ? `SELECTED ${selected.size}` : "WISH LIST"}</Text>
+          <Text style={styles.subtitle}>{selectMode ? "Tap items to include · email below" : "Tools you want · saved links"}</Text>
         </View>
+        {!selectMode ? (
+          <TouchableOpacity
+            testID="wish-select-mode"
+            onPress={() => {
+              setSelectMode(true);
+              setSelected(new Set());
+            }}
+            style={styles.topBarBtn}
+            hitSlop={10}
+          >
+            <Ionicons name="mail-outline" size={20} color={theme.colors.accent} />
+          </TouchableOpacity>
+        ) : (
+          <TouchableOpacity
+            testID="wish-select-all"
+            onPress={() => {
+              const all = visible.map((i: any) => i.id);
+              if (selected.size === all.length) setSelected(new Set());
+              else setSelected(new Set(all));
+            }}
+            style={styles.topBarBtn}
+            hitSlop={10}
+          >
+            <Text style={styles.topBarBtnText}>
+              {selected.size === visible.length && visible.length > 0 ? "NONE" : "ALL"}
+            </Text>
+          </TouchableOpacity>
+        )}
       </View>
 
       <View style={styles.statRow}>
@@ -193,9 +412,20 @@ export default function WishlistScreen() {
         }
         renderItem={({ item }) => {
           const meta = PRIORITIES.find((p) => p.key === (item.priority || "normal")) || PRIORITIES[1];
+          const isSelected = selected.has(item.id);
           return (
-            <BevelCard style={styles.card} testID={`wish-card-${item.id}`}>
+            <BevelCard
+              style={[styles.card, selectMode && isSelected && styles.cardSelected]}
+              testID={`wish-card-${item.id}`}
+              onPress={selectMode ? () => toggleSelected(item.id) : undefined}
+              activeOpacity={selectMode ? 0.7 : 1}
+            >
               <View style={styles.cardHead}>
+                {selectMode && (
+                  <View style={[styles.checkbox, isSelected && styles.checkboxOn]}>
+                    {isSelected && <Ionicons name="checkmark" size={14} color="#000" />}
+                  </View>
+                )}
                 <Text style={styles.itemName} numberOfLines={2}>
                   {item.name}
                 </Text>
@@ -219,15 +449,25 @@ export default function WishlistScreen() {
                     testID={`wish-open-${item.id}`}
                     style={styles.linkBtn}
                     onPress={() => openLink(item.url)}
+                    disabled={selectMode}
                   >
                     <Ionicons name="open-outline" size={16} color={theme.colors.accentSecondary} />
                     <Text style={styles.linkText} numberOfLines={1}>OPEN LINK</Text>
                   </TouchableOpacity>
                 )}
                 <TouchableOpacity
+                  testID={`wish-share-${item.id}`}
+                  style={[styles.iconBtn, { borderColor: theme.colors.accent }]}
+                  onPress={() => shareSheet(item)}
+                  disabled={selectMode}
+                >
+                  <Ionicons name="share-outline" size={18} color={theme.colors.accent} />
+                </TouchableOpacity>
+                <TouchableOpacity
                   testID={`wish-edit-${item.id}`}
                   style={styles.iconBtn}
                   onPress={() => setEditing({ ...item, price: item.price ? String(item.price) : "" })}
+                  disabled={selectMode}
                 >
                   <Ionicons name="create-outline" size={18} color={theme.colors.textPrimary} />
                 </TouchableOpacity>
@@ -280,13 +520,29 @@ export default function WishlistScreen() {
         }}
       />
 
-      <TouchableOpacity
-        testID="add-wish-fab"
-        style={styles.fab}
-        onPress={() => setEditing({ name: "", url: "", description: "", price: "", priority: "normal", notes: "", dealer_id: null })}
-      >
-        <Ionicons name="add" size={32} color="#000" />
-      </TouchableOpacity>
+      {!selectMode ? (
+        <TouchableOpacity
+          testID="add-wish-fab"
+          style={styles.fab}
+          onPress={() => setEditing({ name: "", url: "", description: "", price: "", priority: "normal", notes: "", dealer_id: null })}
+        >
+          <Ionicons name="add" size={32} color="#000" />
+        </TouchableOpacity>
+      ) : (
+        <View style={styles.bulkBar} pointerEvents="box-none">
+          <TouchableOpacity
+            testID="wish-bulk-email"
+            style={[styles.bulkEmailBtn, selected.size === 0 && styles.bulkEmailBtnDisabled]}
+            onPress={emailSelected}
+            disabled={selected.size === 0}
+          >
+            <Ionicons name="mail" size={18} color={selected.size === 0 ? theme.colors.textMuted : "#000"} />
+            <Text style={[styles.bulkEmailText, selected.size === 0 && { color: theme.colors.textMuted }]}>
+              EMAIL {selected.size > 0 ? `${selected.size} ITEM${selected.size === 1 ? "" : "S"}` : "SELECTED"}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
       <Modal visible={!!editing} transparent animationType="slide" onRequestClose={() => setEditing(null)}>
         <KeyboardAvoidingView
@@ -504,6 +760,58 @@ const styles = themedStyles((c) => ({
     backgroundColor: c.accent,
     alignItems: "center", justifyContent: "center",
     ...(theme.elevation.accent as object),
+  },
+  // Select mode UI ---------------------------------------------------
+  cardSelected: {
+    borderColor: c.accent,
+    borderWidth: 2,
+    backgroundColor: c.bg,
+  },
+  checkbox: {
+    width: 22, height: 22,
+    borderRadius: 6,
+    borderWidth: 2,
+    borderColor: c.border,
+    alignItems: "center", justifyContent: "center",
+    marginRight: 4,
+  },
+  checkboxOn: {
+    backgroundColor: c.accent,
+    borderColor: c.accent,
+  },
+  topBarBtn: {
+    paddingHorizontal: 10, paddingVertical: 6,
+    borderRadius: theme.radii.sm,
+    borderWidth: 1, borderColor: c.accent,
+    backgroundColor: c.bgSecondary,
+    minWidth: 44, alignItems: "center", justifyContent: "center",
+  },
+  topBarBtnText: {
+    color: c.accent, fontSize: 9, fontWeight: "900", letterSpacing: 1.5,
+  },
+  bulkBar: {
+    position: "absolute",
+    bottom: 16, left: 16, right: 16,
+  },
+  bulkEmailBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 10,
+    paddingVertical: 14,
+    backgroundColor: c.accent,
+    borderRadius: theme.radii.md,
+    ...(theme.elevation.accent as object),
+  },
+  bulkEmailBtnDisabled: {
+    backgroundColor: c.bgSecondary,
+    borderWidth: 1, borderColor: c.border,
+  },
+  bulkEmailText: {
+    color: "#000",
+    fontWeight: "900",
+    letterSpacing: 1.5,
+    fontSize: 11,
   },
   modalBg: { flex: 1, backgroundColor: "rgba(0, 0, 0, 0.7)", justifyContent: "flex-end" },
   modalCard: {
