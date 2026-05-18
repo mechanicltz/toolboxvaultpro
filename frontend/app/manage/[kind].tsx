@@ -12,6 +12,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
+import { useAppResume } from "../../src/appLifecycle";
 import { theme } from "../../src/theme";
 import { api } from "../../src/api";
 import { confirm } from "../../src/confirm";
@@ -58,6 +59,10 @@ export default function ManageScreen() {
       load();
     }, [load])
   );
+  // iOS suspends in-flight fetches when the app is backgrounded; on resume
+  // _layout.tsx aborts them + calls notifyAppResume() so we re-load here.
+  useAppResume(useCallback(() => { load(); }, [load]));
+
 
   const add = async () => {
     if (!name.trim()) return;

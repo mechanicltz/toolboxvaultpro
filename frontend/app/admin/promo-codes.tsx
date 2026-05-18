@@ -17,6 +17,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter, useFocusEffect } from "expo-router";
+import { useAppResume } from "../../src/appLifecycle";
 import { theme } from "../../src/theme";
 import { api } from "../../src/api";
 
@@ -65,6 +66,10 @@ export default function AdminPromoCodesPage() {
       load();
     }, [load]),
   );
+  // iOS suspends in-flight fetches when the app is backgrounded; on resume
+  // _layout.tsx aborts them + calls notifyAppResume() so we re-load here.
+  useAppResume(useCallback(() => { load(); }, [load]));
+
 
   const openNew = () => {
     setEditing(null);

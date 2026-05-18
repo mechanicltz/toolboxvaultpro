@@ -18,6 +18,7 @@ import DateTimePicker from "@react-native-community/datetimepicker";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter, useFocusEffect } from "expo-router";
+import { useAppResume } from "../../src/appLifecycle";
 import { theme } from "../../src/theme";
 import { useThemeMode } from "../../src/themeContext";
 import {
@@ -128,6 +129,8 @@ export default function MoreScreen() {
       refreshAccountState();
     }, [refreshAccountState]),
   );
+  // Also refresh on app resume (e.g. after a backgrounded subscription change).
+  useAppResume(useCallback(() => { refreshAccountState(); }, [refreshAccountState]));
 
   // Biometric (Face ID / Touch ID) status — re-read on focus so any
   // change made elsewhere is reflected here. Disabling on web is fine

@@ -15,6 +15,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter, useFocusEffect } from "expo-router";
+import { useAppResume } from "../src/appLifecycle";
 import { theme } from "../src/theme";
 import { api } from "../src/api";
 import { formatPhone } from "../src/contactLinks";
@@ -75,6 +76,10 @@ export default function PersonalInfoScreen() {
       load();
     }, [load])
   );
+  // iOS suspends in-flight fetches when the app is backgrounded; on resume
+  // _layout.tsx aborts them + calls notifyAppResume() so we re-load here.
+  useAppResume(useCallback(() => { load(); }, [load]));
+
 
   const update = (k: keyof Profile, v: any) => setForm({ ...form, [k]: v });
 

@@ -16,6 +16,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter, useFocusEffect } from "expo-router";
+import { useAppResume } from "../src/appLifecycle";
 import * as Print from "expo-print";
 import * as Sharing from "expo-sharing";
 import * as FileSystem from "expo-file-system/legacy";
@@ -79,6 +80,10 @@ export default function WarrantyClaimsScreen() {
       load();
     }, [load])
   );
+  // iOS suspends in-flight fetches when the app is backgrounded; on resume
+  // _layout.tsx aborts them + calls notifyAppResume() so we re-load here.
+  useAppResume(useCallback(() => { load(); }, [load]));
+
 
   const onRefresh = async () => {
     setRefreshing(true);
