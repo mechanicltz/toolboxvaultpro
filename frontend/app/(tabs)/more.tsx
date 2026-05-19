@@ -169,12 +169,10 @@ export default function MoreScreen() {
             "secure-text",
           );
         });
-      // Alert.prompt is iOS-only; on Android we route through the
-      // login screen by signing out instead.
       if (Platform.OS !== "ios") {
         Alert.alert(
           `Enable ${bioStatus.label}`,
-          `To enable ${bioStatus.label} on Android, please sign out and the app will offer the prompt on your next sign-in.`,
+          `To enable ${bioStatus.label}, please sign out and the app will offer the prompt on your next sign-in.`,
           [{ text: "OK" }],
         );
         return;

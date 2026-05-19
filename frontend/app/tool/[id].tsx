@@ -2079,7 +2079,7 @@ export default function ToolDetail() {
                       // A future improvement would show a searchable list.
                       Alert.alert(
                         "Pick from contacts",
-                        "On Android, please go to the People tab → Import from Contacts to pick a specific contact. We'll bring you there now.",
+                        "Please go to the People tab → Import from Contacts to pick a specific contact. We'll bring you there now.",
                         [
                           { text: "Cancel", style: "cancel" },
                           { text: "Open People", onPress: () => router.push("/(tabs)/borrowers" as any) },
