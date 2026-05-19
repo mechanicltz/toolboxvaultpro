@@ -198,7 +198,7 @@ export default function PaywallScreen() {
           <View style={styles.stubBanner}>
             <Ionicons name="information-circle" size={16} color={theme.colors.accent} />
             <Text style={styles.stubBannerText}>
-              Subscriptions can only be purchased in the iOS or Android app. You can use Redeem Promo Code below to unlock PRO features here.
+              Subscriptions can only be purchased inside the mobile app. You can use Redeem Promo Code below to unlock PRO features here.
             </Text>
           </View>
         )}
@@ -303,7 +303,7 @@ export default function PaywallScreen() {
         <Text style={styles.terms}>
           Subscriptions auto-renew unless cancelled at least 24 hours before the
           end of the current period. You can cancel any time from your{"\n"}
-          {Platform.OS === "ios" ? "Apple ID subscriptions page" : "Google Play subscriptions page"}.
+          {Platform.OS === "ios" ? "Apple ID Subscriptions page" : "your subscription settings"}.
         </Text>
 
         <View style={styles.legalRow}>

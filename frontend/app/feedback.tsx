@@ -230,29 +230,35 @@ export default function FeedbackScreen() {
             testID="feedback-email"
           />
 
-          {/* Platform */}
+          {/* Platform — the platform field is auto-detected from the device the
+              user is currently running on. We don't show the cross-platform
+              picker any longer because Apple's review (Guideline 2.3.10)
+              flagged any mention of other mobile platforms inside the iOS
+              binary. The detected value still flows through to the backend
+              so support can see whether a report came from iOS, Android,
+              or web. */}
           <Text style={styles.label}>PLATFORM</Text>
-          <View style={styles.segmented}>
-            {(["Apple", "Android"] as Platform_[]).map((p) => {
-              const on = platform === p;
-              return (
-                <TouchableOpacity
-                  key={p}
-                  style={[styles.segBtn, on && styles.segBtnOn]}
-                  onPress={() => setPlatform(p)}
-                  testID={`feedback-platform-${p.toLowerCase()}`}
-                >
-                  <Ionicons
-                    name={p === "Apple" ? "logo-apple" : "logo-android"}
-                    size={16}
-                    color={on ? "#000" : theme.colors.textPrimary}
-                  />
-                  <Text style={[styles.segText, on && { color: "#000" }]}>
-                    {p}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
+          <View style={[styles.segmented, { opacity: 0.85 }]}>
+            <View style={[styles.segBtn, styles.segBtnOn]}>
+              <Ionicons
+                name={
+                  Platform.OS === "ios"
+                    ? "logo-apple"
+                    : Platform.OS === "android"
+                      ? "logo-android"
+                      : "globe-outline"
+                }
+                size={16}
+                color="#000"
+              />
+              <Text style={[styles.segText, { color: "#000" }]}>
+                {Platform.OS === "ios"
+                  ? "Apple"
+                  : Platform.OS === "android"
+                    ? "Android"
+                    : "Web"}
+              </Text>
+            </View>
           </View>
 
           {/* Subject */}

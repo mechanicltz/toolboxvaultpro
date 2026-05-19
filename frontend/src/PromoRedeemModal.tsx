@@ -80,7 +80,7 @@ export function PromoRedeemModal({
         onPress={close}
         testID="promo-backdrop"
       >
-        <TouchableOpacity activeOpacity={1} onPress={() => {}}>
+        <TouchableOpacity activeOpacity={1} onPress={() => {}} style={styles.cardWrap}>
           <View style={styles.card}>
             <View style={styles.header}>
               <Text style={styles.title}>REDEEM CODE</Text>
@@ -148,15 +148,23 @@ const styles = themedStyles((c) => ({
     justifyContent: "center",
     padding: 20,
   },
+  // Inner wrapper that PromoRedeemModal's inner TouchableOpacity uses.
+  // Without an explicit width here the touchable shrinks to fit its content
+  // and the modal card collapses (see iPad screenshot in Apple review #1.3.2
+  // where the error text was clipped to ~150px).
+  cardWrap: {
+    width: "100%",
+    maxWidth: 420,
+    alignSelf: "center",
+  },
   card: {
     width: "100%",
-    maxWidth: 380,
     backgroundColor: c.bgSecondary,
     borderRadius: 14,
     borderWidth: 1,
     borderColor: c.border,
-    padding: 18,
-  
+    padding: 20,
+
     ...(theme.elevation.md as object),
   },
   header: {
