@@ -34,6 +34,23 @@ const PRIORITIES = [
   { key: "high", label: "HIGH", color: theme.colors.danger },
 ];
 
+// Strip protocol + leading "www." and (for very long paths) trim with an
+// ellipsis so the URL fits on one line under the item name. Examples:
+//   "https://www.amazon.com/dp/B0..."    → "amazon.com/dp/B0..."
+//   "https://snapon.com/cdn/products/123" → "snapon.com/cdn/products/123"
+function formatUrlForDisplay(raw?: string): string {
+  if (!raw) return "";
+  let s = raw.trim();
+  s = s.replace(/^https?:\/\//i, "");
+  s = s.replace(/^www\./i, "");
+  // Drop trailing slash for visual polish.
+  s = s.replace(/\/$/, "");
+  // FlatList truncation handles real overflow, but cap at 60 chars so
+  // the row stays compact on small screens.
+  if (s.length > 60) s = s.slice(0, 57) + "...";
+  return s;
+}
+
 export default function WishlistScreen() {
   const router = useRouter();
   const { user } = useAuth();
@@ -433,6 +450,21 @@ export default function WishlistScreen() {
                   <Text style={[styles.priorityText, { color: meta.color }]}>{meta.label}</Text>
                 </View>
               </View>
+              {!!item.url && (
+                <TouchableOpacity
+                  testID={`wish-open-${item.id}`}
+                  style={styles.urlRow}
+                  onPress={() => openLink(item.url)}
+                  disabled={selectMode}
+                  activeOpacity={0.6}
+                  hitSlop={6}
+                >
+                  <Ionicons name="link" size={12} color={theme.colors.accentSecondary} />
+                  <Text style={styles.urlText} numberOfLines={1}>
+                    {formatUrlForDisplay(item.url)}
+                  </Text>
+                </TouchableOpacity>
+              )}
               {!!item.description && <Text style={styles.itemDesc}>{item.description}</Text>}
               <View style={styles.metaRow}>
                 {!!item.price && (
@@ -444,17 +476,6 @@ export default function WishlistScreen() {
               </View>
               {!!item.notes && <Text style={styles.notesText}>{item.notes}</Text>}
               <View style={styles.actions}>
-                {!!item.url && (
-                  <TouchableOpacity
-                    testID={`wish-open-${item.id}`}
-                    style={styles.linkBtn}
-                    onPress={() => openLink(item.url)}
-                    disabled={selectMode}
-                  >
-                    <Ionicons name="open-outline" size={16} color={theme.colors.accentSecondary} />
-                    <Text style={styles.linkText} numberOfLines={1}>OPEN LINK</Text>
-                  </TouchableOpacity>
-                )}
                 <TouchableOpacity
                   testID={`wish-share-${item.id}`}
                   style={[styles.iconBtn, { borderColor: theme.colors.accent }]}
@@ -735,6 +756,22 @@ const styles = themedStyles((c) => ({
   itemName: { flex: 1, color: c.textPrimary, fontSize: 12, fontWeight: "700" },
   priorityPill: { paddingHorizontal: 8, paddingVertical: 3, borderWidth: 1, borderRadius: 3 },
   priorityText: { fontSize: 7, fontWeight: "800", letterSpacing: 1 },
+  // Clickable URL row right under the item name — replaces the old "OPEN LINK"
+  // button in the actions row so the actions row is less cluttered.
+  urlRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginTop: 4,
+    paddingVertical: 2,
+  },
+  urlText: {
+    flex: 1,
+    color: c.accentSecondary,
+    fontSize: 10,
+    fontWeight: "600",
+    textDecorationLine: "underline",
+  },
   itemDesc: { color: c.textSecondary, fontSize: 10, marginTop: 6 },
   metaRow: { flexDirection: "row", gap: 14, marginTop: 8 },
   priceText: { color: c.accent, fontSize: 10, fontWeight: "800" },
