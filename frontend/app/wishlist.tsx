@@ -14,11 +14,13 @@ import {
   RefreshControl,
   KeyboardAvoidingView,
   Share,
+  Image,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter, useFocusEffect } from "expo-router";
 import * as MailComposer from "expo-mail-composer";
+import * as ImagePicker from "expo-image-picker";
 import { useAppResume } from "../src/appLifecycle";
 import { theme } from "../src/theme";
 import { api } from "../src/api";
@@ -131,6 +133,10 @@ export default function WishlistScreen() {
       dealer_id: editing.dealer_id || null,
       priority: editing.priority || "normal",
       notes: editing.notes || "",
+      model_number: (editing.model_number || "").trim(),
+      // Single preview photo stored as a 1-element list — matches the
+      // shape of Tool.photos so the convert endpoint is a direct copy.
+      photos: editing.photos || [],
     };
     try {
       if (editing.id) {
@@ -145,15 +151,104 @@ export default function WishlistScreen() {
     }
   };
 
+  // Image picker for the wishlist preview photo. camera=true → camera;
+  // false → photo library. Stored as a data: URI base64 string so it can
+  // be copied directly to Tool.photos when the wish is converted.
+  const pickWishPhoto = async (camera: boolean) => {
+    try {
+      const perm = camera
+        ? await ImagePicker.requestCameraPermissionsAsync()
+        : await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!perm.granted) {
+        Alert.alert("Permission needed", "Allow access to add a photo.");
+        return;
+      }
+      const opts: any = { quality: 0.5, base64: true, allowsEditing: false };
+      const res = camera
+        ? await ImagePicker.launchCameraAsync(opts)
+        : await ImagePicker.launchImageLibraryAsync({
+            ...opts,
+            mediaTypes: ImagePicker.MediaTypeOptions.Images,
+          });
+      if (!res.canceled && res.assets[0]) {
+        const a = res.assets[0];
+        const dataUri = a.base64 ? `data:image/jpeg;base64,${a.base64}` : a.uri;
+        setEditing({ ...editing, photos: [dataUri] });
+      }
+    } catch (e: any) {
+      Alert.alert("Error", e.message || "Could not load photo");
+    }
+  };
+
+  const choosePhoto = () => {
+    Alert.alert(
+      "Add a photo",
+      "Where do you want the photo from?",
+      [
+        { text: "Take Photo", onPress: () => pickWishPhoto(true) },
+        { text: "Choose from Library", onPress: () => pickWishPhoto(false) },
+        { text: "Cancel", style: "cancel" },
+      ],
+      { cancelable: true }
+    );
+  };
+
   const remove = async (item: any) => {
     if (!(await confirm("Delete wish?", item.name, "Delete", true))) return;
     await api.deleteWishlist(item.id);
     load();
   };
 
+  // When the user taps the green check mark to mark a wish as Purchased
+  // (transitioning unpurchased → purchased), offer to convert it to a
+  // Tool right away.
+  //   • "Just Mark Purchased" → toggles purchased but creates no tool
+  //   • "Convert to Tool"     → creates a Tool, then opens the edit screen
+  //   • "Cancel"              → does nothing
+  // Already-purchased items just toggle back silently (no prompt).
   const togglePurchased = async (item: any) => {
-    await api.updateWishlist(item.id, { purchased: !item.purchased });
-    load();
+    if (item.purchased) {
+      await api.updateWishlist(item.id, { purchased: false });
+      load();
+      return;
+    }
+
+    const justPurchase = async () => {
+      try {
+        await api.updateWishlist(item.id, { purchased: true });
+        load();
+      } catch (e: any) {
+        Alert.alert("Error", e?.message || "Could not update");
+      }
+    };
+
+    // On web the native 3-button Alert callback isn't reliable, so fall
+    // back to a yes/no confirm (Convert? OK = convert, Cancel = just mark).
+    if (Platform.OS === "web") {
+      const wantConvert = await confirm(
+        "Mark as Purchased",
+        `Do you also want to convert "${item.name}" into a tool? OK = convert, Cancel = just mark purchased.`,
+        "Convert to Tool"
+      );
+      if (wantConvert) await convert(item, /* alreadyConfirmed */ true);
+      else await justPurchase();
+      return;
+    }
+
+    Alert.alert(
+      "Mark as Purchased",
+      `Do you also want to convert "${item.name}" into a tool in your inventory? You'll be taken to the edit screen to finish adding details.`,
+      [
+        { text: "Cancel", style: "cancel" },
+        { text: "Just Mark Purchased", onPress: justPurchase },
+        {
+          text: "Convert to Tool",
+          style: "default",
+          onPress: () => convert(item, /* alreadyConfirmed */ true),
+        },
+      ],
+      { cancelable: true }
+    );
   };
 
   // -------------------------------------------------------------------
@@ -338,12 +433,26 @@ export default function WishlistScreen() {
     );
   };
 
-  const convert = async (item: any) => {
-    if (!(await confirm("Convert to tool?", `Add "${item.name}" to your inventory and mark as purchased.`, "Convert"))) return;
+  // Convert a wish into a real Tool. When the user invoked this via
+  // the "Mark Purchased" flow (above) we already showed a confirm,
+  // so skip the second one. Otherwise still confirm first.
+  const convert = async (item: any, alreadyConfirmed: boolean = false) => {
+    if (!alreadyConfirmed) {
+      const ok = await confirm(
+        "Convert to tool?",
+        `Add "${item.name}" to your inventory. You'll be taken to the edit screen to finish entering details.`,
+        "Convert"
+      );
+      if (!ok) return;
+    }
     try {
       const tool = await api.convertWishlist(item.id);
+      // Refresh the wishlist in the background while we navigate so the
+      // user lands on a clean edit screen straight away.
       load();
-      router.push(`/tool/${tool.id}`);
+      // Open in EDIT mode so they can add brand, serial, location, etc.
+      // (not the read-only detail screen).
+      router.push(`/tool/edit?id=${tool.id}`);
     } catch (e: any) {
       Alert.alert("Error", e.message || "Could not convert");
     }
@@ -443,9 +552,19 @@ export default function WishlistScreen() {
                     {isSelected && <Ionicons name="checkmark" size={14} color="#000" />}
                   </View>
                 )}
-                <Text style={styles.itemName} numberOfLines={2}>
-                  {item.name}
-                </Text>
+                {!!(item.photos && item.photos[0]) && (
+                  <Image source={{ uri: item.photos[0] }} style={styles.cardThumb} resizeMode="cover" />
+                )}
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.itemName} numberOfLines={2}>
+                    {item.name}
+                  </Text>
+                  {!!item.model_number && (
+                    <Text style={styles.modelText} numberOfLines={1}>
+                      Model: {item.model_number}
+                    </Text>
+                  )}
+                </View>
                 <View style={[styles.priorityPill, { borderColor: meta.color }]}>
                   <Text style={[styles.priorityText, { color: meta.color }]}>{meta.label}</Text>
                 </View>
@@ -545,7 +664,7 @@ export default function WishlistScreen() {
         <TouchableOpacity
           testID="add-wish-fab"
           style={styles.fab}
-          onPress={() => setEditing({ name: "", url: "", description: "", price: "", priority: "normal", notes: "", dealer_id: null })}
+          onPress={() => setEditing({ name: "", url: "", description: "", price: "", priority: "normal", notes: "", dealer_id: null, model_number: "", photos: [] })}
         >
           <Ionicons name="add" size={32} color="#000" />
         </TouchableOpacity>
@@ -596,6 +715,50 @@ export default function WishlistScreen() {
               keyboardType="url"
             />
 
+            <Text style={styles.label}>MODEL NUMBER</Text>
+            <TextInput
+              testID="wish-model"
+              placeholder="e.g. CTEU8810"
+              placeholderTextColor={theme.colors.textMuted}
+              style={styles.input}
+              value={editing?.model_number || ""}
+              onChangeText={(v) => setEditing({ ...editing, model_number: v })}
+              autoCapitalize="characters"
+            />
+
+            <Text style={styles.label}>PHOTO</Text>
+            {editing?.photos && editing.photos[0] ? (
+              <View style={styles.photoPreviewRow}>
+                <Image source={{ uri: editing.photos[0] }} style={styles.photoPreview} resizeMode="cover" />
+                <View style={{ flex: 1, gap: 8 }}>
+                  <TouchableOpacity
+                    testID="wish-photo-replace"
+                    style={styles.photoBtn}
+                    onPress={choosePhoto}
+                  >
+                    <Ionicons name="camera" size={16} color={theme.colors.accent} />
+                    <Text style={styles.photoBtnText}>REPLACE</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    testID="wish-photo-remove"
+                    style={[styles.photoBtn, { borderColor: theme.colors.danger }]}
+                    onPress={() => setEditing({ ...editing, photos: [] })}
+                  >
+                    <Ionicons name="trash-outline" size={16} color={theme.colors.danger} />
+                    <Text style={[styles.photoBtnText, { color: theme.colors.danger }]}>REMOVE</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ) : (
+              <TouchableOpacity
+                testID="wish-photo-add"
+                style={styles.photoAddBtn}
+                onPress={choosePhoto}
+              >
+                <Ionicons name="camera" size={18} color={theme.colors.accent} />
+                <Text style={styles.photoAddBtnText}>ADD PHOTO</Text>
+              </TouchableOpacity>
+            )}
             <Text style={styles.label}>DESCRIPTION</Text>
             <TextInput
               testID="wish-desc"
@@ -753,7 +916,20 @@ const styles = themedStyles((c) => ({
     ...(theme.elevation.md as object),
   },
   cardHead: { flexDirection: "row", alignItems: "flex-start", gap: 10 },
+  cardThumb: {
+    width: 48, height: 48, borderRadius: 6,
+    backgroundColor: c.surfaceAlt,
+    borderWidth: 1, borderColor: c.border,
+  },
   itemName: { flex: 1, color: c.textPrimary, fontSize: 12, fontWeight: "700" },
+  // Model number shown under the wish name on the card.
+  modelText: {
+    color: c.textMuted,
+    fontSize: 9,
+    fontWeight: "700",
+    letterSpacing: 0.5,
+    marginTop: 2,
+  },
   priorityPill: { paddingHorizontal: 8, paddingVertical: 3, borderWidth: 1, borderRadius: 3 },
   priorityText: { fontSize: 7, fontWeight: "800", letterSpacing: 1 },
   // Clickable URL row right under the item name — replaces the old "OPEN LINK"
@@ -853,6 +1029,42 @@ const styles = themedStyles((c) => ({
     fontWeight: "900",
     letterSpacing: 1.5,
     fontSize: 11,
+  },
+  // Photo picker UI shown inside the wish edit modal.
+  photoPreviewRow: {
+    flexDirection: "row",
+    gap: 12,
+    alignItems: "center",
+    marginTop: 4,
+  },
+  photoPreview: {
+    width: 80, height: 80,
+    borderRadius: 8,
+    borderWidth: 1, borderColor: c.border,
+    backgroundColor: c.surfaceAlt,
+  },
+  photoBtn: {
+    flexDirection: "row", alignItems: "center", justifyContent: "center",
+    gap: 6,
+    paddingHorizontal: 10, paddingVertical: 8,
+    borderWidth: 1, borderColor: c.accent,
+    borderRadius: theme.radii.sm,
+    backgroundColor: c.bgSecondary,
+  },
+  photoBtnText: {
+    color: c.accent, fontSize: 9, fontWeight: "900", letterSpacing: 1,
+  },
+  photoAddBtn: {
+    flexDirection: "row", alignItems: "center", justifyContent: "center",
+    gap: 8,
+    paddingVertical: 14,
+    borderWidth: 1, borderStyle: "dashed", borderColor: c.accent,
+    borderRadius: theme.radii.md,
+    backgroundColor: c.surfaceAlt,
+    marginTop: 4,
+  },
+  photoAddBtnText: {
+    color: c.accent, fontSize: 10, fontWeight: "900", letterSpacing: 1.5,
   },
   modalBg: { flex: 1, backgroundColor: "rgba(0, 0, 0, 0.7)", justifyContent: "flex-end" },
   modalCard: {

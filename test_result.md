@@ -208,6 +208,8 @@ backend_v130_b20:
 
 agent_communication:
   - agent: "testing"
+    message: "WISHLIST PHOTOS + MODEL_NUMBER + CONVERT FLOW — 32/32 PASS via /app/backend_test_wishlist_photos_model.py against https://asset-locator-12.preview.emergentagent.com/api with admin MechanicLTZ@gmail.com / Blue321!.\n\n  TEST A — Create with new fields: POST /api/wishlist {name, photos:['data:image/jpeg;base64,iVBORw0K...'], model_number:'CTEU8810'} → 200; response echoes both photos and model_number='CTEU8810'. ✓\n\n  TEST B — Partial updates: Created base wish with photos=[photo1], model_number='INITIAL123', description='initial desc'. (B1) PUT {model_number:'UPDATED456'} → 200; photos, name, description ALL preserved; model_number updated. (B2) PUT {photos:['data:image/jpeg;base64,abc']} → 200; photos updated; model_number still 'UPDATED456' (NOT wiped); name + description preserved. The update_wishlist handler at server.py L2838 correctly does `updates = {k: v for k, v in payload.dict().items() if v is not None}` — omitted fields stay intact. ✓\n\n  TEST C — Convert flow: Created wish {name:'Test Wrench', description:'Big one', notes:'Bought used', model_number:'TW100', photos:['data:image/jpeg;base64,xyz'], price:50, dealer_id:<dealer>}. POST /api/wishlist/{id}/convert → 200 returned Tool with:\n    • name='Test Wrench' ✓\n    • model='TW100' ✓ (copied from wishlist.model_number)\n    • photos=['data:image/jpeg;base64,xyz'] ✓ (list-copied from wishlist.photos)\n    • description='Big one\\n\\nBought used' ✓ (description + \\n\\n + notes)\n    • cost=50.0 ✓\n    • dealer_id matches ✓\n  Follow-up GET /api/wishlist?purchased=true shows the wish with purchased=true, converted_tool_id=<new tool id>, purchased_at populated. ✓\n\n  TEST D — Cleanup: DELETE /api/tools/{tool_id} → 200, DELETE /api/wishlist/{wish_id} → 200. All test fixtures (3 wishes + 1 tool + 1 dealer) removed. No residue.\n\n  Backend log clean — only the expected 200s. WishlistItem, WishlistItemCreate, WishlistItemUpdate Pydantic models at server.py L608-653 correctly carry photos: List[str] = [] and model_number: Optional[str] = ''. The convert_wishlist_to_tool handler at L2871-2898 correctly copies model_number→tool.model, photos→tool.photos (list-copy via list()), and merges notes into description with '\\n\\n' separator. Main agent: summarise and finish."
+  - agent: "testing"
     message: "DEALER + AGENT FIELD ADDITIONS — ALL GREEN (31/31 PASS) via /app/backend_test_dealer_agent_fields.py against http://localhost:8001/api with admin MechanicLTZ@gmail.com / Blue321!. All 5 review scenarios verified end-to-end:\n\n  TEST A — POST /api/dealers with name + warranty_contact + tech_support_contact + customer_support_contact → 200, response echoes all 3 new fields exactly (warranty_contact='warranty@fieldtest.com', tech_support_contact='555-TECH-911', customer_support_contact='https://fieldtest.com/support'). GET /api/dealers/{id} confirms persistence in Mongo. ✓\n\n  TEST B — Partial update PUT /api/dealers/{id} with only {warranty_contact: 'new-warranty@fieldtest.com'} → 200. Response shows warranty_contact updated to new value; tech_support_contact + customer_support_contact + name + phone all UNCHANGED. The update_dealer handler at server.py L1208 correctly uses `payload.dict()` and filters out None values, so omitted fields are NOT wiped. ✓\n\n  TEST C — POST /api/dealers/{id}/agents body {name:'Jordan Hayes', phone:'555-0200', email:'jordan@fieldtest.com', location:'North Houston Route', notes:'Tuesdays only'} → 200. Returned dealer.agents[0] has location='North Houston Route' echoed back, plus name/phone/email/notes all correct. ✓\n\n  TEST D — PUT /api/dealers/{id}/agents/{agent_id} with location:'South Houston Route' → 200. Response shows agent.location updated to new value while name/email/phone/notes preserved. Follow-up GET /api/dealers/{id} confirms agent.location persisted to MongoDB. The update_agent handler at server.py L1250 correctly applies `a['location'] = payload.location or ''`. ✓\n\n  TEST E — DELETE /api/dealers/{id} → 200 {ok:true}. Follow-up GET → 404. Cleanup verified — no test residue in DB. ✓\n\n  No regressions observed on touched endpoints. Backend log clean — only the test's expected 200s/404. The Dealer Pydantic model at server.py L408-427 now has all 3 new optional string fields, DealerCreate (L448-459) and DealerUpdate (L462-473) include them, and Agent (L389-397) + AgentCreate (L400-405) both carry `location: Optional[str] = ''`. The dealer + agent model field additions are fully working. Main agent: summarise and finish."\n  - agent: "testing"
     message: "DB BACKUP MODULE RETEST — ALL GREEN (52/52 PASS) via /app/backend_test_db_backup.py against http://localhost:8001/api. The wiring fix works: backups.make_backup_router() now builds its own APIRouter(prefix='/api') and server.py calls app.include_router(_make_backup_router(...)) AFTER existing routers. /openapi.json confirms all 5 routes registered (GET /api/admin/backups, POST /api/admin/backups/run, GET /api/admin/backups/config, GET /api/admin/backups/{backup_id}/download, DELETE /api/admin/backups/{backup_id}).\n\nAll 7 review objectives verified end-to-end with MechanicLTZ@gmail.com / Blue321! (admin) and a fresh backupnonadmin_<uuid>@example.com / Pass1234! (non-admin): (1) Boot log line present. (2) Non-admin gets 403 on all 5 endpoints. (3) Admin happy path: GET /config → 200 (max_retained=12, 16 collections, schedule=monthly), initial GET list → [], POST /run → 200 with full create response, follow-up GET list → 1 entry matching id. (4) Download: Content-Type=application/gzip, Content-Disposition matches 'attachment; filename=\"toolbox-vault-backup-*.json.gz\"', gzip decompressed + parsed as JSON dict with all 5 expected keys (users, tools, locations, dealers, subscriptions). (5) DELETE returns 200 + {ok:true}, list goes back to [], double-delete returns 404. (6) Retention: 3 manual runs → 3 unique IDs in list, newest-first chronological. (7) /api/health 200, /api/admin/user-stats 200, /api/admin/promo-codes 200, /api/revenuecat/webhook 200 — no regression.\n\nCLEANUP: backups collection is verified empty via direct mongo count_documents({})==0 at end of run. Also deleted the 3 test backupnonadmin_<uuid> users from this run's invocations via direct mongo. Synthetic RC webhook subscription cleaned. No residue. Backend log clean throughout — no 5xx, no tracebacks. Main agent: backend DB backup module is fully working. Summarise and finish."
   - agent: "testing"
@@ -3660,4 +3662,45 @@ metadata:
            back in subsequent GET /api/dealers/{id}.
         4) PUT /api/dealers/{id}/agents/{agent_id} with updated location -> persists.
         Use admin creds from /app/memory/test_credentials.md.
+
+
+
+#====================================================================================================
+## 2026-05-19 — Wishlist: photos, model_number + convert carry-through
+#====================================================================================================
+backend:
+  - task: "Add photos + model_number to WishlistItem/Create/Update; convert carries them to Tool"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: |
+          Added `photos: List[str] = []` and `model_number: Optional[str] = ""` to WishlistItem,
+          WishlistItemCreate, and WishlistItemUpdate Pydantic models.
+          In POST /api/wishlist/{id}/convert, the new Tool now also gets:
+              model    = item.model_number
+              photos   = item.photos (list-copy)
+              description = item.description + (item.notes appended if both present)
+          NEEDS VERIFICATION:
+            1. POST /api/wishlist with photos=[<data-uri>], model_number="ABC123" → returns them.
+            2. PUT /api/wishlist/{id} partial update of photos OR model_number → persists.
+            3. POST /api/wishlist/{id}/convert → returned Tool has matching model + photos +
+               merged description (description + "\n\n" + notes).
+            4. Convert sets purchased=true and converted_tool_id on the wish.
+
+metadata:
+  test_focus:
+    - "Add photos + model_number to WishlistItem/Create/Update; convert carries them to Tool"
+  agent_communications:
+    - from: "main"
+      to: "testing"
+      message: |
+        Please verify the new wishlist photo + model_number persistence and convert flow.
+        Use the admin creds from /app/memory/test_credentials.md.
+        Other parts unchanged — focus ONLY on wishlist endpoints.
 

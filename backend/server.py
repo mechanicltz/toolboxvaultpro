@@ -615,6 +615,10 @@ class WishlistItem(BaseModel):
     dealer_name: Optional[str] = ""
     priority: Optional[str] = "normal"  # low / normal / high
     notes: Optional[str] = ""
+    # Optional product details — used when converting to a Tool so the user
+    # doesn't have to re-enter info they already saved on the wish.
+    model_number: Optional[str] = ""
+    photos: List[str] = []  # base64 data-URI strings (same format as Tool.photos)
     purchased: bool = False
     purchased_at: Optional[str] = None
     converted_tool_id: Optional[str] = None
@@ -631,6 +635,8 @@ class WishlistItemCreate(BaseModel):
     dealer_name: Optional[str] = ""
     priority: Optional[str] = "normal"
     notes: Optional[str] = ""
+    model_number: Optional[str] = ""
+    photos: List[str] = []
 
 
 class WishlistItemUpdate(BaseModel):
@@ -642,6 +648,8 @@ class WishlistItemUpdate(BaseModel):
     dealer_name: Optional[str] = None
     priority: Optional[str] = None
     notes: Optional[str] = None
+    model_number: Optional[str] = None
+    photos: Optional[List[str]] = None
     purchased: Optional[bool] = None
 
 
@@ -2866,7 +2874,23 @@ async def convert_wishlist_to_tool(item_id: str, user: User = Depends(get_curren
         cost=item.get("price") or 0,
         dealer_id=item.get("dealer_id"),
         dealer_name=item.get("dealer_name") or "",
+        # Carry through optional details captured on the wish so the
+        # user doesn't have to re-enter them when finishing the tool.
+        model=item.get("model_number", "") or "",
+        photos=list(item.get("photos") or []),
+        # Drop notes onto the description so we don't silently lose them.
+        # If the user had both a description and notes, append the notes
+        # on a new line. If only notes existed, that becomes the description.
+        # (We do this in code rather than at the DB level so the wishlist
+        # row still keeps its own notes/description fields intact.)
     )
+    # Merge notes → description if both present (keep description first).
+    extra_notes = (item.get("notes") or "").strip()
+    if extra_notes:
+        if tool.description:
+            tool.description = f"{tool.description}\n\n{extra_notes}"
+        else:
+            tool.description = extra_notes
     await db.tools.insert_one(tool.dict())
     await db.wishlist_items.update_one(
         {"id": item_id},
