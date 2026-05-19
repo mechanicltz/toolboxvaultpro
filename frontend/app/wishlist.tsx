@@ -808,7 +808,11 @@ const styles = themedStyles((c) => ({
     width: 22, height: 22,
     borderRadius: 6,
     borderWidth: 2,
-    borderColor: c.border,
+    // Use the accent color at low opacity so the empty checkbox stays clearly
+    // visible in dark mode (the prior c.border was nearly invisible against
+    // the dark card surface).
+    borderColor: c.accent,
+    backgroundColor: c.surfaceAlt,
     alignItems: "center", justifyContent: "center",
     marginRight: 4,
   },
