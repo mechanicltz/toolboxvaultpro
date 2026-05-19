@@ -282,6 +282,7 @@ export default function WishlistScreen() {
   const itemToPlainText = (it: any): string => {
     const lines: string[] = [];
     lines.push(`🔧 ${it.name}`);
+    if (it.model_number) lines.push(`Model: ${it.model_number}`);
     if (it.price) lines.push(`Price: $${Number(it.price).toFixed(2)}`);
     if (it.dealer_name) lines.push(`Dealer: ${it.dealer_name}`);
     const meta = PRIORITIES.find((p) => p.key === (it.priority || "normal"))?.label;
@@ -314,6 +315,9 @@ export default function WishlistScreen() {
         const dealer = it.dealer_name
           ? `<div style="color:#666;font-size:11px;font-weight:600;letter-spacing:0.5px;text-transform:uppercase;margin-top:4px;">${escapeHtml(it.dealer_name)}</div>`
           : "";
+        const model = it.model_number
+          ? `<div style="color:#444;font-size:12px;font-weight:600;margin-top:6px;"><span style="color:#888;font-size:10px;letter-spacing:1px;">MODEL </span>${escapeHtml(it.model_number)}</div>`
+          : "";
         const desc = it.description
           ? `<p style="color:#333;font-size:13px;line-height:1.5;margin:10px 0 0;">${escapeHtml(it.description)}</p>`
           : "";
@@ -327,6 +331,7 @@ export default function WishlistScreen() {
           <tr><td style="padding:18px;border-bottom:1px solid #eaeaea;">
             <div style="font-size:15px;font-weight:700;color:#1a1a1a;">${escapeHtml(it.name)}${prioBadge}</div>
             ${price}
+            ${model}
             ${dealer}
             ${desc}
             ${notes}
