@@ -213,7 +213,7 @@ export default function ForSaleScreen() {
             style={[styles.tabBtn, tab === "listed" && styles.tabBtnActive]}
             onPress={() => setTab("listed")}
           >
-            <Ionicons name="pricetag" size={14} color={tab === "listed" ? "#000" : theme.colors.textSecondary} />
+            <Ionicons name="pricetag" size={14} color={tab === "listed" ? theme.colors.accent : theme.colors.textSecondary} />
             <Text style={[styles.tabText, tab === "listed" && styles.tabTextActive]}>LISTED</Text>
           </BevelCard>
           <BevelCard
@@ -415,7 +415,7 @@ const styles = themedStyles((c) => ({
   tabBtnActive: { backgroundColor: c.accent, borderColor: c.accent },
   tabBtnActiveSold: { backgroundColor: "#27AE60", borderColor: "#27AE60" },
   tabText: { color: c.textSecondary, fontWeight: "900", fontSize: 9, letterSpacing: 1.5 },
-  tabTextActive: { color: "#000" },
+  tabTextActive: { color: c.accent },
   searchWrap: {
     flexDirection: "row",
     alignItems: "center",
