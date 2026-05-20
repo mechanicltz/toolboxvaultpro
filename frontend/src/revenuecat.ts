@@ -236,6 +236,66 @@ export async function logoutRevenueCat(): Promise<void> {
 }
 
 /**
+ * Present Apple's native code redemption sheet (iOS only).
+ *
+ * This opens Apple's own UIKit sheet for redeeming subscription Offer
+ * Codes and legacy Promo Codes. Apple wrote and ships this UI — using
+ * it is the Apple-blessed in-app redemption pattern. There is no
+ * Guideline 3.1.1 risk because no payment / unlock happens inside our
+ * app: the entire flow runs through Apple's StoreKit.
+ *
+ * Returns:
+ *   { success: true }          — sheet opened (we cannot tell from RN
+ *                                 whether the user actually redeemed;
+ *                                 caller should refresh subscription
+ *                                 state after a short delay)
+ *   { success: false, error }  — sheet could not open (Android, web,
+ *                                 stub mode, or native error). Caller
+ *                                 can fall back to the App Store URL.
+ */
+export async function presentCodeRedemption(): Promise<PurchaseResult> {
+  if (Platform.OS !== "ios") {
+    return {
+      success: false,
+      error: "Code redemption is only available on iOS.",
+    };
+  }
+  if (!isRevenueCatReady()) {
+    return {
+      success: false,
+      stub: true,
+      error:
+        "Code redemption requires the production app from the App Store.",
+    };
+  }
+  try {
+    await _Purchases.presentCodeRedemptionSheet();
+    return { success: true };
+  } catch (e: any) {
+    return {
+      success: false,
+      error: e?.message || "Could not open code redemption.",
+    };
+  }
+}
+
+/**
+ * Build the Apple-hosted code redemption URL as a fallback for when the
+ * native sheet fails (Apple's sheet is known to be flaky in sandbox and
+ * occasionally in production). Opening this URL in Safari lands the
+ * user on Apple's web redemption flow, which is highly reliable.
+ *
+ * Requires EXPO_PUBLIC_APPLE_APP_ID — the 10-digit numeric Apple App ID
+ * from App Store Connect → App Information. Returns null if not set.
+ */
+export function buildAppleRedemptionUrl(code?: string): string | null {
+  const id = (process.env.EXPO_PUBLIC_APPLE_APP_ID || "").trim();
+  if (!id) return null;
+  const codePart = code ? `&code=${encodeURIComponent(code)}` : "";
+  return `https://apps.apple.com/redeem?ctx=offercodes&id=${id}${codePart}`;
+}
+
+/**
  * Extract a small, JSON-safe payload from a RevenueCat customerInfo
  * object that the backend `/api/subscription/sync` endpoint expects.
  * Returns null if there's no `pro` entitlement to report.

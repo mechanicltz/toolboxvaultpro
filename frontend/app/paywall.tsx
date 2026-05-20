@@ -23,6 +23,8 @@ import {
   restorePurchases,
   isStubMode,
   buildSyncPayload,
+  presentCodeRedemption,
+  buildAppleRedemptionUrl,
   type PaywallOffering,
 } from "../src/revenuecat";
 import { notifySubscriptionChanged } from "../src/subscriptionEvents";
@@ -130,6 +132,53 @@ export default function PaywallScreen() {
       }
     } finally {
       setBusyPkg(null);
+    }
+  };
+
+  /**
+   * Open Apple's native code-redemption sheet (iOS only). If the native
+   * sheet fails to open (Apple's sheet is occasionally flaky), offer to
+   * open Apple's web redemption page in Safari as a fallback. Both
+   * paths land in Apple's own UI — no Guideline 3.1.1 risk.
+   */
+  const doRedeemCode = async () => {
+    if (Platform.OS !== "ios") return; // button is iOS-only, defensive
+    const res = await presentCodeRedemption();
+    if (res.success) {
+      // Apple sheet was shown. We can't know from RN whether the user
+      // actually completed the redemption, so refresh subscription state
+      // after a short delay to pick up any new entitlement.
+      setTimeout(async () => {
+        try {
+          await api.post("/subscription/sync", { entitlement_active: false });
+        } catch {
+          // best-effort
+        }
+        await refreshSub();
+        notifySubscriptionChanged();
+      }, 2000);
+      return;
+    }
+    // Native sheet failed — offer the Safari fallback.
+    const url = buildAppleRedemptionUrl();
+    if (url) {
+      Alert.alert(
+        "Couldn't open redemption",
+        (res.error || "") + "\n\nOpen the App Store redemption page instead?",
+        [
+          { text: "Cancel", style: "cancel" },
+          {
+            text: "Open App Store",
+            onPress: () => Linking.openURL(url).catch(() => {}),
+          },
+        ],
+      );
+    } else {
+      Alert.alert(
+        "Couldn't open redemption",
+        res.error ||
+          "Please redeem your code from the App Store: Account → Redeem Gift Card or Code.",
+      );
     }
   };
 
@@ -265,6 +314,22 @@ export default function PaywallScreen() {
               </>
             )}
           </TouchableOpacity>
+
+          {Platform.OS === "ios" && (
+            <TouchableOpacity
+              style={styles.actionBtn}
+              onPress={doRedeemCode}
+              testID="paywall-redeem-apple"
+              accessibilityLabel="Redeem an App Store code"
+            >
+              <Ionicons
+                name="ticket-outline"
+                size={14}
+                color={theme.colors.textPrimary}
+              />
+              <Text style={styles.actionBtnText}>REDEEM CODE</Text>
+            </TouchableOpacity>
+          )}
         </View>
 
         {isPro && (

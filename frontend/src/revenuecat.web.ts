@@ -44,7 +44,7 @@ export async function purchasePackage(_pkg: any): Promise<PurchaseResult> {
     success: false,
     stub: true,
     error:
-      "Purchases aren't available on web. Use the iOS or Android app, or redeem a Promo Code.",
+      "Purchases aren't available on web. Please use the iOS app from the App Store.",
   };
 }
 
@@ -65,5 +65,17 @@ export async function logoutRevenueCat(): Promise<void> {
 }
 
 export function buildSyncPayload(_customerInfo: any): any | null {
+  return null;
+}
+
+export async function presentCodeRedemption(): Promise<PurchaseResult> {
+  return {
+    success: false,
+    stub: true,
+    error: "Code redemption is only available in the iOS app.",
+  };
+}
+
+export function buildAppleRedemptionUrl(_code?: string): string | null {
   return null;
 }
