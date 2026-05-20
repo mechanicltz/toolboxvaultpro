@@ -310,7 +310,7 @@ export default function PaywallScreen() {
             ) : (
               <>
                 <Ionicons name="refresh" size={14} color={theme.colors.textPrimary} />
-                <Text style={styles.actionBtnText}>RESTORE PURCHASES</Text>
+                <Text style={styles.actionBtnText} numberOfLines={1}>RESTORE</Text>
               </>
             )}
           </TouchableOpacity>
@@ -327,7 +327,7 @@ export default function PaywallScreen() {
                 size={14}
                 color={theme.colors.textPrimary}
               />
-              <Text style={styles.actionBtnText}>REDEEM CODE</Text>
+              <Text style={styles.actionBtnText} numberOfLines={1}>REDEEM CODE</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -512,12 +512,13 @@ const styles = themedStyles((c) => ({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 8,
+    gap: 6,
     backgroundColor: c.bgSecondary,
     borderWidth: 1,
     borderColor: c.border,
     borderRadius: 10,
     paddingVertical: 12,
+    paddingHorizontal: 10,
   
     ...(theme.elevation.md as object),
   },
@@ -525,7 +526,8 @@ const styles = themedStyles((c) => ({
     color: c.textPrimary,
     fontWeight: "800",
     fontSize: 10.5,
-    letterSpacing: 1.2,
+    letterSpacing: 1,
+    flexShrink: 1,
   },
   terms: {
     color: c.textMuted,
