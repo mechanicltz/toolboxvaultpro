@@ -34,7 +34,6 @@ export default function LoginScreen() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
-  const [promoCode, setPromoCode] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
@@ -149,15 +148,7 @@ export default function LoginScreen() {
     setBusy(true);
     try {
       if (mode === "register") {
-        const result = await register(email, password, name, promoCode);
-        if (result?.promoRedeemed) {
-          setInfo("✓ Account created and promo code applied! You now have PRO.");
-        } else if (result?.promoError) {
-          setInfo(
-            "Account created. But the promo code couldn't be applied: " +
-              result.promoError,
-          );
-        }
+        await register(email, password, name);
         // Offer biometric enrolment after fresh sign-up too.
         await maybeOfferBiometricEnrol(email, password);
       } else {
@@ -270,22 +261,6 @@ export default function LoginScreen() {
                 </TouchableOpacity>
               </View>
             </View>
-
-            {mode === "register" && (
-              <View style={styles.field}>
-                <Text style={styles.label}>PROMO CODE (OPTIONAL)</Text>
-                <TextInput
-                  value={promoCode}
-                  onChangeText={(t) => setPromoCode(t.toUpperCase())}
-                  placeholder="If you have a code, enter it here"
-                  placeholderTextColor={theme.colors.textMuted}
-                  style={styles.input}
-                  autoCapitalize="characters"
-                  autoCorrect={false}
-                  testID="auth-promo-code"
-                />
-              </View>
-            )}
 
             {err ? (
               <View style={styles.errBox}>

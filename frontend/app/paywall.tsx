@@ -1,6 +1,6 @@
 // Paywall screen — shown when a free user hits the 15-item limit (auto via
 // the 402 interceptor) or when the user opts in from More → Manage Subscription.
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -25,7 +25,6 @@ import {
   buildSyncPayload,
   type PaywallOffering,
 } from "../src/revenuecat";
-import { PromoRedeemModal } from "../src/PromoRedeemModal";
 import { notifySubscriptionChanged } from "../src/subscriptionEvents";
 
 import { themedStyles } from "../src/themeContext";
@@ -43,19 +42,7 @@ export default function PaywallScreen() {
   const [busyPkg, setBusyPkg] = useState<"monthly" | "annual" | "restore" | null>(null);
   const [stub, setStub] = useState(false);
   const [sub, setSub] = useState<any>(null);
-  const [showRedeem, setShowRedeem] = useState(false);
-  // Audit #11: track the post-redeem auto-close timer so it can't fire after
-  // the screen has been manually closed by the user.
-  const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  useEffect(() => {
-    return () => {
-      if (closeTimerRef.current) {
-        clearTimeout(closeTimerRef.current);
-        closeTimerRef.current = null;
-      }
-    };
-  }, []);
 
   const refreshSub = useCallback(async () => {
     try {
@@ -109,7 +96,7 @@ export default function PaywallScreen() {
         Alert.alert(
           "Dev build needed",
           res.error ||
-            "Real purchases require a fresh build. Your UI flow is working — use a Promo Code below to unlock PRO for testing.",
+            "Real purchases require a fresh build. Your UI flow is working.",
         );
       } else if (res.error && res.error !== "Cancelled") {
         Alert.alert("Couldn't complete purchase", res.error);
@@ -198,7 +185,7 @@ export default function PaywallScreen() {
           <View style={styles.stubBanner}>
             <Ionicons name="information-circle" size={16} color={theme.colors.accent} />
             <Text style={styles.stubBannerText}>
-              Subscriptions can only be purchased inside the mobile app. You can use Redeem Promo Code below to unlock PRO features here.
+              Subscriptions can only be purchased inside the mobile app from the App Store.
             </Text>
           </View>
         )}
@@ -274,18 +261,9 @@ export default function PaywallScreen() {
             ) : (
               <>
                 <Ionicons name="refresh" size={14} color={theme.colors.textPrimary} />
-                <Text style={styles.actionBtnText}>RESTORE</Text>
+                <Text style={styles.actionBtnText}>RESTORE PURCHASES</Text>
               </>
             )}
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.actionBtn}
-            onPress={() => setShowRedeem(true)}
-            testID="paywall-redeem"
-          >
-            <Ionicons name="gift" size={14} color={theme.colors.textPrimary} />
-            <Text style={styles.actionBtnText}>REDEEM CODE</Text>
           </TouchableOpacity>
         </View>
 
@@ -330,17 +308,6 @@ export default function PaywallScreen() {
           </TouchableOpacity>
         </View>
       </ScrollView>
-
-      <PromoRedeemModal
-        visible={showRedeem}
-        onClose={() => setShowRedeem(false)}
-        onRedeemed={async () => {
-          await refreshSub();
-          notifySubscriptionChanged();
-          // Allow the success state to be visible briefly, then close paywall.
-          closeTimerRef.current = setTimeout(() => router.back(), 1400);
-        }}
-      />
     </SafeAreaView>
   );
 }

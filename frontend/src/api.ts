@@ -360,40 +360,11 @@ export const api = {
   deleteAccount: (password: string) =>
     request<any>(`/auth/account`, { method: "DELETE", body: JSON.stringify({ password }) }),
 
-  // Subscription / promo
+  // Subscription
   getSubscription: () => request<any>(`/subscription`),
-  redeemPromo: (code: string) =>
-    request<any>(`/promo/redeem`, { method: "POST", body: JSON.stringify({ code }) }),
 
   // Admin (gated by ADMIN_EMAILS server-side)
   adminWhoAmI: () => request<{ is_admin: boolean; email: string }>(`/admin/me`),
-  adminListPromoCodes: () => request<any[]>(`/admin/promo-codes`),
-  adminCreatePromoCode: (data: {
-    code?: string;
-    grant_type: "lifetime" | "months";
-    months?: number;
-    max_redemptions?: number;
-    is_active?: boolean;
-    notes?: string;
-  }) =>
-    request<any>(`/admin/promo-codes`, {
-      method: "POST",
-      body: JSON.stringify(data),
-    }),
-  adminUpdatePromoCode: (id: string, data: Partial<{
-    code: string;
-    grant_type: "lifetime" | "months";
-    months: number;
-    max_redemptions: number;
-    is_active: boolean;
-    notes: string;
-  }>) =>
-    request<any>(`/admin/promo-codes/${id}`, {
-      method: "PATCH",
-      body: JSON.stringify(data),
-    }),
-  adminDeletePromoCode: (id: string) =>
-    request<any>(`/admin/promo-codes/${id}`, { method: "DELETE" }),
 
   // Admin · Database backups (audit #17)
   adminBackupConfig: () =>

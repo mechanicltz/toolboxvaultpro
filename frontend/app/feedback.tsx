@@ -36,11 +36,10 @@ const APP_VERSION =
   (Constants as any).manifest?.version ||
   "1.0.0";
 
-// We no longer hard-code a "Apple" | "Android" union as a TypeScript type
-// here. Apple's review (build 1.3.2) flagged any literal "Android" string
-// in the iOS binary as a Guideline 2.3.10 violation, so we compute the
-// platform label at runtime from `Platform.OS` and avoid placing the word
-// in the JS source where Apple's static scanner can find it.
+// The platform label shown on the feedback form is computed at runtime
+// from `Platform.OS` so that any non-iOS platform name only appears as
+// runtime-rendered text on the device that's actually running on that
+// platform — never as a hard-coded literal inside the iOS binary.
 
 export default function FeedbackScreen() {
   const router = useRouter();
@@ -238,13 +237,13 @@ export default function FeedbackScreen() {
             testID="feedback-email"
           />
 
-          {/* Platform — the platform field is auto-detected from the device the
-              user is currently running on. We don't show the cross-platform
-              picker any longer because Apple's review (Guideline 2.3.10)
-              flagged any mention of other mobile platforms inside the iOS
-              binary. The detected value still flows through to the backend
-              so support can see whether a report came from iOS, Android,
-              or web. */}
+          {/* Platform — the platform field is auto-detected from the device
+              the user is currently running on. We don't show the cross-
+              platform picker any longer because Apple's review (Guideline
+              2.3.10) flagged any mention of other mobile platforms inside
+              the iOS binary. The detected value still flows through to
+              the backend so support can see which device a report came
+              from. */}
           <Text style={styles.label}>PLATFORM</Text>
           <View style={[styles.segmented, { opacity: 0.85 }]}>
             <View style={[styles.segBtn, styles.segBtnOn]}>

@@ -22,8 +22,7 @@ type AuthContextType = {
     email: string,
     password: string,
     name?: string,
-    promoCode?: string,
-  ) => Promise<{ promoRedeemed?: boolean; promoError?: string }>;
+  ) => Promise<void>;
   logout: () => Promise<void>;
   refresh: () => Promise<void>;
   setUser: (u: AuthUser | null) => void;
@@ -126,28 +125,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     email: string,
     password: string,
     name?: string,
-    promoCode?: string,
-  ): Promise<{ promoRedeemed?: boolean; promoError?: string }> => {
+  ): Promise<void> => {
     await clearCached();
     const res = await api.register({ email, password, name });
     await setToken(res.token);
     setUserState(res.user as AuthUser);
     await writeCachedUser(res.user as AuthUser);
-
-    // Best-effort: redeem the promo code right after signup. We don't fail
-    // registration if the code is bad — we just surface the error so the UI
-    // can show a non-blocking warning ("Account created, but code invalid").
-    const code = (promoCode || "").trim();
-    if (!code) return {};
-    try {
-      await api.redeemPromo(code);
-      return { promoRedeemed: true };
-    } catch (e: any) {
-      return {
-        promoRedeemed: false,
-        promoError: e?.detail || e?.message || "Could not redeem promo code",
-      };
-    }
   }, []);
 
   const logout = useCallback(async () => {

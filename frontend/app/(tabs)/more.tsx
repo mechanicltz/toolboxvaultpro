@@ -31,7 +31,6 @@ import { usePrefs, HOME_ROW_LABELS, HomeRowKey } from "../../src/prefs";
 import { api } from "../../src/api";
 import { useAuth } from "../../src/AuthContext";
 import { APP_VERSION_LABEL } from "../../src/version";
-import { PromoRedeemModal } from "../../src/PromoRedeemModal";
 import { themedStyles } from "../../src/themeContext";
 import { BevelCard } from "../../src/components/BevelCard";
 
@@ -93,7 +92,6 @@ export default function MoreScreen() {
   // Subscription + admin gates.
   const [sub, setSub] = useState<any>(null);
   const [isAdmin, setIsAdmin] = useState(false);
-  const [showRedeem, setShowRedeem] = useState(false);
   // Audit #11: track the auto-close timer for the change-password modal so
   // it can't fire setState after this screen unmounts.
   const pwCloseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -225,8 +223,7 @@ export default function MoreScreen() {
   const proLabel = (() => {
     if (sub?.is_lifetime) return "✨ LIFETIME PRO";
     if (isPro) {
-      // Promo grants get the dated form (so the user knows when access ends).
-      if (sub?.promo_code && sub?.expires_at) {
+      if (sub?.expires_at) {
         return `PRO until ${new Date(sub.expires_at).toLocaleDateString()}`;
       }
       return "✨ PRO";
@@ -648,30 +645,12 @@ export default function MoreScreen() {
           title={isPro ? "Manage Subscription" : "Upgrade to PRO"}
           subtitle={
             isPro
-              ? "View / cancel your subscription, or apply codes"
+              ? "View or cancel your subscription"
               : "Unlock unlimited tools and full features"
           }
           testID="more-paywall"
           onPress={() => router.push("/paywall")}
         />
-
-        <Row
-          icon="gift-outline"
-          title="Redeem Promo Code"
-          subtitle={isPro ? "You're PRO. Apply another code anytime." : "Have a code? Unlock PRO here."}
-          testID="more-redeem-promo"
-          onPress={() => setShowRedeem(true)}
-        />
-
-        {isAdmin && (
-          <Row
-            icon="shield-checkmark-outline"
-            title="Admin · Promo Codes"
-            subtitle="Mint, edit, disable or delete promo codes"
-            testID="more-admin-promo-codes"
-            onPress={() => router.push("/admin/promo-codes")}
-          />
-        )}
 
         {isAdmin && (
           <Row
@@ -1072,11 +1051,6 @@ export default function MoreScreen() {
         </Modal>
       )}
 
-      <PromoRedeemModal
-        visible={showRedeem}
-        onClose={() => setShowRedeem(false)}
-        onRedeemed={refreshAccountState}
-      />
     </SafeAreaView>
   );
 }
