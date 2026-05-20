@@ -1546,30 +1546,29 @@ export default function ToolDetail() {
 
           {/* DESCRIPTION — first thing below the photo row (or claim card) */}
           {!!tool.description && (
-            <BevelCard style={newStyles.descBox}>
+            <View style={newStyles.descBox}>
               <Text style={newStyles.descText}>{tool.description}</Text>
-            </BevelCard>
+            </View>
           )}
 
           {/* (CHECKED OUT card was moved to the top of this screen, above
               the description — see block under the photo row.) */}
 
-          {/* LOCATION — wide pill. Tap to reassign this tool to a different
-              existing location (does NOT open the locations management page,
-              which lets users re-parent locations — that was the source of
-              user report #3). */}
-          <BevelCard
+          {/* LOCATION — plain tappable row. Tap to reassign this tool to a
+              different existing location. */}
+          <TouchableOpacity
             testID="location-pill"
             style={newStyles.locationWide}
-            activeOpacity={0.85}
+            activeOpacity={0.6}
             onPress={() => setShowLocationPicker(true)}
           >
-            <Ionicons name="location-outline" size={16} color={theme.colors.accent} />
-            <Text style={newStyles.locationWideText} numberOfLines={1}>
+            <Text style={newStyles.pillRowLabel}>LOCATION: </Text>
+            <Text style={newStyles.pillRowValueText} numberOfLines={1}>
               {tool.location_name || "No location · tap to assign"}
             </Text>
+            <View style={{ flex: 1 }} />
             <Ionicons name="create-outline" size={14} color={theme.colors.textMuted} />
-          </BevelCard>
+          </TouchableOpacity>
 
           {/* PILLBOX DETAIL FIELDS — dealer first, then model numbers, then everything else */}
           <View style={newStyles.fieldGroup}>
@@ -2972,30 +2971,21 @@ function PillRow({
   onPress?: () => void;
   valueColor?: string;
 }) {
+  const Wrapper: any = onPress ? TouchableOpacity : View;
+  const wrapperProps = onPress ? { onPress, activeOpacity: 0.6 } : {};
   return (
-    <BevelCard
-      style={newStyles.pillRow}
-      {...(onPress ? { onPress, activeOpacity: 0.85 } : {})}
-    >
-      <View style={{ flex: 1 }}>
-        <Text style={newStyles.pillRowLabel}>{label}</Text>
-        {!!sub && <Text style={newStyles.pillRowSub}>{sub}</Text>}
-      </View>
-      <View
-        style={[
-          newStyles.pillRowValue,
-          valueColor ? { borderColor: valueColor } : null,
-        ]}
-      >
+    <Wrapper style={newStyles.pillRow} {...wrapperProps}>
+      <View style={{ flex: 1, flexDirection: "row", alignItems: "baseline", flexWrap: "wrap" }}>
+        <Text style={newStyles.pillRowLabel}>{label}: </Text>
         <Text
           style={[
             newStyles.pillRowValueText,
             valueColor ? { color: valueColor } : null,
           ]}
-          numberOfLines={1}
         >
           {value || "—"}
         </Text>
+        {!!sub && <Text style={newStyles.pillRowSub}>  ({sub})</Text>}
       </View>
       {!!onPress && (
         <Ionicons
@@ -3005,7 +2995,7 @@ function PillRow({
           style={{ marginLeft: 4 }}
         />
       )}
-    </BevelCard>
+    </Wrapper>
   );
 }
 
@@ -3804,57 +3794,42 @@ const newStyles = themedStyles((c) => ({
     gap: 6,
   },
 
-  // ---------- PILLBOX ROW (used in PillRow component) ----------
+  // ---------- PLAIN TEXT FIELD ROW (used in PillRow component) ----------
   pillRow: {
-    /* Surface (gradient + bevel borders + drop shadow) comes from
-       <BevelCard>. We only describe the inner flex layout here so the
-       gradient isn't obliterated by a flat bgSecondary fill. */
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 10,
+    paddingHorizontal: 6,
     paddingVertical: 6,
-    gap: 10,
-    minHeight: 28,
-    marginBottom: 6,
+    gap: 6,
+    minHeight: 26,
+    marginBottom: 2,
   },
   pillRowLabel: {
     color: c.textPrimary,
     fontWeight: "800",
-    fontSize: 9.5,
-    letterSpacing: 0.8,
+    fontSize: 14,
+    letterSpacing: 0.3,
   },
   pillRowSub: {
     color: c.textMuted,
-    fontWeight: "600",
-    fontSize: 9,
-    marginTop: 1,
+    fontWeight: "500",
+    fontSize: 12,
   },
   pillRowValue: {
-    backgroundColor: c.bg,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: c.border,
-    maxWidth: "60%",
+    // Kept for backward-compat in case some style spread references it.
+    backgroundColor: "transparent",
   },
   pillRowValueText: {
     color: c.textPrimary,
-    fontWeight: "800",
-    fontSize: 10,
-    letterSpacing: 0.3,
+    fontWeight: "400",
+    fontSize: 14,
+    letterSpacing: 0.2,
   },
 
-  // ---------- DESCRIPTION ----------
+  // ---------- DESCRIPTION (plain text — no pill box) ----------
   descBox: {
-    backgroundColor: c.bgSecondary,
-    borderColor: c.border,
-    borderWidth: 1,
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-  
-    ...(theme.elevation.md as object),
+    paddingHorizontal: 6,
+    paddingVertical: 4,
   },
   descText: {
     color: c.textPrimary,
@@ -3936,27 +3911,21 @@ const newStyles = themedStyles((c) => ({
     gap: 6,
   },
 
-  // ---------- LOCATION (wide pill, NO label) ----------
+  // ---------- LOCATION (plain tappable row) ----------
   locationWide: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
-    backgroundColor: c.bgSecondary,
-    borderColor: c.border,
-    borderWidth: 1,
-    borderRadius: 12,
-    paddingHorizontal: 10,
+    gap: 4,
+    paddingHorizontal: 6,
     paddingVertical: 6,
-    minHeight: 28,
-  
-    ...(theme.elevation.md as object),
+    minHeight: 26,
+    marginBottom: 2,
   },
   locationWideText: {
-    flex: 1,
     color: c.textPrimary,
-    fontWeight: "800",
-    fontSize: 10,
-    letterSpacing: 0.3,
+    fontWeight: "400",
+    fontSize: 14,
+    letterSpacing: 0.2,
   },
 
   // ---------- HISTORY LINK ROWS (navigates to a dedicated page) ----------
