@@ -657,7 +657,7 @@ export default function HomeScreen() {
         </TouchableOpacity>
 
         <Text style={styles.tip}>
-          Pull to refresh · Customize this list under MORE → DISPLAY
+          Pull to refresh · Customize this list under MORE → CUSTOMIZE
         </Text>
       </ScrollView>
 
