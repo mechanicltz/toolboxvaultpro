@@ -291,47 +291,115 @@ export default function HomeScreen() {
         />
       );
     },
-    owed_to_dealers: () => (
-      <View style={styles.owedCluster}>
-        {/* Header: clickable, navigates to dealers list. The dollar total
-            no longer lives here — it's pulled to the bottom of the cluster
-            below for clearer "subtotal" semantics. */}
-        <SummaryRow
-          icon="wallet"
-          label="DEALER ACCOUNTS"
-          value=""
-          onPress={() => router.push("/dealers")}
-          nested
-        />
-        {dealersAll.length === 0 ? (
-          <Text style={styles.emptyInline}>No dealers yet.</Text>
-        ) : (
-          dealersAll.map((d, i) => (
-            <View
-              key={d.id}
-              style={[
-                styles.owedDivider,
-                i === dealersAll.length - 1 && { borderBottomWidth: 0 },
-              ]}
-            >
-              <DealerBalanceRow
-                dealer={d}
-                onAdjust={() => openAdjustForDealer(d)}
-                onOpenDealer={() => router.push(`/dealer/${d.id}`)}
-              />
-            </View>
-          ))
-        )}
-        {/* Subtotal pinned at the bottom of the cluster */}
-        {dealersAll.length > 0 && (
-          <View style={styles.owedTotalRow}>
-            <Text style={styles.owedTotalLabel}>TOTAL</Text>
-            <Text style={styles.owedTotalValue}>${totalOwed.toFixed(2)}</Text>
-          </View>
-        )}
-      </View>
-    ),
+    owed_to_dealers: () => null /* rendered in its own dealer-accounts card below */,
   };
+
+  // Helper that renders a single warranty-card-style row matching the
+  // tool detail screen exactly. Used for all stat rows on the home screen
+  // so the look is consistent across the app.
+  type HomeDetailRow = {
+    label: string;
+    value: string;
+    sub?: string;
+    valueColor?: string;
+    onPress?: () => void;
+  };
+  const renderHomeRow = (r: HomeDetailRow, isLast: boolean, key: string) => {
+    const Wrapper: any = r.onPress ? TouchableOpacity : View;
+    const wrapperProps = r.onPress
+      ? { onPress: r.onPress, activeOpacity: 0.6 }
+      : {};
+    return (
+      <Wrapper
+        key={key}
+        testID={`home-row-${key}`}
+        style={[styles.detailsRow, isLast && styles.detailsRowLast]}
+        {...wrapperProps}
+      >
+        <View style={{ flexShrink: 1 }}>
+          <Text style={styles.detailsLabel}>{r.label}</Text>
+          {!!r.sub && <Text style={styles.detailsRowSub}>{r.sub}</Text>}
+        </View>
+        <View style={styles.detailsValueWrap}>
+          {!!r.value && (
+            <Text
+              style={[styles.detailsValue, r.valueColor ? { color: r.valueColor } : null]}
+              numberOfLines={1}
+            >
+              {r.value}
+            </Text>
+          )}
+          {r.onPress && (
+            <Ionicons
+              name="chevron-forward"
+              size={14}
+              color={theme.colors.textMuted}
+            />
+          )}
+        </View>
+      </Wrapper>
+    );
+  };
+
+  // Build the list of stat rows the user has opted in to, in their preferred
+  // order. The dealer-accounts row lives in its own separate card below.
+  const STAT_ROW_DATA: Record<string, HomeDetailRow | null> = {
+    total_items: {
+      label: "TOTAL ITEMS",
+      value: String(totalItems),
+      onPress: () => router.push("/inventory"),
+    },
+    invested: prefs.show_prices
+      ? {
+          label: "NET WORTH",
+          value: `$${totalInvested.toFixed(2)}`,
+          valueColor: theme.colors.success,
+        }
+      : null,
+    checked_out: {
+      label: "CHECKED OUT",
+      value: String(checkedOut),
+      valueColor: checkedOut > 0 ? theme.colors.danger : undefined,
+      onPress: () => router.push("/inventory?filter=out"),
+    },
+    selling: {
+      label: "SELLING",
+      value: String(forSaleCount),
+      onPress: () => router.push("/for-sale"),
+    },
+    wishlist: {
+      label: "WISH LIST",
+      value: String(wishlistCount),
+      onPress: () => router.push("/wishlist"),
+    },
+    lost: {
+      label: "LOST / STOLEN",
+      value: String(lost),
+      onPress: () => router.push("/inventory?filter=lost"),
+    },
+    maintenance: (() => {
+      const mnTotal = mnt.overdue + mnt.due_soon;
+      return {
+        label: "MAINTENANCE DUE",
+        value: String(mnTotal),
+        sub: mnt.overdue > 0 ? `${mnt.overdue} OVERDUE` : "DUE 30D",
+        valueColor: mnTotal > 0 ? theme.colors.danger : undefined,
+        onPress: () => router.push("/maintenance"),
+      };
+    })(),
+    open_claims: (() => {
+      const oc = claims?.totals?.open || 0;
+      return {
+        label: "OPEN CLAIMS",
+        value: String(oc),
+        valueColor: oc > 0 ? theme.colors.danger : undefined,
+        onPress: () => router.push("/claims"),
+      };
+    })(),
+  };
+  const statRowsInOrder = order
+    .filter((k) => k !== "owed_to_dealers" && visible[k] && STAT_ROW_DATA[k])
+    .map((k) => ({ key: k, row: STAT_ROW_DATA[k]! }));
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
@@ -391,10 +459,100 @@ export default function HomeScreen() {
           </TouchableOpacity>
         )}
 
-        {/* The customizable scrollable list */}
+        {/* STATS card — warranty-card-style box containing all toggled-on
+            non-dealer stat rows in the user's preferred order. */}
+        {statRowsInOrder.length > 0 && (
+          <View style={styles.detailsBox} testID="home-stats-box">
+            {statRowsInOrder.map((sr, i) =>
+              renderHomeRow(sr.row, i === statRowsInOrder.length - 1, sr.key),
+            )}
+          </View>
+        )}
+
+        {/* DEALER ACCOUNTS card — warranty-card-style box with one row per
+            dealer plus a TOTAL footer row. Each dealer row is tappable to
+            navigate to the dealer detail; the "Adjust" button stays as an
+            inline action so quick balance edits don't require a new screen. */}
+        {visible.owed_to_dealers && (
+          <View style={styles.detailsBox} testID="home-dealers-box">
+            <TouchableOpacity
+              style={styles.detailsRow}
+              activeOpacity={0.6}
+              testID="home-dealers-header"
+              onPress={() => router.push("/dealers")}
+            >
+              <Text style={styles.detailsLabel}>DEALER ACCOUNTS</Text>
+              <View style={styles.detailsValueWrap}>
+                <Text style={styles.detailsValue}>${totalOwed.toFixed(2)}</Text>
+                <Ionicons name="chevron-forward" size={14} color={theme.colors.textMuted} />
+              </View>
+            </TouchableOpacity>
+            {dealersAll.length === 0 ? (
+              <View style={[styles.detailsRow, styles.detailsRowLast]}>
+                <Text
+                  style={[
+                    styles.detailsValue,
+                    { color: theme.colors.textMuted, textAlign: "left", flex: 1, fontWeight: "500" },
+                  ]}
+                >
+                  No dealers yet.
+                </Text>
+              </View>
+            ) : (
+              dealersAll.map((d, i) => {
+                const credit = Number(d.credit_balance) || 0;
+                const truck = Number(d.personal_balance) || 0;
+                const dTotal = credit + truck;
+                const isLast = i === dealersAll.length - 1;
+                return (
+                  <View
+                    key={d.id}
+                    style={[styles.detailsRow, isLast && styles.detailsRowLast]}
+                  >
+                    <TouchableOpacity
+                      onPress={() => router.push(`/dealer/${d.id}`)}
+                      activeOpacity={0.6}
+                      style={{ flex: 1, flexShrink: 1 }}
+                      testID={`home-dealer-${d.id}`}
+                    >
+                      <Text style={styles.dealerRowName} numberOfLines={1}>
+                        {d.name}
+                      </Text>
+                    </TouchableOpacity>
+                    <View style={styles.detailsValueWrap}>
+                      <Text
+                        style={[
+                          styles.detailsValue,
+                          dTotal === 0 && { color: theme.colors.textMuted },
+                        ]}
+                      >
+                        ${dTotal.toFixed(2)}
+                      </Text>
+                      <TouchableOpacity
+                        testID={`adjust-${d.id}`}
+                        style={styles.dealerAdjustChip}
+                        onPress={() => openAdjustForDealer(d)}
+                        activeOpacity={0.7}
+                      >
+                        <Text style={styles.dealerAdjustChipText}>ADJUST</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                );
+              })
+            )}
+          </View>
+        )}
+
+        {/* Render any other custom rows the user has set up but that
+            don't fall into the two cards above. Currently nothing falls
+            here — kept as a safety net for future row types. */}
         <View style={styles.list}>
           {order.map((k) =>
-            visible[k] && (k !== "invested" || prefs.show_prices) ? (
+            visible[k] &&
+            k !== "owed_to_dealers" &&
+            !STAT_ROW_DATA[k] &&
+            (k !== "invested" || prefs.show_prices) ? (
               <View key={k}>{ROW_RENDERERS[k]?.()}</View>
             ) : null,
           )}
@@ -649,6 +807,79 @@ const styles = themedStyles((c) => ({
 
   /* Main list — claim-screen style: separate cards w/ rounded corners + small gap */
   list: {
+
+  // ---------- DETAILS BOX (warranty-card style, mirrors tool/dealer detail) ----------
+  detailsBox: {
+    backgroundColor: c.bgSecondary,
+    borderWidth: 1,
+    borderColor: c.border,
+    borderRadius: 6,
+    padding: 12,
+    marginBottom: 12,
+    ...(theme.elevation.md as object),
+  },
+  detailsRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: c.borderSubtle,
+    gap: 8,
+  },
+  detailsRowLast: {
+    borderBottomWidth: 0,
+  },
+  detailsLabel: {
+    color: c.textMuted,
+    fontSize: 7,
+    fontWeight: "800",
+    letterSpacing: 1.5,
+  },
+  detailsRowSub: {
+    color: c.textMuted,
+    fontSize: 7,
+    fontWeight: "600",
+    letterSpacing: 1.2,
+    marginTop: 2,
+  },
+  detailsValueWrap: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    flexShrink: 1,
+    maxWidth: "70%",
+    justifyContent: "flex-end",
+  },
+  detailsValue: {
+    color: c.textPrimary,
+    fontSize: 10,
+    fontWeight: "700",
+    textAlign: "right",
+    flexShrink: 1,
+  },
+  // Dealer rows inside the dealer-accounts card use a slightly larger name
+  // since the dealer name is the row's primary identifier (analogous to the
+  // agent rows on the dealer detail screen).
+  dealerRowName: {
+    color: c.textPrimary,
+    fontSize: 12,
+    fontWeight: "700",
+  },
+  dealerAdjustChip: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderWidth: 1.5,
+    borderColor: c.accent,
+    borderRadius: 6,
+  },
+  dealerAdjustChipText: {
+    color: c.accent,
+    fontSize: 8,
+    fontWeight: "900",
+    letterSpacing: 1,
+  },
+
     gap: 8,
   },
 
