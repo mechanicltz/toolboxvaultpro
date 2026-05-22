@@ -21,6 +21,9 @@ import { api } from "../../src/api";
 import { confirm } from "../../src/confirm";
 import { formatDateUS as fmtDate } from "../../src/dateUtil";
 import { formatPhonesInText } from "../../src/contactLinks";
+import * as MailComposer from "expo-mail-composer";
+import * as Sharing from "expo-sharing";
+import * as FileSystem from "expo-file-system/legacy";
 
 import { themedStyles } from "../../src/themeContext";
 import { BevelCard } from "../../src/components/BevelCard";
@@ -146,7 +149,7 @@ export default function DealerClaimsScreen() {
         if (ok) router.push(`/dealer/${dealer.id}`);
         return;
       }
-      const subject = encodeURIComponent(`Repair / Warranty: ${t.name}`);
+      const subject = `Repair / Warranty: ${t.name}`;
       const greetName = agent?.name || dealer?.name || "there";
       const lines = [
         `Hello ${greetName}, I have a repair/warranty tool.`,
@@ -154,21 +157,94 @@ export default function DealerClaimsScreen() {
         `Model Number: ${t.serial_number || "N/A"}`,
         `Purchase date: ${fmtDate(t.purchase_date) || "N/A"}`,
       ];
-      if (t.repair_info?.broken_photo) {
-        lines.push(`(A photo of the broken item is available.)`);
+      const body = lines.join("\n");
+
+      // Materialize the broken-item photo (stored as base64 data URI on the
+      // tool's repair_info) into a temp file so we can attach it to either
+      // the email (via MailComposer) or the share sheet for SMS (MMS via
+      // Sharing.shareAsync). If there's no photo, we still send the text-
+      // only message via the standard mailto:/sms: scheme as before.
+      let photoUri: string | null = null;
+      const dataUri: string = t.repair_info?.broken_photo || "";
+      if (dataUri.startsWith("data:image/")) {
+        try {
+          const match = dataUri.match(/^data:image\/(\w+);base64,(.+)$/);
+          if (match) {
+            const ext = (match[1] || "jpg").toLowerCase().replace("jpeg", "jpg");
+            const base64 = match[2];
+            const safeName = (t.name || "broken-item")
+              .replace(/[^a-z0-9_-]/gi, "_")
+              .slice(0, 40);
+            const target =
+              (FileSystem.cacheDirectory || "") + `${safeName}.${ext}`;
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            await (FileSystem as any).writeAsStringAsync(target, base64, {
+              encoding: "base64",
+            });
+            photoUri = target;
+          }
+        } catch (e) {
+          console.warn("[claims] failed to materialize broken photo", e);
+        }
       }
-      const body = encodeURIComponent(lines.join("\n"));
-      let url = "";
+
       if (mode === "email") {
-        url = `mailto:${email}?subject=${subject}&body=${body}`;
+        // Prefer the native mail composer because it actually supports
+        // file attachments. mailto: URLs do not.
+        const canCompose = await MailComposer.isAvailableAsync().catch(() => false);
+        if (canCompose) {
+          await MailComposer.composeAsync({
+            recipients: [email],
+            subject,
+            body,
+            isHtml: false,
+            attachments: photoUri ? [photoUri] : undefined,
+          });
+        } else {
+          // Fallback: open mailto: (no attachment possible).
+          const url = `mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+          if (Platform.OS === "web") {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            (globalThis as any).window.location.href = url;
+          } else {
+            await Linking.openURL(url);
+          }
+        }
       } else {
-        url = `sms:${phone}?body=${body}`;
-      }
-      if (Platform.OS === "web") {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (globalThis as any).window.location.href = url;
-      } else {
-        await Linking.openURL(url);
+        // SMS: sms: URL scheme can pre-fill the body but cannot attach a
+        // photo. To send the photo as MMS we open the system share sheet
+        // with the image — user picks Messages and types/keeps the body.
+        if (photoUri && Platform.OS !== "web") {
+          const canShare = await Sharing.isAvailableAsync().catch(() => false);
+          if (canShare) {
+            await Sharing.shareAsync(photoUri, {
+              dialogTitle: subject,
+              mimeType: "image/jpeg",
+              UTI: "public.jpeg",
+            });
+            // Some users may also want the prefilled text — drop into clipboard so
+            // they can paste it into Messages after they select a recipient.
+            try {
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              const Clipboard = await import("expo-clipboard");
+              await Clipboard.setStringAsync(`${subject}\n\n${body}`);
+            } catch {
+              // best-effort
+            }
+          } else {
+            const url = `sms:${phone}?body=${encodeURIComponent(body)}`;
+            await Linking.openURL(url);
+          }
+        } else {
+          // No photo (or web): regular sms: link with body pre-filled.
+          const url = `sms:${phone}?body=${encodeURIComponent(body)}`;
+          if (Platform.OS === "web") {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            (globalThis as any).window.location.href = url;
+          } else {
+            await Linking.openURL(url);
+          }
+        }
       }
       // Auto mark Reported
       const cur = t.repair_info?.repair_status || "Not Reported";

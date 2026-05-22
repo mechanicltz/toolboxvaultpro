@@ -221,8 +221,8 @@ export default function ForSaleScreen() {
             style={[styles.tabBtn, tab === "sold" && styles.tabBtnActiveSold]}
             onPress={() => setTab("sold")}
           >
-            <Ionicons name="checkmark-circle" size={14} color={tab === "sold" ? "#fff" : theme.colors.textSecondary} />
-            <Text style={[styles.tabText, tab === "sold" && { color: "#fff" }]}>SOLD</Text>
+            <Ionicons name="checkmark-circle" size={14} color={tab === "sold" ? theme.colors.accent : theme.colors.textSecondary} />
+            <Text style={[styles.tabText, tab === "sold" && { color: theme.colors.accent }]}>SOLD</Text>
           </BevelCard>
         </View>
 
@@ -412,8 +412,8 @@ const styles = themedStyles((c) => ({
   
     ...(theme.elevation.md as object),
   },
-  tabBtnActive: { backgroundColor: c.accent, borderColor: c.accent },
-  tabBtnActiveSold: { backgroundColor: "#27AE60", borderColor: "#27AE60" },
+  tabBtnActive: { backgroundColor: "transparent", borderColor: c.accent, borderWidth: 2 },
+  tabBtnActiveSold: { backgroundColor: "transparent", borderColor: c.accent, borderWidth: 2 },
   tabText: { color: c.textSecondary, fontWeight: "900", fontSize: 9, letterSpacing: 1.5 },
   tabTextActive: { color: c.accent },
   searchWrap: {
