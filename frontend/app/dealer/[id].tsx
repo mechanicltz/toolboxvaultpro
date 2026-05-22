@@ -54,6 +54,9 @@ export default function DealerDetail() {
   const [pickerLoading, setPickerLoading] = useState(false);
   const [deviceContacts, setDeviceContacts] = useState<PickedContact[]>([]);
   const [pickerFilter, setPickerFilter] = useState("");
+  // Tracks which row of the new consolidated details box is currently
+  // expanded. Values: "accounts" | `agent:<id>` | null.
+  const [expandedRow, setExpandedRow] = useState<string | null>(null);
   const canImportContacts = isDeviceContactsAvailable();
 
   const filteredDeviceContacts = useMemo(() => {
@@ -317,187 +320,221 @@ export default function DealerDetail() {
               <Text style={[styles.contactText, { flex: 1 }]}>{dealer.notes}</Text>
             </View>
           )}
-
-          {/* Nested: Tools Purchased — visually part of Company Details */}
-          <View style={styles.companyDivider} />
-          <View style={styles.toolsHeader}>
-            <Text style={[styles.sectionLabelStrong, { paddingHorizontal: 0, paddingTop: 4 }]}>
-              TOOLS PURCHASED
-            </Text>
-            <View style={styles.totalPill}>
-              <Text style={styles.totalPillValue}>${total.toFixed(2)}</Text>
-            </View>
-          </View>
-          <BevelCard
-            testID="view-dealer-tools-btn"
-            style={[styles.viewToolsBtn, { marginHorizontal: 0 }]}
-            onPress={() =>
-              router.push(`/dealer/${id}/tools?name=${encodeURIComponent(dealer.name)}`)
-            }
-            activeOpacity={0.85}
-          >
-            <View style={styles.viewToolsIcon}>
-              <Ionicons name="construct" size={20} color={theme.colors.accent} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.viewToolsTitle}>
-                {tools.length === 0
-                  ? "No tools assigned yet"
-                  : tools.length === 1
-                  ? "View 1 purchased tool"
-                  : `View ${tools.length} purchased tools`}
-              </Text>
-              <Text style={styles.viewToolsSub}>
-                {tools.length === 0
-                  ? "Assign a dealer to a tool to see it here"
-                  : `Tap to browse the full list  ·  Total $${total.toFixed(2)}`}
-              </Text>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color={theme.colors.textMuted} />
-          </BevelCard>
         </BevelCard>
 
-        {/* Payment Accounts — moved to bottom */}
-        <BalanceSection dealer={dealer} onChange={load} />
-
-        {/* AGENTS — moved below Company Details + Balances so the company-level info reads first */}
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionLabelStrong}>AGENTS ({(dealer.agents || []).length})</Text>
-          <TouchableOpacity
-            testID="add-agent-btn"
-            style={styles.addBtn}
-            onPress={() => {
-              setAgentForm({ name: "", phone: "", email: "", location: "", notes: "" });
-            }}
-          >
-            <Ionicons
-              name="add"
-              size={16}
-              color={theme.colors.accent}
-            />
-            <Text style={styles.addBtnText}>
-              ADD
-            </Text>
-          </TouchableOpacity>
-        </View>
-        {allAgents.length === 0 && (
-          <Text style={styles.empty}>No agents yet. Add one to get started.</Text>
-        )}
-        {allAgents.map((a: any) => {
-          const isCurrent = a.id === dealer.current_agent_id;
-          return (
-            <BevelCard
-              key={a.id}
-              style={[styles.agentCard, isCurrent && styles.agentCardActive]}
+        {/* DETAILS / ACCOUNTS / AGENTS — warranty-card-style consolidated
+            box (matches the tool-detail screen's design). Tools-purchased
+            and accounts rows tap to navigate / expand inline; each agent
+            is its own expandable row that reveals their contact card. */}
+        <View style={styles.detailsBox} testID="dealer-details-box">
+            {/* TOOLS PURCHASED row */}
+            <TouchableOpacity
+              style={styles.detailsRow}
+              activeOpacity={0.6}
+              testID="details-row-tools"
+              onPress={() =>
+                router.push(`/dealer/${id}/tools?name=${encodeURIComponent(dealer.name)}`)
+              }
             >
-              {isCurrent ? (
-                <>
-                  {/* Current agent: badge + location pill on row 1, name drops to row 2 for readability. */}
-                  <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
-                    <View style={styles.currentBadge}>
-                      <Ionicons name="star" size={10} color="#000" />
-                      <Text style={styles.currentBadgeText}>CURRENT</Text>
-                    </View>
-                    {!!a.location && (
-                      <View style={styles.locationPill}>
-                        <Ionicons name="location" size={10} color={theme.colors.accent} />
-                        <Text style={styles.locationPillText} numberOfLines={1}>
-                          {a.location}
-                        </Text>
-                      </View>
-                    )}
-                  </View>
-                  <Text style={[styles.agentName, { marginTop: 6 }]}>{a.name}</Text>
-                </>
-              ) : (
-                <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
-                  <Text style={[styles.agentName, { flex: 1, marginTop: 0 }]}>{a.name}</Text>
-                  {!!a.location && (
-                    <View style={styles.locationPill}>
-                      <Ionicons name="location" size={10} color={theme.colors.accent} />
-                      <Text style={styles.locationPillText} numberOfLines={1}>
-                        {a.location}
+              <Text style={styles.detailsLabel}>TOOLS PURCHASED</Text>
+              <View style={styles.detailsValueWrap}>
+                <Text style={styles.detailsValue} numberOfLines={1}>
+                  ${total.toFixed(2)} · {tools.length} item{tools.length === 1 ? "" : "s"}
+                </Text>
+                <Ionicons
+                  name="chevron-forward"
+                  size={14}
+                  color={theme.colors.textMuted}
+                />
+              </View>
+            </TouchableOpacity>
+
+            {/* ACCOUNTS row — expandable */}
+            {(() => {
+              const credit = Number(dealer?.credit_balance || 0);
+              const personal = Number(dealer?.personal_balance || 0);
+              const sum = credit + personal;
+              const isOpen = expandedRow === "accounts";
+              return (
+                <View>
+                  <TouchableOpacity
+                    style={styles.detailsRow}
+                    activeOpacity={0.6}
+                    testID="details-row-accounts"
+                    onPress={() => setExpandedRow(isOpen ? null : "accounts")}
+                  >
+                    <Text style={styles.detailsLabel}>ACCOUNTS</Text>
+                    <View style={styles.detailsValueWrap}>
+                      <Text style={styles.detailsValue} numberOfLines={1}>
+                        ${sum.toFixed(2)}
                       </Text>
+                      <Ionicons
+                        name={isOpen ? "chevron-down" : "chevron-forward"}
+                        size={14}
+                        color={theme.colors.textMuted}
+                      />
+                    </View>
+                  </TouchableOpacity>
+                  {isOpen && (
+                    <View style={styles.detailsExpanded}>
+                      <BalanceSection dealer={dealer} onChange={load} />
                     </View>
                   )}
                 </View>
-              )}
-              {!!a.phone && (
-                <View style={styles.agentContactRow}>
-                  <TouchableOpacity
-                    testID={`agent-call-${a.id}`}
-                    style={styles.agentContactBtn}
-                    onPress={() => openPhone(a.phone)}
-                    activeOpacity={0.7}
-                  >
-                    <Ionicons name="call" size={13} color={theme.colors.accent} />
-                    <Text style={styles.agentContactText} numberOfLines={1}>{formatPhone(a.phone)}</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    testID={`agent-text-${a.id}`}
-                    style={[styles.agentContactBtn, styles.agentContactBtnSmall]}
-                    onPress={() => openSms(a.phone)}
-                    activeOpacity={0.7}
-                  >
-                    <Ionicons name="chatbubble-ellipses" size={13} color={theme.colors.accent} />
-                    <Text style={styles.agentContactText}>TEXT</Text>
-                  </TouchableOpacity>
-                </View>
-              )}
-              {!!a.email && (
-                <TouchableOpacity
-                  testID={`agent-email-${a.id}`}
-                  style={styles.agentContactBtn}
-                  onPress={() => openEmail(a.email)}
-                  activeOpacity={0.7}
-                >
-                  <Ionicons name="mail" size={13} color={theme.colors.accent} />
-                  <Text style={styles.agentContactText} numberOfLines={1}>{a.email}</Text>
-                </TouchableOpacity>
-              )}
-              {!!a.notes && <Text style={styles.agentMeta}>{a.notes}</Text>}
-              {a.ended_at && !isCurrent && (
-                <Text style={styles.agentMeta}>Ended: {formatDateUS(a.ended_at)}</Text>
-              )}
-              <View style={styles.agentActions}>
-                <TouchableOpacity
-                  testID={`edit-agent-${a.id}`}
-                  style={styles.agentActionBtn}
-                  onPress={() => setAgentForm({
-                    id: a.id,
-                    name: a.name || "",
-                    phone: a.phone || "",
-                    email: a.email || "",
-                    location: a.location || "",
-                    notes: a.notes || "",
-                  })}
-                >
-                  <Ionicons name="create-outline" size={16} color={theme.colors.accent} />
-                  <Text style={styles.agentActionText}>EDIT</Text>
-                </TouchableOpacity>
-                {!isCurrent && (
-                  <TouchableOpacity
-                    testID={`set-current-${a.id}`}
-                    style={styles.agentActionBtn}
-                    onPress={() => setCurrent(a.id)}
-                  >
-                    <Ionicons name="star-outline" size={16} color={theme.colors.accent} />
-                    <Text style={styles.agentActionText}>SET CURRENT</Text>
-                  </TouchableOpacity>
-                )}
-                <TouchableOpacity
-                  testID={`remove-agent-${a.id}`}
-                  style={[styles.agentActionBtn, { borderColor: theme.colors.danger }]}
-                  onPress={() => removeAgent(a.id, a.name)}
-                >
-                  <Ionicons name="trash-outline" size={16} color={theme.colors.danger} />
-                  <Text style={[styles.agentActionText, { color: theme.colors.danger }]}>REMOVE</Text>
-                </TouchableOpacity>
+              );
+            })()}
+
+            {/* AGENTS header — non-interactive divider row */}
+            <View style={styles.detailsHeaderRow}>
+              <Text style={styles.detailsHeaderLabel}>
+                AGENTS ({allAgents.length})
+              </Text>
+              <TouchableOpacity
+                testID="add-agent-btn"
+                style={styles.detailsHeaderAdd}
+                onPress={() => {
+                  setAgentForm({ name: "", phone: "", email: "", location: "", notes: "" });
+                }}
+              >
+                <Ionicons name="add" size={14} color={theme.colors.accent} />
+                <Text style={styles.detailsHeaderAddText}>ADD</Text>
+              </TouchableOpacity>
+            </View>
+
+            {allAgents.length === 0 && (
+              <View style={[styles.detailsRow, styles.detailsRowLast]}>
+                <Text style={[styles.detailsValue, { color: theme.colors.textMuted, textAlign: "left", flex: 1, fontWeight: "500" }]}>
+                  No agents yet — tap ADD to create one.
+                </Text>
               </View>
-            </BevelCard>
-          );
-        })}
-      </ScrollView>
+            )}
+
+            {/* AGENT rows — each is expandable */}
+            {allAgents.map((a: any, idx: number) => {
+              const isCurrent = a.id === dealer.current_agent_id;
+              const isOpen = expandedRow === `agent:${a.id}`;
+              const isLast = idx === allAgents.length - 1;
+              return (
+                <View key={a.id}>
+                  <TouchableOpacity
+                    style={[styles.detailsRow, isLast && !isOpen && styles.detailsRowLast]}
+                    activeOpacity={0.6}
+                    testID={`agent-row-${a.id}`}
+                    onPress={() => setExpandedRow(isOpen ? null : `agent:${a.id}`)}
+                  >
+                    <View
+                      style={{
+                        flexDirection: "row",
+                        alignItems: "center",
+                        gap: 6,
+                        flexShrink: 1,
+                      }}
+                    >
+                      {isCurrent && (
+                        <Ionicons
+                          name="star"
+                          size={14}
+                          color={theme.colors.accent}
+                        />
+                      )}
+                      <Text style={styles.agentRowName} numberOfLines={1}>
+                        {a.name}
+                      </Text>
+                    </View>
+                    <View style={styles.detailsValueWrap}>
+                      {!!a.location && (
+                        <Text style={styles.detailsValue} numberOfLines={1}>
+                          {a.location}
+                        </Text>
+                      )}
+                      <Ionicons
+                        name={isOpen ? "chevron-down" : "chevron-forward"}
+                        size={14}
+                        color={theme.colors.textMuted}
+                      />
+                    </View>
+                  </TouchableOpacity>
+                  {isOpen && (
+                    <View style={[styles.detailsExpanded, isLast && styles.detailsRowLast]}>
+                      {!!a.phone && (
+                        <View style={styles.agentContactRow}>
+                          <TouchableOpacity
+                            testID={`agent-call-${a.id}`}
+                            style={styles.agentContactBtn}
+                            onPress={() => openPhone(a.phone)}
+                            activeOpacity={0.7}
+                          >
+                            <Ionicons name="call" size={13} color={theme.colors.accent} />
+                            <Text style={styles.agentContactText} numberOfLines={1}>{formatPhone(a.phone)}</Text>
+                          </TouchableOpacity>
+                          <TouchableOpacity
+                            testID={`agent-text-${a.id}`}
+                            style={[styles.agentContactBtn, styles.agentContactBtnSmall]}
+                            onPress={() => openSms(a.phone)}
+                            activeOpacity={0.7}
+                          >
+                            <Ionicons name="chatbubble-ellipses" size={13} color={theme.colors.accent} />
+                            <Text style={styles.agentContactText}>TEXT</Text>
+                          </TouchableOpacity>
+                        </View>
+                      )}
+                      {!!a.email && (
+                        <TouchableOpacity
+                          testID={`agent-email-${a.id}`}
+                          style={styles.agentContactBtn}
+                          onPress={() => openEmail(a.email)}
+                          activeOpacity={0.7}
+                        >
+                          <Ionicons name="mail" size={13} color={theme.colors.accent} />
+                          <Text style={styles.agentContactText} numberOfLines={1}>{a.email}</Text>
+                        </TouchableOpacity>
+                      )}
+                      {!!a.notes && <Text style={styles.agentMeta}>{a.notes}</Text>}
+                      {a.ended_at && !isCurrent && (
+                        <Text style={styles.agentMeta}>Ended: {formatDateUS(a.ended_at)}</Text>
+                      )}
+                      <View style={styles.agentActions}>
+                        <TouchableOpacity
+                          testID={`edit-agent-${a.id}`}
+                          style={styles.agentActionBtn}
+                          onPress={() => setAgentForm({
+                            id: a.id,
+                            name: a.name || "",
+                            phone: a.phone || "",
+                            email: a.email || "",
+                            location: a.location || "",
+                            notes: a.notes || "",
+                          })}
+                        >
+                          <Ionicons name="create-outline" size={16} color={theme.colors.accent} />
+                          <Text style={styles.agentActionText}>EDIT</Text>
+                        </TouchableOpacity>
+                        {!isCurrent && (
+                          <TouchableOpacity
+                            testID={`set-current-${a.id}`}
+                            style={styles.agentActionBtn}
+                            onPress={() => setCurrent(a.id)}
+                          >
+                            <Ionicons name="star-outline" size={16} color={theme.colors.accent} />
+                            <Text style={styles.agentActionText}>SET CURRENT</Text>
+                          </TouchableOpacity>
+                        )}
+                        <TouchableOpacity
+                          testID={`remove-agent-${a.id}`}
+                          style={[styles.agentActionBtn, { borderColor: theme.colors.danger }]}
+                          onPress={() => removeAgent(a.id, a.name)}
+                        >
+                          <Ionicons name="trash-outline" size={16} color={theme.colors.danger} />
+                          <Text style={[styles.agentActionText, { color: theme.colors.danger }]}>REMOVE</Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  )}
+                </View>
+              );
+            })}
+          </View>
+        </ScrollView>
 
       {/* Edit dealer modal */}
       <Modal visible={editing} transparent animationType="slide">
@@ -1319,6 +1356,96 @@ const styles = themedStyles((c) => ({
     textAlign: "center",
   },
   // Company Details card (groups contact rows + nested tools-purchased button)
+
+  // ---------- DETAILS BOX (warranty-card style, mirrors tool detail) ----------
+  detailsBox: {
+    backgroundColor: c.bgSecondary,
+    borderWidth: 1,
+    borderColor: c.border,
+    borderRadius: 6,
+    padding: 12,
+    marginTop: 4,
+    marginBottom: 8,
+    ...(theme.elevation.md as object),
+  },
+  detailsRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: c.borderSubtle,
+    gap: 8,
+  },
+  detailsRowLast: {
+    borderBottomWidth: 0,
+  },
+  detailsLabel: {
+    color: c.textMuted,
+    fontSize: 7,
+    fontWeight: "800",
+    letterSpacing: 1.5,
+  },
+  detailsValueWrap: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    flexShrink: 1,
+    maxWidth: "70%",
+    justifyContent: "flex-end",
+  },
+  detailsValue: {
+    color: c.textPrimary,
+    fontSize: 10,
+    fontWeight: "700",
+    textAlign: "right",
+    flexShrink: 1,
+  },
+  detailsExpanded: {
+    paddingTop: 4,
+    paddingBottom: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: c.borderSubtle,
+  },
+  // AGENTS sub-header inside the details box
+  detailsHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingTop: 12,
+    paddingBottom: 6,
+    borderBottomWidth: 1,
+    borderBottomColor: c.borderSubtle,
+  },
+  detailsHeaderLabel: {
+    color: c.textMuted,
+    fontSize: 8,
+    fontWeight: "900",
+    letterSpacing: 1.5,
+  },
+  detailsHeaderAdd: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderWidth: 1.5,
+    borderColor: c.accent,
+    borderRadius: 6,
+  },
+  detailsHeaderAddText: {
+    color: c.accent,
+    fontSize: 9,
+    fontWeight: "900",
+    letterSpacing: 1,
+  },
+  agentRowName: {
+    color: c.textPrimary,
+    fontSize: 12,
+    fontWeight: "700",
+    flexShrink: 1,
+  },
+
   companyCard: {
     marginHorizontal: 16,
     marginTop: 4,
