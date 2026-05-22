@@ -27,6 +27,15 @@ export type Prefs = {
   dealer_notification_hour: number; // 0-23
   dealer_notification_minute: number; // 0-59
   dealer_notify_day_before: boolean;
+  // Home screen decorative logo. Modes:
+  //   "default" — show the bundled wrench/gear default logo
+  //   "custom"  — show the base64 image stored in `home_logo_data`
+  //   "hidden"  — don't render the logo block at all
+  home_logo_mode: "default" | "custom" | "hidden";
+  // Base64 PNG/JPEG data URI of the user's custom logo. Only used when
+  // `home_logo_mode` === "custom". Resized client-side to fit ~512x512 max
+  // before being saved so AsyncStorage doesn't blow up on giant photos.
+  home_logo_data: string | null;
 };
 
 const KEY = "toolbox_prefs_v2";
@@ -69,6 +78,8 @@ const DEFAULTS: Prefs = {
   dealer_notification_hour: 7,
   dealer_notification_minute: 0,
   dealer_notify_day_before: false,
+  home_logo_mode: "default",
+  home_logo_data: null,
 };
 
 export const loadPrefs = async (): Promise<Prefs> => {

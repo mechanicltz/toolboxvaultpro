@@ -8,6 +8,7 @@ import {
   RefreshControl,
   Alert,
   Platform,
+  Image,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -451,6 +452,24 @@ export default function HomeScreen() {
           />
         }
       >
+        {/* HOME LOGO — purely decorative, sits at the very top of the
+            content scroll. User can pick a custom image or hide it
+            altogether from More → Customize → Home Screen Logo. */}
+        {prefs.home_logo_mode !== "hidden" && (
+          <View style={styles.logoWrap}>
+            <Image
+              testID="home-logo"
+              source={
+                prefs.home_logo_mode === "custom" && prefs.home_logo_data
+                  ? { uri: prefs.home_logo_data }
+                  : require("../../assets/images/default-home-logo.png")
+              }
+              style={styles.logoImage}
+              resizeMode="contain"
+            />
+          </View>
+        )}
+
         {/* Next dealer route — kept prominent and highlighted */}
         {nextRouteBanner && (
           <TouchableOpacity
@@ -818,6 +837,20 @@ const styles = themedStyles((c) => ({
     fontWeight: "700",
     letterSpacing: 1.5,
     marginTop: 4,
+  },
+
+  /* Decorative center logo on Home — fixed height so even large user
+     photos render as a contained thumbnail. Width is responsive (fills
+     the content padding) and resizeMode="contain" preserves aspect
+     ratio so square photos AND wide banners both look right. */
+  logoWrap: {
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 16,
+  },
+  logoImage: {
+    width: "60%",
+    height: 140,
   },
 
   /* Highlighted next-route banner */

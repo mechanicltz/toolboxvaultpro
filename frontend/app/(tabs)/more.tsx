@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect, useRef, ReactNode } from "react";
 import {
   View,
   Text,
@@ -14,6 +14,8 @@ import {
   Alert,
   Linking,
 } from "react-native";
+import * as ImagePicker from "expo-image-picker";
+import * as ImageManipulator from "expo-image-manipulator";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -73,6 +75,108 @@ const Row = ({ icon, title, subtitle, onPress, testID, badge, badgeColor }: RowP
     <Ionicons name="chevron-forward" size={18} color={theme.colors.textMuted} />
   </BevelCard>
 );
+
+/* ---------------- Description-card grouping for the More screen ----------------
+   Each named section (System / Import-Export / Organization / Customize /
+   Notifications / Account) gets wrapped in a single bordered card. Rows
+   inside are stacked with thin dividers between them. Mirrors the
+   "Description Card" pattern used on the Home, Tool detail, and Dealer
+   detail screens. */
+type SectionRowProps = {
+  icon: any;
+  title: string;
+  subtitle?: string;
+  onPress?: () => void;
+  testID?: string;
+  isLast?: boolean;
+  rightSlot?: ReactNode;
+  titleColor?: string;
+  iconColor?: string;
+  badge?: number;
+  badgeColor?: string;
+};
+
+const SectionRow = ({
+  icon,
+  title,
+  subtitle,
+  onPress,
+  testID,
+  isLast,
+  rightSlot,
+  titleColor,
+  iconColor,
+  badge,
+  badgeColor,
+}: SectionRowProps) => {
+  const Wrapper: any = onPress ? TouchableOpacity : View;
+  const wrapperProps = onPress ? { onPress, activeOpacity: 0.6 } : {};
+  return (
+    <Wrapper
+      testID={testID}
+      style={[styles.sectionRow, isLast && styles.sectionRowLast]}
+      {...wrapperProps}
+    >
+      <View style={styles.sectionRowIcon}>
+        <Ionicons
+          name={icon}
+          size={18}
+          color={iconColor || theme.colors.accent}
+        />
+      </View>
+      <View style={{ flex: 1, minWidth: 0 }}>
+        <Text
+          style={[styles.sectionRowTitle, titleColor ? { color: titleColor } : null]}
+          numberOfLines={1}
+        >
+          {title}
+        </Text>
+        {subtitle ? (
+          <Text style={styles.sectionRowSub} numberOfLines={2}>
+            {subtitle}
+          </Text>
+        ) : null}
+      </View>
+      {!!badge && badge > 0 && (
+        <View
+          style={[
+            styles.badge,
+            badgeColor ? { backgroundColor: badgeColor } : null,
+          ]}
+        >
+          <Text style={styles.badgeText}>{badge > 99 ? "99+" : String(badge)}</Text>
+        </View>
+      )}
+      {rightSlot
+        ? rightSlot
+        : onPress && (
+            <Ionicons
+              name="chevron-forward"
+              size={16}
+              color={theme.colors.textMuted}
+            />
+          )}
+    </Wrapper>
+  );
+};
+
+const SectionCard = ({
+  title,
+  children,
+  testID,
+}: {
+  title: string;
+  children: ReactNode;
+  testID?: string;
+}) => (
+  <View style={styles.sectionCardWrap}>
+    <Text style={styles.sectionLabel}>{title}</Text>
+    <View style={styles.sectionCard} testID={testID}>
+      {children}
+    </View>
+  </View>
+);
+
 
 export default function MoreScreen() {
   const router = useRouter();
@@ -239,6 +343,108 @@ export default function MoreScreen() {
     return `${h12}:${mm} ${period}`;
   };
 
+  // ---------- Home Screen Logo customization helpers ----------
+  // Resizes the picked image to fit within 512x512 max, JPEG @ 80%, and
+  // stores the resulting base64 data URI in prefs. Keeping the saved blob
+  // small is essential since AsyncStorage is a single-string store — a
+  // multi-MB photo would slow down every prefs read.
+  const saveResizedLogo = useCallback(
+    async (uri: string) => {
+      try {
+        const result = await ImageManipulator.manipulateAsync(
+          uri,
+          [{ resize: { width: 512 } }],
+          {
+            compress: 0.8,
+            format: ImageManipulator.SaveFormat.JPEG,
+            base64: true,
+          },
+        );
+        if (!result.base64) throw new Error("No image data returned");
+        const dataUri = `data:image/jpeg;base64,${result.base64}`;
+        await update({
+          home_logo_mode: "custom",
+          home_logo_data: dataUri,
+        });
+      } catch (e: any) {
+        Alert.alert(
+          "Couldn't set logo",
+          e?.message || "Try a different image.",
+        );
+      }
+    },
+    [update],
+  );
+
+  const pickHomeLogoFromLibrary = useCallback(async () => {
+    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!perm.granted) {
+      Alert.alert(
+        "Permission needed",
+        "Allow Photo Library access in your device settings to pick a logo.",
+      );
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      quality: 1,
+    });
+    if (result.canceled || !result.assets?.[0]?.uri) return;
+    await saveResizedLogo(result.assets[0].uri);
+  }, [saveResizedLogo]);
+
+  const takeHomeLogoPhoto = useCallback(async () => {
+    const perm = await ImagePicker.requestCameraPermissionsAsync();
+    if (!perm.granted) {
+      Alert.alert(
+        "Permission needed",
+        "Allow Camera access in your device settings to take a logo photo.",
+      );
+      return;
+    }
+    const result = await ImagePicker.launchCameraAsync({
+      allowsEditing: true,
+      quality: 1,
+    });
+    if (result.canceled || !result.assets?.[0]?.uri) return;
+    await saveResizedLogo(result.assets[0].uri);
+  }, [saveResizedLogo]);
+
+  // Open the logo-customization action sheet. Choices are: pick from
+  // Library, take a Camera photo, reset to bundled default, or hide
+  // the logo entirely from the home screen.
+  const openHomeLogoMenu = useCallback(() => {
+    Alert.alert(
+      "Home Screen Logo",
+      "Pick a new logo, reset to the default, or hide it.",
+      [
+        { text: "Choose from Library", onPress: pickHomeLogoFromLibrary },
+        { text: "Take Photo", onPress: takeHomeLogoPhoto },
+        {
+          text: "Reset to Default",
+          onPress: () =>
+            update({ home_logo_mode: "default", home_logo_data: null }),
+        },
+        {
+          text: "Hide Logo",
+          style: "destructive",
+          onPress: () => update({ home_logo_mode: "hidden" }),
+        },
+        { text: "Cancel", style: "cancel" },
+      ],
+      { cancelable: true },
+    );
+  }, [pickHomeLogoFromLibrary, takeHomeLogoPhoto, update]);
+
+  // Friendly subtitle for the Home Screen Logo row — tells the user the
+  // current state without having to open the action sheet first.
+  const logoSubtitle = (() => {
+    if (prefs.home_logo_mode === "hidden") return "Logo is hidden on Home";
+    if (prefs.home_logo_mode === "custom") return "Showing your custom logo";
+    return "Showing the default logo";
+  })();
+
   const submitPasswordChange = async () => {
     setPwErr("");
     setPwOk("");
@@ -347,465 +553,385 @@ export default function MoreScreen() {
           onPress={() => router.push("/feedback")}
         />
 
-        <Text style={styles.sectionLabel}>SYSTEM</Text>
-
-        <Row
-          icon="heart"
-          title="Wish List"
-          subtitle="Saved links to tools you want"
-          testID="more-wishlist"
-          onPress={() => router.push("/wishlist")}
-        />
-
-        <Row
-          icon="pricetag"
-          title="Inventory for Sale"
-          subtitle="List items, mark as sold, sale & sold reports"
-          testID="more-for-sale"
-          onPress={() => router.push("/for-sale")}
-        />
-
-        <Row
-          icon="shield-checkmark"
-          title="Warranty Alerts"
-          subtitle="Expiring & expired warranties"
-          testID="more-warranty"
-          onPress={() => router.push("/warranty")}
-        />
-
-        <Row
-          icon="settings"
-          title="Maintenance"
-          subtitle={
-            totalDue > 0
-              ? `${mntDue.overdue} overdue, ${mntDue.due_soon} due soon`
-              : "Calibration & service schedules"
-          }
-          testID="more-maintenance"
-          badge={totalDue}
-          badgeColor={mntDue.overdue > 0 ? theme.colors.danger : theme.colors.accent}
-          onPress={() => router.push("/maintenance")}
-        />
-
-        <Text style={styles.sectionLabel}>IMPORT / EXPORT</Text>
-        <Row
-          icon="document-text"
-          title="Reports"
-          subtitle="PDF / CSV exports & saved presets"
-          testID="more-reports"
-          onPress={() => router.push("/reports")}
-        />
-        <Row
-          icon="swap-horizontal"
-          title="Import / Export Database"
-          subtitle="Bulk-upload tools or back up to a spreadsheet"
-          testID="more-import-export"
-          onPress={() => router.push("/import-export" as any)}
-        />
-
-        <Text style={styles.sectionLabel}>ORGANIZATION</Text>
-        <Row
-          icon="folder"
-          title="Categories"
-          subtitle="Manage tool categories"
-          testID="more-categories"
-          onPress={() => router.push("/manage/categories")}
-        />
-        <Row
-          icon="pricetag"
-          title="Tags"
-          subtitle="Manage tags"
-          testID="more-tags"
-          onPress={() => router.push("/manage/tags")}
-        />
-        <Row
-          icon="location"
-          title="Locations"
-          subtitle="Nested storage hierarchy"
-          testID="more-locations"
-          onPress={() => router.push("/locations")}
-        />
-
-        <Text style={styles.sectionLabel}>DISPLAY</Text>
-
-        {/* Home Screen Rows — collapsed into a pillbox row that opens a
-            modal containing the reorder/visibility list. (Was previously an
-            inline always-expanded card — user feedback Round 4.) */}
-        <Row
-          icon="grid"
-          title="Home Screen Rows"
-          subtitle="Choose which rows show on Home & reorder them"
-          testID="more-home-rows"
-          onPress={() => setHomeRowsModal(true)}
-        />
-
-        <BevelCard style={styles.toggleRow}>
-          <View style={styles.iconBox}>
-            <Ionicons name="cash" size={20} color={theme.colors.accent} />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.rowTitle}>Show prices in lists</Text>
-            <Text style={styles.rowSub}>Hide $ amounts everywhere</Text>
-          </View>
-          <Switch
-            testID="toggle-prices"
-            value={prefs.show_prices}
-            onValueChange={(v) => update({ show_prices: v })}
-            trackColor={{ true: theme.colors.accent, false: theme.colors.border }}
-            thumbColor="#fff"
+        <SectionCard title="SYSTEM" testID="more-section-system">
+          <SectionRow
+            icon="heart"
+            title="Wish List"
+            subtitle="Saved links to tools you want"
+            testID="more-wishlist"
+            onPress={() => router.push("/wishlist")}
           />
-        </BevelCard>
-
-        <BevelCard style={styles.toggleRow}>
-          <View style={styles.iconBox}>
-            <Ionicons name="stats-chart" size={20} color={theme.colors.accent} />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.rowTitle}>Detail summary headers</Text>
-            <Text style={styles.rowSub}>Show counts/breakdowns on lists</Text>
-          </View>
-          <Switch
-            testID="toggle-summary"
-            value={prefs.show_details_summary}
-            onValueChange={(v) => update({ show_details_summary: v })}
-            trackColor={{ true: theme.colors.accent, false: theme.colors.border }}
-            thumbColor="#fff"
+          <SectionRow
+            icon="pricetag"
+            title="Inventory for Sale"
+            subtitle="List items, mark as sold, sale & sold reports"
+            testID="more-for-sale"
+            onPress={() => router.push("/for-sale")}
           />
-        </BevelCard>
-
-        <BevelCard style={styles.toggleRow}>
-          <View style={styles.iconBox}>
-            <Ionicons name="notifications" size={20} color={theme.colors.accent} />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.rowTitle}>Warranty Expiring Alerts</Text>
-            <Text style={styles.rowSub}>Banner on inventory tab</Text>
-          </View>
-          <Switch
-            testID="toggle-warranty-alerts"
-            value={prefs.warranty_alerts}
-            onValueChange={(v) => update({ warranty_alerts: v })}
-            trackColor={{ true: theme.colors.accent, false: theme.colors.border }}
-            thumbColor="#fff"
+          <SectionRow
+            icon="shield-checkmark"
+            title="Warranty Alerts"
+            subtitle="Expiring & expired warranties"
+            testID="more-warranty"
+            onPress={() => router.push("/warranty")}
           />
-        </BevelCard>
-
-        {/* Light / Dark mode toggle has moved to the TOP of the More tab
-            (see beginning of ScrollView). */}
-
-        <Text style={styles.sectionLabel}>NOTIFICATIONS</Text>
-
-        <BevelCard style={styles.toggleRow} testID="notif-toggle-row">
-          <View style={styles.iconBox}>
-            <Ionicons name="notifications" size={20} color={theme.colors.accent} />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.rowTitle}>Dealer route reminders</Text>
-            <Text style={styles.rowSub}>
-              Local notification when a tool dealer is scheduled to visit
-            </Text>
-          </View>
-          <Switch
-            value={prefs.dealer_notifications_enabled}
-            onValueChange={async (v) => {
-              if (v) {
-                const granted = await requestNotificationPermissions();
-                if (!granted) {
-                  Alert.alert(
-                    "Permission needed",
-                    "To remind you about dealer visits, please allow notifications for this app in your device settings.",
-                  );
-                  return;
-                }
-                await update({ dealer_notifications_enabled: true });
-                try {
-                  const dealers = await api.listDealers();
-                  await rescheduleDealerNotifications(dealers, {
-                    enabled: true,
-                    hour: prefs.dealer_notification_hour,
-                    minute: prefs.dealer_notification_minute,
-                    notifyDayBefore: prefs.dealer_notify_day_before,
-                  });
-                } catch {
-                  /* dealers fetch may fail offline; user can re-toggle later */
-                }
-              } else {
-                await update({ dealer_notifications_enabled: false });
-                await cancelDealerNotifications();
-              }
-            }}
-            trackColor={{ true: theme.colors.accent, false: theme.colors.border }}
-            thumbColor="#fff"
+          <SectionRow
+            icon="settings"
+            title="Maintenance"
+            subtitle={
+              totalDue > 0
+                ? `${mntDue.overdue} overdue, ${mntDue.due_soon} due soon`
+                : "Calibration & service schedules"
+            }
+            testID="more-maintenance"
+            badge={totalDue}
+            badgeColor={mntDue.overdue > 0 ? theme.colors.danger : theme.colors.accent}
+            onPress={() => router.push("/maintenance")}
+            isLast
           />
-        </BevelCard>
+        </SectionCard>
 
-        {prefs.dealer_notifications_enabled && (
-          <>
-            <BevelCard
-              style={styles.toggleRow}
-              onPress={() => setTimePickerOpen(true)}
-              testID="notif-time-row"
-            >
-              <View style={styles.iconBox}>
-                <Ionicons name="time" size={20} color={theme.colors.accent} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.rowTitle}>Reminder time</Text>
-                <Text style={styles.rowSub}>
-                  When to send the reminder on dealer-visit days
-                </Text>
-              </View>
-              <Text style={styles.timeValue}>
-                {formatHourMinute(
-                  prefs.dealer_notification_hour,
-                  prefs.dealer_notification_minute,
-                )}
-              </Text>
-            </BevelCard>
+        <SectionCard title="IMPORT / EXPORT" testID="more-section-import-export">
+          <SectionRow
+            icon="document-text"
+            title="Reports"
+            subtitle="PDF / CSV exports & saved presets"
+            testID="more-reports"
+            onPress={() => router.push("/reports")}
+          />
+          <SectionRow
+            icon="swap-horizontal"
+            title="Import / Export Database"
+            subtitle="Bulk-upload tools or back up to a spreadsheet"
+            testID="more-import-export"
+            onPress={() => router.push("/import-export" as any)}
+            isLast
+          />
+        </SectionCard>
 
-            <BevelCard style={styles.toggleRow}>
-              <View style={styles.iconBox}>
-                <Ionicons name="calendar" size={20} color={theme.colors.accent} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.rowTitle}>Also remind day before</Text>
-                <Text style={styles.rowSub}>
-                  Get a heads-up reminder the day before too
-                </Text>
-              </View>
+        <SectionCard title="ORGANIZATION" testID="more-section-organization">
+          <SectionRow
+            icon="folder"
+            title="Categories"
+            subtitle="Manage tool categories"
+            testID="more-categories"
+            onPress={() => router.push("/manage/categories")}
+          />
+          <SectionRow
+            icon="pricetag"
+            title="Tags"
+            subtitle="Manage tags"
+            testID="more-tags"
+            onPress={() => router.push("/manage/tags")}
+          />
+          <SectionRow
+            icon="location"
+            title="Locations"
+            subtitle="Nested storage hierarchy"
+            testID="more-locations"
+            onPress={() => router.push("/locations")}
+            isLast
+          />
+        </SectionCard>
+
+        <SectionCard title="CUSTOMIZE" testID="more-section-customize">
+          <SectionRow
+            icon="image"
+            title="Home Screen Logo"
+            subtitle={logoSubtitle}
+            testID="more-home-logo"
+            onPress={openHomeLogoMenu}
+          />
+          <SectionRow
+            icon="grid"
+            title="Home Screen Rows"
+            subtitle="Choose which rows show on Home & reorder them"
+            testID="more-home-rows"
+            onPress={() => setHomeRowsModal(true)}
+          />
+          <SectionRow
+            icon="cash"
+            title="Show prices in lists"
+            subtitle="Hide $ amounts everywhere"
+            rightSlot={
               <Switch
-                value={prefs.dealer_notify_day_before}
+                testID="toggle-prices"
+                value={prefs.show_prices}
+                onValueChange={(v) => update({ show_prices: v })}
+                trackColor={{ true: theme.colors.accent, false: theme.colors.border }}
+                thumbColor="#fff"
+              />
+            }
+          />
+          <SectionRow
+            icon="stats-chart"
+            title="Detail summary headers"
+            subtitle="Show counts/breakdowns on lists"
+            rightSlot={
+              <Switch
+                testID="toggle-summary"
+                value={prefs.show_details_summary}
+                onValueChange={(v) => update({ show_details_summary: v })}
+                trackColor={{ true: theme.colors.accent, false: theme.colors.border }}
+                thumbColor="#fff"
+              />
+            }
+          />
+          <SectionRow
+            icon="notifications"
+            title="Warranty Expiring Alerts"
+            subtitle="Banner on inventory tab"
+            rightSlot={
+              <Switch
+                testID="toggle-warranty-alerts"
+                value={prefs.warranty_alerts}
+                onValueChange={(v) => update({ warranty_alerts: v })}
+                trackColor={{ true: theme.colors.accent, false: theme.colors.border }}
+                thumbColor="#fff"
+              />
+            }
+            isLast
+          />
+        </SectionCard>
+
+        <SectionCard title="NOTIFICATIONS" testID="more-section-notifications">
+          <SectionRow
+            icon="notifications"
+            title="Dealer route reminders"
+            subtitle="Local notification when a tool dealer is scheduled to visit"
+            testID="notif-toggle-row"
+            isLast={!prefs.dealer_notifications_enabled}
+            rightSlot={
+              <Switch
+                value={prefs.dealer_notifications_enabled}
                 onValueChange={async (v) => {
-                  await update({ dealer_notify_day_before: v });
-                  try {
-                    const dealers = await api.listDealers();
-                    await rescheduleDealerNotifications(dealers, {
-                      enabled: true,
-                      hour: prefs.dealer_notification_hour,
-                      minute: prefs.dealer_notification_minute,
-                      notifyDayBefore: v,
-                    });
-                  } catch {
-                    /* no-op */
+                  if (v) {
+                    const granted = await requestNotificationPermissions();
+                    if (!granted) {
+                      Alert.alert(
+                        "Permission needed",
+                        "To remind you about dealer visits, please allow notifications for this app in your device settings.",
+                      );
+                      return;
+                    }
+                    await update({ dealer_notifications_enabled: true });
+                    try {
+                      const dealers = await api.listDealers();
+                      await rescheduleDealerNotifications(dealers, {
+                        enabled: true,
+                        hour: prefs.dealer_notification_hour,
+                        minute: prefs.dealer_notification_minute,
+                        notifyDayBefore: prefs.dealer_notify_day_before,
+                      });
+                    } catch {
+                      /* dealers fetch may fail offline; user can re-toggle later */
+                    }
+                  } else {
+                    await update({ dealer_notifications_enabled: false });
+                    await cancelDealerNotifications();
                   }
                 }}
                 trackColor={{ true: theme.colors.accent, false: theme.colors.border }}
                 thumbColor="#fff"
               />
-            </BevelCard>
-
-            <BevelCard
-              style={styles.toggleRow}
-              testID="notif-test-row"
-              onPress={async () => {
-                const ok = await sendTestNotification();
-                if (ok) {
-                  Alert.alert(
-                    "Test scheduled",
-                    "A test notification will appear in about 5 seconds. If your phone is on silent or Do Not Disturb is on, you'll see it in Notification Center.",
-                  );
-                } else {
-                  Alert.alert(
-                    "Permission needed",
-                    "Please enable notifications for this app in your device settings.",
-                  );
-                }
-              }}
-            >
-              <View style={styles.iconBox}>
-                <Ionicons name="paper-plane" size={20} color={theme.colors.accent} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.rowTitle}>Send a test notification</Text>
-                <Text style={styles.rowSub}>
-                  Fires in 5 seconds — confirms permissions are working
-                </Text>
-              </View>
-              <Ionicons
-                name="chevron-forward"
-                size={16}
-                color={theme.colors.textMuted}
-              />
-            </BevelCard>
-          </>
-        )}
-
-        <Text style={styles.sectionLabel}>ACCOUNT</Text>
-
-        <Row
-          icon="person-circle"
-          title="Personal Information"
-          subtitle="Name, address, phone, insurance — used in reports"
-          testID="more-personal-info"
-          onPress={() => router.push("/personal-info")}
-        />
-
-        <Row
-          icon="star-outline"
-          title={isPro ? "Manage Subscription" : "Upgrade to PRO"}
-          subtitle={
-            isPro
-              ? "View or cancel your subscription"
-              : "Unlock unlimited tools and full features"
-          }
-          testID="more-paywall"
-          onPress={() => router.push("/paywall")}
-        />
-
-        {isAdmin && (
-          <Row
-            icon="cloud-download-outline"
-            title="Admin · Database Backups"
-            subtitle="Monthly auto-backups · manual triggers · downloads"
-            testID="more-admin-backups"
-            onPress={() => router.push("/admin/backups")}
+            }
           />
-        )}
-
-        <Row
-          icon="key"
-          title="Change Password"
-          subtitle="Update your account password"
-          testID="more-change-password"
-          onPress={() => {
-            setPwNew("");
-            setPwConfirm("");
-            setPwErr("");
-            setPwOk("");
-            setPwOpen(true);
-          }}
-        />
-
-        {/* Biometric (Face ID / Touch ID / Fingerprint) sign-in toggle —
-            only shown on native builds when the device has hardware +
-            an enrolled biometric. Disabling wipes the saved credentials
-            from the OS Keychain / Keystore. */}
-        {bioStatus && bioStatus.hasHardware ? (
-          <BevelCard style={styles.toggleRow} testID="more-biometric-toggle">
-            <View style={styles.iconBox}>
-              <Ionicons
-                name={
-                  bioStatus.label.toLowerCase().includes("face")
-                    ? "scan"
-                    : bioStatus.label.toLowerCase().includes("touch") ||
-                      bioStatus.label.toLowerCase().includes("finger")
-                    ? "finger-print"
-                    : "lock-closed"
+          {prefs.dealer_notifications_enabled && (
+            <>
+              <SectionRow
+                icon="time"
+                title="Reminder time"
+                subtitle="When to send the reminder on dealer-visit days"
+                testID="notif-time-row"
+                onPress={() => setTimePickerOpen(true)}
+                rightSlot={
+                  <Text style={styles.timeValue}>
+                    {formatHourMinute(
+                      prefs.dealer_notification_hour,
+                      prefs.dealer_notification_minute,
+                    )}
+                  </Text>
                 }
-                size={20}
-                color={theme.colors.accent}
               />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.rowTitle}>{bioStatus.label} Sign-In</Text>
-              <Text style={styles.rowSub}>
-                {!bioStatus.isEnrolled
+              <SectionRow
+                icon="calendar"
+                title="Also remind day before"
+                subtitle="Get a heads-up reminder the day before too"
+                rightSlot={
+                  <Switch
+                    value={prefs.dealer_notify_day_before}
+                    onValueChange={async (v) => {
+                      await update({ dealer_notify_day_before: v });
+                      try {
+                        const dealers = await api.listDealers();
+                        await rescheduleDealerNotifications(dealers, {
+                          enabled: true,
+                          hour: prefs.dealer_notification_hour,
+                          minute: prefs.dealer_notification_minute,
+                          notifyDayBefore: v,
+                        });
+                      } catch {
+                        /* no-op */
+                      }
+                    }}
+                    trackColor={{ true: theme.colors.accent, false: theme.colors.border }}
+                    thumbColor="#fff"
+                  />
+                }
+              />
+              <SectionRow
+                icon="paper-plane"
+                title="Send a test notification"
+                subtitle="Fires in 5 seconds — confirms permissions are working"
+                testID="notif-test-row"
+                isLast
+                onPress={async () => {
+                  const ok = await sendTestNotification();
+                  if (ok) {
+                    Alert.alert(
+                      "Test scheduled",
+                      "A test notification will appear in about 5 seconds. If your phone is on silent or Do Not Disturb is on, you'll see it in Notification Center.",
+                    );
+                  } else {
+                    Alert.alert(
+                      "Permission needed",
+                      "Please enable notifications for this app in your device settings.",
+                    );
+                  }
+                }}
+              />
+            </>
+          )}
+        </SectionCard>
+
+        <SectionCard title="ACCOUNT" testID="more-section-account">
+          <SectionRow
+            icon="person-circle"
+            title="Personal Information"
+            subtitle="Name, address, phone, insurance — used in reports"
+            testID="more-personal-info"
+            onPress={() => router.push("/personal-info")}
+          />
+          <SectionRow
+            icon="star-outline"
+            title={isPro ? "Manage Subscription" : "Upgrade to PRO"}
+            subtitle={
+              isPro
+                ? "View or cancel your subscription"
+                : "Unlock unlimited tools and full features"
+            }
+            testID="more-paywall"
+            onPress={() => router.push("/paywall")}
+          />
+          {isAdmin && (
+            <SectionRow
+              icon="cloud-download-outline"
+              title="Admin · Database Backups"
+              subtitle="Monthly auto-backups · manual triggers · downloads"
+              testID="more-admin-backups"
+              onPress={() => router.push("/admin/backups")}
+            />
+          )}
+          <SectionRow
+            icon="key"
+            title="Change Password"
+            subtitle="Update your account password"
+            testID="more-change-password"
+            onPress={() => {
+              setPwNew("");
+              setPwConfirm("");
+              setPwErr("");
+              setPwOk("");
+              setPwOpen(true);
+            }}
+          />
+          {bioStatus && bioStatus.hasHardware ? (
+            <SectionRow
+              icon={
+                bioStatus.label.toLowerCase().includes("face")
+                  ? "scan"
+                  : bioStatus.label.toLowerCase().includes("touch") ||
+                    bioStatus.label.toLowerCase().includes("finger")
+                  ? "finger-print"
+                  : "lock-closed"
+              }
+              title={`${bioStatus.label} Sign-In`}
+              subtitle={
+                !bioStatus.isEnrolled
                   ? `Set up ${bioStatus.label} in your device settings first`
                   : bioStatus.enabled
                   ? `Auto-unlock the app with ${bioStatus.label}`
-                  : `Skip the password — sign in with ${bioStatus.label}`}
-              </Text>
-            </View>
-            <Switch
-              testID="toggle-biometric"
-              value={bioStatus.enabled}
-              disabled={!bioStatus.isEnrolled}
-              onValueChange={handleToggleBiometric}
-              trackColor={{ true: theme.colors.accent, false: theme.colors.border }}
-              thumbColor="#fff"
+                  : `Skip the password — sign in with ${bioStatus.label}`
+              }
+              testID="more-biometric-toggle"
+              rightSlot={
+                <Switch
+                  testID="toggle-biometric"
+                  value={bioStatus.enabled}
+                  disabled={!bioStatus.isEnrolled}
+                  onValueChange={handleToggleBiometric}
+                  trackColor={{ true: theme.colors.accent, false: theme.colors.border }}
+                  thumbColor="#fff"
+                />
+              }
             />
-          </BevelCard>
-        ) : null}
-
-        <BevelCard
-          style={styles.row}
-          onPress={() =>
-            Linking.openURL(
-              "https://mechanicltz.github.io/toolboxvault-legal/terms.html",
-            )
-          }
-          activeOpacity={0.7}
-          testID="more-terms"
-        >
-          <View style={styles.iconBox}>
-            <Ionicons name="document-text" size={20} color={theme.colors.accent} />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.rowTitle}>Terms of Use</Text>
-            <Text style={styles.rowSub}>EULA · subscription terms</Text>
-          </View>
-          <Ionicons name="open-outline" size={18} color={theme.colors.textMuted} />
-        </BevelCard>
-
-        <BevelCard
-          style={styles.row}
-          onPress={() =>
-            Linking.openURL(
-              "https://mechanicltz.github.io/toolboxvault-legal/privacy.html",
-            )
-          }
-          activeOpacity={0.7}
-          testID="more-privacy"
-        >
-          <View style={styles.iconBox}>
-            <Ionicons name="lock-closed" size={20} color={theme.colors.accent} />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.rowTitle}>Privacy Policy</Text>
-            <Text style={styles.rowSub}>How we handle your data</Text>
-          </View>
-          <Ionicons name="open-outline" size={18} color={theme.colors.textMuted} />
-        </BevelCard>
-
-        <BevelCard
-          style={styles.row}
-          onPress={() => logout()}
-          activeOpacity={0.7}
-          testID="more-logout"
-        >
-          <View style={styles.iconBox}>
-            <Ionicons name="log-out" size={20} color={theme.colors.danger} />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={[styles.rowTitle, { color: theme.colors.danger }]}>Sign Out</Text>
-            <Text style={styles.rowSub}>{user?.email || ""}</Text>
-          </View>
-          <Ionicons name="chevron-forward" size={18} color={theme.colors.textMuted} />
-        </BevelCard>
-
-        <BevelCard
-          style={styles.row}
-          activeOpacity={0.7}
-          testID="more-delete-account"
-          onPress={() => {
-            Alert.alert(
-              "Delete Account",
-              "Are you sure you want to delete your account?",
-              [
-                { text: "No", style: "cancel" },
-                {
-                  text: "Yes",
-                  style: "destructive",
-                  onPress: () => router.push("/delete-account" as any),
-                },
-              ],
-              { cancelable: true },
-            );
-          }}
-        >
-          <View style={styles.iconBox}>
-            <Ionicons name="skull" size={20} color={theme.colors.danger} />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={[styles.rowTitle, { color: theme.colors.danger }]}>
-              Delete Account
-            </Text>
-            <Text style={styles.rowSub}>
-              Permanently destroy your account and all data
-            </Text>
-          </View>
-          <Ionicons name="chevron-forward" size={18} color={theme.colors.textMuted} />
-        </BevelCard>
+          ) : null}
+          <SectionRow
+            icon="document-text"
+            title="Terms of Use"
+            subtitle="EULA · subscription terms"
+            testID="more-terms"
+            onPress={() =>
+              Linking.openURL(
+                "https://mechanicltz.github.io/toolboxvault-legal/terms.html",
+              )
+            }
+          />
+          <SectionRow
+            icon="lock-closed"
+            title="Privacy Policy"
+            subtitle="How we handle your data"
+            testID="more-privacy"
+            onPress={() =>
+              Linking.openURL(
+                "https://mechanicltz.github.io/toolboxvault-legal/privacy.html",
+              )
+            }
+          />
+          <SectionRow
+            icon="log-out"
+            iconColor={theme.colors.danger}
+            titleColor={theme.colors.danger}
+            title="Sign Out"
+            subtitle={user?.email || ""}
+            testID="more-logout"
+            onPress={() => logout()}
+          />
+          <SectionRow
+            icon="skull"
+            iconColor={theme.colors.danger}
+            titleColor={theme.colors.danger}
+            title="Delete Account"
+            subtitle="Permanently destroy your account and all data"
+            testID="more-delete-account"
+            isLast
+            onPress={() => {
+              Alert.alert(
+                "Delete Account",
+                "Are you sure you want to delete your account?",
+                [
+                  { text: "No", style: "cancel" },
+                  {
+                    text: "Yes",
+                    style: "destructive",
+                    onPress: () => router.push("/delete-account" as any),
+                  },
+                ],
+                { cancelable: true },
+              );
+            }}
+          />
+        </SectionCard>
       </ScrollView>
 
       {/* Home Screen Rows modal — pick which rows show on Home and reorder them */}
@@ -1228,6 +1354,59 @@ const styles = themedStyles((c) => ({
     paddingHorizontal: 20,
     paddingTop: 20,
     paddingBottom: 8,
+  },
+
+  /* ---------- Description-card grouping wrappers for each MORE section ---------- */
+  // Outer wrapper provides horizontal margin so the card edges align with
+  // existing screens. Inside it sits the section label + a single bordered
+  // box. (Each section now reads as ONE consolidated card instead of N
+  // separate floating row-cards — see "Description Cards" pattern used on
+  // Home/Tool/Dealer screens.)
+  sectionCardWrap: {
+    marginHorizontal: 16,
+    marginTop: 12,
+  },
+  sectionCard: {
+    backgroundColor: c.bgSecondary,
+    borderWidth: 1,
+    borderColor: c.border,
+    borderRadius: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    ...(theme.elevation.md as object),
+  },
+  // Each row inside a section card. Thin bottom divider between siblings
+  // (removed for the last row via `sectionRowLast`).
+  sectionRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 12,
+    gap: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: c.borderSubtle,
+  },
+  sectionRowLast: {
+    borderBottomWidth: 0,
+  },
+  sectionRowIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: c.surface,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: c.border,
+  },
+  sectionRowTitle: {
+    color: c.textPrimary,
+    fontSize: 12,
+    fontWeight: "700",
+  },
+  sectionRowSub: {
+    color: c.textSecondary,
+    fontSize: 9,
+    marginTop: 2,
   },
   row: {
     flexDirection: "row",
