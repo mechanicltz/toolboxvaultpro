@@ -949,8 +949,10 @@ const styles = themedStyles((c) => ({
   nestedHeaderRow: {
     borderBottomColor: c.border,
   },
-  // The TOTAL footer inside the dealer sub-card — accent colored value, bigger
-  // font, top divider to set it apart from the per-dealer rows above it.
+  // The TOTAL footer inside the dealer sub-card — label uses the same
+  // typography as every other row label in the Description Card; only the
+  // value is accent-colored so the grand total still reads as a "total"
+  // without breaking the visual rhythm of the rest of the card.
   nestedTotalRow: {
     borderTopWidth: 1,
     borderTopColor: c.border,
@@ -958,15 +960,15 @@ const styles = themedStyles((c) => ({
     marginTop: 2,
   },
   nestedTotalLabel: {
-    color: c.textPrimary,
-    fontSize: 11,
-    fontWeight: "900",
+    color: c.textMuted,
+    fontSize: 9,
+    fontWeight: "800",
     letterSpacing: 1.5,
   },
   nestedTotalValue: {
     color: c.accent,
-    fontSize: 14,
-    fontWeight: "900",
+    fontSize: 12,
+    fontWeight: "700",
   },
 
   row: {
