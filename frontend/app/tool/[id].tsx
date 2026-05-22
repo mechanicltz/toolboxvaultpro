@@ -67,10 +67,10 @@ export default function ToolDetail() {
   const [photoIdx, setPhotoIdx] = useState(0);
   const [isImageViewerVisible, setIsImageViewerVisible] = useState(false);
   // Which pillbox in the Attachments section is currently expanded.
-  // Default to "gallery" so photos are visible at a glance.
+  // All rows start collapsed — user taps to expand any one.
   const [attachOpen, setAttachOpen] = useState<
     "gallery" | "documents" | "receipts" | "maintenance" | "warranty" | null
-  >("gallery");
+  >(null);
   // Tap the QUANTITY pillbox in the photo row to open the stepper.
   const [showQtyModal, setShowQtyModal] = useState(false);
 
