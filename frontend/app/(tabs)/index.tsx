@@ -489,28 +489,34 @@ export default function HomeScreen() {
                 // last row of the card).
                 return renderHomeRow(item.row, isLastItem, item.key);
               }
-              // DEALER ACCOUNTS block — header row + N dealer sub-rows.
+              // DEALER ACCOUNTS block — header row + N dealer sub-rows +
+              // TOTAL footer, all nested inside a sub-card within the main
+              // Description Card so the dealer cluster is visually distinct
+              // from the surrounding stat rows.
               return (
-                <View key="owed_to_dealers">
+                <View
+                  key="owed_to_dealers"
+                  style={[
+                    styles.nestedCard,
+                    // Only the divider between the dealer block and the next
+                    // outer row should remain visible — the nested card's
+                    // own border supplies the bottom edge already.
+                    isLastItem && { marginBottom: 0 },
+                  ]}
+                >
                   <TouchableOpacity
-                    style={styles.detailsRow}
+                    style={[styles.detailsRow, styles.nestedHeaderRow]}
                     activeOpacity={0.6}
                     testID="home-dealers-header"
                     onPress={() => router.push("/dealers")}
                   >
                     <Text style={styles.detailsLabel}>DEALER ACCOUNTS</Text>
                     <View style={styles.detailsValueWrap}>
-                      <Text style={styles.detailsValue}>${totalOwed.toFixed(2)}</Text>
                       <Ionicons name="chevron-forward" size={14} color={theme.colors.textMuted} />
                     </View>
                   </TouchableOpacity>
                   {dealersAll.length === 0 ? (
-                    <View
-                      style={[
-                        styles.detailsRow,
-                        isLastItem && styles.detailsRowLast,
-                      ]}
-                    >
+                    <View style={[styles.detailsRow, styles.detailsRowLast]}>
                       <Text
                         style={[
                           styles.detailsValue,
@@ -526,53 +532,63 @@ export default function HomeScreen() {
                       </Text>
                     </View>
                   ) : (
-                    dealersAll.map((d, i) => {
-                      const credit = Number(d.credit_balance) || 0;
-                      const truck = Number(d.personal_balance) || 0;
-                      const dTotal = credit + truck;
-                      const isLastDealer = i === dealersAll.length - 1;
-                      // Only drop the bottom border when this dealer is the
-                      // very last visible row in the WHOLE card.
-                      const dropBorder = isLastDealer && isLastItem;
-                      return (
-                        <View
-                          key={d.id}
+                    <>
+                      {dealersAll.map((d, i) => {
+                        const credit = Number(d.credit_balance) || 0;
+                        const truck = Number(d.personal_balance) || 0;
+                        const dTotal = credit + truck;
+                        void i;
+                        return (
+                          <View key={d.id} style={styles.detailsRow}>
+                            <TouchableOpacity
+                              onPress={() => router.push(`/dealer/${d.id}`)}
+                              activeOpacity={0.6}
+                              style={{ flex: 1, minWidth: 0, marginRight: 8 }}
+                              testID={`home-dealer-${d.id}`}
+                            >
+                              <Text style={styles.dealerRowName} numberOfLines={1}>
+                                {d.name}
+                              </Text>
+                            </TouchableOpacity>
+                            <View style={styles.detailsValueWrap}>
+                              <Text
+                                style={[
+                                  styles.detailsValue,
+                                  dTotal === 0 && { color: theme.colors.textMuted },
+                                ]}
+                              >
+                                ${dTotal.toFixed(2)}
+                              </Text>
+                              <TouchableOpacity
+                                testID={`adjust-${d.id}`}
+                                style={styles.dealerAdjustChip}
+                                onPress={() => openAdjustForDealer(d)}
+                                activeOpacity={0.7}
+                              >
+                                <Text style={styles.dealerAdjustChipText}>ADJUST</Text>
+                              </TouchableOpacity>
+                            </View>
+                          </View>
+                        );
+                      })}
+                      {/* TOTAL footer — sum of every dealer balance shown above.
+                          Always rendered when there's at least one dealer so the
+                          user can see the grand total without scrolling back up. */}
+                      <View
+                        style={[styles.detailsRow, styles.detailsRowLast, styles.nestedTotalRow]}
+                        testID="home-dealers-total"
+                      >
+                        <Text style={styles.nestedTotalLabel}>TOTAL</Text>
+                        <Text
                           style={[
-                            styles.detailsRow,
-                            dropBorder && styles.detailsRowLast,
+                            styles.nestedTotalValue,
+                            totalOwed === 0 && { color: theme.colors.textMuted },
                           ]}
                         >
-                          <TouchableOpacity
-                            onPress={() => router.push(`/dealer/${d.id}`)}
-                            activeOpacity={0.6}
-                            style={{ flex: 1, minWidth: 0, marginRight: 8 }}
-                            testID={`home-dealer-${d.id}`}
-                          >
-                            <Text style={styles.dealerRowName} numberOfLines={1}>
-                              {d.name}
-                            </Text>
-                          </TouchableOpacity>
-                          <View style={styles.detailsValueWrap}>
-                            <Text
-                              style={[
-                                styles.detailsValue,
-                                dTotal === 0 && { color: theme.colors.textMuted },
-                              ]}
-                            >
-                              ${dTotal.toFixed(2)}
-                            </Text>
-                            <TouchableOpacity
-                              testID={`adjust-${d.id}`}
-                              style={styles.dealerAdjustChip}
-                              onPress={() => openAdjustForDealer(d)}
-                              activeOpacity={0.7}
-                            >
-                              <Text style={styles.dealerAdjustChipText}>ADJUST</Text>
-                            </TouchableOpacity>
-                          </View>
-                        </View>
-                      );
-                    })
+                          ${totalOwed.toFixed(2)}
+                        </Text>
+                      </View>
+                    </>
                   )}
                 </View>
               );
@@ -915,6 +931,42 @@ const styles = themedStyles((c) => ({
     fontSize: 8,
     fontWeight: "900",
     letterSpacing: 1,
+  },
+
+  // ---------- NESTED SUB-CARD (used for DEALER ACCOUNTS inside the main
+  // Description Card so the dealer cluster reads as a card-within-a-card). ----------
+  nestedCard: {
+    backgroundColor: c.bg,
+    borderWidth: 1,
+    borderColor: c.borderSubtle,
+    borderRadius: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    marginVertical: 6,
+  },
+  // The header row inside the nested card gets an emphasized bottom border so
+  // it visually separates from the dealer list directly below it.
+  nestedHeaderRow: {
+    borderBottomColor: c.border,
+  },
+  // The TOTAL footer inside the dealer sub-card — accent colored value, bigger
+  // font, top divider to set it apart from the per-dealer rows above it.
+  nestedTotalRow: {
+    borderTopWidth: 1,
+    borderTopColor: c.border,
+    paddingTop: 10,
+    marginTop: 2,
+  },
+  nestedTotalLabel: {
+    color: c.textPrimary,
+    fontSize: 11,
+    fontWeight: "900",
+    letterSpacing: 1.5,
+  },
+  nestedTotalValue: {
+    color: c.accent,
+    fontSize: 14,
+    fontWeight: "900",
   },
 
   row: {
