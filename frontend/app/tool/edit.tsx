@@ -1909,9 +1909,9 @@ const styles = themedStyles((c) => ({
   helper: { color: c.textMuted, fontStyle: "italic", fontSize: 10 },
   chipWrap: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   chip: { paddingHorizontal: 14, paddingVertical: 8, borderWidth: 1, borderColor: c.border, borderRadius: 4 },
-  chipActive: { backgroundColor: c.accent, borderColor: c.accent },
+  chipActive: { backgroundColor: "transparent", borderColor: c.accent, borderWidth: 2 },
   chipText: { color: c.textSecondary, fontSize: 9, fontWeight: "700", letterSpacing: 0.5 },
-  chipTextActive: { color: "#000" },
+  chipTextActive: { color: c.accent },
   locRow: {
     flexDirection: "row",
     alignItems: "center",

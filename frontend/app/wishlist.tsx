@@ -904,9 +904,9 @@ const styles = themedStyles((c) => ({
   
     ...(theme.elevation.md as object),
   },
-  tabBtnActive: { backgroundColor: c.accent, borderColor: c.accent },
+  tabBtnActive: { backgroundColor: "transparent", borderColor: c.accent, borderWidth: 2 },
   tabText: { color: c.textSecondary, fontSize: 9, fontWeight: "800", letterSpacing: 1.5 },
-  tabTextActive: { color: "#000" },
+  tabTextActive: { color: c.accent },
   empty: { alignItems: "center", marginTop: 60, paddingHorizontal: 40 },
   emptyTitle: { color: c.textPrimary, fontSize: 12, fontWeight: "900", letterSpacing: 2, marginTop: 16 },
   emptyText: { color: c.textSecondary, fontSize: 10, textAlign: "center", marginTop: 8 },
@@ -1100,9 +1100,9 @@ const styles = themedStyles((c) => ({
     borderWidth: 1, borderColor: c.border,
     borderRadius: theme.radii.sm,
   },
-  dealerChipActive: { backgroundColor: c.accent, borderColor: c.accent },
+  dealerChipActive: { backgroundColor: "transparent", borderColor: c.accent, borderWidth: 2 },
   dealerChipText: { color: c.textSecondary, fontSize: 7, fontWeight: "800", letterSpacing: 1 },
-  dealerChipTextActive: { color: "#000" },
+  dealerChipTextActive: { color: c.accent },
   btn: {
     flex: 1, height: 48, alignItems: "center", justifyContent: "center",
     backgroundColor: c.accent, borderRadius: theme.radii.md,

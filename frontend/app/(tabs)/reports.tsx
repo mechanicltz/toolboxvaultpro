@@ -1366,7 +1366,7 @@ const styles = themedStyles((c) => ({
     borderRadius: 4,
     alignItems: "center",
   },
-  segmentedBtnOn: { backgroundColor: c.accent },
+  segmentedBtnOn: { backgroundColor: "transparent", borderWidth: 2, borderColor: c.accent },
   segmentedText: { color: c.textPrimary, fontSize: 9, fontWeight: "700" },
   chipWrap: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 8 },
   chip: {
@@ -1379,7 +1379,7 @@ const styles = themedStyles((c) => ({
   
     ...(theme.elevation.md as object),
   },
-  chipOn: { backgroundColor: c.accent, borderColor: c.accent },
+  chipOn: { backgroundColor: "transparent", borderColor: c.accent, borderWidth: 2 },
   chipText: { color: c.textPrimary, fontSize: 8, fontWeight: "700" },
   // ---- fields ----
   fieldRow: {
@@ -1582,7 +1582,7 @@ const styles = themedStyles((c) => ({
   
     ...(theme.elevation.md as object),
   },
-  formatCardOn: { backgroundColor: c.accent, borderColor: c.accent },
+  formatCardOn: { backgroundColor: "transparent", borderColor: c.accent, borderWidth: 2 },
   formatTitle: {
     color: c.textPrimary,
     fontSize: 12,

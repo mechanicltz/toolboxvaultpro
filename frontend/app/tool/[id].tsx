@@ -3658,9 +3658,9 @@ const styles = themedStyles((c) => ({
     overflow: "hidden",
   },
   segBtn: { flex: 1, paddingVertical: 12, alignItems: "center" },
-  segBtnActive: { backgroundColor: c.accent },
+  segBtnActive: { backgroundColor: "transparent", borderWidth: 2, borderColor: c.accent, borderRadius: 4 },
   segText: { color: c.textSecondary, fontWeight: "800", fontSize: 9, letterSpacing: 1 },
-  segTextActive: { color: "#000" },
+  segTextActive: { color: c.accent },
   borrowerPick: {
     flexDirection: "row",
     justifyContent: "space-between",

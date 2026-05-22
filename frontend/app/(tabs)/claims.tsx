@@ -501,14 +501,14 @@ const styles = themedStyles((c) => ({
     borderColor: c.border,
     borderRadius: theme.radii.pill,
   },
-  modeChipOn: { backgroundColor: c.accent, borderColor: c.accent },
+  modeChipOn: { backgroundColor: "transparent", borderColor: c.accent, borderWidth: 2 },
   modeText: {
     color: c.textSecondary,
     fontWeight: "800",
     fontSize: 8,
     letterSpacing: 1.2,
   },
-  modeTextOn: { color: "#000" },
+  modeTextOn: { color: c.accent },
   searchBox: {
     marginHorizontal: 16,
     marginBottom: 6,
