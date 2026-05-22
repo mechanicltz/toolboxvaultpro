@@ -1567,7 +1567,8 @@ export default function ToolDetail() {
 
             type Row =
               | { kind: "value"; label: string; value: string; onPress?: () => void }
-              | { kind: "models"; label: string; values: string[] };
+              | { kind: "models"; label: string; values: string[] }
+              | { kind: "expandable"; key: "gallery" | "documents" | "receipts" | "maintenance" | "warranty"; label: string; value: string };
 
             const rows: Row[] = [];
             rows.push({
@@ -1609,6 +1610,55 @@ export default function ToolDetail() {
               });
             }
 
+            // ---- ATTACHMENTS (expandable rows) ----
+            rows.push({
+              kind: "expandable",
+              key: "gallery",
+              label: "GALLERY",
+              value: `${photos.length} photo${photos.length === 1 ? "" : "s"}`,
+            });
+            rows.push({
+              kind: "expandable",
+              key: "documents",
+              label: "DOCUMENTS",
+              value: `${Array.isArray(tool.documents) ? tool.documents.length : 0} document${(Array.isArray(tool.documents) ? tool.documents.length : 0) === 1 ? "" : "s"}`,
+            });
+            rows.push({
+              kind: "expandable",
+              key: "receipts",
+              label: "RECEIPTS",
+              value: `${Array.isArray(tool.receipts) ? tool.receipts.length : 0} receipt${(Array.isArray(tool.receipts) ? tool.receipts.length : 0) === 1 ? "" : "s"}`,
+            });
+            // ---- SERVICES (expandable rows) ----
+            rows.push({
+              kind: "expandable",
+              key: "maintenance",
+              label: "MAINTENANCE",
+              value: `${maintenanceCount} record${maintenanceCount === 1 ? "" : "s"}`,
+            });
+            rows.push({
+              kind: "expandable",
+              key: "warranty",
+              label: "WARRANTY",
+              value: `${warrantyCount} record${warrantyCount === 1 ? "" : "s"}`,
+            });
+            // ---- HISTORY (tappable rows that navigate) ----
+            const checkoutCount = Array.isArray(tool.checkout_history)
+              ? tool.checkout_history.length
+              : 0;
+            rows.push({
+              kind: "value",
+              label: "CHECKOUT HISTORY",
+              value: `${checkoutCount} entr${checkoutCount === 1 ? "y" : "ies"}`,
+              onPress: () => router.push(`/checkout-history/${tool.id}`),
+            });
+            rows.push({
+              kind: "value",
+              label: "CLAIMS HISTORY",
+              value: "View",
+              onPress: () => router.push(`/claims-history/${tool.id}`),
+            });
+
             return (
               <View style={newStyles.detailsBox} testID="details-box">
                 {rows.map((r, i) => {
@@ -1641,6 +1691,94 @@ export default function ToolDetail() {
                       </View>
                     );
                   }
+                  if (r.kind === "expandable") {
+                    const isOpen = attachOpen === r.key;
+                    return (
+                      <View
+                        key={`e-${r.key}`}
+                        style={[
+                          isLast && !isOpen && newStyles.detailsRowLast,
+                        ]}
+                      >
+                        <TouchableOpacity
+                          style={[newStyles.detailsRow, !isOpen && isLast && newStyles.detailsRowLast]}
+                          activeOpacity={0.6}
+                          onPress={() => setAttachOpen(isOpen ? null : r.key)}
+                          testID={`details-row-${r.key}`}
+                        >
+                          <Text style={newStyles.detailsLabel}>{r.label}</Text>
+                          <View style={newStyles.detailsValueWrap}>
+                            <Text style={newStyles.detailsValue} numberOfLines={1}>
+                              {r.value}
+                            </Text>
+                            <Ionicons
+                              name={isOpen ? "chevron-down" : "chevron-forward"}
+                              size={14}
+                              color={theme.colors.textMuted}
+                            />
+                          </View>
+                        </TouchableOpacity>
+                        {isOpen && (
+                          <View style={[newStyles.detailsExpanded, isLast && newStyles.detailsRowLast]}>
+                            {r.key === "gallery" && (
+                              photos.length === 0 ? (
+                                <TouchableOpacity
+                                  style={newStyles.galleryEmpty}
+                                  onPress={promptAddPhoto}
+                                  testID="gallery-add-first"
+                                >
+                                  <Ionicons name="camera" size={20} color={theme.colors.accent} />
+                                  <Text style={newStyles.galleryEmptyText}>ADD PHOTO</Text>
+                                </TouchableOpacity>
+                              ) : (
+                                <ScrollView
+                                  horizontal
+                                  showsHorizontalScrollIndicator={false}
+                                  contentContainerStyle={newStyles.galleryRow}
+                                >
+                                  {photos.map((p: string, j: number) => (
+                                    <TouchableOpacity
+                                      key={j}
+                                      testID={`gallery-thumb-${j}`}
+                                      onPress={() => {
+                                        setPhotoIdx(j);
+                                        setIsImageViewerVisible(true);
+                                      }}
+                                      activeOpacity={0.85}
+                                    >
+                                      <Image source={{ uri: p }} style={newStyles.galleryThumb} />
+                                    </TouchableOpacity>
+                                  ))}
+                                  <TouchableOpacity
+                                    testID="gallery-add-more"
+                                    style={newStyles.galleryAddTile}
+                                    onPress={promptAddPhoto}
+                                  >
+                                    <Ionicons name="add" size={22} color={theme.colors.accent} />
+                                  </TouchableOpacity>
+                                </ScrollView>
+                              )
+                            )}
+                            {r.key === "documents" && (
+                              <DocumentsSection tool={tool} onChange={load} />
+                            )}
+                            {r.key === "receipts" && (
+                              <ReceiptsSection
+                                receipts={tool.receipts}
+                                onAdd={promptAddReceipt}
+                              />
+                            )}
+                            {r.key === "maintenance" && (
+                              <MaintenanceSection tool={tool} onChange={load} />
+                            )}
+                            {r.key === "warranty" && (
+                              <WarrantySection tool={tool} />
+                            )}
+                          </View>
+                        )}
+                      </View>
+                    );
+                  }
                   const RowWrapper: any = r.onPress ? TouchableOpacity : View;
                   const wrapperProps = r.onPress
                     ? { onPress: r.onPress, activeOpacity: 0.6 }
@@ -1649,7 +1787,7 @@ export default function ToolDetail() {
                     <RowWrapper
                       key={`r-${i}`}
                       style={[newStyles.detailsRow, isLast && newStyles.detailsRowLast]}
-                      testID={`details-row-${r.label.toLowerCase()}`}
+                      testID={`details-row-${r.label.toLowerCase().replace(/\s+/g, "-")}`}
                       {...wrapperProps}
                     >
                       <Text style={newStyles.detailsLabel}>{r.label}</Text>
@@ -1749,149 +1887,10 @@ export default function ToolDetail() {
             </View>
           )}
 
-          {/* ===== ATTACHMENTS — Gallery / Documents / Receipts ===== */}
-          <View style={{ marginTop: 16 }}>
-            <Text style={newStyles.sectionTitle}>ATTACHMENTS</Text>
-
-            {/* GALLERY pillbox */}
-            <AttachmentPill
-              icon="images-outline"
-              label="GALLERY"
-              count={photos.length}
-              open={attachOpen === "gallery"}
-              onToggle={() =>
-                setAttachOpen(attachOpen === "gallery" ? null : "gallery")
-              }
-            >
-              {photos.length === 0 ? (
-                <TouchableOpacity
-                  style={newStyles.galleryEmpty}
-                  onPress={promptAddPhoto}
-                  testID="gallery-add-first"
-                >
-                  <Ionicons name="camera" size={20} color={theme.colors.accent} />
-                  <Text style={newStyles.galleryEmptyText}>ADD PHOTO</Text>
-                </TouchableOpacity>
-              ) : (
-                <ScrollView
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={newStyles.galleryRow}
-                >
-                  {photos.map((p: string, i: number) => (
-                    <TouchableOpacity
-                      key={i}
-                      testID={`gallery-thumb-${i}`}
-                      onPress={() => {
-                        setPhotoIdx(i);
-                        setIsImageViewerVisible(true);
-                      }}
-                      activeOpacity={0.85}
-                    >
-                      <Image source={{ uri: p }} style={newStyles.galleryThumb} />
-                    </TouchableOpacity>
-                  ))}
-                  <TouchableOpacity
-                    testID="gallery-add-more"
-                    style={newStyles.galleryAddTile}
-                    onPress={promptAddPhoto}
-                  >
-                    <Ionicons name="add" size={22} color={theme.colors.accent} />
-                  </TouchableOpacity>
-                </ScrollView>
-              )}
-            </AttachmentPill>
-
-            {/* DOCUMENTS pillbox */}
-            <AttachmentPill
-              icon="document-attach-outline"
-              label="DOCUMENTS"
-              count={Array.isArray(tool.documents) ? tool.documents.length : 0}
-              open={attachOpen === "documents"}
-              onToggle={() =>
-                setAttachOpen(attachOpen === "documents" ? null : "documents")
-              }
-            >
-              <DocumentsSection tool={tool} onChange={load} />
-            </AttachmentPill>
-
-            {/* RECEIPTS pillbox */}
-            <AttachmentPill
-              icon="receipt-outline"
-              label="RECEIPTS"
-              count={Array.isArray(tool.receipts) ? tool.receipts.length : 0}
-              open={attachOpen === "receipts"}
-              onToggle={() =>
-                setAttachOpen(attachOpen === "receipts" ? null : "receipts")
-              }
-            >
-              <ReceiptsSection
-                receipts={tool.receipts}
-                onAdd={promptAddReceipt}
-              />
-            </AttachmentPill>
-          </View>
-
-          {/* ===== SERVICE — Maintenance & Warranty ===== */}
-          <View style={{ marginTop: 16 }}>
-            <Text style={newStyles.sectionTitle}>SERVICE</Text>
-
-            <AttachmentPill
-              icon="construct-outline"
-              label="MAINTENANCE"
-              count={maintenanceCount}
-              open={attachOpen === "maintenance"}
-              onToggle={() =>
-                setAttachOpen(attachOpen === "maintenance" ? null : "maintenance")
-              }
-            >
-              <MaintenanceSection tool={tool} onChange={load} />
-            </AttachmentPill>
-
-            <AttachmentPill
-              icon="shield-checkmark-outline"
-              label="WARRANTY"
-              count={warrantyCount}
-              open={attachOpen === "warranty"}
-              onToggle={() =>
-                setAttachOpen(attachOpen === "warranty" ? null : "warranty")
-              }
-            >
-              <WarrantySection tool={tool} />
-            </AttachmentPill>
-          </View>
-
-          {/* ===== HISTORY — Checkout history + Claims history (each opens its own page) ===== */}
-          <View style={{ marginTop: 16 }}>
-            <Text style={newStyles.sectionTitle}>HISTORY</Text>
-
-            <BevelCard
-              testID="open-checkout-history"
-              style={newStyles.historyLink}
-              activeOpacity={0.85}
-              onPress={() => router.push(`/checkout-history/${tool.id}`)}
-            >
-              <Ionicons name="time-outline" size={16} color={theme.colors.accent} />
-              <Text style={newStyles.historyLinkLabel}>CHECKOUT HISTORY</Text>
-              <View style={newStyles.historyCount}>
-                <Text style={newStyles.historyCountText}>
-                  {Array.isArray(tool.checkout_history) ? tool.checkout_history.length : 0}
-                </Text>
-              </View>
-              <Ionicons name="chevron-forward" size={16} color={theme.colors.textMuted} />
-            </BevelCard>
-
-            <BevelCard
-              testID="open-claims-history"
-              style={newStyles.historyLink}
-              activeOpacity={0.85}
-              onPress={() => router.push(`/claims-history/${tool.id}`)}
-            >
-              <Ionicons name="shield-outline" size={16} color={theme.colors.accent} />
-              <Text style={newStyles.historyLinkLabel}>CLAIMS HISTORY</Text>
-              <Ionicons name="chevron-forward" size={16} color={theme.colors.textMuted} />
-            </BevelCard>
-          </View>
+          {/* ATTACHMENTS / SERVICE / HISTORY were moved into the DetailsBox
+              card above (gallery, documents, receipts, maintenance, warranty
+              now collapse/expand inline; checkout & claims history tap to
+              navigate). */}
 
           {/* REPORT LOST OR STOLEN */}
           <View style={{ marginTop: 16 }}>
@@ -3960,6 +3959,12 @@ const newStyles = themedStyles((c) => ({
     fontWeight: "700",
     textAlign: "right",
     flexShrink: 1,
+  },
+  detailsExpanded: {
+    paddingTop: 4,
+    paddingBottom: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: c.borderSubtle,
   },
 
   // ---------- CHECKED OUT CARD (sits in the same slot as the claim card —
