@@ -316,9 +316,9 @@ export default function HomeScreen() {
         style={[styles.detailsRow, isLast && styles.detailsRowLast]}
         {...wrapperProps}
       >
-        <View style={{ flexShrink: 1 }}>
-          <Text style={styles.detailsLabel}>{r.label}</Text>
-          {!!r.sub && <Text style={styles.detailsRowSub}>{r.sub}</Text>}
+        <View style={{ flex: 1, minWidth: 0, marginRight: 8 }}>
+          <Text style={styles.detailsLabel} numberOfLines={1}>{r.label}</Text>
+          {!!r.sub && <Text style={styles.detailsRowSub} numberOfLines={1}>{r.sub}</Text>}
         </View>
         <View style={styles.detailsValueWrap}>
           {!!r.value && (
@@ -512,7 +512,7 @@ export default function HomeScreen() {
                     <TouchableOpacity
                       onPress={() => router.push(`/dealer/${d.id}`)}
                       activeOpacity={0.6}
-                      style={{ flex: 1, flexShrink: 1 }}
+                      style={{ flex: 1, minWidth: 0, marginRight: 8 }}
                       testID={`home-dealer-${d.id}`}
                     >
                       <Text style={styles.dealerRowName} numberOfLines={1}>
@@ -847,8 +847,7 @@ const styles = themedStyles((c) => ({
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    flexShrink: 1,
-    maxWidth: "70%",
+    flexShrink: 0,
     justifyContent: "flex-end",
   },
   detailsValue: {
