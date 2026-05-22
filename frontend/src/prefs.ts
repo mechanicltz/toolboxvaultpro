@@ -28,9 +28,11 @@ export type Prefs = {
   dealer_notification_minute: number; // 0-59
   dealer_notify_day_before: boolean;
   // Home screen decorative logo. Modes:
-  //   "default" — show the bundled wrench/gear default logo
   //   "custom"  — show the base64 image stored in `home_logo_data`
-  //   "hidden"  — don't render the logo block at all
+  //   "hidden"  — don't render the logo block at all (initial state)
+  //   "default" — legacy mode kept only for backwards-compat with prefs
+  //               saved before we removed the bundled default. Rendered
+  //               the same as "hidden".
   home_logo_mode: "default" | "custom" | "hidden";
   // Base64 PNG/JPEG data URI of the user's custom logo. Only used when
   // `home_logo_mode` === "custom". Resized client-side to fit ~512x512 max
@@ -78,7 +80,7 @@ const DEFAULTS: Prefs = {
   dealer_notification_hour: 7,
   dealer_notification_minute: 0,
   dealer_notify_day_before: false,
-  home_logo_mode: "default",
+  home_logo_mode: "hidden",
   home_logo_data: null,
 };
 

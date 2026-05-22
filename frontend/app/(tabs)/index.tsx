@@ -453,17 +453,15 @@ export default function HomeScreen() {
         }
       >
         {/* HOME LOGO — purely decorative, sits at the very top of the
-            content scroll. User can pick a custom image or hide it
-            altogether from More → Customize → Home Screen Logo. */}
-        {prefs.home_logo_mode !== "hidden" && (
+            content scroll. Hidden by default; only renders when the user
+            has picked their own image from More → Customize → Home
+            Screen Logo. The legacy "default" mode renders as hidden too
+            (the bundled-default image was removed by user request). */}
+        {prefs.home_logo_mode === "custom" && prefs.home_logo_data && (
           <View style={styles.logoWrap}>
             <Image
               testID="home-logo"
-              source={
-                prefs.home_logo_mode === "custom" && prefs.home_logo_data
-                  ? { uri: prefs.home_logo_data }
-                  : require("../../assets/images/icon.png")
-              }
+              source={{ uri: prefs.home_logo_data }}
               style={styles.logoImage}
               resizeMode="contain"
             />

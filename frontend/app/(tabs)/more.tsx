@@ -412,24 +412,20 @@ export default function MoreScreen() {
   }, [saveResizedLogo]);
 
   // Open the logo-customization action sheet. Choices are: pick from
-  // Library, take a Camera photo, reset to bundled default, or hide
-  // the logo entirely from the home screen.
+  // Library, take a Camera photo, or remove the logo entirely. (No
+  // "Reset to Default" since there is no bundled default image.)
   const openHomeLogoMenu = useCallback(() => {
     Alert.alert(
       "Home Screen Logo",
-      "Pick a new logo, reset to the default, or hide it.",
+      "Pick an image to display at the top of the Home tab.",
       [
         { text: "Choose from Library", onPress: pickHomeLogoFromLibrary },
         { text: "Take Photo", onPress: takeHomeLogoPhoto },
         {
-          text: "Reset to Default",
-          onPress: () =>
-            update({ home_logo_mode: "default", home_logo_data: null }),
-        },
-        {
-          text: "Hide Logo",
+          text: "Remove",
           style: "destructive",
-          onPress: () => update({ home_logo_mode: "hidden" }),
+          onPress: () =>
+            update({ home_logo_mode: "hidden", home_logo_data: null }),
         },
         { text: "Cancel", style: "cancel" },
       ],
@@ -440,9 +436,10 @@ export default function MoreScreen() {
   // Friendly subtitle for the Home Screen Logo row — tells the user the
   // current state without having to open the action sheet first.
   const logoSubtitle = (() => {
-    if (prefs.home_logo_mode === "hidden") return "Logo is hidden on Home";
-    if (prefs.home_logo_mode === "custom") return "Showing your custom logo";
-    return "Showing the default logo";
+    if (prefs.home_logo_mode === "custom" && prefs.home_logo_data) {
+      return "Showing your custom logo";
+    }
+    return "No logo set — tap to add one";
   })();
 
   const submitPasswordChange = async () => {
