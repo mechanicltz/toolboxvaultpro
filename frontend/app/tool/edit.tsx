@@ -1295,10 +1295,11 @@ export default function ToolEdit() {
                       style={[
                         styles.warrChip,
                         on && styles.warrChipOn,
-                        opt.t !== "months" && {
-                          borderColor: theme.colors.accent,
-                          borderWidth: on ? 0 : 1.5,
-                        },
+                        opt.t !== "months" &&
+                          !on && {
+                            borderColor: theme.colors.accent,
+                            borderWidth: 1.5,
+                          },
                       ]}
                       onPress={() => {
                         const next: any = {
@@ -2056,8 +2057,9 @@ const styles = themedStyles((c) => ({
     ...(theme.elevation.md as object),
   },
   warrChipOn: {
-    backgroundColor: c.accent,
+    backgroundColor: "transparent",
     borderColor: c.accent,
+    borderWidth: 2,
   },
   warrChipText: {
     color: c.textSecondary,
@@ -2066,7 +2068,7 @@ const styles = themedStyles((c) => ({
     letterSpacing: 1,
   },
   warrChipTextOn: {
-    color: "#000",
+    color: c.accent,
     fontWeight: "900",
   },
   warrInfo: {

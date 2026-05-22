@@ -2978,6 +2978,148 @@ async def _claim_orphan_data(user_id: str):
     )
 
 
+# --------------------------------------------------------------------------
+# Default-content seeding for newly registered users
+# --------------------------------------------------------------------------
+# When a new user signs up, we seed their account with a small set of
+# helpful defaults so they're not staring at an empty app on first launch:
+#   • 5 well-known tool dealers, pre-populated with the publicly available
+#     warranty / customer-service / tech-support contact channels
+#   • A handful of tags + categories common to tool inventories
+#
+# The seed is fully idempotent — if the user already has a same-named
+# record we skip rather than duplicate. This lets us safely re-run the
+# seed against existing accounts (e.g. for the original owner) without
+# creating doubles.
+
+DEFAULT_DEALERS_SEED: List[Dict[str, Any]] = [
+    {
+        "name": "Snap-on Tools",
+        "phone": "1-877-762-7664",
+        "website": "www.snapon.com",
+        "address": "Snap-on Incorporated, 2801 80th Street, Kenosha, WI 53143",
+        "warranty_contact": "1-877-762-7664 · ncccsupport@snapon.com",
+        "customer_support_contact": "1-877-762-7664",
+        "tech_support_contact": "1-800-225-5786",
+        "notes": "",
+    },
+    {
+        "name": "Matco Tools",
+        "phone": "866-289-8665",
+        "website": "www.matcotools.com",
+        "address": "Matco Tools Corporation, 4403 Allen Rd, Stow, OH 44224",
+        "warranty_contact": "866-289-8665 (contact local distributor first)",
+        "customer_support_contact": "866-289-8665 (Mon-Fri 8:00 AM - 6:30 PM EST)",
+        "tech_support_contact": "866-289-8665",
+        "notes": "",
+    },
+    {
+        "name": "Mac Tools",
+        "phone": "1-800-622-8665",
+        "website": "www.mactools.com",
+        "address": "Mac Tools, 5195 Blazer Parkway, Dublin, OH 43017",
+        "warranty_contact": "1-800-MAC-TOOLS (622-8665)",
+        "customer_support_contact": "1-800-MAC-TOOLS (622-8665)",
+        "tech_support_contact": "1-800-MAC-TOOLS (622-8665) — select technical / product support option",
+        "notes": "",
+    },
+    {
+        "name": "Cornwell Tools",
+        "phone": "1-800-321-8356",
+        "website": "www.cornwelltools.com",
+        "address": "Cornwell Quality Tools, 667 Seville Road, Wadsworth, OH 44281",
+        "warranty_contact": "custserv@cornwelltools.com · 1-800-321-8356",
+        "customer_support_contact": "1-800-321-8356 · 330-336-3506",
+        "tech_support_contact": "1-800-321-8356",
+        "notes": "",
+    },
+    {
+        "name": "Harbor Freight",
+        "phone": "1-800-444-3353",
+        "website": "www.harborfreight.com",
+        "address": "Harbor Freight Tools, 26677 Agoura Road, Calabasas, CA 91302",
+        "warranty_contact": "1-888-838-3421 (many items have a lifetime in-store replacement warranty)",
+        "customer_support_contact": "1-800-444-3353",
+        "tech_support_contact": "1-888-838-3421 (gas-powered equipment / specialty)",
+        "notes": "",
+    },
+]
+
+DEFAULT_TAGS_SEED: List[str] = ["Hand tools", "Power tools", "Pneumatic tools"]
+
+DEFAULT_CATEGORIES_SEED: List[str] = [
+    "Timing",
+    "Specialty Service",
+    "Hand Tools",
+    "Power Tools",
+    "Pneumatic Tools",
+]
+
+
+async def seed_default_content_for_user(user_id: str) -> Dict[str, int]:
+    """Insert the default dealers, tags and categories for *user_id*.
+
+    Idempotent — same-named records (case-insensitive for tags / categories,
+    exact match for dealer names) are skipped. Returns a small counters
+    dict for logging.
+    """
+    counters = {"dealers": 0, "tags": 0, "categories": 0}
+
+    # --- Dealers ---
+    for d in DEFAULT_DEALERS_SEED:
+        # Skip if a dealer with this name already exists for the user.
+        existing = await real_db.dealers.find_one(
+            {"user_id": user_id, "name": d["name"]}, {"_id": 0, "id": 1}
+        )
+        if existing:
+            continue
+        dealer = Dealer(name=d["name"])
+        record = dealer.dict()
+        record.update({
+            "user_id": user_id,
+            "phone": d.get("phone", ""),
+            "website": d.get("website", ""),
+            "address": d.get("address", ""),
+            "notes": d.get("notes", ""),
+            "warranty_contact": d.get("warranty_contact", ""),
+            "tech_support_contact": d.get("tech_support_contact", ""),
+            "customer_support_contact": d.get("customer_support_contact", ""),
+        })
+        await real_db.dealers.insert_one(record)
+        counters["dealers"] += 1
+
+    # --- Tags ---
+    for tag_name in DEFAULT_TAGS_SEED:
+        existing = await real_db.tags.find_one(
+            {"user_id": user_id, "name": {"$regex": f"^{re.escape(tag_name)}$", "$options": "i"}},
+            {"_id": 0, "id": 1},
+        )
+        if existing:
+            continue
+        tag = Tag(name=tag_name)
+        rec = tag.dict()
+        rec["user_id"] = user_id
+        await real_db.tags.insert_one(rec)
+        counters["tags"] += 1
+
+    # --- Categories ---
+    for cat_name in DEFAULT_CATEGORIES_SEED:
+        existing = await real_db.categories.find_one(
+            {"user_id": user_id, "name": {"$regex": f"^{re.escape(cat_name)}$", "$options": "i"}},
+            {"_id": 0, "id": 1},
+        )
+        if existing:
+            continue
+        cat = Category(name=cat_name)
+        rec = cat.dict()
+        rec["user_id"] = user_id
+        await real_db.categories.insert_one(rec)
+        counters["categories"] += 1
+
+    return counters
+
+
+
 @auth_router.post("/register", response_model=AuthResponse)
 async def register(payload: RegisterRequest, request: Request):
     # Rate limit: 3 new accounts per IP per hour (anti-spam).
@@ -3000,6 +3142,14 @@ async def register(payload: RegisterRequest, request: Request):
     await real_db.users.insert_one(user.dict())
     # First-user migration
     await _claim_orphan_data(user.id)
+    # Seed helpful defaults (dealers, tags, categories) — idempotent.
+    try:
+        await seed_default_content_for_user(user.id)
+    except Exception as e:
+        # Never fail registration over seed errors — log and move on.
+        logging.getLogger("server").warning(
+            "Default-content seed failed for user %s: %s", user.id, e
+        )
     token = create_token(user.id)
     return AuthResponse(token=token, user=to_public(user))
 
