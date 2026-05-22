@@ -1554,70 +1554,123 @@ export default function ToolDetail() {
           {/* (CHECKED OUT card was moved to the top of this screen, above
               the description — see block under the photo row.) */}
 
-          {/* LOCATION — plain tappable row. Tap to reassign this tool to a
-              different existing location. */}
-          <TouchableOpacity
-            testID="location-pill"
-            style={newStyles.locationWide}
-            activeOpacity={0.6}
-            onPress={() => setShowLocationPicker(true)}
-          >
-            <Text style={newStyles.pillRowLabel}>LOCATION: </Text>
-            <Text style={newStyles.pillRowValueText} numberOfLines={1}>
-              {tool.location_name || "No location · tap to assign"}
-            </Text>
-            <View style={{ flex: 1 }} />
-            <Ionicons name="create-outline" size={14} color={theme.colors.textMuted} />
-          </TouchableOpacity>
+          {/* DETAILS BOX — groups location, dealer, model number(s), brand,
+              purchased, category in one bordered card, styled identically
+              to the warranty card. Location and dealer rows are tappable
+              (chevron on right). */}
+          {(() => {
+            const serials: string[] = tool.is_set
+              ? (Array.isArray(tool.set_serials)
+                  ? tool.set_serials.filter((s: string) => !!s)
+                  : [])
+              : (tool.serial_number ? [String(tool.serial_number)] : []);
 
-          {/* PILLBOX DETAIL FIELDS — dealer first, then model numbers, then everything else */}
-          <View style={newStyles.fieldGroup}>
-            <PillRow label="DEALER"
-              value={tool.dealer_name || "—"}
-              sub={tool.purchased_from_agent_name || undefined}
-              onPress={tool.dealer_id ? () => router.push(`/dealer/${tool.dealer_id}`) : undefined}
-            />
+            type Row =
+              | { kind: "value"; label: string; value: string; onPress?: () => void }
+              | { kind: "models"; label: string; values: string[] };
 
-            {/* MODEL NUMBERS — directly below the Dealer pillbox.
-                One serial per row when more than one exists. */}
-            {(() => {
-              const serials: string[] = tool.is_set
-                ? (Array.isArray(tool.set_serials)
-                    ? tool.set_serials.filter((s: string) => !!s)
-                    : [])
-                : (tool.serial_number ? [String(tool.serial_number)] : []);
-              if (serials.length === 0) return null;
-              return (
-                <BevelCard style={newStyles.serialBox} testID="serial-box">
-                  <Text style={newStyles.serialBoxLabel}>
-                    MODEL NUMBER{serials.length > 1 ? "S" : ""}
-                    {serials.length > 1 ? `  (${serials.length})` : ""}
-                  </Text>
-                  {serials.map((s: string, i: number) => (
-                    <View key={i} style={newStyles.serialRow}>
-                      {serials.length > 1 && (
-                        <Text style={newStyles.serialIdx}>{i + 1}.</Text>
-                      )}
-                      <Text style={newStyles.serialVal} numberOfLines={1}>
-                        {s}
-                      </Text>
-                    </View>
-                  ))}
-                </BevelCard>
-              );
-            })()}
+            const rows: Row[] = [];
+            rows.push({
+              kind: "value",
+              label: "LOCATION",
+              value: tool.location_name || "No location · tap to assign",
+              onPress: () => setShowLocationPicker(true),
+            });
+            rows.push({
+              kind: "value",
+              label: "DEALER",
+              value: tool.dealer_name || "—",
+              onPress: tool.dealer_id
+                ? () => router.push(`/dealer/${tool.dealer_id}`)
+                : undefined,
+            });
+            if (serials.length > 0) {
+              rows.push({
+                kind: "models",
+                label: serials.length > 1 ? "MODEL NUMBERS" : "MODEL #",
+                values: serials,
+              });
+            }
+            if (tool.brand) {
+              rows.push({ kind: "value", label: "BRAND", value: String(tool.brand) });
+            }
+            if (tool.purchase_date) {
+              rows.push({
+                kind: "value",
+                label: "PURCHASED",
+                value: formatDateUS(tool.purchase_date),
+              });
+            }
+            if (tool.category_name) {
+              rows.push({
+                kind: "value",
+                label: "CATEGORY",
+                value: String(tool.category_name),
+              });
+            }
 
-            {!!tool.brand && <PillRow label="BRAND" value={tool.brand} />}
-            {/* Legacy "MODEL" pillbox removed — every tool now uses the
-                consolidated MODEL NUMBER block above. The internal
-                `tool.model` field may still be populated from old data /
-                CSV imports, but we no longer surface it on the detail
-                screen to avoid duplicating the model-identifier UI. */}
-            {!!tool.purchase_date && (
-              <PillRow label="PURCHASED" value={formatDateUS(tool.purchase_date)} />
-            )}
-            {!!tool.category_name && <PillRow label="CATEGORY" value={tool.category_name} />}
-          </View>
+            return (
+              <View style={newStyles.detailsBox} testID="details-box">
+                {rows.map((r, i) => {
+                  const isLast = i === rows.length - 1;
+                  if (r.kind === "models") {
+                    return (
+                      <View
+                        key={`m-${i}`}
+                        style={[newStyles.detailsRow, isLast && newStyles.detailsRowLast]}
+                      >
+                        <Text style={newStyles.detailsLabel}>{r.label}</Text>
+                        <View
+                          style={{
+                            flex: 1,
+                            alignItems: "flex-end",
+                            justifyContent: "center",
+                            gap: 2,
+                          }}
+                        >
+                          {r.values.map((s, j) => (
+                            <Text
+                              key={j}
+                              style={newStyles.detailsValue}
+                              numberOfLines={1}
+                            >
+                              {s}
+                            </Text>
+                          ))}
+                        </View>
+                      </View>
+                    );
+                  }
+                  const RowWrapper: any = r.onPress ? TouchableOpacity : View;
+                  const wrapperProps = r.onPress
+                    ? { onPress: r.onPress, activeOpacity: 0.6 }
+                    : {};
+                  return (
+                    <RowWrapper
+                      key={`r-${i}`}
+                      style={[newStyles.detailsRow, isLast && newStyles.detailsRowLast]}
+                      testID={`details-row-${r.label.toLowerCase()}`}
+                      {...wrapperProps}
+                    >
+                      <Text style={newStyles.detailsLabel}>{r.label}</Text>
+                      <View style={newStyles.detailsValueWrap}>
+                        <Text style={newStyles.detailsValue} numberOfLines={1}>
+                          {r.value}
+                        </Text>
+                        {r.onPress && (
+                          <Ionicons
+                            name="chevron-forward"
+                            size={14}
+                            color={theme.colors.textMuted}
+                          />
+                        )}
+                      </View>
+                    </RowWrapper>
+                  );
+                })}
+              </View>
+            );
+          })()}
 
           {/* TAGS moved to the very bottom of the page — see below */}
 
@@ -2971,21 +3024,30 @@ function PillRow({
   onPress?: () => void;
   valueColor?: string;
 }) {
-  const Wrapper: any = onPress ? TouchableOpacity : View;
-  const wrapperProps = onPress ? { onPress, activeOpacity: 0.6 } : {};
   return (
-    <Wrapper style={newStyles.pillRow} {...wrapperProps}>
-      <View style={{ flex: 1, flexDirection: "row", alignItems: "baseline", flexWrap: "wrap" }}>
-        <Text style={newStyles.pillRowLabel}>{label}: </Text>
+    <BevelCard
+      style={newStyles.pillRow}
+      {...(onPress ? { onPress, activeOpacity: 0.85 } : {})}
+    >
+      <View style={{ flex: 1 }}>
+        <Text style={newStyles.pillRowLabel}>{label}</Text>
+        {!!sub && <Text style={newStyles.pillRowSub}>{sub}</Text>}
+      </View>
+      <View
+        style={[
+          newStyles.pillRowValue,
+          valueColor ? { borderColor: valueColor } : null,
+        ]}
+      >
         <Text
           style={[
             newStyles.pillRowValueText,
             valueColor ? { color: valueColor } : null,
           ]}
+          numberOfLines={1}
         >
           {value || "—"}
         </Text>
-        {!!sub && <Text style={newStyles.pillRowSub}>  ({sub})</Text>}
       </View>
       {!!onPress && (
         <Ionicons
@@ -2995,7 +3057,7 @@ function PillRow({
           style={{ marginLeft: 4 }}
         />
       )}
-    </Wrapper>
+    </BevelCard>
   );
 }
 
@@ -3794,47 +3856,110 @@ const newStyles = themedStyles((c) => ({
     gap: 6,
   },
 
-  // ---------- PLAIN TEXT FIELD ROW (used in PillRow component) ----------
+  // ---------- PILLBOX ROW (used in PillRow component) ----------
   pillRow: {
+    /* Surface (gradient + bevel borders + drop shadow) comes from
+       <BevelCard>. We only describe the inner flex layout here so the
+       gradient isn't obliterated by a flat bgSecondary fill. */
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 6,
+    paddingHorizontal: 10,
     paddingVertical: 6,
-    gap: 6,
-    minHeight: 26,
-    marginBottom: 2,
+    gap: 10,
+    minHeight: 28,
+    marginBottom: 6,
   },
   pillRowLabel: {
     color: c.textPrimary,
     fontWeight: "800",
-    fontSize: 14,
-    letterSpacing: 0.3,
+    fontSize: 9.5,
+    letterSpacing: 0.8,
   },
   pillRowSub: {
     color: c.textMuted,
-    fontWeight: "500",
-    fontSize: 12,
+    fontWeight: "600",
+    fontSize: 9,
+    marginTop: 1,
   },
   pillRowValue: {
-    // Kept for backward-compat in case some style spread references it.
-    backgroundColor: "transparent",
+    backgroundColor: c.bg,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: c.border,
+    maxWidth: "60%",
   },
   pillRowValueText: {
     color: c.textPrimary,
-    fontWeight: "400",
-    fontSize: 14,
-    letterSpacing: 0.2,
+    fontWeight: "800",
+    fontSize: 10,
+    letterSpacing: 0.3,
   },
 
-  // ---------- DESCRIPTION (plain text — no pill box) ----------
+  // ---------- DESCRIPTION ----------
   descBox: {
-    paddingHorizontal: 6,
-    paddingVertical: 4,
+    backgroundColor: c.bgSecondary,
+    borderColor: c.border,
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  
+    ...(theme.elevation.md as object),
   },
   descText: {
     color: c.textPrimary,
     fontSize: 14,
     lineHeight: 20,
+  },
+
+  // ---------- DETAILS BOX (groups location/dealer/brand/model/purchased/category) ----------
+  detailsBox: {
+    backgroundColor: c.bgSecondary,
+    borderWidth: 1,
+    borderColor: c.border,
+    borderRadius: 6,
+    padding: 12,
+    marginTop: 4,
+  
+    ...(theme.elevation.md as object),
+  },
+  detailsRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: c.borderSubtle,
+    gap: 8,
+  },
+  detailsRowLast: {
+    borderBottomWidth: 0,
+  },
+  detailsRowTouchable: {
+    // Touchable variant keeps the same row look — only adds a subtle hint via chevron icon.
+  },
+  detailsLabel: {
+    color: c.textMuted,
+    fontSize: 7,
+    fontWeight: "800",
+    letterSpacing: 1.5,
+  },
+  detailsValueWrap: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    flexShrink: 1,
+    maxWidth: "70%",
+    justifyContent: "flex-end",
+  },
+  detailsValue: {
+    color: c.textPrimary,
+    fontSize: 10,
+    fontWeight: "700",
+    textAlign: "right",
+    flexShrink: 1,
   },
 
   // ---------- CHECKED OUT CARD (sits in the same slot as the claim card —
@@ -3911,21 +4036,27 @@ const newStyles = themedStyles((c) => ({
     gap: 6,
   },
 
-  // ---------- LOCATION (plain tappable row) ----------
+  // ---------- LOCATION (wide pill, NO label) ----------
   locationWide: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
-    paddingHorizontal: 6,
+    gap: 8,
+    backgroundColor: c.bgSecondary,
+    borderColor: c.border,
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 10,
     paddingVertical: 6,
-    minHeight: 26,
-    marginBottom: 2,
+    minHeight: 28,
+  
+    ...(theme.elevation.md as object),
   },
   locationWideText: {
+    flex: 1,
     color: c.textPrimary,
-    fontWeight: "400",
-    fontSize: 14,
-    letterSpacing: 0.2,
+    fontWeight: "800",
+    fontSize: 10,
+    letterSpacing: 0.3,
   },
 
   // ---------- HISTORY LINK ROWS (navigates to a dedicated page) ----------
