@@ -397,9 +397,22 @@ export default function HomeScreen() {
       };
     })(),
   };
-  const statRowsInOrder = order
-    .filter((k) => k !== "owed_to_dealers" && visible[k] && STAT_ROW_DATA[k])
-    .map((k) => ({ key: k, row: STAT_ROW_DATA[k]! }));
+  // Build the full ordered render sequence for the unified Description Card.
+  // The user's chosen `order` array drives EVERYTHING — including where the
+  // DEALER ACCOUNTS block falls. Previously the dealer card was hardcoded to
+  // render after the stats card, which silently ignored the user's order
+  // preference for `owed_to_dealers`. Now each item knows its position.
+  type RenderItem =
+    | { kind: "stat"; key: string; row: HomeDetailRow }
+    | { kind: "dealers" };
+  const renderSequence: RenderItem[] = order
+    .filter((k) => visible[k])
+    .map((k): RenderItem | null => {
+      if (k === "owed_to_dealers") return { kind: "dealers" };
+      const row = STAT_ROW_DATA[k];
+      return row ? { kind: "stat", key: k, row } : null;
+    })
+    .filter((x): x is RenderItem => x !== null);
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
@@ -459,88 +472,111 @@ export default function HomeScreen() {
           </TouchableOpacity>
         )}
 
-        {/* STATS card — warranty-card-style box containing all toggled-on
-            non-dealer stat rows in the user's preferred order. */}
-        {statRowsInOrder.length > 0 && (
-          <View style={styles.detailsBox} testID="home-stats-box">
-            {statRowsInOrder.map((sr, i) =>
-              renderHomeRow(sr.row, i === statRowsInOrder.length - 1, sr.key),
-            )}
-          </View>
-        )}
-
-        {/* DEALER ACCOUNTS card — warranty-card-style box with one row per
-            dealer plus a TOTAL footer row. Each dealer row is tappable to
-            navigate to the dealer detail; the "Adjust" button stays as an
-            inline action so quick balance edits don't require a new screen. */}
-        {visible.owed_to_dealers && (
-          <View style={styles.detailsBox} testID="home-dealers-box">
-            <TouchableOpacity
-              style={styles.detailsRow}
-              activeOpacity={0.6}
-              testID="home-dealers-header"
-              onPress={() => router.push("/dealers")}
-            >
-              <Text style={styles.detailsLabel}>DEALER ACCOUNTS</Text>
-              <View style={styles.detailsValueWrap}>
-                <Text style={styles.detailsValue}>${totalOwed.toFixed(2)}</Text>
-                <Ionicons name="chevron-forward" size={14} color={theme.colors.textMuted} />
-              </View>
-            </TouchableOpacity>
-            {dealersAll.length === 0 ? (
-              <View style={[styles.detailsRow, styles.detailsRowLast]}>
-                <Text
-                  style={[
-                    styles.detailsValue,
-                    { color: theme.colors.textMuted, textAlign: "left", flex: 1, fontWeight: "500" },
-                  ]}
-                >
-                  No dealers yet.
-                </Text>
-              </View>
-            ) : (
-              dealersAll.map((d, i) => {
-                const credit = Number(d.credit_balance) || 0;
-                const truck = Number(d.personal_balance) || 0;
-                const dTotal = credit + truck;
-                const isLast = i === dealersAll.length - 1;
-                return (
-                  <View
-                    key={d.id}
-                    style={[styles.detailsRow, isLast && styles.detailsRowLast]}
+        {/* UNIFIED HOME DESCRIPTION CARD — single warranty-card-style box
+            containing every enabled row in the user's chosen order. The
+            DEALER ACCOUNTS header sits at its assigned position in the
+            sequence, with its dealer sub-rows nested directly beneath it.
+            Previously the stats and dealer-accounts lived in two separate
+            hardcoded-order cards, which ignored the user's row-order
+            preference for `owed_to_dealers`. */}
+        {renderSequence.length > 0 && (
+          <View style={styles.detailsBox} testID="home-details-box">
+            {renderSequence.map((item, idx) => {
+              const isLastItem = idx === renderSequence.length - 1;
+              if (item.kind === "stat") {
+                // For stat rows, only mark as "last" when this is the final
+                // item in the sequence (so no trailing divider on the very
+                // last row of the card).
+                return renderHomeRow(item.row, isLastItem, item.key);
+              }
+              // DEALER ACCOUNTS block — header row + N dealer sub-rows.
+              return (
+                <View key="owed_to_dealers">
+                  <TouchableOpacity
+                    style={styles.detailsRow}
+                    activeOpacity={0.6}
+                    testID="home-dealers-header"
+                    onPress={() => router.push("/dealers")}
                   >
-                    <TouchableOpacity
-                      onPress={() => router.push(`/dealer/${d.id}`)}
-                      activeOpacity={0.6}
-                      style={{ flex: 1, minWidth: 0, marginRight: 8 }}
-                      testID={`home-dealer-${d.id}`}
-                    >
-                      <Text style={styles.dealerRowName} numberOfLines={1}>
-                        {d.name}
-                      </Text>
-                    </TouchableOpacity>
+                    <Text style={styles.detailsLabel}>DEALER ACCOUNTS</Text>
                     <View style={styles.detailsValueWrap}>
+                      <Text style={styles.detailsValue}>${totalOwed.toFixed(2)}</Text>
+                      <Ionicons name="chevron-forward" size={14} color={theme.colors.textMuted} />
+                    </View>
+                  </TouchableOpacity>
+                  {dealersAll.length === 0 ? (
+                    <View
+                      style={[
+                        styles.detailsRow,
+                        isLastItem && styles.detailsRowLast,
+                      ]}
+                    >
                       <Text
                         style={[
                           styles.detailsValue,
-                          dTotal === 0 && { color: theme.colors.textMuted },
+                          {
+                            color: theme.colors.textMuted,
+                            textAlign: "left",
+                            flex: 1,
+                            fontWeight: "500",
+                          },
                         ]}
                       >
-                        ${dTotal.toFixed(2)}
+                        No dealers yet.
                       </Text>
-                      <TouchableOpacity
-                        testID={`adjust-${d.id}`}
-                        style={styles.dealerAdjustChip}
-                        onPress={() => openAdjustForDealer(d)}
-                        activeOpacity={0.7}
-                      >
-                        <Text style={styles.dealerAdjustChipText}>ADJUST</Text>
-                      </TouchableOpacity>
                     </View>
-                  </View>
-                );
-              })
-            )}
+                  ) : (
+                    dealersAll.map((d, i) => {
+                      const credit = Number(d.credit_balance) || 0;
+                      const truck = Number(d.personal_balance) || 0;
+                      const dTotal = credit + truck;
+                      const isLastDealer = i === dealersAll.length - 1;
+                      // Only drop the bottom border when this dealer is the
+                      // very last visible row in the WHOLE card.
+                      const dropBorder = isLastDealer && isLastItem;
+                      return (
+                        <View
+                          key={d.id}
+                          style={[
+                            styles.detailsRow,
+                            dropBorder && styles.detailsRowLast,
+                          ]}
+                        >
+                          <TouchableOpacity
+                            onPress={() => router.push(`/dealer/${d.id}`)}
+                            activeOpacity={0.6}
+                            style={{ flex: 1, minWidth: 0, marginRight: 8 }}
+                            testID={`home-dealer-${d.id}`}
+                          >
+                            <Text style={styles.dealerRowName} numberOfLines={1}>
+                              {d.name}
+                            </Text>
+                          </TouchableOpacity>
+                          <View style={styles.detailsValueWrap}>
+                            <Text
+                              style={[
+                                styles.detailsValue,
+                                dTotal === 0 && { color: theme.colors.textMuted },
+                              ]}
+                            >
+                              ${dTotal.toFixed(2)}
+                            </Text>
+                            <TouchableOpacity
+                              testID={`adjust-${d.id}`}
+                              style={styles.dealerAdjustChip}
+                              onPress={() => openAdjustForDealer(d)}
+                              activeOpacity={0.7}
+                            >
+                              <Text style={styles.dealerAdjustChipText}>ADJUST</Text>
+                            </TouchableOpacity>
+                          </View>
+                        </View>
+                      );
+                    })
+                  )}
+                </View>
+              );
+            })}
           </View>
         )}
 
