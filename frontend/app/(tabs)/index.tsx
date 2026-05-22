@@ -807,6 +807,8 @@ const styles = themedStyles((c) => ({
 
   /* Main list — claim-screen style: separate cards w/ rounded corners + small gap */
   list: {
+    gap: 8,
+  },
 
   // ---------- DETAILS BOX (warranty-card style, mirrors tool/dealer detail) ----------
   detailsBox: {
@@ -832,13 +834,13 @@ const styles = themedStyles((c) => ({
   },
   detailsLabel: {
     color: c.textMuted,
-    fontSize: 7,
+    fontSize: 9,
     fontWeight: "800",
     letterSpacing: 1.5,
   },
   detailsRowSub: {
     color: c.textMuted,
-    fontSize: 7,
+    fontSize: 8,
     fontWeight: "600",
     letterSpacing: 1.2,
     marginTop: 2,
@@ -852,7 +854,7 @@ const styles = themedStyles((c) => ({
   },
   detailsValue: {
     color: c.textPrimary,
-    fontSize: 10,
+    fontSize: 12,
     fontWeight: "700",
     textAlign: "right",
     flexShrink: 1,
@@ -877,9 +879,6 @@ const styles = themedStyles((c) => ({
     fontSize: 8,
     fontWeight: "900",
     letterSpacing: 1,
-  },
-
-    gap: 8,
   },
 
   row: {
