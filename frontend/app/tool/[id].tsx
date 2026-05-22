@@ -1376,8 +1376,22 @@ export default function ToolDetail() {
             {tool.name || "Untitled tool"}
           </Text>
         </View>
-        {/* Header actions intentionally removed — all actions live in the
-            bottom "ACTIONS" section. */}
+        {/* Edit + Delete moved to top-right header icons to match the
+            dealer detail screen's pattern, freeing up the bottom
+            "ACTIONS" section for state-change buttons only (check
+            out, mark broken, list for sale, etc.). */}
+        <View style={{ flexDirection: "row", gap: 16, alignItems: "center" }}>
+          <TouchableOpacity
+            testID="edit-tool-btn"
+            onPress={() => router.push({ pathname: "/tool/edit", params: { id: tool.id } })}
+            hitSlop={10}
+          >
+            <Ionicons name="create-outline" size={24} color={theme.colors.textPrimary} />
+          </TouchableOpacity>
+          <TouchableOpacity testID="delete-tool-btn" onPress={doDelete} hitSlop={10}>
+            <Ionicons name="trash-outline" size={24} color={theme.colors.danger} />
+          </TouchableOpacity>
+        </View>
       </View>
 
       <ScrollView contentContainerStyle={{ paddingBottom: 40 }}>
@@ -1902,15 +1916,8 @@ export default function ToolDetail() {
           <Text style={newStyles.sectionTitle}>ACTIONS</Text>
 
           <View style={newStyles.actionGrid}>
-            {/* EDIT ITEM */}
-            <BevelCard
-              testID="action-edit"
-              style={newStyles.actionTile}
-              onPress={() => router.push({ pathname: "/tool/edit", params: { id: tool.id } })}
-            >
-              <Ionicons name="create-outline" size={20} color={theme.colors.accent} />
-              <Text style={newStyles.actionTileText}>EDIT</Text>
-            </BevelCard>
+            {/* EDIT + DELETE moved to top-right header icons (matching the
+                dealer detail screen). Only state-change actions remain here. */}
 
             {/* DOCUMENTS — expands the Documents pill in Attachments */}
             {/* (DOCUMENTS bottom action removed — users can reach
@@ -2005,17 +2012,7 @@ export default function ToolDetail() {
               )
             )}
 
-            {/* DELETE — always available, danger styling */}
-            <BevelCard
-              testID="action-delete"
-              style={[newStyles.actionTile, newStyles.actionTileDanger]}
-              onPress={doDelete}
-            >
-              <Ionicons name="trash-outline" size={20} color={theme.colors.danger} />
-              <Text style={[newStyles.actionTileText, { color: theme.colors.danger }]}>
-                DELETE ITEM
-              </Text>
-            </BevelCard>
+            {/* DELETE — moved to top-right header icon. */}
           </View>
 
           {/* ===== TAGS — pinned at the very bottom of the page ===== */}
