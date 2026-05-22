@@ -462,7 +462,7 @@ export default function HomeScreen() {
               source={
                 prefs.home_logo_mode === "custom" && prefs.home_logo_data
                   ? { uri: prefs.home_logo_data }
-                  : require("../../assets/images/default-home-logo.png")
+                  : require("../../assets/images/icon.png")
               }
               style={styles.logoImage}
               resizeMode="contain"
