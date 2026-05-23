@@ -342,9 +342,9 @@ export default function ReportsHubScreen() {
               style={[styles.formatCard, format === "pdf" && styles.formatCardOn]}
               onPress={() => setFormat("pdf")}
             >
-              <Ionicons name="document-text" size={28} color={format === "pdf" ? "#000" : theme.colors.textPrimary} />
-              <Text style={[styles.formatTitle, format === "pdf" && { color: "#000" }]}>PDF</Text>
-              <Text style={[styles.formatSub, format === "pdf" && { color: "#000" }]}>
+              <Ionicons name="document-text" size={28} color={format === "pdf" ? theme.colors.accent : theme.colors.textPrimary} />
+              <Text style={[styles.formatTitle, format === "pdf" && { color: theme.colors.accent }]}>PDF</Text>
+              <Text style={[styles.formatSub, format === "pdf" && { color: theme.colors.accent }]}>
                 Formatted report{"\n"}max {MAX_PDF_COLUMNS} columns
               </Text>
             </TouchableOpacity>
@@ -352,9 +352,9 @@ export default function ReportsHubScreen() {
               style={[styles.formatCard, format === "csv" && styles.formatCardOn]}
               onPress={() => setFormat("csv")}
             >
-              <Ionicons name="grid" size={28} color={format === "csv" ? "#000" : theme.colors.textPrimary} />
-              <Text style={[styles.formatTitle, format === "csv" && { color: "#000" }]}>CSV</Text>
-              <Text style={[styles.formatSub, format === "csv" && { color: "#000" }]}>
+              <Ionicons name="grid" size={28} color={format === "csv" ? theme.colors.accent : theme.colors.textPrimary} />
+              <Text style={[styles.formatTitle, format === "csv" && { color: theme.colors.accent }]}>CSV</Text>
+              <Text style={[styles.formatSub, format === "csv" && { color: theme.colors.accent }]}>
                 Spreadsheet file{"\n"}all columns supported
               </Text>
             </TouchableOpacity>
