@@ -141,14 +141,41 @@ Open question — user to decide. My recommendation:
 
 ## Open Questions for User (re-ask when implementing)
 
-1. Equipment = separate entity OR Tools with type-flag? *(recommendation: type-flag, not separate)*
-2. Should Managers be able to promote/demote other Managers? *(recommendation: master only)*
-3. Can employees see ALL company tools, or only assigned/checked-out to them? *(recommendation: all by default; filter UI)*
-4. Subscription model — flat tier vs per-seat? *(recommendation: flat tier)*
-5. Specific seat/item counts per tier — user to confirm
-6. Lapsed sub grace period length?
-7. Multi-shop support (one company with multiple physical locations)? Out of scope for v1?
-8. Specific reports company tier needs (insurance aggregate, maintenance compliance, others)?
+> **Answered 2026-05-23 — Round 2.** Locked in:
+>
+> 1. **Data ownership on sever:** ✅ Everything stays with the item it happened to. Maintenance entries, checkouts, photos, notes — all retain the original employee's name as historical record, even after sever. Company has a permanent audit trail. Employee just loses view access, doesn't take anything with them on company items.
+>
+> 2. **Equipment ≠ Tools — SEPARATE entities with separate hierarchies.** (User overrode my type-flag recommendation; reasoning is sound.)
+>    - **Tools** = portable, checkout-able items (timing kit, socket set, scan tool, etc).
+>    - **Equipment** = generally stationary, but can be flagged as checkout-able if the company allows (tire machine, tractor, trailer, lift, oil-sticker machine, etc).
+>    - Each maintains its own access-control hierarchy independently.
+>    - Equipment can have a `movable: bool` flag that allows checkout when set.
+>
+> 3. **Manager permissions = toggle-switch ACL, mutable by Master at any time.**
+>    - Each Manager account has individual toggle switches granting/revoking specific permissions:
+>      - Add/edit company tools (toggle)
+>      - Add/edit company equipment (toggle)
+>      - Delete company tools (toggle, off by default)
+>      - Delete company equipment (toggle, off by default)
+>      - Invite new employees (toggle)
+>      - Invite new managers (toggle, off by default — master only by default)
+>      - Promote/demote other managers (toggle, off by default — master only by default)
+>      - Sever employees (toggle)
+>      - View company-level reports (toggle)
+>      - Edit subscription (toggle, master-only by default)
+>    - Master can flip these toggles per-manager.
+>
+> 4. **Employee default visibility = NOTHING.** Master/Manager explicitly toggles ON each employee's access:
+>    - Access to specific tools or tool categories (checkbox list)
+>    - Access to specific equipment or equipment categories (checkbox list)
+>    - Whether employee can be promoted to Manager (separate flag — flipping this on changes their role)
+>    - All access can be revoked anytime
+>
+> 5. **Subscription model:** Still TBD. Will decide when closer to Phase 5.
+>
+> 6. **Lapsed-sub grace period:** Still TBD. Will decide when closer to Phase 5.
+>
+> 7. **Company reports:** User confirms at minimum insurance aggregate, compliance, per-employee audit. Will define complete list at Phase 6.
 
 ## Implementation Phases (Recommended Order)
 
