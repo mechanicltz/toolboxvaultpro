@@ -165,11 +165,12 @@ Open question — user to decide. My recommendation:
 >      - Edit subscription (toggle, master-only by default)
 >    - Master can flip these toggles per-manager.
 >
-> 4. **Employee default visibility = NOTHING.** Master/Manager explicitly toggles ON each employee's access:
->    - Access to specific tools or tool categories (checkbox list)
->    - Access to specific equipment or equipment categories (checkbox list)
->    - Whether employee can be promoted to Manager (separate flag — flipping this on changes their role)
->    - All access can be revoked anytime
+> 4. **Employee default visibility = NOTHING.** Master/Manager explicitly toggles ON each employee's access at the **AREA level** (broad, NOT per-item):
+>    - Toggle: access to **Tools area** (on/off) — sees the company's tools list at all
+>    - Toggle: access to **Equipment area** (on/off) — sees the company's equipment list at all
+>    - Toggle: **Manager role** (on/off) — promotes employee → manager
+>    - That's it. No per-tool or per-category granularity. Keeps the management UX dead simple — three toggles per employee row.
+>    - All access can be revoked anytime by flipping a toggle off.
 >
 > 5. **Subscription model:** Still TBD. Will decide when closer to Phase 5.
 >
