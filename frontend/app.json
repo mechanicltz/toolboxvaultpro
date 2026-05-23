@@ -21,7 +21,7 @@
     },
     "android": {
       "package": "app.emergent.assetlocator128c92565d",
-      "versionCode": 23,
+      "versionCode": 127,
       "edgeToEdgeEnabled": false,
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
