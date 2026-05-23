@@ -3066,17 +3066,23 @@ async def seed_default_content_for_user(user_id: str) -> Dict[str, int]:
     counters = {"dealers": 0, "tags": 0, "categories": 0}
 
     # --- Dealers ---
+    # NOTE: This function bypasses the `db` proxy (which auto-injects
+    # `owner_id`) and writes to `real_db` directly. So we MUST set
+    # `owner_id` ourselves — every other endpoint scopes by `owner_id`,
+    # not `user_id`. Setting only `user_id` makes the seed records
+    # invisible to the rest of the API, which is exactly the bug new
+    # users hit ("0 dealers / tags / categories").
     for d in DEFAULT_DEALERS_SEED:
         # Skip if a dealer with this name already exists for the user.
         existing = await real_db.dealers.find_one(
-            {"user_id": user_id, "name": d["name"]}, {"_id": 0, "id": 1}
+            {"owner_id": user_id, "name": d["name"]}, {"_id": 0, "id": 1}
         )
         if existing:
             continue
         dealer = Dealer(name=d["name"])
         record = dealer.dict()
         record.update({
-            "user_id": user_id,
+            "owner_id": user_id,
             "phone": d.get("phone", ""),
             "website": d.get("website", ""),
             "address": d.get("address", ""),
@@ -3091,28 +3097,28 @@ async def seed_default_content_for_user(user_id: str) -> Dict[str, int]:
     # --- Tags ---
     for tag_name in DEFAULT_TAGS_SEED:
         existing = await real_db.tags.find_one(
-            {"user_id": user_id, "name": {"$regex": f"^{re.escape(tag_name)}$", "$options": "i"}},
+            {"owner_id": user_id, "name": {"$regex": f"^{re.escape(tag_name)}$", "$options": "i"}},
             {"_id": 0, "id": 1},
         )
         if existing:
             continue
         tag = Tag(name=tag_name)
         rec = tag.dict()
-        rec["user_id"] = user_id
+        rec["owner_id"] = user_id
         await real_db.tags.insert_one(rec)
         counters["tags"] += 1
 
     # --- Categories ---
     for cat_name in DEFAULT_CATEGORIES_SEED:
         existing = await real_db.categories.find_one(
-            {"user_id": user_id, "name": {"$regex": f"^{re.escape(cat_name)}$", "$options": "i"}},
+            {"owner_id": user_id, "name": {"$regex": f"^{re.escape(cat_name)}$", "$options": "i"}},
             {"_id": 0, "id": 1},
         )
         if existing:
             continue
         cat = Category(name=cat_name)
         rec = cat.dict()
-        rec["user_id"] = user_id
+        rec["owner_id"] = user_id
         await real_db.categories.insert_one(rec)
         counters["categories"] += 1
 
