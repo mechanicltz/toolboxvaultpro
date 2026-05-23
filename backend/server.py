@@ -3125,6 +3125,72 @@ async def seed_default_content_for_user(user_id: str) -> Dict[str, int]:
     return counters
 
 
+# ---------------------------------------------------------------------------
+# Admin: one-shot default-content backfill
+# ---------------------------------------------------------------------------
+# Allows an admin to retroactively seed dealers/tags/categories for any
+# user (or every user) who registered before the seed function existed,
+# or before the seed-field-name bug was fixed. Idempotent — names are
+# de-duped, so it's safe to run multiple times. Admin-only.
+
+class AdminSeedDefaultsRequest(BaseModel):
+    # Optional. If omitted, the endpoint seeds EVERY user in the DB.
+    # If provided, seeds only that one user.
+    user_id: Optional[str] = None
+
+
+from subscriptions import _require_admin as _require_admin_for_seed  # noqa: E402
+
+
+@api_router.post("/admin/seed-defaults")
+async def admin_seed_defaults(
+    payload: AdminSeedDefaultsRequest,
+    user: User = Depends(get_current_user),
+):
+    """Backfill the 5 default dealers / 3 tags / 5 categories for one user
+    (when `user_id` is given) or every user (when body is `{}`).
+    Idempotent — skips any item whose name already exists for that user."""
+    _require_admin_for_seed(user)
+
+    if payload.user_id:
+        # Single-user mode
+        target = await real_db.users.find_one(
+            {"id": payload.user_id}, {"_id": 0, "id": 1, "email": 1}
+        )
+        if not target:
+            raise HTTPException(404, "User not found")
+        added = await seed_default_content_for_user(target["id"])
+        return {
+            "scope": "single",
+            "user_id": target["id"],
+            "email": target.get("email"),
+            "added": added,
+        }
+
+    # All-users mode — iterate every user in the DB and seed each.
+    summary: List[Dict[str, Any]] = []
+    totals = {"dealers": 0, "tags": 0, "categories": 0, "users_touched": 0}
+    cursor = real_db.users.find({}, {"_id": 0, "id": 1, "email": 1})
+    async for u in cursor:
+        added = await seed_default_content_for_user(u["id"])
+        # Only record users who actually received NEW records (skips
+        # users who already had all defaults — keeps the response small).
+        if any(added.values()):
+            summary.append({
+                "user_id": u["id"],
+                "email": u.get("email"),
+                "added": added,
+            })
+            for k in ("dealers", "tags", "categories"):
+                totals[k] += added[k]
+        totals["users_touched"] += 1
+    return {
+        "scope": "all",
+        "totals": totals,
+        "newly_seeded_users": summary,
+    }
+
+
 
 @auth_router.post("/register", response_model=AuthResponse)
 async def register(payload: RegisterRequest, request: Request):
