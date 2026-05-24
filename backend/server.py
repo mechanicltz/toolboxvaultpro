@@ -914,6 +914,17 @@ async def update_location(loc_id: str, payload: LocationUpdate):
             depth += 1
     await db.locations.update_one({"id": loc_id}, {"$set": updates})
     new_doc = await db.locations.find_one({"id": loc_id}, {"_id": 0})
+
+    # If the NAME changed, propagate the new name to every tool that has
+    # this location_id cached. Otherwise tools keep showing the old name
+    # forever (bug reported 2026-05-23: rename "test" → "test2", tool
+    # description card still shows "test").
+    if "name" in updates and updates["name"] != doc.get("name"):
+        await db.tools.update_many(
+            {"location_id": loc_id},
+            {"$set": {"location_name": updates["name"]}},
+        )
+
     return Location(**new_doc)
 
 
@@ -1025,8 +1036,14 @@ async def update_category(cat_id: str, payload: CategoryCreate):
     old_name = doc.get("name") or ""
     await db.categories.update_one({"id": cat_id}, {"$set": {"name": new_name}})
     if old_name and old_name != new_name:
-        # Rename references on tools (category is a single string)
+        # Rename references on tools. Some tools store the category as a
+        # legacy string field (`category`), others store the modern
+        # `category_id` + cached `category_name` pair. Cover both.
         await db.tools.update_many({"category": old_name}, {"$set": {"category": new_name}})
+        await db.tools.update_many(
+            {"category_id": cat_id},
+            {"$set": {"category_name": new_name}},
+        )
     new = await db.categories.find_one({"id": cat_id}, {"_id": 0})
     return Category(**new)
 
@@ -1216,6 +1233,14 @@ async def update_dealer(dealer_id: str, payload: DealerUpdate):
     updates = {k: v for k, v in payload.dict().items() if v is not None}
     await db.dealers.update_one({"id": dealer_id}, {"$set": updates})
     new = await db.dealers.find_one({"id": dealer_id}, {"_id": 0})
+
+    # Propagate name change to every tool with this dealer_id cached.
+    if "name" in updates and updates["name"] != d.get("name"):
+        await db.tools.update_many(
+            {"dealer_id": dealer_id},
+            {"$set": {"dealer_name": updates["name"]}},
+        )
+
     return Dealer(**new)
 
 
@@ -1957,6 +1982,42 @@ async def update_tool(tool_id: str, payload: ToolUpdate):
         raise HTTPException(status_code=404, detail="Tool not found")
     updates = {k: v for k, v in payload.dict().items() if v is not None}
     updates["updated_at"] = now_iso()
+
+    # ---------------------------------------------------------------
+    # Keep denormalized *_name fields in sync with their *_id fields.
+    # The frontend only sends *_id when re-assigning location/dealer/
+    # category, but the tool model also stores a cached *_name field
+    # (used by list views to avoid an extra join). If we update the id
+    # without refreshing the name, the description card keeps showing
+    # the OLD name forever — exactly the "renamed to test2 but card
+    # still shows test" bug reported 2026-05-23.
+    # ---------------------------------------------------------------
+    if "location_id" in updates:
+        if updates["location_id"]:
+            loc = await db.locations.find_one(
+                {"id": updates["location_id"]}, {"_id": 0, "name": 1}
+            )
+            updates["location_name"] = (loc or {}).get("name", "") or ""
+        else:
+            updates["location_name"] = ""
+
+    if "dealer_id" in updates:
+        if updates["dealer_id"]:
+            dl = await db.dealers.find_one(
+                {"id": updates["dealer_id"]}, {"_id": 0, "name": 1}
+            )
+            updates["dealer_name"] = (dl or {}).get("name", "") or ""
+        else:
+            updates["dealer_name"] = ""
+
+    if "category_id" in updates:
+        if updates["category_id"]:
+            cat = await db.categories.find_one(
+                {"id": updates["category_id"]}, {"_id": 0, "name": 1}
+            )
+            updates["category_name"] = (cat or {}).get("name", "") or ""
+        else:
+            updates["category_name"] = ""
 
     # When the caller marks the tool as Repaired (needs_repair: false, repair_info: null),
     # Pydantic's None values get filtered out above. Restore the null so the tool's
