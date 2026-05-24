@@ -3412,8 +3412,8 @@ async def admin_migrate_model_serial(user: User = Depends(get_current_user)):
     cursor = real_db.tools.find({}, {"_id": 0})
     async for t in cursor:
         total += 1
-        if t.get("model_numbers"):
-            continue  # already migrated
+        if "model_numbers" in t:
+            continue  # already migrated (presence check — empty list also counts)
         candidates: List[str] = []
         for v in (t.get("set_serials") or []):
             if v:
