@@ -1396,6 +1396,28 @@ async def create_tool(payload: ToolCreate, user: User = Depends(get_current_user
     from subscriptions import enforce_tool_limit  # local import to avoid cycles
     await enforce_tool_limit(real_db, user.id)
     tool = Tool(**payload.dict())
+
+    # Denormalize the *_name fields from their *_id counterparts so the
+    # tool description card has the right names from the very first
+    # render. Without this, freshly-created tools showed empty
+    # location/dealer/category names until the next edit (bug noticed
+    # while fixing the rename-cascade issue, 2026-05-23).
+    if tool.location_id and not tool.location_name:
+        loc = await db.locations.find_one(
+            {"id": tool.location_id}, {"_id": 0, "name": 1}
+        )
+        tool.location_name = (loc or {}).get("name", "") or ""
+    if tool.dealer_id and not tool.dealer_name:
+        dl = await db.dealers.find_one(
+            {"id": tool.dealer_id}, {"_id": 0, "name": 1}
+        )
+        tool.dealer_name = (dl or {}).get("name", "") or ""
+    if tool.category_id and not tool.category_name:
+        cat = await db.categories.find_one(
+            {"id": tool.category_id}, {"_id": 0, "name": 1}
+        )
+        tool.category_name = (cat or {}).get("name", "") or ""
+
     await db.tools.insert_one(tool.dict())
     # If created already broken, also create a warranty claim mirror with broken_photo
     if tool.needs_repair:
@@ -1980,7 +2002,13 @@ async def update_tool(tool_id: str, payload: ToolUpdate):
     doc = await db.tools.find_one({"id": tool_id}, {"_id": 0})
     if not doc:
         raise HTTPException(status_code=404, detail="Tool not found")
-    updates = {k: v for k, v in payload.dict().items() if v is not None}
+
+    # Use exclude_unset so the client can EXPLICITLY clear a field by
+    # sending null (e.g., `{"location_id": null}` to detach the tool from
+    # its location). The previous "drop if v is None" rule made the
+    # endpoint physically unable to clear a foreign-key field — values
+    # could only be reassigned, never removed.
+    updates = payload.dict(exclude_unset=True)
     updates["updated_at"] = now_iso()
 
     # ---------------------------------------------------------------
