@@ -34,6 +34,12 @@ export default function ToolEdit() {
   const [brand, setBrand] = useState("");
   const [model, setModel] = useState("");
   const [serial, setSerial] = useState("");
+  // NEW multi-value fields — users can stack any number of model #s and
+  // serial #s per tool. The legacy `model` / `serial` / `setSerials` /
+  // `isSet` state above is still maintained for backward compat with the
+  // receipt-scan modal and older import paths.
+  const [modelNumbers, setModelNumbers] = useState<string[]>([""]);
+  const [serialNumbers, setSerialNumbers] = useState<string[]>([""]);
   const [isSet, setIsSet] = useState(false);
   const [setSerials, setSetSerials] = useState<string[]>([""]);
   const [cost, setCost] = useState("");
@@ -132,6 +138,17 @@ export default function ToolEdit() {
             ? t.set_serials
             : [""]
         );
+        // New multi-value model #s — fall back through legacy fields.
+        const loadedModels: string[] = (Array.isArray(t.model_numbers) && t.model_numbers.length)
+          ? t.model_numbers
+          : (Array.isArray(t.set_serials) && t.set_serials.length
+              ? t.set_serials
+              : [t.serial_number, t.model].filter((s: any) => !!s));
+        setModelNumbers(loadedModels.length ? loadedModels : [""]);
+        const loadedSerials: string[] = (Array.isArray(t.serial_numbers) && t.serial_numbers.length)
+          ? t.serial_numbers
+          : [];
+        setSerialNumbers(loadedSerials.length ? loadedSerials : [""]);
         setCost(t.cost ? String(t.cost) : ""); setPurchaseDate(t.purchase_date || "");
         setQuantity(t.quantity != null ? String(t.quantity) : "1");
         setCondition(t.condition || "Good"); setLocationId(t.location_id);
@@ -437,8 +454,26 @@ export default function ToolEdit() {
     const f = scanFields;
     if (scanApply.name && f.name) setName(f.name);
     if (scanApply.brand && f.brand) setBrand(f.brand);
-    if (scanApply.model && f.model) setModel(f.model);
-    if (scanApply.serial_number && f.serial_number) setSerial(f.serial_number);
+    if (scanApply.model && f.model) {
+      setModel(f.model);
+      // Also append to modelNumbers stacked input — that's where the
+      // multi-value MODEL # block reads from.
+      setModelNumbers((arr) => {
+        const compact = arr.filter((s) => s.trim());
+        return compact.includes(f.model) ? (compact.length ? compact : [""]) : [...compact, f.model];
+      });
+    }
+    if (scanApply.serial_number && f.serial_number) {
+      setSerial(f.serial_number);
+      // The scanner labels Part # / Item # / SKU as "Model #" → append
+      // to modelNumbers (NOT serial_numbers) since these are model identifiers.
+      setModelNumbers((arr) => {
+        const compact = arr.filter((s) => s.trim());
+        return compact.includes(f.serial_number)
+          ? (compact.length ? compact : [""])
+          : [...compact, f.serial_number];
+      });
+    }
     if (scanApply.cost && f.cost) {
       const n = parseFloat(f.cost) || 0;
       setCost(n > 0 ? String(n.toFixed(2)) : "");
@@ -706,11 +741,16 @@ export default function ToolEdit() {
     if (!name.trim()) { Alert.alert("Required", "Please enter a tool name."); return; }
     setSaving(true);
     const cleanedSerials = setSerials.map((s) => s.trim()).filter((s) => s.length > 0);
+    const cleanedModelNums = modelNumbers.map((s) => s.trim()).filter((s) => s.length > 0);
+    const cleanedSerialNums = serialNumbers.map((s) => s.trim()).filter((s) => s.length > 0);
     const payload: any = {
       name: name.trim(), description, brand, model,
       serial_number: isSet ? "" : serial,
       is_set: isSet,
       set_serials: isSet ? cleanedSerials : [],
+      // New multi-value fields (backend will keep legacy mirrors in sync)
+      model_numbers: cleanedModelNums,
+      serial_numbers: cleanedSerialNums,
       cost: parseFloat(cost) || 0, purchase_date: purchaseDate, condition,
       quantity: Math.max(1, parseInt(quantity, 10) || 1),
       location_id: locationId, location_name: locationName,
@@ -744,6 +784,7 @@ export default function ToolEdit() {
   const resetFormForNextItem = () => {
     setName(""); setDescription(""); setBrand(""); setModel(""); setSerial("");
     setIsSet(false); setSetSerials([""]);
+    setModelNumbers([""]); setSerialNumbers([""]);
     setCost(""); setQuantity("1");
     setCondition("Good");
     setLocationId(null); setLocationName("");
@@ -829,7 +870,7 @@ export default function ToolEdit() {
       }
     }
     finally { setSaving(false); }
-  }, [name, description, brand, model, serial, isSet, setSerials, cost, quantity, purchaseDate, condition, locationId, locationName, category, tags, photos, documents, receipts, isConsumable, consumableInfo, needsRepair, repairInfo, hasWarranty, warranty, dealerId, dealerName, purchasedAgentId, purchasedAgentName, pendingDealerCharge, scanItems, importedItemIdxs, isEdit, id, router]);
+  }, [name, description, brand, model, serial, isSet, setSerials, modelNumbers, serialNumbers, cost, quantity, purchaseDate, condition, locationId, locationName, category, tags, photos, documents, receipts, isConsumable, consumableInfo, needsRepair, repairInfo, hasWarranty, warranty, dealerId, dealerName, purchasedAgentId, purchasedAgentName, pendingDealerCharge, scanItems, importedItemIdxs, isEdit, id, router]);
 
   if (loading) {
     return (
@@ -921,121 +962,154 @@ export default function ToolEdit() {
               value={brand} onChangeText={setBrand} style={styles.input} />
           </View>
 
-          {/* IS-A-SET toggle */}
-          <View style={styles.toggleRow}>
-            <Ionicons name="cube" size={20} color={theme.colors.accent} />
-            <Text style={styles.toggleText}>THIS IS A SET (multiple model numbers)</Text>
-            <Switch
-              testID="toggle-is-set"
-              value={isSet}
-              onValueChange={(v) => {
-                setIsSet(v);
-                if (v && setSerials.length === 0) setSetSerials([""]);
-              }}
-              trackColor={{ true: theme.colors.accent, false: theme.colors.border }}
-              thumbColor="#fff"
-            />
+          {/* COST + QTY row (always shown — the model/serial blocks below
+              are now stacked multi-value inputs and don't share this row). */}
+          <View style={styles.row2}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.label}>COST ($)</Text>
+              <TextInput testID="cost-input" placeholder="0.00" placeholderTextColor={theme.colors.textMuted}
+                value={cost} onChangeText={setCost} style={styles.input} keyboardType="decimal-pad" />
+            </View>
+            <View style={{ width: 90 }}>
+              <Text style={styles.label}>QTY</Text>
+              <TextInput testID="quantity-input" placeholder="1" placeholderTextColor={theme.colors.textMuted}
+                value={quantity} onChangeText={(v) => setQuantity(v.replace(/[^0-9]/g, ""))}
+                style={styles.input} keyboardType="number-pad" />
+            </View>
           </View>
 
-          {!isSet ? (
-            <View style={styles.row2}>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.label}>MODEL #</Text>
-                <TextInput testID="serial-input" placeholder="ABC-1234" placeholderTextColor={theme.colors.textMuted}
-                  value={serial} onChangeText={setSerial} style={styles.input} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.label}>COST ($)</Text>
-                <TextInput testID="cost-input" placeholder="0.00" placeholderTextColor={theme.colors.textMuted}
-                  value={cost} onChangeText={setCost} style={styles.input} keyboardType="decimal-pad" />
-              </View>
-              <View style={{ width: 90 }}>
-                <Text style={styles.label}>QTY</Text>
-                <TextInput testID="quantity-input" placeholder="1" placeholderTextColor={theme.colors.textMuted}
-                  value={quantity} onChangeText={(v) => setQuantity(v.replace(/[^0-9]/g, ""))}
-                  style={styles.input} keyboardType="number-pad" />
-              </View>
-            </View>
-          ) : (
-            <>
-              <View style={styles.row2}>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.label}>COST ($)</Text>
-                  <TextInput testID="cost-input" placeholder="0.00" placeholderTextColor={theme.colors.textMuted}
-                    value={cost} onChangeText={setCost} style={styles.input} keyboardType="decimal-pad" />
-                </View>
-                <View style={{ width: 90 }}>
-                  <Text style={styles.label}>QTY</Text>
-                  <TextInput testID="quantity-input" placeholder="1" placeholderTextColor={theme.colors.textMuted}
-                    value={quantity} onChangeText={(v) => setQuantity(v.replace(/[^0-9]/g, ""))}
-                    style={styles.input} keyboardType="number-pad" />
-                </View>
-              </View>
-              <View style={styles.subSection}>
-                <Text style={[styles.label, { marginTop: 0 }]}>MODEL NUMBERS (one per item in the set)</Text>
-                {setSerials.map((s, idx) => (
-                  <View
-                    key={idx}
-                    style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 8 }}
-                  >
-                    <Text style={{ color: theme.colors.textMuted, width: 28, fontWeight: "700" }}>
-                      {idx + 1}.
-                    </Text>
-                    <TextInput
-                      testID={`set-serial-input-${idx}`}
-                      placeholder={`Model # for item ${idx + 1}`}
-                      placeholderTextColor={theme.colors.textMuted}
-                      value={s}
-                      onChangeText={(v) => {
-                        const next = [...setSerials];
-                        next[idx] = v;
-                        setSetSerials(next);
-                      }}
-                      style={[styles.input, { flex: 1 }]}
-                    />
-                    {setSerials.length > 1 && (
-                      <TouchableOpacity
-                        testID={`set-serial-remove-${idx}`}
-                        onPress={() => {
-                          const next = setSerials.filter((_, i) => i !== idx);
-                          setSetSerials(next.length ? next : [""]);
-                        }}
-                        hitSlop={8}
-                        style={{
-                          padding: 6,
-                          borderRadius: 6,
-                          backgroundColor: "rgba(220,38,38,0.08)",
-                        }}
-                      >
-                        <Ionicons name="close" size={18} color={theme.colors.danger} />
-                      </TouchableOpacity>
-                    )}
-                  </View>
-                ))}
-                <TouchableOpacity
-                  testID="add-set-serial"
-                  onPress={() => setSetSerials([...setSerials, ""])}
-                  style={{
-                    flexDirection: "row",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    gap: 6,
-                    borderWidth: 1,
-                    borderStyle: "dashed",
-                    borderColor: theme.colors.accent,
-                    borderRadius: 6,
-                    paddingVertical: 10,
-                    marginTop: 4,
+          {/* MODEL NUMBERS — stacked multi-value input. Add as many rows as
+              the user needs. The first row is always visible; remove (×) appears
+              from the second row onward. */}
+          <View style={styles.subSection}>
+            <Text style={[styles.label, { marginTop: 0 }]}>MODEL NUMBER(S)</Text>
+            {modelNumbers.map((s, idx) => (
+              <View
+                key={`mn-${idx}`}
+                style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 8 }}
+              >
+                <Text style={{ color: theme.colors.textMuted, width: 28, fontWeight: "700" }}>
+                  {idx + 1}.
+                </Text>
+                <TextInput
+                  testID={`model-number-input-${idx}`}
+                  placeholder={idx === 0 ? "e.g. DCD777" : `Model # ${idx + 1}`}
+                  placeholderTextColor={theme.colors.textMuted}
+                  value={s}
+                  onChangeText={(v) => {
+                    const next = [...modelNumbers];
+                    next[idx] = v;
+                    setModelNumbers(next);
                   }}
-                >
-                  <Ionicons name="add" size={18} color={theme.colors.accent} />
-                  <Text style={{ color: theme.colors.accent, fontWeight: "800", letterSpacing: 1 }}>
-                    ADD MODEL NUMBER
-                  </Text>
-                </TouchableOpacity>
+                  style={[styles.input, { flex: 1 }]}
+                />
+                {modelNumbers.length > 1 && (
+                  <TouchableOpacity
+                    testID={`model-number-remove-${idx}`}
+                    onPress={() => {
+                      const next = modelNumbers.filter((_, i) => i !== idx);
+                      setModelNumbers(next.length ? next : [""]);
+                    }}
+                    hitSlop={8}
+                    style={{
+                      padding: 6,
+                      borderRadius: 6,
+                      backgroundColor: "rgba(220,38,38,0.08)",
+                    }}
+                  >
+                    <Ionicons name="close" size={18} color={theme.colors.danger} />
+                  </TouchableOpacity>
+                )}
               </View>
-            </>
-          )}
+            ))}
+            <TouchableOpacity
+              testID="add-model-number"
+              onPress={() => setModelNumbers([...modelNumbers, ""])}
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 6,
+                borderWidth: 1,
+                borderStyle: "dashed",
+                borderColor: theme.colors.accent,
+                borderRadius: 6,
+                paddingVertical: 10,
+                marginTop: 4,
+              }}
+            >
+              <Ionicons name="add" size={18} color={theme.colors.accent} />
+              <Text style={{ color: theme.colors.accent, fontWeight: "800", letterSpacing: 1 }}>
+                ADD ANOTHER MODEL #
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* SERIAL NUMBERS — same stacked input pattern. */}
+          <View style={styles.subSection}>
+            <Text style={[styles.label, { marginTop: 0 }]}>SERIAL NUMBER(S)</Text>
+            {serialNumbers.map((s, idx) => (
+              <View
+                key={`sn-${idx}`}
+                style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 8 }}
+              >
+                <Text style={{ color: theme.colors.textMuted, width: 28, fontWeight: "700" }}>
+                  {idx + 1}.
+                </Text>
+                <TextInput
+                  testID={`serial-number-input-${idx}`}
+                  placeholder={idx === 0 ? "e.g. SN-ABC-1234" : `Serial # ${idx + 1}`}
+                  placeholderTextColor={theme.colors.textMuted}
+                  value={s}
+                  onChangeText={(v) => {
+                    const next = [...serialNumbers];
+                    next[idx] = v;
+                    setSerialNumbers(next);
+                  }}
+                  style={[styles.input, { flex: 1 }]}
+                />
+                {serialNumbers.length > 1 && (
+                  <TouchableOpacity
+                    testID={`serial-number-remove-${idx}`}
+                    onPress={() => {
+                      const next = serialNumbers.filter((_, i) => i !== idx);
+                      setSerialNumbers(next.length ? next : [""]);
+                    }}
+                    hitSlop={8}
+                    style={{
+                      padding: 6,
+                      borderRadius: 6,
+                      backgroundColor: "rgba(220,38,38,0.08)",
+                    }}
+                  >
+                    <Ionicons name="close" size={18} color={theme.colors.danger} />
+                  </TouchableOpacity>
+                )}
+              </View>
+            ))}
+            <TouchableOpacity
+              testID="add-serial-number"
+              onPress={() => setSerialNumbers([...serialNumbers, ""])}
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 6,
+                borderWidth: 1,
+                borderStyle: "dashed",
+                borderColor: theme.colors.accent,
+                borderRadius: 6,
+                paddingVertical: 10,
+                marginTop: 4,
+              }}
+            >
+              <Ionicons name="add" size={18} color={theme.colors.accent} />
+              <Text style={{ color: theme.colors.accent, fontWeight: "800", letterSpacing: 1 }}>
+                ADD ANOTHER SERIAL #
+              </Text>
+            </TouchableOpacity>
+          </View>
+
 
           <View style={styles.row2}>
             <View style={{ flex: 1 }}>

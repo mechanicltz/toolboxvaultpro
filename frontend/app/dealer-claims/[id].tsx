@@ -151,10 +151,16 @@ export default function DealerClaimsScreen() {
       }
       const subject = `Repair / Warranty: ${t.name}`;
       const greetName = agent?.name || dealer?.name || "there";
+      const _claimMns: string[] = (Array.isArray(t.model_numbers) && t.model_numbers.length)
+        ? t.model_numbers.filter((s: any) => !!s)
+        : (t.serial_number ? [String(t.serial_number)] : []);
+      const _claimSns: string[] = Array.isArray(t.serial_numbers)
+        ? t.serial_numbers.filter((s: any) => !!s) : [];
       const lines = [
         `Hello ${greetName}, I have a repair/warranty tool.`,
         `Tool: ${t.name}`,
-        `Model Number: ${t.serial_number || "N/A"}`,
+        `Model Number${_claimMns.length > 1 ? "s" : ""}: ${_claimMns.length ? _claimMns.join(", ") : "N/A"}`,
+        `Serial Number${_claimSns.length === 1 ? "" : "s"}: ${_claimSns.length ? _claimSns.join(", ") : "N/A"}`,
         `Purchase date: ${fmtDate(t.purchase_date) || "N/A"}`,
       ];
       const body = lines.join("\n");

@@ -432,10 +432,16 @@ export default function ToolDetail() {
       // Exact template requested. User report #7: if a photo is attached to
       // the claim we ACTUALLY attach it now (used to just mention it in text).
       const greetName = agent?.name || dealer.name;
+      const _mnsForEmail: string[] = (Array.isArray(t.model_numbers) && t.model_numbers.length)
+        ? t.model_numbers.filter((s: any) => !!s)
+        : (t.serial_number ? [String(t.serial_number)] : []);
+      const _snsForEmail: string[] = Array.isArray(t.serial_numbers)
+        ? t.serial_numbers.filter((s: any) => !!s) : [];
       const lines = [
         `Hello ${greetName}, I have a repair/warranty tool.`,
         `Tool: ${t.name}`,
-        `Model Number: ${t.serial_number || "N/A"}`,
+        `Model Number${_mnsForEmail.length > 1 ? "s" : ""}: ${_mnsForEmail.length ? _mnsForEmail.join(", ") : "N/A"}`,
+        `Serial Number${_snsForEmail.length === 1 ? "" : "s"}: ${_snsForEmail.length ? _snsForEmail.join(", ") : "N/A"}`,
         `Purchase date: ${formatDateUS(t.purchase_date) || "N/A"}`,
       ];
       const subject = `Repair / Warranty: ${t.name}`;
@@ -641,8 +647,23 @@ export default function ToolDetail() {
     if (F.brand) specRows.push({ label: "Brand", value: tool.brand || "" });
     // "Model" row intentionally omitted — the for-sale flyer now uses
     // the consolidated Model # / Part # field instead.
-    if (F.serial)
-      specRows.push({ label: "Model #", value: tool.serial_number || "" });
+    if (F.serial) {
+      const _mns: string[] = (Array.isArray(tool.model_numbers) && tool.model_numbers.length)
+        ? tool.model_numbers.filter((s: any) => !!s)
+        : (tool.serial_number ? [String(tool.serial_number)] : []);
+      specRows.push({
+        label: _mns.length > 1 ? "Model #s" : "Model #",
+        value: _mns.length ? _mns.join(", ") : "",
+      });
+      const _sns: string[] = Array.isArray(tool.serial_numbers)
+        ? tool.serial_numbers.filter((s: any) => !!s) : [];
+      if (_sns.length) {
+        specRows.push({
+          label: _sns.length > 1 ? "Serial #s" : "Serial #",
+          value: _sns.join(", "),
+        });
+      }
+    }
     if (F.condition)
       specRows.push({ label: "Condition", value: tool.condition || "" });
     if (F.category)
@@ -973,6 +994,11 @@ export default function ToolDetail() {
     const receipts: string[] = includeReceipts && rawReceipts.length > 0
       ? await compressManyForPdf(rawReceipts, { maxWidth: 1200, quality: 0.6 })
       : [];
+    // Header model #s (joined) for the receipt sub-line in PDFs.
+    const _pdfHeaderMns: string[] = (Array.isArray(tool.model_numbers) && tool.model_numbers.length)
+      ? tool.model_numbers.filter((s: any) => !!s)
+      : (tool.serial_number ? [String(tool.serial_number)] : []);
+    const _pdfHeaderMnsStr = _pdfHeaderMns.length ? _pdfHeaderMns.join(", ") : "—";
     const receiptPages =
       includeReceipts && receipts.length > 0
         ? receipts
@@ -980,7 +1006,7 @@ export default function ToolDetail() {
               (r: string, i: number) => `
               <pdf:nextpage/>
               <div class="rcpt-header">RECEIPT ${i + 1} OF ${receipts.length}</div>
-              <div class="rcpt-sub"><b>${esc(tool.name) || "(unnamed)"}</b> &middot; Model: <b>${esc(tool.serial_number) || "—"}</b></div>
+              <div class="rcpt-sub"><b>${esc(tool.name) || "(unnamed)"}</b> &middot; Model: <b>${esc(_pdfHeaderMnsStr)}</b></div>
               <div class="rcpt-img-wrap"><img class="rcpt-img" src="${r}"/></div>`,
             )
             .join("")
@@ -995,7 +1021,22 @@ export default function ToolDetail() {
     if (tool.brand) specPairs.push({ label: "Brand", value: String(tool.brand) });
     // Legacy "Model" pair no longer emitted on receipt-style spec sheets
     // — see consolidation comment in the for-sale flyer renderer above.
-    if (tool.serial_number) specPairs.push({ label: "Model #", value: String(tool.serial_number) });
+    if (_pdfHeaderMns.length) {
+      specPairs.push({
+        label: _pdfHeaderMns.length > 1 ? "Model #s" : "Model #",
+        value: _pdfHeaderMns.join(", "),
+      });
+    }
+    {
+      const _pdfSns: string[] = Array.isArray(tool.serial_numbers)
+        ? tool.serial_numbers.filter((s: any) => !!s) : [];
+      if (_pdfSns.length) {
+        specPairs.push({
+          label: _pdfSns.length > 1 ? "Serial #s" : "Serial #",
+          value: _pdfSns.join(", "),
+        });
+      }
+    }
     if (tool.condition) specPairs.push({ label: "Condition", value: String(tool.condition) });
     if (tool.category_name) specPairs.push({ label: "Category", value: String(tool.category_name) });
     if (tool.location_name) specPairs.push({ label: "Location", value: String(tool.location_name) });
@@ -1573,11 +1614,19 @@ export default function ToolDetail() {
               to the warranty card. Location and dealer rows are tappable
               (chevron on right). */}
           {(() => {
-            const serials: string[] = tool.is_set
-              ? (Array.isArray(tool.set_serials)
-                  ? tool.set_serials.filter((s: string) => !!s)
-                  : [])
-              : (tool.serial_number ? [String(tool.serial_number)] : []);
+            // Prefer the new multi-value arrays. Fall back through legacy
+            // shape (set_serials when is_set, otherwise the single
+            // serial_number string) for tools not yet migrated.
+            const modelNums: string[] = Array.isArray(tool.model_numbers) && tool.model_numbers.length
+              ? tool.model_numbers.filter((s: string) => !!s)
+              : (tool.is_set
+                  ? (Array.isArray(tool.set_serials)
+                      ? tool.set_serials.filter((s: string) => !!s)
+                      : [])
+                  : (tool.serial_number ? [String(tool.serial_number)] : []));
+            const serialNums: string[] = Array.isArray(tool.serial_numbers)
+              ? tool.serial_numbers.filter((s: string) => !!s)
+              : [];
 
             type Row =
               | { kind: "value"; label: string; value: string; onPress?: () => void }
@@ -1599,13 +1648,19 @@ export default function ToolDetail() {
                 ? () => router.push(`/dealer/${tool.dealer_id}`)
                 : undefined,
             });
-            if (serials.length > 0) {
-              rows.push({
-                kind: "models",
-                label: serials.length > 1 ? "MODEL NUMBERS" : "MODEL #",
-                values: serials,
-              });
-            }
+            // ALWAYS show MODEL NUMBER(S) — per user, an empty row is shown
+            // with a "—" placeholder rather than being hidden.
+            rows.push({
+              kind: "models",
+              label: modelNums.length > 1 ? "MODEL NUMBERS" : "MODEL #",
+              values: modelNums.length ? modelNums : ["—"],
+            });
+            // ALWAYS show SERIAL NUMBER(S) row.
+            rows.push({
+              kind: "models",
+              label: serialNums.length > 1 ? "SERIAL NUMBERS" : "SERIAL #",
+              values: serialNums.length ? serialNums : ["—"],
+            });
             if (tool.brand) {
               rows.push({ kind: "value", label: "BRAND", value: String(tool.brand) });
             }

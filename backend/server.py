@@ -676,8 +676,15 @@ class Tool(BaseModel):
     name: str
     description: Optional[str] = ""
     brand: Optional[str] = ""
+    # Legacy single-value fields (kept for backward compat with older app
+    # builds and CSV import). New code reads/writes model_numbers / serial_numbers
+    # arrays. See _resolve_model_serial_arrays() for the migration glue.
     model: Optional[str] = ""
     serial_number: Optional[str] = ""
+    # New multi-value fields — users can stack any number of model #s and
+    # serial #s per tool (e.g., for kits, replacement parts, etc).
+    model_numbers: List[str] = []
+    serial_numbers: List[str] = []
     is_set: bool = False
     set_serials: List[str] = []
     cost: Optional[float] = 0.0
@@ -728,6 +735,8 @@ class ToolCreate(BaseModel):
     brand: Optional[str] = ""
     model: Optional[str] = ""
     serial_number: Optional[str] = ""
+    model_numbers: Optional[List[str]] = None
+    serial_numbers: Optional[List[str]] = None
     is_set: bool = False
     set_serials: List[str] = []
     cost: Optional[float] = 0.0
@@ -761,6 +770,8 @@ class ToolUpdate(BaseModel):
     brand: Optional[str] = None
     model: Optional[str] = None
     serial_number: Optional[str] = None
+    model_numbers: Optional[List[str]] = None
+    serial_numbers: Optional[List[str]] = None
     is_set: Optional[bool] = None
     set_serials: Optional[List[str]] = None
     cost: Optional[float] = None
@@ -826,6 +837,8 @@ def build_tool_query(
             {"model": rx},
             {"serial_number": rx},
             {"set_serials": rx},
+            {"model_numbers": rx},
+            {"serial_numbers": rx},
             {"tag_names": rx},
             {"location_name": rx},
             {"category_name": rx},
@@ -1389,13 +1402,86 @@ async def delete_dealer_transaction(dealer_id: str, tx_id: str):
 
 
 # ---------- Tools ----------
+
+# Backward-compat shim. The frontend writes model_numbers[] / serial_numbers[]
+# for new builds, but older app builds still send legacy {model, serial_number,
+# set_serials, is_set} fields. This helper folds either shape into a normalized
+# dict that we can persist consistently. Always writes BOTH the new arrays and
+# the legacy single-value mirrors so older app installs keep rendering data.
+def _resolve_model_serial_arrays(
+    updates: Dict[str, Any],
+    existing: Optional[Dict[str, Any]] = None,
+) -> None:
+    """Mutates `updates` in place to keep model_numbers/serial_numbers in sync
+    with the legacy model / serial_number / set_serials fields."""
+    existing = existing or {}
+
+    def _clean(arr: Any) -> List[str]:
+        if not isinstance(arr, list):
+            return []
+        return [str(x).strip() for x in arr if x is not None and str(x).strip()]
+
+    has_new_models = "model_numbers" in updates and updates["model_numbers"] is not None
+    has_new_serials = "serial_numbers" in updates and updates["serial_numbers"] is not None
+    has_legacy_set = "set_serials" in updates and updates["set_serials"] is not None
+    has_legacy_serial = "serial_number" in updates
+    has_legacy_model = "model" in updates
+
+    # ----- Resolve model_numbers -----
+    if has_new_models:
+        mns = _clean(updates["model_numbers"])
+    elif has_legacy_set or has_legacy_serial or has_legacy_model:
+        # Older app sent legacy fields → derive
+        candidates: List[str] = []
+        if has_legacy_set:
+            candidates.extend(_clean(updates.get("set_serials")))
+        if has_legacy_serial and updates.get("serial_number"):
+            candidates.append(str(updates["serial_number"]).strip())
+        if has_legacy_model and updates.get("model"):
+            candidates.append(str(updates["model"]).strip())
+        # Dedupe preserving order
+        seen = set()
+        mns = []
+        for v in candidates:
+            if v and v not in seen:
+                seen.add(v)
+                mns.append(v)
+    else:
+        mns = None  # not provided in this update at all
+
+    # ----- Resolve serial_numbers -----
+    if has_new_serials:
+        sns = _clean(updates["serial_numbers"])
+    else:
+        sns = None  # not provided in this update at all
+
+    # Persist resolved arrays + legacy mirrors so old app builds still render
+    if mns is not None:
+        updates["model_numbers"] = mns
+        # Legacy mirrors derived from model_numbers
+        updates["serial_number"] = mns[0] if mns else ""
+        updates["set_serials"] = mns
+        updates["is_set"] = len(mns) > 1
+        # Clear legacy `model` since we no longer accept it separately
+        if "model" not in updates:
+            updates["model"] = ""
+
+    if sns is not None:
+        updates["serial_numbers"] = sns
+
+
 @api_router.post("/tools", response_model=Tool)
 async def create_tool(payload: ToolCreate, user: User = Depends(get_current_user)):
     _validate_photo_payload(payload.photos)
     # Free-tier 15-item limit. Pro / lifetime users always pass.
     from subscriptions import enforce_tool_limit  # local import to avoid cycles
     await enforce_tool_limit(real_db, user.id)
-    tool = Tool(**payload.dict())
+    payload_dict = payload.dict()
+    # Normalize legacy/new model & serial fields so both shapes survive.
+    _resolve_model_serial_arrays(payload_dict)
+    # Strip None values so Tool() applies its defaults instead of crashing
+    payload_dict = {k: v for k, v in payload_dict.items() if v is not None}
+    tool = Tool(**payload_dict)
 
     # Denormalize the *_name fields from their *_id counterparts so the
     # tool description card has the right names from the very first
@@ -1476,6 +1562,7 @@ _EXPORT_FIELDS: List[Dict[str, Any]] = [
     {"id": "brand", "label": "Brand"},
     {"id": "model", "label": "Model"},
     {"id": "serial_number", "label": "Model number"},
+    {"id": "serial_numbers", "label": "Serial number(s)"},
     {"id": "quantity", "label": "Quantity"},
     {"id": "cost", "label": "Cost"},
     {"id": "category", "label": "Category"},
@@ -1501,7 +1588,15 @@ def _build_export_value(field_id: str, t: Dict[str, Any], lookups: Dict[str, Dic
     if field_id == "model":
         return t.get("model") or ""
     if field_id == "serial_number":
+        # Legacy "Model number" export. Prefer the new model_numbers[] array
+        # (semicolon-joined) so users see all model numbers in one cell;
+        # fall back to the single legacy field for tools not yet migrated.
+        mns = t.get("model_numbers") or []
+        if mns:
+            return "; ".join([str(x) for x in mns if x])
         return t.get("serial_number") or ""
+    if field_id == "serial_numbers":
+        return "; ".join([str(x) for x in (t.get("serial_numbers") or []) if x])
     if field_id == "quantity":
         return t.get("quantity") or 1
     if field_id == "cost":
@@ -1882,11 +1977,26 @@ async def tools_import(payload: ImportPayload, user: User = Depends(get_current_
             qty = _to_int(raw.quantity, default=1)
             cost = _to_float(raw.cost)
 
+            # Build model_numbers[] from legacy import fields (deduped).
+            _mn_cands = []
+            if _norm(raw.serial_number):
+                _mn_cands.append(_norm(raw.serial_number))
+            if _norm(raw.model):
+                _mn_cands.append(_norm(raw.model))
+            _mn_seen = set()
+            _model_numbers: List[str] = []
+            for _v in _mn_cands:
+                if _v and _v not in _mn_seen:
+                    _mn_seen.add(_v)
+                    _model_numbers.append(_v)
+
             tool = Tool(
                 name=name,
                 brand=_norm(raw.brand),
                 model=_norm(raw.model),
                 serial_number=_norm(raw.serial_number),
+                model_numbers=_model_numbers,
+                serial_numbers=[],
                 quantity=qty,
                 cost=cost,
                 description=_norm(raw.description),
@@ -2010,6 +2120,10 @@ async def update_tool(tool_id: str, payload: ToolUpdate):
     # could only be reassigned, never removed.
     updates = payload.dict(exclude_unset=True)
     updates["updated_at"] = now_iso()
+
+    # Keep legacy model/serial fields and new model_numbers/serial_numbers
+    # arrays in sync — whichever shape the client sent, both get persisted.
+    _resolve_model_serial_arrays(updates, doc)
 
     # ---------------------------------------------------------------
     # Keep denormalized *_name fields in sync with their *_id fields.
@@ -3278,6 +3392,51 @@ async def admin_seed_defaults(
         "totals": totals,
         "newly_seeded_users": summary,
     }
+
+
+@api_router.post("/admin/migrate-model-serial")
+async def admin_migrate_model_serial(user: User = Depends(get_current_user)):
+    """Backfill `model_numbers[]` for every tool that doesn't have one yet.
+    Per the user's instructions:
+      - Existing `model` and `serial_number` (legacy single-string model #s)
+        and `set_serials` (legacy multi-model array) all merge into
+        `model_numbers[]`, deduped, order preserved.
+      - `serial_numbers[]` stays empty (no real serial numbers were ever
+        captured).
+      - Legacy fields are left intact so older app builds keep rendering.
+    Idempotent — tools that already have model_numbers populated are skipped.
+    Admin only."""
+    _require_admin_for_seed(user)
+    total = 0
+    touched = 0
+    cursor = real_db.tools.find({}, {"_id": 0})
+    async for t in cursor:
+        total += 1
+        if t.get("model_numbers"):
+            continue  # already migrated
+        candidates: List[str] = []
+        for v in (t.get("set_serials") or []):
+            if v:
+                candidates.append(str(v).strip())
+        sn = t.get("serial_number")
+        if sn:
+            candidates.append(str(sn).strip())
+        md = t.get("model")
+        if md:
+            candidates.append(str(md).strip())
+        seen = set()
+        mns: List[str] = []
+        for v in candidates:
+            if v and v not in seen:
+                seen.add(v)
+                mns.append(v)
+        update_doc: Dict[str, Any] = {
+            "model_numbers": mns,
+            "serial_numbers": t.get("serial_numbers") or [],
+        }
+        await real_db.tools.update_one({"id": t["id"]}, {"$set": update_doc})
+        touched += 1
+    return {"total_tools": total, "migrated": touched}
 
 
 

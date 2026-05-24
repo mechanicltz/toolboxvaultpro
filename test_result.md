@@ -112,10 +112,23 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Audit #16 + #10 + #11 + #17 — Mongo indexes, sub refresh broadcast, timer leaks, monthly DB backup"
+    - "Tool multi-value model_numbers[] / serial_numbers[] + /api/admin/migrate-model-serial"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
+
+backend_model_serial_multi:
+  - task: "Tool multi-value model_numbers[] / serial_numbers[] + legacy migration endpoint"
+    implemented: true
+    working: false
+    file: "/app/backend/server.py"
+    stuck_count: 1
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: false
+        agent: "testing"
+        comment: "19/20 PASS via /app/backend_test_model_serial_multi.py against http://localhost:8001/api with admin MechanicLTZ@gmail.com / Blue321!.\n\nSCENARIO 1 (POST with arrays) ✅ — POST /api/tools {name:'TestMV', model_numbers:['MN-1','MN-2'], serial_numbers:['SN-A']} → 200; response has model_numbers=['MN-1','MN-2'], serial_numbers=['SN-A'], serial_number='MN-1' (legacy mirror = first model), set_serials=['MN-1','MN-2'] (legacy mirror), is_set=true (>1 model). Exactly per spec.\n\nSCENARIO 2 (PUT model_numbers only) ✅ — PUT /api/tools/{id} {model_numbers:['X-ONLY']} → 200; response has model_numbers=['X-ONLY'], serial_numbers=['SN-A'] (untouched, not in payload — the _resolve_model_serial_arrays helper correctly leaves sns=None when key absent), serial_number='X-ONLY', is_set=false (1 model). Exactly per spec.\n\nSCENARIO 3 (legacy-only POST) ✅ — POST /api/tools {name:'LegacyOld', serial_number:'LEG-42'} (no model_numbers/serial_numbers) → 200; response has model_numbers=['LEG-42'] (derived from legacy serial_number), serial_numbers=[], serial_number='LEG-42'. Exactly per spec.\n\nSCENARIO 4 (search hits both arrays) ✅ — GET /api/tools?search=MN-1 returned tool1 (matched on model_numbers). GET /api/tools?search=SN-A returned tool1 (matched on serial_numbers). Both arrays are correctly indexed in the $or regex search at server.py L840-841.\n\nSCENARIO 5 (migrate endpoint) ❌ NOT IDEMPOTENT — Real bug found.\n  • 5a: POST /api/admin/migrate-model-serial → 200 {total_tools:7, migrated:5}. ✅ Response shape correct.\n  • 5b: SECOND POST /api/admin/migrate-model-serial → 200 {total_tools:7, migrated:4}. ❌ Expected migrated==0 per the review request explicit requirement 'the SECOND call's migrated count MUST be 0 (idempotent)'. Got migrated=4.\n  • 5c: After migrate, GET /api/tools — every visible tool with legacy serial_number/set_serials DOES have model_numbers populated. ✅ The DATA outcome is correct, but the counting is wrong.\n\n  ROOT CAUSE (one-line fix in /app/backend/server.py at L3415):\n     ```python\n     if t.get(\"model_numbers\"):\n         continue  # already migrated\n     ```\n  The check `t.get(\"model_numbers\")` returns `[]` (an empty list) for any tool that has the field already set to an empty array — and `[]` is falsy in Python, so the migration falls through and re-writes the same empty array, incrementing `touched`. Verified via direct mongo query: 4 tools have `model_numbers: []` (no legacy data — Test 2, Hammer, Wrench, Wrench). On every migrate call those 4 are reprocessed (legacy fields are all empty, so `mns` ends up as `[]` again, and `update_one` is called with `{model_numbers: [], serial_numbers: []}`).\n\n  FIX: change L3415 to `if \"model_numbers\" in t:` (presence check, not truthy check). OR skip if the computed `mns` equals what's already on the doc. After the fix, second call returns migrated=0 as required.\n\n  IMPACT: end-user data is correct (all tools end up with the right model_numbers state), but every admin call to the migrate endpoint does N redundant database writes where N = number of tools with no legacy model/serial/set_serials data. For a large tenant this is wasted I/O and inflates the audit/migrated count, giving misleading admin feedback ('Migrated 1,000 tools!' when in reality nothing changed).\n\nSCENARIO 6 (cleanup) ✅ — DELETE /api/tools/{TestMV.id} 200, DELETE /api/tools/{LegacyOld.id} 200. Both test tools removed.\n\nNO OTHER REGRESSIONS. Backend log clean — only the expected 200s. All scenarios except the idempotency-count requirement of #5 passed. Main agent: please apply the one-line idempotency fix at server.py:3415, then ask for re-test."
 
 backend_db_backup:
   - task: "Database backup module (audit #17): /api/admin/backups CRUD + monthly scheduler"
@@ -3703,4 +3716,62 @@ metadata:
         Please verify the new wishlist photo + model_number persistence and convert flow.
         Use the admin creds from /app/memory/test_credentials.md.
         Other parts unchanged — focus ONLY on wishlist endpoints.
+
+
+#====================================================================================================
+## 2026-05-24 — Multi-value model_numbers + serial_numbers on Tool
+#====================================================================================================
+backend:
+  - task: "Tool: model_numbers[] + serial_numbers[] arrays with legacy compat + migration endpoint"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: |
+          Added `model_numbers: List[str] = []` and `serial_numbers: List[str] = []`
+          to Tool / ToolCreate / ToolUpdate. Created helper `_resolve_model_serial_arrays`
+          that:
+          (a) accepts EITHER the new arrays OR legacy {model, serial_number, set_serials, is_set}
+          and (b) writes BOTH on save (legacy mirrors derived from model_numbers[0] so older
+          app builds keep rendering).
+          Hooked into create_tool and update_tool.
+          Updated build_tool_query to also search model_numbers/serial_numbers.
+          Updated _EXPORT_FIELDS: added "serial_numbers" export id; "serial_number"
+          export now prefers joined model_numbers[].
+          Added admin endpoint POST /api/admin/migrate-model-serial that backfills
+          model_numbers[] for every existing tool from (set_serials ∪ serial_number ∪ model),
+          deduped. Idempotent — tools that already have model_numbers are skipped.
+          CSV import now also populates model_numbers[] from the legacy import fields.
+
+          NEEDS VERIFICATION:
+            1. POST /api/tools with {model_numbers:["A","B"], serial_numbers:["S1"]} →
+               returned Tool has those arrays AND legacy mirrors:
+                 serial_number == "A", set_serials == ["A","B"], is_set == true.
+            2. PUT /api/tools/{id} with just {model_numbers:["X"]} → updates arrays
+               and legacy mirrors; serial_numbers preserved (untouched).
+            3. POST /api/tools with ONLY legacy {serial_number:"Z"} (old app shape) →
+               model_numbers becomes ["Z"], serial_numbers stays [].
+            4. Search ?search=A finds tools whose model_numbers[] contains "A".
+            5. POST /api/admin/migrate-model-serial (admin user) → returns
+               {total_tools, migrated} and is idempotent on a second call (migrated==0).
+            6. After migration, every tool with legacy set_serials or serial_number
+               has model_numbers populated; tools created fresh post-migration are
+               unaffected.
+
+metadata:
+  test_focus:
+    - "Tool: model_numbers[] + serial_numbers[] arrays with legacy compat + migration endpoint"
+  agent_communications:
+    - from: "main"
+      to: "testing"
+      message: |
+        Please verify multi-value model_numbers/serial_numbers on the Tool model.
+        Use the admin creds from /app/memory/test_credentials.md.
+        Focus on the 6 verification steps above. Other endpoints unchanged.
+
 
