@@ -73,27 +73,54 @@ The infrastructure is there — what's missing is the polish.
 - **Native iOS/Android share sheets** — fallback to manual share/download
 - **Background tasks / local notifications** — N/A on web
 
-## Subscription Handling on Web (Big Issue)
+## Subscription Handling on Web (Big Issue → Actually Simpler Than It Looks)
 
-Mobile subs come from Apple IAP / Google Play Billing via RevenueCat. **Web users can't use
-those.** Need a parallel path:
+Mobile subs come from Apple IAP / Google Play Billing via RevenueCat. Web users can't use
+those.
 
-### Option A: Stripe via RevenueCat Web SDK
-- RevenueCat already supports Stripe-backed web checkout (`https://docs.revenuecat.com/docs/web`)
-- Same entitlements unify across iOS / Android / Web
-- Web users pay via Stripe → RC gives them the same `pro` entitlement that iOS subscribers get
-- No double-billing: if a user subscribes on iOS then signs in on web, RC sees their active
-  iOS entitlement and skips the upsell
+### ⭐ RECOMMENDED: Option B — Web is "sign in only" for existing mobile accounts
 
-### Option B: Apple/Google's "external web purchase" allowance
-- Apple recently allowed apps to link to external web purchase (with required disclosure)
-- Could direct mobile users to web checkout for a cheaper price (skipping the 30% cut)
-- Risky — Apple's rules around this are strict and changing
-- **NOT recommended** until we're more established
+This is the chosen path. Reasoning documented in conversation 2026-05-23:
 
-### Recommended: Option A (Stripe via RC)
-- Same price on web as on mobile to avoid the Apple/Google compliance drama
-- ~$5-10/mo savings if users prefer Stripe (lower fees, easier to manage in dashboard)
+- ALL sign-ups happen via mobile (App Store / Play Store with native IAP)
+- Web access is gated behind: "you must already have a mobile-created account to sign in"
+- Web users sign in with the same email/password they use on mobile
+- Web inherits the entitlement (free or pro) from the mobile-side subscription via RevenueCat
+- **No Stripe needed. No payments on web. No Apple compliance risk.**
+
+Benefits:
+- Zero Apple compliance gray-area (App Store reviewers cannot flag a non-existent web payment)
+- ~80-120 credits saved vs Stripe integration
+- ~1-2 weeks faster shipping
+- Single subscription state machine (IAP only, via RC)
+- Can always add direct web signup later if data shows demand
+
+Trade-off accepted:
+- Users discovering on desktop with no phone are locked out (small overlap for mechanic audience)
+- No direct-web-signup conversion path until later
+- "Download the app first" friction for any potential web-first user
+
+### Option A (DEFERRED): Stripe via RC for direct web signups
+
+Apple does NOT regulate website payments — companies like Spotify, Notion, Slack all
+sell on web via Stripe and on iOS via IAP simultaneously. The constraint is:
+- The iOS app cannot link to or advertise the web checkout
+- The iOS app must use IAP for any in-app purchase
+- The web stays its own world, completely separate billing
+
+If we ever do this later:
+- RC web SDK supports Stripe out of the box
+- Same entitlements unified across iOS/Android/Web
+- No double-billing (if user has active iOS sub, RC sees it and skips the upsell)
+- iOS app code MUST stay clean — no mention of web pricing, no upsell button
+
+This is technically lower-risk than people fear if executed carefully, but for v1 we defer.
+Revisit if analytics show meaningful web-discovery without mobile install.
+
+### Option C (NOT RECOMMENDED): External web purchase link from iOS app
+
+Apple recently allowed this under heavy disclosure requirements. Risky and changing.
+Don't do it.
 
 ## Architecture Decisions
 
