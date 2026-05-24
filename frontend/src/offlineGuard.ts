@@ -9,6 +9,7 @@ import { isOnline } from "./network";
 export function showOfflineAlert(
   what: string = "This action",
   message?: string,
+  title: string = "You're offline",
 ) {
   const body =
     message ||
@@ -17,11 +18,11 @@ export function showOfflineAlert(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const w: any = (globalThis as any).window;
     if (w?.alert) {
-      w.alert(`Offline\n\n${body}`);
+      w.alert(`${title}\n\n${body}`);
       return;
     }
   }
-  Alert.alert("You're offline", body);
+  Alert.alert(title, body);
 }
 
 /**

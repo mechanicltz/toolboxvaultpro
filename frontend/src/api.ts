@@ -46,7 +46,18 @@ const TOKEN_KEY = "tt.auth.token";
 // app comes back to active, instantly killing any zombie requests and
 // letting screens retry against a healthy socket.
 // ---------------------------------------------------------------------------
-const REQUEST_TIMEOUT_MS = 20_000;
+// Default timeout — applied to every fetch unless the caller bumps it.
+// 20s was too short for photo/invoice/document uploads (1-5 MB of base64
+// content over cellular routinely takes 30+ seconds), causing the app to
+// fire "You're offline" alerts on requests that were actually succeeding.
+// 60s is a reasonable mobile-network ceiling for typical API traffic.
+// Upload-heavy requests can pass `{ timeoutMs: ... }` via the options to
+// extend further (see UPLOAD_TIMEOUT_MS for the default we use).
+const REQUEST_TIMEOUT_MS = 60_000;
+// Bigger window for upload-heavy mutations (POST/PUT with photo payloads).
+// On cellular, a 5 MB invoice can take 60-90s to upload. 120s gives
+// generous headroom without letting truly-broken requests hang forever.
+const UPLOAD_TIMEOUT_MS = 120_000;
 const _inFlight = new Set<AbortController>();
 
 /**
@@ -188,14 +199,28 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   // Hard timeout via AbortController so iOS-suspended requests can't hang
   // forever. The controller is registered in _inFlight so the AppState
   // listener can yank it the moment the app comes back to foreground.
+  //
+  // Heavy uploads (mutations that include a `photos` or `invoice` field
+  // in the JSON body) get the longer UPLOAD_TIMEOUT_MS window because
+  // 1-5 MB of base64 over cellular routinely exceeds the default 60s.
+  const isHeavyUpload =
+    mutation &&
+    typeof options.body === "string" &&
+    (options.body.includes('"photos"') ||
+      options.body.includes('"invoice"') ||
+      options.body.includes('"image"') ||
+      options.body.length > 500_000);
+  const effectiveTimeout = isHeavyUpload ? UPLOAD_TIMEOUT_MS : REQUEST_TIMEOUT_MS;
   const ctrl = new AbortController();
+  let timedOut = false;
   const timer = setTimeout(() => {
+    timedOut = true;
     try {
       ctrl.abort("timeout" as any);
     } catch {
       /* best effort */
     }
-  }, REQUEST_TIMEOUT_MS);
+  }, effectiveTimeout);
   _inFlight.add(ctrl);
   try {
     res = await fetch(`${BASE}/api${path}`, {
@@ -212,8 +237,23 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
       return getCached(apiCacheKey(path), undefined as any);
     }
     if (mutation) {
-      // The eager check above usually catches this, but if connectivity
-      // dropped *during* the request we still warn.
+      // Distinguish a timeout (our own AbortController fired) from a real
+      // network failure. A timeout doesn't mean the user is offline — it
+      // just means the request took longer than we waited. Showing
+      // "You're offline" in that case is misleading and exactly what the
+      // user reported on 2026-05-24 (their wifi/cellular was fine).
+      if (timedOut) {
+        if (!path.startsWith("/auth/")) {
+          showOfflineAlert(
+            "This change",
+            isHeavyUpload
+              ? "Your upload is taking longer than expected. Check your connection and try again — large invoices / photos can take a minute on cellular."
+              : "The request took too long to complete. Check your connection and try again.",
+            "Request timed out",
+          );
+        }
+        throw new OfflineError("Request timed out");
+      }
       if (!path.startsWith("/auth/")) showOfflineAlert("This change");
       throw new OfflineError();
     }
