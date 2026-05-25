@@ -1282,8 +1282,9 @@ const styles = themedStyles((c) => ({
     backgroundColor: c.bg,
   },
   formatBtnActive: {
-    backgroundColor: c.accent,
+    backgroundColor: "transparent",
     borderColor: c.accent,
+    borderWidth: 2,
   },
   formatBtnText: {
     color: c.textSecondary,
@@ -1292,6 +1293,6 @@ const styles = themedStyles((c) => ({
     letterSpacing: 1.2,
   },
   formatBtnTextActive: {
-    color: "#000",
+    color: c.accent,
   },
 }));
