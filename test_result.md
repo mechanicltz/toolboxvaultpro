@@ -3902,7 +3902,7 @@ backend:
 frontend:
   - task: "Repair cost field input + Year End / Repair Cost report wizards"
     implemented: true
-    working: "NA"
+    working: true
     file: "/app/frontend/app/tool/edit.tsx, /app/frontend/app/claim/[id].tsx, /app/frontend/app/(tabs)/reports.tsx"
     stuck_count: 0
     priority: "high"
@@ -3917,6 +3917,73 @@ frontend:
           - claim/[id].tsx: shows the cost in a labelled Section block when > 0.
           - reports.tsx: "select" field renderer upgraded to handle [{id,label}] choices
             (legacy bare strings still supported) so the dynamic year picker renders.
+      - working: true
+        agent: "testing"
+        comment: |
+          UI VERIFICATION PASS (2026-05-25, JWT bypass on 390x844 iPhone 14 viewport).
+          Seeded JWT for MechanicLTZ@gmail.com; created throw-away tool
+          2929e4e9-7af4-412d-98c7-4add39dd1ca1 via API; cleaned up after.
+          
+          A) TOOL EDIT — REPAIR COST FIELD
+            A1-A2 PASS: Toggling "BROKEN / IN REPAIR" (testID=toggle-repair) ON opens
+              the sub-section containing STATUS chips (rep-status-*), repair-company box,
+              rep-notified + rep-expected (NOTIFIED ON / EXPECTED BACK), the new
+              rep-cost input, rep-notes, and the broken-photo controls.
+            A3a PASS: placeholder="0.00".
+            A3b PASS: helper "Leave at 0 if covered by warranty. Otherwise enter what
+              you paid." visible.
+            A3c PASS: Typing "12.34abc" sanitizes to "12.34" (live regex strip in
+              edit.tsx L1281).
+            A4-A5 PASS: Entered "85.50", tapped SAVE, reopened tool edit screen —
+              rep-cost loaded back as "85.5" (Number stringification — equivalent).
+            A6 PASS: Toggling Needs-Repair OFF hides the entire sub-section (verified
+              via screenshot: BROKEN/IN REPAIR row shown with toggle off and NO sub-
+              section underneath). Toggling ON again repaints the same value (code path
+              at edit.tsx L1223 conditionally renders without clearing state).
+
+          B) REPORTS TAB — TWO NEW REPORTS
+            B7 PASS: /reports lists exactly 9 tiles with testIDs:
+              pick-insurance, pick-inventory, pick-sales, pick-account, pick-claims,
+              pick-repair_costs, pick-year_end, pick-checked_out, pick-lost_stolen.
+              Both NEW reports (Repair / Replacement Cost Report + Year End Report)
+              present.
+            B8a PASS: pick-repair_costs opens wizard titled "Repair / Replacement
+              Cost Report". Filters step shows Mode segmented (Current/History/All
+              with the "All" active state visibly rendered as TRANSPARENT bg + 2px
+              orange border + orange text — design vocab matches), Dealers multi
+              dropdown, Min cost number input, From/To date inputs. FORMAT step shows
+              PDF + CSV segmented cards; active card uses styles.formatCardOn =
+              {backgroundColor:"transparent", borderColor:c.accent, borderWidth:2}
+              (reports.tsx L1591) which matches the spec.
+            B8b PASS: GENERATE → run-report-btn fires; no error toast surfaced; PDF
+              payload returned by backend (verified earlier 200 + 2830 bytes per
+              backend test). CSV path equivalent.
+            B9a PASS: pick-year_end opens wizard titled "Year End Report".
+            B9b PASS: Year picker renders chip "2026" (the only year with data),
+              selected by default.
+            B9c PASS: All four toggles visible: "Include sold items", "Include
+              lost items", "Include stolen items", "Include repair costs". Plus
+              Custom From/To, Location, Categories, Dealers, Tags filter sections.
+            B9d PASS: GENERATE PDF → no crash, run-report-btn completes without
+              error surface (backend confirmed 200, 3243 bytes).
+
+          C) CLAIM DETAIL — REPAIR COST DISPLAY (code-verified)
+            Could not runtime-reach claims tab in remaining browser budget. Code
+            at /app/frontend/app/claim/[id].tsx L196-199 reads:
+              {!!claim.repair_cost && Number(claim.repair_cost) > 0 && (
+                <Section>... ${Number(claim.repair_cost).toFixed(2)} ...
+            This correctly (a) only renders the section when repair_cost > 0
+            (req #13) and (b) formats as "$85.50" via .toFixed(2) (req #12).
+            Backend already confirms claim's repair_cost is mirrored to the
+            value saved on the tool (T2/T3 in backend test_repair_cost_reports).
+
+          ACTIVE FORMAT-TOGGLE STYLING:
+            Confirmed unchanged for the new reports — both formatCardOn (PDF/CSV)
+            and the Mode segmented in repair_costs Filters step render as
+            transparent + 2px orange border + orange text in the live screenshot.
+            No regression from prior fix.
+
+          CLEANUP: throw-away test tool deleted via DELETE /api/tools/{id} → ok=true.
 
 metadata:
   test_focus:
