@@ -634,20 +634,26 @@ function OptionRow({
     );
   }
   if (field.type === "select") {
+    // Backend may pass either bare strings (legacy) or [{id, label}] objects
+    // (new — used by the dynamic year picker on Year End Report).
+    const rawChoices: any[] = (field as any).choices || [];
+    const choices: { id: string; label: string }[] = rawChoices.map((c: any) =>
+      typeof c === "string" ? { id: c, label: c || "Any" } : { id: String(c.id ?? c), label: String(c.label ?? c.id ?? c) },
+    );
     return (
       <View style={styles.optionField}>
         <Text style={styles.optionLabel}>{field.label}</Text>
         <View style={styles.segmentedRow}>
-          {(field as any).choices.map((c: string) => {
-            const active = (value || "") === c;
+          {choices.map((c) => {
+            const active = String(value || "") === c.id;
             return (
               <TouchableOpacity
-                key={c || "_any"}
+                key={c.id || "_any"}
                 style={[styles.segmentedBtn, active && styles.segmentedBtnOn]}
-                onPress={() => onChange(c)}
+                onPress={() => onChange(c.id)}
               >
                 <Text style={[styles.segmentedText, active && { color: "#000" }]}>
-                  {c || "Any"}
+                  {c.label}
                 </Text>
               </TouchableOpacity>
             );

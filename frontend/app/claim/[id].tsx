@@ -191,6 +191,16 @@ export default function ClaimDetailScreen() {
           </Section>
         )}
 
+        {/* Repair / replacement cost — shown when > 0. Helps the user verify
+            what they recorded and what will roll up into reports. */}
+        {!!claim.repair_cost && Number(claim.repair_cost) > 0 && (
+          <Section label="REPAIR / REPLACEMENT COST">
+            <Text style={[styles.notes, { fontSize: 18, fontWeight: "700" }]}>
+              ${Number(claim.repair_cost).toFixed(2)}
+            </Text>
+          </Section>
+        )}
+
         {!!claim.broken_photo && (
           <Section label="PHOTO OF BROKEN PART">
             <Image source={{ uri: claim.broken_photo }} style={styles.photoLarge} />

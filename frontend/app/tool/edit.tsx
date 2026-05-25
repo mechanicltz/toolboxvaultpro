@@ -67,6 +67,7 @@ export default function ToolEdit() {
     contact: "",
     notes: "",
     broken_photo: "",
+    repair_cost: "", // dollar amount user paid for repair (string for input)
   });
 
   // Warranty
@@ -168,6 +169,7 @@ export default function ToolEdit() {
             contact: t.repair_info.contact || "",
             notes: t.repair_info.notes || "",
             broken_photo: t.repair_info.broken_photo || "",
+            repair_cost: t.repair_info.repair_cost ? String(t.repair_info.repair_cost) : "",
           });
         }
         if (t.warranty?.has_warranty) {
@@ -768,6 +770,7 @@ export default function ToolEdit() {
         contact: purchasedAgentName || "",
         notes: repairInfo.notes,
         broken_photo: repairInfo.broken_photo || "",
+        repair_cost: parseFloat(repairInfo.repair_cost || "0") || 0,
       } : null,
       warranty: hasWarranty ? {
         has_warranty: true,
@@ -798,6 +801,7 @@ export default function ToolEdit() {
     setRepairInfo({
       company_notified: "", notified_at: "", expected_completion: "",
       repair_status: "Not Reported", contact: "", notes: "", broken_photo: "",
+      repair_cost: "",
     });
     setHasWarranty(false);
     setWarranty({ provider: "", contact: "", terms: "", length_months: "", coverage_type: "months", start_date: "", expiry_date: "" });
@@ -1260,6 +1264,26 @@ export default function ToolEdit() {
                   />
                 </View>
               </View>
+              {/* Out-of-pocket repair / replacement cost. Defaults to $0 —
+                  user only fills this in when they paid for the fix. Feeds
+                  into the Repair Cost Report and Year End Report totals. */}
+              <Text style={styles.label}>REPAIR / REPLACEMENT COST ($)</Text>
+              <Text style={styles.helper}>
+                Leave at 0 if covered by warranty. Otherwise enter what you paid.
+              </Text>
+              <TextInput
+                testID="rep-cost"
+                placeholder="0.00"
+                placeholderTextColor={theme.colors.textMuted}
+                value={repairInfo.repair_cost}
+                onChangeText={(v) => {
+                  // Allow only digits + one decimal point
+                  const clean = v.replace(/[^0-9.]/g, "").replace(/(\..*?)\..*/g, "$1");
+                  setRepairInfo({ ...repairInfo, repair_cost: clean });
+                }}
+                style={styles.input}
+                keyboardType="decimal-pad"
+              />
               <Text style={styles.label}>NOTES</Text>
               <TextInput testID="rep-notes" placeholder="What's wrong? RMA #..." placeholderTextColor={theme.colors.textMuted}
                 value={repairInfo.notes} style={[styles.input, { height: 70, textAlignVertical: "top" }]} multiline

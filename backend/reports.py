@@ -971,20 +971,28 @@ def _normalise_tool_row(t: Dict[str, Any]) -> Dict[str, Any]:
         qty = 1
     qty = max(1, qty)
     unit_cost = float(t.get("cost") or 0)
-    # Multi-line serials for "Set" tools — every serial on its own line
-    # in the same Serial column. Falls back to the single serial otherwise.
-    if t.get("is_set") and (t.get("set_serials") or []):
+    # Multi-value model_numbers — every value on its own line in the Model
+    # column. Falls back through legacy set_serials and serial_number for
+    # tools that haven't migrated yet.
+    mns = t.get("model_numbers") or []
+    if isinstance(mns, list) and mns:
+        serial_str = "\n".join([str(s) for s in mns if s])
+    elif t.get("is_set") and (t.get("set_serials") or []):
         serial_str = "\n".join(
             [s for s in (t.get("set_serials") or []) if s]
         )
     else:
         serial_str = t.get("serial_number") or ""
+    # Multi-value serial_numbers (the NEW field, separate from model #)
+    sns = t.get("serial_numbers") or []
+    serial_numbers_str = "\n".join([str(s) for s in sns if s]) if isinstance(sns, list) else ""
     return {
         "id": t.get("id"),
         "name": t.get("name") or "",
         "brand": t.get("brand") or "",
         "model": t.get("model") or "",
         "serial": serial_str,
+        "serial_numbers": serial_numbers_str,
         "category": t.get("category_name") or "",
         "location": t.get("location_name") or "",
         "dealer": t.get("dealer_name") or "",
@@ -1141,6 +1149,8 @@ async def _fetch_claims(db, user, options: Dict[str, Any]) -> Dict[str, Any]:
             "completed_at": it.get("completed_at") or "",
             "notes": it.get("notes") or "",
             "created_at": (it.get("created_at") or "")[:10],
+            # Out-of-pocket repair / replacement cost (0 if covered by warranty)
+            "repair_cost": float(it.get("repair_cost") or 0),
         })
 
     # Group rows by dealer; within each group keep newest claim first.
@@ -1978,6 +1988,238 @@ _LOST_STOLEN_COLUMNS = [
 ]
 
 
+# ---- REPAIR COSTS (new dedicated repair/replacement cost report) -----------
+
+async def _fetch_repair_costs(db, user, options: Dict[str, Any]) -> Dict[str, Any]:
+    """Same shape as _fetch_claims but oriented around money totals. Always
+    rendered with the repair_cost column (and TOTAL row) included. Optional
+    min_cost filter hides $0 (warranty-covered) entries when set > 0."""
+    # mode is handled inside _fetch_claims via options["claims_mode"]
+    # Reuse the claims fetcher so we get the row layout / dealer grouping
+    base = await _fetch_claims(db, user, options)
+    rows = base.get("rows") or []
+    min_cost = options.get("min_cost")
+    try:
+        min_cost = float(min_cost) if min_cost not in (None, "") else 0.0
+    except Exception:
+        min_cost = 0.0
+    if min_cost > 0:
+        rows = [
+            r for r in rows
+            if r.get("_section_header") or float(r.get("repair_cost") or 0) >= min_cost
+        ]
+
+    only_real = [r for r in rows if not r.get("_section_header")]
+    grand_total = sum(float(r.get("repair_cost") or 0) for r in only_real)
+    stats = [
+        ("Claims", str(len(only_real)), False),
+        ("Total Repair Cost", fmt_money(grand_total), True),
+    ]
+    sub = base.get("subtitle") or ""
+    return {
+        "rows": rows,
+        "stats": stats,
+        "subtitle": f"Repair / Replacement Cost  ·  {sub}" if sub else "Repair / Replacement Cost",
+        "group_by": base.get("group_by"),
+        "group_label": base.get("group_label"),
+        "ordered_groups": base.get("ordered_groups"),
+        "page_break_per_group": base.get("page_break_per_group"),
+    }
+
+
+# ---- YEAR END (annual snapshot report) -------------------------------------
+
+async def _compute_available_years(db) -> List[int]:
+    """Return a descending list of years where the user has any tool /
+    sale / loss / repair activity. Drives the year_end report's year picker."""
+    years: set = set()
+    cursor = db.tools.find(
+        {},
+        {"_id": 0, "purchase_date": 1, "sold_at": 1, "created_at": 1,
+         "lost_status": 1, "is_sold": 1},
+    )
+    async for t in cursor:
+        for k in ("purchase_date", "sold_at", "created_at"):
+            v = t.get(k)
+            if isinstance(v, str) and len(v) >= 4 and v[:4].isdigit():
+                years.add(int(v[:4]))
+        ls = t.get("lost_status") or {}
+        if isinstance(ls, dict):
+            v = ls.get("reported_at") or ""
+            if isinstance(v, str) and len(v) >= 4 and v[:4].isdigit():
+                years.add(int(v[:4]))
+    # Also include warranty-claim years (in case a tool was acquired in
+    # a prior year but had repairs this year).
+    cursor2 = db.warranty_claims.find(
+        {}, {"_id": 0, "notified_at": 1, "created_at": 1, "completed_at": 1},
+    )
+    async for c in cursor2:
+        for k in ("notified_at", "created_at", "completed_at"):
+            v = c.get(k)
+            if isinstance(v, str) and len(v) >= 4 and v[:4].isdigit():
+                years.add(int(v[:4]))
+    return sorted(years, reverse=True)
+
+
+async def _fetch_year_end(db, user, options: Dict[str, Any]) -> Dict[str, Any]:
+    year_str = (options.get("year") or "").strip()
+    try:
+        year = int(year_str) if year_str else datetime.now().year
+    except Exception:
+        year = datetime.now().year
+
+    # Default window = Jan 1 .. Dec 31 of selected year, but user can override.
+    start = (options.get("date_from") or "").strip() or f"{year:04d}-01-01"
+    end = (options.get("date_to") or "").strip() or f"{year:04d}-12-31"
+
+    include_sold = options.get("include_sold", True)
+    include_lost = options.get("include_lost", True)
+    include_stolen = options.get("include_stolen", True)
+    include_repairs = options.get("include_repairs", True)
+
+    # ----- Pull all candidate tools (apply category/location/dealer/tag filters) -----
+    q: Dict[str, Any] = {}
+    location_id = options.get("location_id")
+    if location_id:
+        q["location_id"] = location_id
+    cat_ids = options.get("category_ids") or []
+    if isinstance(cat_ids, list) and cat_ids:
+        q["category_id"] = {"$in": cat_ids}
+    dealer_ids = options.get("dealer_ids") or []
+    if isinstance(dealer_ids, list) and dealer_ids:
+        q["dealer_id"] = {"$in": dealer_ids}
+    tag_ids = options.get("tag_ids") or []
+    if isinstance(tag_ids, list) and tag_ids:
+        q["tag_ids"] = {"$in": tag_ids}
+
+    tools = await db.tools.find(q, {"_id": 0}).to_list(20000)
+
+    rows: List[Dict[str, Any]] = []
+    total_acquired_count = 0
+    total_sold_count = 0
+    total_lost_count = 0
+    total_stolen_count = 0
+    total_spent = 0.0
+    total_recovered = 0.0
+
+    for t in tools:
+        base = _normalise_tool_row(t)
+        purchase_in_range = in_range(t.get("purchase_date"), start, end)
+        sold_in_range = bool(t.get("is_sold")) and in_range(t.get("sold_at"), start, end)
+        ls = t.get("lost_status") or {}
+        loss_type = (ls.get("type") or "").lower() if isinstance(ls, dict) else ""
+        loss_reported = ls.get("reported_at") if isinstance(ls, dict) else None
+        lost_in_range = loss_type == "lost" and in_range(loss_reported, start, end)
+        stolen_in_range = loss_type == "stolen" and in_range(loss_reported, start, end)
+
+        # Apply event filters
+        if not include_sold and sold_in_range:
+            sold_in_range = False
+        if not include_lost and lost_in_range:
+            lost_in_range = False
+        if not include_stolen and stolen_in_range:
+            stolen_in_range = False
+
+        # A tool can have multiple events in the year — emit one row per event.
+        # Acquired
+        if purchase_in_range:
+            r = dict(base)
+            r["ye_status"] = "Acquired"
+            r["ye_event_date"] = t.get("purchase_date") or ""
+            r["ye_recovered"] = 0
+            r["repair_cost"] = 0
+            rows.append(r)
+            total_acquired_count += 1
+            total_spent += float(r.get("cost") or 0)
+        # Sold
+        if sold_in_range:
+            r = dict(base)
+            r["ye_status"] = "Sold"
+            r["ye_event_date"] = t.get("sold_at") or ""
+            r["ye_recovered"] = float(t.get("sold_price") or 0) * max(int(t.get("quantity") or 1), 1)
+            r["cost"] = 0  # don't double-count cost — acquired row handles it
+            r["repair_cost"] = 0
+            rows.append(r)
+            total_sold_count += 1
+            total_recovered += float(r.get("ye_recovered") or 0)
+        # Lost
+        if lost_in_range:
+            r = dict(base)
+            r["ye_status"] = "Lost"
+            r["ye_event_date"] = loss_reported or ""
+            r["ye_recovered"] = 0
+            r["repair_cost"] = 0
+            r["cost"] = 0
+            rows.append(r)
+            total_lost_count += 1
+        # Stolen
+        if stolen_in_range:
+            r = dict(base)
+            r["ye_status"] = "Stolen"
+            r["ye_event_date"] = loss_reported or ""
+            r["ye_recovered"] = 0
+            r["repair_cost"] = 0
+            r["cost"] = 0
+            rows.append(r)
+            total_stolen_count += 1
+
+    # ----- Repair costs from warranty_claims -----
+    total_repair_cost = 0.0
+    if include_repairs:
+        tool_ids = {t["id"] for t in tools if t.get("id")}
+        cursor = db.warranty_claims.find(
+            {}, {"_id": 0, "id": 1, "tool_id": 1, "tool_name": 1, "tool_photo": 1,
+                 "broken_photo": 1, "dealer_name": 1, "repair_company": 1,
+                 "repair_cost": 1, "notified_at": 1, "completed_at": 1,
+                 "claim_status": 1, "created_at": 1},
+        )
+        async for c in cursor:
+            if c.get("tool_id") and c["tool_id"] not in tool_ids:
+                continue  # filtered out by category/location/etc
+            event_date = c.get("completed_at") or c.get("notified_at") or c.get("created_at") or ""
+            if not in_range(event_date, start, end):
+                continue
+            cost = float(c.get("repair_cost") or 0)
+            tool_lookup = next((tt for tt in tools if tt.get("id") == c.get("tool_id")), {}) or {}
+            base = _normalise_tool_row(tool_lookup) if tool_lookup else {
+                "name": c.get("tool_name") or "", "photo": "",
+                "brand": "", "serial": "", "category": "", "location": "",
+                "dealer": c.get("dealer_name") or "", "purchase_date": "", "cost": 0,
+            }
+            r = dict(base)
+            r["ye_status"] = "Repair / Claim"
+            r["ye_event_date"] = event_date
+            r["ye_recovered"] = 0
+            r["repair_cost"] = cost
+            r["cost"] = 0  # repairs don't re-count the acquisition cost
+            rows.append(r)
+            total_repair_cost += cost
+
+    # Sort by event date (oldest first within the year)
+    def _key(r: Dict[str, Any]) -> str:
+        return r.get("ye_event_date") or ""
+    rows.sort(key=_key)
+
+    stats = [
+        ("Year", str(year), False),
+        ("Acquired", str(total_acquired_count), False),
+        ("Sold", str(total_sold_count), False),
+        ("Lost / Stolen", str(total_lost_count + total_stolen_count), False),
+        ("Total Spent", fmt_money(total_spent), True),
+        ("Total Recovered", fmt_money(total_recovered), True),
+    ]
+    if include_repairs:
+        stats.append(("Repair Cost", fmt_money(total_repair_cost), True))
+
+    return {
+        "rows": rows,
+        "stats": stats,
+        "subtitle": f"Year End Report for {year}  ·  {_date_range_subtitle(start, end)}",
+        # Override the PDF title so it includes the year prominently
+        "title_override": f"Year End Report for {year}",
+    }
+
+
 REPORTS: Dict[str, ReportSpec] = {
     "insurance": ReportSpec(
         id="insurance",
@@ -2086,6 +2328,10 @@ REPORTS: Dict[str, ReportSpec] = {
             Column("completed_at", "Completed", "left", "date"),
             Column("created_at", "Opened", "left", "date"),
             Column("notes", "Notes", "left", "text"),
+            # Repair/replacement cost — money column so PDF auto-renders
+            # TOTAL row. Default OFF so the column only appears when the
+            # user toggles it on in the wizard.
+            Column("repair_cost", "Repair Cost", "right", "money"),
         ],
         default_columns=["notified_at", "tool_name", "serial", "dealer", "status", "notes"],
         fetch=_fetch_claims,
@@ -2100,6 +2346,85 @@ REPORTS: Dict[str, ReportSpec] = {
             {"id": "dealer_ids", "type": "dealer_multi", "label": "Dealers"},
             {"id": "date_from", "type": "date", "label": "From"},
             {"id": "date_to", "type": "date", "label": "To"},
+        ],
+    ),
+    "repair_costs": ReportSpec(
+        id="repair_costs",
+        title="Repair / Replacement Cost Report",
+        description="Out-of-pocket repair and replacement costs across all warranty claims. Includes a running TOTAL.",
+        icon="cash",
+        accent="#16A34A",
+        columns=[
+            Column("claim_photo", "Photo", "center", "image"),
+            Column("notified_at", "Notified", "left", "date"),
+            Column("tool_name", "Tool", "left", "text"),
+            Column("serial", "Model #", "left", "text"),
+            Column("dealer", "Dealer", "left", "text"),
+            Column("repair_company", "Repair Co.", "left", "text"),
+            Column("status", "Status", "left", "text"),
+            Column("completed_at", "Completed", "left", "date"),
+            Column("notes", "Notes", "left", "text"),
+            Column("repair_cost", "Repair Cost", "right", "money"),
+        ],
+        default_columns=["notified_at", "tool_name", "serial", "dealer", "status", "repair_cost"],
+        fetch=_fetch_repair_costs,
+        options_schema=[
+            {"id": "claims_mode", "type": "segmented", "label": "Mode",
+             "choices": [
+                 {"id": "current", "label": "Current"},
+                 {"id": "history", "label": "History"},
+                 {"id": "all", "label": "All"},
+             ],
+             "default": "all"},
+            {"id": "dealer_ids", "type": "dealer_multi", "label": "Dealers"},
+            {"id": "min_cost", "type": "number", "label": "Min cost (hide $0)"},
+            {"id": "date_from", "type": "date", "label": "From"},
+            {"id": "date_to", "type": "date", "label": "To"},
+        ],
+    ),
+    "year_end": ReportSpec(
+        id="year_end",
+        title="Year End Report",
+        description="Annual snapshot — tools acquired, sold, lost, stolen, and repaired in the selected year. Optionally fine-tune the date range.",
+        icon="calendar",
+        accent="#0EA5E9",
+        columns=[
+            Column("photo", "Photo", "center", "image"),
+            Column("name", "Tool", "left", "text"),
+            Column("brand", "Brand", "left", "text"),
+            Column("serial", "Model #", "left", "text"),
+            Column("category", "Category", "left", "text"),
+            Column("location", "Location", "left", "text"),
+            Column("dealer", "Dealer", "left", "text"),
+            Column("purchase_date", "Acquired", "left", "date"),
+            Column("ye_status", "Status", "left", "text"),
+            Column("ye_event_date", "Event Date", "left", "date"),
+            Column("cost", "Cost", "right", "money"),
+            Column("ye_recovered", "Recovered", "right", "money"),
+            Column("repair_cost", "Repair Cost", "right", "money"),
+        ],
+        default_columns=["name", "serial", "purchase_date", "ye_status", "ye_event_date", "cost", "ye_recovered"],
+        fetch=_fetch_year_end,
+        options_schema=[
+            # The "year" choice list is injected dynamically per-user
+            # (see make_reports_router → reports_spec) so users only see
+            # years where they actually have data.
+            {"id": "year", "type": "select", "label": "Year",
+             "choices": [], "default": ""},
+            {"id": "date_from", "type": "date", "label": "Custom From (optional)"},
+            {"id": "date_to", "type": "date", "label": "Custom To (optional)"},
+            {"id": "include_sold", "type": "toggle",
+             "label": "Include sold items", "default": True},
+            {"id": "include_lost", "type": "toggle",
+             "label": "Include lost items", "default": True},
+            {"id": "include_stolen", "type": "toggle",
+             "label": "Include stolen items", "default": True},
+            {"id": "include_repairs", "type": "toggle",
+             "label": "Include repair costs", "default": True},
+            {"id": "location_id", "type": "location", "label": "Location"},
+            {"id": "category_ids", "type": "category_multi", "label": "Categories"},
+            {"id": "dealer_ids", "type": "dealer_multi", "label": "Dealers"},
+            {"id": "tag_ids", "type": "tag_multi", "label": "Tags"},
         ],
     ),
     "checked_out": ReportSpec(
@@ -2167,7 +2492,28 @@ REPORTS: Dict[str, ReportSpec] = {
 def make_reports_router(api_router: APIRouter, get_db, get_current_user) -> None:
     @api_router.get("/reports/spec")
     async def reports_spec(user=Depends(get_current_user)):
-        return {"reports": [spec.to_dict() for spec in REPORTS.values()]}
+        # Compute available years for the year_end report's year picker so
+        # users only see years where they actually have data.
+        db = get_db()
+        years = await _compute_available_years(db)
+        out = []
+        for spec in REPORTS.values():
+            d = spec.to_dict()
+            if spec.id == "year_end":
+                for opt in d.get("options_schema") or []:
+                    if opt.get("id") == "year":
+                        if years:
+                            opt["choices"] = [
+                                {"id": str(y), "label": str(y)} for y in years
+                            ]
+                            opt["default"] = str(years[0])
+                        else:
+                            # No data yet — fall back to current year only.
+                            cur = datetime.now().year
+                            opt["choices"] = [{"id": str(cur), "label": str(cur)}]
+                            opt["default"] = str(cur)
+            out.append(d)
+        return {"reports": out}
 
     @api_router.get("/reports/filter-options")
     async def reports_filter_options(user=Depends(get_current_user)):

@@ -570,6 +570,10 @@ class RepairInfo(BaseModel):
     contact: Optional[str] = ""  # legacy — auto-derived from agent now
     notes: Optional[str] = ""
     broken_photo: Optional[str] = ""  # extra photo, only shown on broken-item view
+    # Repair / replacement cost — defaults to 0; user enters dollar amount if
+    # they paid for the repair / replacement out of pocket. Feeds into the
+    # Repair Cost Report and Year End Report.
+    repair_cost: Optional[float] = 0.0
 
 
 # Warranty claim — long-lived record that survives "Mark Repaired"
@@ -590,6 +594,10 @@ class WarrantyClaim(BaseModel):
     expected_completion: Optional[str] = ""
     claim_status: str = "broken"
     notes: Optional[str] = ""
+    # Cost the user paid out of pocket for this repair / replacement.
+    # 0 = free (e.g., under warranty). Persisted on the claim so it survives
+    # after the tool is marked Repaired and repair_info is cleared.
+    repair_cost: Optional[float] = 0.0
     created_at: str = Field(default_factory=now_iso)
     updated_at: str = Field(default_factory=now_iso)
     completed_at: Optional[str] = None
@@ -602,6 +610,7 @@ class WarrantyClaimUpdate(BaseModel):
     notified_at: Optional[str] = None
     expected_completion: Optional[str] = None
     notes: Optional[str] = None
+    repair_cost: Optional[float] = None
 
 
 # Wish list — tools the user wants to buy
@@ -1522,6 +1531,7 @@ async def create_tool(payload: ToolCreate, user: User = Depends(get_current_user
                 expected_completion=ri.get("expected_completion") or "",
                 claim_status="broken",
                 notes=ri.get("notes") or "",
+                repair_cost=float(ri.get("repair_cost") or 0),
             )
             await db.warranty_claims.insert_one(claim.dict())
     return tool
@@ -2214,6 +2224,7 @@ async def update_tool(tool_id: str, payload: ToolUpdate):
                 expected_completion=ri.get("expected_completion") or "",
                 claim_status="broken",
                 notes=ri.get("notes") or "",
+                repair_cost=float(ri.get("repair_cost") or 0),
             )
             await db.warranty_claims.insert_one(claim.dict())
     elif "repair_info" in updates and new_doc.get("needs_repair"):
@@ -2229,6 +2240,7 @@ async def update_tool(tool_id: str, payload: ToolUpdate):
                     "expected_completion": ri.get("expected_completion") or "",
                     "notes": ri.get("notes") or "",
                     "broken_photo": ri.get("broken_photo") or "",
+                    "repair_cost": float(ri.get("repair_cost") or 0),
                     "updated_at": now_iso(),
                 }
             },
@@ -2999,6 +3011,16 @@ async def update_warranty_claim(claim_id: str, payload: WarrantyClaimUpdate):
                 ri = dict(tdoc.get("repair_info") or {})
                 ri["repair_status"] = label_map.get(new_status, ri.get("repair_status") or "Reported")
                 await db.tools.update_one({"id": tool_id}, {"$set": {"repair_info": ri, "updated_at": now_iso()}})
+
+        # Repair-cost mirror: if the user edited repair_cost on the claim
+        # AND the tool is still flagged broken, sync the value back onto
+        # tool.repair_info so the edit screen reflects it.
+        if "repair_cost" in updates and not archiving:
+            tdoc2 = await db.tools.find_one({"id": tool_id}, {"_id": 0, "repair_info": 1, "needs_repair": 1})
+            if tdoc2 and tdoc2.get("needs_repair"):
+                ri2 = dict(tdoc2.get("repair_info") or {})
+                ri2["repair_cost"] = float(updates.get("repair_cost") or 0)
+                await db.tools.update_one({"id": tool_id}, {"$set": {"repair_info": ri2, "updated_at": now_iso()}})
 
     new = await db.warranty_claims.find_one({"id": claim_id}, {"_id": 0})
     return WarrantyClaim(**new)
