@@ -516,9 +516,9 @@ const styles = themedStyles((c) => ({
     borderWidth: 1, borderColor: c.border,
     borderRadius: 999,
   },
-  chipActive: { backgroundColor: c.accent, borderColor: c.accent },
+  chipActive: { backgroundColor: "transparent", borderColor: c.accent, borderWidth: 2 },
   chipText: { color: c.textSecondary, fontSize: 9, fontWeight: "700" },
-  chipTextActive: { color: "#000", fontWeight: "900" },
+  chipTextActive: { color: c.accent, fontWeight: "900" },
   // Report option cards
   reportOpt: {
     flexDirection: "row",

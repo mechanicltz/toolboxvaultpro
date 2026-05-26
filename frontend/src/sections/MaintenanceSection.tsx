@@ -654,15 +654,16 @@ const styles = themedStyles((c) => ({
     backgroundColor: c.bg,
   },
   chipOn: {
-    backgroundColor: c.accent,
+    backgroundColor: "transparent",
     borderColor: c.accent,
+    borderWidth: 2,
   },
   chipText: {
     color: c.textSecondary,
     fontSize: 9,
     fontWeight: "700",
   },
-  chipTextOn: { color: "#000", fontWeight: "900" },
+  chipTextOn: { color: c.accent, fontWeight: "900" },
   btnGhost: {
     flex: 1,
     height: 44,

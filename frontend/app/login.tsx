@@ -412,7 +412,7 @@ const styles = themedStyles((c) => ({
   tab: { flex: 1, paddingVertical: 10, alignItems: "center", borderRadius: 8 },
   tabActive: { backgroundColor: c.accent },
   tabText: { color: c.textMuted, fontWeight: "800", fontSize: 9, letterSpacing: 1 },
-  tabTextActive: { color: "#000" },
+  tabTextActive: { color: c.accent },
   field: { marginBottom: 14 },
   label: {
     color: c.textMuted,

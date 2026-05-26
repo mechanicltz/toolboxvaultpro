@@ -173,6 +173,7 @@ export default function ToolDetail() {
     contact: "",
     notes: "",
     broken_photo: "",
+    repair_cost: "", // dollars user paid out of pocket; "" → 0
   });
 
   // Pick the photo of the broken/damaged item for a repair claim.
@@ -560,15 +561,19 @@ export default function ToolDetail() {
       contact,
       notes: tool.repair_info?.notes || "",
       broken_photo: tool.repair_info?.broken_photo || "",
+      repair_cost: tool.repair_info?.repair_cost
+        ? String(tool.repair_info.repair_cost)
+        : "",
     });
     setShowRepair(true);
   };
 
   const saveRepair = async () => {
     try {
+      const _rcNum = parseFloat(repairForm.repair_cost || "0") || 0;
       await api.updateTool(tool.id, {
         needs_repair: true,
-        repair_info: { ...repairForm },
+        repair_info: { ...repairForm, repair_cost: _rcNum },
       });
       setShowRepair(false);
       load();
@@ -2343,6 +2348,25 @@ export default function ToolDetail() {
                   />
                 </View>
               </View>
+
+              {/* Out-of-pocket repair / replacement cost. Defaults to $0.
+                  Flows into the Repair Cost Report + Year End Report totals. */}
+              <Text style={styles.repairLabel}>REPAIR / REPLACEMENT COST ($)</Text>
+              <Text style={{ color: theme.colors.textMuted, fontSize: 9, marginBottom: 4 }}>
+                Leave at 0 if covered by warranty. Otherwise enter what you paid.
+              </Text>
+              <TextInput
+                testID="repmod-cost"
+                placeholder="0.00"
+                placeholderTextColor={theme.colors.textMuted}
+                value={repairForm.repair_cost}
+                onChangeText={(v) => {
+                  const clean = v.replace(/[^0-9.]/g, "").replace(/(\..*?)\..*/g, "$1");
+                  setRepairForm({ ...repairForm, repair_cost: clean });
+                }}
+                style={styles.input}
+                keyboardType="decimal-pad"
+              />
 
               <Text style={styles.repairLabel}>NOTES</Text>
               <TextInput

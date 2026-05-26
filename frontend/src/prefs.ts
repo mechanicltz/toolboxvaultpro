@@ -38,6 +38,10 @@ export type Prefs = {
   // `home_logo_mode` === "custom". Resized client-side to fit ~512x512 max
   // before being saved so AsyncStorage doesn't blow up on giant photos.
   home_logo_data: string | null;
+  // Show the "Next dealer route" banner at the top of the home screen.
+  // Defaults to TRUE (preserves prior behavior). User can hide via the
+  // CUSTOMIZE section in the More tab.
+  show_dealer_route_reminder: boolean;
 };
 
 const KEY = "toolbox_prefs_v2";
@@ -82,6 +86,7 @@ const DEFAULTS: Prefs = {
   dealer_notify_day_before: false,
   home_logo_mode: "hidden",
   home_logo_data: null,
+  show_dealer_route_reminder: true,
 };
 
 export const loadPrefs = async (): Promise<Prefs> => {

@@ -681,7 +681,7 @@ export default function WishlistScreen() {
             onPress={emailSelected}
             disabled={selected.size === 0}
           >
-            <Ionicons name="mail" size={18} color={selected.size === 0 ? theme.colors.textMuted : "#000"} />
+            <Ionicons name="mail" size={18} color={selected.size === 0 ? theme.colors.textMuted : theme.colors.accent} />
             <Text style={[styles.bulkEmailText, selected.size === 0 && { color: theme.colors.textMuted }]}>
               EMAIL {selected.size > 0 ? `${selected.size} ITEM${selected.size === 1 ? "" : "S"}` : "SELECTED"}
             </Text>

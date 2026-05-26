@@ -246,7 +246,7 @@ const styles = themedStyles((c) => ({
   },
   segBtnActive: { backgroundColor: c.accent },
   segText: { color: c.textSecondary, fontWeight: "800", letterSpacing: 1.5, fontSize: 9 },
-  segTextActive: { color: "#000" },
+  segTextActive: { color: c.accent, fontWeight: "900" },
   label: {
     color: c.textMuted,
     fontSize: 8,

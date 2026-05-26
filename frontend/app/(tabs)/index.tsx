@@ -469,7 +469,7 @@ export default function HomeScreen() {
         )}
 
         {/* Next dealer route — kept prominent and highlighted */}
-        {nextRouteBanner && (
+        {nextRouteBanner && prefs.show_dealer_route_reminder && (
           <TouchableOpacity
             testID="next-route-banner"
             style={styles.routeBanner}

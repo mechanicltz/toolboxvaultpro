@@ -229,7 +229,7 @@ export function CategoryPicker({
             <Text
               style={[
                 styles.rowText,
-                selected?.id === c.id && { color: "#000" },
+                selected?.id === c.id && { color: theme.colors.accent, fontWeight: "900" },
               ]}
             >
               {c.name}
@@ -578,7 +578,7 @@ const styles = themedStyles((c) => ({
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
-    backgroundColor: c.accent,
+    backgroundColor: "transparent",
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 4,

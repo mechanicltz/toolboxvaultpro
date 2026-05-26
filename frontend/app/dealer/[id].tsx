@@ -428,6 +428,9 @@ export default function DealerDetail() {
                         alignItems: "center",
                         gap: 6,
                         flexShrink: 1,
+                        // Indent agent rows so they read as children of the
+                        // bold-white "AGENTS" header above.
+                        paddingLeft: 14,
                       }}
                     >
                       {isCurrent && (
@@ -437,13 +440,27 @@ export default function DealerDetail() {
                           color={theme.colors.accent}
                         />
                       )}
-                      <Text style={styles.agentRowName} numberOfLines={1}>
+                      <Text
+                        style={[
+                          styles.agentRowName,
+                          isCurrent
+                            ? { color: theme.colors.accent, fontWeight: "900" }
+                            : { color: theme.colors.textPrimary, fontWeight: "500" },
+                        ]}
+                        numberOfLines={1}
+                      >
                         {a.name}
                       </Text>
                     </View>
                     <View style={styles.detailsValueWrap}>
                       {!!a.location && (
-                        <Text style={styles.detailsValue} numberOfLines={1}>
+                        <Text
+                          style={[
+                            styles.detailsValue,
+                            isCurrent && { color: theme.colors.accent, fontWeight: "800" },
+                          ]}
+                          numberOfLines={1}
+                        >
                           {a.location}
                         </Text>
                       )}
@@ -494,21 +511,10 @@ export default function DealerDetail() {
                         <Text style={styles.agentMeta}>Ended: {formatDateUS(a.ended_at)}</Text>
                       )}
                       <View style={styles.agentActions}>
-                        <TouchableOpacity
-                          testID={`edit-agent-${a.id}`}
-                          style={styles.agentActionBtn}
-                          onPress={() => setAgentForm({
-                            id: a.id,
-                            name: a.name || "",
-                            phone: a.phone || "",
-                            email: a.email || "",
-                            location: a.location || "",
-                            notes: a.notes || "",
-                          })}
-                        >
-                          <Ionicons name="create-outline" size={16} color={theme.colors.accent} />
-                          <Text style={styles.agentActionText}>EDIT</Text>
-                        </TouchableOpacity>
+                        {/* Per user (2026-05-26): EDIT button removed — the
+                            agent row can be edited via the dealer-level edit
+                            modal pencil in the header. Keeping SET CURRENT
+                            and REMOVE here since they're agent-specific. */}
                         {!isCurrent && (
                           <TouchableOpacity
                             testID={`set-current-${a.id}`}
@@ -931,8 +937,9 @@ const styles = themedStyles((c) => ({
     borderRadius: 4,
   },
   editChipOn: {
-    backgroundColor: c.accent,
+    backgroundColor: "transparent",
     borderColor: c.accent,
+    borderWidth: 2,
   },
   editChipText: {
     color: c.textSecondary,
@@ -940,7 +947,7 @@ const styles = themedStyles((c) => ({
     fontWeight: "800",
     letterSpacing: 1,
   },
-  editChipTextOn: { color: "#000" },
+  editChipTextOn: { color: c.accent },
   bigAvatar: {
     width: 80,
     height: 80,
@@ -1418,8 +1425,10 @@ const styles = themedStyles((c) => ({
     borderBottomColor: c.borderSubtle,
   },
   detailsHeaderLabel: {
-    color: c.textMuted,
-    fontSize: 8,
+    // AGENTS header — user wants this bold WHITE (not muted) so it reads
+    // as the parent of the agent rows below.
+    color: c.textPrimary,
+    fontSize: 9,
     fontWeight: "900",
     letterSpacing: 1.5,
   },

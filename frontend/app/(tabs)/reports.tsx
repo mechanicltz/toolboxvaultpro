@@ -547,7 +547,7 @@ function Crumbs({ current }: { current: number }) {
                 done && { backgroundColor: "#16a34a" },
               ]}
             >
-              <Text style={[styles.crumbDotText, (active || done) && { color: "#000" }]}>
+              <Text style={[styles.crumbDotText, (active || done) && { color: c.accent }]}>
                 {i + 1}
               </Text>
             </View>
@@ -652,7 +652,7 @@ function OptionRow({
                 style={[styles.segmentedBtn, active && styles.segmentedBtnOn]}
                 onPress={() => onChange(c.id)}
               >
-                <Text style={[styles.segmentedText, active && { color: "#000" }]}>
+                <Text style={[styles.segmentedText, active && { color: c.accent, fontWeight: "900" }]}>
                   {c.label}
                 </Text>
               </TouchableOpacity>
@@ -675,7 +675,7 @@ function OptionRow({
                 style={[styles.segmentedBtn, active && styles.segmentedBtnOn]}
                 onPress={() => onChange(c.id)}
               >
-                <Text style={[styles.segmentedText, active && { color: "#000" }]}>
+                <Text style={[styles.segmentedText, active && { color: c.accent, fontWeight: "900" }]}>
                   {c.label}
                 </Text>
               </TouchableOpacity>
@@ -939,7 +939,7 @@ function MultiSelectDropdown({
                       onPress={() => toggle(i.id)}
                     >
                       <View style={[styles.dropdownCheck, active && styles.dropdownCheckOn]}>
-                        {active && <Ionicons name="checkmark" size={14} color="#000" />}
+                        {active && <Ionicons name="checkmark" size={14} color={c.accent} />}
                       </View>
                       <Text style={[styles.dropdownRowText, { flex: 1 }]} numberOfLines={1}>
                         {i.label}

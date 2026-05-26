@@ -149,11 +149,6 @@ export default function DealersScreen() {
               }}
               activeOpacity={isLocked ? 1 : 0.7}
             >
-              <View style={styles.avatar}>
-                <Text style={styles.avatarText}>
-                  {item.name.substring(0, 2).toUpperCase()}
-                </Text>
-              </View>
               <View style={{ flex: 1 }}>
                 <Text style={styles.rowTitle}>{item.name}</Text>
                 <Text style={styles.rowSub}>
@@ -164,36 +159,43 @@ export default function DealersScreen() {
                   {prefs.show_prices ? `  ·  $${s.total.toFixed(2)}` : ""}
                   {`  ·  ${routeLabel(item)}`}
                 </Text>
-                {!!item.phone && (
-                  <View style={styles.rowContactBtns}>
-                    <TouchableOpacity
-                      testID={`dealer-row-call-${item.id}`}
-                      style={styles.rowContactBtn}
-                      onPress={(e) => {
-                        (e as any)?.stopPropagation?.();
-                        openPhone(item.phone);
-                      }}
-                      activeOpacity={0.7}
-                    >
-                      <Ionicons name="call" size={12} color={theme.colors.accent} />
-                      <Text style={styles.rowContactBtnText} numberOfLines={1}>
-                        {formatPhone(item.phone)}
-                      </Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      testID={`dealer-row-text-${item.id}`}
-                      style={[styles.rowContactBtn, styles.rowContactBtnSmall]}
-                      onPress={(e) => {
-                        (e as any)?.stopPropagation?.();
-                        openSms(item.phone);
-                      }}
-                      activeOpacity={0.7}
-                    >
-                      <Ionicons name="chatbubble-ellipses" size={12} color={theme.colors.accent} />
-                      <Text style={styles.rowContactBtnText}>TEXT</Text>
-                    </TouchableOpacity>
-                  </View>
-                )}
+                {/* Phone/text quick-actions — show ONLY when a current agent is
+                    set, and dial the AGENT's number (not the company line). Hidden
+                    entirely when no current agent. */}
+                {(() => {
+                  const agentPhone = cur?.phone || "";
+                  if (!agentPhone) return null;
+                  return (
+                    <View style={styles.rowContactBtns}>
+                      <TouchableOpacity
+                        testID={`dealer-row-call-${item.id}`}
+                        style={styles.rowContactBtn}
+                        onPress={(e) => {
+                          (e as any)?.stopPropagation?.();
+                          openPhone(agentPhone);
+                        }}
+                        activeOpacity={0.7}
+                      >
+                        <Ionicons name="call" size={12} color={theme.colors.accent} />
+                        <Text style={styles.rowContactBtnText} numberOfLines={1}>
+                          {formatPhone(agentPhone)}
+                        </Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        testID={`dealer-row-text-${item.id}`}
+                        style={[styles.rowContactBtn, styles.rowContactBtnSmall]}
+                        onPress={(e) => {
+                          (e as any)?.stopPropagation?.();
+                          openSms(agentPhone);
+                        }}
+                        activeOpacity={0.7}
+                      >
+                        <Ionicons name="chatbubble-ellipses" size={12} color={theme.colors.accent} />
+                        <Text style={styles.rowContactBtnText}>TEXT</Text>
+                      </TouchableOpacity>
+                    </View>
+                  );
+                })()}
               </View>
               <TouchableOpacity
                 testID={`delete-dealer-row-${item.id}`}
@@ -575,5 +577,5 @@ const styles = themedStyles((c) => ({
     fontWeight: "800",
     letterSpacing: 1,
   },
-  chipTextOn: { color: "#000" },
+  chipTextOn: { color: c.accent },
 }));
