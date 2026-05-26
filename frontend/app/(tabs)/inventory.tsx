@@ -1805,8 +1805,9 @@ const styles = themedStyles((c) => ({
     ...(theme.elevation.sm as object),
   },
   chipActive: {
-    backgroundColor: c.accent,
-    borderColor: "#FFA000",
+    backgroundColor: "transparent",
+    borderColor: c.accent,
+    borderWidth: 2,
     ...(theme.elevation.accent as object),
   },
   chipClaims: {
@@ -1821,7 +1822,7 @@ const styles = themedStyles((c) => ({
     fontWeight: "800",
     letterSpacing: 1,
   },
-  chipTextActive: { color: "#000" },
+  chipTextActive: { color: c.accent },
   row: {
     flexDirection: "row",
     marginHorizontal: 16,

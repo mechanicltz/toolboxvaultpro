@@ -565,8 +565,9 @@ const styles = themedStyles((c) => ({
     borderRadius: 4,
   },
   chipOn: {
-    backgroundColor: c.accent,
+    backgroundColor: "transparent",
     borderColor: c.accent,
+    borderWidth: 2,
   },
   chipText: {
     color: c.textSecondary,
