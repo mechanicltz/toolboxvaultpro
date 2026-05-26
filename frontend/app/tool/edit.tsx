@@ -43,6 +43,9 @@ export default function ToolEdit() {
   const [isSet, setIsSet] = useState(false);
   const [setSerials, setSetSerials] = useState<string[]>([""]);
   const [cost, setCost] = useState("");
+  // Manufacturer's Suggested Retail Price. Optional — purely informational
+  // and feeds report totals when the user toggles MSRP columns on.
+  const [msrpPrice, setMsrpPrice] = useState("");
   const [quantity, setQuantity] = useState("1");
   const [purchaseDate, setPurchaseDate] = useState(isEdit ? "" : new Date().toISOString().substring(0, 10));
   const [condition, setCondition] = useState("Good");
@@ -151,6 +154,7 @@ export default function ToolEdit() {
           : [];
         setSerialNumbers(loadedSerials.length ? loadedSerials : [""]);
         setCost(t.cost ? String(t.cost) : ""); setPurchaseDate(t.purchase_date || "");
+        setMsrpPrice(t.msrp_price ? String(t.msrp_price) : "");
         setQuantity(t.quantity != null ? String(t.quantity) : "1");
         setCondition(t.condition || "Good"); setLocationId(t.location_id);
         setLocationName(t.location_name || "");
@@ -753,7 +757,9 @@ export default function ToolEdit() {
       // New multi-value fields (backend will keep legacy mirrors in sync)
       model_numbers: cleanedModelNums,
       serial_numbers: cleanedSerialNums,
-      cost: parseFloat(cost) || 0, purchase_date: purchaseDate, condition,
+      cost: parseFloat(cost) || 0,
+      msrp_price: parseFloat(msrpPrice) || 0,
+      purchase_date: purchaseDate, condition,
       quantity: Math.max(1, parseInt(quantity, 10) || 1),
       location_id: locationId, location_name: locationName,
       category_id: category?.id || null, category_name: category?.name || "",
@@ -788,7 +794,7 @@ export default function ToolEdit() {
     setName(""); setDescription(""); setBrand(""); setModel(""); setSerial("");
     setIsSet(false); setSetSerials([""]);
     setModelNumbers([""]); setSerialNumbers([""]);
-    setCost(""); setQuantity("1");
+    setCost(""); setMsrpPrice(""); setQuantity("1");
     setCondition("Good");
     setLocationId(null); setLocationName("");
     setCategory(null);
@@ -874,7 +880,7 @@ export default function ToolEdit() {
       }
     }
     finally { setSaving(false); }
-  }, [name, description, brand, model, serial, isSet, setSerials, modelNumbers, serialNumbers, cost, quantity, purchaseDate, condition, locationId, locationName, category, tags, photos, documents, receipts, isConsumable, consumableInfo, needsRepair, repairInfo, hasWarranty, warranty, dealerId, dealerName, purchasedAgentId, purchasedAgentName, pendingDealerCharge, scanItems, importedItemIdxs, isEdit, id, router]);
+  }, [name, description, brand, model, serial, isSet, setSerials, modelNumbers, serialNumbers, cost, msrpPrice, quantity, purchaseDate, condition, locationId, locationName, category, tags, photos, documents, receipts, isConsumable, consumableInfo, needsRepair, repairInfo, hasWarranty, warranty, dealerId, dealerName, purchasedAgentId, purchasedAgentName, pendingDealerCharge, scanItems, importedItemIdxs, isEdit, id, router]);
 
   if (loading) {
     return (
@@ -966,15 +972,30 @@ export default function ToolEdit() {
               value={brand} onChangeText={setBrand} style={styles.input} />
           </View>
 
-          {/* COST + QTY row (always shown — the model/serial blocks below
-              are now stacked multi-value inputs and don't share this row). */}
+          {/* COST + MSRP + QTY row. MSRP is optional and only affects
+              report totals; cost is the actual purchase price the user paid. */}
           <View style={styles.row2}>
             <View style={{ flex: 1 }}>
               <Text style={styles.label}>COST ($)</Text>
               <TextInput testID="cost-input" placeholder="0.00" placeholderTextColor={theme.colors.textMuted}
                 value={cost} onChangeText={setCost} style={styles.input} keyboardType="decimal-pad" />
             </View>
-            <View style={{ width: 90 }}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.label}>MSRP ($)</Text>
+              <TextInput
+                testID="msrp-input"
+                placeholder="optional"
+                placeholderTextColor={theme.colors.textMuted}
+                value={msrpPrice}
+                onChangeText={(v) => {
+                  const clean = v.replace(/[^0-9.]/g, "").replace(/(\..*?)\..*/g, "$1");
+                  setMsrpPrice(clean);
+                }}
+                style={styles.input}
+                keyboardType="decimal-pad"
+              />
+            </View>
+            <View style={{ width: 70 }}>
               <Text style={styles.label}>QTY</Text>
               <TextInput testID="quantity-input" placeholder="1" placeholderTextColor={theme.colors.textMuted}
                 value={quantity} onChangeText={(v) => setQuantity(v.replace(/[^0-9]/g, ""))}

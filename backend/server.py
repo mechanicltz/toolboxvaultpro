@@ -697,6 +697,11 @@ class Tool(BaseModel):
     is_set: bool = False
     set_serials: List[str] = []
     cost: Optional[float] = 0.0
+    # Manufacturer's Suggested Retail Price — informational, used as an
+    # optional column on Insurance / Inventory / Lost-Stolen / Year End
+    # reports (alongside or instead of the user's actual purchase cost).
+    # 0 = not set; user fills this in if they want MSRP totals in reports.
+    msrp_price: Optional[float] = 0.0
     quantity: Optional[int] = 1
     purchase_date: Optional[str] = ""
     condition: Optional[str] = "Good"
@@ -749,6 +754,7 @@ class ToolCreate(BaseModel):
     is_set: bool = False
     set_serials: List[str] = []
     cost: Optional[float] = 0.0
+    msrp_price: Optional[float] = 0.0
     quantity: Optional[int] = 1
     purchase_date: Optional[str] = ""
     condition: Optional[str] = "Good"
@@ -784,6 +790,7 @@ class ToolUpdate(BaseModel):
     is_set: Optional[bool] = None
     set_serials: Optional[List[str]] = None
     cost: Optional[float] = None
+    msrp_price: Optional[float] = None
     quantity: Optional[int] = None
     purchase_date: Optional[str] = None
     condition: Optional[str] = None
@@ -1549,6 +1556,7 @@ _IMPORT_FIELDS = [
     {"id": "serial_number", "label": "Model number"},
     {"id": "quantity", "label": "Quantity"},
     {"id": "cost", "label": "Cost (per unit)"},
+    {"id": "msrp_price", "label": "MSRP (per unit, optional)"},
     {"id": "description", "label": "Description / Notes"},
     {"id": "category", "label": "Category (by name)"},
     {"id": "location", "label": "Location (by name)"},
@@ -1575,6 +1583,7 @@ _EXPORT_FIELDS: List[Dict[str, Any]] = [
     {"id": "serial_numbers", "label": "Serial number(s)"},
     {"id": "quantity", "label": "Quantity"},
     {"id": "cost", "label": "Cost"},
+    {"id": "msrp_price", "label": "MSRP"},
     {"id": "category", "label": "Category"},
     {"id": "location", "label": "Location"},
     {"id": "dealer", "label": "Dealer"},
@@ -1611,6 +1620,8 @@ def _build_export_value(field_id: str, t: Dict[str, Any], lookups: Dict[str, Dic
         return t.get("quantity") or 1
     if field_id == "cost":
         return t.get("cost") or 0
+    if field_id == "msrp_price":
+        return t.get("msrp_price") or 0
     if field_id == "category":
         return lookups["cats"].get(t.get("category_id") or "", "")
     if field_id == "location":
@@ -1801,6 +1812,7 @@ class ImportRow(BaseModel):
     # The raw value is sanitised inside tools_import() via _to_int / _to_float.
     quantity: Optional[Any] = 1
     cost: Optional[Any] = 0.0
+    msrp_price: Optional[Any] = 0.0
     description: Optional[str] = ""
     category: Optional[str] = ""        # name (case-insensitive lookup; auto-create if missing)
     location: Optional[str] = ""        # name match (existing only)
@@ -1986,6 +1998,7 @@ async def tools_import(payload: ImportPayload, user: User = Depends(get_current_
 
             qty = _to_int(raw.quantity, default=1)
             cost = _to_float(raw.cost)
+            msrp_price = _to_float(raw.msrp_price)
 
             # Build model_numbers[] from legacy import fields (deduped).
             _mn_cands = []
@@ -2009,6 +2022,7 @@ async def tools_import(payload: ImportPayload, user: User = Depends(get_current_
                 serial_numbers=[],
                 quantity=qty,
                 cost=cost,
+                msrp_price=msrp_price,
                 description=_norm(raw.description),
                 category_id=category_id,
                 category_name=category_name,

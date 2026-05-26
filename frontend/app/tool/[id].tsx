@@ -1043,6 +1043,8 @@ export default function ToolDetail() {
     if (tool.purchase_date) specPairs.push({ label: "Purchased", value: formatDateUS(tool.purchase_date) });
     if (tool.dealer_name) specPairs.push({ label: "Dealer", value: String(tool.dealer_name) });
     if (tool.cost != null) specPairs.push({ label: "Cost", value: fmtMoney(tool.cost) });
+    if (tool.msrp_price && Number(tool.msrp_price) > 0)
+      specPairs.push({ label: "MSRP", value: fmtMoney(tool.msrp_price) });
     if (tool.quantity != null && Number(tool.quantity) > 1)
       specPairs.push({ label: "Quantity", value: String(tool.quantity) });
     if (tool.tag_names && tool.tag_names.length)
@@ -1669,6 +1671,16 @@ export default function ToolDetail() {
                 kind: "value",
                 label: "PURCHASED",
                 value: formatDateUS(tool.purchase_date),
+              });
+            }
+            // MSRP — only surface when set (>0). The user enters this on
+            // the edit screen and it powers the MSRP column / totals in
+            // Insurance / Inventory / Lost-Stolen / Year End reports.
+            if (tool.msrp_price && Number(tool.msrp_price) > 0) {
+              rows.push({
+                kind: "value",
+                label: "MSRP",
+                value: `$${Number(tool.msrp_price).toFixed(2)}`,
               });
             }
             if (tool.category_name) {

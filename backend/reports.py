@@ -971,6 +971,7 @@ def _normalise_tool_row(t: Dict[str, Any]) -> Dict[str, Any]:
         qty = 1
     qty = max(1, qty)
     unit_cost = float(t.get("cost") or 0)
+    unit_msrp = float(t.get("msrp_price") or 0)
     # Multi-value model_numbers — every value on its own line in the Model
     # column. Falls back through legacy set_serials and serial_number for
     # tools that haven't migrated yet.
@@ -1003,6 +1004,10 @@ def _normalise_tool_row(t: Dict[str, Any]) -> Dict[str, Any]:
         "notes": t.get("description") or "",
         "unit_cost": unit_cost,
         "cost": round(unit_cost * qty, 2),  # EXTENDED cost (qty × unit)
+        # MSRP — same shape as cost. unit_msrp is informational; the "msrp"
+        # field is extended (qty × unit) so totals add up correctly.
+        "unit_msrp": unit_msrp,
+        "msrp": round(unit_msrp * qty, 2),
         "quantity": qty,
         "photo": photo,
         "receipts": t.get("receipts") or [],
@@ -1936,6 +1941,10 @@ _TOOL_COLUMNS = [
     Column("quantity", "Qty", "right", "number"),
     Column("unit_cost", "Unit Cost", "right", "money"),
     Column("cost", "Cost", "right", "money"),
+    # MSRP — toggleable in the report wizard. When both Cost and MSRP are
+    # included, the auto-TOTAL row renders separate column sums for each.
+    Column("unit_msrp", "Unit MSRP", "right", "money"),
+    Column("msrp", "MSRP", "right", "money"),
 ]
 
 _SALES_COLUMNS = [
@@ -1985,6 +1994,7 @@ _LOST_STOLEN_COLUMNS = [
     Column("insurance_claim", "Claim #", "left", "text"),
     Column("loss_notes", "Notes", "left", "text"),
     Column("cost", "Value", "right", "money"),
+    Column("msrp", "MSRP", "right", "money"),
 ]
 
 
@@ -2138,6 +2148,7 @@ async def _fetch_year_end(db, user, options: Dict[str, Any]) -> Dict[str, Any]:
             r["ye_event_date"] = t.get("sold_at") or ""
             r["ye_recovered"] = float(t.get("sold_price") or 0) * max(int(t.get("quantity") or 1), 1)
             r["cost"] = 0  # don't double-count cost — acquired row handles it
+            r["msrp"] = 0  # don't double-count MSRP either
             r["repair_cost"] = 0
             rows.append(r)
             total_sold_count += 1
@@ -2150,6 +2161,7 @@ async def _fetch_year_end(db, user, options: Dict[str, Any]) -> Dict[str, Any]:
             r["ye_recovered"] = 0
             r["repair_cost"] = 0
             r["cost"] = 0
+            r["msrp"] = 0
             rows.append(r)
             total_lost_count += 1
         # Stolen
@@ -2160,6 +2172,7 @@ async def _fetch_year_end(db, user, options: Dict[str, Any]) -> Dict[str, Any]:
             r["ye_recovered"] = 0
             r["repair_cost"] = 0
             r["cost"] = 0
+            r["msrp"] = 0
             rows.append(r)
             total_stolen_count += 1
 
@@ -2192,6 +2205,7 @@ async def _fetch_year_end(db, user, options: Dict[str, Any]) -> Dict[str, Any]:
             r["ye_recovered"] = 0
             r["repair_cost"] = cost
             r["cost"] = 0  # repairs don't re-count the acquisition cost
+            r["msrp"] = 0
             rows.append(r)
             total_repair_cost += cost
 
@@ -2400,6 +2414,7 @@ REPORTS: Dict[str, ReportSpec] = {
             Column("ye_status", "Status", "left", "text"),
             Column("ye_event_date", "Event Date", "left", "date"),
             Column("cost", "Cost", "right", "money"),
+            Column("msrp", "MSRP", "right", "money"),
             Column("ye_recovered", "Recovered", "right", "money"),
             Column("repair_cost", "Repair Cost", "right", "money"),
         ],
