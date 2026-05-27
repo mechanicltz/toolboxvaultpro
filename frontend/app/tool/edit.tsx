@@ -1437,35 +1437,32 @@ export default function ToolEdit() {
             onToggle={() => toggle("warranty")}
             testID="acc-warranty"
           >
-          {/* Warranty */}
-          <View style={styles.toggleRow}>
-            <Ionicons name="shield-checkmark" size={20} color={theme.colors.accent} />
-            <Text style={styles.toggleText}>HAS WARRANTY</Text>
+          {/* Warranty — compact form per user 2026-05-27: same slim input
+              + tight label spacing as the Model/Serial number rows. */}
+          <View style={styles.toggleRowCompact}>
+            <Ionicons name="shield-checkmark" size={14} color={theme.colors.accent} />
+            <Text style={styles.toggleTextCompact}>HAS WARRANTY</Text>
             <Switch testID="toggle-warranty" value={hasWarranty} onValueChange={setHasWarranty}
               trackColor={{ true: theme.colors.accent, false: theme.colors.border }} thumbColor="#fff" />
           </View>
           {hasWarranty && (
-            <View style={styles.subSection}>
-              <Text style={[styles.label, { marginTop: 0 }]}>PROVIDER</Text>
+            <View style={{ marginTop: 4 }}>
+              <Text style={styles.labelSm}>PROVIDER</Text>
               <TextInput testID="war-provider" placeholder="Manufacturer name" placeholderTextColor={theme.colors.textMuted}
-                value={warranty.provider} style={styles.input}
+                value={warranty.provider} style={styles.compactInput}
                 onChangeText={(v) => onWarrantyChange("provider", v)} />
-              <Text style={styles.label}>CONTACT (phone / email)</Text>
+              <Text style={styles.labelSm}>CONTACT (phone / email)</Text>
               <TextInput testID="war-contact" placeholder="800-555-1234" placeholderTextColor={theme.colors.textMuted}
-                value={warranty.contact} style={styles.input}
+                value={warranty.contact} style={styles.compactInput}
                 onChangeText={(v) => onWarrantyChange("contact", v)} />
-              <View style={styles.row2}>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.label}>START DATE</Text>
-                  <DateField
-                    testID="war-start"
-                    value={warranty.start_date}
-                    onChange={(v) => onWarrantyChange("start_date", v)}
-                  />
-                </View>
-              </View>
+              <Text style={styles.labelSm}>START DATE</Text>
+              <DateField
+                testID="war-start"
+                value={warranty.start_date}
+                onChange={(v) => onWarrantyChange("start_date", v)}
+              />
 
-              <Text style={styles.label}>WARRANTY LENGTH</Text>
+              <Text style={styles.labelSm}>WARRANTY LENGTH</Text>
               <View style={styles.warrChipWrap}>
                 {[
                   { lbl: "1 MO", t: "months", m: "1" },
@@ -1495,7 +1492,7 @@ export default function ToolEdit() {
                       key={opt.lbl}
                       testID={`war-len-${opt.lbl.replace(/\s/g, "-")}`}
                       style={[
-                        styles.warrChip,
+                        styles.warrChipSm,
                         on && styles.warrChipOn,
                         opt.t !== "months" &&
                           !on && {
@@ -1517,7 +1514,7 @@ export default function ToolEdit() {
                         setWarranty(next);
                       }}
                     >
-                      <Text style={[styles.warrChipText, on && styles.warrChipTextOn]}>
+                      <Text style={[styles.warrChipTextSm, on && styles.warrChipTextOn]}>
                         {opt.lbl}
                       </Text>
                     </BevelCard>
@@ -1527,7 +1524,7 @@ export default function ToolEdit() {
 
               {warranty.coverage_type === "months" ? (
                 <>
-                  <Text style={styles.label}>EXPIRE DATE (auto)</Text>
+                  <Text style={styles.labelSm}>EXPIRE DATE (auto)</Text>
                   <DateField
                     testID="war-expiry"
                     value={warranty.expiry_date}
@@ -1536,7 +1533,7 @@ export default function ToolEdit() {
                 </>
               ) : (
                 <View style={styles.warrInfo}>
-                  <Ionicons name="information-circle" size={14} color={theme.colors.accent} />
+                  <Ionicons name="information-circle" size={12} color={theme.colors.accent} />
                   <Text style={styles.warrInfoText}>
                     {warranty.coverage_type === "lifetime"
                       ? "Lifetime warranty — no expiry date."
@@ -1544,9 +1541,9 @@ export default function ToolEdit() {
                   </Text>
                 </View>
               )}
-              <Text style={styles.label}>TERMS / NOTES</Text>
+              <Text style={styles.labelSm}>TERMS / NOTES</Text>
               <TextInput testID="war-terms" placeholder="Coverage details..." placeholderTextColor={theme.colors.textMuted}
-                value={warranty.terms} style={[styles.input, { height: 70, textAlignVertical: "top" }]} multiline
+                value={warranty.terms} style={[styles.compactInput, { height: 60, textAlignVertical: "top" }]} multiline
                 onChangeText={(v) => onWarrantyChange("terms", v)} />
             </View>
           )}
@@ -2149,6 +2146,28 @@ const styles = themedStyles((c) => ({
   // Compact input — slim variant for stacked rows (model/serial numbers).
   // Same look as `input` but tighter padding + smaller min-height so a
   // list of inputs stays visually professional and not bloated.
+  // Compact label/toggle/chip variants — used inside the WARRANTY
+  // accordion (per user 2026-05-27: match the smaller Model/Serial #
+  // formatting). Tighter spacing, smaller font sizes.
+  labelSm: {
+    color: c.textMuted, fontSize: 8, fontWeight: "900", letterSpacing: 1.5,
+    marginTop: 8, marginBottom: 4,
+  },
+  toggleRowCompact: {
+    flexDirection: "row", alignItems: "center", gap: 8,
+    paddingVertical: 4, marginBottom: 4,
+  },
+  toggleTextCompact: {
+    color: c.textPrimary, fontSize: 10, fontWeight: "800",
+    letterSpacing: 1.2, flex: 1,
+  },
+  warrChipSm: {
+    paddingHorizontal: 9, paddingVertical: 5, marginRight: 5, marginBottom: 5,
+    borderRadius: 3, backgroundColor: c.surface, borderWidth: 1, borderColor: c.border,
+  },
+  warrChipTextSm: {
+    color: c.textPrimary, fontSize: 9, fontWeight: "800", letterSpacing: 1,
+  },
   compactInput: {
     backgroundColor: c.bgSecondary, borderWidth: 1, borderColor: c.border,
     color: c.textPrimary, paddingHorizontal: 10, paddingVertical: 7,
