@@ -49,36 +49,30 @@ defaults that contradict the decisions documented here.**
 - [x] CSV/XLSX exports still share immediately (binary text, no visual preview value).
 - NOTE: Native interactive notification buttons (TEXT/CALL directly inside the iOS banner) were intentionally not implemented — the tap-deep-link → on-screen-buttons pattern is more reliable.
 
-### Session 4 — Tool-edit screen → 25+ accordions (#7)
-- [ ] Full rewrite of `app/tool/edit.tsx` (~2,400 lines currently).
-- [ ] Every input field becomes its own COLLAPSED row by default. Tap row → expands inline to reveal input(s).
-- [ ] **CRITICAL ORDER**: Model Number(s) is the **FIRST** row (above everything else, even Name). User plans to add an AI-powered model lookup feature next that will auto-fill the rest of the form from the model #, so Model # must come first.
-- [ ] Suggested row order:
-  1. **Model Number(s)** ← FIRST
-  2. Photos
-  3. Name
-  4. Brand
-  5. Cost
-  6. MSRP (optional)
-  7. Quantity
-  8. Purchase Date
-  9. Condition
-  10. Serial Number(s)
-  11. Description / Notes
-  12. Category
-  13. Tags
-  14. Location
-  15. Dealer
-  16. Purchased Agent
-  17. Pending Dealer Charge
-  18. Consumable (toggle group)
-  19. Needs Repair (toggle group)
-  20. Warranty (toggle group)
-  21. Documents
-  22. Receipts
-  23. (anything else like is_consumable subfields under the toggle row)
-- [ ] Each accordion row shows: label + a SUMMARY value (e.g., "MODEL #(S): DCD777, MAX-15") + chevron. Tapping expands.
-- [ ] Preserve all existing functionality: AI receipt scan, multi-item parsing, photo capture, set-mode behavior, etc.
+### Session 4 — Tool-edit screen → 25+ accordions (#7) ✅ DONE
+- [x] Created `src/components/AccordionRow.tsx` — collapsible Description Card row with icon, label, summary, expand/collapse chevron, and optional required-dot indicator.
+- [x] Refactored `app/tool/edit.tsx` form body — 17 accordion sections wrapped around all existing input groups:
+  1. **MODEL NUMBER(S)** ← FIRST, required, auto-expanded on a fresh tool
+  2. NAME (required)
+  3. DESCRIPTION
+  4. BRAND
+  5. PRICING & QTY (Cost + MSRP + Qty in one accordion)
+  6. PURCHASE DATE & CONDITION
+  7. SERIAL NUMBER(S)
+  8. CATEGORY
+  9. TAGS
+  10. LOCATION
+  11. DEALER & AGENT (incl. Pending Charge)
+  12. CONSUMABLE
+  13. NEEDS REPAIR / BROKEN
+  14. WARRANTY
+  15. PHOTOS
+  16. RECEIPTS
+  17. DOCUMENTS
+- [x] Single-expand pattern via `openKey` state — tap a header expands it and collapses the previous one.
+- [x] On fresh tool (new) `openKey` defaults to "modelNumbers" so the model # input is open immediately (matches the user's "Model # first" workflow).
+- [x] All existing internal JSX (multi-value inputs, picker buttons, sub-modals, AI receipt scan integration, repair sub-section, warranty sub-section, photos+receipts capture) preserved verbatim inside accordion bodies.
+- [x] Each accordion header shows a one-line summary of the current value when collapsed (e.g., "Cost: $50 · MSRP $99 · Qty 2").
 
 ---
 

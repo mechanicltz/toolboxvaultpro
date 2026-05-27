@@ -11,6 +11,7 @@ import * as ImageManipulator from "expo-image-manipulator";
 import * as DocumentPicker from "expo-document-picker";
 import * as FileSystem from "expo-file-system/legacy";
 import { theme } from "../../src/theme";
+import { AccordionRow } from "../../src/components/AccordionRow";
 import { api } from "../../src/api";
 import { TagInput, CategoryPicker, LocationPicker } from "../../src/Pickers";
 // (locationTree helpers no longer needed here — LocationPicker handles tree flattening internally)
@@ -40,6 +41,15 @@ export default function ToolEdit() {
   // receipt-scan modal and older import paths.
   const [modelNumbers, setModelNumbers] = useState<string[]>([""]);
   const [serialNumbers, setSerialNumbers] = useState<string[]>([""]);
+
+  // Accordion state: tracks which Description-Card row is currently open.
+  // User asked (2026-05-26) for each field to be a collapsed row, with
+  // Model #(s) auto-expanded on a fresh tool (since model # is the first
+  // thing they fill in, and the upcoming AI model lookup will autofill
+  // the rest of the form from it).
+  const [openKey, setOpenKey] = useState<string | null>("modelNumbers");
+  const toggle = (k: string) =>
+    setOpenKey((cur) => (cur === k ? null : k));
   const [isSet, setIsSet] = useState(false);
   const [setSerials, setSetSerials] = useState<string[]>([""]);
   const [cost, setCost] = useState("");
@@ -950,59 +960,15 @@ export default function ToolEdit() {
             </TouchableOpacity>
           )}
 
-          <Text style={styles.label}>NAME *</Text>
-          <TextInput testID="name-input" placeholder="Cordless Drill" placeholderTextColor={theme.colors.textMuted}
-            value={name} onChangeText={setName} style={styles.input} />
-
-          <Text style={styles.label}>DESCRIPTION</Text>
-          <TextInput testID="desc-input" placeholder="Detailed notes..." placeholderTextColor={theme.colors.textMuted}
-            value={description} onChangeText={setDescription}
-            style={[styles.input, { height: 90, textAlignVertical: "top" }]} multiline />
-
-          {/* BRAND now sits alone on its row. The legacy "MODEL" text input
-              (e.g. "DCD777") was removed at the user's request — every tool
-              uses the consolidated multi-value MODEL NUMBER block below
-              instead. The internal `model` field is still kept in state so
-              that existing tools imported via CSV or migrated from older
-              builds don't silently lose data on save; new tools simply
-              leave it blank. */}
-          <View>
-            <Text style={styles.label}>BRAND</Text>
-            <TextInput testID="brand-input" placeholder="DeWalt" placeholderTextColor={theme.colors.textMuted}
-              value={brand} onChangeText={setBrand} style={styles.input} />
-          </View>
-
-          {/* COST + MSRP + QTY row. MSRP is optional and only affects
-              report totals; cost is the actual purchase price the user paid. */}
-          <View style={styles.row2}>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.label}>COST ($)</Text>
-              <TextInput testID="cost-input" placeholder="0.00" placeholderTextColor={theme.colors.textMuted}
-                value={cost} onChangeText={setCost} style={styles.input} keyboardType="decimal-pad" />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.label}>MSRP ($)</Text>
-              <TextInput
-                testID="msrp-input"
-                placeholder="optional"
-                placeholderTextColor={theme.colors.textMuted}
-                value={msrpPrice}
-                onChangeText={(v) => {
-                  const clean = v.replace(/[^0-9.]/g, "").replace(/(\..*?)\..*/g, "$1");
-                  setMsrpPrice(clean);
-                }}
-                style={styles.input}
-                keyboardType="decimal-pad"
-              />
-            </View>
-            <View style={{ width: 70 }}>
-              <Text style={styles.label}>QTY</Text>
-              <TextInput testID="quantity-input" placeholder="1" placeholderTextColor={theme.colors.textMuted}
-                value={quantity} onChangeText={(v) => setQuantity(v.replace(/[^0-9]/g, ""))}
-                style={styles.input} keyboardType="number-pad" />
-            </View>
-          </View>
-
+          <AccordionRow
+            label="MODEL NUMBER(S)"
+            icon="barcode"
+            summary={(modelNumbers.filter(Boolean).join(", ") || "Tap to add model #") as any}
+            required
+            open={openKey === "modelNumbers"}
+            onToggle={() => toggle("modelNumbers")}
+            testID="acc-modelNumbers"
+          >
           {/* MODEL NUMBERS — stacked multi-value input. Add as many rows as
               the user needs. The first row is always visible; remove (×) appears
               from the second row onward. */}
@@ -1069,7 +1035,127 @@ export default function ToolEdit() {
               </Text>
             </TouchableOpacity>
           </View>
+          </AccordionRow>
 
+          <AccordionRow
+            label="NAME"
+            icon="pricetag"
+            summary={(name || "Tap to set") as any}
+            required
+            open={openKey === "name"}
+            onToggle={() => toggle("name")}
+            testID="acc-name"
+          >
+          <Text style={styles.label}>NAME *</Text>
+          <TextInput testID="name-input" placeholder="Cordless Drill" placeholderTextColor={theme.colors.textMuted}
+            value={name} onChangeText={setName} style={styles.input} />
+          </AccordionRow>
+          <AccordionRow
+            label="DESCRIPTION"
+            icon="document-text"
+            summary={(description || "—") as any}
+            open={openKey === "description"}
+            onToggle={() => toggle("description")}
+            testID="acc-description"
+          >
+          <Text style={styles.label}>DESCRIPTION</Text>
+          <TextInput testID="desc-input" placeholder="Detailed notes..." placeholderTextColor={theme.colors.textMuted}
+            value={description} onChangeText={setDescription}
+            style={[styles.input, { height: 90, textAlignVertical: "top" }]} multiline />
+          </AccordionRow>
+          <AccordionRow
+            label="BRAND"
+            icon="ribbon"
+            summary={(brand || "—") as any}
+            open={openKey === "brand"}
+            onToggle={() => toggle("brand")}
+            testID="acc-brand"
+          >
+          {/* BRAND now sits alone on its row. The legacy "MODEL" text input
+              (e.g. "DCD777") was removed at the user's request — every tool
+              uses the consolidated multi-value MODEL NUMBER block below
+              instead. The internal `model` field is still kept in state so
+              that existing tools imported via CSV or migrated from older
+              builds don't silently lose data on save; new tools simply
+              leave it blank. */}
+          <View>
+            <Text style={styles.label}>BRAND</Text>
+            <TextInput testID="brand-input" placeholder="DeWalt" placeholderTextColor={theme.colors.textMuted}
+              value={brand} onChangeText={setBrand} style={styles.input} />
+          </View>
+          </AccordionRow>
+          <AccordionRow
+            label="PRICING & QTY"
+            icon="cash"
+            summary={((cost ? `$${cost}` : "—") + (msrpPrice ? ` · MSRP $${msrpPrice}` : "") + (quantity && quantity !== "1" ? ` · Qty ${quantity}` : "")) as any}
+            open={openKey === "pricing"}
+            onToggle={() => toggle("pricing")}
+            testID="acc-pricing"
+          >
+          {/* COST + MSRP + QTY row. MSRP is optional and only affects
+              report totals; cost is the actual purchase price the user paid. */}
+          <View style={styles.row2}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.label}>COST ($)</Text>
+              <TextInput testID="cost-input" placeholder="0.00" placeholderTextColor={theme.colors.textMuted}
+                value={cost} onChangeText={setCost} style={styles.input} keyboardType="decimal-pad" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.label}>MSRP ($)</Text>
+              <TextInput
+                testID="msrp-input"
+                placeholder="optional"
+                placeholderTextColor={theme.colors.textMuted}
+                value={msrpPrice}
+                onChangeText={(v) => {
+                  const clean = v.replace(/[^0-9.]/g, "").replace(/(\..*?)\..*/g, "$1");
+                  setMsrpPrice(clean);
+                }}
+                style={styles.input}
+                keyboardType="decimal-pad"
+              />
+            </View>
+            <View style={{ width: 70 }}>
+              <Text style={styles.label}>QTY</Text>
+              <TextInput testID="quantity-input" placeholder="1" placeholderTextColor={theme.colors.textMuted}
+                value={quantity} onChangeText={(v) => setQuantity(v.replace(/[^0-9]/g, ""))}
+                style={styles.input} keyboardType="number-pad" />
+            </View>
+          </View>
+          </AccordionRow>
+          <AccordionRow
+            label="PURCHASE DATE & CONDITION"
+            icon="calendar"
+            summary={((purchaseDate || "—") + " · " + (condition || "Good")) as any}
+            open={openKey === "purchase"}
+            onToggle={() => toggle("purchase")}
+            testID="acc-purchase"
+          >
+          <View style={styles.row2}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.label}>PURCHASED</Text>
+              <DateField
+                testID="purchase-input"
+                value={purchaseDate}
+                onChange={setPurchaseDate}
+                placeholder="MM/DD/YYYY"
+              />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.label}>CONDITION</Text>
+              <TextInput testID="condition-input" placeholder="Good" placeholderTextColor={theme.colors.textMuted}
+                value={condition} onChangeText={setCondition} style={styles.input} />
+            </View>
+          </View>
+          </AccordionRow>
+          <AccordionRow
+            label="SERIAL NUMBER(S)"
+            icon="key"
+            summary={(serialNumbers.filter(Boolean).join(", ") || "—") as any}
+            open={openKey === "serialNumbers"}
+            onToggle={() => toggle("serialNumbers")}
+            testID="acc-serialNumbers"
+          >
           {/* SERIAL NUMBERS — same stacked input pattern. */}
           <View style={styles.subSection}>
             <Text style={[styles.label, { marginTop: 0 }]}>SERIAL NUMBER(S)</Text>
@@ -1134,31 +1220,38 @@ export default function ToolEdit() {
               </Text>
             </TouchableOpacity>
           </View>
+          </AccordionRow>
 
-
-          <View style={styles.row2}>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.label}>PURCHASED</Text>
-              <DateField
-                testID="purchase-input"
-                value={purchaseDate}
-                onChange={setPurchaseDate}
-                placeholder="MM/DD/YYYY"
-              />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.label}>CONDITION</Text>
-              <TextInput testID="condition-input" placeholder="Good" placeholderTextColor={theme.colors.textMuted}
-                value={condition} onChangeText={setCondition} style={styles.input} />
-            </View>
-          </View>
-
+          <AccordionRow
+            label="CATEGORY"
+            icon="folder"
+            summary={(category || "—") as any}
+            open={openKey === "category"}
+            onToggle={() => toggle("category")}
+            testID="acc-category"
+          >
           <Text style={styles.label}>CATEGORY</Text>
           <CategoryPicker selected={category} onChange={setCategory} />
-
+          </AccordionRow>
+          <AccordionRow
+            label="TAGS"
+            icon="pricetags"
+            summary={(tags?.length ? tags.join(", ") : "—") as any}
+            open={openKey === "tags"}
+            onToggle={() => toggle("tags")}
+            testID="acc-tags"
+          >
           <Text style={styles.label}>TAGS</Text>
           <TagInput selected={tags} onChange={setTags} />
-
+          </AccordionRow>
+          <AccordionRow
+            label="LOCATION"
+            icon="location"
+            summary={(locationName || "—") as any}
+            open={openKey === "location"}
+            onToggle={() => toggle("location")}
+            testID="acc-location"
+          >
           <Text style={styles.label}>LOCATION</Text>
           <LocationPicker
             locationId={locationId}
@@ -1168,7 +1261,15 @@ export default function ToolEdit() {
               setLocationName(path);
             }}
           />
-
+          </AccordionRow>
+          <AccordionRow
+            label="DEALER & AGENT"
+            icon="people"
+            summary={((dealerName || "—") + (purchasedAgentName ? ` · ${purchasedAgentName}` : "")) as any}
+            open={openKey === "dealer"}
+            onToggle={() => toggle("dealer")}
+            testID="acc-dealer"
+          >
           {/* Dealer */}
           <Text style={styles.label}>DEALER</Text>
           <BevelCard testID="pick-dealer-btn" style={styles.pickerRow} onPress={() => setShowDealerPicker(true)}>
@@ -1200,7 +1301,15 @@ export default function ToolEdit() {
               </View>
             </>
           )}
-
+          </AccordionRow>
+          <AccordionRow
+            label="CONSUMABLE"
+            icon="flask"
+            summary={(isConsumable ? "Yes" : "No") as any}
+            open={openKey === "consumable"}
+            onToggle={() => toggle("consumable")}
+            testID="acc-consumable"
+          >
           {/* Consumable */}
           <View style={styles.toggleRow}>
             <Ionicons name="repeat" size={20} color={theme.colors.accent} />
@@ -1228,7 +1337,15 @@ export default function ToolEdit() {
                 multiline onChangeText={(v) => setConsumableInfo({ ...consumableInfo, notes: v })} />
             </View>
           )}
-
+          </AccordionRow>
+          <AccordionRow
+            label="NEEDS REPAIR / BROKEN"
+            icon="build"
+            summary={(needsRepair ? (repairInfo.repair_status || "Reported") : "No") as any}
+            open={openKey === "repair"}
+            onToggle={() => toggle("repair")}
+            testID="acc-repair"
+          >
           {/* Broken / Needs Repair */}
           <View style={[styles.toggleRow, needsRepair && { backgroundColor: "rgba(220,38,38,0.08)" }]}>
             <Ionicons name="build" size={20} color={needsRepair ? theme.colors.danger : theme.colors.accent} />
@@ -1353,7 +1470,15 @@ export default function ToolEdit() {
               </Text>
             </View>
           )}
-
+          </AccordionRow>
+          <AccordionRow
+            label="WARRANTY"
+            icon="shield-checkmark"
+            summary={(hasWarranty ? (warranty.warranty_end || "Active") : "No") as any}
+            open={openKey === "warranty"}
+            onToggle={() => toggle("warranty")}
+            testID="acc-warranty"
+          >
           {/* Warranty */}
           <View style={styles.toggleRow}>
             <Ionicons name="shield-checkmark" size={20} color={theme.colors.accent} />
@@ -1467,7 +1592,15 @@ export default function ToolEdit() {
                 onChangeText={(v) => onWarrantyChange("terms", v)} />
             </View>
           )}
-
+          </AccordionRow>
+          <AccordionRow
+            label="PHOTOS"
+            icon="camera"
+            summary={(`${photos.length} photo${photos.length === 1 ? "" : "s"}`) as any}
+            open={openKey === "photos"}
+            onToggle={() => toggle("photos")}
+            testID="acc-photos"
+          >
           {/* Photos */}
           <Text style={styles.label}>PHOTOS ({photos.length})</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 8 }}>
@@ -1489,7 +1622,15 @@ export default function ToolEdit() {
               <Text style={styles.photoAddText}>GALLERY</Text>
             </TouchableOpacity>
           </ScrollView>
-
+          </AccordionRow>
+          <AccordionRow
+            label="RECEIPTS"
+            icon="receipt"
+            summary={(`${receipts.length} receipt${receipts.length === 1 ? "" : "s"}`) as any}
+            open={openKey === "receipts"}
+            onToggle={() => toggle("receipts")}
+            testID="acc-receipts"
+          >
           {/* Receipts */}
           <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
             <Text style={styles.label}>RECEIPTS ({receipts.length})</Text>
@@ -1538,7 +1679,15 @@ export default function ToolEdit() {
               Attach receipt photos for insurance, warranty claims, and PDF reports.
             </Text>
           )}
-
+          </AccordionRow>
+          <AccordionRow
+            label="DOCUMENTS"
+            icon="attach"
+            summary={(`${documents.length} document${documents.length === 1 ? "" : "s"}`) as any}
+            open={openKey === "documents"}
+            onToggle={() => toggle("documents")}
+            testID="acc-documents"
+          >
           {/* Documents */}
           <Text style={styles.label}>DOCUMENTS ({documents.length})</Text>
           {documents.map((d, i) => (
@@ -1554,6 +1703,7 @@ export default function ToolEdit() {
             <Ionicons name="attach" size={20} color={theme.colors.accent} />
             <Text style={styles.docAddText}>ATTACH DOCUMENT</Text>
           </TouchableOpacity>
+          </AccordionRow>
         </ScrollView>
       </KeyboardAvoidingView>
 
