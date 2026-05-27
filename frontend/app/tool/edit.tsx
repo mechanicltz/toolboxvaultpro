@@ -960,6 +960,7 @@ export default function ToolEdit() {
             </TouchableOpacity>
           )}
 
+          <View style={styles.detailsBox}>
           <AccordionRow
             label="MODEL NUMBER(S)"
             icon="barcode"
@@ -1686,6 +1687,7 @@ export default function ToolEdit() {
             summary={(`${documents.length} document${documents.length === 1 ? "" : "s"}`) as any}
             open={openKey === "documents"}
             onToggle={() => toggle("documents")}
+            lastRow
             testID="acc-documents"
           >
           {/* Documents */}
@@ -1704,6 +1706,7 @@ export default function ToolEdit() {
             <Text style={styles.docAddText}>ATTACH DOCUMENT</Text>
           </TouchableOpacity>
           </AccordionRow>
+          </View>
         </ScrollView>
       </KeyboardAvoidingView>
 
@@ -2211,6 +2214,21 @@ const styles = themedStyles((c) => ({
   subSection: {
     marginTop: 4, paddingLeft: 12,
     borderLeftWidth: 2, borderLeftColor: c.accent,
+  },
+  // Single Description Card container that wraps ALL accordion rows on the
+  // Tool Edit screen — visually identical to the detailsBox on tool/[id].tsx
+  // so the edit screen reads as the same Description Card family as the
+  // read-only detail screen. Each AccordionRow is a flat divider row
+  // inside this card (no individual chrome).
+  detailsBox: {
+    backgroundColor: c.bgSecondary,
+    borderWidth: 1,
+    borderColor: c.border,
+    borderRadius: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 2,
+    marginTop: 4,
+    ...(theme.elevation.md as object),
   },
   photoWrap: { marginRight: 8, position: "relative" },
   photo: { width: 100, height: 100, borderRadius: 4, borderWidth: 1, borderColor: c.border },

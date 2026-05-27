@@ -1,19 +1,24 @@
 /**
- * AccordionRow — collapsible Description Card row used to compact the
- * Tool Edit screen. Visual language matches the read-only Description
- * Cards on the Tool detail screen: bgSecondary background, subtle border,
- * tiny (7pt) bold ALL-CAPS label on the left, right-aligned value on the
- * right (when collapsed), expand chevron, expanded body underneath.
+ * AccordionRow — a single collapsible row inside the shared Description Card
+ * on the Tool Edit screen. Visual language MIRRORS the read-only Description
+ * Card on tool/[id].tsx exactly: each row is a flat divider row (hairline
+ * borderBottom in `borderSubtle`) sitting inside ONE parent `detailsBox`.
  *
- * Per the user (2026-05-26): the Tool Edit screen has 25+ accordion rows
- * so each input is its own collapsed row. Model #(s) is the FIRST row.
+ * Per user (2026-05-26):
+ *  - All accordion rows must live inside ONE master Description Card —
+ *    NOT 17 individual scattered cards.
+ *  - Colors must respond to Light/Dark mode (the previous module-level
+ *    StyleSheet.create snapshotted dark colors and looked off in light mode).
+ *
+ * The component is now visually transparent — no own background, no own
+ * border, no own shadow, no own margin. It only paints a bottom hairline
+ * unless `lastRow` is set. The parent container owns all chrome.
  */
 import React from "react";
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Text, TouchableOpacity, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { themedStyles } from "../themeContext";
 import { theme } from "../theme";
-
-const c = theme.colors;
 
 type Props = {
   /** Icon name from Ionicons set — left adornment */
@@ -30,8 +35,8 @@ type Props = {
   onToggle: () => void;
   /** Expanded content */
   children: React.ReactNode;
-  /** Disable padding/border on the wrapper (use inside another card) */
-  noBorder?: boolean;
+  /** When true, the row skips its bottom divider (use on the final row) */
+  lastRow?: boolean;
   /** testID for testing */
   testID?: string;
 };
@@ -44,22 +49,17 @@ export function AccordionRow({
   open,
   onToggle,
   children,
-  noBorder,
+  lastRow,
   testID,
 }: Props): React.ReactElement {
+  const c = theme.colors;
   return (
-    <View
-      style={[
-        styles.card,
-        !noBorder && styles.cardBorder,
-        open && styles.cardOpen,
-      ]}
-    >
+    <View style={[styles.row, !lastRow && !open && styles.rowDivider]}>
       <TouchableOpacity
         testID={testID}
         activeOpacity={0.6}
         onPress={onToggle}
-        style={styles.row}
+        style={styles.header}
       >
         <View style={styles.left}>
           {icon && (
@@ -89,34 +89,31 @@ export function AccordionRow({
         </View>
       </TouchableOpacity>
 
-      {open && <View style={styles.body}>{children}</View>}
+      {open && (
+        <View style={[styles.body, !lastRow && styles.bodyDivider]}>
+          {children}
+        </View>
+      )}
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  // Description Card body — matches tool/[id].tsx detailsBox so the edit
-  // screen reads as the same visual family as the read-only detail screen.
-  card: {
-    backgroundColor: c.bgSecondary,
-    borderRadius: 6,
-    marginBottom: 8,
-    overflow: "hidden",
-    ...(theme.elevation.md as object),
-  },
-  cardBorder: {
-    borderWidth: 1,
-    borderColor: c.border,
-  },
-  cardOpen: {
-    borderColor: c.accent,
-  },
-  // Header row — same metrics as detailsRow (paddingVertical:8, gap:8)
+const styles = themedStyles((c) => ({
+  // No background / border / shadow / margin — parent `detailsBox` owns those.
   row: {
+    backgroundColor: "transparent",
+  },
+  // Hairline between collapsed rows — matches detailsRow on tool/[id].tsx.
+  rowDivider: {
+    borderBottomWidth: 1,
+    borderBottomColor: c.borderSubtle,
+  },
+  // Same metrics as detailsRow: paddingVertical 8, no horizontal padding
+  // (the parent `detailsBox` pads horizontally for the whole stack).
+  header: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 12,
     paddingVertical: 10,
     gap: 8,
   },
@@ -125,7 +122,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     flex: 1,
   },
-  // detailsLabel: muted, fontSize 7, letterSpacing 1.5, ALL CAPS
+  // detailsLabel — muted, fontSize 7, letterSpacing 1.5, ALL CAPS
   label: {
     color: c.textMuted,
     fontSize: 7,
@@ -144,7 +141,7 @@ const styles = StyleSheet.create({
     maxWidth: "65%",
     justifyContent: "flex-end",
   },
-  // detailsValue: textPrimary, fontSize 10, fontWeight 700, right-aligned
+  // detailsValue — textPrimary, fontSize 10, fontWeight 700, right-aligned
   value: {
     color: c.textPrimary,
     fontSize: 10,
@@ -152,14 +149,15 @@ const styles = StyleSheet.create({
     textAlign: "right",
     flexShrink: 1,
   },
-  // Expanded body: thin separator + comfortable inputs spacing
+  // Expanded body — sits between the header and the next row.
   body: {
-    paddingHorizontal: 12,
     paddingBottom: 12,
-    paddingTop: 6,
-    borderTopWidth: 1,
-    borderTopColor: c.borderSubtle,
+    paddingTop: 2,
   },
-});
+  bodyDivider: {
+    borderBottomWidth: 1,
+    borderBottomColor: c.borderSubtle,
+  },
+}));
 
 export default AccordionRow;
