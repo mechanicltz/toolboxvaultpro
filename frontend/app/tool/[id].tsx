@@ -21,6 +21,12 @@ import { useLocalSearchParams, useRouter, useFocusEffect } from "expo-router";
 import { useAppResume } from "../../src/appLifecycle";
 import * as ImagePicker from "expo-image-picker";
 import { theme } from "../../src/theme";
+import { loadPrefs } from "../../src/prefs";
+import {
+  scheduleBorrowReminder,
+  cancelBorrowReminder,
+  composeBorrowSmsBody,
+} from "../../src/borrowReminders";
 import { api } from "../../src/api";
 import { printReportHtml } from "../../src/printHtml";
 import { confirm } from "../../src/confirm";
@@ -373,6 +379,7 @@ export default function ToolDetail() {
       await api.checkoutTool(tool.id, {
         borrower_name: name,
         borrower_id: resolvedId,
+        borrower_phone: coPhone || undefined,
         notes: coNotes,
       });
       setShowCheckout(false);
@@ -380,6 +387,23 @@ export default function ToolDetail() {
       setCoPhone("");
       setCoBorrowerId(null);
       setCoNotes("");
+      // Schedule an overdue reminder if the user has opted in. Best-effort —
+      // a notification failure must not block the checkout itself.
+      try {
+        const prefs = await loadPrefs();
+        if (prefs.borrow_reminders_enabled) {
+          await scheduleBorrowReminder({
+            toolId: tool.id,
+            toolName: tool.name || "Tool",
+            borrowerName: name,
+            borrowerPhone: coPhone || "",
+            options: {
+              enabled: true,
+              reminderHours: prefs.borrow_reminder_hours || 24,
+            },
+          });
+        }
+      } catch { /* non-fatal */ }
       load();
     } catch (e: any) {
       Alert.alert("Error", e.message || "Checkout failed");
@@ -389,6 +413,10 @@ export default function ToolDetail() {
   const doCheckin = async () => {
     try {
       await api.checkinTool(tool.id);
+      try {
+        // Cancel any pending overdue notifications for this tool. Best-effort.
+        await cancelBorrowReminder(tool.id);
+      } catch { /* non-fatal */ }
       load();
     } catch (e: any) {
       Alert.alert("Error", e.message || "Check in failed");
@@ -1601,6 +1629,57 @@ export default function ToolDetail() {
                   <Text style={newStyles.checkedOutLine}>
                     On: {formatDateUS(active.checked_out_at)}
                   </Text>
+                  {/* Quick-action TEXT + CALL buttons. Visible only when we
+                      know the borrower's phone (lookup happens at checkout).
+                      The TEXT button pre-fills the user's reminder template
+                      (see composeBorrowSmsBody). These mirror the action
+                      buttons that appear on the overdue notification when
+                      the user taps it. */}
+                  {(() => {
+                    const phone = active.borrower_phone || "";
+                    if (!phone) return null;
+                    const tel = phone.replace(/[^0-9+]/g, "");
+                    const smsBody = composeBorrowSmsBody(
+                      tool.name || "tool",
+                      active.borrower_name || "there",
+                    );
+                    return (
+                      <View
+                        style={{
+                          flexDirection: "row",
+                          gap: 8,
+                          marginTop: 10,
+                        }}
+                      >
+                        <TouchableOpacity
+                          testID="checkedout-call"
+                          style={newStyles.qaBtn}
+                          onPress={(e: any) => {
+                            e?.stopPropagation?.();
+                            Linking.openURL(`tel:${tel}`);
+                          }}
+                          activeOpacity={0.7}
+                        >
+                          <Ionicons name="call" size={14} color={theme.colors.accent} />
+                          <Text style={newStyles.qaBtnText}>CALL</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          testID="checkedout-text"
+                          style={newStyles.qaBtn}
+                          onPress={(e: any) => {
+                            e?.stopPropagation?.();
+                            const sep = Platform.OS === "ios" ? "&" : "?";
+                            const url = `sms:${tel}${sep}body=${encodeURIComponent(smsBody)}`;
+                            Linking.openURL(url);
+                          }}
+                          activeOpacity={0.7}
+                        >
+                          <Ionicons name="chatbubble-ellipses" size={14} color={theme.colors.accent} />
+                          <Text style={newStyles.qaBtnText}>TEXT REMINDER</Text>
+                        </TouchableOpacity>
+                      </View>
+                    );
+                  })()}
                 </View>
               </TouchableOpacity>
             );
@@ -4075,6 +4154,26 @@ const newStyles = themedStyles((c) => ({
     color: c.textPrimary,
     fontSize: 12,
     marginTop: 4,
+  },
+  // Quick-action buttons (TEXT REMINDER / CALL) shown on the checked-out
+  // card when the borrower's phone is on file. Transparent w/ orange border
+  // matches the active-toggle styling rule used across the app.
+  qaBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 6,
+    backgroundColor: "transparent",
+    borderColor: c.accent,
+    borderWidth: 1,
+  },
+  qaBtnText: {
+    color: c.accent,
+    fontSize: 10,
+    fontWeight: "900",
+    letterSpacing: 1,
   },
 
   // ---------- (legacy) CHECKED OUT PILL — kept for back-compat in case

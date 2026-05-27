@@ -27,6 +27,11 @@ export type Prefs = {
   dealer_notification_hour: number; // 0-23
   dealer_notification_minute: number; // 0-59
   dealer_notify_day_before: boolean;
+  // Borrowed-tool overdue reminders. When enabled, the app schedules a
+  // local notification every `borrow_reminder_hours` while a tool is
+  // checked out (until the user marks it returned).
+  borrow_reminders_enabled: boolean;
+  borrow_reminder_hours: number; // total hours between reminders. 24 = daily.
   // Home screen decorative logo. Modes:
   //   "custom"  — show the base64 image stored in `home_logo_data`
   //   "hidden"  — don't render the logo block at all (initial state)
@@ -84,6 +89,8 @@ const DEFAULTS: Prefs = {
   dealer_notification_hour: 7,
   dealer_notification_minute: 0,
   dealer_notify_day_before: false,
+  borrow_reminders_enabled: false,
+  borrow_reminder_hours: 24, // default = 1 day per user spec (2026-05-26)
   home_logo_mode: "hidden",
   home_logo_data: null,
   show_dealer_route_reminder: true,

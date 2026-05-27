@@ -42,6 +42,10 @@ import {
   cancelDealerNotifications,
   sendTestNotification,
 } from "../../src/notifications";
+import {
+  rescheduleAllBorrowReminders,
+  cancelAllBorrowReminders,
+} from "../../src/borrowReminders";
 
 type RowProps = {
   icon: any;
@@ -190,6 +194,10 @@ export default function MoreScreen() {
   const [pwErr, setPwErr] = useState("");
   const [pwOk, setPwOk] = useState("");
   const [timePickerOpen, setTimePickerOpen] = useState(false);
+  const [borrowPeriodPickerOpen, setBorrowPeriodPickerOpen] = useState(false);
+  // Local edit state for the "Custom" picker (number of days). Only used while
+  // the user is typing inside the modal.
+  const [customDaysInput, setCustomDaysInput] = useState("");
   const [homeRowsModal, setHomeRowsModal] = useState(false);
   const { mode: themeMode, setMode: setThemeMode } = useThemeMode();
 
@@ -341,6 +349,52 @@ export default function MoreScreen() {
     const h12 = h % 12 === 0 ? 12 : h % 12;
     const mm = String(m).padStart(2, "0");
     return `${h12}:${mm} ${period}`;
+  };
+
+  // ---------- Borrow reminder period helpers ----------
+  // Preset choices the user can pick from in the period modal. Each entry's
+  // `hours` is what gets persisted into prefs.borrow_reminder_hours.
+  const BORROW_PRESETS: Array<{ hours: number; label: string }> = [
+    { hours: 12, label: "12 hours" },
+    { hours: 24, label: "1 day" },
+    { hours: 48, label: "2 days" },
+    { hours: 72, label: "3 days" },
+    { hours: 96, label: "4 days" },
+    { hours: 120, label: "5 days" },
+    { hours: 144, label: "6 days" },
+    { hours: 168, label: "1 week" },
+    { hours: 336, label: "2 weeks" },
+    { hours: 504, label: "3 weeks" },
+    { hours: 720, label: "1 month" },
+  ];
+
+  // Pretty-format hours back to the closest preset label, or "X days" for
+  // custom values that don't match a preset exactly.
+  const formatBorrowPeriod = (hours: number): string => {
+    const preset = BORROW_PRESETS.find((p) => p.hours === hours);
+    if (preset) return preset.label;
+    if (hours < 24) return `${hours} hours`;
+    const days = hours / 24;
+    if (Number.isInteger(days)) return `${days} days`;
+    return `${days.toFixed(1)} days`;
+  };
+
+  // Apply a new reminder period — saves to prefs AND re-schedules every
+  // currently-checked-out tool so existing checkouts use the new cadence.
+  const applyBorrowPeriod = async (hours: number) => {
+    if (!Number.isFinite(hours) || hours < 1) return;
+    await update({ borrow_reminder_hours: hours });
+    setBorrowPeriodPickerOpen(false);
+    setCustomDaysInput("");
+    if (prefs.borrow_reminders_enabled) {
+      try {
+        const tools = await api.listTools();
+        await rescheduleAllBorrowReminders(tools, {
+          enabled: true,
+          reminderHours: hours,
+        });
+      } catch { /* offline ok */ }
+    }
   };
 
   // ---------- Home Screen Logo customization helpers ----------
@@ -790,28 +844,85 @@ export default function MoreScreen() {
                   />
                 }
               />
-              <SectionRow
-                icon="paper-plane"
-                title="Send a test notification"
-                subtitle="Fires in 5 seconds — confirms permissions are working"
-                testID="notif-test-row"
-                isLast
-                onPress={async () => {
-                  const ok = await sendTestNotification();
-                  if (ok) {
-                    Alert.alert(
-                      "Test scheduled",
-                      "A test notification will appear in about 5 seconds. If your phone is on silent or Do Not Disturb is on, you'll see it in Notification Center.",
-                    );
+            </>
+          )}
+          {/* ------- Borrowed-tool overdue reminders (new 2026-05-26) ------ */}
+          <SectionRow
+            icon="time"
+            title="Borrowed-tool overdue reminders"
+            subtitle="Notify me when a tool I checked out is still out"
+            testID="notif-borrow-toggle-row"
+            isLast={!prefs.borrow_reminders_enabled}
+            rightSlot={
+              <Switch
+                value={prefs.borrow_reminders_enabled}
+                onValueChange={async (v) => {
+                  if (v) {
+                    const granted = await requestNotificationPermissions();
+                    if (!granted) {
+                      Alert.alert(
+                        "Permission needed",
+                        "To remind you about checked-out tools, please allow notifications for this app in your device settings.",
+                      );
+                      return;
+                    }
+                    await update({ borrow_reminders_enabled: true });
+                    try {
+                      const tools = await api.listTools();
+                      await rescheduleAllBorrowReminders(tools, {
+                        enabled: true,
+                        reminderHours: prefs.borrow_reminder_hours || 24,
+                      });
+                    } catch { /* offline ok */ }
                   } else {
-                    Alert.alert(
-                      "Permission needed",
-                      "Please enable notifications for this app in your device settings.",
-                    );
+                    await update({ borrow_reminders_enabled: false });
+                    await cancelAllBorrowReminders();
                   }
                 }}
+                trackColor={{ true: theme.colors.accent, false: theme.colors.border }}
+                thumbColor="#fff"
               />
-            </>
+            }
+          />
+          {prefs.borrow_reminders_enabled && (
+            <SectionRow
+              icon="hourglass"
+              title="Reminder period"
+              subtitle="How often to remind you while a tool is checked out"
+              testID="notif-borrow-period-row"
+              isLast
+              onPress={() => setBorrowPeriodPickerOpen(true)}
+              rightSlot={
+                <Text style={styles.timeValue}>
+                  {formatBorrowPeriod(prefs.borrow_reminder_hours)}
+                </Text>
+              }
+            />
+          )}
+          {/* ------- TEST notification — moved OUT of the dealer-only block so
+              it shows whenever ANY notification toggle is on, per user spec. */}
+          {(prefs.dealer_notifications_enabled || prefs.borrow_reminders_enabled) && (
+            <SectionRow
+              icon="paper-plane"
+              title="Send a test notification"
+              subtitle="Fires in 5 seconds — confirms permissions are working"
+              testID="notif-test-row"
+              isLast
+              onPress={async () => {
+                const ok = await sendTestNotification();
+                if (ok) {
+                  Alert.alert(
+                    "Test scheduled",
+                    "A test notification will appear in about 5 seconds. If your phone is on silent or Do Not Disturb is on, you\'ll see it in Notification Center.",
+                  );
+                } else {
+                  Alert.alert(
+                    "Permission needed",
+                    "Please enable notifications for this app in your device settings.",
+                  );
+                }
+              }}
+            />
           )}
         </SectionCard>
 
@@ -1194,6 +1305,98 @@ export default function MoreScreen() {
         </Modal>
       )}
 
+      {/* ===== Borrow reminder period picker ============================ */}
+      <Modal
+        visible={borrowPeriodPickerOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setBorrowPeriodPickerOpen(false)}
+      >
+        <TouchableOpacity
+          style={styles.timeModalBackdrop}
+          activeOpacity={1}
+          onPress={() => setBorrowPeriodPickerOpen(false)}
+        >
+          <TouchableOpacity
+            activeOpacity={1}
+            style={[styles.timeModalSheet, { maxHeight: "85%" }]}
+            onPress={(e) => e.stopPropagation()}
+          >
+            <View style={styles.timeModalHeader}>
+              <Text style={styles.timeModalTitle}>REMINDER PERIOD</Text>
+              <TouchableOpacity onPress={() => setBorrowPeriodPickerOpen(false)}>
+                <Ionicons name="close" size={24} color={theme.colors.textPrimary} />
+              </TouchableOpacity>
+            </View>
+            <ScrollView style={{ maxHeight: 460 }}>
+              {BORROW_PRESETS.map((p) => {
+                const active = prefs.borrow_reminder_hours === p.hours;
+                return (
+                  <TouchableOpacity
+                    key={p.hours}
+                    style={[
+                      styles.periodOptionRow,
+                      active && styles.periodOptionRowActive,
+                    ]}
+                    onPress={() => applyBorrowPeriod(p.hours)}
+                  >
+                    <Text
+                      style={[
+                        styles.periodOptionLabel,
+                        active && { color: theme.colors.accent, fontWeight: "900" },
+                      ]}
+                    >
+                      {p.label}
+                    </Text>
+                    {active && (
+                      <Ionicons name="checkmark" size={18} color={theme.colors.accent} />
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
+              {/* Custom days input — accepts any positive number */}
+              <View style={[styles.periodOptionRow, { flexDirection: "column", alignItems: "stretch", gap: 8 }]}>
+                <Text style={styles.periodOptionLabel}>Custom (number of days)</Text>
+                <View style={{ flexDirection: "row", gap: 8 }}>
+                  <TextInput
+                    testID="borrow-custom-days"
+                    placeholder="e.g. 10"
+                    placeholderTextColor={theme.colors.textMuted}
+                    value={customDaysInput}
+                    onChangeText={(v) => setCustomDaysInput(v.replace(/[^0-9]/g, ""))}
+                    keyboardType="number-pad"
+                    style={{
+                      flex: 1,
+                      backgroundColor: theme.colors.surface,
+                      color: theme.colors.textPrimary,
+                      borderRadius: 8,
+                      paddingHorizontal: 12,
+                      paddingVertical: 10,
+                      borderWidth: 1,
+                      borderColor: theme.colors.border,
+                    }}
+                  />
+                  <TouchableOpacity
+                    style={{
+                      backgroundColor: theme.colors.accent,
+                      borderRadius: 8,
+                      paddingHorizontal: 16,
+                      justifyContent: "center",
+                    }}
+                    onPress={() => {
+                      const days = parseInt(customDaysInput || "0", 10);
+                      if (days > 0) applyBorrowPeriod(days * 24);
+                    }}
+                  >
+                    <Text style={{ color: "#000", fontWeight: "900" }}>SET</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </ScrollView>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
+
     </SafeAreaView>
   );
 }
@@ -1505,6 +1708,24 @@ const styles = themedStyles((c) => ({
     color: c.accent,
     fontSize: 13,
     fontWeight: "800",
+  },
+  // Reminder-period picker rows (Borrow-Reminder modal)
+  periodOptionRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: c.border,
+  },
+  periodOptionRowActive: {
+    backgroundColor: "rgba(237, 126, 44, 0.08)",
+  },
+  periodOptionLabel: {
+    color: c.textPrimary,
+    fontSize: 15,
+    fontWeight: "600",
   },
   badge: {
     minWidth: 24,

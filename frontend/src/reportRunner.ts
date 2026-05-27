@@ -14,6 +14,7 @@ import { Platform } from "react-native";
 import * as FileSystem from "expo-file-system/legacy";
 import * as Sharing from "expo-sharing";
 import * as MailComposer from "expo-mail-composer";
+import { router } from "expo-router";
 import { getToken, API_BASE } from "./api";
 
 // Single source of truth for the backend URL — shared with api.ts so login
@@ -255,9 +256,30 @@ async function runReportNative(
     return;
   }
 
-  // For both "view" and "save" we use the system share sheet — the user can
-  // then "Save to Files", "Open in Acrobat", "Print", etc. This is the
-  // standard iOS/Android pattern for delivering generated files.
+  // For "view": route PDFs to the in-app preview screen so the user can
+  // actually SEE the report before being thrown into a share sheet (which
+  // was the long-standing complaint). CSV files don't have an in-app
+  // viewer (binary text, not visual) — they fall through to the share
+  // sheet for "Save to Files" / "Open in Numbers" / etc.
+  if (action === "view" && file.mime.includes("pdf")) {
+    try {
+      router.push({
+        pathname: "/pdf-viewer",
+        params: {
+          uri: file.uri,
+          title: file.filename || "Report",
+          mime: file.mime,
+        },
+      });
+      return;
+    } catch {
+      /* fall through to share sheet on router failure */
+    }
+  }
+
+  // For "save", "email" with no mail composer, or CSV view → use the
+  // share sheet. This is the standard iOS/Android pattern for delivering
+  // generated files.
   if (await Sharing.isAvailableAsync()) {
     await Sharing.shareAsync(file.uri, {
       mimeType: file.mime,

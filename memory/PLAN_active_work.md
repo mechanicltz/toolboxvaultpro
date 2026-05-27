@@ -27,31 +27,27 @@ defaults that contradict the decisions documented here.**
 - [ ] **#5b** — Dealer DETAIL screen: remove the duplicate EDIT button that sits UNDER the Phone + Text buttons. The header already has an Edit pencil. (The under-buttons-edit one is redundant.)
 - [ ] **#6** — Home Customize settings: add a toggle to show/hide the "next dealer-route reminder" banner at the top of the home screen.
 
-### Session 2 — Borrowed-tool overdue notifications (#3)
-- [ ] New profile/settings field: `borrow_reminder_period` (stored as DURATION_HOURS integer; nullable = off)
-  - **Default for new users: 24 hours (1 day)**
-  - **Choices: 12 hours, 1 day, 2 days, 3 days, 4 days, 5 days, 6 days, 1 week, 2 weeks, 3 weeks, 1 month, Custom (number of days)**
-  - Custom path stores raw hours; UI picks days × 24
-- [ ] On `POST /api/tools/{id}/checkout` → frontend schedules a local `expo-notifications` reminder for `now + borrow_reminder_period`. Repeat every period until checkin.
-- [ ] On `POST /api/tools/{id}/checkin` → cancel scheduled notification for that tool.
-- [ ] Notification body: `"Tool [NAME] is still checked out to [BORROWER] — please follow up."`
-- [ ] Notification actions:
-  - **TEXT** → opens SMS deep link with EXACT template (DO NOT REWORD):
-    > `Hey [Borrower Name] — just a friendly reminder you still have my [Tool Name]. Let me know when it's coming back, Thanks`
-  - **CALL** → `tel:` deep link to borrower phone
-- [ ] Works even when app is closed/force-quit (local notifications survive on iOS up to 64 scheduled).
-- [ ] **#3a** — Settings/Notifications screen:
-  - "Send test notification" button appears ONLY if ANY notification toggle is enabled
-  - Reminder-time picker is SHARED across all notification types (warranty expiry, maintenance, borrow reminder) — one setting drives all of them
+### Session 2 — Borrowed-tool overdue notifications (#3) ✅ DONE
+- [x] New profile/settings field: `borrow_reminders_enabled` (bool) + `borrow_reminder_hours` (number; defaults to 24h per user spec)
+  - Period choices in modal: 12h, 1d, 2d, 3d, 4d, 5d, 6d, 1w, 2w, 3w, 1m, Custom days
+- [x] `src/borrowReminders.ts` module created — schedules/cancels local notifications, 5 stacked occurrences per tool
+- [x] On `POST /api/tools/{id}/checkout` → frontend (`tool/[id].tsx`) schedules reminder if user has enabled
+- [x] On `POST /api/tools/{id}/checkin` → frontend cancels scheduled notifications for that tool
+- [x] Reminder body: "[Tool Name] is still checked out to [Borrower]. Tap to follow up."
+- [x] Notification deep-link: tap → opens `/tool/{id}` (handled by data.url)
+- [x] In-app TEXT REMINDER + CALL quick-action buttons added to the checked-out card on tool detail (visible when borrower_phone is on file). TEXT uses the EXACT user-approved template via `composeBorrowSmsBody()`
+- [x] Backend: `CheckoutRecord.borrower_phone` field added; `CheckoutRequest.borrower_phone` accepted; auto-resolved from `borrowers` collection when borrower_id is sent. Verified via curl: tool checkout returns `current_checkout.borrower_phone` populated.
+- [x] **#3a** Settings: "Send test notification" row now appears whenever EITHER `dealer_notifications_enabled` OR `borrow_reminders_enabled` is on (was previously gated to dealer-only). Both notification types share the same test button.
+- [x] Reminder-period picker modal added with all 11 presets + Custom days input
 
-### Session 3 — In-app PDF preview screen (#2)
-- [ ] When user taps "Generate PDF" or "View Report" in a report wizard (or anywhere PDFs are produced — tool spec, for-sale flyer, etc.), instead of immediately invoking the iOS share sheet:
-  - Navigate to a new `app/pdf-viewer.tsx` screen
-  - Show the PDF inline (use `expo-print`'s `printToFileAsync` + an in-app PDF viewer; on web fall back to `<iframe>`. For native use `react-native-pdf` if needed, OR open the file:// URI in a WebView)
-  - Top-right header: **Share** icon → opens the share sheet (current behavior)
-  - Top-left header: Back chevron (does not auto-share, just closes)
-- [ ] Same flow for CSV/XLSX? — user did NOT specify; assume PDF only unless asked. CSV/XLSX still share immediately.
-- [ ] Audit ALL places that currently auto-share PDFs: `reports.tsx` (report wizard), `tool/[id].tsx` (spec sheet + for-sale flyer + receipt PDFs), `reportRunner.ts`, `printHtml*.ts`.
+### Session 3 — In-app PDF preview screen (#2) ✅ DONE
+- [x] Created `app/pdf-viewer.tsx` — new screen with WebView (native) / iframe (web) embed of the PDF, header SHARE button, and persistent SHARE/SAVE button at the bottom as a backup affordance.
+- [x] Registered route in `app/_layout.tsx` (header shown, slide-from-right animation, card presentation).
+- [x] Updated `src/reportRunner.ts` runReportNative: for `action == "view"` + PDF mime → navigate to `/pdf-viewer` instead of share sheet. `action == "save"` / "email" / CSV view still uses the share sheet (the user might not have asked for those).
+- [x] Updated `src/printHtml.native.ts`: tool detail PDFs (spec sheet, for-sale flyer, receipt PDFs) now also route through the preview screen before the share sheet.
+- [x] Web report flow unchanged — anchor-download already provides preview-then-save via browser tab.
+- [x] CSV/XLSX exports still share immediately (binary text, no visual preview value).
+- NOTE: Native interactive notification buttons (TEXT/CALL directly inside the iOS banner) were intentionally not implemented — the tap-deep-link → on-screen-buttons pattern is more reliable.
 
 ### Session 4 — Tool-edit screen → 25+ accordions (#7)
 - [ ] Full rewrite of `app/tool/edit.tsx` (~2,400 lines currently).

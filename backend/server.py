@@ -675,6 +675,11 @@ class CheckoutRecord(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     borrower_name: str
     borrower_id: Optional[str] = None
+    # Phone number for the borrower — captured so the in-app & notification
+    # quick-actions (CALL / TEXT REMINDER) can dial without forcing the user
+    # to look up the contact. Auto-resolved from the borrowers collection
+    # when borrower_id is provided; otherwise can come from the payload.
+    borrower_phone: Optional[str] = ""
     checked_out_at: str = Field(default_factory=now_iso)
     checked_in_at: Optional[str] = None
     notes: Optional[str] = ""
@@ -827,6 +832,9 @@ class ToolUpdate(BaseModel):
 class CheckoutRequest(BaseModel):
     borrower_name: str
     borrower_id: Optional[str] = None
+    # Optional phone — if not given but borrower_id is, the endpoint will
+    # look it up from the borrowers collection.
+    borrower_phone: Optional[str] = ""
     notes: Optional[str] = ""
 
 
@@ -2388,9 +2396,18 @@ async def checkout_tool(tool_id: str, payload: CheckoutRequest):
         raise HTTPException(status_code=404, detail="Tool not found")
     if doc.get("is_checked_out"):
         raise HTTPException(status_code=400, detail="Tool already checked out")
+    # Resolve borrower phone: explicit payload wins, else fetch from saved
+    # borrower record. This phone fuels the in-app + notification quick-actions
+    # (CALL / TEXT REMINDER) so the user doesn't need to look it up later.
+    borrower_phone = (payload.borrower_phone or "").strip()
+    if not borrower_phone and payload.borrower_id:
+        b = await db.borrowers.find_one({"id": payload.borrower_id}, {"_id": 0, "phone": 1})
+        if b and b.get("phone"):
+            borrower_phone = str(b["phone"]).strip()
     record = CheckoutRecord(
         borrower_name=payload.borrower_name,
         borrower_id=payload.borrower_id,
+        borrower_phone=borrower_phone,
         notes=payload.notes or "",
     )
     await db.tools.update_one(
