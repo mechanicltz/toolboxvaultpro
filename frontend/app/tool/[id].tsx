@@ -1685,12 +1685,8 @@ export default function ToolDetail() {
             );
           })()}
 
-          {/* DESCRIPTION — first thing below the photo row (or claim card) */}
-          {!!tool.description && (
-            <View style={newStyles.descBox}>
-              <Text style={newStyles.descText}>{tool.description}</Text>
-            </View>
-          )}
+          {/* DESCRIPTION/NOTES + TAGS are now rendered inside the grouped
+              details boxes below (Group 5 + Group 4 respectively). */}
 
           {/* (CHECKED OUT card was moved to the top of this screen, above
               the description — see block under the photo row.) */}
@@ -1717,16 +1713,44 @@ export default function ToolDetail() {
             type Row =
               | { kind: "value"; label: string; value: string; onPress?: () => void }
               | { kind: "models"; label: string; values: string[] }
-              | { kind: "expandable"; key: "gallery" | "documents" | "receipts" | "maintenance" | "warranty"; label: string; value: string };
+              | { kind: "expandable"; key: "gallery" | "documents" | "receipts" | "maintenance" | "warranty" | "consumable"; label: string; value: string }
+              | { kind: "description"; value: string };
 
-            const rows: Row[] = [];
-            rows.push({
+            // ---- GROUPED ROWS (per user 2026-05-26) ------------------------
+            // The Edit screen orders fields into 5 visual groups. The Detail
+            // screen mirrors that exact same ordering so the read-only +
+            // edit views feel coherent. Each group renders in its own
+            // detailsBox card with a top margin to provide visible
+            // section breaks. The Claims/History group is left at the
+            // bottom (user explicitly asked to leave the claims section
+            // where it currently sits).
+            const groupPrimary: Row[] = [];
+            const groupAttachments: Row[] = [];
+            const groupServices: Row[] = [];
+            const groupClassify: Row[] = [];
+            const groupDescription: Row[] = [];
+            const groupHistory: Row[] = [];
+
+            // Group 1: NAME (page title), PRICE (status pill), LOCATION,
+            // MODEL #s, SERIAL #s, DEALER, BRAND. NAME + PRICE are already
+            // shown at the top of the screen so we don't repeat them here.
+            groupPrimary.push({
               kind: "value",
               label: "LOCATION",
               value: tool.location_name || "No location · tap to assign",
               onPress: () => setShowLocationPicker(true),
             });
-            rows.push({
+            groupPrimary.push({
+              kind: "models",
+              label: modelNums.length > 1 ? "MODEL NUMBERS" : "MODEL #",
+              values: modelNums.length ? modelNums : ["—"],
+            });
+            groupPrimary.push({
+              kind: "models",
+              label: serialNums.length > 1 ? "SERIAL NUMBERS" : "SERIAL #",
+              values: serialNums.length ? serialNums : ["—"],
+            });
+            groupPrimary.push({
               kind: "value",
               label: "DEALER",
               value: tool.dealer_name || "—",
@@ -1734,100 +1758,122 @@ export default function ToolDetail() {
                 ? () => router.push(`/dealer/${tool.dealer_id}`)
                 : undefined,
             });
-            // ALWAYS show MODEL NUMBER(S) — per user, an empty row is shown
-            // with a "—" placeholder rather than being hidden.
-            rows.push({
-              kind: "models",
-              label: modelNums.length > 1 ? "MODEL NUMBERS" : "MODEL #",
-              values: modelNums.length ? modelNums : ["—"],
+            groupPrimary.push({
+              kind: "value",
+              label: "BRAND",
+              value: tool.brand ? String(tool.brand) : "—",
             });
-            // ALWAYS show SERIAL NUMBER(S) row.
-            rows.push({
-              kind: "models",
-              label: serialNums.length > 1 ? "SERIAL NUMBERS" : "SERIAL #",
-              values: serialNums.length ? serialNums : ["—"],
-            });
-            if (tool.brand) {
-              rows.push({ kind: "value", label: "BRAND", value: String(tool.brand) });
-            }
-            if (tool.purchase_date) {
-              rows.push({
-                kind: "value",
-                label: "PURCHASED",
-                value: formatDateUS(tool.purchase_date),
-              });
-            }
-            // MSRP — only surface when set (>0). The user enters this on
-            // the edit screen and it powers the MSRP column / totals in
-            // Insurance / Inventory / Lost-Stolen / Year End reports.
-            if (tool.msrp_price && Number(tool.msrp_price) > 0) {
-              rows.push({
-                kind: "value",
-                label: "MSRP",
-                value: `$${Number(tool.msrp_price).toFixed(2)}`,
-              });
-            }
-            if (tool.category_name) {
-              rows.push({
-                kind: "value",
-                label: "CATEGORY",
-                value: String(tool.category_name),
-              });
-            }
 
-            // ---- ATTACHMENTS (expandable rows) ----
-            rows.push({
+            // Group 2: PHOTOS, DOCUMENTS, RECEIPTS
+            groupAttachments.push({
               kind: "expandable",
               key: "gallery",
-              label: "GALLERY",
+              label: "PHOTOS",
               value: `${photos.length} photo${photos.length === 1 ? "" : "s"}`,
             });
-            rows.push({
+            groupAttachments.push({
               kind: "expandable",
               key: "documents",
               label: "DOCUMENTS",
               value: `${Array.isArray(tool.documents) ? tool.documents.length : 0} document${(Array.isArray(tool.documents) ? tool.documents.length : 0) === 1 ? "" : "s"}`,
             });
-            rows.push({
+            groupAttachments.push({
               kind: "expandable",
               key: "receipts",
               label: "RECEIPTS",
               value: `${Array.isArray(tool.receipts) ? tool.receipts.length : 0} receipt${(Array.isArray(tool.receipts) ? tool.receipts.length : 0) === 1 ? "" : "s"}`,
             });
-            // ---- SERVICES (expandable rows) ----
-            rows.push({
-              kind: "expandable",
-              key: "maintenance",
-              label: "MAINTENANCE",
-              value: `${maintenanceCount} record${maintenanceCount === 1 ? "" : "s"}`,
-            });
-            rows.push({
+
+            // Group 3: WARRANTY, MAINTENANCE, CONSUMABLE
+            groupServices.push({
               kind: "expandable",
               key: "warranty",
               label: "WARRANTY",
               value: `${warrantyCount} record${warrantyCount === 1 ? "" : "s"}`,
             });
-            // ---- HISTORY (tappable rows that navigate) ----
+            groupServices.push({
+              kind: "expandable",
+              key: "maintenance",
+              label: "MAINTENANCE",
+              value: `${maintenanceCount} record${maintenanceCount === 1 ? "" : "s"}`,
+            });
+            groupServices.push({
+              kind: "expandable",
+              key: "consumable",
+              label: "CONSUMABLE",
+              value: tool.is_consumable ? "Yes" : "No",
+            });
+
+            // Group 4: CATEGORY, TAGS, PURCHASE DATE (+ MSRP if set)
+            groupClassify.push({
+              kind: "value",
+              label: "CATEGORY",
+              value: tool.category_name ? String(tool.category_name) : "—",
+            });
+            const tagSummary = Array.isArray(tool.tag_names) && tool.tag_names.length
+              ? tool.tag_names.join(", ")
+              : "—";
+            groupClassify.push({
+              kind: "value",
+              label: "TAGS",
+              value: tagSummary,
+            });
+            groupClassify.push({
+              kind: "value",
+              label: "PURCHASED",
+              value: tool.purchase_date ? formatDateUS(tool.purchase_date) : "—",
+            });
+            if (tool.msrp_price && Number(tool.msrp_price) > 0) {
+              groupClassify.push({
+                kind: "value",
+                label: "MSRP",
+                value: `$${Number(tool.msrp_price).toFixed(2)}`,
+              });
+            }
+
+            // Group 5: DESCRIPTION / NOTES (long-form text, single row)
+            if (tool.description && String(tool.description).trim()) {
+              groupDescription.push({
+                kind: "description",
+                value: String(tool.description),
+              });
+            }
+
+            // History group — stays at the bottom of the page (CLAIMS
+            // section is intentionally left in place per user request).
             const checkoutCount = Array.isArray(tool.checkout_history)
               ? tool.checkout_history.length
               : 0;
-            rows.push({
+            groupHistory.push({
               kind: "value",
               label: "CHECKOUT HISTORY",
               value: `${checkoutCount} entr${checkoutCount === 1 ? "y" : "ies"}`,
               onPress: () => router.push(`/checkout-history/${tool.id}`),
             });
-            rows.push({
+            groupHistory.push({
               kind: "value",
               label: "CLAIMS HISTORY",
               value: "View",
               onPress: () => router.push(`/claims-history/${tool.id}`),
             });
 
-            return (
-              <View style={newStyles.detailsBox} testID="details-box">
+            const renderGroup = (rows: Row[], boxKey: string) => (
+              <View key={boxKey} style={newStyles.detailsBox} testID={`details-box-${boxKey}`}>
                 {rows.map((r, i) => {
                   const isLast = i === rows.length - 1;
+                  if (r.kind === "description") {
+                    return (
+                      <View
+                        key={`desc-${i}`}
+                        style={[newStyles.detailsRow, isLast && newStyles.detailsRowLast, { flexDirection: "column", alignItems: "stretch", paddingVertical: 12, gap: 6 }]}
+                      >
+                        <Text style={newStyles.detailsLabel}>DESCRIPTION / NOTES</Text>
+                        <Text style={[newStyles.detailsValue, { textAlign: "left", fontSize: 11, fontWeight: "500", lineHeight: 16 }]}>
+                          {r.value}
+                        </Text>
+                      </View>
+                    );
+                  }
                   if (r.kind === "models") {
                     return (
                       <View
@@ -1939,6 +1985,35 @@ export default function ToolDetail() {
                             {r.key === "warranty" && (
                               <WarrantySection tool={tool} />
                             )}
+                            {r.key === "consumable" && (
+                              <View style={{ paddingVertical: 4, gap: 4 }}>
+                                {tool.is_consumable ? (
+                                  <>
+                                    {!!tool.consumable_info?.store_name && (
+                                      <Text style={newStyles.detailsValue}>Store: {tool.consumable_info.store_name}</Text>
+                                    )}
+                                    {!!tool.consumable_info?.website && (
+                                      <Text style={newStyles.detailsValue}>Site: {tool.consumable_info.website}</Text>
+                                    )}
+                                    {!!tool.consumable_info?.sku && (
+                                      <Text style={newStyles.detailsValue}>SKU: {tool.consumable_info.sku}</Text>
+                                    )}
+                                    {!!tool.consumable_info?.notes && (
+                                      <Text style={[newStyles.detailsValue, { textAlign: "left" }]}>
+                                        Notes: {tool.consumable_info.notes}
+                                      </Text>
+                                    )}
+                                    {!tool.consumable_info?.store_name && !tool.consumable_info?.website && !tool.consumable_info?.sku && !tool.consumable_info?.notes && (
+                                      <Text style={newStyles.detailsValue}>
+                                        Marked as consumable — re-orderable item.
+                                      </Text>
+                                    )}
+                                  </>
+                                ) : (
+                                  <Text style={newStyles.detailsValue}>Not a consumable item.</Text>
+                                )}
+                              </View>
+                            )}
                           </View>
                         )}
                       </View>
@@ -1973,7 +2048,19 @@ export default function ToolDetail() {
                 })}
               </View>
             );
+
+            return (
+              <>
+                {renderGroup(groupPrimary, "primary")}
+                {renderGroup(groupAttachments, "attachments")}
+                {renderGroup(groupServices, "services")}
+                {renderGroup(groupClassify, "classify")}
+                {groupDescription.length > 0 && renderGroup(groupDescription, "description")}
+                {renderGroup(groupHistory, "history")}
+              </>
+            );
           })()}
+
 
           {/* TAGS moved to the very bottom of the page — see below */}
 
@@ -2166,19 +2253,8 @@ export default function ToolDetail() {
             {/* DELETE — moved to top-right header icon. */}
           </View>
 
-          {/* ===== TAGS — pinned at the very bottom of the page ===== */}
-          {(tool.tag_names || []).length > 0 && (
-            <View style={{ marginTop: 18 }}>
-              <Text style={newStyles.sectionTitle}>TAGS</Text>
-              <View style={[newStyles.tagWrap, { marginTop: 8 }]}>
-                {tool.tag_names.map((t: string) => (
-                  <BevelCard key={t} style={newStyles.tagChip}>
-                    <Text style={newStyles.tagChipText}>{t}</Text>
-                  </BevelCard>
-                ))}
-              </View>
-            </View>
-          )}
+          {/* TAGS row was moved into the grouped details box (Group 4)
+              above per the user's 2026-05-26 layout reorder. */}
 
         </View>
       </ScrollView>

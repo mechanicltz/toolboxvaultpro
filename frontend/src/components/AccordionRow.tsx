@@ -157,10 +157,14 @@ const styles = themedStyles((c) => ({
   // We use the theme's `glass` (soft accent-orange tint) + `glassBorder`
   // (matching orange-glow border) pair — those are theme-reactive and
   // already calibrated for dark + light modes.
+  // Expanded body — rendered as a nested Description Card (page-bg
+  // background + soft border) so the active input row visually pops out
+  // of the surrounding group card. Per user (2026-05-26): no orange
+  // highlight — a clean nested card inside the parent card.
   body: {
-    backgroundColor: c.glass,
-    borderWidth: 1.5,
-    borderColor: c.accent,
+    backgroundColor: c.bg,
+    borderWidth: 1,
+    borderColor: c.border,
     borderRadius: 6,
     paddingHorizontal: 10,
     paddingTop: 8,

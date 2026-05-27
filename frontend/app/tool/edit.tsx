@@ -21,6 +21,7 @@ import { useAuth } from "../../src/AuthContext";
 
 import { themedStyles } from "../../src/themeContext";
 import { BevelCard } from "../../src/components/BevelCard";
+import { MaintenanceSection } from "../../src/sections/MaintenanceSection";
 
 export default function ToolEdit() {
   const { id } = useLocalSearchParams<{ id?: string }>();
@@ -68,6 +69,12 @@ export default function ToolEdit() {
   const [documents, setDocuments] = useState<{ name: string; data: string; mime_type?: string }[]>([]);
   const [isConsumable, setIsConsumable] = useState(false);
   const [consumableInfo, setConsumableInfo] = useState({ store_name: "", website: "", sku: "", notes: "" });
+
+  // Maintenance — list of schedules loaded from the saved tool. New tools
+  // start empty (the accordion shows a "save first" message). On edit,
+  // we initialize from `tool.maintenance` and refresh after add/delete.
+  const [maintSchedules, setMaintSchedules] = useState<any[]>([]);
+  const maintCount = maintSchedules.length;
 
   // Repair / Broken
   const todayStr = () => new Date().toISOString().substring(0, 10);
@@ -204,6 +211,7 @@ export default function ToolEdit() {
         }
         setPurchasedAgentId(t.purchased_from_agent_id || null);
         setPurchasedAgentName(t.purchased_from_agent_name || "");
+        setMaintSchedules(Array.isArray(t.maintenance) ? t.maintenance : []);
         setLoading(false);
       }
     })();
@@ -962,6 +970,76 @@ export default function ToolEdit() {
 
           <View style={styles.detailsBox}>
           <AccordionRow
+            label="NAME"
+            icon="pricetag"
+            summary={(name || "Tap to set") as any}
+            required
+            open={openKey === "name"}
+            onToggle={() => toggle("name")}
+            testID="acc-name"
+          >
+          <Text style={styles.label}>NAME *</Text>
+          <TextInput testID="name-input" placeholder="Cordless Drill" placeholderTextColor={theme.colors.textMuted}
+            value={name} onChangeText={setName} style={styles.input} />
+          </AccordionRow>
+          <AccordionRow
+            label="PRICING & QTY"
+            icon="cash"
+            summary={((cost ? `$${cost}` : "—") + (msrpPrice ? ` · MSRP $${msrpPrice}` : "") + (quantity && quantity !== "1" ? ` · Qty ${quantity}` : "")) as any}
+            open={openKey === "pricing"}
+            onToggle={() => toggle("pricing")}
+            testID="acc-pricing"
+          >
+          {/* COST + MSRP + QTY row. MSRP is optional and only affects
+              report totals; cost is the actual purchase price the user paid. */}
+          <View style={styles.row2}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.label}>COST ($)</Text>
+              <TextInput testID="cost-input" placeholder="0.00" placeholderTextColor={theme.colors.textMuted}
+                value={cost} onChangeText={setCost} style={styles.input} keyboardType="decimal-pad" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.label}>MSRP ($)</Text>
+              <TextInput
+                testID="msrp-input"
+                placeholder="optional"
+                placeholderTextColor={theme.colors.textMuted}
+                value={msrpPrice}
+                onChangeText={(v) => {
+                  const clean = v.replace(/[^0-9.]/g, "").replace(/(\..*?)\..*/g, "$1");
+                  setMsrpPrice(clean);
+                }}
+                style={styles.input}
+                keyboardType="decimal-pad"
+              />
+            </View>
+            <View style={{ width: 70 }}>
+              <Text style={styles.label}>QTY</Text>
+              <TextInput testID="quantity-input" placeholder="1" placeholderTextColor={theme.colors.textMuted}
+                value={quantity} onChangeText={(v) => setQuantity(v.replace(/[^0-9]/g, ""))}
+                style={styles.input} keyboardType="number-pad" />
+            </View>
+          </View>
+          </AccordionRow>
+          <AccordionRow
+            label="LOCATION"
+            icon="location"
+            summary={(locationName || "—") as any}
+            open={openKey === "location"}
+            onToggle={() => toggle("location")}
+            testID="acc-location"
+          >
+          <Text style={styles.label}>LOCATION</Text>
+          <LocationPicker
+            locationId={locationId}
+            locationName={locationName}
+            onChange={(id, path) => {
+              setLocationId(id);
+              setLocationName(path);
+            }}
+          />
+          </AccordionRow>
+          <AccordionRow
             label="MODEL NUMBER(S)"
             icon="barcode"
             summary={(modelNumbers.filter(Boolean).join(", ") || "Tap to add model #") as any}
@@ -1037,118 +1115,6 @@ export default function ToolEdit() {
             </TouchableOpacity>
           </View>
           </AccordionRow>
-
-          <AccordionRow
-            label="NAME"
-            icon="pricetag"
-            summary={(name || "Tap to set") as any}
-            required
-            open={openKey === "name"}
-            onToggle={() => toggle("name")}
-            testID="acc-name"
-          >
-          <Text style={styles.label}>NAME *</Text>
-          <TextInput testID="name-input" placeholder="Cordless Drill" placeholderTextColor={theme.colors.textMuted}
-            value={name} onChangeText={setName} style={styles.input} />
-          </AccordionRow>
-          <AccordionRow
-            label="DESCRIPTION"
-            icon="document-text"
-            summary={(description || "—") as any}
-            open={openKey === "description"}
-            onToggle={() => toggle("description")}
-            testID="acc-description"
-          >
-          <Text style={styles.label}>DESCRIPTION</Text>
-          <TextInput testID="desc-input" placeholder="Detailed notes..." placeholderTextColor={theme.colors.textMuted}
-            value={description} onChangeText={setDescription}
-            style={[styles.input, { height: 90, textAlignVertical: "top" }]} multiline />
-          </AccordionRow>
-          <AccordionRow
-            label="BRAND"
-            icon="ribbon"
-            summary={(brand || "—") as any}
-            open={openKey === "brand"}
-            onToggle={() => toggle("brand")}
-            testID="acc-brand"
-          >
-          {/* BRAND now sits alone on its row. The legacy "MODEL" text input
-              (e.g. "DCD777") was removed at the user's request — every tool
-              uses the consolidated multi-value MODEL NUMBER block below
-              instead. The internal `model` field is still kept in state so
-              that existing tools imported via CSV or migrated from older
-              builds don't silently lose data on save; new tools simply
-              leave it blank. */}
-          <View>
-            <Text style={styles.label}>BRAND</Text>
-            <TextInput testID="brand-input" placeholder="DeWalt" placeholderTextColor={theme.colors.textMuted}
-              value={brand} onChangeText={setBrand} style={styles.input} />
-          </View>
-          </AccordionRow>
-          <AccordionRow
-            label="PRICING & QTY"
-            icon="cash"
-            summary={((cost ? `$${cost}` : "—") + (msrpPrice ? ` · MSRP $${msrpPrice}` : "") + (quantity && quantity !== "1" ? ` · Qty ${quantity}` : "")) as any}
-            open={openKey === "pricing"}
-            onToggle={() => toggle("pricing")}
-            testID="acc-pricing"
-          >
-          {/* COST + MSRP + QTY row. MSRP is optional and only affects
-              report totals; cost is the actual purchase price the user paid. */}
-          <View style={styles.row2}>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.label}>COST ($)</Text>
-              <TextInput testID="cost-input" placeholder="0.00" placeholderTextColor={theme.colors.textMuted}
-                value={cost} onChangeText={setCost} style={styles.input} keyboardType="decimal-pad" />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.label}>MSRP ($)</Text>
-              <TextInput
-                testID="msrp-input"
-                placeholder="optional"
-                placeholderTextColor={theme.colors.textMuted}
-                value={msrpPrice}
-                onChangeText={(v) => {
-                  const clean = v.replace(/[^0-9.]/g, "").replace(/(\..*?)\..*/g, "$1");
-                  setMsrpPrice(clean);
-                }}
-                style={styles.input}
-                keyboardType="decimal-pad"
-              />
-            </View>
-            <View style={{ width: 70 }}>
-              <Text style={styles.label}>QTY</Text>
-              <TextInput testID="quantity-input" placeholder="1" placeholderTextColor={theme.colors.textMuted}
-                value={quantity} onChangeText={(v) => setQuantity(v.replace(/[^0-9]/g, ""))}
-                style={styles.input} keyboardType="number-pad" />
-            </View>
-          </View>
-          </AccordionRow>
-          <AccordionRow
-            label="PURCHASE DATE & CONDITION"
-            icon="calendar"
-            summary={((purchaseDate || "—") + " · " + (condition || "Good")) as any}
-            open={openKey === "purchase"}
-            onToggle={() => toggle("purchase")}
-            testID="acc-purchase"
-          >
-          <View style={styles.row2}>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.label}>PURCHASED</Text>
-              <DateField
-                testID="purchase-input"
-                value={purchaseDate}
-                onChange={setPurchaseDate}
-                placeholder="MM/DD/YYYY"
-              />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.label}>CONDITION</Text>
-              <TextInput testID="condition-input" placeholder="Good" placeholderTextColor={theme.colors.textMuted}
-                value={condition} onChangeText={setCondition} style={styles.input} />
-            </View>
-          </View>
-          </AccordionRow>
           <AccordionRow
             label="SERIAL NUMBER(S)"
             icon="key"
@@ -1222,47 +1188,6 @@ export default function ToolEdit() {
             </TouchableOpacity>
           </View>
           </AccordionRow>
-
-          <AccordionRow
-            label="CATEGORY"
-            icon="folder"
-            summary={(category?.name || "—") as any}
-            open={openKey === "category"}
-            onToggle={() => toggle("category")}
-            testID="acc-category"
-          >
-          <Text style={styles.label}>CATEGORY</Text>
-          <CategoryPicker selected={category} onChange={setCategory} />
-          </AccordionRow>
-          <AccordionRow
-            label="TAGS"
-            icon="pricetags"
-            summary={(tags?.length ? tags.map((t) => t.name).join(", ") : "—") as any}
-            open={openKey === "tags"}
-            onToggle={() => toggle("tags")}
-            testID="acc-tags"
-          >
-          <Text style={styles.label}>TAGS</Text>
-          <TagInput selected={tags} onChange={setTags} />
-          </AccordionRow>
-          <AccordionRow
-            label="LOCATION"
-            icon="location"
-            summary={(locationName || "—") as any}
-            open={openKey === "location"}
-            onToggle={() => toggle("location")}
-            testID="acc-location"
-          >
-          <Text style={styles.label}>LOCATION</Text>
-          <LocationPicker
-            locationId={locationId}
-            locationName={locationName}
-            onChange={(id, path) => {
-              setLocationId(id);
-              setLocationName(path);
-            }}
-          />
-          </AccordionRow>
           <AccordionRow
             label="DEALER & AGENT"
             icon="people"
@@ -1304,174 +1229,145 @@ export default function ToolEdit() {
           )}
           </AccordionRow>
           <AccordionRow
-            label="CONSUMABLE"
-            icon="flask"
-            summary={(isConsumable ? "Yes" : "No") as any}
-            open={openKey === "consumable"}
-            onToggle={() => toggle("consumable")}
-            testID="acc-consumable"
+            label="BRAND"
+            icon="ribbon"
+            summary={(brand || "—") as any}
+            open={openKey === "brand"}
+            onToggle={() => toggle("brand")}
+            lastRow
+            testID="acc-brand"
           >
-          {/* Consumable */}
-          <View style={styles.toggleRow}>
-            <Ionicons name="repeat" size={20} color={theme.colors.accent} />
-            <Text style={styles.toggleText}>CONSUMABLE ITEM</Text>
-            <Switch testID="toggle-consumable" value={isConsumable} onValueChange={setIsConsumable}
-              trackColor={{ true: theme.colors.accent, false: theme.colors.border }} thumbColor="#fff" />
+          {/* BRAND now sits alone on its row. The legacy "MODEL" text input
+              (e.g. "DCD777") was removed at the user's request — every tool
+              uses the consolidated multi-value MODEL NUMBER block below
+              instead. The internal `model` field is still kept in state so
+              that existing tools imported via CSV or migrated from older
+              builds don't silently lose data on save; new tools simply
+              leave it blank. */}
+          <View>
+            <Text style={styles.label}>BRAND</Text>
+            <TextInput testID="brand-input" placeholder="DeWalt" placeholderTextColor={theme.colors.textMuted}
+              value={brand} onChangeText={setBrand} style={styles.input} />
           </View>
-          {isConsumable && (
-            <View style={styles.subSection}>
-              <Text style={[styles.label, { marginTop: 0 }]}>STORE / WHERE TO BUY</Text>
-              <TextInput testID="cons-store" placeholder="Home Depot, Amazon..." placeholderTextColor={theme.colors.textMuted}
-                value={consumableInfo.store_name} style={styles.input}
-                onChangeText={(v) => setConsumableInfo({ ...consumableInfo, store_name: v })} />
-              <Text style={styles.label}>WEBSITE / LINK</Text>
-              <TextInput testID="cons-website" placeholder="https://..." placeholderTextColor={theme.colors.textMuted}
-                value={consumableInfo.website} style={styles.input} autoCapitalize="none"
-                onChangeText={(v) => setConsumableInfo({ ...consumableInfo, website: v })} />
-              <Text style={styles.label}>SKU / PART #</Text>
-              <TextInput testID="cons-sku" placeholder="12345" placeholderTextColor={theme.colors.textMuted}
-                value={consumableInfo.sku} style={styles.input}
-                onChangeText={(v) => setConsumableInfo({ ...consumableInfo, sku: v })} />
-              <Text style={styles.label}>NOTES</Text>
-              <TextInput testID="cons-notes" placeholder="Replacement instructions..." placeholderTextColor={theme.colors.textMuted}
-                value={consumableInfo.notes} style={[styles.input, { height: 70, textAlignVertical: "top" }]}
-                multiline onChangeText={(v) => setConsumableInfo({ ...consumableInfo, notes: v })} />
-            </View>
-          )}
+          </AccordionRow>
+          </View>
+
+          <View style={styles.detailsBox}>
+          <AccordionRow
+            label="PHOTOS"
+            icon="camera"
+            summary={(`${photos.length} photo${photos.length === 1 ? "" : "s"}`) as any}
+            open={openKey === "photos"}
+            onToggle={() => toggle("photos")}
+            testID="acc-photos"
+          >
+          {/* Photos */}
+          <Text style={styles.label}>PHOTOS ({photos.length})</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 8 }}>
+            {photos.map((p, i) => (
+              <View key={i} style={styles.photoWrap}>
+                <Image source={{ uri: p }} style={styles.photo} />
+                <TouchableOpacity testID={`remove-photo-${i}`} style={styles.photoRemove}
+                  onPress={() => setPhotos((arr) => arr.filter((_, idx) => idx !== i))}>
+                  <Ionicons name="close" size={16} color={theme.colors.textPrimary} />
+                </TouchableOpacity>
+              </View>
+            ))}
+            <TouchableOpacity testID="add-photo-camera-btn" style={styles.photoAdd} onPress={() => pickPhoto(true)}>
+              <Ionicons name="camera" size={28} color={theme.colors.accent} />
+              <Text style={styles.photoAddText}>CAMERA</Text>
+            </TouchableOpacity>
+            <TouchableOpacity testID="add-photo-gallery-btn" style={styles.photoAdd} onPress={() => pickPhoto(false)}>
+              <Ionicons name="images" size={28} color={theme.colors.accent} />
+              <Text style={styles.photoAddText}>GALLERY</Text>
+            </TouchableOpacity>
+          </ScrollView>
           </AccordionRow>
           <AccordionRow
-            label="NEEDS REPAIR / BROKEN"
-            icon="build"
-            summary={(needsRepair ? (repairInfo.repair_status || "Reported") : "No") as any}
-            open={openKey === "repair"}
-            onToggle={() => toggle("repair")}
-            testID="acc-repair"
+            label="DOCUMENTS"
+            icon="attach"
+            summary={(`${documents.length} document${documents.length === 1 ? "" : "s"}`) as any}
+            open={openKey === "documents"}
+            onToggle={() => toggle("documents")}
+            testID="acc-documents"
           >
-          {/* Broken / Needs Repair */}
-          <View style={[styles.toggleRow, needsRepair && { backgroundColor: "rgba(220,38,38,0.08)" }]}>
-            <Ionicons name="build" size={20} color={needsRepair ? theme.colors.danger : theme.colors.accent} />
-            <Text style={styles.toggleText}>BROKEN / IN REPAIR</Text>
-            <Switch testID="toggle-repair" value={needsRepair} onValueChange={(v) => {
-              setNeedsRepair(v);
-              if (v && !repairInfo.notified_at) {
-                setRepairInfo({ ...repairInfo, notified_at: todayStr() });
-              }
-            }}
-              trackColor={{ true: theme.colors.danger, false: theme.colors.border }} thumbColor="#fff" />
-          </View>
-          {needsRepair && (
-            <View style={[styles.subSection, { borderLeftColor: theme.colors.danger }]}>
-              <Text style={[styles.label, { marginTop: 0 }]}>STATUS</Text>
-              <View style={styles.chipWrap}>
-                {["Not Reported", "Reported", "In Repair", "Awaiting Parts", "Repaired"].map((s) => (
-                  <TouchableOpacity key={s} testID={`rep-status-${s}`}
-                    style={[styles.chip, repairInfo.repair_status === s && styles.chipActive]}
-                    onPress={() => setRepairInfo({ ...repairInfo, repair_status: s })}>
-                    <Text style={[styles.chipText, repairInfo.repair_status === s && styles.chipTextActive]}>{s}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-
-              <View style={styles.dealerInfoBox}>
-                <Ionicons name="briefcase" size={14} color={theme.colors.accent} />
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.dealerInfoLabel}>REPAIR COMPANY (auto)</Text>
-                  <Text style={styles.dealerInfoVal}>
-                    {dealerName || "— select a Dealer above to auto-fill —"}
-                  </Text>
-                  {!!purchasedAgentName && (
-                    <Text style={styles.dealerInfoSub}>Contact: {purchasedAgentName}</Text>
-                  )}
-                </View>
-              </View>
-
-              <View style={styles.row2}>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.label}>NOTIFIED ON</Text>
-                  <DateField
-                    testID="rep-notified"
-                    value={repairInfo.notified_at}
-                    onChange={(v) => setRepairInfo({ ...repairInfo, notified_at: v })}
-                  />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.label}>EXPECTED BACK</Text>
-                  <DateField
-                    testID="rep-expected"
-                    value={repairInfo.expected_completion}
-                    onChange={(v) => setRepairInfo({ ...repairInfo, expected_completion: v })}
-                  />
-                </View>
-              </View>
-              {/* Out-of-pocket repair / replacement cost. Defaults to $0 —
-                  user only fills this in when they paid for the fix. Feeds
-                  into the Repair Cost Report and Year End Report totals. */}
-              <Text style={styles.label}>REPAIR / REPLACEMENT COST ($)</Text>
-              <Text style={styles.helper}>
-                Leave at 0 if covered by warranty. Otherwise enter what you paid.
-              </Text>
-              <TextInput
-                testID="rep-cost"
-                placeholder="0.00"
-                placeholderTextColor={theme.colors.textMuted}
-                value={repairInfo.repair_cost}
-                onChangeText={(v) => {
-                  // Allow only digits + one decimal point
-                  const clean = v.replace(/[^0-9.]/g, "").replace(/(\..*?)\..*/g, "$1");
-                  setRepairInfo({ ...repairInfo, repair_cost: clean });
-                }}
-                style={styles.input}
-                keyboardType="decimal-pad"
-              />
-              <Text style={styles.label}>NOTES</Text>
-              <TextInput testID="rep-notes" placeholder="What's wrong? RMA #..." placeholderTextColor={theme.colors.textMuted}
-                value={repairInfo.notes} style={[styles.input, { height: 70, textAlignVertical: "top" }]} multiline
-                onChangeText={(v) => setRepairInfo({ ...repairInfo, notes: v })} />
-
-              <Text style={styles.label}>BROKEN-ITEM PHOTO (optional)</Text>
-              <Text style={styles.helper}>
-                A photo of the damage. Only shows on the broken-item view & email card.
-              </Text>
-              {repairInfo.broken_photo ? (
-                <View style={styles.brokenPhotoBox}>
-                  <Image source={{ uri: repairInfo.broken_photo }} style={styles.brokenPhoto} />
-                  <TouchableOpacity
-                    testID="remove-broken-photo"
-                    style={styles.brokenRemove}
-                    onPress={() => setRepairInfo({ ...repairInfo, broken_photo: "" })}
-                  >
-                    <Ionicons name="close-circle" size={26} color={theme.colors.danger} />
-                  </TouchableOpacity>
-                </View>
+          {/* Documents */}
+          <Text style={styles.label}>DOCUMENTS ({documents.length})</Text>
+          {documents.map((d, i) => (
+            <BevelCard key={i} style={styles.docRow}>
+              <Ionicons name="document" size={20} color={theme.colors.accent} />
+              <Text style={styles.docName} numberOfLines={1}>{d.name}</Text>
+              <TouchableOpacity onPress={() => setDocuments((arr) => arr.filter((_, idx) => idx !== i))}>
+                <Ionicons name="close" size={20} color={theme.colors.danger} />
+              </TouchableOpacity>
+            </BevelCard>
+          ))}
+          <TouchableOpacity testID="add-doc-btn" style={styles.docAdd} onPress={pickDocument}>
+            <Ionicons name="attach" size={20} color={theme.colors.accent} />
+            <Text style={styles.docAddText}>ATTACH DOCUMENT</Text>
+          </TouchableOpacity>
+          </AccordionRow>
+          <AccordionRow
+            label="RECEIPTS"
+            icon="receipt"
+            summary={(`${receipts.length} receipt${receipts.length === 1 ? "" : "s"}`) as any}
+            open={openKey === "receipts"}
+            onToggle={() => toggle("receipts")}
+            lastRow
+            testID="acc-receipts"
+          >
+          {/* Receipts */}
+          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+            <Text style={styles.label}>RECEIPTS ({receipts.length})</Text>
+            <TouchableOpacity
+              testID="add-receipt-btn"
+              onPress={onTapReceiptButton}
+              disabled={scanning}
+              style={styles.smallScanBtn}
+            >
+              {scanning ? (
+                <ActivityIndicator color={theme.colors.accent} size="small" />
               ) : (
-                <TouchableOpacity
-                  testID="add-broken-photo"
-                  style={styles.addPhotoBtn}
-                  onPress={async () => {
-                    const res = await ImagePicker.launchImageLibraryAsync({
-                      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-                      base64: true,
-                      quality: 0.6,
-                    });
-                    if (!res.canceled && res.assets[0]?.base64) {
-                      setRepairInfo({
-                        ...repairInfo,
-                        broken_photo: `data:${res.assets[0].mimeType || "image/jpeg"};base64,${res.assets[0].base64}`,
-                      });
-                    }
-                  }}
-                >
-                  <Ionicons name="camera" size={18} color={theme.colors.accent} />
-                  <Text style={styles.addPhotoText}>ADD BROKEN-ITEM PHOTO</Text>
-                </TouchableOpacity>
+                <>
+                  <Ionicons
+                    name={isEdit ? "add-circle" : "scan"}
+                    size={12}
+                    color={theme.colors.accent}
+                  />
+                  <Text style={styles.smallScanBtnText}>
+                    {isEdit ? "ADD RECEIPT" : "SCAN RECEIPT"}
+                  </Text>
+                </>
               )}
-
-              <Text style={[styles.helper, { color: theme.colors.warning, marginTop: 4 }]}>
-                Marking as broken will auto check-in this tool if it's currently out.
-              </Text>
-            </View>
+            </TouchableOpacity>
+          </View>
+          {receipts.length > 0 ? (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 8 }}>
+              {receipts.map((r, i) => (
+                <View key={i} style={styles.photoWrap}>
+                  <Image source={{ uri: r }} style={styles.photo} />
+                  <TouchableOpacity
+                    testID={`remove-receipt-${i}`}
+                    style={styles.photoRemove}
+                    onPress={() => setReceipts((arr) => arr.filter((_, idx) => idx !== i))}
+                  >
+                    <Ionicons name="close" size={16} color={theme.colors.textPrimary} />
+                  </TouchableOpacity>
+                  <View style={styles.receiptBadge}>
+                    <Ionicons name="receipt" size={10} color="#000" />
+                  </View>
+                </View>
+              ))}
+            </ScrollView>
+          ) : (
+            <Text style={styles.helper}>
+              Attach receipt photos for insurance, warranty claims, and PDF reports.
+            </Text>
           )}
           </AccordionRow>
+          </View>
+
+          <View style={styles.detailsBox}>
           <AccordionRow
             label="WARRANTY"
             icon="shield-checkmark"
@@ -1595,116 +1491,136 @@ export default function ToolEdit() {
           )}
           </AccordionRow>
           <AccordionRow
-            label="PHOTOS"
-            icon="camera"
-            summary={(`${photos.length} photo${photos.length === 1 ? "" : "s"}`) as any}
-            open={openKey === "photos"}
-            onToggle={() => toggle("photos")}
-            testID="acc-photos"
+            label="MAINTENANCE"
+            icon="construct"
+            summary={(isEdit ? `${(maintCount || 0)} schedule${maintCount === 1 ? "" : "s"}` : "Save tool first") as any}
+            open={openKey === "maintenance"}
+            onToggle={() => toggle("maintenance")}
+            testID="acc-maintenance"
           >
-          {/* Photos */}
-          <Text style={styles.label}>PHOTOS ({photos.length})</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 8 }}>
-            {photos.map((p, i) => (
-              <View key={i} style={styles.photoWrap}>
-                <Image source={{ uri: p }} style={styles.photo} />
-                <TouchableOpacity testID={`remove-photo-${i}`} style={styles.photoRemove}
-                  onPress={() => setPhotos((arr) => arr.filter((_, idx) => idx !== i))}>
-                  <Ionicons name="close" size={16} color={theme.colors.textPrimary} />
-                </TouchableOpacity>
-              </View>
-            ))}
-            <TouchableOpacity testID="add-photo-camera-btn" style={styles.photoAdd} onPress={() => pickPhoto(true)}>
-              <Ionicons name="camera" size={28} color={theme.colors.accent} />
-              <Text style={styles.photoAddText}>CAMERA</Text>
-            </TouchableOpacity>
-            <TouchableOpacity testID="add-photo-gallery-btn" style={styles.photoAdd} onPress={() => pickPhoto(false)}>
-              <Ionicons name="images" size={28} color={theme.colors.accent} />
-              <Text style={styles.photoAddText}>GALLERY</Text>
-            </TouchableOpacity>
-          </ScrollView>
-          </AccordionRow>
-          <AccordionRow
-            label="RECEIPTS"
-            icon="receipt"
-            summary={(`${receipts.length} receipt${receipts.length === 1 ? "" : "s"}`) as any}
-            open={openKey === "receipts"}
-            onToggle={() => toggle("receipts")}
-            testID="acc-receipts"
-          >
-          {/* Receipts */}
-          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-            <Text style={styles.label}>RECEIPTS ({receipts.length})</Text>
-            <TouchableOpacity
-              testID="add-receipt-btn"
-              onPress={onTapReceiptButton}
-              disabled={scanning}
-              style={styles.smallScanBtn}
-            >
-              {scanning ? (
-                <ActivityIndicator color={theme.colors.accent} size="small" />
-              ) : (
-                <>
-                  <Ionicons
-                    name={isEdit ? "add-circle" : "scan"}
-                    size={12}
-                    color={theme.colors.accent}
-                  />
-                  <Text style={styles.smallScanBtnText}>
-                    {isEdit ? "ADD RECEIPT" : "SCAN RECEIPT"}
-                  </Text>
-                </>
-              )}
-            </TouchableOpacity>
-          </View>
-          {receipts.length > 0 ? (
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 8 }}>
-              {receipts.map((r, i) => (
-                <View key={i} style={styles.photoWrap}>
-                  <Image source={{ uri: r }} style={styles.photo} />
-                  <TouchableOpacity
-                    testID={`remove-receipt-${i}`}
-                    style={styles.photoRemove}
-                    onPress={() => setReceipts((arr) => arr.filter((_, idx) => idx !== i))}
-                  >
-                    <Ionicons name="close" size={16} color={theme.colors.textPrimary} />
-                  </TouchableOpacity>
-                  <View style={styles.receiptBadge}>
-                    <Ionicons name="receipt" size={10} color="#000" />
-                  </View>
-                </View>
-              ))}
-            </ScrollView>
+          {isEdit && id ? (
+            <MaintenanceSection
+              tool={{ id, maintenance: maintSchedules } as any}
+              onChange={async () => {
+                try {
+                  const fresh = await api.getTool(id);
+                  setMaintSchedules(Array.isArray(fresh?.maintenance) ? fresh.maintenance : []);
+                } catch {}
+              }}
+            />
           ) : (
-            <Text style={styles.helper}>
-              Attach receipt photos for insurance, warranty claims, and PDF reports.
-            </Text>
+            <View style={{ paddingVertical: 8 }}>
+              <Text style={styles.helper}>
+                Save this tool first, then re-open Edit to schedule
+                calibration / service / inspection reminders.
+              </Text>
+            </View>
           )}
           </AccordionRow>
           <AccordionRow
-            label="DOCUMENTS"
-            icon="attach"
-            summary={(`${documents.length} document${documents.length === 1 ? "" : "s"}`) as any}
-            open={openKey === "documents"}
-            onToggle={() => toggle("documents")}
+            label="CONSUMABLE"
+            icon="flask"
+            summary={(isConsumable ? "Yes" : "No") as any}
+            open={openKey === "consumable"}
+            onToggle={() => toggle("consumable")}
             lastRow
-            testID="acc-documents"
+            testID="acc-consumable"
           >
-          {/* Documents */}
-          <Text style={styles.label}>DOCUMENTS ({documents.length})</Text>
-          {documents.map((d, i) => (
-            <BevelCard key={i} style={styles.docRow}>
-              <Ionicons name="document" size={20} color={theme.colors.accent} />
-              <Text style={styles.docName} numberOfLines={1}>{d.name}</Text>
-              <TouchableOpacity onPress={() => setDocuments((arr) => arr.filter((_, idx) => idx !== i))}>
-                <Ionicons name="close" size={20} color={theme.colors.danger} />
-              </TouchableOpacity>
-            </BevelCard>
-          ))}
-          <TouchableOpacity testID="add-doc-btn" style={styles.docAdd} onPress={pickDocument}>
-            <Ionicons name="attach" size={20} color={theme.colors.accent} />
-            <Text style={styles.docAddText}>ATTACH DOCUMENT</Text>
-          </TouchableOpacity>
+          {/* Consumable */}
+          <View style={styles.toggleRow}>
+            <Ionicons name="repeat" size={20} color={theme.colors.accent} />
+            <Text style={styles.toggleText}>CONSUMABLE ITEM</Text>
+            <Switch testID="toggle-consumable" value={isConsumable} onValueChange={setIsConsumable}
+              trackColor={{ true: theme.colors.accent, false: theme.colors.border }} thumbColor="#fff" />
+          </View>
+          {isConsumable && (
+            <View style={styles.subSection}>
+              <Text style={[styles.label, { marginTop: 0 }]}>STORE / WHERE TO BUY</Text>
+              <TextInput testID="cons-store" placeholder="Home Depot, Amazon..." placeholderTextColor={theme.colors.textMuted}
+                value={consumableInfo.store_name} style={styles.input}
+                onChangeText={(v) => setConsumableInfo({ ...consumableInfo, store_name: v })} />
+              <Text style={styles.label}>WEBSITE / LINK</Text>
+              <TextInput testID="cons-website" placeholder="https://..." placeholderTextColor={theme.colors.textMuted}
+                value={consumableInfo.website} style={styles.input} autoCapitalize="none"
+                onChangeText={(v) => setConsumableInfo({ ...consumableInfo, website: v })} />
+              <Text style={styles.label}>SKU / PART #</Text>
+              <TextInput testID="cons-sku" placeholder="12345" placeholderTextColor={theme.colors.textMuted}
+                value={consumableInfo.sku} style={styles.input}
+                onChangeText={(v) => setConsumableInfo({ ...consumableInfo, sku: v })} />
+              <Text style={styles.label}>NOTES</Text>
+              <TextInput testID="cons-notes" placeholder="Replacement instructions..." placeholderTextColor={theme.colors.textMuted}
+                value={consumableInfo.notes} style={[styles.input, { height: 70, textAlignVertical: "top" }]}
+                multiline onChangeText={(v) => setConsumableInfo({ ...consumableInfo, notes: v })} />
+            </View>
+          )}
+          </AccordionRow>
+          </View>
+
+          <View style={styles.detailsBox}>
+          <AccordionRow
+            label="CATEGORY"
+            icon="folder"
+            summary={(category?.name || "—") as any}
+            open={openKey === "category"}
+            onToggle={() => toggle("category")}
+            testID="acc-category"
+          >
+          <Text style={styles.label}>CATEGORY</Text>
+          <CategoryPicker selected={category} onChange={setCategory} />
+          </AccordionRow>
+          <AccordionRow
+            label="TAGS"
+            icon="pricetags"
+            summary={(tags?.length ? tags.map((t) => t.name).join(", ") : "—") as any}
+            open={openKey === "tags"}
+            onToggle={() => toggle("tags")}
+            testID="acc-tags"
+          >
+          <Text style={styles.label}>TAGS</Text>
+          <TagInput selected={tags} onChange={setTags} />
+          </AccordionRow>
+          <AccordionRow
+            label="PURCHASE DATE & CONDITION"
+            icon="calendar"
+            summary={((purchaseDate || "—") + " · " + (condition || "Good")) as any}
+            open={openKey === "purchase"}
+            onToggle={() => toggle("purchase")}
+            lastRow
+            testID="acc-purchase"
+          >
+          <View style={styles.row2}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.label}>PURCHASED</Text>
+              <DateField
+                testID="purchase-input"
+                value={purchaseDate}
+                onChange={setPurchaseDate}
+                placeholder="MM/DD/YYYY"
+              />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.label}>CONDITION</Text>
+              <TextInput testID="condition-input" placeholder="Good" placeholderTextColor={theme.colors.textMuted}
+                value={condition} onChangeText={setCondition} style={styles.input} />
+            </View>
+          </View>
+          </AccordionRow>
+          </View>
+
+          <View style={styles.detailsBox}>
+          <AccordionRow
+            label="DESCRIPTION"
+            icon="document-text"
+            summary={(description || "—") as any}
+            open={openKey === "description"}
+            onToggle={() => toggle("description")}
+            lastRow
+            testID="acc-description"
+          >
+          <Text style={styles.label}>DESCRIPTION</Text>
+          <TextInput testID="desc-input" placeholder="Detailed notes..." placeholderTextColor={theme.colors.textMuted}
+            value={description} onChangeText={setDescription}
+            style={[styles.input, { height: 90, textAlignVertical: "top" }]} multiline />
           </AccordionRow>
           </View>
         </ScrollView>
@@ -2215,11 +2131,11 @@ const styles = themedStyles((c) => ({
     marginTop: 4, paddingLeft: 12,
     borderLeftWidth: 2, borderLeftColor: c.accent,
   },
-  // Single Description Card container that wraps ALL accordion rows on the
-  // Tool Edit screen — visually identical to the detailsBox on tool/[id].tsx
-  // so the edit screen reads as the same Description Card family as the
-  // read-only detail screen. Each AccordionRow is a flat divider row
-  // inside this card (no individual chrome).
+  // Single Description Card container that wraps each accordion GROUP on
+  // the Tool Edit screen — visually identical to the detailsBox on
+  // tool/[id].tsx. Multiple detailsBox cards stack with a top margin to
+  // create visible section breaks between groups (NAME/PRICE/LOCATION,
+  // PHOTOS/DOCUMENTS/RECEIPTS, WARRANTY/MAINTENANCE/CONSUMABLE, etc.).
   detailsBox: {
     backgroundColor: c.bgSecondary,
     borderWidth: 1,
@@ -2227,7 +2143,7 @@ const styles = themedStyles((c) => ({
     borderRadius: 6,
     paddingHorizontal: 12,
     paddingVertical: 2,
-    marginTop: 4,
+    marginTop: 16,
     ...(theme.elevation.md as object),
   },
   photoWrap: { marginRight: 8, position: "relative" },
