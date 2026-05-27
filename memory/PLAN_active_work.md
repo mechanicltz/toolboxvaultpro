@@ -132,3 +132,14 @@ Update this in-place as items complete:
 - [x] #6 home customize toggle added (`show_dealer_route_reminder` pref; toggle in More → Customize section; banner respects pref on home tab)
 
 When Session 1 is done, prompt user: "Ready to move to Session 2 (notifications)?"
+
+---
+
+## 🚨 ATTENTION ITEM (logged 2026-05-27): AI Receipt Scan Cost Transparency
+- Production users hit "Budget has been exceeded!" on Emergent Universal Key ($1.001 default cap).
+- The receipt-scan feature uses gpt-4o vision (~$0.012-$0.015 per scan; 100 users × 1/mo ≈ $1.30/mo).
+- App owner was NOT warned about per-feature costs before building. This needs to be raised with Emergent support@emergent.sh for goodwill / retroactive credit consideration.
+- Mitigation options still pending decision:
+  (A) Top up Emergent Universal Key + enable Auto-Recharge
+  (B) Add `OPENAI_API_KEY` env-var fallback so user can BYO key
+  (C) Switch model to gpt-4o-mini (~15x cheaper, may impact quality)

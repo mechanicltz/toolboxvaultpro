@@ -1931,7 +1931,7 @@ export default function ToolDetail() {
                         {isOpen && (
                           <View style={[newStyles.detailsExpanded, isLast && newStyles.detailsRowLast]}>
                             {r.key === "gallery" && (
-                              <View style={newStyles.attachSection}>
+                              <View style={newStyles.nestedCard}>
                                 <View style={newStyles.attachHeader}>
                                   <Text style={newStyles.attachSectionLabel}>
                                     PHOTOS{photos.length > 0 ? ` (${photos.length})` : ""}
@@ -1974,46 +1974,67 @@ export default function ToolDetail() {
                               </View>
                             )}
                             {r.key === "documents" && (
-                              <DocumentsSection tool={tool} onChange={load} />
+                              <View style={newStyles.nestedCard}>
+                                <DocumentsSection tool={tool} onChange={load} />
+                              </View>
                             )}
                             {r.key === "receipts" && (
-                              <ReceiptsSection
-                                receipts={tool.receipts}
-                                onAdd={promptAddReceipt}
-                              />
+                              <View style={newStyles.nestedCard}>
+                                <ReceiptsSection
+                                  receipts={tool.receipts}
+                                  onAdd={promptAddReceipt}
+                                />
+                              </View>
                             )}
                             {r.key === "maintenance" && (
-                              <MaintenanceSection tool={tool} onChange={load} />
+                              <View style={newStyles.nestedCard}>
+                                <MaintenanceSection tool={tool} onChange={load} />
+                              </View>
                             )}
                             {r.key === "warranty" && (
                               <WarrantySection tool={tool} />
                             )}
                             {r.key === "consumable" && (
-                              <View style={{ paddingVertical: 4, gap: 4 }}>
+                              <View style={newStyles.nestedCard}>
+                                <View style={newStyles.attachHeader}>
+                                  <Text style={newStyles.attachSectionLabel}>CONSUMABLE</Text>
+                                  <View style={[newStyles.consumableBadge, tool.is_consumable ? newStyles.consumableBadgeYes : newStyles.consumableBadgeNo]}>
+                                    <Text style={[newStyles.consumableBadgeText, tool.is_consumable ? { color: theme.colors.success } : { color: theme.colors.textMuted }]}>
+                                      {tool.is_consumable ? "YES" : "NO"}
+                                    </Text>
+                                  </View>
+                                </View>
                                 {tool.is_consumable ? (
-                                  <>
+                                  <View style={{ paddingTop: 4, gap: 8 }}>
                                     {!!tool.consumable_info?.store_name && (
-                                      <Text style={newStyles.detailsValue}>Store: {tool.consumable_info.store_name}</Text>
+                                      <View style={newStyles.consRow}>
+                                        <Text style={newStyles.consLabel}>STORE</Text>
+                                        <Text style={newStyles.consValue} numberOfLines={1}>{tool.consumable_info.store_name}</Text>
+                                      </View>
                                     )}
                                     {!!tool.consumable_info?.website && (
-                                      <Text style={newStyles.detailsValue}>Site: {tool.consumable_info.website}</Text>
+                                      <View style={newStyles.consRow}>
+                                        <Text style={newStyles.consLabel}>SITE</Text>
+                                        <Text style={newStyles.consValue} numberOfLines={1}>{tool.consumable_info.website}</Text>
+                                      </View>
                                     )}
                                     {!!tool.consumable_info?.sku && (
-                                      <Text style={newStyles.detailsValue}>SKU: {tool.consumable_info.sku}</Text>
+                                      <View style={newStyles.consRow}>
+                                        <Text style={newStyles.consLabel}>SKU</Text>
+                                        <Text style={newStyles.consValue} numberOfLines={1}>{tool.consumable_info.sku}</Text>
+                                      </View>
                                     )}
                                     {!!tool.consumable_info?.notes && (
-                                      <Text style={[newStyles.detailsValue, { textAlign: "left" }]}>
-                                        Notes: {tool.consumable_info.notes}
+                                      <Text style={[newStyles.consValue, { textAlign: "left", marginTop: 4 }]}>
+                                        {tool.consumable_info.notes}
                                       </Text>
                                     )}
-                                    {!tool.consumable_info?.store_name && !tool.consumable_info?.website && !tool.consumable_info?.sku && !tool.consumable_info?.notes && (
-                                      <Text style={newStyles.detailsValue}>
-                                        Marked as consumable — re-orderable item.
-                                      </Text>
-                                    )}
-                                  </>
+                                  </View>
                                 ) : (
-                                  <Text style={newStyles.detailsValue}>Not a consumable item.</Text>
+                                  <Text style={newStyles.attachEmpty}>
+                                    Not marked as consumable. Toggle on the edit screen
+                                    to track re-orderable items.
+                                  </Text>
                                 )}
                               </View>
                             )}
@@ -4656,12 +4677,22 @@ const newStyles = themedStyles((c) => ({
     letterSpacing: 1,
   },
 
-  // ---------- UNIFIED ATTACHMENT SECTIONS (photos / docs / receipts) ----------
-  // Per user (2026-05-26): all three attachment-style accordions on the
-  // detail screen should use the same DocumentsSection-style header
-  // pattern (section label + small primary action button + empty helper
-  // text). This is shared so Photos / Docs / Receipts feel like the
-  // same family of components.
+  // ---------- UNIFIED NESTED DESCRIPTION CARD ----------
+  // Used by every accordion expansion (Photos / Documents / Receipts /
+  // Maintenance / Consumable). Mirrors the WarrantySection.card style
+  // (the reference design from user 2026-05-27): white/bgSecondary
+  // background, soft border, big radius, large elevation shadow — a true
+  // "second details card within the first" look.
+  nestedCard: {
+    backgroundColor: c.bgSecondary,
+    borderWidth: 1,
+    borderColor: c.border,
+    borderRadius: 10,
+    padding: 14,
+    marginTop: 6,
+    marginBottom: 6,
+    ...(theme.elevation.lg as object),
+  },
   attachSection: {
     paddingTop: 4,
   },
@@ -4669,20 +4700,20 @@ const newStyles = themedStyles((c) => ({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: 10,
+    marginBottom: 12,
   },
   attachSectionLabel: {
-    color: c.textMuted,
-    fontSize: 9,
+    color: c.textPrimary,
+    fontSize: 10,
     fontWeight: "900",
     letterSpacing: 2,
   },
   attachAddBtn: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
-    paddingVertical: 6,
-    paddingHorizontal: 10,
+    gap: 5,
+    paddingVertical: 7,
+    paddingHorizontal: 12,
     borderRadius: 6,
     backgroundColor: c.accent,
   },
@@ -4696,7 +4727,44 @@ const newStyles = themedStyles((c) => ({
     color: c.textMuted,
     fontSize: 11,
     fontStyle: "italic",
+    paddingVertical: 4,
+    lineHeight: 16,
+  },
+  // ---------- CONSUMABLE accordion content ----------
+  consumableBadge: {
+    borderWidth: 1,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 3,
+  },
+  consumableBadgeYes: { borderColor: c.success, backgroundColor: c.success + "15" },
+  consumableBadgeNo: { borderColor: c.border, backgroundColor: c.border + "20" },
+  consumableBadgeText: {
+    fontSize: 8,
+    fontWeight: "900",
+    letterSpacing: 1.5,
+  },
+  consRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: c.borderSubtle,
+    gap: 8,
+  },
+  consLabel: {
+    color: c.textMuted,
+    fontSize: 9,
+    fontWeight: "800",
+    letterSpacing: 1.5,
+  },
+  consValue: {
+    color: c.textPrimary,
+    fontSize: 11,
+    fontWeight: "700",
+    flexShrink: 1,
+    textAlign: "right",
   },
 
   // ---------- CHECKOUT HISTORY ----------

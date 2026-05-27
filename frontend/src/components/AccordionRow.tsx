@@ -163,6 +163,11 @@ const styles = themedStyles((c) => ({
   // the content. Per user (2026-05-26): "every accordion drop-down should
   // look like the warranty expansion — a second details card within the
   // parent details card, clean dividers, easy to read."
+  // Expanded body — wraps children in a nested Description Card matching
+  // the WarrantySection reference design (per user 2026-05-27): white
+  // background, soft border, large radius, large elevation shadow. This
+  // gives EVERY accordion row across the app the "second details card
+  // within the first" look the user explicitly requested.
   body: {
     backgroundColor: c.bgSecondary,
     borderWidth: 1,
@@ -171,9 +176,8 @@ const styles = themedStyles((c) => ({
     paddingHorizontal: 14,
     paddingTop: 12,
     paddingBottom: 14,
-    marginTop: 8,
-    marginBottom: 14,
-    marginHorizontal: 2,
+    marginTop: 6,
+    marginBottom: 10,
     ...(theme.elevation.lg as object),
   },
   bodyDivider: {

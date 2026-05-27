@@ -30,22 +30,24 @@ export function WarrantySection({ tool }: { tool: any }) {
   if (!has) {
     return (
       <View style={styles.wrap}>
-        <View style={styles.head}>
-          <Ionicons name="shield-outline" size={18} color={theme.colors.textMuted} />
-          <Text style={styles.title}>WARRANTY</Text>
-        </View>
-        <View style={styles.emptyCard}>
-          <Text style={styles.emptyText}>No warranty information available.</Text>
-          <TouchableOpacity
-            testID="add-warranty-link"
-            style={styles.addBtn}
-            onPress={() =>
-              router.push({ pathname: "/tool/edit", params: { id: tool.id, focus: "warranty" } })
-            }
-          >
-            <Ionicons name="add-circle" size={16} color={theme.colors.accent} />
-            <Text style={styles.addBtnText}>ADD WARRANTY INFORMATION</Text>
-          </TouchableOpacity>
+        <View style={styles.card}>
+          <View style={styles.head}>
+            <Ionicons name="shield-outline" size={18} color={theme.colors.textMuted} />
+            <Text style={styles.title}>WARRANTY</Text>
+          </View>
+          <View style={styles.emptyInner}>
+            <Text style={styles.emptyText}>No warranty information available.</Text>
+            <TouchableOpacity
+              testID="add-warranty-link"
+              style={styles.addBtn}
+              onPress={() =>
+                router.push({ pathname: "/tool/edit", params: { id: tool.id, focus: "warranty" } })
+              }
+            >
+              <Ionicons name="add-circle" size={16} color={theme.colors.accent} />
+              <Text style={styles.addBtnText}>ADD WARRANTY INFORMATION</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
     );
@@ -78,19 +80,19 @@ export function WarrantySection({ tool }: { tool: any }) {
 
   return (
     <View style={styles.wrap}>
-      <View style={styles.head}>
-        <Ionicons name="shield-checkmark" size={18} color={theme.colors.success} />
-        <View style={{ flex: 1 }}>
-          <Text style={styles.title}>WARRANTY</Text>
-          <Text style={styles.sub}>
-            {COVERAGE_LABEL[coverageType] || coverageType.toUpperCase()}
-          </Text>
-        </View>
-        <View style={[styles.badge, { borderColor: badgeColor, backgroundColor: badgeColor + "15" }]}>
-          <Text style={[styles.badgeText, { color: badgeColor }]}>{badgeLabel}</Text>
-        </View>
-      </View>
       <View style={styles.card}>
+        <View style={styles.head}>
+          <Ionicons name="shield-checkmark" size={18} color={theme.colors.success} />
+          <View style={{ flex: 1 }}>
+            <Text style={styles.title}>WARRANTY</Text>
+            <Text style={styles.sub}>
+              {COVERAGE_LABEL[coverageType] || coverageType.toUpperCase()}
+            </Text>
+          </View>
+          <View style={[styles.badge, { borderColor: badgeColor, backgroundColor: badgeColor + "15" }]}>
+            <Text style={[styles.badgeText, { color: badgeColor }]}>{badgeLabel}</Text>
+          </View>
+        </View>
         {!!w.provider && <Row label="Provider" value={w.provider} />}
         {!!w.contact && <Row label="Contact" value={w.contact} />}
         {!isLifetime && !!w.start_date && (
@@ -152,10 +154,9 @@ function Row({
 }
 
 const styles = themedStyles((c) => ({
-  // Per user 2026-05-26: the parent AccordionRow body now provides the
-  // nested-card wrapper (bgSecondary + border + elevation). WarrantySection
-  // renders its head + rows + footer flat so we don't double-wrap.
-  wrap: { paddingHorizontal: 0, paddingTop: 0 },
+  // Outer wrap — small top padding so the nested card lifts off the
+  // accordion header row above it.
+  wrap: { paddingHorizontal: 0, paddingTop: 6 },
   head: {
     flexDirection: "row",
     alignItems: "center",
@@ -187,21 +188,39 @@ const styles = themedStyles((c) => ({
     letterSpacing: 1.2,
   },
   card: {
-    // Flat container — parent AccordionRow body provides the card chrome.
-    backgroundColor: "transparent",
-    padding: 0,
-    marginTop: 4,
+    // Internal nested Description Card (matches user's reference screenshot
+    // 2026-05-27): white card with soft border + elevation, sitting inside
+    // the parent group details card.
+    backgroundColor: c.bgSecondary,
+    borderWidth: 1,
+    borderColor: c.border,
+    borderRadius: 10,
+    padding: 14,
+    ...(theme.elevation.lg as object),
   },
   emptyCard: {
-    backgroundColor: "transparent",
+    // Legacy — replaced by emptyInner inside the main card.
+    backgroundColor: c.bgSecondary,
     borderWidth: 1,
     borderStyle: "dashed",
     borderColor: c.border,
-    borderRadius: 6,
-    padding: 16,
+    borderRadius: 10,
+    padding: 18,
     alignItems: "center",
     gap: 12,
-    marginTop: 6,
+    ...(theme.elevation.md as object),
+  },
+  // Empty-state inner box — dashed border around "No warranty info" +
+  // ADD button, sits INSIDE the main warranty card.
+  emptyInner: {
+    borderWidth: 1,
+    borderStyle: "dashed",
+    borderColor: c.border,
+    borderRadius: 8,
+    padding: 14,
+    alignItems: "center",
+    gap: 10,
+    marginTop: 4,
   },
   emptyText: {
     color: c.textMuted,
