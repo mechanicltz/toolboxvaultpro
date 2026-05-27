@@ -1,19 +1,12 @@
 /**
  * AccordionRow — collapsible Description Card row used to compact the
- * Tool Edit screen. Tap the header to expand/collapse; expanded content is
- * rendered inline below the header.
+ * Tool Edit screen. Visual language matches the read-only Description
+ * Cards on the Tool detail screen: bgSecondary background, subtle border,
+ * tiny (7pt) bold ALL-CAPS label on the left, right-aligned value on the
+ * right (when collapsed), expand chevron, expanded body underneath.
  *
- * Per the user (2026-05-26): the Tool Edit screen now has 25+ accordion
- * rows so each input is its own collapsed row. Model #(s) is the FIRST
- * row — that field is critical to the upcoming AI model-lookup feature.
- *
- * Behavior:
- *  - `open` and `onToggle` control whether the body is rendered. The PARENT
- *    owns the state so the caller can enforce single-expand if desired.
- *  - `summary` (optional) is a one-line preview of the current value shown
- *    on the right side of the header while collapsed.
- *  - `required` adds a small orange "•" dot — borrowed from the warranty
- *    cards' visual language.
+ * Per the user (2026-05-26): the Tool Edit screen has 25+ accordion rows
+ * so each input is its own collapsed row. Model #(s) is the FIRST row.
  */
 import React from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
@@ -57,24 +50,24 @@ export function AccordionRow({
   return (
     <View
       style={[
-        styles.wrap,
-        !noBorder && styles.wrapBorder,
-        open && styles.wrapOpen,
+        styles.card,
+        !noBorder && styles.cardBorder,
+        open && styles.cardOpen,
       ]}
     >
       <TouchableOpacity
         testID={testID}
         activeOpacity={0.6}
         onPress={onToggle}
-        style={styles.header}
+        style={styles.row}
       >
-        <View style={styles.headerLeft}>
+        <View style={styles.left}>
           {icon && (
             <Ionicons
               name={icon}
-              size={18}
+              size={13}
               color={open ? c.accent : c.textMuted}
-              style={{ marginRight: 8 }}
+              style={{ marginRight: 6 }}
             />
           )}
           <Text style={[styles.label, open && { color: c.accent }]}>
@@ -82,15 +75,15 @@ export function AccordionRow({
             {required && <Text style={styles.requiredDot}>  •</Text>}
           </Text>
         </View>
-        <View style={styles.headerRight}>
+        <View style={styles.right}>
           {!!summary && !open && (
-            <Text style={styles.summary} numberOfLines={1}>
+            <Text style={styles.value} numberOfLines={1}>
               {summary}
             </Text>
           )}
           <Ionicons
             name={open ? "chevron-up" : "chevron-down"}
-            size={20}
+            size={16}
             color={open ? c.accent : c.textMuted}
           />
         </View>
@@ -102,58 +95,70 @@ export function AccordionRow({
 }
 
 const styles = StyleSheet.create({
-  wrap: {
-    backgroundColor: c.surface,
-    borderRadius: 10,
-    marginBottom: 10,
+  // Description Card body — matches tool/[id].tsx detailsBox so the edit
+  // screen reads as the same visual family as the read-only detail screen.
+  card: {
+    backgroundColor: c.bgSecondary,
+    borderRadius: 6,
+    marginBottom: 8,
     overflow: "hidden",
+    ...(theme.elevation.md as object),
   },
-  wrapBorder: {
+  cardBorder: {
     borderWidth: 1,
     borderColor: c.border,
   },
-  wrapOpen: {
+  cardOpen: {
     borderColor: c.accent,
   },
-  header: {
+  // Header row — same metrics as detailsRow (paddingVertical:8, gap:8)
+  row: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 14,
-    paddingVertical: 14,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    gap: 8,
   },
-  headerLeft: {
+  left: {
     flexDirection: "row",
     alignItems: "center",
     flex: 1,
   },
+  // detailsLabel: muted, fontSize 7, letterSpacing 1.5, ALL CAPS
   label: {
-    color: c.textPrimary,
-    fontSize: 11,
-    fontWeight: "900",
-    letterSpacing: 1.4,
+    color: c.textMuted,
+    fontSize: 7,
+    fontWeight: "800",
+    letterSpacing: 1.5,
   },
   requiredDot: {
     color: c.accent,
     fontWeight: "900",
   },
-  headerRight: {
+  right: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
-    maxWidth: "55%",
+    gap: 6,
+    flexShrink: 1,
+    maxWidth: "65%",
+    justifyContent: "flex-end",
   },
-  summary: {
-    color: c.textMuted,
-    fontSize: 12,
-    fontWeight: "500",
+  // detailsValue: textPrimary, fontSize 10, fontWeight 700, right-aligned
+  value: {
+    color: c.textPrimary,
+    fontSize: 10,
+    fontWeight: "700",
+    textAlign: "right",
+    flexShrink: 1,
   },
+  // Expanded body: thin separator + comfortable inputs spacing
   body: {
-    paddingHorizontal: 14,
-    paddingBottom: 14,
-    paddingTop: 4,
+    paddingHorizontal: 12,
+    paddingBottom: 12,
+    paddingTop: 6,
     borderTopWidth: 1,
-    borderTopColor: c.border,
+    borderTopColor: c.borderSubtle,
   },
 });
 
