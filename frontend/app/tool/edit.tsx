@@ -1049,72 +1049,52 @@ export default function ToolEdit() {
             onToggle={() => toggle("modelNumbers")}
             testID="acc-modelNumbers"
           >
-          {/* MODEL NUMBERS — stacked multi-value input. Add as many rows as
-              the user needs. The first row is always visible; remove (×) appears
-              from the second row onward. */}
-          <View style={styles.subSection}>
-            <Text style={[styles.label, { marginTop: 0 }]}>MODEL NUMBER(S)</Text>
-            {modelNumbers.map((s, idx) => (
-              <View
-                key={`mn-${idx}`}
-                style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 8 }}
-              >
-                <Text style={{ color: theme.colors.textMuted, width: 28, fontWeight: "700" }}>
-                  {idx + 1}.
-                </Text>
-                <TextInput
-                  testID={`model-number-input-${idx}`}
-                  placeholder={idx === 0 ? "e.g. DCD777" : `Model # ${idx + 1}`}
-                  placeholderTextColor={theme.colors.textMuted}
-                  value={s}
-                  onChangeText={(v) => {
-                    const next = [...modelNumbers];
-                    next[idx] = v;
-                    setModelNumbers(next);
-                  }}
-                  style={[styles.input, { flex: 1 }]}
-                />
-                {modelNumbers.length > 1 && (
-                  <TouchableOpacity
-                    testID={`model-number-remove-${idx}`}
-                    onPress={() => {
-                      const next = modelNumbers.filter((_, i) => i !== idx);
-                      setModelNumbers(next.length ? next : [""]);
-                    }}
-                    hitSlop={8}
-                    style={{
-                      padding: 6,
-                      borderRadius: 6,
-                      backgroundColor: "rgba(220,38,38,0.08)",
-                    }}
-                  >
-                    <Ionicons name="close" size={18} color={theme.colors.danger} />
-                  </TouchableOpacity>
-                )}
-              </View>
-            ))}
+          {/* MODEL NUMBERS — header row matches the Photos/Documents/Receipts
+              pattern: "MODEL NUMBERS (n)" label on left + small orange OUTLINE
+              ADD button on right. Each row is a slim input + delete icon. */}
+          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+            <Text style={styles.label}>MODEL NUMBERS ({modelNumbers.filter(Boolean).length})</Text>
             <TouchableOpacity
               testID="add-model-number"
               onPress={() => setModelNumbers([...modelNumbers, ""])}
-              style={{
-                flexDirection: "row",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 6,
-                borderWidth: 1,
-                borderStyle: "dashed",
-                borderColor: theme.colors.accent,
-                borderRadius: 6,
-                paddingVertical: 10,
-                marginTop: 4,
-              }}
+              style={styles.smallScanBtn}
             >
-              <Ionicons name="add" size={18} color={theme.colors.accent} />
-              <Text style={{ color: theme.colors.accent, fontWeight: "800", letterSpacing: 1 }}>
-                ADD ANOTHER MODEL #
-              </Text>
+              <Ionicons name="add-circle" size={12} color={theme.colors.accent} />
+              <Text style={styles.smallScanBtnText}>ADD MODEL #</Text>
             </TouchableOpacity>
           </View>
+          {modelNumbers.map((s, idx) => (
+            <View
+              key={`mn-${idx}`}
+              style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 6 }}
+            >
+              <TextInput
+                testID={`model-number-input-${idx}`}
+                placeholder={idx === 0 ? "e.g. DCD777" : `Model # ${idx + 1}`}
+                placeholderTextColor={theme.colors.textMuted}
+                value={s}
+                onChangeText={(v) => {
+                  const next = [...modelNumbers];
+                  next[idx] = v;
+                  setModelNumbers(next);
+                }}
+                style={[styles.compactInput, { flex: 1 }]}
+              />
+              {modelNumbers.length > 1 && (
+                <TouchableOpacity
+                  testID={`model-number-remove-${idx}`}
+                  onPress={() => {
+                    const next = modelNumbers.filter((_, i) => i !== idx);
+                    setModelNumbers(next.length ? next : [""]);
+                  }}
+                  hitSlop={8}
+                  style={styles.removeIconBtn}
+                >
+                  <Ionicons name="close" size={14} color={theme.colors.danger} />
+                </TouchableOpacity>
+              )}
+            </View>
+          ))}
           </AccordionRow>
           <AccordionRow
             label="SERIAL NUMBER(S)"
@@ -1124,70 +1104,50 @@ export default function ToolEdit() {
             onToggle={() => toggle("serialNumbers")}
             testID="acc-serialNumbers"
           >
-          {/* SERIAL NUMBERS — same stacked input pattern. */}
-          <View style={styles.subSection}>
-            <Text style={[styles.label, { marginTop: 0 }]}>SERIAL NUMBER(S)</Text>
-            {serialNumbers.map((s, idx) => (
-              <View
-                key={`sn-${idx}`}
-                style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 8 }}
-              >
-                <Text style={{ color: theme.colors.textMuted, width: 28, fontWeight: "700" }}>
-                  {idx + 1}.
-                </Text>
-                <TextInput
-                  testID={`serial-number-input-${idx}`}
-                  placeholder={idx === 0 ? "e.g. SN-ABC-1234" : `Serial # ${idx + 1}`}
-                  placeholderTextColor={theme.colors.textMuted}
-                  value={s}
-                  onChangeText={(v) => {
-                    const next = [...serialNumbers];
-                    next[idx] = v;
-                    setSerialNumbers(next);
-                  }}
-                  style={[styles.input, { flex: 1 }]}
-                />
-                {serialNumbers.length > 1 && (
-                  <TouchableOpacity
-                    testID={`serial-number-remove-${idx}`}
-                    onPress={() => {
-                      const next = serialNumbers.filter((_, i) => i !== idx);
-                      setSerialNumbers(next.length ? next : [""]);
-                    }}
-                    hitSlop={8}
-                    style={{
-                      padding: 6,
-                      borderRadius: 6,
-                      backgroundColor: "rgba(220,38,38,0.08)",
-                    }}
-                  >
-                    <Ionicons name="close" size={18} color={theme.colors.danger} />
-                  </TouchableOpacity>
-                )}
-              </View>
-            ))}
+          {/* SERIAL NUMBERS — same compact pattern as Model #s. */}
+          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+            <Text style={styles.label}>SERIAL NUMBERS ({serialNumbers.filter(Boolean).length})</Text>
             <TouchableOpacity
               testID="add-serial-number"
               onPress={() => setSerialNumbers([...serialNumbers, ""])}
-              style={{
-                flexDirection: "row",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 6,
-                borderWidth: 1,
-                borderStyle: "dashed",
-                borderColor: theme.colors.accent,
-                borderRadius: 6,
-                paddingVertical: 10,
-                marginTop: 4,
-              }}
+              style={styles.smallScanBtn}
             >
-              <Ionicons name="add" size={18} color={theme.colors.accent} />
-              <Text style={{ color: theme.colors.accent, fontWeight: "800", letterSpacing: 1 }}>
-                ADD ANOTHER SERIAL #
-              </Text>
+              <Ionicons name="add-circle" size={12} color={theme.colors.accent} />
+              <Text style={styles.smallScanBtnText}>ADD SERIAL #</Text>
             </TouchableOpacity>
           </View>
+          {serialNumbers.map((s, idx) => (
+            <View
+              key={`sn-${idx}`}
+              style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 6 }}
+            >
+              <TextInput
+                testID={`serial-number-input-${idx}`}
+                placeholder={idx === 0 ? "e.g. SN-ABC-1234" : `Serial # ${idx + 1}`}
+                placeholderTextColor={theme.colors.textMuted}
+                value={s}
+                onChangeText={(v) => {
+                  const next = [...serialNumbers];
+                  next[idx] = v;
+                  setSerialNumbers(next);
+                }}
+                style={[styles.compactInput, { flex: 1 }]}
+              />
+              {serialNumbers.length > 1 && (
+                <TouchableOpacity
+                  testID={`serial-number-remove-${idx}`}
+                  onPress={() => {
+                    const next = serialNumbers.filter((_, i) => i !== idx);
+                    setSerialNumbers(next.length ? next : [""]);
+                  }}
+                  hitSlop={8}
+                  style={styles.removeIconBtn}
+                >
+                  <Ionicons name="close" size={14} color={theme.colors.danger} />
+                </TouchableOpacity>
+              )}
+            </View>
+          ))}
           </AccordionRow>
           <AccordionRow
             label="DEALER & AGENT"
@@ -2117,6 +2077,19 @@ const styles = themedStyles((c) => ({
     minHeight: 48, borderRadius: 4, fontSize: 11,
   
     ...(theme.elevation.input as object),
+  },
+  // Compact input — slim variant for stacked rows (model/serial numbers).
+  // Same look as `input` but tighter padding + smaller min-height so a
+  // list of inputs stays visually professional and not bloated.
+  compactInput: {
+    backgroundColor: c.bgSecondary, borderWidth: 1, borderColor: c.border,
+    color: c.textPrimary, paddingHorizontal: 10, paddingVertical: 7,
+    minHeight: 34, borderRadius: 4, fontSize: 11,
+  },
+  // Small inline delete icon button used in stacked input rows.
+  removeIconBtn: {
+    width: 28, height: 28, alignItems: "center", justifyContent: "center",
+    borderRadius: 4, backgroundColor: "rgba(220,38,38,0.08)",
   },
   row2: { flexDirection: "row", gap: 10 },
   helper: { color: c.textMuted, fontStyle: "italic", fontSize: 10 },
