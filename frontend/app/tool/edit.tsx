@@ -288,116 +288,12 @@ export default function ToolEdit() {
     }
   };
 
-  const runReceiptScan = async (src: "camera" | "library") => {
-    try {
-      const perm =
-        src === "camera"
-          ? await ImagePicker.requestCameraPermissionsAsync()
-          : await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (!perm.granted) {
-        Alert.alert("Permission needed", `Please grant ${src === "camera" ? "camera" : "photo library"} access.`);
-        return;
-      }
-      const opts: any = { quality: 0.8, allowsEditing: false, base64: false };
-      const res =
-        src === "camera"
-          ? await ImagePicker.launchCameraAsync(opts)
-          : await ImagePicker.launchImageLibraryAsync({
-              ...opts,
-              mediaTypes: ImagePicker.MediaTypeOptions.Images,
-            });
-      if (res.canceled || !res.assets?.[0]?.uri) return;
+  // AI receipt scan COMPLETELY REMOVED per user 2026-05-27. The functions
+  // runReceiptScan / chooseReceiptSource / openConfirmationForItem and the
+  // multi-item picker modal are gone. Only the plain photo-attachment
+  // helper below remains.
 
-      setScanning(true);
-      const { base64 } = await compressImage(res.assets[0].uri);
-      if (!base64) {
-        setScanning(false);
-        Alert.alert("Error", "Could not process image.");
-        return;
-      }
-      const dataUri = `data:image/jpeg;base64,${base64}`;
-      setScanImage(base64);
-      setScanImageUri(dataUri);
-
-      try {
-        const r = await api.post<any>(`/ai/receipt-scan`, { image_base64: base64 });
-        setScanResult(r || {});
-        const items = Array.isArray(r?.items) ? r.items : [];
-        setScanItems(items);
-        setImportedItemIdxs([]);
-        if (items.length === 0) {
-          // No items detected — open confirmation modal with empty fields so user can manually fill
-          openConfirmationForItem(-1, r);
-        } else if (items.length === 1) {
-          openConfirmationForItem(0, r, items[0]);
-        } else {
-          // Multiple items — show picker first
-          setScanItemPickerOpen(true);
-        }
-      } catch (e: any) {
-        Alert.alert(
-          "Scan failed",
-          e?.message || e?.detail || "Unable to read receipt. Please try a clearer photo or enter details manually.",
-        );
-      } finally {
-        setScanning(false);
-      }
-    } catch (e: any) {
-      setScanning(false);
-      Alert.alert("Error", e.message || "Could not start receipt scan.");
-    }
-  };
-
-  const openConfirmationForItem = (idx: number, receipt?: any, item?: any) => {
-    const r = receipt || scanResult || {};
-    const it = item || (idx >= 0 ? (scanItems[idx] || {}) : {});
-    setScanItemIdx(idx);
-    // Pre-fill editable text values from the item + receipt
-    const fields: Record<string, string> = {
-      name: String(it.name || "").trim(),
-      brand: String(it.brand || "").trim(),
-      model: String(it.model || "").trim(),
-      serial_number: String(it.serial_number || "").trim(),
-      cost: it.cost != null && Number(it.cost) > 0 ? String(Number(it.cost).toFixed(2)) : "",
-      quantity: it.quantity != null ? String(Math.max(1, parseInt(String(it.quantity), 10) || 1)) : "1",
-      purchase_date: String(r.purchase_date || "").trim(),
-      dealer: String(r.dealer || "").trim(),
-      sold_by: String(r.sold_by || "").trim(),
-      description: String(it.description || "").trim(),
-    };
-    setScanFields(fields);
-    // Default toggles ON for any non-empty value
-    setScanApply({
-      name: !!fields.name,
-      brand: !!fields.brand,
-      model: !!fields.model,
-      serial_number: !!fields.serial_number,
-      cost: !!fields.cost && Number(fields.cost) > 0,
-      quantity: !!fields.quantity && parseInt(fields.quantity, 10) > 1,
-      purchase_date: !!fields.purchase_date,
-      dealer: !!fields.dealer,
-      sold_by: !!fields.sold_by,
-      description: !!fields.description,
-    });
-    setScanItemPickerOpen(false);
-    setScanShowRaw(false);
-    setScanModalOpen(true);
-  };
-
-  const chooseReceiptSource = () => {
-    Alert.alert(
-      "Scan Receipt",
-      "Choose how to provide the receipt photo. Our AI will read it and auto-fill the fields. Multi-item receipts let you pick one item per tool entry.",
-      [
-        { text: "Take Photo", onPress: () => runReceiptScan("camera") },
-        { text: "Choose from Library", onPress: () => runReceiptScan("library") },
-        { text: "Cancel", style: "cancel" },
-      ],
-    );
-  };
-
-  // EDIT-MODE: just attach a receipt photo to the existing tool — no OCR,
-  // no multi-item picker, no overwriting of any current fields.
+  // EDIT-MODE + NEW-MODE: just attach a receipt photo to the tool — no AI.
   const pickReceiptPhotoOnly = async (src: "camera" | "library") => {
     try {
       const perm =
@@ -425,7 +321,6 @@ export default function ToolEdit() {
         uri && uri.startsWith("data:")
           ? uri
           : (await (async () => {
-              // Fall back: re-encode as base64 for portability across devices
               const { base64 } = await compressImage(res.assets[0].uri);
               return base64 ? `data:image/jpeg;base64,${base64}` : uri;
             })());
@@ -439,32 +334,14 @@ export default function ToolEdit() {
     }
   };
 
-  // Entry point used by the small button in the RECEIPTS section.
-  // - On a NEW tool: full OCR scanner flow (camera/library + auto-fill fields).
-  // - On an EXISTING tool (edit mode): default to "just attach the photo",
-  //   but offer an optional "Scan & auto-fill" path for power users.
-  const onTapReceiptButton = () => {
-    if (!isEdit) {
-      // New tool — keep the existing OCR-first flow
-      chooseReceiptSource();
-      return;
-    }
+  // Receipt-add entry point — simple Camera / Library picker, no AI scan.
+  const pickReceipt = () => {
     Alert.alert(
-      "Add receipt to this item",
-      "Just attach the photo, or also use AI to auto-fill any missing fields on this item?",
+      "Add Receipt",
+      "Attach a receipt photo to this item.",
       [
-        {
-          text: "Take Photo (no scan)",
-          onPress: () => pickReceiptPhotoOnly("camera"),
-        },
-        {
-          text: "Choose from Library (no scan)",
-          onPress: () => pickReceiptPhotoOnly("library"),
-        },
-        {
-          text: "Scan & auto-fill",
-          onPress: chooseReceiptSource,
-        },
+        { text: "Take Photo", onPress: () => pickReceiptPhotoOnly("camera") },
+        { text: "Choose from Library", onPress: () => pickReceiptPhotoOnly("library") },
         { text: "Cancel", style: "cancel" },
       ],
     );
@@ -957,32 +834,7 @@ export default function ToolEdit() {
         </View>
 
         <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 120 }} keyboardShouldPersistTaps="handled">
-          {/* AI Receipt Scanner banner — prominent at top of form */}
-          {!isEdit && (
-            <TouchableOpacity
-              testID="scan-receipt-btn"
-              style={styles.scanBanner}
-              onPress={chooseReceiptSource}
-              disabled={scanning}
-              activeOpacity={0.85}
-            >
-              {scanning ? (
-                <>
-                  <ActivityIndicator color="#000" />
-                  <Text style={styles.scanBannerText}>READING RECEIPT…</Text>
-                </>
-              ) : (
-                <>
-                  <Ionicons name="scan" size={22} color="#000" />
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.scanBannerText}>SCAN RECEIPT</Text>
-                    <Text style={styles.scanBannerSub}>AI auto-fills fields from a photo</Text>
-                  </View>
-                  <Ionicons name="sparkles" size={18} color="#000" />
-                </>
-              )}
-            </TouchableOpacity>
-          )}
+          {/* AI Receipt Scanner banner removed per user 2026-05-27. */}
 
           <View style={styles.detailsBox}>
           <AccordionRow
@@ -1382,24 +1234,11 @@ export default function ToolEdit() {
             <Text style={styles.label}>RECEIPTS ({receipts.length})</Text>
             <TouchableOpacity
               testID="add-receipt-btn"
-              onPress={onTapReceiptButton}
-              disabled={scanning}
+              onPress={pickReceipt}
               style={styles.smallScanBtn}
             >
-              {scanning ? (
-                <ActivityIndicator color={theme.colors.accent} size="small" />
-              ) : (
-                <>
-                  <Ionicons
-                    name={isEdit ? "add-circle" : "scan"}
-                    size={12}
-                    color={theme.colors.accent}
-                  />
-                  <Text style={styles.smallScanBtnText}>
-                    {isEdit ? "ADD RECEIPT" : "SCAN RECEIPT"}
-                  </Text>
-                </>
-              )}
+              <Ionicons name="add-circle" size={12} color={theme.colors.accent} />
+              <Text style={styles.smallScanBtnText}>ADD RECEIPT</Text>
             </TouchableOpacity>
           </View>
           {receipts.length > 0 ? (

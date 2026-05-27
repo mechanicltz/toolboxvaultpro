@@ -3989,213 +3989,24 @@ def _normalize_date(s: str) -> str:
     return ""
 
 
-@api_router.post("/ai/receipt-scan", response_model=ReceiptScanResponse)
-async def ai_receipt_scan(payload: ReceiptScanRequest, user: User = Depends(get_current_user)):
-    """Send the receipt image to GPT-4o vision and extract structured fields.
-    Returns best-guess values that the user reviews/edits in the mapping UI
-    before they are committed to a tool record.
-
-    Supports multi-item receipts: the response includes a list of items so the
-    frontend can prompt the user to pick which one to add.
-    """
-    # Rate limit: 30 AI receipt scans per user per hour (protect LLM budget).
-    _enforce_rate_limit(
-        "ai.receipt_scan",
-        user.id,
-        max_count=30,
-        window_seconds=3600,
-        message="You have used the AI receipt scanner a lot in the last hour. "
-        "Please try again later.",
+@api_router.post("/ai/receipt-scan")
+async def ai_receipt_scan_disabled(user: User = Depends(get_current_user)):
+    """AI receipt-scan has been REMOVED from the product (per user
+    decision 2026-05-27). The endpoint now returns 410 Gone so any old
+    cached clients fail loudly instead of silently hitting OpenAI."""
+    raise HTTPException(
+        status_code=410,
+        detail="AI Receipt Scan has been removed from this app. Please enter receipt details manually.",
     )
-    import base64
-    import json
-    import re
-    import tempfile
-    import os as _os
-
-    raw_b64 = payload.image_base64 or ""
-    if not raw_b64:
-        raise HTTPException(status_code=400, detail="image_base64 is required")
-    # Strip data URL prefix if present
-    if raw_b64.startswith("data:"):
-        comma = raw_b64.find(",")
-        if comma > 0:
-            raw_b64 = raw_b64[comma + 1 :]
-    try:
-        image_bytes = base64.b64decode(raw_b64, validate=False)
-    except Exception:
-        raise HTTPException(status_code=400, detail="Invalid base64 image")
-
-    # Write to a temp file so emergentintegrations can pass it as a file path
-    tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".jpg")
-    try:
-        tmp.write(image_bytes)
-        tmp.flush()
-        tmp.close()
-
-        from emergentintegrations.llm.chat import (
-            LlmChat,
-            UserMessage,
-            ImageContent,
-        )
-
-        api_key = _os.environ.get("EMERGENT_LLM_KEY", "")
-        if not api_key:
-            raise HTTPException(
-                status_code=500,
-                detail="EMERGENT_LLM_KEY missing in backend environment",
-            )
-
-        system_prompt = (
-            "You are a precise receipt-OCR extractor for a tool inventory app. "
-            "Given an image of a receipt, packing slip, invoice, or product box, "
-            "return ONLY a JSON object — no markdown, no commentary.\n\n"
-            "Receipts often contain MULTIPLE distinct line items (different "
-            "tools / parts purchased). Identify EVERY purchased line item. "
-            "Skip subtotals, taxes, discounts, shipping, fees, totals, "
-            "salesperson lines (those go in 'sold_by'), account numbers, "
-            "transaction history rows, finance charges, payments — list ONLY "
-            "actual products being purchased.\n\n"
-            "Return EXACTLY this JSON shape:\n"
-            "{\n"
-            '  "dealer": "<store / seller / vendor / franchisee name — often a logo at top, e.g. \'Snap-on\', \'Cornwell\', \'Matco\'>",\n'
-            '  "sold_by": "<the sales rep / agent who sold it — appears as \'Sold By:\', \'Salesperson:\', \'Rep:\', \'Sold by:\' on the receipt>",\n'
-            '  "purchase_date": "YYYY-MM-DD (use ISO format; convert M/D/YYYY → YYYY-MM-DD)",\n'
-            '  "raw_text": "<full OCR transcription of the receipt, line by line, as you read it>",\n'
-            '  "items": [\n'
-            "    {\n"
-            '      "name": "<short product/tool name from the Description column>",\n'
-            '      "brand": "<manufacturer / brand — often the same as the dealer for branded receipts>",\n'
-            '      "model": "<model number / model name>",\n'
-            '      "serial_number": "<model #, part #, item #, sku, catalog # — see note below>",\n'
-            '      "cost": <number, no currency symbols>,\n'
-            '      "quantity": <integer, default 1>,\n'
-            '      "description": "<very brief 1-sentence description>"\n'
-            "    }\n"
-            "  ]\n"
-            "}\n\n"
-            "Important rules:\n"
-            "- Receipts use various labels for the unique product identifier. "
-            "Treat ANY of these as 'serial_number': 'Part #', 'Part Number', "
-            "'Item #', 'Item Number', 'SKU', 'Catalog #', 'Catalog Number', "
-            "'Product #', 'Product Code', 'Stock #'. Use the literal value "
-            "shown next to the label.\n"
-            "- 'cost' is the per-unit price (or extended/total if per-unit "
-            "isn't shown). Strip currency symbols and commas. Always a number.\n"
-            "- 'quantity' must be a positive integer (default 1).\n"
-            "- 'sold_by' is the human salesperson/rep who sold it (e.g. "
-            "'Wade Miller'). Receipts label this as 'Sold By:' or "
-            "'Salesperson:'. Leave empty if not present.\n"
-            "- 'purchase_date' MUST be ISO YYYY-MM-DD. Convert any other "
-            "format (5/7/2025 → 2025-05-07).\n"
-            "- Use empty strings or 0 if a value isn't present. Do NOT invent.\n"
-            "- 'raw_text' is REQUIRED — include every line of text from the "
-            "receipt so the user can copy any value the structured extraction "
-            "missed.\n"
-            "- Output ONLY the JSON object. No prose, no markdown fences."
-        )
-
-        chat = (
-            LlmChat(
-                api_key=api_key,
-                session_id=f"receipt-scan-{uuid.uuid4()}",
-                system_message=system_prompt,
-            )
-            .with_model("openai", "gpt-4o")
-            .with_params(max_tokens=2000)
-        )
-
-        msg = UserMessage(
-            text=(
-                "Extract every line item from this receipt. Return ONLY the "
-                "JSON object exactly as instructed."
-            ),
-            file_contents=[ImageContent(image_base64=raw_b64)],
-        )
-        response_text = await chat.send_message(msg)
-
-        # Try parse JSON. Strip markdown fences if present, then regex-extract
-        # the outermost JSON object.
-        cleaned = (response_text or "").strip()
-        # Strip ```json ... ``` fences
-        cleaned = re.sub(r"^```(?:json)?\s*", "", cleaned, flags=re.IGNORECASE)
-        cleaned = re.sub(r"\s*```$", "", cleaned)
-        m = re.search(r"\{.*\}", cleaned, re.DOTALL)
-        json_text = m.group(0) if m else cleaned
-        try:
-            data = json.loads(json_text)
-        except Exception:
-            data = {}
-
-        # Build items list — accept either {items:[...]} or a single-item shape
-        raw_items = data.get("items")
-        items_list: List[ReceiptItem] = []
-        if isinstance(raw_items, list) and raw_items:
-            for it in raw_items:
-                if not isinstance(it, dict):
-                    continue
-                items_list.append(
-                    ReceiptItem(
-                        name=str(it.get("name") or "").strip(),
-                        brand=str(it.get("brand") or "").strip(),
-                        model=str(it.get("model") or "").strip(),
-                        serial_number=str(it.get("serial_number") or "").strip(),
-                        cost=_to_float(it.get("cost", 0)),
-                        quantity=_to_int(it.get("quantity", 1), default=1),
-                        description=str(it.get("description") or "").strip(),
-                    )
-                )
-        # Legacy / single-item fallback — older prompts returned flat fields
-        if not items_list and any(
-            data.get(k) for k in ("name", "brand", "model", "serial_number", "cost")
-        ):
-            items_list.append(
-                ReceiptItem(
-                    name=str(data.get("name") or "").strip(),
-                    brand=str(data.get("brand") or "").strip(),
-                    model=str(data.get("model") or "").strip(),
-                    serial_number=str(data.get("serial_number") or "").strip(),
-                    cost=_to_float(data.get("cost", 0)),
-                    quantity=_to_int(data.get("quantity", 1), default=1),
-                    description=str(data.get("description") or "").strip(),
-                )
-            )
-
-        first = items_list[0] if items_list else ReceiptItem()
-        return ReceiptScanResponse(
-            dealer=str(data.get("dealer") or "").strip(),
-            sold_by=str(data.get("sold_by") or "").strip(),
-            purchase_date=_normalize_date(str(data.get("purchase_date") or "").strip()),
-            raw_text=str(data.get("raw_text") or "").strip(),
-            items=items_list,
-            # Mirror first item to top-level for backward compatibility
-            name=first.name,
-            brand=first.brand,
-            model=first.model,
-            serial_number=first.serial_number,
-            cost=first.cost,
-            quantity=first.quantity,
-            description=first.description,
-            raw=data if isinstance(data, dict) else None,
-        )
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"AI receipt scan failed: {e}")
-    finally:
-        try:
-            _os.unlink(tmp.name)
-        except Exception:
-            pass
 
 
-@api_router.post("/ocr/receipt", response_model=ReceiptScanResponse)
-async def ocr_receipt_alias(payload: ReceiptScanRequest, user: User = Depends(get_current_user)):
-    """Alias for /api/ai/receipt-scan — kept for forward-compatibility with
-    any older clients or tooling that hits the simpler `/ocr/receipt` path."""
-    return await ai_receipt_scan(payload, user)
-
-
+@api_router.post("/ocr/receipt")
+async def ocr_receipt_disabled(user: User = Depends(get_current_user)):
+    """Same — disabled alias for /api/ai/receipt-scan."""
+    raise HTTPException(
+        status_code=410,
+        detail="AI Receipt Scan has been removed from this app. Please enter receipt details manually.",
+    )
 
 
 app.include_router(api_router)
