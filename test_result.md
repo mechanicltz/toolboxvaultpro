@@ -112,10 +112,23 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Tool multi-value model_numbers[] / serial_numbers[] + /api/admin/migrate-model-serial"
+    - "Brands collection CRUD + automatic brand persistence on tool create/update"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
+
+backend_brands:
+  - task: "/api/brands CRUD + automatic brand save on POST/PUT /api/tools"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "PASS — 13/13 checks GREEN via /app/backend_test_brands.py against https://asset-locator-12.preview.emergentagent.com/api with admin MechanicLTZ@gmail.com / Blue321!. All 7 review scenarios verified end-to-end:\n  (1) GET /api/brands initially returns 200 + JSON array (count=0 in this run). ✓\n  (2) POST /api/brands {name:'Test Brand'} → 200 with {id:<uuid>, name:'Test Brand', created_at:'2026-05-27T...'} — all 3 required schema fields present, name echoed exactly. ✓\n  (3) POST /api/brands {name:'test brand'} (lower-case) → 200 returning the SAME id and the ORIGINAL casing 'Test Brand' preserved. Subsequent GET /api/brands confirms only ONE 'Test Brand' entry in list (no duplicate row). Case-insensitive upsert at server.py L1071-1078 working correctly. ✓\n  (4) POST /api/tools {name:'AutoBrand Tool', brand:'AutoBrand Special', cost:10, location_id:null} → 200 with brand echoed. GET /api/brands then shows 'AutoBrand Special' as a new row with its own id and created_at. The _ensure_brand_saved() call at server.py L1617 (inside create_tool) is firing correctly. ✓\n  (5) PUT /api/tools/{tool_id} {brand:'YetAnotherBrand'} → 200 with brand updated. GET /api/brands then shows 'YetAnotherBrand' as a new row. The _ensure_brand_saved() call at server.py L2351 (inside update_tool) is firing correctly. ✓\n  (6) DELETE /api/brands/{test_brand_id} → 200 {ok:true}. Follow-up GET /api/brands confirms the deleted brand is absent. Double-DELETE returns 404 'Brand not found' as expected. ✓\n  (7) Regression: POST /api/auth/login still returns 200 with JWT; GET /api/tools still 200 and contains the created AutoBrand Tool with brand='YetAnotherBrand'. ✓\n\n  Cleanup: deleted the AutoBrand Tool and the two auto-created brands (AutoBrand Special + YetAnotherBrand) at end of run. No residue.\n\n  Backend log clean — only the expected 200s/404. No 5xx, no tracebacks. The new Brand / BrandCreate Pydantic models (server.py L380-388), the three endpoints (POST /api/brands L1066-1078, GET /api/brands L1081-1084, DELETE /api/brands/{id} L1087-1092), the helper _ensure_brand_saved (L1095-1107), and the two call-sites in create_tool/update_tool all work exactly as specified."
 
 backend_model_serial_multi:
   - task: "Tool multi-value model_numbers[] / serial_numbers[] + legacy migration endpoint"

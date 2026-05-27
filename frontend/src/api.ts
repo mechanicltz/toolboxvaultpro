@@ -494,6 +494,11 @@ export const api = {
   updateTag: (id: string, data: any) => request<any>(`/tags/${id}`, { method: "PUT", body: JSON.stringify(data) }),
   deleteTag: (id: string) => request<any>(`/tags/${id}`, { method: "DELETE" }),
 
+  // Brands — typeahead source for the Brand field on tools
+  listBrands: () => request<any[]>(`/brands`),
+  createBrand: (data: any) => request<any>(`/brands`, { method: "POST", body: JSON.stringify(data) }),
+  deleteBrand: (id: string) => request<any>(`/brands/${id}`, { method: "DELETE" }),
+
   // Categories
   listCategories: () => request<any[]>(`/categories`),
   createCategory: (data: any) => request<any>(`/categories`, { method: "POST", body: JSON.stringify(data) }),

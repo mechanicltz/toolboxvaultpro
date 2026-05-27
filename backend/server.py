@@ -373,6 +373,20 @@ class CategoryCreate(BaseModel):
     name: str
 
 
+# ---------- Brands ----------
+# Brands work like Tags / Categories — each user-entered brand string is
+# saved once and re-suggested as a typeahead option when filling future
+# tools (per user 2026-05-27).
+class Brand(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    name: str
+    created_at: str = Field(default_factory=now_iso)
+
+
+class BrandCreate(BaseModel):
+    name: str
+
+
 class Borrower(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     name: str
@@ -1044,6 +1058,55 @@ async def delete_tag(tag_id: str):
     return {"ok": True}
 
 
+# ---------- Brands (typeahead source for the Brand field on tools) ----------
+# Matches the same upsert / list / delete pattern as Tags. Brands are
+# auto-created when a tool is saved with a brand that doesn't already
+# exist in this collection (see _ensure_brand_saved in update_tool /
+# create_tool — added 2026-05-27).
+@api_router.post("/brands", response_model=Brand)
+async def create_brand(payload: BrandCreate):
+    name = (payload.name or "").strip()
+    if not name:
+        raise HTTPException(400, "Name required")
+    existing = await db.brands.find_one(
+        {"name": {"$regex": f"^{re.escape(name)}$", "$options": "i"}}, {"_id": 0}
+    )
+    if existing:
+        return Brand(**existing)
+    b = Brand(name=name)
+    await db.brands.insert_one(b.dict())
+    return b
+
+
+@api_router.get("/brands", response_model=List[Brand])
+async def list_brands():
+    items = await db.brands.find({}, {"_id": 0}).sort("name", 1).to_list(2000)
+    return [Brand(**i) for i in items]
+
+
+@api_router.delete("/brands/{brand_id}")
+async def delete_brand(brand_id: str):
+    res = await db.brands.delete_one({"id": brand_id})
+    if res.deleted_count == 0:
+        raise HTTPException(404, "Brand not found")
+    return {"ok": True}
+
+
+async def _ensure_brand_saved(brand_name: Optional[str]):
+    """Idempotent upsert — call after a tool save so any new brand string
+    is immediately available in the typeahead for future tool entries."""
+    name = (brand_name or "").strip()
+    if not name:
+        return
+    existing = await db.brands.find_one(
+        {"name": {"$regex": f"^{re.escape(name)}$", "$options": "i"}}, {"_id": 0}
+    )
+    if existing:
+        return
+    b = Brand(name=name)
+    await db.brands.insert_one(b.dict())
+
+
 # ---------- Categories ----------
 @api_router.post("/categories", response_model=Category)
 async def create_category(payload: CategoryCreate):
@@ -1549,6 +1612,9 @@ async def create_tool(payload: ToolCreate, user: User = Depends(get_current_user
                 repair_cost=float(ri.get("repair_cost") or 0),
             )
             await db.warranty_claims.insert_one(claim.dict())
+    # Persist any new brand string to the brands collection so future
+    # tools see it as a typeahead suggestion (per user 2026-05-27).
+    await _ensure_brand_saved(tool.brand)
     return tool
 
 
@@ -2280,6 +2346,9 @@ async def update_tool(tool_id: str, payload: ToolUpdate):
             },
         )
 
+    # Persist any new brand string to the brands collection so future
+    # tools see it as a typeahead suggestion (per user 2026-05-27).
+    await _ensure_brand_saved(new_doc.get("brand"))
     return Tool(**new_doc)
 
 

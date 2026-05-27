@@ -35,6 +35,12 @@ export default function ToolEdit() {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [brand, setBrand] = useState("");
+  // Brand typeahead — list of all brands the user has previously saved.
+  // Loaded once on mount; the BRAND TextInput filters this list as the
+  // user types and lets them tap an existing brand to autofill (per
+  // user 2026-05-27 — same UX pattern as Tags).
+  const [brandList, setBrandList] = useState<string[]>([]);
+  const [brandFocused, setBrandFocused] = useState(false);
   const [model, setModel] = useState("");
   const [serial, setSerial] = useState("");
   // NEW multi-value fields — users can stack any number of model #s and
@@ -147,9 +153,18 @@ export default function ToolEdit() {
 
   useEffect(() => {
     (async () => {
-      const [loc, deal] = await Promise.all([api.listLocations(), api.listDealers()]);
+      const [loc, deal, brnds] = await Promise.all([
+        api.listLocations(),
+        api.listDealers(),
+        api.listBrands().catch(() => [] as any[]),
+      ]);
       setLocations(loc);
       setDealers(deal);
+      setBrandList(
+        (Array.isArray(brnds) ? brnds : [])
+          .map((b: any) => String(b?.name || "").trim())
+          .filter(Boolean)
+      );
       if (isEdit && id) {
         const t = await api.getTool(id);
         setName(t.name); setDescription(t.description || ""); setBrand(t.brand || "");
@@ -1198,17 +1213,70 @@ export default function ToolEdit() {
             lastRow
             testID="acc-brand"
           >
-          {/* BRAND now sits alone on its row. The legacy "MODEL" text input
-              (e.g. "DCD777") was removed at the user's request — every tool
-              uses the consolidated multi-value MODEL NUMBER block below
-              instead. The internal `model` field is still kept in state so
-              that existing tools imported via CSV or migrated from older
-              builds don't silently lose data on save; new tools simply
-              leave it blank. */}
+          {/* BRAND — typeahead. Filters the user's saved brands as they type
+              and lets them tap any matching chip to autofill (per user
+              2026-05-27). New brands typed here are saved to the brands
+              collection on tool-save and become future suggestions. */}
           <View>
             <Text style={styles.label}>BRAND</Text>
-            <TextInput testID="brand-input" placeholder="DeWalt" placeholderTextColor={theme.colors.textMuted}
-              value={brand} onChangeText={setBrand} style={styles.input} />
+            <TextInput
+              testID="brand-input"
+              placeholder="DeWalt"
+              placeholderTextColor={theme.colors.textMuted}
+              value={brand}
+              onChangeText={setBrand}
+              onFocus={() => setBrandFocused(true)}
+              onBlur={() => setTimeout(() => setBrandFocused(false), 150)}
+              style={styles.input}
+            />
+            {(() => {
+              const q = brand.trim().toLowerCase();
+              const matches = brandList
+                .filter((b) => {
+                  if (!brandFocused) return false;
+                  const lower = b.toLowerCase();
+                  if (q && lower === q) return false; // hide exact-match (already typed)
+                  return q ? lower.includes(q) : true;
+                })
+                .slice(0, 8);
+              if (matches.length === 0) return null;
+              return (
+                <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 8 }}>
+                  {matches.map((b) => (
+                    <TouchableOpacity
+                      key={b}
+                      testID={`brand-suggest-${b}`}
+                      onPress={() => {
+                        setBrand(b);
+                        setBrandFocused(false);
+                      }}
+                      style={{
+                        flexDirection: "row",
+                        alignItems: "center",
+                        gap: 4,
+                        borderWidth: 1,
+                        borderColor: theme.colors.accent,
+                        backgroundColor: theme.colors.accent + "15",
+                        paddingHorizontal: 10,
+                        paddingVertical: 5,
+                        borderRadius: 4,
+                      }}
+                    >
+                      <Ionicons name="pricetag" size={11} color={theme.colors.accent} />
+                      <Text
+                        style={{
+                          color: theme.colors.accent,
+                          fontSize: 11,
+                          fontWeight: "700",
+                        }}
+                      >
+                        {b}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              );
+            })()}
           </View>
           </AccordionRow>
           </View>
