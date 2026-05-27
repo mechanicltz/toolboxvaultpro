@@ -1060,7 +1060,7 @@ export default function ToolEdit() {
               style={styles.smallScanBtn}
             >
               <Ionicons name="add-circle" size={12} color={theme.colors.accent} />
-              <Text style={styles.smallScanBtnText}>ADD MODEL #</Text>
+              <Text style={styles.smallScanBtnText}>ADD</Text>
             </TouchableOpacity>
           </View>
           {modelNumbers.map((s, idx) => (
@@ -1113,7 +1113,7 @@ export default function ToolEdit() {
               style={styles.smallScanBtn}
             >
               <Ionicons name="add-circle" size={12} color={theme.colors.accent} />
-              <Text style={styles.smallScanBtnText}>ADD SERIAL #</Text>
+              <Text style={styles.smallScanBtnText}>ADD</Text>
             </TouchableOpacity>
           </View>
           {serialNumbers.map((s, idx) => (
