@@ -157,14 +157,24 @@ const styles = themedStyles((c) => ({
   // We use the theme's `glass` (soft accent-orange tint) + `glassBorder`
   // (matching orange-glow border) pair — those are theme-reactive and
   // already calibrated for dark + light modes.
-  // Expanded body — plain transparent container. The content INSIDE the
-  // body provides its own card/section styling (e.g. WarrantySection,
-  // DocumentsSection). Per user (2026-05-26): no wrapper border / glow
-  // — the inner section already looks like a Description Card.
+  // Expanded body — wraps the inner content in a nested Description Card
+  // matching the WarrantySection's internal card style: bgSecondary + soft
+  // border + radius 6 + elevation.md, with comfortable padding around
+  // the content. Per user (2026-05-26): "every accordion drop-down should
+  // look like the warranty expansion — a second details card within the
+  // parent details card, clean dividers, easy to read."
   body: {
-    backgroundColor: "transparent",
-    paddingTop: 2,
-    paddingBottom: 12,
+    backgroundColor: c.bgSecondary,
+    borderWidth: 1,
+    borderColor: c.border,
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingTop: 12,
+    paddingBottom: 14,
+    marginTop: 8,
+    marginBottom: 14,
+    marginHorizontal: 2,
+    ...(theme.elevation.lg as object),
   },
   bodyDivider: {
     // Kept as a no-op for backward compat — the body now has its own

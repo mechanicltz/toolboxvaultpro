@@ -152,7 +152,10 @@ function Row({
 }
 
 const styles = themedStyles((c) => ({
-  wrap: { paddingHorizontal: 18, paddingTop: 18 },
+  // Per user 2026-05-26: the parent AccordionRow body now provides the
+  // nested-card wrapper (bgSecondary + border + elevation). WarrantySection
+  // renders its head + rows + footer flat so we don't double-wrap.
+  wrap: { paddingHorizontal: 0, paddingTop: 0 },
   head: {
     flexDirection: "row",
     alignItems: "center",
@@ -184,16 +187,13 @@ const styles = themedStyles((c) => ({
     letterSpacing: 1.2,
   },
   card: {
-    backgroundColor: c.bgSecondary,
-    borderWidth: 1,
-    borderColor: c.border,
-    borderRadius: 6,
-    padding: 12,
-  
-    ...(theme.elevation.md as object),
+    // Flat container — parent AccordionRow body provides the card chrome.
+    backgroundColor: "transparent",
+    padding: 0,
+    marginTop: 4,
   },
   emptyCard: {
-    backgroundColor: c.bgSecondary,
+    backgroundColor: "transparent",
     borderWidth: 1,
     borderStyle: "dashed",
     borderColor: c.border,
@@ -201,8 +201,7 @@ const styles = themedStyles((c) => ({
     padding: 16,
     alignItems: "center",
     gap: 12,
-  
-    ...(theme.elevation.md as object),
+    marginTop: 6,
   },
   emptyText: {
     color: c.textMuted,
