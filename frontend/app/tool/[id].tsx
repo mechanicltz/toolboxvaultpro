@@ -1504,90 +1504,98 @@ export default function ToolDetail() {
             </View>
           </View>
 
-          {/* CLAIM INFORMATION — when this tool is broken/in-repair, show
-              the claim card FIRST (right under the photo, before anything
-              else). Per user request: this is the most important banner. */}
+          {/* CLAIM INFORMATION — converted to the "card within a card" style
+              (per user 2026-05-27, matching WarrantySection layout): outer
+              Description Card with flat header (icon + title + status badge),
+              inner inset card holding the claim data rows + action buttons.
+              Shown FIRST under the photo when the tool is broken/in-repair. */}
           {tool.needs_repair && (
-            <View style={newStyles.repairCard}>
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 8 }}>
-                <Ionicons name="build" size={18} color={theme.colors.danger} />
-                <Text style={newStyles.repairTitle}>CLAIM INFORMATION</Text>
-              </View>
-              <View style={{ marginLeft: 28 }}>
-                <Text style={newStyles.repairLine}>
-                  Status: {(tool.repair_info?.repair_status || "Repair pending").toUpperCase()}
-                </Text>
-                {!!tool.repair_info?.company_notified && (
-                  <Text style={newStyles.repairLine}>At: {tool.repair_info.company_notified}</Text>
-                )}
-                {!!tool.repair_info?.notified_at && (
-                  <Text style={newStyles.repairLine}>
-                    Notified: {formatDateUS(tool.repair_info.notified_at)}
+            <View style={newStyles.claimBox}>
+              {/* Flat header — icon + title + status badge */}
+              <View style={newStyles.claimHead}>
+                <Ionicons name="build" size={22} color={theme.colors.danger} />
+                <View style={{ flex: 1 }}>
+                  <Text style={newStyles.claimTitle}>CLAIM INFORMATION</Text>
+                  {!!tool.repair_info?.company_notified && (
+                    <Text style={newStyles.claimSub}>
+                      AT {String(tool.repair_info.company_notified).toUpperCase()}
+                    </Text>
+                  )}
+                </View>
+                <View style={[newStyles.claimBadge, { borderColor: theme.colors.danger, backgroundColor: theme.colors.danger + "15" }]}>
+                  <Text style={[newStyles.claimBadgeText, { color: theme.colors.danger }]} numberOfLines={1}>
+                    {(tool.repair_info?.repair_status || "Repair pending").toUpperCase()}
                   </Text>
+                </View>
+              </View>
+              {/* Inset inner card — data rows + action buttons (matches
+                  WarrantySection.card style exactly) */}
+              <View style={newStyles.claimCard}>
+                {!!tool.repair_info?.notified_at && (
+                  <View style={newStyles.claimRow}>
+                    <Text style={newStyles.claimRowLabel}>Notified</Text>
+                    <Text style={newStyles.claimRowValue}>{formatDateUS(tool.repair_info.notified_at)}</Text>
+                  </View>
                 )}
                 {!!tool.repair_info?.expected_completion && (
-                  <Text style={newStyles.repairLine}>
-                    Expected back: {formatDateUS(tool.repair_info.expected_completion)}
-                  </Text>
+                  <View style={newStyles.claimRow}>
+                    <Text style={newStyles.claimRowLabel}>Expected back</Text>
+                    <Text style={newStyles.claimRowValue}>{formatDateUS(tool.repair_info.expected_completion)}</Text>
+                  </View>
+                )}
+                {!!tool.repair_info?.repair_cost && Number(tool.repair_info.repair_cost) > 0 && (
+                  <View style={newStyles.claimRow}>
+                    <Text style={newStyles.claimRowLabel}>Repair cost</Text>
+                    <Text style={newStyles.claimRowValue}>${Number(tool.repair_info.repair_cost).toFixed(2)}</Text>
+                  </View>
                 )}
                 {!!tool.repair_info?.notes && (
-                  <Text style={[newStyles.repairLine, { fontStyle: "italic", marginTop: 6 }]}>
-                    {tool.repair_info.notes}
-                  </Text>
+                  <View style={newStyles.claimNotes}>
+                    <Text style={newStyles.claimRowLabel}>NOTES</Text>
+                    <Text style={newStyles.claimNotesText}>{tool.repair_info.notes}</Text>
+                  </View>
                 )}
-              </View>
-              <View style={{ flexDirection: "row", gap: 10, marginTop: 14 }}>
-                {/* Quick-contact actions — wire the dealer's email / phone
-                    straight into the OS mailer / SMS app, mirroring the
-                    same flow available on the dealer-claims page. Auto-
-                    marks the claim as "Reported" the moment the user
-                    triggers contact (see notifyDealer in this file). */}
-                <TouchableOpacity
-                  style={[
-                    newStyles.saleBtn,
-                    { backgroundColor: theme.colors.accent, flex: 1 },
-                  ]}
-                  onPress={() => notifyDealer(tool, "email")}
-                  testID="claim-email-dealer"
-                  activeOpacity={0.85}
-                >
-                  <Ionicons name="mail" size={14} color="#000" />
-                  <Text style={[newStyles.saleBtnText, { color: "#000" }]}>EMAIL</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[
-                    newStyles.saleBtn,
-                    { backgroundColor: theme.colors.accent, flex: 1 },
-                  ]}
-                  onPress={() => notifyDealer(tool, "sms")}
-                  testID="claim-text-dealer"
-                  activeOpacity={0.85}
-                >
-                  <Ionicons name="chatbubble" size={14} color="#000" />
-                  <Text style={[newStyles.saleBtnText, { color: "#000" }]}>TEXT</Text>
-                </TouchableOpacity>
-              </View>
-              <View style={{ flexDirection: "row", gap: 10, marginTop: 10 }}>
-                <TouchableOpacity
-                  style={[newStyles.saleBtn, { backgroundColor: "rgba(0,0,0,0.25)", flex: 1 }]}
-                  onPress={openRepair}
-                  testID="claim-edit"
-                >
-                  <Ionicons name="create-outline" size={14} color={theme.colors.danger} />
-                  <Text style={[newStyles.saleBtnText, { color: theme.colors.danger }]}>
-                    EDIT CLAIM
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[newStyles.saleBtn, { backgroundColor: theme.colors.success, flex: 1 }]}
-                  onPress={markRepaired}
-                  testID="claim-mark-fixed"
-                >
-                  <Ionicons name="checkmark-done" size={14} color="#000" />
-                  <Text style={[newStyles.saleBtnText, { color: "#000" }]}>
-                    MARK FIXED
-                  </Text>
-                </TouchableOpacity>
+                {/* Quick-contact + edit/fix action buttons */}
+                <View style={{ flexDirection: "row", gap: 8, marginTop: 12 }}>
+                  <TouchableOpacity
+                    style={[newStyles.claimActionBtn, { backgroundColor: theme.colors.accent, flex: 1 }]}
+                    onPress={() => notifyDealer(tool, "email")}
+                    testID="claim-email-dealer"
+                    activeOpacity={0.85}
+                  >
+                    <Ionicons name="mail" size={13} color="#000" />
+                    <Text style={[newStyles.claimActionText, { color: "#000" }]}>EMAIL</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[newStyles.claimActionBtn, { backgroundColor: theme.colors.accent, flex: 1 }]}
+                    onPress={() => notifyDealer(tool, "sms")}
+                    testID="claim-text-dealer"
+                    activeOpacity={0.85}
+                  >
+                    <Ionicons name="chatbubble" size={13} color="#000" />
+                    <Text style={[newStyles.claimActionText, { color: "#000" }]}>TEXT</Text>
+                  </TouchableOpacity>
+                </View>
+                <View style={{ flexDirection: "row", gap: 8, marginTop: 8 }}>
+                  <TouchableOpacity
+                    style={[newStyles.claimActionBtn, newStyles.claimActionBtnOutline, { flex: 1 }]}
+                    onPress={openRepair}
+                    testID="claim-edit"
+                    activeOpacity={0.85}
+                  >
+                    <Ionicons name="create-outline" size={13} color={theme.colors.danger} />
+                    <Text style={[newStyles.claimActionText, { color: theme.colors.danger }]}>EDIT CLAIM</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[newStyles.claimActionBtn, { backgroundColor: theme.colors.success, flex: 1 }]}
+                    onPress={markRepaired}
+                    testID="claim-mark-fixed"
+                    activeOpacity={0.85}
+                  >
+                    <Ionicons name="checkmark-done" size={13} color="#000" />
+                    <Text style={[newStyles.claimActionText, { color: "#000" }]}>MARK FIXED</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
             </View>
           )}
@@ -4470,6 +4478,116 @@ const newStyles = themedStyles((c) => ({
   },
 
   // ---------- REPAIR / SALE CARDS ----------
+  // CLAIM INFORMATION — "card within a card" style (per user 2026-05-27).
+  // Outer Description Card (claimBox) holds a flat header (claimHead +
+  // claimTitle + claimBadge), and an inner inset card (claimCard)
+  // identical to WarrantySection.card for the data rows + action buttons.
+  claimBox: {
+    backgroundColor: c.bgSecondary,
+    borderWidth: 1,
+    borderColor: c.danger,
+    borderRadius: 6,
+    paddingHorizontal: 14,
+    paddingTop: 14,
+    paddingBottom: 16,
+    marginTop: 10,
+    ...(theme.elevation.md as object),
+  },
+  claimHead: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    marginBottom: 4,
+  },
+  claimTitle: {
+    color: c.textPrimary,
+    fontSize: 18,
+    fontWeight: "900",
+    letterSpacing: 2,
+  },
+  claimSub: {
+    color: c.textMuted,
+    fontSize: 9,
+    fontWeight: "800",
+    letterSpacing: 1.5,
+    marginTop: 2,
+  },
+  claimBadge: {
+    borderWidth: 1.5,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 4,
+    maxWidth: 130,
+  },
+  claimBadgeText: {
+    fontSize: 9,
+    fontWeight: "900",
+    letterSpacing: 1.2,
+  },
+  // Inner inset card — same recipe as WarrantySection.card
+  claimCard: {
+    backgroundColor: c.bgSecondary,
+    borderWidth: 1,
+    borderColor: c.border,
+    borderRadius: 6,
+    padding: 12,
+    marginHorizontal: 18,
+    marginTop: 10,
+    ...(theme.elevation.md as object),
+  },
+  claimRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 7,
+    borderBottomWidth: 1,
+    borderBottomColor: c.borderSubtle,
+  },
+  claimRowLabel: {
+    color: c.textMuted,
+    fontSize: 11,
+    fontWeight: "800",
+    letterSpacing: 2,
+  },
+  claimRowValue: {
+    color: c.textPrimary,
+    fontSize: 14,
+    fontWeight: "800",
+  },
+  claimNotes: {
+    marginTop: 8,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: c.borderSubtle,
+  },
+  claimNotesText: {
+    color: c.textPrimary,
+    fontSize: 12,
+    fontStyle: "italic",
+    marginTop: 4,
+    lineHeight: 16,
+  },
+  claimActionBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingVertical: 9,
+    paddingHorizontal: 12,
+    borderRadius: 4,
+  },
+  claimActionBtnOutline: {
+    backgroundColor: "transparent",
+    borderWidth: 1.5,
+    borderColor: c.danger,
+  },
+  claimActionText: {
+    fontSize: 10,
+    fontWeight: "900",
+    letterSpacing: 1.2,
+  },
+  // Legacy styles below — kept for backward compat with any other
+  // surfaces that may still reference them.
   repairCard: {
     backgroundColor: "rgba(231, 76, 60, 0.08)",
     borderColor: c.danger,
