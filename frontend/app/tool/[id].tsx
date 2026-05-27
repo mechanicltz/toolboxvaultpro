@@ -4679,19 +4679,24 @@ const newStyles = themedStyles((c) => ({
 
   // ---------- UNIFIED NESTED DESCRIPTION CARD ----------
   // Used by every accordion expansion (Photos / Documents / Receipts /
-  // Maintenance / Consumable). Mirrors the WarrantySection.card style
-  // (the reference design from user 2026-05-27): white/bgSecondary
-  // background, soft border, big radius, large elevation shadow — a true
-  // "second details card within the first" look.
+  // Maintenance / Consumable). Matches WarrantySection.card EXACTLY
+  // (the reference design from user 2026-05-27 IMG_6427.png): inset
+  // from the left so the card visibly sits "within" the parent group
+  // card, white/bgSecondary fill, no border (shadow does the lift),
+  // strong drop shadow at bottom-right.
   nestedCard: {
     backgroundColor: c.bgSecondary,
-    borderWidth: 1,
-    borderColor: c.border,
     borderRadius: 10,
-    padding: 14,
-    marginTop: 6,
+    padding: 16,
+    marginLeft: 24,
+    marginRight: 4,
+    marginTop: 8,
     marginBottom: 6,
-    ...(theme.elevation.lg as object),
+    shadowColor: "#0F172A",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.18,
+    shadowRadius: 12,
+    elevation: 8,
   },
   attachSection: {
     paddingTop: 4,
