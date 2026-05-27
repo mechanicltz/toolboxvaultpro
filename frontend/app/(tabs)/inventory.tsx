@@ -334,7 +334,7 @@ export default function InventoryScreen() {
     }
   };
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (opts?: { forceFresh?: boolean }) => {
     // Only `search` goes to the server. All other filters (status, location,
     // tag, sort) are applied client-side via the `displayedTools` useMemo
     // below, so changing them is instant — no network round-trip.
@@ -350,16 +350,17 @@ export default function InventoryScreen() {
       // reported.
       const KEEP = Symbol("keep-previous");
       const keep = () => KEEP as unknown;
+      const ff = opts?.forceFresh ? { forceFresh: true } : undefined;
       const [t, a, w, cs, locs, tags, mu, sub] = await Promise.all([
-        api.listTools(params),
-        api.aggregate({}),
+        api.listTools(params, ff),
+        api.aggregate({}, ff),
         prefs.warranty_alerts
           ? api.warrantyAlerts(60)
           : Promise.resolve({ expiring: [], expired: [] }),
-        api.warrantyClaimsSummary().catch(keep),
+        api.warrantyClaimsSummary(ff).catch(keep),
         api.listLocations().catch(keep),
         api.listTags().catch(keep),
-        api.upcomingMaintenance(60).catch(keep),
+        api.upcomingMaintenance(60, ff).catch(keep),
         api.getSubscription().catch(keep),
       ]);
       const mItems: any[] = mu !== KEEP ? ((mu as any)?.items || []) : [];
@@ -522,7 +523,7 @@ export default function InventoryScreen() {
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await load();
+    await load({ forceFresh: true });
     setRefreshing(false);
   };
 

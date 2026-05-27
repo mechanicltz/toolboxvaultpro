@@ -1,5 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { apiCacheKey, getCached, hasCached, setCached } from "./cache";
+import { apiCacheKey, getCached, hasCached, setCached, getCachedAt, clearCached } from "./cache";
 import { isOnline, OfflineError } from "./network";
 import { showOfflineAlert } from "./offlineGuard";
 
@@ -59,6 +59,8 @@ const REQUEST_TIMEOUT_MS = 60_000;
 // generous headroom without letting truly-broken requests hang forever.
 const UPLOAD_TIMEOUT_MS = 120_000;
 const _inFlight = new Set<AbortController>();
+// PERF (2026-06): in-flight GET dedupe — see request() below.
+const _inFlightGetByKey = new Map<string, Promise<any>>();
 
 /**
  * Abort every pending fetch right now. Safe to call multiple times.
@@ -176,7 +178,49 @@ function isNetworkError(err: any): boolean {
   );
 }
 
-async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
+async function request<T>(
+  path: string,
+  options: (RequestInit & { freshFor?: number; forceFresh?: boolean }) = {},
+): Promise<T> {
+  const method = (options.method || "GET").toUpperCase();
+
+  // -----------------------------------------------------------------
+  // PERF (2026-06): Stale-While-Revalidate + in-flight dedupe for GETs.
+  // (See _doRequest for the actual network logic.) Pull-to-refresh /
+  // explicit reloads can bypass the freshness check by passing
+  // `forceFresh: true`.
+  // -----------------------------------------------------------------
+  const DEFAULT_FRESH_MS = 5000;
+  const freshFor = options.freshFor ?? (method === "GET" ? DEFAULT_FRESH_MS : 0);
+  const forceFresh = !!options.forceFresh;
+
+  if (method === "GET" && shouldCacheGet(path) && !forceFresh) {
+    const key = apiCacheKey(path);
+    if (freshFor > 0 && hasCached(key)) {
+      const ts = getCachedAt(key) || 0;
+      if (Date.now() - ts < freshFor) {
+        return getCached(key, undefined as any);
+      }
+    }
+    const pending = _inFlightGetByKey.get(key);
+    if (pending) return pending as Promise<T>;
+    const p = _doRequest<T>(path, options);
+    _inFlightGetByKey.set(key, p);
+    p.finally(() => {
+      // Only remove if still us — guards against races where a parallel
+      // pull-to-refresh registered its own newer promise under the same key.
+      if (_inFlightGetByKey.get(key) === p) _inFlightGetByKey.delete(key);
+    });
+    return p;
+  }
+
+  return _doRequest<T>(path, options);
+}
+
+async function _doRequest<T>(
+  path: string,
+  options: (RequestInit & { freshFor?: number; forceFresh?: boolean }) = {},
+): Promise<T> {
   const method = (options.method || "GET").toUpperCase();
   const mutation = isMutation(method);
 
@@ -354,6 +398,13 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 
 // Best-effort: when a mutation hits "/tools/abc/checkout" we want to bust
 // "/tools" and "/stats" so the next read shows fresh data immediately.
+//
+// PERF (2026-06): previously this function was a no-op (it just iterated
+// without clearing anything, relying on the next focus to refetch). Now
+// that requests use a 5 s freshness window, the no-op meant mutations
+// might not show up for 5 s. We actively clear the relevant caches AND
+// invalidate any in-flight dedupe so the next read goes straight to
+// the network with a fresh result.
 function invalidateRelatedCaches(path: string) {
   // Crudely inspect the first segment of the path.
   // e.g. "/tools/abc/maintenance/x" → root segment "tools".
@@ -362,20 +413,12 @@ function invalidateRelatedCaches(path: string) {
   // Always blow away common aggregate endpoints since they depend on lots of things.
   const toClear: string[] = [
     apiCacheKey(`/${seg}`),
-    apiCacheKey(`/${seg}/`),
     apiCacheKey(`/stats`),
     apiCacheKey(`/aggregate`),
   ];
-  // We don't have an easy way to enumerate cached query-string variants
-  // here; that's OK because the screens will refetch on focus and the
-  // cache will be repopulated. The cleared base list is the important one.
   for (const k of toClear) {
-    if (hasCached(k)) {
-      // Setting to a defensive empty value would mislead screens; we
-      // simply re-mark by calling setCached with the existing value to
-      // refresh its meta timestamp. Real refresh comes from the next fetch.
-      // (Intentional no-op — kept for clarity; real screens use stale-while-revalidate.)
-    }
+    clearCached(k);
+    _inFlightGetByKey.delete(k);
   }
 }
 
@@ -472,7 +515,8 @@ export const api = {
     }),
 
   // Tools
-  listTools: (params?: any) => request<any[]>(`/tools${qs(params)}`),
+  listTools: (params?: any, opts?: { forceFresh?: boolean }) =>
+    request<any[]>(`/tools${qs(params)}`, opts as any),
   getTool: (id: string) => request<any>(`/tools/${id}`),
   createTool: (data: any) => request<any>(`/tools`, { method: "POST", body: JSON.stringify(data) }),
   updateTool: (id: string, data: any) => request<any>(`/tools/${id}`, { method: "PUT", body: JSON.stringify(data) }),
@@ -513,7 +557,8 @@ export const api = {
   borrowerHistory: (id: string) => request<any>(`/borrowers/${id}/history`),
 
   // Dealers
-  listDealers: () => request<any[]>(`/dealers`),
+  listDealers: (opts?: { forceFresh?: boolean }) =>
+    request<any[]>(`/dealers`, opts as any),
   getDealer: (id: string) => request<any>(`/dealers/${id}`),
   createDealer: (data: any) => request<any>(`/dealers`, { method: "POST", body: JSON.stringify(data) }),
   updateDealer: (id: string, data: any) => request<any>(`/dealers/${id}`, { method: "PUT", body: JSON.stringify(data) }),
@@ -524,23 +569,30 @@ export const api = {
   setCurrentAgent: (dealerId: string, agentId: string) => request<any>(`/dealers/${dealerId}/current-agent/${agentId}`, { method: "POST" }),
 
   // Stats / Aggregate / Warranty
-  getStats: () => request<any>(`/stats`),
-  aggregate: (params?: any) => request<any>(`/aggregate${qs(params)}`),
+  getStats: (opts?: { forceFresh?: boolean }) =>
+    request<any>(`/stats`, opts as any),
+  aggregate: (params?: any, opts?: { forceFresh?: boolean }) =>
+    request<any>(`/aggregate${qs(params)}`, opts as any),
   warrantyAlerts: (days = 60) => request<any>(`/warranty-alerts?days=${days}`),
 
   // Warranty claims
-  listWarrantyClaims: (params?: { dealer_id?: string; tool_id?: string; status?: string; archived?: boolean }) =>
-    request<any[]>(`/warranty-claims${qs(params)}`),
+  listWarrantyClaims: (
+    params?: { dealer_id?: string; tool_id?: string; status?: string; archived?: boolean },
+    opts?: { forceFresh?: boolean },
+  ) => request<any[]>(`/warranty-claims${qs(params)}`, opts as any),
   getWarrantyClaim: (id: string) => request<any>(`/warranty-claims/${id}`),
-  warrantyClaimsSummary: () => request<any>(`/warranty-claims/summary`),
+  warrantyClaimsSummary: (opts?: { forceFresh?: boolean }) =>
+    request<any>(`/warranty-claims/summary`, opts as any),
   updateWarrantyClaim: (id: string, data: any) =>
     request<any>(`/warranty-claims/${id}`, { method: "PUT", body: JSON.stringify(data) }),
   deleteWarrantyClaim: (id: string) =>
     request<any>(`/warranty-claims/${id}`, { method: "DELETE" }),
 
   // Wishlist
-  listWishlist: (params?: { purchased?: boolean }) =>
-    request<any[]>(`/wishlist${qs(params)}`),
+  listWishlist: (
+    params?: { purchased?: boolean },
+    opts?: { forceFresh?: boolean },
+  ) => request<any[]>(`/wishlist${qs(params)}`, opts as any),
   createWishlist: (data: any) =>
     request<any>(`/wishlist`, { method: "POST", body: JSON.stringify(data) }),
   updateWishlist: (id: string, data: any) =>
@@ -565,8 +617,8 @@ export const api = {
     request<any>(`/tools/${toolId}/maintenance/${schId}`, { method: "DELETE" }),
   logService: (toolId: string, schId: string, data: any) =>
     request<any>(`/tools/${toolId}/maintenance/${schId}/service`, { method: "POST", body: JSON.stringify(data) }),
-  upcomingMaintenance: (days = 30) =>
-    request<any>(`/maintenance/upcoming?days=${days}`),
+  upcomingMaintenance: (days = 30, opts?: { forceFresh?: boolean }) =>
+    request<any>(`/maintenance/upcoming?days=${days}`, opts as any),
 
   // Theft / Loss
   reportLost: (toolId: string, data: any) =>

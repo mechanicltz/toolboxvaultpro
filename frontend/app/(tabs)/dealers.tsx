@@ -45,8 +45,12 @@ export default function DealersScreen() {
 
   const atDealerLimit = false;
 
-  const load = useCallback(async () => {
-    const [d, t] = await Promise.all([api.listDealers(), api.listTools()]);
+  const load = useCallback(async (opts?: { forceFresh?: boolean }) => {
+    const ff = opts?.forceFresh ? { forceFresh: true } : undefined;
+    const [d, t] = await Promise.all([
+      api.listDealers(ff),
+      api.listTools(undefined, ff),
+    ]);
     setDealers(setCached("dealers", d));
     setTools(setCached("tools", t));
     // Re-sync local route notifications whenever the dealer list changes

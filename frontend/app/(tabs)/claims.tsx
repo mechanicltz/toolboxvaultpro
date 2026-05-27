@@ -34,13 +34,14 @@ export default function ClaimsScreen() {
   const [search, setSearch] = useState("");
   const [archivedClaims, setArchivedClaims] = useState<any[]>(() => getCached("claims_archived", []));
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (opts?: { forceFresh?: boolean }) => {
     try {
+      const ff = opts?.forceFresh ? { forceFresh: true } : undefined;
       const [d, t, s, archived] = await Promise.all([
-        api.listDealers(),
-        api.listTools({ needs_repair: true }),
-        api.warrantyClaimsSummary().catch(() => ({ totals: {}, dealers: [] })),
-        api.listWarrantyClaims({ archived: true }).catch(() => []),
+        api.listDealers(ff),
+        api.listTools({ needs_repair: true }, ff),
+        api.warrantyClaimsSummary(ff).catch(() => ({ totals: {}, dealers: [] })),
+        api.listWarrantyClaims({ archived: true }, ff).catch(() => []),
       ]);
       setDealers(setCached("dealers", d || []));
       setTools(setCached("claims_tools", t || []));
@@ -63,7 +64,7 @@ export default function ClaimsScreen() {
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await load();
+    await load({ forceFresh: true });
     setRefreshing(false);
   };
 

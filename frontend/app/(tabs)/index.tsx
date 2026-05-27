@@ -77,7 +77,7 @@ export default function HomeScreen() {
 
   void stats;
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (opts?: { forceFresh?: boolean }) => {
     try {
       // ---------------------------------------------------------------
       // PRESERVE-ON-ERROR PATTERN — the previous version of this code
@@ -98,18 +98,21 @@ export default function HomeScreen() {
       // ---------------------------------------------------------------
       const KEEP = Symbol("keep-previous");
       const keep = () => KEEP as unknown;
-      const [s, a, t, w, d, m, c] = await Promise.all([
-        api.getStats().catch(keep),
-        api.aggregate({}).catch(keep),
-        api.listTools({}).catch(keep),
-        api.listWishlist().catch(keep),
-        api.listDealers().catch(keep),
-        api.upcomingMaintenance(30).catch(keep),
-        api.warrantyClaimsSummary().catch(keep),
+      const ff = opts?.forceFresh ? { forceFresh: true } : undefined;
+      // PERF (2026-06): dropped api.listTools() — home now derives all
+      // tool counts/totals from /aggregate which returns counts only
+      // (no full tool docs). Saves the biggest payload on home load.
+      // The inventory tab still fetches tools itself when visited.
+      const [s, a, w, d, m, c] = await Promise.all([
+        api.getStats(ff).catch(keep),
+        api.aggregate({}, ff).catch(keep),
+        api.listWishlist(undefined, ff).catch(keep),
+        api.listDealers(ff).catch(keep),
+        api.upcomingMaintenance(30, ff).catch(keep),
+        api.warrantyClaimsSummary(ff).catch(keep),
       ]);
       if (s !== KEEP) setStats(setCached("home_stats", s));
       if (a !== KEEP) setAgg(setCached("home_agg", a));
-      if (t !== KEEP) setTools(setCached("tools", t as any[]));
       if (w !== KEEP) setWishlist(setCached("wishlist", w as any[]));
       if (d !== KEEP) setDealers(setCached("dealers", d as any[]));
       if (m !== KEEP) setMnt(setCached("home_mnt", m));
@@ -148,15 +151,18 @@ export default function HomeScreen() {
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await load();
+    await load({ forceFresh: true });
     setRefreshing(false);
   };
 
   // ---------- Derived metrics ----------
-  const totalItems = tools.length;
-  const checkedOut = tools.filter((x) => x.is_checked_out).length;
-  const forSaleCount = tools.filter((x) => x.for_sale && !x.is_sold).length;
-  const lost = tools.filter((x) => x?.lost_status?.is_lost).length;
+  // PERF (2026-06): all counts now come from /aggregate's $facet results.
+  // The `tools` state is kept for back-compat (other code paths may still
+  // hydrate it) but is no longer fetched on home load.
+  const totalItems = Number(agg?.count ?? tools.length) || 0;
+  const checkedOut = Number(agg?.checked_out ?? tools.filter((x) => x.is_checked_out).length) || 0;
+  const forSaleCount = Number(agg?.for_sale ?? tools.filter((x) => x.for_sale && !x.is_sold).length) || 0;
+  const lost = Number(agg?.lost ?? tools.filter((x) => x?.lost_status?.is_lost).length) || 0;
   const aggTotal = Number(agg?.total_value);
   const totalInvested = Number.isFinite(aggTotal)
     ? aggTotal
