@@ -1225,7 +1225,7 @@ export default function ToolEdit() {
           <AccordionRow
             label="CATEGORY"
             icon="folder"
-            summary={(category || "—") as any}
+            summary={(category?.name || "—") as any}
             open={openKey === "category"}
             onToggle={() => toggle("category")}
             testID="acc-category"
@@ -1236,7 +1236,7 @@ export default function ToolEdit() {
           <AccordionRow
             label="TAGS"
             icon="pricetags"
-            summary={(tags?.length ? tags.join(", ") : "—") as any}
+            summary={(tags?.length ? tags.map((t) => t.name).join(", ") : "—") as any}
             open={openKey === "tags"}
             onToggle={() => toggle("tags")}
             testID="acc-tags"
@@ -1474,7 +1474,7 @@ export default function ToolEdit() {
           <AccordionRow
             label="WARRANTY"
             icon="shield-checkmark"
-            summary={(hasWarranty ? (warranty.warranty_end || "Active") : "No") as any}
+            summary={(hasWarranty ? String(warranty.warranty_end || "Active") : "No") as any}
             open={openKey === "warranty"}
             onToggle={() => toggle("warranty")}
             testID="acc-warranty"
