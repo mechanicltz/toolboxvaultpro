@@ -206,11 +206,17 @@ async function request<T>(
     if (pending) return pending as Promise<T>;
     const p = _doRequest<T>(path, options);
     _inFlightGetByKey.set(key, p);
-    p.finally(() => {
-      // Only remove if still us — guards against races where a parallel
-      // pull-to-refresh registered its own newer promise under the same key.
+    // IMPORTANT: must NOT create a side-promise that re-throws — otherwise
+    // when `p` rejects (e.g. /admin/user-stats → 403 "Admin access
+    // required" for non-admin users, which the home screen catches),
+    // the side-promise's rejection is unhandled and shows up as the
+    // dev LogBox redbox. Use .then(cb, cb) which runs the cleanup on
+    // both fulfillment and rejection but does NOT re-throw, so only the
+    // caller's `await p` observes the rejection.
+    const cleanup = () => {
       if (_inFlightGetByKey.get(key) === p) _inFlightGetByKey.delete(key);
-    });
+    };
+    p.then(cleanup, cleanup);
     return p;
   }
 
