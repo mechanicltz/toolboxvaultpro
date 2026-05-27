@@ -1941,8 +1941,8 @@ export default function ToolDetail() {
                                     style={newStyles.attachAddBtn}
                                     onPress={promptAddPhoto}
                                   >
-                                    <Ionicons name="camera" size={14} color="#000" />
-                                    <Text style={newStyles.attachAddBtnText}>ADD</Text>
+                                    <Ionicons name="add-circle" size={12} color={theme.colors.accent} />
+                                    <Text style={newStyles.attachAddBtnText}>ADD PHOTO</Text>
                                   </TouchableOpacity>
                                 </View>
                                 {photos.length === 0 ? (
@@ -4699,35 +4699,40 @@ const newStyles = themedStyles((c) => ({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: 12,
+    marginBottom: 10,
   },
   attachSectionLabel: {
-    color: c.textPrimary,
-    fontSize: 10,
+    color: c.textMuted,
+    fontSize: 9,
     fontWeight: "900",
     letterSpacing: 2,
   },
+  // Orange OUTLINE add button matching user's IMG_6430.png reference
+  // (per 2026-05-27): borderWidth + accent color, transparent fill,
+  // small + icon + uppercase text — identical to edit.tsx smallScanBtn.
   attachAddBtn: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 5,
-    paddingVertical: 7,
-    paddingHorizontal: 12,
-    borderRadius: 6,
-    backgroundColor: c.accent,
+    gap: 6,
+    borderWidth: 1,
+    borderColor: c.accent,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 4,
+    backgroundColor: "transparent",
   },
   attachAddBtnText: {
-    color: "#000",
-    fontSize: 10,
+    color: c.accent,
+    fontSize: 8,
     fontWeight: "900",
     letterSpacing: 1.5,
   },
   attachEmpty: {
     color: c.textMuted,
-    fontSize: 11,
+    fontSize: 10,
     fontStyle: "italic",
     paddingVertical: 4,
-    lineHeight: 16,
+    lineHeight: 14,
   },
   // ---------- CONSUMABLE accordion content ----------
   consumableBadge: {

@@ -1262,27 +1262,44 @@ export default function ToolEdit() {
             onToggle={() => toggle("photos")}
             testID="acc-photos"
           >
-          {/* Photos */}
-          <Text style={styles.label}>PHOTOS ({photos.length})</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 8 }}>
-            {photos.map((p, i) => (
-              <View key={i} style={styles.photoWrap}>
-                <Image source={{ uri: p }} style={styles.photo} />
-                <TouchableOpacity testID={`remove-photo-${i}`} style={styles.photoRemove}
-                  onPress={() => setPhotos((arr) => arr.filter((_, idx) => idx !== i))}>
-                  <Ionicons name="close" size={16} color={theme.colors.textPrimary} />
-                </TouchableOpacity>
-              </View>
-            ))}
-            <TouchableOpacity testID="add-photo-camera-btn" style={styles.photoAdd} onPress={() => pickPhoto(true)}>
-              <Ionicons name="camera" size={28} color={theme.colors.accent} />
-              <Text style={styles.photoAddText}>CAMERA</Text>
+          {/* Photos — matches Receipts layout per user 2026-05-27:
+              header row (title + outline ADD button) + thumbs OR helper text. */}
+          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+            <Text style={styles.label}>PHOTOS ({photos.length})</Text>
+            <TouchableOpacity
+              testID="add-photo-btn"
+              onPress={() => pickPhoto(false)}
+              style={styles.smallScanBtn}
+            >
+              <Ionicons name="add-circle" size={12} color={theme.colors.accent} />
+              <Text style={styles.smallScanBtnText}>ADD PHOTO</Text>
             </TouchableOpacity>
-            <TouchableOpacity testID="add-photo-gallery-btn" style={styles.photoAdd} onPress={() => pickPhoto(false)}>
-              <Ionicons name="images" size={28} color={theme.colors.accent} />
-              <Text style={styles.photoAddText}>GALLERY</Text>
-            </TouchableOpacity>
-          </ScrollView>
+          </View>
+          {photos.length > 0 ? (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 8 }}>
+              {photos.map((p, i) => (
+                <View key={i} style={styles.photoWrap}>
+                  <Image source={{ uri: p }} style={styles.photo} />
+                  <TouchableOpacity testID={`remove-photo-${i}`} style={styles.photoRemove}
+                    onPress={() => setPhotos((arr) => arr.filter((_, idx) => idx !== i))}>
+                    <Ionicons name="close" size={16} color={theme.colors.textPrimary} />
+                  </TouchableOpacity>
+                </View>
+              ))}
+              <TouchableOpacity testID="add-photo-camera-btn" style={styles.photoAdd} onPress={() => pickPhoto(true)}>
+                <Ionicons name="camera" size={22} color={theme.colors.accent} />
+                <Text style={styles.photoAddText}>CAMERA</Text>
+              </TouchableOpacity>
+              <TouchableOpacity testID="add-photo-gallery-btn" style={styles.photoAdd} onPress={() => pickPhoto(false)}>
+                <Ionicons name="images" size={22} color={theme.colors.accent} />
+                <Text style={styles.photoAddText}>GALLERY</Text>
+              </TouchableOpacity>
+            </ScrollView>
+          ) : (
+            <Text style={styles.helper}>
+              Attach product photos, condition shots, or reference images.
+            </Text>
+          )}
           </AccordionRow>
           <AccordionRow
             label="DOCUMENTS"
@@ -1292,21 +1309,36 @@ export default function ToolEdit() {
             onToggle={() => toggle("documents")}
             testID="acc-documents"
           >
-          {/* Documents */}
-          <Text style={styles.label}>DOCUMENTS ({documents.length})</Text>
-          {documents.map((d, i) => (
-            <BevelCard key={i} style={styles.docRow}>
-              <Ionicons name="document" size={20} color={theme.colors.accent} />
-              <Text style={styles.docName} numberOfLines={1}>{d.name}</Text>
-              <TouchableOpacity onPress={() => setDocuments((arr) => arr.filter((_, idx) => idx !== i))}>
-                <Ionicons name="close" size={20} color={theme.colors.danger} />
-              </TouchableOpacity>
-            </BevelCard>
-          ))}
-          <TouchableOpacity testID="add-doc-btn" style={styles.docAdd} onPress={pickDocument}>
-            <Ionicons name="attach" size={20} color={theme.colors.accent} />
-            <Text style={styles.docAddText}>ATTACH DOCUMENT</Text>
-          </TouchableOpacity>
+          {/* Documents — matches Receipts layout per user 2026-05-27:
+              header row (title + outline ADD button) + list OR helper text. */}
+          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+            <Text style={styles.label}>DOCUMENTS ({documents.length})</Text>
+            <TouchableOpacity
+              testID="add-doc-btn"
+              onPress={pickDocument}
+              style={styles.smallScanBtn}
+            >
+              <Ionicons name="add-circle" size={12} color={theme.colors.accent} />
+              <Text style={styles.smallScanBtnText}>ADD DOCUMENT</Text>
+            </TouchableOpacity>
+          </View>
+          {documents.length > 0 ? (
+            <>
+              {documents.map((d, i) => (
+                <BevelCard key={i} style={styles.docRow}>
+                  <Ionicons name="document" size={20} color={theme.colors.accent} />
+                  <Text style={styles.docName} numberOfLines={1}>{d.name}</Text>
+                  <TouchableOpacity onPress={() => setDocuments((arr) => arr.filter((_, idx) => idx !== i))}>
+                    <Ionicons name="close" size={20} color={theme.colors.danger} />
+                  </TouchableOpacity>
+                </BevelCard>
+              ))}
+            </>
+          ) : (
+            <Text style={styles.helper}>
+              Attach manuals, warranty papers, or any PDF/file for this tool.
+            </Text>
+          )}
           </AccordionRow>
           <AccordionRow
             label="RECEIPTS"

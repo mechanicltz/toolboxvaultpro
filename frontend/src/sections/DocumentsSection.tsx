@@ -574,11 +574,11 @@ export function DocumentsSection({
           disabled={busy}
         >
           {busy ? (
-            <ActivityIndicator color="#000" size="small" />
+            <ActivityIndicator color={theme.colors.accent} size="small" />
           ) : (
             <>
-              <Ionicons name="cloud-upload" size={14} color="#000" />
-              <Text style={styles.addBtnText}>UPLOAD</Text>
+              <Ionicons name="add-circle" size={12} color={theme.colors.accent} />
+              <Text style={styles.addBtnText}>ADD DOCUMENT</Text>
             </>
           )}
         </TouchableOpacity>
@@ -748,26 +748,32 @@ const styles = themedStyles((c) => ({
     fontWeight: "900",
     letterSpacing: 2,
   },
+  // Outline orange ADD button — matches user IMG_6430.png reference
+  // (2026-05-27): borderColor accent, transparent fill, orange + icon
+  // + uppercase orange text.
   addBtn: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 5,
-    backgroundColor: c.accent,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
+    gap: 6,
+    borderWidth: 1,
+    borderColor: c.accent,
+    backgroundColor: "transparent",
+    paddingHorizontal: 10,
+    paddingVertical: 6,
     borderRadius: 4,
   },
   addBtnText: {
-    color: "#000",
+    color: c.accent,
     fontWeight: "900",
     fontSize: 8,
     letterSpacing: 1.5,
   },
   empty: {
     color: c.textMuted,
-    fontSize: 9,
+    fontSize: 10,
     fontStyle: "italic",
-    paddingVertical: 8,
+    paddingVertical: 4,
+    lineHeight: 14,
   },
   docRow: {
     flexDirection: "row",

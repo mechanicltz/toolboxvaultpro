@@ -53,13 +53,12 @@ export function ReceiptsSection({ receipts, onAdd }: Props) {
             onPress={onAdd}
             activeOpacity={0.8}
           >
-            <Ionicons name="receipt-outline" size={14} color="#000" />
-            <Text style={styles.addBtnText}>ADD</Text>
+            <Ionicons name="add-circle" size={12} color={theme.colors.accent} />
+            <Text style={styles.addBtnText}>ADD RECEIPT</Text>
           </TouchableOpacity>
         </View>
         <Text style={styles.empty}>
-          No receipts yet. Snap a photo of paper receipts or attach order
-          confirmations for warranty + insurance proof.
+          Attach receipt photos for insurance, warranty claims, and PDF reports.
         </Text>
       </View>
     );
@@ -77,8 +76,8 @@ export function ReceiptsSection({ receipts, onAdd }: Props) {
               onPress={onAdd}
               activeOpacity={0.8}
             >
-              <Ionicons name="receipt-outline" size={14} color="#000" />
-              <Text style={styles.addBtnText}>ADD</Text>
+              <Ionicons name="add-circle" size={12} color={theme.colors.accent} />
+              <Text style={styles.addBtnText}>ADD RECEIPT</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -197,28 +196,31 @@ const styles = themedStyles((c) => ({
     fontWeight: "900",
     letterSpacing: 1.5,
   },
-  // Match the DocumentsSection upload-button shape so Photos / Documents /
-  // Receipts attachment sections all look like the same component family.
+  // Match edit.tsx smallScanBtn — orange OUTLINE button + accent text +
+  // small + icon (per user 2026-05-27 IMG_6430.png reference).
   addBtn: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
-    paddingVertical: 6,
+    gap: 6,
+    borderWidth: 1,
+    borderColor: c.accent,
     paddingHorizontal: 10,
-    borderRadius: 6,
-    backgroundColor: c.accent,
+    paddingVertical: 6,
+    borderRadius: 4,
+    backgroundColor: "transparent",
   },
   addBtnText: {
-    color: "#000",
-    fontSize: 10,
+    color: c.accent,
+    fontSize: 8,
     fontWeight: "900",
     letterSpacing: 1.5,
   },
   empty: {
     color: c.textMuted,
-    fontSize: 11,
+    fontSize: 10,
     fontStyle: "italic",
-    paddingVertical: 8,
+    paddingVertical: 4,
+    lineHeight: 14,
   },
   thumbStrip: {
     gap: 8,
