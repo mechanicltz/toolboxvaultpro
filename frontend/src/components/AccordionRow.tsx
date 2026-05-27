@@ -90,7 +90,7 @@ export function AccordionRow({
       </TouchableOpacity>
 
       {open && (
-        <View style={[styles.body, !lastRow && styles.bodyDivider]}>
+        <View style={styles.body}>
           {children}
         </View>
       )}
@@ -149,14 +149,29 @@ const styles = themedStyles((c) => ({
     textAlign: "right",
     flexShrink: 1,
   },
-  // Expanded body — sits between the header and the next row.
+  // Expanded body — wrapped in a subtly accent-tinted inset panel so the
+  // active input area visually pops out of the surrounding Description
+  // Card. Per user (2026-05-26): "give the expanded area a slight bevelled
+  // edge so it doesn't blend in".
+  //
+  // We use the theme's `glass` (soft accent-orange tint) + `glassBorder`
+  // (matching orange-glow border) pair — those are theme-reactive and
+  // already calibrated for dark + light modes.
   body: {
+    backgroundColor: c.glass,
+    borderWidth: 1.5,
+    borderColor: c.accent,
+    borderRadius: 6,
+    paddingHorizontal: 10,
+    paddingTop: 8,
     paddingBottom: 12,
-    paddingTop: 2,
+    marginTop: 4,
+    marginBottom: 10,
+    ...(theme.elevation.input as object),
   },
   bodyDivider: {
-    borderBottomWidth: 1,
-    borderBottomColor: c.borderSubtle,
+    // Kept as a no-op for backward compat — the body now has its own
+    // border on all sides, no separate divider needed.
   },
 }));
 
