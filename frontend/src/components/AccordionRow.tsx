@@ -163,23 +163,22 @@ const styles = themedStyles((c) => ({
   // the content. Per user (2026-05-26): "every accordion drop-down should
   // look like the warranty expansion — a second details card within the
   // parent details card, clean dividers, easy to read."
-  // Expanded body — inset nested Description Card matching the user's
-  // 2026-05-27 reference (IMG_6427.png): offset from the left so the card
-  // visibly sits "within" the parent group card, no border (the strong
-  // drop shadow at bottom-right does the lifting), bgSecondary fill.
+  // Expanded body — RESTORED to the EXACT same card style as the
+  // WarrantySection's card from commit dccd9b3e (the styling that
+  // produced the user's IMG_6427.png reference). The 18px horizontal
+  // margin gives the inset look. Per user 2026-05-27: "make them
+  // all look like this, not something like this, make them look
+  // like this".
   body: {
     backgroundColor: c.bgSecondary,
-    borderRadius: 10,
-    padding: 16,
-    marginLeft: 24,
-    marginRight: 4,
-    marginTop: 8,
-    marginBottom: 10,
-    shadowColor: "#0F172A",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.18,
-    shadowRadius: 12,
-    elevation: 8,
+    borderWidth: 1,
+    borderColor: c.border,
+    borderRadius: 6,
+    padding: 12,
+    marginHorizontal: 18,
+    marginTop: 4,
+    marginBottom: 12,
+    ...(theme.elevation.md as object),
   },
   bodyDivider: {
     // Kept as a no-op for backward compat — the body now has its own
