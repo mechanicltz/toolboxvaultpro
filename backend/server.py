@@ -34,8 +34,6 @@ mongo_url = os.environ['MONGO_URL']
 client = AsyncIOMotorClient(mongo_url)
 real_db = client[os.environ['DB_NAME']]
 
-EMERGENT_LLM_KEY = os.environ.get('EMERGENT_LLM_KEY', '')
-
 # ---------- Per-request user context ----------
 current_user_id_var: ContextVar[Optional[str]] = ContextVar("current_user_id", default=None)
 
@@ -3916,38 +3914,11 @@ async def delete_account(
 
 
 # ---------------------------------------------------------------------------
-# AI RECEIPT SCANNER
+# (AI Receipt Scanner section — removed 2026-05-27)
+# All scanner endpoints, request/response models, and OCR plumbing have been
+# deleted per user request. Only the `_normalize_date` helper is retained
+# because other parts of the codebase still call it for date input cleanup.
 # ---------------------------------------------------------------------------
-class ReceiptScanRequest(BaseModel):
-    image_base64: str  # raw base64 (no data: prefix needed; we strip it if present)
-
-
-class ReceiptItem(BaseModel):
-    name: Optional[str] = ""
-    brand: Optional[str] = ""
-    model: Optional[str] = ""
-    serial_number: Optional[str] = ""
-    cost: Optional[float] = 0.0
-    quantity: Optional[int] = 1
-    description: Optional[str] = ""
-
-
-class ReceiptScanResponse(BaseModel):
-    # Receipt-level fields (apply to ALL items on the receipt)
-    dealer: Optional[str] = ""
-    sold_by: Optional[str] = ""        # Sales rep / agent who sold (e.g. "Sold By: Wade Miller")
-    purchase_date: Optional[str] = ""  # ISO YYYY-MM-DD (normalised)
-    raw_text: Optional[str] = ""       # Full OCR transcription (so user can copy missing values)
-    items: List[ReceiptItem] = []
-    # Backward-compat top-level fields = mirror of items[0] when present
-    name: Optional[str] = ""
-    brand: Optional[str] = ""
-    model: Optional[str] = ""
-    serial_number: Optional[str] = ""
-    cost: Optional[float] = 0.0
-    quantity: Optional[int] = 1
-    description: Optional[str] = ""
-    raw: Optional[Dict[str, Any]] = None
 
 
 def _normalize_date(s: str) -> str:
@@ -3987,26 +3958,6 @@ def _normalize_date(s: str) -> str:
         if 1 <= mo <= 12 and 1 <= d <= 31:
             return f"{y:04d}-{mo:02d}-{d:02d}"
     return ""
-
-
-@api_router.post("/ai/receipt-scan")
-async def ai_receipt_scan_disabled(user: User = Depends(get_current_user)):
-    """AI receipt-scan has been REMOVED from the product (per user
-    decision 2026-05-27). The endpoint now returns 410 Gone so any old
-    cached clients fail loudly instead of silently hitting OpenAI."""
-    raise HTTPException(
-        status_code=410,
-        detail="AI Receipt Scan has been removed from this app. Please enter receipt details manually.",
-    )
-
-
-@api_router.post("/ocr/receipt")
-async def ocr_receipt_disabled(user: User = Depends(get_current_user)):
-    """Same — disabled alias for /api/ai/receipt-scan."""
-    raise HTTPException(
-        status_code=410,
-        detail="AI Receipt Scan has been removed from this app. Please enter receipt details manually.",
-    )
 
 
 app.include_router(api_router)

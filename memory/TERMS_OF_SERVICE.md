@@ -21,7 +21,6 @@ Toolbox Vault is a personal mobile inventory tracker that lets users:
 - Track checkouts and loans to other people
 - Record dealer accounts, payments, and warranties
 - Generate PDF reports for insurance, sales, and personal records
-- Scan receipts using AI-assisted OCR
 - Store photos of items, receipts, and documents
 
 ## 3. Eligibility
@@ -47,8 +46,8 @@ with related dealer, warranty, and checkout data.
 
 ### 5.2 Pro Subscription
 
-A Pro subscription unlocks unlimited tools, advanced PDF reports, AI receipt
-scanning at scale, and other premium features. Subscriptions are offered as:
+A Pro subscription unlocks unlimited tools, advanced PDF reports, and other
+premium features. Subscriptions are offered as:
 
 - **Monthly:** Auto-renewing each month
 - **Yearly:** Auto-renewing each year at a discount
@@ -109,27 +108,20 @@ the property of Toolbox Vault and protected by copyright, trademark, and
 other intellectual property laws. You may not copy, modify, distribute, or
 sell any part of the App without our written permission.
 
-## 9. AI Features Disclaimer
-
-The App uses AI-assisted features (receipt scanning, etc.) to help speed
-up data entry. **AI suggestions are not guaranteed to be accurate** — you
-are responsible for reviewing and correcting any AI-generated data before
-saving it.
-
-## 10. Data Backup
+## 9. Data Backup
 
 We make reasonable efforts to back up your data, but we are not responsible
 for any loss of data. You are encouraged to periodically export your data
 using the built-in **Export CSV** feature (More → Import / Export).
 
-## 11. Service Availability
+## 10. Service Availability
 
 We strive to keep the App available 24/7, but we do not guarantee
 uninterrupted service. The App may occasionally be unavailable for
 maintenance, updates, or due to circumstances beyond our control. We are
 not liable for any losses caused by App unavailability.
 
-## 12. Termination
+## 11. Termination
 
 You may stop using the App at any time and delete your account via
 **More → Account → Delete Account**. We reserve the right to suspend or
@@ -138,14 +130,14 @@ terminate accounts that violate these Terms, with or without notice.
 Upon termination, your data is permanently deleted within 30 days, except
 where retention is required by law.
 
-## 13. Disclaimers
+## 12. Disclaimers
 
 THE APP IS PROVIDED "AS IS" AND "AS AVAILABLE" WITHOUT WARRANTIES OF ANY
 KIND, EXPRESS OR IMPLIED, INCLUDING WARRANTIES OF MERCHANTABILITY, FITNESS
 FOR A PARTICULAR PURPOSE, OR NON-INFRINGEMENT. WE DO NOT WARRANT THAT THE
 APP WILL BE ERROR-FREE OR UNINTERRUPTED.
 
-## 14. Limitation of Liability
+## 13. Limitation of Liability
 
 TO THE MAXIMUM EXTENT PERMITTED BY LAW, WE SHALL NOT BE LIABLE FOR ANY
 INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES, OR ANY
@@ -157,27 +149,27 @@ Our total liability for any claim arising from these Terms or your use of
 the App will not exceed the amount you paid for the App in the 12 months
 preceding the claim.
 
-## 15. Indemnification
+## 14. Indemnification
 
 You agree to indemnify and hold us harmless from any claims, damages, or
 expenses arising from your use of the App, your violation of these Terms,
 or your violation of any rights of another party.
 
-## 16. Changes to Terms
+## 15. Changes to Terms
 
 We may update these Terms at any time. The most current version will always
 be available within the App. Continued use of the App after changes
 constitutes acceptance of the new Terms. Material changes will be notified
 via an in-app banner at next launch.
 
-## 17. Governing Law
+## 16. Governing Law
 
 These Terms are governed by the laws of the United States and the State in
 which Toolbox Vault's principal place of business is located, without regard
 to conflict of law principles. Any dispute arising out of these Terms shall
 be resolved in the courts of that jurisdiction.
 
-## 18. Apple-Specific Terms (iOS Users)
+## 17. Apple-Specific Terms (iOS Users)
 
 In addition to these Terms, Apple's "Licensed Application End User License
 Agreement" (EULA) applies to your use of the App. In the event of any
@@ -186,7 +178,7 @@ party to these Terms and has no responsibility for the App. The Apple EULA
 is available at:
 https://www.apple.com/legal/internet-services/itunes/dev/stdeula/
 
-## 19. Contact Us
+## 18. Contact Us
 
 **Email:** MechanicVault@gmail.com
 

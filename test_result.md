@@ -112,10 +112,26 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Brands collection CRUD + automatic brand persistence on tool create/update"
+    - "Post-AI-removal backend health check — verify all core endpoints still work after removing /api/ai/receipt-scan, /api/ocr/receipt, ReceiptScan models, EMERGENT_LLM_KEY var"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
+
+backend_ai_removal_cleanup:
+  - task: "AI Receipt Scan complete removal — full backend health check"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Removed all remaining AI Receipt Scan artefacts from backend per user request 2026-06: (1) Deleted Pydantic models ReceiptScanRequest, ReceiptItem, ReceiptScanResponse from /app/backend/server.py L3919-3948. (2) Deleted the disabled 410-Gone stub endpoints /api/ai/receipt-scan and /api/ocr/receipt that were left after the 2026-05-27 first-pass removal. (3) Removed unused `EMERGENT_LLM_KEY = os.environ.get(...)` module-level var at L37. (4) Kept `_normalize_date()` helper intact because date input cleanup is still useful elsewhere. (5) Deleted old smoke-test /app/backend_test_receipt_scan_smoke.py. Backend reloads cleanly per supervisor logs (Application startup complete, 43 indices verified, no tracebacks). Please run a broad smoke test confirming core flows still work: auth login/me, tools list/create/get/update/delete, dealers, brands, wishlist, claims, reports, subscription. Specifically verify the two old AI scan paths now return 404 (since the stubs are gone) — they should NOT return 500 or hang. Auth creds: MechanicLTZ@gmail.com / Blue321! (preview)."
+      - working: true
+        agent: "testing"
+        comment: "ALL GREEN — 16/16 PASS via /app/backend_test_ai_removal_health.py against http://localhost:8001/api with admin MechanicLTZ@gmail.com / Blue321!. Full post-AI-removal smoke verified:\n\n  A) AUTH:\n    ✅ POST /api/auth/login (admin) → 200 with valid JWT.\n    ✅ GET /api/auth/me with JWT → 200, email=mechanicltz@gmail.com.\n\n  B) CORE CRUD:\n    ✅ GET /api/tools → 200 (count=1).\n    ✅ POST /api/tools (minimal {name, cost:1, quantity:1}) → 200 with id; follow-up DELETE /api/tools/{id} → 200 {ok:true}.\n    ✅ GET /api/dealers → 200 (count=5).\n    ✅ GET /api/brands → 200 (count=4) — recently-added typeahead endpoint healthy.\n    ✅ GET /api/wishlist → 200 (count=0).\n    ✅ GET /api/warranty-claims/summary → 200.\n    ✅ GET /api/stats → 200.\n    ✅ GET /api/aggregate → 200.\n    ✅ GET /api/maintenance/upcoming?days=30 → 200.\n\n  C) REMOVED AI ENDPOINTS — both correctly 404, NOT 410, NOT 500:\n    ✅ POST /api/ai/receipt-scan with valid Bearer + body → 404 {\"detail\":\"Not Found\"}. Route is completely gone — no zombie handler.\n    ✅ POST /api/ocr/receipt with valid Bearer + body → 404 {\"detail\":\"Not Found\"}. Alias also completely gone.\n\n  D) SUBSCRIPTION:\n    ✅ GET /api/subscription with JWT → 200 with full SubscriptionState body.\n\n  E) REPORTS RENDER:\n    ✅ POST /api/reports/render {report_type:'inventory', format:'pdf', options:{}} → 200, Content-Type=application/pdf, 2497 bytes. No 500.\n\n  BACKEND LOG CLEANLINESS: /var/log/supervisor/backend.err.log shows clean startup ('Backup scheduler started', 'Mongo index init: 43 created/verified', 'Application startup complete') — zero ERROR/500/Traceback lines during the test run. /var/log/supervisor/backend.out.log shows only the expected 200s for all tested endpoints (plus the two 404s for the removed AI paths). The 403s for /api/admin/user-stats visible in the log are from OTHER concurrent traffic (different IP/user, not from this test). No regressions introduced by the AI removal. The removal is clean and the system is healthy."
 
 backend_brands:
   - task: "/api/brands CRUD + automatic brand save on POST/PUT /api/tools"

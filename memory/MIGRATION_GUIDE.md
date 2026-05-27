@@ -184,9 +184,6 @@ Pick the host that fits your budget and skill level.
    MONGO_URL=mongodb+srv://...    ← from Step 3
    DB_NAME=toolbox_vault_prod      ← from Step 4
    JWT_SECRET=<paste old value>    ← from old .env, OR generate fresh
-   EMERGENT_LLM_KEY=<paste>        ← OPTIONAL — used for AI receipt OCR.
-                                     Will need to migrate to OpenAI key
-                                     directly (see note below)
    GMAIL_APP_PASSWORD=<paste>      ← from old .env (or regenerate at apple)
    GMAIL_FROM_ADDRESS=MechanicVault@gmail.com
    GMAIL_FROM_NAME=Toolbox Vault
@@ -196,11 +193,7 @@ Pick the host that fits your budget and skill level.
 5. **Deploy** — Railway builds and starts automatically.
 6. **Settings → Networking → Generate Domain** — gives you a public URL like `toolbox-vault-backend-production.up.railway.app`. **Save this URL.**
 
-⚠️ **About `EMERGENT_LLM_KEY`:** This is an Emergent-specific universal key for OpenAI/Anthropic/Google. When you leave Emergent, you should switch to your own OpenAI API key. The receipt-scanning code in `/app/backend/server.py` uses the `emergentintegrations` library. To replace:
-- Get an OpenAI API key at https://platform.openai.com/api-keys
-- Replace the `emergentintegrations` import in server.py with the official `openai` package: `pip install openai`
-- Adapt the OCR call (~10 lines of code)
-- Or, if cost is a concern, AI features can be disabled without breaking the app.
+ℹ️ **Note on LLM keys:** The app no longer uses any AI/LLM service in its runtime path (the AI receipt-scan feature was removed in 2026-05). You do NOT need `EMERGENT_LLM_KEY`, `OPENAI_API_KEY`, or `emergentintegrations` for this app to run.
 
 ### Option B — Render (similar pricing, very simple)
 
@@ -347,7 +340,6 @@ I have NOT done any of those for you yet — they're future production hygiene t
 | Domain (optional) | ❌ | ~$12/year |
 | Apple Developer | ❌ | $99/year (already have) |
 | Google Play | ❌ | $25 one-time (already have) |
-| OpenAI (for receipt OCR) | ✅ pay-as-you-go | ~$0.01 per receipt scan |
 | RevenueCat | ✅ free up to $10k MRR | 1% revenue share above |
 
 **Total ongoing minimum: ~$5/month** ($60/year) to host the backend, plus the Apple/Google annual fees you already pay.

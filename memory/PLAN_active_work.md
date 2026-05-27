@@ -71,7 +71,7 @@ defaults that contradict the decisions documented here.**
   17. DOCUMENTS
 - [x] Single-expand pattern via `openKey` state — tap a header expands it and collapses the previous one.
 - [x] On fresh tool (new) `openKey` defaults to "modelNumbers" so the model # input is open immediately (matches the user's "Model # first" workflow).
-- [x] All existing internal JSX (multi-value inputs, picker buttons, sub-modals, AI receipt scan integration, repair sub-section, warranty sub-section, photos+receipts capture) preserved verbatim inside accordion bodies.
+- [x] All existing internal JSX (multi-value inputs, picker buttons, sub-modals, repair sub-section, warranty sub-section, photos+receipts capture) preserved verbatim inside accordion bodies. (AI receipt scan integration was later REMOVED — see "REMOVED FEATURES" section at the bottom of this file.)
 - [x] Each accordion header shows a one-line summary of the current value when collapsed (e.g., "Cost: $50 · MSRP $99 · Qty 2").
 
 ---
@@ -135,11 +135,17 @@ When Session 1 is done, prompt user: "Ready to move to Session 2 (notifications)
 
 ---
 
-## 🚨 ATTENTION ITEM (logged 2026-05-27): AI Receipt Scan Cost Transparency
-- Production users hit "Budget has been exceeded!" on Emergent Universal Key ($1.001 default cap).
-- The receipt-scan feature uses gpt-4o vision (~$0.012-$0.015 per scan; 100 users × 1/mo ≈ $1.30/mo).
-- App owner was NOT warned about per-feature costs before building. This needs to be raised with Emergent support@emergent.sh for goodwill / retroactive credit consideration.
-- Mitigation options still pending decision:
-  (A) Top up Emergent Universal Key + enable Auto-Recharge
-  (B) Add `OPENAI_API_KEY` env-var fallback so user can BYO key
-  (C) Switch model to gpt-4o-mini (~15x cheaper, may impact quality)
+## 🚫 REMOVED FEATURES (do NOT rebuild without user approval)
+
+### AI Receipt Scan (REMOVED 2026-05-27)
+- All `/api/ai/receipt-scan` and `/api/ocr/receipt` endpoints **deleted** from backend.
+- All scan-related state, modals, and the multi-item picker **deleted** from `app/tool/edit.tsx`.
+- `emergentintegrations` / `openai` imports removed from runtime path.
+- Replaced with a plain "+ ADD RECEIPT" → camera/library photo picker.
+- **Reason:** Production users hit "Budget has been exceeded!" on Emergent Universal Key — user was not warned about per-feature LLM costs. User explicitly demanded full removal.
+- **Rule going forward:** DO NOT propose, plan, or build any AI-powered feature (image OCR, GPT autofill, AI lookup, etc.) without first surfacing a per-call cost estimate AND getting explicit written approval from the app owner.
+
+### Model Number AI Autofill (REMOVED from future roadmap 2026-06)
+- Previously listed as a P1 upcoming feature ("AI lookup from dealer websites to autofill tool info from model number").
+- **Cancelled** by user direction on 2026-06 due to the same LLM-cost concerns above.
+- Do not re-add to plans, PRDs, or feature roadmaps.
