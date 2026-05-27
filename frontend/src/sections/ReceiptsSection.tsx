@@ -38,23 +38,29 @@ export function ReceiptsSection({ receipts, onAdd }: Props) {
   const [open, setOpen] = useState(false);
   const [idx, setIdx] = useState(0);
 
-  // Even with zero receipts, render an "ADD RECEIPT" pill if onAdd was passed.
+  // Even with zero receipts, render the section header + helper text so the
+  // attachment family (Photos / Docs / Receipts) all look consistent
+  // (per user 2026-05-26: match the DocumentsSection empty-state look).
   if (list.length === 0) {
     if (!onAdd) return null;
     return (
       <View>
         <View style={styles.headerRow}>
           <Text style={styles.sectionLabel}>RECEIPTS</Text>
+          <TouchableOpacity
+            testID="add-receipt-empty"
+            style={styles.addBtn}
+            onPress={onAdd}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="receipt-outline" size={14} color="#000" />
+            <Text style={styles.addBtnText}>ADD</Text>
+          </TouchableOpacity>
         </View>
-        <TouchableOpacity
-          style={styles.addPill}
-          onPress={onAdd}
-          activeOpacity={0.8}
-          testID="add-receipt-empty"
-        >
-          <Ionicons name="receipt-outline" size={16} color={theme.colors.accent} />
-          <Text style={styles.addPillText}>ADD RECEIPT</Text>
-        </TouchableOpacity>
+        <Text style={styles.empty}>
+          No receipts yet. Snap a photo of paper receipts or attach order
+          confirmations for warranty + insurance proof.
+        </Text>
       </View>
     );
   }
@@ -63,28 +69,18 @@ export function ReceiptsSection({ receipts, onAdd }: Props) {
     <View>
       <View style={styles.headerRow}>
         <Text style={styles.sectionLabel}>RECEIPTS ({list.length})</Text>
-        <View style={{ flexDirection: "row", gap: 14, alignItems: "center" }}>
+        <View style={{ flexDirection: "row", gap: 8, alignItems: "center" }}>
           {onAdd && (
             <TouchableOpacity
               testID="add-receipt-header"
+              style={styles.addBtn}
               onPress={onAdd}
-              activeOpacity={0.7}
-              hitSlop={6}
+              activeOpacity={0.8}
             >
-              <Text style={styles.viewLink}>+ ADD</Text>
+              <Ionicons name="receipt-outline" size={14} color="#000" />
+              <Text style={styles.addBtnText}>ADD</Text>
             </TouchableOpacity>
           )}
-          <TouchableOpacity
-            testID="view-receipts-link"
-            onPress={() => {
-              setIdx(0);
-              setOpen(true);
-            }}
-            activeOpacity={0.7}
-            hitSlop={6}
-          >
-            <Text style={styles.viewLink}>VIEW ALL ›</Text>
-          </TouchableOpacity>
         </View>
       </View>
 
@@ -200,6 +196,29 @@ const styles = themedStyles((c) => ({
     fontSize: 9,
     fontWeight: "900",
     letterSpacing: 1.5,
+  },
+  // Match the DocumentsSection upload-button shape so Photos / Documents /
+  // Receipts attachment sections all look like the same component family.
+  addBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 6,
+    backgroundColor: c.accent,
+  },
+  addBtnText: {
+    color: "#000",
+    fontSize: 10,
+    fontWeight: "900",
+    letterSpacing: 1.5,
+  },
+  empty: {
+    color: c.textMuted,
+    fontSize: 11,
+    fontStyle: "italic",
+    paddingVertical: 8,
   },
   thumbStrip: {
     gap: 8,

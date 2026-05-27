@@ -22,6 +22,7 @@ import { useAuth } from "../../src/AuthContext";
 import { themedStyles } from "../../src/themeContext";
 import { BevelCard } from "../../src/components/BevelCard";
 import { MaintenanceSection } from "../../src/sections/MaintenanceSection";
+import { formatDateUS } from "../../src/dateUtil";
 
 export default function ToolEdit() {
   const { id } = useLocalSearchParams<{ id?: string }>();
@@ -1580,30 +1581,21 @@ export default function ToolEdit() {
           <TagInput selected={tags} onChange={setTags} />
           </AccordionRow>
           <AccordionRow
-            label="PURCHASE DATE & CONDITION"
+            label="PURCHASE DATE"
             icon="calendar"
-            summary={((purchaseDate || "—") + " · " + (condition || "Good")) as any}
+            summary={(purchaseDate ? formatDateUS(purchaseDate) : "—") as any}
             open={openKey === "purchase"}
             onToggle={() => toggle("purchase")}
             lastRow
             testID="acc-purchase"
           >
-          <View style={styles.row2}>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.label}>PURCHASED</Text>
-              <DateField
-                testID="purchase-input"
-                value={purchaseDate}
-                onChange={setPurchaseDate}
-                placeholder="MM/DD/YYYY"
-              />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.label}>CONDITION</Text>
-              <TextInput testID="condition-input" placeholder="Good" placeholderTextColor={theme.colors.textMuted}
-                value={condition} onChangeText={setCondition} style={styles.input} />
-            </View>
-          </View>
+          <Text style={styles.label}>PURCHASED</Text>
+          <DateField
+            testID="purchase-input"
+            value={purchaseDate}
+            onChange={setPurchaseDate}
+            placeholder="MM/DD/YYYY"
+          />
           </AccordionRow>
           </View>
 

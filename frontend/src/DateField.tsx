@@ -62,36 +62,38 @@ export function DateField({
   };
 
   if (Platform.OS === "web") {
-    // Render the native date input directly so clicking anywhere opens the OS calendar.
-    // The browser displays it in MM/DD/YYYY format (en-US locale).
+    // Use a masked text input on web so the visible format is ALWAYS
+    // MM/DD/YYYY regardless of the browser's locale (per user
+    // 2026-05-26: every date input + display in the app must use US
+    // MM/DD/YYYY). The internal `value` is still stored as ISO
+    // YYYY-MM-DD and the parent receives the same ISO via onChange.
     return (
       <View style={styles.input}>
-        {/* @ts-ignore — DOM element on web */}
-        <input
-          data-testid={testID}
-          type="date"
-          value={value || ""}
-          onChange={(e: any) => onChange(e.target.value)}
-          placeholder="mm/dd/yyyy"
+        <TextInput
+          testID={testID}
+          value={text}
+          onChangeText={handleType}
+          placeholder={placeholder || "MM/DD/YYYY"}
+          placeholderTextColor={theme.colors.textMuted}
+          keyboardType="numeric"
+          maxLength={10}
           style={{
             flex: 1,
-            backgroundColor: "transparent",
-            border: 0,
-            outline: "none",
             color: theme.colors.textPrimary,
             fontSize: 11,
-            fontFamily: "inherit",
-            colorScheme: "dark",
-            cursor: "pointer",
             paddingTop: 4,
             paddingBottom: 4,
+            // @ts-ignore — web-only
+            outline: "none" as any,
           }}
         />
         {value ? (
           <TouchableOpacity onPress={() => { onChange(""); setText(""); }} hitSlop={8}>
             <Ionicons name="close-circle" size={18} color={theme.colors.textMuted} />
           </TouchableOpacity>
-        ) : null}
+        ) : (
+          <Ionicons name="calendar-outline" size={18} color={theme.colors.textSecondary} />
+        )}
       </View>
     );
   }

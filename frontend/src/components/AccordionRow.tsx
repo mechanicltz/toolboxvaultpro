@@ -157,21 +157,14 @@ const styles = themedStyles((c) => ({
   // We use the theme's `glass` (soft accent-orange tint) + `glassBorder`
   // (matching orange-glow border) pair — those are theme-reactive and
   // already calibrated for dark + light modes.
-  // Expanded body — rendered as a nested Description Card (page-bg
-  // background + soft border) so the active input row visually pops out
-  // of the surrounding group card. Per user (2026-05-26): no orange
-  // highlight — a clean nested card inside the parent card.
+  // Expanded body — plain transparent container. The content INSIDE the
+  // body provides its own card/section styling (e.g. WarrantySection,
+  // DocumentsSection). Per user (2026-05-26): no wrapper border / glow
+  // — the inner section already looks like a Description Card.
   body: {
-    backgroundColor: c.bg,
-    borderWidth: 1,
-    borderColor: c.border,
-    borderRadius: 6,
-    paddingHorizontal: 10,
-    paddingTop: 8,
+    backgroundColor: "transparent",
+    paddingTop: 2,
     paddingBottom: 12,
-    marginTop: 4,
-    marginBottom: 10,
-    ...(theme.elevation.input as object),
   },
   bodyDivider: {
     // Kept as a no-op for backward compat — the body now has its own

@@ -697,8 +697,7 @@ export default function ToolDetail() {
         });
       }
     }
-    if (F.condition)
-      specRows.push({ label: "Condition", value: tool.condition || "" });
+    // Condition field removed app-wide (2026-05-26 per user request).
     if (F.category)
       specRows.push({ label: "Category", value: tool.category_name || "" });
     if (F.purchase_date)
@@ -1070,7 +1069,7 @@ export default function ToolDetail() {
         });
       }
     }
-    if (tool.condition) specPairs.push({ label: "Condition", value: String(tool.condition) });
+    if (tool.category_name) specPairs.push({ label: "Category", value: String(tool.category_name) });
     if (tool.category_name) specPairs.push({ label: "Category", value: String(tool.category_name) });
     if (tool.location_name) specPairs.push({ label: "Location", value: String(tool.location_name) });
     if (tool.purchase_date) specPairs.push({ label: "Purchased", value: formatDateUS(tool.purchase_date) });
@@ -1932,43 +1931,47 @@ export default function ToolDetail() {
                         {isOpen && (
                           <View style={[newStyles.detailsExpanded, isLast && newStyles.detailsRowLast]}>
                             {r.key === "gallery" && (
-                              photos.length === 0 ? (
-                                <TouchableOpacity
-                                  style={newStyles.galleryEmpty}
-                                  onPress={promptAddPhoto}
-                                  testID="gallery-add-first"
-                                >
-                                  <Ionicons name="camera" size={20} color={theme.colors.accent} />
-                                  <Text style={newStyles.galleryEmptyText}>ADD PHOTO</Text>
-                                </TouchableOpacity>
-                              ) : (
-                                <ScrollView
-                                  horizontal
-                                  showsHorizontalScrollIndicator={false}
-                                  contentContainerStyle={newStyles.galleryRow}
-                                >
-                                  {photos.map((p: string, j: number) => (
-                                    <TouchableOpacity
-                                      key={j}
-                                      testID={`gallery-thumb-${j}`}
-                                      onPress={() => {
-                                        setPhotoIdx(j);
-                                        setIsImageViewerVisible(true);
-                                      }}
-                                      activeOpacity={0.85}
-                                    >
-                                      <Image source={{ uri: p }} style={newStyles.galleryThumb} />
-                                    </TouchableOpacity>
-                                  ))}
+                              <View style={newStyles.attachSection}>
+                                <View style={newStyles.attachHeader}>
+                                  <Text style={newStyles.attachSectionLabel}>
+                                    PHOTOS{photos.length > 0 ? ` (${photos.length})` : ""}
+                                  </Text>
                                   <TouchableOpacity
-                                    testID="gallery-add-more"
-                                    style={newStyles.galleryAddTile}
+                                    testID="add-photo-btn"
+                                    style={newStyles.attachAddBtn}
                                     onPress={promptAddPhoto}
                                   >
-                                    <Ionicons name="add" size={22} color={theme.colors.accent} />
+                                    <Ionicons name="camera" size={14} color="#000" />
+                                    <Text style={newStyles.attachAddBtnText}>ADD</Text>
                                   </TouchableOpacity>
-                                </ScrollView>
-                              )
+                                </View>
+                                {photos.length === 0 ? (
+                                  <Text style={newStyles.attachEmpty}>
+                                    No photos yet. Add product shots, condition photos,
+                                    or reference images.
+                                  </Text>
+                                ) : (
+                                  <ScrollView
+                                    horizontal
+                                    showsHorizontalScrollIndicator={false}
+                                    contentContainerStyle={newStyles.galleryRow}
+                                  >
+                                    {photos.map((p: string, j: number) => (
+                                      <TouchableOpacity
+                                        key={j}
+                                        testID={`gallery-thumb-${j}`}
+                                        onPress={() => {
+                                          setPhotoIdx(j);
+                                          setIsImageViewerVisible(true);
+                                        }}
+                                        activeOpacity={0.85}
+                                      >
+                                        <Image source={{ uri: p }} style={newStyles.galleryThumb} />
+                                      </TouchableOpacity>
+                                    ))}
+                                  </ScrollView>
+                                )}
+                              </View>
                             )}
                             {r.key === "documents" && (
                               <DocumentsSection tool={tool} onChange={load} />
@@ -2790,7 +2793,6 @@ export default function ToolDetail() {
                 // "Model" (brand-product-model) row removed — every tool
                 // now uses a single consolidated "Model #" identifier.
                 { k: "serial", label: "Model #" },
-                { k: "condition", label: "Condition" },
                 { k: "category", label: "Category" },
                 { k: "purchase_date", label: "Original purchase date" },
                 { k: "description", label: "Description" },
@@ -4652,6 +4654,49 @@ const newStyles = themedStyles((c) => ({
     fontWeight: "800",
     fontSize: 12,
     letterSpacing: 1,
+  },
+
+  // ---------- UNIFIED ATTACHMENT SECTIONS (photos / docs / receipts) ----------
+  // Per user (2026-05-26): all three attachment-style accordions on the
+  // detail screen should use the same DocumentsSection-style header
+  // pattern (section label + small primary action button + empty helper
+  // text). This is shared so Photos / Docs / Receipts feel like the
+  // same family of components.
+  attachSection: {
+    paddingTop: 4,
+  },
+  attachHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 10,
+  },
+  attachSectionLabel: {
+    color: c.textMuted,
+    fontSize: 9,
+    fontWeight: "900",
+    letterSpacing: 2,
+  },
+  attachAddBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 6,
+    backgroundColor: c.accent,
+  },
+  attachAddBtnText: {
+    color: "#000",
+    fontSize: 10,
+    fontWeight: "900",
+    letterSpacing: 1.5,
+  },
+  attachEmpty: {
+    color: c.textMuted,
+    fontSize: 11,
+    fontStyle: "italic",
+    paddingVertical: 8,
   },
 
   // ---------- CHECKOUT HISTORY ----------
