@@ -1515,15 +1515,30 @@ export default function ToolDetail() {
               <View style={newStyles.claimHead}>
                 <Ionicons name="build" size={18} color={theme.colors.danger} />
                 <View style={{ flex: 1 }}>
-                  <Text style={newStyles.claimTitle}>CLAIM INFORMATION</Text>
+                  <Text
+                    style={newStyles.claimTitle}
+                    allowFontScaling={false}
+                    numberOfLines={1}
+                    adjustsFontSizeToFit
+                  >
+                    CLAIM INFORMATION
+                  </Text>
                   {!!tool.repair_info?.company_notified && (
-                    <Text style={newStyles.claimSub} numberOfLines={1}>
+                    <Text
+                      style={newStyles.claimSub}
+                      allowFontScaling={false}
+                      numberOfLines={1}
+                    >
                       AT {String(tool.repair_info.company_notified).toUpperCase()}
                     </Text>
                   )}
                 </View>
                 <View style={[newStyles.claimBadge, { borderColor: theme.colors.danger, backgroundColor: theme.colors.danger + "15" }]}>
-                  <Text style={[newStyles.claimBadgeText, { color: theme.colors.danger }]} numberOfLines={1}>
+                  <Text
+                    style={[newStyles.claimBadgeText, { color: theme.colors.danger }]}
+                    allowFontScaling={false}
+                    numberOfLines={1}
+                  >
                     {(tool.repair_info?.repair_status || "Repair pending").toUpperCase()}
                   </Text>
                 </View>
@@ -1533,26 +1548,26 @@ export default function ToolDetail() {
               <View style={newStyles.claimCard}>
                 {!!tool.repair_info?.notified_at && (
                   <View style={newStyles.claimRow}>
-                    <Text style={newStyles.claimRowLabel}>Notified</Text>
-                    <Text style={newStyles.claimRowValue}>{formatDateUS(tool.repair_info.notified_at)}</Text>
+                    <Text style={newStyles.claimRowLabel} allowFontScaling={false}>Notified</Text>
+                    <Text style={newStyles.claimRowValue} allowFontScaling={false}>{formatDateUS(tool.repair_info.notified_at)}</Text>
                   </View>
                 )}
                 {!!tool.repair_info?.expected_completion && (
                   <View style={newStyles.claimRow}>
-                    <Text style={newStyles.claimRowLabel}>Expected back</Text>
-                    <Text style={newStyles.claimRowValue}>{formatDateUS(tool.repair_info.expected_completion)}</Text>
+                    <Text style={newStyles.claimRowLabel} allowFontScaling={false}>Expected back</Text>
+                    <Text style={newStyles.claimRowValue} allowFontScaling={false}>{formatDateUS(tool.repair_info.expected_completion)}</Text>
                   </View>
                 )}
                 {!!tool.repair_info?.repair_cost && Number(tool.repair_info.repair_cost) > 0 && (
                   <View style={newStyles.claimRow}>
-                    <Text style={newStyles.claimRowLabel}>Repair cost</Text>
-                    <Text style={newStyles.claimRowValue}>${Number(tool.repair_info.repair_cost).toFixed(2)}</Text>
+                    <Text style={newStyles.claimRowLabel} allowFontScaling={false}>Repair cost</Text>
+                    <Text style={newStyles.claimRowValue} allowFontScaling={false}>${Number(tool.repair_info.repair_cost).toFixed(2)}</Text>
                   </View>
                 )}
                 {!!tool.repair_info?.notes && (
                   <View style={newStyles.claimNotes}>
-                    <Text style={newStyles.claimRowLabel}>NOTES</Text>
-                    <Text style={newStyles.claimNotesText}>{tool.repair_info.notes}</Text>
+                    <Text style={newStyles.claimRowLabel} allowFontScaling={false}>NOTES</Text>
+                    <Text style={newStyles.claimNotesText} allowFontScaling={false}>{tool.repair_info.notes}</Text>
                   </View>
                 )}
                 {/* Quick-contact + edit/fix action buttons */}
