@@ -4106,6 +4106,34 @@ def _normalize_date(s: str) -> str:
     return ""
 
 
+# ---------------------------------------------------------------------------
+# BACKWARDS-COMPATIBILITY STUB — old native app v2.1.1 (and any earlier
+# TestFlight/Play Store build) still has a "Scan Receipt" button that POSTs
+# to /api/ai/receipt-scan. After we deleted the feature, those clients
+# would get a generic 404 which surfaces as an ugly error popup.
+#
+# These two stubs return HTTP 410 GONE with a user-friendly message asking
+# them to update their app. They take ZERO LLM calls, do ZERO work — just
+# raise an HTTPException with a graceful detail.
+#
+# Safe to remove once you're confident no users are still on v2.1.1.
+# ---------------------------------------------------------------------------
+_RECEIPT_SCAN_GONE_MSG = (
+    "Receipt scanning has been replaced with photo upload. Please update "
+    "the app to the latest version to use the new receipt feature."
+)
+
+
+@api_router.post("/ai/receipt-scan")
+async def ai_receipt_scan_gone():
+    raise HTTPException(status_code=410, detail=_RECEIPT_SCAN_GONE_MSG)
+
+
+@api_router.post("/ocr/receipt")
+async def ocr_receipt_gone():
+    raise HTTPException(status_code=410, detail=_RECEIPT_SCAN_GONE_MSG)
+
+
 app.include_router(api_router)
 app.include_router(auth_router)
 
