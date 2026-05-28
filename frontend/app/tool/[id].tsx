@@ -1513,11 +1513,11 @@ export default function ToolDetail() {
             <View style={newStyles.claimBox}>
               {/* Flat header — icon + title + status badge */}
               <View style={newStyles.claimHead}>
-                <Ionicons name="build" size={22} color={theme.colors.danger} />
+                <Ionicons name="build" size={18} color={theme.colors.danger} />
                 <View style={{ flex: 1 }}>
                   <Text style={newStyles.claimTitle}>CLAIM INFORMATION</Text>
                   {!!tool.repair_info?.company_notified && (
-                    <Text style={newStyles.claimSub}>
+                    <Text style={newStyles.claimSub} numberOfLines={1}>
                       AT {String(tool.repair_info.company_notified).toUpperCase()}
                     </Text>
                   )}
@@ -1563,7 +1563,7 @@ export default function ToolDetail() {
                     testID="claim-email-dealer"
                     activeOpacity={0.85}
                   >
-                    <Ionicons name="mail" size={13} color="#000" />
+                    <Ionicons name="mail" size={11} color="#000" />
                     <Text style={[newStyles.claimActionText, { color: "#000" }]}>EMAIL</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
@@ -1572,7 +1572,7 @@ export default function ToolDetail() {
                     testID="claim-text-dealer"
                     activeOpacity={0.85}
                   >
-                    <Ionicons name="chatbubble" size={13} color="#000" />
+                    <Ionicons name="chatbubble" size={11} color="#000" />
                     <Text style={[newStyles.claimActionText, { color: "#000" }]}>TEXT</Text>
                   </TouchableOpacity>
                 </View>
@@ -1583,7 +1583,7 @@ export default function ToolDetail() {
                     testID="claim-edit"
                     activeOpacity={0.85}
                   >
-                    <Ionicons name="create-outline" size={13} color={theme.colors.danger} />
+                    <Ionicons name="create-outline" size={11} color={theme.colors.danger} />
                     <Text style={[newStyles.claimActionText, { color: theme.colors.danger }]}>EDIT CLAIM</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
@@ -1592,7 +1592,7 @@ export default function ToolDetail() {
                     testID="claim-mark-fixed"
                     activeOpacity={0.85}
                   >
-                    <Ionicons name="checkmark-done" size={13} color="#000" />
+                    <Ionicons name="checkmark-done" size={11} color="#000" />
                     <Text style={[newStyles.claimActionText, { color: "#000" }]}>MARK FIXED</Text>
                   </TouchableOpacity>
                 </View>
@@ -4478,10 +4478,10 @@ const newStyles = themedStyles((c) => ({
   },
 
   // ---------- REPAIR / SALE CARDS ----------
-  // CLAIM INFORMATION — "card within a card" style (per user 2026-05-27).
-  // Outer Description Card (claimBox) holds a flat header (claimHead +
-  // claimTitle + claimBadge), and an inner inset card (claimCard)
-  // identical to WarrantySection.card for the data rows + action buttons.
+  // CLAIM INFORMATION — Description-Card-styled (matches WarrantySection
+  // exactly): compact 10pt title, 7pt sub + badge, smaller icon, smaller
+  // padding. The header is allowed to wrap nowrap so the badge sits cleanly
+  // on the same line as the title even on narrow phones.
   claimBox: {
     backgroundColor: c.bgSecondary,
     borderWidth: 1,
@@ -4496,31 +4496,30 @@ const newStyles = themedStyles((c) => ({
   claimHead: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
-    marginBottom: 4,
+    gap: 8,
+    marginBottom: 8,
   },
   claimTitle: {
     color: c.textPrimary,
-    fontSize: 18,
+    fontSize: 10,
     fontWeight: "900",
     letterSpacing: 2,
   },
   claimSub: {
     color: c.textMuted,
-    fontSize: 9,
-    fontWeight: "800",
+    fontSize: 7,
+    fontWeight: "700",
     letterSpacing: 1.5,
     marginTop: 2,
   },
   claimBadge: {
-    borderWidth: 1.5,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 4,
-    maxWidth: 130,
+    borderWidth: 1,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 3,
   },
   claimBadgeText: {
-    fontSize: 9,
+    fontSize: 7,
     fontWeight: "900",
     letterSpacing: 1.2,
   },
@@ -4531,28 +4530,26 @@ const newStyles = themedStyles((c) => ({
     borderColor: c.border,
     borderRadius: 6,
     padding: 12,
-    marginHorizontal: 18,
-    marginTop: 10,
     ...(theme.elevation.md as object),
   },
   claimRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingVertical: 7,
+    paddingVertical: 6,
     borderBottomWidth: 1,
     borderBottomColor: c.borderSubtle,
   },
   claimRowLabel: {
     color: c.textMuted,
-    fontSize: 11,
+    fontSize: 7,
     fontWeight: "800",
-    letterSpacing: 2,
+    letterSpacing: 1.5,
   },
   claimRowValue: {
     color: c.textPrimary,
-    fontSize: 14,
-    fontWeight: "800",
+    fontSize: 10,
+    fontWeight: "700",
   },
   claimNotes: {
     marginTop: 8,
@@ -4561,19 +4558,18 @@ const newStyles = themedStyles((c) => ({
     borderTopColor: c.borderSubtle,
   },
   claimNotesText: {
-    color: c.textPrimary,
-    fontSize: 12,
-    fontStyle: "italic",
+    color: c.textSecondary,
+    fontSize: 9,
+    lineHeight: 13,
     marginTop: 4,
-    lineHeight: 16,
   },
   claimActionBtn: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 6,
-    paddingVertical: 9,
-    paddingHorizontal: 12,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
     borderRadius: 4,
   },
   claimActionBtnOutline: {
@@ -4582,7 +4578,7 @@ const newStyles = themedStyles((c) => ({
     borderColor: c.danger,
   },
   claimActionText: {
-    fontSize: 10,
+    fontSize: 8,
     fontWeight: "900",
     letterSpacing: 1.2,
   },
