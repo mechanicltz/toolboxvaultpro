@@ -32,6 +32,7 @@ import { themedStyles } from "../../src/themeContext";
 import { BevelCard } from "../../src/components/BevelCard";
 import { IndustrialBanner } from "../../src/components/IndustrialBanner";
 import { DiamondPlate } from "../../src/components/DiamondPlate";
+import { PillButton } from "../../src/components/PillButton";
 
 export default function DealersScreen() {
   const router = useRouter();
