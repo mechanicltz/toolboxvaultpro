@@ -35,6 +35,7 @@ import { useAuth } from "../../src/AuthContext";
 import { APP_VERSION_LABEL } from "../../src/version";
 import { themedStyles } from "../../src/themeContext";
 import { BevelCard } from "../../src/components/BevelCard";
+import { IndustrialBanner } from "../../src/components/IndustrialBanner";
 
 import {
   requestPermissions as requestNotificationPermissions,
@@ -539,11 +540,11 @@ export default function MoreScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
-      <View style={styles.header}>
-        <Text style={styles.title}>TOOLBOX VAULT</Text>
-        <Text style={styles.subtitle} numberOfLines={1}>
-          {user?.email || "Manage everything"}
-        </Text>
+      <IndustrialBanner
+        title="TOOLBOX VAULT"
+        subtitle={user?.email || "Manage everything"}
+      />
+      <View style={styles.infoRow}>
         <View
           style={[
             styles.proBadge,
@@ -1529,6 +1530,15 @@ const pwStyles = themedStyles((c) => ({
 
 const styles = themedStyles((c) => ({
   container: { flex: 1, backgroundColor: c.bg },
+  infoRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    paddingHorizontal: 20,
+    paddingTop: 10,
+    paddingBottom: 6,
+    flexWrap: "wrap",
+  },
   header: {
     paddingHorizontal: 20,
     paddingTop: 12,

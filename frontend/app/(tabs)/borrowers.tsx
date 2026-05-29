@@ -22,6 +22,7 @@ import { confirm } from "../../src/confirm";
 import { parseContacts, openEmail, openPhone, openSms } from "../../src/contactLinks";
 import { themedStyles } from "../../src/themeContext";
 import { BevelCard } from "../../src/components/BevelCard";
+import { IndustrialBanner } from "../../src/components/IndustrialBanner";
 
 import {
   isDeviceContactsAvailable,
@@ -160,11 +161,8 @@ export default function BorrowersScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
-      <View style={styles.header}>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.title}>CONTACTS</Text>
-          <Text style={styles.subtitle}>Borrowers & Checkouts</Text>
-        </View>
+      <IndustrialBanner title="CONTACTS" subtitle="Borrowers & Checkouts" />
+      <View style={styles.actionsRow}>
         <TouchableOpacity
           testID="add-contact-header-btn"
           style={styles.headerAddBtn}
@@ -521,6 +519,13 @@ function RowContactChips({ raw }: { raw?: string | null }) {
 
 const styles = themedStyles((c) => ({
   container: { flex: 1, backgroundColor: c.bg },
+  actionsRow: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    paddingHorizontal: 16,
+    paddingTop: 10,
+    paddingBottom: 4,
+  },
   header: {
     flexDirection: "row",
     alignItems: "center",

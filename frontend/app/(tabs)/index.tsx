@@ -25,6 +25,7 @@ import { APP_VERSION_LABEL } from "../../src/version";
 
 import { themedStyles } from "../../src/themeContext";
 import { BevelCard } from "../../src/components/BevelCard";
+import { IndustrialBanner } from "../../src/components/IndustrialBanner";
 import { useSubscriptionChange } from "../../src/subscriptionEvents";
 import { useAppResume } from "../../src/appLifecycle";
 
@@ -423,29 +424,24 @@ export default function HomeScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
-      <View style={styles.header}>
-        <View>
-          <Text style={styles.title}>TOOLBOX VAULT</Text>
-          <Text style={styles.subtitle}>SUMMARY</Text>
-          <View style={{ flexDirection: "row", alignItems: "center", flexWrap: "wrap" }}>
-            <Text style={styles.versionLine} testID="home-version">
-              {APP_VERSION_LABEL}
-            </Text>
-            {/* Admin-only at-a-glance user-base counter.
-                Free vs subscribed counts come from /api/admin/user-stats which
-                is gated to ADMIN_EMAILS — non-admins simply never see this row
-                because the fetch silently fails. Auto-refreshes on every home
-                pull-to-refresh via the same `load()` cycle. */}
-            {userStats && (
-              <Text
-                style={[styles.versionLine, { marginLeft: 8 }]}
-                testID="home-admin-userstats"
-              >
-                FREE: {userStats.free}   SUB: {userStats.subscribed}
-              </Text>
-            )}
-          </View>
-        </View>
+      <IndustrialBanner title="TOOLBOX VAULT" subtitle="SUMMARY" />
+      <View style={styles.versionRow}>
+        <Text style={styles.versionLine} testID="home-version">
+          {APP_VERSION_LABEL}
+        </Text>
+        {/* Admin-only at-a-glance user-base counter.
+            Free vs subscribed counts come from /api/admin/user-stats which
+            is gated to ADMIN_EMAILS — non-admins simply never see this row
+            because the fetch silently fails. Auto-refreshes on every home
+            pull-to-refresh via the same `load()` cycle. */}
+        {userStats && (
+          <Text
+            style={[styles.versionLine, { marginLeft: 8 }]}
+            testID="home-admin-userstats"
+          >
+            FREE: {userStats.free}   SUB: {userStats.subscribed}
+          </Text>
+        )}
       </View>
 
       <ScrollView
@@ -811,6 +807,14 @@ function DealerBalanceRow({
 
 const styles = themedStyles((c) => ({
   container: { flex: 1, backgroundColor: c.bg },
+  versionRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    flexWrap: "wrap",
+    paddingHorizontal: 20,
+    paddingTop: 8,
+    paddingBottom: 2,
+  },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",

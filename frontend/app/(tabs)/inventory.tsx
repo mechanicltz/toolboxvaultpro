@@ -32,6 +32,7 @@ import { useResponsive } from "../../src/responsive";
 
 import { themedStyles } from "../../src/themeContext";
 import { BevelCard } from "../../src/components/BevelCard";
+import { IndustrialBanner } from "../../src/components/IndustrialBanner";
 
 type Filter = "all" | "available" | "out" | "consumables" | "lost" | "maintenance" | "for_sale";
 
@@ -569,12 +570,7 @@ export default function InventoryScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
-      <View style={styles.header}>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.title}>TOOLBOX</Text>
-          <Text style={styles.subtitle}>Inventory Tracker</Text>
-        </View>
-      </View>
+      <IndustrialBanner title="TOOLBOX" subtitle="Inventory Tracker" />
 
       {prefs.warranty_alerts && warningCount > 0 && (
         <TouchableOpacity

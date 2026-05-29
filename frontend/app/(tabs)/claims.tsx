@@ -21,6 +21,7 @@ import { formatPhone } from "../../src/contactLinks";
 
 import { themedStyles } from "../../src/themeContext";
 import { BevelCard } from "../../src/components/BevelCard";
+import { IndustrialBanner } from "../../src/components/IndustrialBanner";
 
 type Mode = "dealers" | "all-open";
 
@@ -130,10 +131,7 @@ export default function ClaimsScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
-      <View style={styles.header}>
-        <Text style={styles.title}>CLAIMS</Text>
-        <Text style={styles.subtitle}>BROKEN ITEMS BY DEALER</Text>
-      </View>
+      <IndustrialBanner title="CLAIMS" subtitle="Broken Items by Dealer" />
 
       <View style={styles.statRow}>
         <Stat label="Total" value={summary?.totals?.total ?? 0} />
