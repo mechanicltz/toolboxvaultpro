@@ -1,134 +1,193 @@
 // =============================================================================
 // DiamondPlate.tsx
 // -----------------------------------------------------------------------------
-// A full-screen industrial "diamond / tread plate" background, drawn entirely
-// in SVG so it scales crisply at any resolution and ships zero image assets.
+// Industrial diamond / tread plate background. Real diamond plate has long,
+// narrow embossed "eye" dashes (rugby-ball shapes) arranged in a herringbone
+// hatch — every row tilts the opposite direction of the row above it.
 //
-//   Visual: dark gunmetal grey with rows of polished diamond bumps. Adjacent
-//   rows are offset half-a-tile, just like real diamond plate steel.
+//   Row 1:  \\\\\\\\\\\\\\\\
+//   Row 2:  ////////////////
+//   Row 3:  \\\\\\\\\\\\\\\\
+//   Row 4:  ////////////////
+//
+// Drawn entirely in SVG so it scales crisply at any size with zero image
+// assets. Sits absolutely behind everything and never intercepts touches.
 //
 //   Usage:
 //     <View style={{ flex: 1 }}>
 //       <DiamondPlate />
-//       {/* …actual screen content goes on top… */}
+//       {/* …screen content goes on top… */}
 //     </View>
-//
-//   The component absolutely fills its parent and is purely decorative — it
-//   sits behind everything and never intercepts touches.
 // =============================================================================
 
-import React from "react";
+import React, { useMemo } from "react";
 import { View, StyleSheet, useWindowDimensions } from "react-native";
 import Svg, {
   Defs,
-  Pattern,
-  Rect,
-  Path,
   LinearGradient,
   Stop,
+  Path,
+  Rect,
   G,
 } from "react-native-svg";
 
 type Props = {
-  /** Override the base color (defaults to a dark gunmetal). */
+  /** Base colour (defaults to a polished silver-grey). */
   baseColor?: string;
-  /** Optional opacity (0–1) on the diamond highlights. Default 0.9. */
+  /** Optional opacity override on the dashes. Default 1.0. */
   intensity?: number;
 };
 
-const TILE = 36; // pixel size of one diamond cell
+const DASH_W = 9;      // dash thickness
+const DASH_H = 32;     // dash length
+const DASH_TILT = 32;  // degrees off vertical
+const ROW_GAP_X = 38;  // horizontal spacing between dashes in a row
+const ROW_GAP_Y = 26;  // vertical spacing between rows (alternates tilt)
+
+// Build the "lens / rugby ball" outline path (sharp tips, rounded belly)
+function dashPath(cx: number, cy: number, w: number, h: number): string {
+  // Construct a 4-control-point Bezier lens shape symmetric about cy
+  const halfW = w / 2;
+  const halfH = h / 2;
+  const topX = cx;
+  const topY = cy - halfH;
+  const botX = cx;
+  const botY = cy + halfH;
+  const leftX = cx - halfW;
+  const leftY = cy;
+  const rightX = cx + halfW;
+  const rightY = cy;
+  // M top → curve down-right via right belly → curve down-left to bottom
+  // → curve up-left via left belly → close
+  return `M ${topX} ${topY}
+          C ${topX + halfW * 0.55} ${topY + halfH * 0.25}, ${rightX} ${rightY - halfH * 0.5}, ${rightX} ${rightY}
+          C ${rightX} ${rightY + halfH * 0.5}, ${botX + halfW * 0.55} ${botY - halfH * 0.25}, ${botX} ${botY}
+          C ${botX - halfW * 0.55} ${botY - halfH * 0.25}, ${leftX} ${leftY + halfH * 0.5}, ${leftX} ${leftY}
+          C ${leftX} ${leftY - halfH * 0.5}, ${topX - halfW * 0.55} ${topY + halfH * 0.25}, ${topX} ${topY} Z`;
+}
 
 export function DiamondPlate({
-  baseColor = "#1A1A1C",
-  intensity = 0.9,
+  baseColor = "#A8AAAD",
+  intensity = 1,
 }: Props) {
   const { width, height } = useWindowDimensions();
-  // Use slightly larger than viewport to ensure we cover overscroll bounce.
-  const W = Math.ceil(width) + TILE;
-  const H = Math.ceil(height) + TILE * 4;
+  const W = Math.ceil(width) + ROW_GAP_X;
+  const H = Math.ceil(height) + ROW_GAP_Y * 4;
+
+  // Pre-compute dash positions so we render a fixed array of paths.
+  // For each row we emit a tilt direction (alternates) and a horizontal offset
+  // so neighbouring rows interlock.
+  const rows = useMemo(() => {
+    const out: { tilt: number; offsetX: number; y: number }[] = [];
+    let row = 0;
+    for (let y = ROW_GAP_Y / 2; y < H; y += ROW_GAP_Y) {
+      const tilt = row % 2 === 0 ? -DASH_TILT : DASH_TILT;
+      const offsetX = row % 2 === 0 ? 0 : ROW_GAP_X / 2;
+      out.push({ tilt, offsetX, y });
+      row++;
+    }
+    return out;
+  }, [H]);
+
+  const dashesInRow = Math.ceil(W / ROW_GAP_X) + 1;
 
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents="none">
       <Svg width={W} height={H} viewBox={`0 0 ${W} ${H}`}>
         <Defs>
-          {/* Background gradient (subtle vignette so the plate doesn't feel flat) */}
-          <LinearGradient id="bgGrad" x1="0" y1="0" x2="0" y2="1">
-            <Stop offset="0%" stopColor={baseColor} stopOpacity="1" />
-            <Stop offset="50%" stopColor="#0E0E10" stopOpacity="1" />
-            <Stop offset="100%" stopColor={baseColor} stopOpacity="1" />
+          {/* Base "polished steel" gradient — light center, slightly darker edges */}
+          <LinearGradient id="plateBase" x1="0" y1="0" x2="0" y2="1">
+            <Stop offset="0%" stopColor="#BFC1C4" stopOpacity="1" />
+            <Stop offset="50%" stopColor={baseColor} stopOpacity="1" />
+            <Stop offset="100%" stopColor="#7C7E81" stopOpacity="1" />
           </LinearGradient>
 
-          {/* Highlight gradient for each diamond (top-left polished sheen) */}
-          <LinearGradient id="diamondGrad" x1="0" y1="0" x2="1" y2="1">
-            <Stop offset="0%" stopColor="#5A5A5E" stopOpacity={intensity} />
-            <Stop offset="55%" stopColor="#2E2E32" stopOpacity={intensity} />
-            <Stop offset="100%" stopColor="#0A0A0C" stopOpacity={intensity} />
+          {/* Each embossed dash uses a gradient that goes
+              white-ish at the top → mid grey → dark grey at the bottom
+              to fake 3-D lighting. */}
+          <LinearGradient id="dashGrad" x1="0" y1="0" x2="0" y2="1">
+            <Stop offset="0%" stopColor="#FFFFFF" stopOpacity={intensity} />
+            <Stop offset="40%" stopColor="#D5D6D8" stopOpacity={intensity} />
+            <Stop offset="100%" stopColor="#3F4143" stopOpacity={intensity} />
           </LinearGradient>
-
-          {/* The tile contains TWO diamonds positioned so adjacent rows
-              interlock — typical diamond / tread plate pattern. */}
-          <Pattern
-            id="plate"
-            x="0"
-            y="0"
-            width={TILE}
-            height={TILE}
-            patternUnits="userSpaceOnUse"
-          >
-            {/* Row 1 diamond — slightly thin, oriented down-right */}
-            <G>
-              <Path
-                d={`M ${TILE * 0.18} ${TILE * 0.4}
-                    L ${TILE * 0.5} ${TILE * 0.18}
-                    L ${TILE * 0.82} ${TILE * 0.4}
-                    L ${TILE * 0.5} ${TILE * 0.5}
-                    Z`}
-                fill="url(#diamondGrad)"
-              />
-              {/* polished highlight ridge */}
-              <Path
-                d={`M ${TILE * 0.22} ${TILE * 0.4}
-                    L ${TILE * 0.5} ${TILE * 0.22}
-                    L ${TILE * 0.78} ${TILE * 0.4}`}
-                stroke="rgba(255,255,255,0.18)"
-                strokeWidth={1}
-                fill="none"
-              />
-            </G>
-            {/* Row 2 diamond — same shape, offset half-tile */}
-            <G>
-              <Path
-                d={`M ${TILE * 0.68} ${TILE * 0.9}
-                    L ${TILE * 1.0} ${TILE * 0.68}
-                    L ${TILE * 1.32} ${TILE * 0.9}
-                    L ${TILE * 1.0} ${TILE * 1.0}
-                    Z`}
-                fill="url(#diamondGrad)"
-              />
-              <Path
-                d={`M ${TILE * 0.72} ${TILE * 0.9}
-                    L ${TILE * 1.0} ${TILE * 0.72}
-                    L ${TILE * 0.96} ${TILE * 0.9}`}
-                stroke="rgba(255,255,255,0.18)"
-                strokeWidth={1}
-                fill="none"
-              />
-            </G>
-          </Pattern>
         </Defs>
 
-        {/* Base gradient fill */}
-        <Rect x="0" y="0" width={W} height={H} fill="url(#bgGrad)" />
-        {/* Apply tiled diamond pattern on top */}
-        <Rect x="0" y="0" width={W} height={H} fill="url(#plate)" />
-        {/* Subtle dark grit overlay so the diamonds don't look too clean */}
+        {/* Base plate */}
+        <Rect x="0" y="0" width={W} height={H} fill="url(#plateBase)" />
+
+        {/* Brushed-metal vertical streaks — many thin semi-opaque lines
+            give the surface a metallic-brushed feel without a real image. */}
+        {Array.from({ length: 90 }).map((_, i) => {
+          const x = (i * (W / 90)) + (i % 3 === 0 ? 0.5 : 0);
+          const op = 0.04 + (i % 5) * 0.015;
+          return (
+            <Path
+              key={`brush-${i}`}
+              d={`M ${x} 0 L ${x} ${H}`}
+              stroke="#FFFFFF"
+              strokeWidth={i % 7 === 0 ? 0.9 : 0.4}
+              strokeOpacity={op}
+            />
+          );
+        })}
+        {Array.from({ length: 60 }).map((_, i) => {
+          const x = (i * (W / 60)) + 1.7;
+          const op = 0.05 + (i % 4) * 0.02;
+          return (
+            <Path
+              key={`brushd-${i}`}
+              d={`M ${x} 0 L ${x} ${H}`}
+              stroke="#000000"
+              strokeWidth={i % 9 === 0 ? 0.9 : 0.35}
+              strokeOpacity={op}
+            />
+          );
+        })}
+
+        {/* Dashes — render every row */}
+        {rows.map((r, ri) =>
+          Array.from({ length: dashesInRow }).map((_, ci) => {
+            const cx = r.offsetX + ci * ROW_GAP_X + ROW_GAP_X / 2;
+            const cy = r.y;
+            return (
+              <G
+                key={`dash-${ri}-${ci}`}
+                transform={`rotate(${r.tilt} ${cx} ${cy})`}
+              >
+                {/* drop shadow under the dash for depth */}
+                <Path
+                  d={dashPath(cx, cy + 1.4, DASH_W, DASH_H)}
+                  fill="#000000"
+                  opacity={0.45}
+                />
+                {/* the dash itself */}
+                <Path
+                  d={dashPath(cx, cy, DASH_W, DASH_H)}
+                  fill="url(#dashGrad)"
+                />
+                {/* polished top highlight */}
+                <Path
+                  d={`M ${cx - DASH_W * 0.32} ${cy - DASH_H * 0.30}
+                      Q ${cx} ${cy - DASH_H * 0.45} ${cx + DASH_W * 0.18} ${cy - DASH_H * 0.20}`}
+                  stroke="#FFFFFF"
+                  strokeOpacity={0.75}
+                  strokeWidth={1.1}
+                  fill="none"
+                  strokeLinecap="round"
+                />
+              </G>
+            );
+          })
+        )}
+
+        {/* Subtle dark vignette so the plate feels grounded */}
         <Rect
           x="0"
           y="0"
           width={W}
           height={H}
           fill="#000000"
-          opacity="0.18"
+          opacity="0.08"
         />
       </Svg>
     </View>
