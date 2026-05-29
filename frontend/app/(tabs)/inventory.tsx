@@ -104,6 +104,16 @@ export default function InventoryScreen() {
     return `${tagFilter.length} tags`;
   }, [tagFilter, allTags]);
 
+  // Category filter (single-select)
+  const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
+  const [showCategoryPicker, setShowCategoryPicker] = useState(false);
+  const [allCategories, setAllCategories] = useState<any[]>([]);
+  const selectedCategoryName = useMemo(() => {
+    if (!categoryFilter) return null;
+    const found = allCategories.find((c) => c.id === categoryFilter);
+    return found?.name || null;
+  }, [categoryFilter, allCategories]);
+
   // Status picker (replaces the horizontal chip scroller)
   const [showStatusPicker, setShowStatusPicker] = useState(false);
 
@@ -351,7 +361,7 @@ export default function InventoryScreen() {
       const KEEP = Symbol("keep-previous");
       const keep = () => KEEP as unknown;
       const ff = opts?.forceFresh ? { forceFresh: true } : undefined;
-      const [t, a, w, cs, locs, tags, mu, sub] = await Promise.all([
+      const [t, a, w, cs, locs, tags, cats, mu, sub] = await Promise.all([
         api.listTools(params, ff),
         api.aggregate({}, ff),
         prefs.warranty_alerts
@@ -360,6 +370,7 @@ export default function InventoryScreen() {
         api.warrantyClaimsSummary(ff).catch(keep),
         api.listLocations().catch(keep),
         api.listTags().catch(keep),
+        api.listCategories().catch(keep),
         api.upcomingMaintenance(60, ff).catch(keep),
         api.getSubscription().catch(keep),
       ]);
@@ -376,6 +387,7 @@ export default function InventoryScreen() {
       if (cs !== KEEP) setOpenClaims((cs as any)?.totals?.open || 0);
       if (locs !== KEEP) setAllLocations(locs as any[]);
       if (tags !== KEEP) setAllTags(tags as any[]);
+      if (cats !== KEEP) setAllCategories(cats as any[]);
       if (sub !== KEEP) setHiddenCount((sub as any)?.hidden_tool_count || 0);
     } catch (e: any) {
       // Backend / network failure — DON'T spam the LogBox/console.error red
@@ -435,6 +447,11 @@ export default function InventoryScreen() {
       );
     }
 
+    // Category filter (single-select)
+    if (categoryFilter) {
+      out = out.filter((x: any) => x.category_id === categoryFilter);
+    }
+
     // Sort
     const _toTime = (s: any): number => {
       if (!s) return 0;
@@ -491,7 +508,7 @@ export default function InventoryScreen() {
         break;
     }
     return sorted;
-  }, [tools, filter, locationFilter, tagFilter, sortBy, allLocations]);
+  }, [tools, filter, locationFilter, tagFilter, categoryFilter, sortBy, allLocations]);
 
   // Stable references — prevents FlatList from treating the callbacks as new
   // every render, which would force every visible row to remount and re-decode
@@ -722,6 +739,49 @@ export default function InventoryScreen() {
                       : "PRICE: LOW → HIGH"}
             </Text>
             <Ionicons name="chevron-down" size={14} color={theme.colors.textMuted} />
+          </TouchableOpacity>
+        </View>
+
+        {/* Row 3 — CATEGORY (full-width) — added 2026-06 per user request */}
+        <View style={styles.filterDropdownRow}>
+          <TouchableOpacity
+            testID="category-filter-btn"
+            style={[
+              styles.locationFilterBtn,
+              { flex: 1 },
+              !!categoryFilter && styles.locationFilterBtnActive,
+            ]}
+            onPress={() => setShowCategoryPicker(true)}
+            activeOpacity={0.7}
+          >
+            <Ionicons
+              name="folder"
+              size={14}
+              color={categoryFilter ? theme.colors.accent : theme.colors.textMuted}
+            />
+            <Text
+              style={[
+                styles.locationFilterText,
+                categoryFilter && styles.locationFilterTextActive,
+              ]}
+              numberOfLines={1}
+            >
+              {selectedCategoryName || "All Categories"}
+            </Text>
+            {categoryFilter ? (
+              <TouchableOpacity
+                testID="category-filter-clear"
+                onPress={(e) => {
+                  e.stopPropagation();
+                  setCategoryFilter(null);
+                }}
+                hitSlop={6}
+              >
+                <Ionicons name="close-circle" size={14} color={theme.colors.accent} />
+              </TouchableOpacity>
+            ) : (
+              <Ionicons name="chevron-down" size={14} color={theme.colors.textMuted} />
+            )}
           </TouchableOpacity>
         </View>
       </View>
@@ -1225,7 +1285,93 @@ export default function InventoryScreen() {
         </View>
       </Modal>
 
-      {/* Filter: Status picker modal */}
+      {/* Filter: Category picker modal (single-select, added 2026-06) */}
+      <Modal
+        visible={showCategoryPicker}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowCategoryPicker(false)}
+      >
+        <View style={styles.modalBg}>
+          <View style={styles.modalSheet}>
+            <Text style={styles.modalTitle}>FILTER BY CATEGORY</Text>
+            <ScrollView style={{ maxHeight: 460 }}>
+              <TouchableOpacity
+                testID="category-filter-all"
+                style={[styles.locOption, !categoryFilter && styles.locOptionActive]}
+                onPress={() => {
+                  setCategoryFilter(null);
+                  setShowCategoryPicker(false);
+                }}
+              >
+                <Ionicons
+                  name="apps"
+                  size={16}
+                  color={!categoryFilter ? theme.colors.accent : theme.colors.textMuted}
+                />
+                <Text
+                  style={[
+                    styles.locOptName,
+                    !categoryFilter && { color: theme.colors.accent },
+                  ]}
+                >
+                  ALL CATEGORIES
+                </Text>
+              </TouchableOpacity>
+              {[...allCategories]
+                .sort((a, b) => (a.name || "").localeCompare(b.name || ""))
+                .map((c: any) => {
+                  const isActive = categoryFilter === c.id;
+                  const count = (tools || []).filter(
+                    (t: any) => t.category_id === c.id,
+                  ).length;
+                  return (
+                    <TouchableOpacity
+                      key={c.id}
+                      testID={`category-filter-${c.id}`}
+                      style={[styles.locOption, isActive && styles.locOptionActive]}
+                      onPress={() => {
+                        setCategoryFilter(c.id);
+                        setShowCategoryPicker(false);
+                      }}
+                    >
+                      <Ionicons
+                        name="folder"
+                        size={16}
+                        color={isActive ? theme.colors.accent : theme.colors.textMuted}
+                      />
+                      <Text
+                        style={[
+                          styles.locOptName,
+                          isActive && { color: theme.colors.accent },
+                        ]}
+                      >
+                        {c.name} ({count})
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              {allCategories.length === 0 && (
+                <Text
+                  style={{
+                    color: theme.colors.textMuted,
+                    padding: 16,
+                    textAlign: "center",
+                  }}
+                >
+                  No categories yet. Create some when editing a tool.
+                </Text>
+              )}
+            </ScrollView>
+            <TouchableOpacity
+              style={styles.btnGhost}
+              onPress={() => setShowCategoryPicker(false)}
+            >
+              <Text style={styles.btnGhostText}>DONE</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
       <Modal
         visible={showStatusPicker}
         transparent
