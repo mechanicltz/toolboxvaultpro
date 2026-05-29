@@ -8,6 +8,7 @@ import { theme } from "../src/theme";
 import { api } from "../src/api";
 import { formatDateUS } from "../src/dateUtil";
 import { BevelCard } from "../src/components/BevelCard";
+import { IndustrialBanner } from "../src/components/IndustrialBanner";
 
 import { themedStyles } from "../src/themeContext";
 
@@ -57,13 +58,15 @@ export default function WarrantyScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
-      <View style={styles.topBar}>
-        <TouchableOpacity onPress={() => router.back()} hitSlop={10}>
-          <Ionicons name="arrow-back" size={26} color={theme.colors.textPrimary} />
-        </TouchableOpacity>
-        <Text style={styles.title}>WARRANTY ALERTS</Text>
-        <View style={{ width: 26 }} />
-      </View>
+      <IndustrialBanner
+        title="WARRANTY ALERTS"
+        subtitle="Expiring & Expired"
+        leftSlot={
+          <TouchableOpacity onPress={() => router.back()} hitSlop={10}>
+            <Ionicons name="arrow-back" size={22} color="#FFFFFF" />
+          </TouchableOpacity>
+        }
+      />
       <ScrollView contentContainerStyle={{ paddingBottom: 60 }}>
         <Text style={styles.sectionLabel}>EXPIRED ({data.expired.length})</Text>
         {data.expired.length === 0 ? (

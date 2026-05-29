@@ -21,6 +21,7 @@ import { api } from "../src/api";
 import { formatPhone } from "../src/contactLinks";
 
 import { themedStyles } from "../src/themeContext";
+import { IndustrialBanner } from "../src/components/IndustrialBanner";
 
 type Profile = {
   name: string;
@@ -114,19 +115,15 @@ export default function PersonalInfoScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
-      <View style={styles.header}>
-        <TouchableOpacity
-          testID="pi-back"
-          onPress={() => router.back()}
-          hitSlop={10}
-        >
-          <Ionicons name="arrow-back" size={24} color={theme.colors.textPrimary} />
-        </TouchableOpacity>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.title}>PERSONAL INFORMATION</Text>
-          <Text style={styles.subtitle}>USED FOR INSURANCE REPORTS</Text>
-        </View>
-      </View>
+      <IndustrialBanner
+        title="PERSONAL INFORMATION"
+        subtitle="Used for Insurance Reports"
+        leftSlot={
+          <TouchableOpacity testID="pi-back" onPress={() => router.back()} hitSlop={10}>
+            <Ionicons name="arrow-back" size={22} color="#FFFFFF" />
+          </TouchableOpacity>
+        }
+      />
 
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : undefined}

@@ -20,6 +20,7 @@ import { api } from "../src/api";
 import { parseCsv, parseXlsx, saveBase64 } from "../src/csvIO";
 
 import { themedStyles } from "../src/themeContext";
+import { IndustrialBanner } from "../src/components/IndustrialBanner";
 
 type ImportField = { id: string; label: string; required?: boolean };
 type ExportField = { id: string; label: string };
@@ -403,13 +404,15 @@ export default function ImportExportScreen() {
   /* ---------------- RENDER ---------------- */
   return (
     <SafeAreaView style={styles.container} edges={["bottom"]}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} hitSlop={10}>
-          <Ionicons name="chevron-back" size={26} color={theme.colors.textPrimary} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>IMPORT / EXPORT DATABASE</Text>
-        <View style={{ width: 26 }} />
-      </View>
+      <IndustrialBanner
+        title="IMPORT / EXPORT"
+        subtitle="Backup & Restore"
+        leftSlot={
+          <TouchableOpacity onPress={() => router.back()} hitSlop={10}>
+            <Ionicons name="chevron-back" size={22} color="#FFFFFF" />
+          </TouchableOpacity>
+        }
+      />
 
       <ScrollView contentContainerStyle={{ padding: 18 }}>
         {/* EXPORT CARD */}

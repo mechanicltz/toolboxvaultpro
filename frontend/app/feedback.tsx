@@ -29,6 +29,7 @@ import { useAuth } from "../src/AuthContext";
 import { api } from "../src/api";
 
 import { themedStyles } from "../src/themeContext";
+import { IndustrialBanner } from "../src/components/IndustrialBanner";
 
 const DESTINATION_EMAIL = "MechanicVault@gmail.com";
 const APP_VERSION =
@@ -185,17 +186,15 @@ export default function FeedbackScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} hitSlop={10}>
-          <Ionicons
-            name="chevron-back"
-            size={24}
-            color={theme.colors.textPrimary}
-          />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>CONTACT · FEEDBACK</Text>
-        <View style={{ width: 24 }} />
-      </View>
+      <IndustrialBanner
+        title="CONTACT · FEEDBACK"
+        subtitle="Bug Reports & Feature Requests"
+        leftSlot={
+          <TouchableOpacity onPress={() => router.back()} hitSlop={10}>
+            <Ionicons name="chevron-back" size={22} color="#FFFFFF" />
+          </TouchableOpacity>
+        }
+      />
 
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : undefined}

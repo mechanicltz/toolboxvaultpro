@@ -27,6 +27,8 @@ import * as FileSystem from "expo-file-system/legacy";
 
 import { themedStyles } from "../../src/themeContext";
 import { BevelCard } from "../../src/components/BevelCard";
+import { IndustrialBanner } from "../../src/components/IndustrialBanner";
+import { PillButton } from "../../src/components/PillButton";
 
 type Tab = "open" | "completed";
 
@@ -283,23 +285,23 @@ export default function DealerClaimsScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} hitSlop={10} style={styles.backBtn}>
-          <Ionicons name="chevron-back" size={26} color={theme.colors.textPrimary} />
-        </TouchableOpacity>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.title}>{dealer.name}</Text>
-          <Text style={styles.subtitle}>CLAIMS / REPAIRS</Text>
-        </View>
-        <TouchableOpacity
+      <IndustrialBanner
+        title={dealer.name}
+        subtitle="Claims / Repairs"
+        leftSlot={
+          <TouchableOpacity onPress={() => router.back()} hitSlop={10}>
+            <Ionicons name="chevron-back" size={22} color="#FFFFFF" />
+          </TouchableOpacity>
+        }
+      />
+      <View style={styles.detailActionsRowDC}>
+        <PillButton
           testID="open-dealer-detail"
+          label="DEALER"
+          icon="briefcase"
+          variant="active"
           onPress={() => router.push(`/dealer/${dealer.id}`)}
-          hitSlop={10}
-          style={styles.dealerBtn}
-        >
-          <Ionicons name="briefcase" size={16} color={theme.colors.accent} />
-          <Text style={styles.dealerBtnText}>DEALER</Text>
-        </TouchableOpacity>
+        />
       </View>
 
       <View style={styles.tabRow}>
@@ -507,6 +509,7 @@ export default function DealerClaimsScreen() {
 
 const styles = themedStyles((c) => ({
   container: { flex: 1, backgroundColor: c.bg },
+  detailActionsRowDC: { flexDirection: "row", justifyContent: "flex-end", gap: 8, paddingHorizontal: 16, paddingTop: 10, paddingBottom: 4 },
   notifiedHighlight: {
     color: c.accent,
     fontSize: 10,

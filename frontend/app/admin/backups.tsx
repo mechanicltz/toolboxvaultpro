@@ -20,6 +20,7 @@ import { theme } from "../../src/theme";
 import { api, getToken } from "../../src/api";
 import { themedStyles } from "../../src/themeContext";
 import { BevelCard } from "../../src/components/BevelCard";
+import { IndustrialBanner } from "../../src/components/IndustrialBanner";
 
 type BackupRow = {
   id: string;
@@ -227,13 +228,15 @@ export default function AdminBackupsPage() {
 
   return (
     <SafeAreaView style={styles.safe} edges={["top", "left", "right"]}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-          <Ionicons name="chevron-back" size={24} color={theme.colors.text} />
-        </TouchableOpacity>
-        <Text style={styles.title}>Database Backups</Text>
-        <View style={{ width: 32 }} />
-      </View>
+      <IndustrialBanner
+        title="DATABASE BACKUPS"
+        subtitle="Admin Only"
+        leftSlot={
+          <TouchableOpacity onPress={() => router.back()} hitSlop={10}>
+            <Ionicons name="chevron-back" size={22} color="#FFFFFF" />
+          </TouchableOpacity>
+        }
+      />
 
       <ScrollView
         contentContainerStyle={styles.content}

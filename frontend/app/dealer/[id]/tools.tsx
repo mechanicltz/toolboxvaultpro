@@ -17,6 +17,7 @@ import { api } from "../../../src/api";
 import { usePrefs } from "../../../src/prefs";
 
 import { themedStyles } from "../../../src/themeContext";
+import { IndustrialBanner } from "../../../src/components/IndustrialBanner";
 import { BevelCard } from "../../../src/components/BevelCard";
 
 /**
@@ -65,21 +66,16 @@ export default function DealerToolsScreen() {
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() => router.back()}
-          style={styles.backBtn}
-          hitSlop={10}
-          testID="back-btn"
-        >
-          <Ionicons name="chevron-back" size={22} color={theme.colors.textPrimary} />
-        </TouchableOpacity>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.headerOver}>TOOLS PURCHASED FROM</Text>
-          <Text style={styles.headerName} numberOfLines={1}>
-            {dealerName}
-          </Text>
-        </View>
+      <IndustrialBanner
+        title={dealerName || "TOOLS"}
+        subtitle="Tools Purchased From"
+        leftSlot={
+          <TouchableOpacity onPress={() => router.back()} hitSlop={10} testID="back-btn">
+            <Ionicons name="chevron-back" size={22} color="#FFFFFF" />
+          </TouchableOpacity>
+        }
+      />
+      <View style={{display:"none"}}>
       </View>
 
       {/* Summary band */}

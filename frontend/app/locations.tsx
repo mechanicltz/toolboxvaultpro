@@ -20,6 +20,8 @@ import { theme } from "../src/theme";
 import { api } from "../src/api";
 import { confirm } from "../src/confirm";
 import { buildLocationTree, LocationNode } from "../src/locationTree";
+import { IndustrialBanner } from "../src/components/IndustrialBanner";
+import { PillButton } from "../src/components/PillButton";
 
 import { themedStyles } from "../src/themeContext";
 
@@ -232,18 +234,23 @@ export default function LocationsTreeScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
-      <View style={styles.topBar}>
-        <TouchableOpacity onPress={() => router.back()} hitSlop={10}>
-          <Ionicons name="arrow-back" size={26} color={theme.colors.textPrimary} />
-        </TouchableOpacity>
-        <Text style={styles.title}>LOCATIONS</Text>
-        <TouchableOpacity
+      <IndustrialBanner
+        title="LOCATIONS"
+        subtitle="Nested Storage Tree"
+        leftSlot={
+          <TouchableOpacity onPress={() => router.back()} hitSlop={10}>
+            <Ionicons name="arrow-back" size={22} color="#FFFFFF" />
+          </TouchableOpacity>
+        }
+      />
+      <View style={styles.actionsRow}>
+        <PillButton
           testID="add-root-btn"
+          label="ADD LOCATION"
+          icon="add"
+          variant="active"
           onPress={() => setAdding({ parentId: null, parentName: "" })}
-          hitSlop={10}
-        >
-          <Ionicons name="add" size={26} color={theme.colors.accent} />
-        </TouchableOpacity>
+        />
       </View>
       <ScrollView contentContainerStyle={{ paddingBottom: 60 }}>
         {!loaded ? (
@@ -432,6 +439,13 @@ export default function LocationsTreeScreen() {
 
 const styles = themedStyles((c) => ({
   container: { flex: 1, backgroundColor: c.bg },
+  actionsRow: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    paddingHorizontal: 16,
+    paddingTop: 10,
+    paddingBottom: 4,
+  },
   topBar: {
     flexDirection: "row",
     justifyContent: "space-between",

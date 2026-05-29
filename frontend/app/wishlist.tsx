@@ -29,6 +29,8 @@ import { useAuth } from "../src/AuthContext";
 
 import { themedStyles } from "../src/themeContext";
 import { BevelCard } from "../src/components/BevelCard";
+import { IndustrialBanner } from "../src/components/IndustrialBanner";
+import { PillButton } from "../src/components/PillButton";
 
 const PRIORITIES = [
   { key: "low", label: "LOW", color: theme.colors.textMuted },
@@ -465,14 +467,16 @@ export default function WishlistScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
-      <View style={styles.topBar}>
-        <TouchableOpacity testID="wishlist-back" onPress={() => (selectMode ? cancelSelectMode() : router.back())} hitSlop={10}>
-          <Ionicons name={selectMode ? "close" : "arrow-back"} size={26} color={theme.colors.textPrimary} />
-        </TouchableOpacity>
-        <View style={{ flex: 1, marginLeft: 12 }}>
-          <Text style={styles.title}>{selectMode ? `SELECTED ${selected.size}` : "WISH LIST"}</Text>
-          <Text style={styles.subtitle}>{selectMode ? "Tap items to include · email below" : "Tools you want · saved links"}</Text>
-        </View>
+      <IndustrialBanner
+        title={selectMode ? `SELECTED ${selected.size}` : "WISH LIST"}
+        subtitle={selectMode ? "Tap items to include · email below" : "Tools you want · saved links"}
+        leftSlot={
+          <TouchableOpacity testID="wishlist-back" onPress={() => (selectMode ? cancelSelectMode() : router.back())} hitSlop={10}>
+            <Ionicons name={selectMode ? "close" : "arrow-back"} size={22} color="#FFFFFF" />
+          </TouchableOpacity>
+        }
+      />
+      <View style={styles.wishActionsRow}>
         {!selectMode ? (
           <TouchableOpacity
             testID="wish-select-mode"
@@ -487,6 +491,13 @@ export default function WishlistScreen() {
           </TouchableOpacity>
         ) : (
           <TouchableOpacity
+            testID="wish-select-all-tmp"
+            style={{display:"none"}}
+          ><Text>x</Text></TouchableOpacity>
+        )}
+      </View>
+      <View style={{display: "none"}}>
+          <TouchableOpacity
             testID="wish-select-all"
             onPress={() => {
               const all = visible.map((i: any) => i.id);
@@ -500,7 +511,6 @@ export default function WishlistScreen() {
               {selected.size === visible.length && visible.length > 0 ? "NONE" : "ALL"}
             </Text>
           </TouchableOpacity>
-        )}
       </View>
 
       <View style={styles.statRow}>
@@ -882,6 +892,7 @@ function Stat({ label, value, color }: { label: string; value: string; color?: s
 const styles = themedStyles((c) => ({
   container: { flex: 1, backgroundColor: c.bg },
   topBar: { flexDirection: "row", alignItems: "center", paddingHorizontal: 20, paddingVertical: 12, borderBottomColor: c.border, borderBottomWidth: 1 },
+  wishActionsRow: { flexDirection: "row", justifyContent: "flex-end", paddingHorizontal: 16, paddingTop: 10, paddingBottom: 4, gap: 8 },
   title: { color: c.textPrimary, fontSize: 14, fontWeight: "900", letterSpacing: 2 },
   subtitle: { color: c.accent, fontSize: 7, fontWeight: "700", letterSpacing: 1.5, marginTop: 2 },
   statRow: { flexDirection: "row", padding: 16, gap: 8 },

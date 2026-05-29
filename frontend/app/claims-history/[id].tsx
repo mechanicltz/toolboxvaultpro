@@ -17,6 +17,7 @@ import { api } from "../../src/api";
 import { formatDateUS } from "../../src/dateUtil";
 
 import { themedStyles } from "../../src/themeContext";
+import { IndustrialBanner } from "../../src/components/IndustrialBanner";
 
 const STATUS_COLORS: Record<string, string> = {
   broken: theme.colors.danger,
@@ -70,20 +71,16 @@ export default function ClaimsHistoryPage() {
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
-      <View style={styles.headerBar}>
-        <TouchableOpacity onPress={() => router.back()} hitSlop={10} testID="back-btn">
-          <Ionicons name="arrow-back" size={26} color={theme.colors.textPrimary} />
-        </TouchableOpacity>
-        <View style={styles.headerTitleCol}>
-          <Text style={styles.headerTitle} numberOfLines={1}>
-            CLAIMS HISTORY
-          </Text>
-          {!!tool?.name && (
-            <Text style={styles.headerSub} numberOfLines={1}>
-              {tool.name}
-            </Text>
-          )}
-        </View>
+      <IndustrialBanner
+        title="CLAIMS HISTORY"
+        subtitle={tool?.name || "Warranty claims"}
+        leftSlot={
+          <TouchableOpacity onPress={() => router.back()} hitSlop={10} testID="back-btn">
+            <Ionicons name="arrow-back" size={22} color="#FFFFFF" />
+          </TouchableOpacity>
+        }
+      />
+      <View style={{ display: "none" }}>
         <View style={styles.headerCount}>
           <Text style={styles.headerCountText}>{claims.length}</Text>
         </View>

@@ -20,6 +20,7 @@ import { DateField } from "../../src/DateField";
 import { useAuth } from "../../src/AuthContext";
 
 import { themedStyles } from "../../src/themeContext";
+import { IndustrialBanner } from "../../src/components/IndustrialBanner";
 import { BevelCard } from "../../src/components/BevelCard";
 import { MaintenanceSection } from "../../src/sections/MaintenanceSection";
 import { formatDateUS } from "../../src/dateUtil";
@@ -500,32 +501,40 @@ export default function ToolEdit() {
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1 }}>
-        <View style={styles.topBar}>
-          <TouchableOpacity
-            testID="cancel-btn"
-            onPress={() => {
-              if (router.canGoBack()) {
-                router.back();
-              } else {
-                router.replace("/");
-              }
-            }}
-            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-            style={styles.topBarBtn}
-          >
-            <Ionicons name="close" size={26} color={theme.colors.textPrimary} />
-          </TouchableOpacity>
-          <Text style={styles.topTitle}>{isEdit ? "EDIT TOOL" : "NEW TOOL"}</Text>
-          <TouchableOpacity
-            testID="save-tool-btn"
-            onPress={save}
-            disabled={saving}
-            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-            style={styles.topBarBtn}
-          >
-            {saving ? <ActivityIndicator color={theme.colors.accent} /> : <Text style={styles.saveText}>SAVE</Text>}
-          </TouchableOpacity>
-        </View>
+        <IndustrialBanner
+          title={isEdit ? "EDIT TOOL" : "NEW TOOL"}
+          subtitle={name ? String(name) : (isEdit ? "Update item details" : "Add a new item")}
+          leftSlot={
+            <TouchableOpacity
+              testID="cancel-btn"
+              onPress={() => {
+                if (router.canGoBack()) {
+                  router.back();
+                } else {
+                  router.replace("/");
+                }
+              }}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            >
+              <Ionicons name="close" size={22} color="#FFFFFF" />
+            </TouchableOpacity>
+          }
+          rightSlot={
+            <TouchableOpacity
+              testID="save-tool-btn"
+              onPress={save}
+              disabled={saving}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+              style={styles.saveHeaderBtn}
+            >
+              {saving ? (
+                <ActivityIndicator color="#000" />
+              ) : (
+                <Text style={styles.saveHeaderText}>SAVE</Text>
+              )}
+            </TouchableOpacity>
+          }
+        />
 
         <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 120 }} keyboardShouldPersistTaps="handled">
           {/* AI Receipt Scanner banner removed per user 2026-05-27. */}
@@ -1480,6 +1489,18 @@ const styles = themedStyles((c) => ({
   },
   topTitle: { color: c.textPrimary, fontSize: 12, fontWeight: "900", letterSpacing: 2 },
   saveText: { color: c.accent, fontWeight: "900", letterSpacing: 2, fontSize: 10 },
+  saveHeaderBtn: {
+    backgroundColor: "#FFFFFF",
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: 999,
+  },
+  saveHeaderText: {
+    color: c.accent,
+    fontWeight: "900",
+    letterSpacing: 1.5,
+    fontSize: 10,
+  },
   label: {
     color: c.textMuted, fontSize: 8, fontWeight: "800",
     letterSpacing: 2, marginTop: 16, marginBottom: 6,

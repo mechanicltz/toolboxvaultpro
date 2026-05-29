@@ -18,6 +18,7 @@ import { formatDateUS } from "../src/dateUtil";
 
 import { themedStyles } from "../src/themeContext";
 import { BevelCard } from "../src/components/BevelCard";
+import { IndustrialBanner } from "../src/components/IndustrialBanner";
 
 function daysUntil(iso: string): number {
   if (!iso) return 9999;
@@ -64,15 +65,15 @@ export default function MaintenanceScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
-      <View style={styles.topBar}>
-        <TouchableOpacity onPress={() => router.back()} hitSlop={10} style={styles.backBtn}>
-          <Ionicons name="chevron-back" size={26} color={theme.colors.textPrimary} />
-        </TouchableOpacity>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.title}>MAINTENANCE</Text>
-          <Text style={styles.subtitle}>CALIBRATION · SERVICE · INSPECTION</Text>
-        </View>
-      </View>
+      <IndustrialBanner
+        title="MAINTENANCE"
+        subtitle="Calibration · Service · Inspection"
+        leftSlot={
+          <TouchableOpacity onPress={() => router.back()} hitSlop={10}>
+            <Ionicons name="chevron-back" size={22} color="#FFFFFF" />
+          </TouchableOpacity>
+        }
+      />
 
       <View style={styles.statRow}>
         <View style={[styles.statCard, { borderLeftColor: theme.colors.danger }]}>

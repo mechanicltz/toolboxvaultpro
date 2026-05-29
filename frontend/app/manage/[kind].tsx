@@ -18,6 +18,7 @@ import { api } from "../../src/api";
 import { confirm } from "../../src/confirm";
 
 import { themedStyles } from "../../src/themeContext";
+import { IndustrialBanner } from "../../src/components/IndustrialBanner";
 
 type Kind = "categories" | "tags" | "locations";
 
@@ -104,13 +105,14 @@ export default function ManageScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
-      <View style={styles.topBar}>
-        <TouchableOpacity onPress={() => router.back()} hitSlop={10}>
-          <Ionicons name="arrow-back" size={26} color={theme.colors.textPrimary} />
-        </TouchableOpacity>
-        <Text style={styles.title}>{TITLES[k]}</Text>
-        <View style={{ width: 26 }} />
-      </View>
+      <IndustrialBanner
+        title={TITLES[k]}
+        leftSlot={
+          <TouchableOpacity onPress={() => router.back()} hitSlop={10}>
+            <Ionicons name="arrow-back" size={22} color="#FFFFFF" />
+          </TouchableOpacity>
+        }
+      />
       <View style={styles.addRow}>
         <TextInput
           testID="manage-name-input"

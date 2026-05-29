@@ -28,6 +28,7 @@ import { formatDateUS } from "../src/dateUtil";
 import { DateField } from "../src/DateField";
 
 import { themedStyles } from "../src/themeContext";
+import { IndustrialBanner } from "../src/components/IndustrialBanner";
 import { BevelCard } from "../src/components/BevelCard";
 
 const STATUS_LIST = [
@@ -359,14 +360,16 @@ export default function WarrantyClaimsScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
-      <View style={styles.topBar}>
-        <TouchableOpacity testID="claims-back" onPress={() => router.back()} hitSlop={10}>
-          <Ionicons name="arrow-back" size={26} color={theme.colors.textPrimary} />
-        </TouchableOpacity>
-        <View style={{ flex: 1, marginLeft: 12 }}>
-          <Text style={styles.title}>WARRANTY CLAIMS</Text>
-          <Text style={styles.subtitle}>By dealer · with status pipeline</Text>
-        </View>
+      <IndustrialBanner
+        title="WARRANTY CLAIMS"
+        subtitle="By Dealer · Status Pipeline"
+        leftSlot={
+          <TouchableOpacity testID="claims-back" onPress={() => router.back()} hitSlop={10}>
+            <Ionicons name="arrow-back" size={22} color="#FFFFFF" />
+          </TouchableOpacity>
+        }
+      />
+      <View style={{ display: "none" }}>
         <View style={{ flexDirection: "row", gap: 14 }}>
           <TouchableOpacity testID="filters-btn" onPress={() => setShowFilters(true)} hitSlop={10}>
             <View>

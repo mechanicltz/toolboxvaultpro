@@ -30,6 +30,8 @@ import { DateField } from "../../src/DateField";
 import { useAuth } from "../../src/AuthContext";
 import { themedStyles } from "../../src/themeContext";
 import { BevelCard } from "../../src/components/BevelCard";
+import { IndustrialBanner } from "../../src/components/IndustrialBanner";
+import { PillButton } from "../../src/components/PillButton";
 
 import {
   isDeviceContactsAvailable,
@@ -201,37 +203,45 @@ export default function DealerDetail() {
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
-      <View style={styles.topBar}>
-        <TouchableOpacity onPress={() => router.back()} hitSlop={10}>
-          <Ionicons name="arrow-back" size={26} color={theme.colors.textPrimary} />
-        </TouchableOpacity>
-        <View style={{ flexDirection: "row", gap: 16 }}>
-          <TouchableOpacity
-            testID="edit-dealer-btn"
-            onPress={() => {
-              setEditForm({
-                name: dealer.name,
-                phone: dealer.phone || "",
-                website: dealer.website || "",
-                address: dealer.address || "",
-                notes: dealer.notes || "",
-                warranty_contact: dealer.warranty_contact || "",
-                tech_support_contact: dealer.tech_support_contact || "",
-                customer_support_contact: dealer.customer_support_contact || "",
-                route_frequency: dealer.route_frequency || "N/A",
-                route_day_of_week: dealer.route_day_of_week || "",
-                route_anchor_date: dealer.route_anchor_date || "",
-              });
-              setEditing(true);
-            }}
-            hitSlop={10}
-          >
-            <Ionicons name="create-outline" size={24} color={theme.colors.textPrimary} />
+      <IndustrialBanner
+        title={dealer.name}
+        subtitle="Dealer Details"
+        leftSlot={
+          <TouchableOpacity onPress={() => router.back()} hitSlop={10}>
+            <Ionicons name="arrow-back" size={22} color="#FFFFFF" />
           </TouchableOpacity>
-          <TouchableOpacity testID="delete-dealer-btn" onPress={removeDealer} hitSlop={10}>
-            <Ionicons name="trash-outline" size={24} color={theme.colors.danger} />
-          </TouchableOpacity>
-        </View>
+        }
+      />
+      <View style={styles.detailActionsRowDealer}>
+        <PillButton
+          testID="edit-dealer-btn"
+          label="EDIT"
+          icon="create-outline"
+          variant="active"
+          onPress={() => {
+            setEditForm({
+              name: dealer.name,
+              phone: dealer.phone || "",
+              website: dealer.website || "",
+              address: dealer.address || "",
+              notes: dealer.notes || "",
+              warranty_contact: dealer.warranty_contact || "",
+              tech_support_contact: dealer.tech_support_contact || "",
+              customer_support_contact: dealer.customer_support_contact || "",
+              route_frequency: dealer.route_frequency || "N/A",
+              route_day_of_week: dealer.route_day_of_week || "",
+              route_anchor_date: dealer.route_anchor_date || "",
+            });
+            setEditing(true);
+          }}
+        />
+        <PillButton
+          testID="delete-dealer-btn"
+          label="DELETE"
+          icon="trash-outline"
+          variant="danger"
+          onPress={removeDealer}
+        />
       </View>
 
       <ScrollView contentContainerStyle={{ paddingBottom: 100 }}>
@@ -871,6 +881,7 @@ function CopyableRow({
 
 const styles = themedStyles((c) => ({
   container: { flex: 1, backgroundColor: c.bg },
+  detailActionsRowDealer: { flexDirection: "row", justifyContent: "flex-end", gap: 8, paddingHorizontal: 16, paddingTop: 10, paddingBottom: 4 },
   topBar: {
     flexDirection: "row",
     justifyContent: "space-between",

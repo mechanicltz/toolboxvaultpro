@@ -25,6 +25,8 @@ import { useResponsive } from "../src/responsive";
 
 import { themedStyles } from "../src/themeContext";
 import { BevelCard } from "../src/components/BevelCard";
+import { IndustrialBanner } from "../src/components/IndustrialBanner";
+import { PillButton } from "../src/components/PillButton";
 
 type Tool = any;
 
@@ -190,19 +192,23 @@ export default function ForSaleScreen() {
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <Stack.Screen options={{ headerShown: false }} />
-      <View style={styles.topBar}>
-        <TouchableOpacity onPress={() => router.back()} hitSlop={10} testID="back-btn">
-          <Ionicons name="chevron-back" size={26} color={theme.colors.textPrimary} />
-        </TouchableOpacity>
-        <Text style={styles.title}>INVENTORY FOR SALE</Text>
-        <TouchableOpacity
-          onPress={() => router.push("/tool/edit")}
+      <IndustrialBanner
+        title="INVENTORY FOR SALE"
+        subtitle="Listed & Sold Items"
+        leftSlot={
+          <TouchableOpacity onPress={() => router.back()} hitSlop={10} testID="back-btn">
+            <Ionicons name="chevron-back" size={22} color="#FFFFFF" />
+          </TouchableOpacity>
+        }
+      />
+      <View style={styles.actionsRow}>
+        <PillButton
           testID="add-item-btn"
-          style={styles.reportsBtn}
-        >
-          <Ionicons name="add" size={14} color={theme.colors.accent} />
-          <Text style={styles.reportsBtnText}>ADD ITEM</Text>
-        </TouchableOpacity>
+          label="ADD ITEM"
+          icon="add"
+          variant="active"
+          onPress={() => router.push("/tool/edit")}
+        />
       </View>
 
       <ResponsiveContainer>
@@ -361,6 +367,13 @@ function ChipSelect({ items, value, onChange, testIDPrefix }: { items: any[]; va
 
 const styles = themedStyles((c) => ({
   container: { flex: 1, backgroundColor: c.bg },
+  actionsRow: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    paddingHorizontal: 16,
+    paddingTop: 10,
+    paddingBottom: 4,
+  },
   topBar: {
     flexDirection: "row",
     alignItems: "center",

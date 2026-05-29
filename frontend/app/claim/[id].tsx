@@ -19,6 +19,7 @@ import { formatDateUS, formatDateTimeUS } from "../../src/dateUtil";
 import { formatPhonesInText } from "../../src/contactLinks";
 
 import { themedStyles } from "../../src/themeContext";
+import { IndustrialBanner } from "../../src/components/IndustrialBanner";
 
 const STATUS_COLORS: Record<string, string> = {
   broken: theme.colors.danger,
@@ -82,31 +83,29 @@ export default function ClaimDetailScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
-      <View style={styles.header}>
-        <TouchableOpacity
-          testID="claim-back-btn"
-          onPress={() => {
-            try {
-              if (router.canGoBack()) {
-                router.back();
-              } else {
+      <IndustrialBanner
+        title="WARRANTY CLAIM"
+        subtitle={isHistorical ? "Historical Record" : "Active Claim"}
+        leftSlot={
+          <TouchableOpacity
+            testID="claim-back-btn"
+            onPress={() => {
+              try {
+                if (router.canGoBack()) {
+                  router.back();
+                } else {
+                  router.replace("/claims");
+                }
+              } catch {
                 router.replace("/claims");
               }
-            } catch {
-              router.replace("/claims");
-            }
-          }}
-          hitSlop={10}
-        >
-          <Ionicons name="arrow-back" size={24} color={theme.colors.textPrimary} />
-        </TouchableOpacity>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.title}>WARRANTY CLAIM</Text>
-          <Text style={styles.subtitle}>
-            {isHistorical ? "HISTORICAL RECORD" : "ACTIVE CLAIM"}
-          </Text>
-        </View>
-      </View>
+            }}
+            hitSlop={10}
+          >
+            <Ionicons name="arrow-back" size={22} color="#FFFFFF" />
+          </TouchableOpacity>
+        }
+      />
 
       <ScrollView contentContainerStyle={{ padding: 18, paddingBottom: 100 }}>
         <View style={[styles.statusBanner, { borderColor: color }]}>

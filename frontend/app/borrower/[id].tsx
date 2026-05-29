@@ -10,6 +10,8 @@ import { formatDateTime } from "../../src/dt";
 import { parseContacts, openEmail, openPhone, openSms } from "../../src/contactLinks";
 
 import { themedStyles } from "../../src/themeContext";
+import { IndustrialBanner } from "../../src/components/IndustrialBanner";
+import { PillButton } from "../../src/components/PillButton";
 
 export default function BorrowerHistory() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -69,14 +71,23 @@ export default function BorrowerHistory() {
   const b = data.borrower;
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
-      <View style={styles.topBar}>
-        <TouchableOpacity onPress={() => router.back()} hitSlop={10}>
-          <Ionicons name="arrow-back" size={26} color={theme.colors.textPrimary} />
-        </TouchableOpacity>
-        <Text style={styles.title} numberOfLines={1}>{b.name.toUpperCase()}</Text>
-        <TouchableOpacity testID="edit-borrower-btn" onPress={openEditModal} hitSlop={10}>
-          <Ionicons name="create-outline" size={24} color={theme.colors.textPrimary} />
-        </TouchableOpacity>
+      <IndustrialBanner
+        title={b.name}
+        subtitle="Contact Details"
+        leftSlot={
+          <TouchableOpacity onPress={() => router.back()} hitSlop={10}>
+            <Ionicons name="arrow-back" size={22} color="#FFFFFF" />
+          </TouchableOpacity>
+        }
+      />
+      <View style={styles.detailActionsRow}>
+        <PillButton
+          testID="edit-borrower-btn"
+          label="EDIT"
+          icon="create-outline"
+          variant="active"
+          onPress={openEditModal}
+        />
       </View>
 
       <ScrollView contentContainerStyle={{ paddingBottom: 60 }}>
@@ -298,6 +309,7 @@ function ContactActions({ raw }: { raw?: string | null }) {
 
 const styles = themedStyles((c) => ({
   container: { flex: 1, backgroundColor: c.bg },
+  detailActionsRow: { flexDirection: "row", justifyContent: "flex-end", paddingHorizontal: 16, paddingTop: 10, paddingBottom: 4, gap: 8 },
   topBar: {
     flexDirection: "row",
     justifyContent: "space-between",
