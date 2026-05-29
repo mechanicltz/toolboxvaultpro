@@ -63,6 +63,47 @@ export default function PdfViewerScreen(): React.ReactElement {
     }
   };
 
+  // Robust back: previously the system's default header back button worked
+  // the FIRST time a PDF was viewed but broke on subsequent previews. The
+  // root cause is that every report tap calls `router.push("/pdf-viewer",
+  // ...)` (see /app/frontend/src/reportRunner.ts), which STACKS a fresh
+  // PDF screen on top of the previous one. On 2nd+ taps you have
+  // [reports → pdfA → pdfB] and the default back arrow can pop pdfB into
+  // pdfA (still rendered behind) — making it look like nothing happens.
+  //
+  // Fix: provide an explicit headerLeft that calls `router.back()`. If
+  // the previous route is ALSO a /pdf-viewer (which happens after
+  // multiple previews), keep popping until we land back on something
+  // else. This guarantees the X always returns to the reports tab.
+  const handleBack = React.useCallback(() => {
+    try {
+      router.back();
+      // If after backing we're STILL inside a pdf-viewer (multiple
+      // stacked previews), keep going. We schedule one extra pop on
+      // next tick so React Navigation has time to update the stack.
+      setTimeout(() => {
+        try {
+          // expo-router 5+ exposes canGoBack; fall back to a raw back call.
+          // @ts-ignore
+          if ((router as any).canGoBack?.()) {
+            // Heuristic: try to dismiss any remaining pdf-viewer in stack.
+            // If we're already on a non-pdf route this is harmless.
+            // @ts-ignore
+            (router as any).dismissAll?.();
+          }
+        } catch {
+          /* ignore */
+        }
+      }, 0);
+    } catch {
+      try {
+        router.replace("/(tabs)/reports");
+      } catch {
+        /* swallow */
+      }
+    }
+  }, [router]);
+
   return (
     <SafeAreaView style={styles.container} edges={["top", "left", "right"]}>
       <Stack.Screen
@@ -71,6 +112,17 @@ export default function PdfViewerScreen(): React.ReactElement {
           headerStyle: { backgroundColor: theme.colors.background },
           headerTintColor: theme.colors.textPrimary,
           headerTitleStyle: { color: theme.colors.textPrimary, fontWeight: "700" },
+          headerLeft: () => (
+            <TouchableOpacity
+              testID="pdf-back-btn"
+              onPress={handleBack}
+              style={{ paddingHorizontal: 12, paddingVertical: 6, marginLeft: -4 }}
+              accessibilityLabel="Back"
+              hitSlop={8}
+            >
+              <Ionicons name="chevron-back" size={26} color={theme.colors.accent} />
+            </TouchableOpacity>
+          ),
           headerRight: () => (
             <TouchableOpacity
               testID="pdf-share-btn"

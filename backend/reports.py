@@ -2002,21 +2002,20 @@ _LOST_STOLEN_COLUMNS = [
 
 async def _fetch_repair_costs(db, user, options: Dict[str, Any]) -> Dict[str, Any]:
     """Same shape as _fetch_claims but oriented around money totals. Always
-    rendered with the repair_cost column (and TOTAL row) included. Optional
-    min_cost filter hides $0 (warranty-covered) entries when set > 0."""
-    # mode is handled inside _fetch_claims via options["claims_mode"]
-    # Reuse the claims fetcher so we get the row layout / dealer grouping
+    rendered with the repair_cost column (and TOTAL row) included.
+
+    Default includes ALL claims in the timeframe (whether or not a repair
+    cost was logged) so the user sees the full picture. The "Only repairs
+    with a cost" toggle drops $0 / warranty-covered rows for users who
+    want to see ONLY out-of-pocket repair spending."""
     base = await _fetch_claims(db, user, options)
     rows = base.get("rows") or []
-    min_cost = options.get("min_cost")
-    try:
-        min_cost = float(min_cost) if min_cost not in (None, "") else 0.0
-    except Exception:
-        min_cost = 0.0
-    if min_cost > 0:
+
+    only_paid = bool(options.get("only_paid"))
+    if only_paid:
         rows = [
             r for r in rows
-            if r.get("_section_header") or float(r.get("repair_cost") or 0) >= min_cost
+            if r.get("_section_header") or float(r.get("repair_cost") or 0) > 0
         ]
 
     only_real = [r for r in rows if not r.get("_section_header")]
@@ -2240,7 +2239,7 @@ REPORTS: Dict[str, ReportSpec] = {
         title="Insurance Inventory Report",
         description="A formatted inventory of every tool, with values and personal info — for insurance carriers.",
         icon="shield-checkmark",
-        accent="#F97316",
+        accent="#3B82F6",
         columns=_TOOL_COLUMNS,
         default_columns=["photo", "name", "quantity", "brand", "serial", "cost"],
         fetch=_fetch_insurance,
@@ -2279,7 +2278,7 @@ REPORTS: Dict[str, ReportSpec] = {
         title="Sales Report",
         description="Items currently for sale, or items already sold, with prices and dates.",
         icon="pricetag",
-        accent="#F97316",
+        accent="#10B981",
         columns=_SALES_COLUMNS,
         default_columns=["sale_date", "name", "quantity", "brand", "cost", "price"],
         fetch=_fetch_sales,
@@ -2308,7 +2307,7 @@ REPORTS: Dict[str, ReportSpec] = {
         title="Dealer Account Report",
         description="Per-dealer balances, payments and new charges across both Credit and Truck accounts.",
         icon="wallet",
-        accent="#F97316",
+        accent="#8B5CF6",
         columns=[
             Column("date", "Date", "left", "date"),
             Column("type", "Type", "left", "text"),
@@ -2328,7 +2327,7 @@ REPORTS: Dict[str, ReportSpec] = {
         title="Warranty Claims Report",
         description="Open and historical warranty / repair claims, filterable by dealer and date range. Grouped by dealer (newest first).",
         icon="construct",
-        accent="#F97316",
+        accent="#EF4444",
         columns=[
             Column("claim_photo", "Photo", "center", "image"),
             Column("notified_at", "Notified", "left", "date"),
@@ -2391,7 +2390,8 @@ REPORTS: Dict[str, ReportSpec] = {
              ],
              "default": "all"},
             {"id": "dealer_ids", "type": "dealer_multi", "label": "Dealers"},
-            {"id": "min_cost", "type": "number", "label": "Min cost (hide $0)"},
+            {"id": "only_paid", "type": "toggle",
+             "label": "Only repairs with a cost", "default": False},
             {"id": "date_from", "type": "date", "label": "From"},
             {"id": "date_to", "type": "date", "label": "To"},
         ],
@@ -2447,7 +2447,7 @@ REPORTS: Dict[str, ReportSpec] = {
         title="Checked-Out Items Report",
         description="Tools that are (or were) signed out to borrowers. Filter by date range, location, tags, dealer, and one or more people.",
         icon="people",
-        accent="#F97316",
+        accent="#EAB308",
         columns=_CHECKED_OUT_COLUMNS,
         default_columns=["photo", "name", "serial", "borrower_name", "checked_out_at", "checked_in_at", "days_out", "checkout_status"],
         fetch=_fetch_checked_out,
@@ -2473,7 +2473,7 @@ REPORTS: Dict[str, ReportSpec] = {
         title="Lost / Stolen Items Report",
         description="Items reported lost or stolen, with police-report and insurance details. Recovered items are excluded unless you toggle them on.",
         icon="alert-circle",
-        accent="#F97316",
+        accent="#DB2777",
         columns=_LOST_STOLEN_COLUMNS,
         default_columns=["photo", "name", "serial", "loss_type", "reported_date", "police_report", "insurance_claim", "cost"],
         fetch=_fetch_lost_stolen,

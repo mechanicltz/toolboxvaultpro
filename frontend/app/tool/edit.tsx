@@ -55,7 +55,7 @@ export default function ToolEdit() {
   // Model #(s) auto-expanded on a fresh tool (since model # is the first
   // thing they fill in, and the upcoming AI model lookup will autofill
   // the rest of the form from it).
-  const [openKey, setOpenKey] = useState<string | null>("modelNumbers");
+  const [openKey, setOpenKey] = useState<string | null>(null);
   const toggle = (k: string) =>
     setOpenKey((cur) => (cur === k ? null : k));
   const [isSet, setIsSet] = useState(false);
@@ -1045,13 +1045,21 @@ export default function ToolEdit() {
                     <Modal
                       visible={lengthPickerOpen}
                       transparent
-                      animationType="slide"
+                      animationType="fade"
                       onRequestClose={() => setLengthPickerOpen(false)}
                     >
-                      <View style={styles.modalBg}>
-                        <View style={styles.modalSheet}>
-                          <View style={styles.modalHeader}>
-                            <Text style={styles.modalTitle}>WARRANTY LENGTH</Text>
+                      <TouchableOpacity
+                        activeOpacity={1}
+                        onPress={() => setLengthPickerOpen(false)}
+                        style={styles.lengthPickerScrim}
+                      >
+                        <TouchableOpacity
+                          activeOpacity={1}
+                          onPress={(e) => e.stopPropagation()}
+                          style={styles.lengthPickerSheet}
+                        >
+                          <View style={styles.lengthPickerHeader}>
+                            <Text style={styles.lengthPickerTitle}>WARRANTY LENGTH</Text>
                             <TouchableOpacity
                               onPress={() => setLengthPickerOpen(false)}
                               hitSlop={8}
@@ -1060,7 +1068,10 @@ export default function ToolEdit() {
                               <Ionicons name="close" size={22} color={theme.colors.textPrimary} />
                             </TouchableOpacity>
                           </View>
-                          <ScrollView style={{ maxHeight: 480 }}>
+                          <ScrollView
+                            style={{ maxHeight: 420 }}
+                            keyboardShouldPersistTaps="handled"
+                          >
                             {lengthOptions.map((opt) => {
                               const on =
                                 warranty.coverage_type === opt.t &&
@@ -1104,8 +1115,8 @@ export default function ToolEdit() {
                               );
                             })}
                           </ScrollView>
-                        </View>
-                      </View>
+                        </TouchableOpacity>
+                      </TouchableOpacity>
                     </Modal>
                   </>
                 );
@@ -1593,6 +1604,39 @@ const styles = themedStyles((c) => ({
   },
   docAddText: { color: c.accent, fontWeight: "800", letterSpacing: 1.5, fontSize: 9 },
   modalBg: { flex: 1, backgroundColor: "rgba(0,0,0,0.7)", justifyContent: "flex-end" },
+  lengthPickerScrim: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.65)",
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 24,
+  },
+  lengthPickerSheet: {
+    width: "100%",
+    maxWidth: 360,
+    backgroundColor: c.bgSecondary,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: c.border,
+    overflow: "hidden",
+    ...(theme.elevation.lg as object),
+  },
+  lengthPickerHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 14,
+    paddingVertical: 11,
+    backgroundColor: c.bg,
+    borderBottomWidth: 1,
+    borderBottomColor: c.border,
+  },
+  lengthPickerTitle: {
+    color: c.textPrimary,
+    fontWeight: "900",
+    fontSize: 10,
+    letterSpacing: 2,
+  },
   optionRow: {
     flexDirection: "row",
     alignItems: "center",

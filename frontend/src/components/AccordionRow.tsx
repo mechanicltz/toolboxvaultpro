@@ -66,7 +66,7 @@ export function AccordionRow({
             <Ionicons
               name={icon}
               size={13}
-              color={open ? c.accent : c.textMuted}
+              color={c.accent}
               style={{ marginRight: 6 }}
             />
           )}
