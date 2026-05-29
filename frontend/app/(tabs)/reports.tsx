@@ -547,7 +547,7 @@ function Crumbs({ current }: { current: number }) {
                 done && { backgroundColor: "#16a34a" },
               ]}
             >
-              <Text style={[styles.crumbDotText, (active || done) && { color: c.accent }]}>
+              <Text style={[styles.crumbDotText, (active || done) && { color: "#000" }]}>
                 {i + 1}
               </Text>
             </View>
@@ -644,16 +644,16 @@ function OptionRow({
       <View style={styles.optionField}>
         <Text style={styles.optionLabel}>{field.label}</Text>
         <View style={styles.segmentedRow}>
-          {choices.map((c) => {
-            const active = String(value || "") === c.id;
+          {choices.map((choice) => {
+            const active = String(value || "") === choice.id;
             return (
               <TouchableOpacity
-                key={c.id || "_any"}
+                key={choice.id || "_any"}
                 style={[styles.segmentedBtn, active && styles.segmentedBtnOn]}
-                onPress={() => onChange(c.id)}
+                onPress={() => onChange(choice.id)}
               >
-                <Text style={[styles.segmentedText, active && { color: c.accent, fontWeight: "900" }]}>
-                  {c.label}
+                <Text style={[styles.segmentedText, active && { color: theme.colors.accent, fontWeight: "900" }]}>
+                  {choice.label}
                 </Text>
               </TouchableOpacity>
             );
@@ -667,16 +667,16 @@ function OptionRow({
       <View style={styles.optionField}>
         <Text style={styles.optionLabel}>{field.label}</Text>
         <View style={styles.segmentedRow}>
-          {(field as any).choices.map((c: { id: string; label: string }) => {
-            const active = value === c.id;
+          {(field as any).choices.map((choice: { id: string; label: string }) => {
+            const active = value === choice.id;
             return (
               <TouchableOpacity
-                key={c.id}
+                key={choice.id}
                 style={[styles.segmentedBtn, active && styles.segmentedBtnOn]}
-                onPress={() => onChange(c.id)}
+                onPress={() => onChange(choice.id)}
               >
-                <Text style={[styles.segmentedText, active && { color: c.accent, fontWeight: "900" }]}>
-                  {c.label}
+                <Text style={[styles.segmentedText, active && { color: theme.colors.accent, fontWeight: "900" }]}>
+                  {choice.label}
                 </Text>
               </TouchableOpacity>
             );
