@@ -110,6 +110,7 @@ export default function InventoryScreen() {
   const [allCategories, setAllCategories] = useState<any[]>([]);
   const selectedCategoryName = useMemo(() => {
     if (!categoryFilter) return null;
+    if (categoryFilter === "__none") return "(NO CATEGORY)";
     const found = allCategories.find((c) => c.id === categoryFilter);
     return found?.name || null;
   }, [categoryFilter, allCategories]);
@@ -259,6 +260,7 @@ export default function InventoryScreen() {
 
   const selectedLocationName = useMemo(() => {
     if (!locationFilter) return null;
+    if (locationFilter === "__none") return "(NO LOCATION)";
     const found = allLocations.find((l) => l.id === locationFilter);
     return found?.name || null;
   }, [locationFilter, allLocations]);
@@ -420,36 +422,57 @@ export default function InventoryScreen() {
       );
 
     // Location filter (selected location + all descendants)
+    // Special sentinel "__none" → tools that have NO location assigned.
     if (locationFilter) {
-      const ids = new Set<string>([locationFilter]);
-      const queue: string[] = [locationFilter];
-      while (queue.length) {
-        const cur = queue.shift()!;
-        (allLocations || [])
-          .filter((l: any) => l.parent_id === cur)
-          .forEach((l: any) => {
-            if (!ids.has(l.id)) {
-              ids.add(l.id);
-              queue.push(l.id);
-            }
-          });
+      if (locationFilter === "__none") {
+        out = out.filter(
+          (x: any) => !x.location_id || String(x.location_id).trim() === "",
+        );
+      } else {
+        const ids = new Set<string>([locationFilter]);
+        const queue: string[] = [locationFilter];
+        while (queue.length) {
+          const cur = queue.shift()!;
+          (allLocations || [])
+            .filter((l: any) => l.parent_id === cur)
+            .forEach((l: any) => {
+              if (!ids.has(l.id)) {
+                ids.add(l.id);
+                queue.push(l.id);
+              }
+            });
+        }
+        out = out.filter((x: any) => x.location_id && ids.has(x.location_id));
       }
-      out = out.filter((x: any) => x.location_id && ids.has(x.location_id));
     }
 
     // Tag filter
+    // Special sentinel "__none" → tools that have NO tags assigned.
+    // When mixed with real tag IDs, an item matches if it has NO tags OR has
+    // any of the wanted tags (OR semantics, consistent with existing logic).
     if (tagFilter.length) {
-      const wanted = new Set(tagFilter);
-      out = out.filter(
-        (x: any) =>
-          Array.isArray(x.tag_ids) &&
-          x.tag_ids.some((tid: string) => wanted.has(tid)),
-      );
+      const wantNone = tagFilter.includes("__none");
+      const wantedReal = new Set(tagFilter.filter((t) => t !== "__none"));
+      out = out.filter((x: any) => {
+        const tagIds = Array.isArray(x.tag_ids) ? x.tag_ids : [];
+        if (wantNone && tagIds.length === 0) return true;
+        if (wantedReal.size > 0 && tagIds.some((tid: string) => wantedReal.has(tid))) {
+          return true;
+        }
+        return false;
+      });
     }
 
     // Category filter (single-select)
+    // Special sentinel "__none" → tools that have NO category assigned.
     if (categoryFilter) {
-      out = out.filter((x: any) => x.category_id === categoryFilter);
+      if (categoryFilter === "__none") {
+        out = out.filter(
+          (x: any) => !x.category_id || String(x.category_id).trim() === "",
+        );
+      } else {
+        out = out.filter((x: any) => x.category_id === categoryFilter);
+      }
     }
 
     // Sort

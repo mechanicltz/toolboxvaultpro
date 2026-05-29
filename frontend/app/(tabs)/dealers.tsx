@@ -30,6 +30,7 @@ import { useAppResume } from "../../src/appLifecycle";
 
 import { themedStyles } from "../../src/themeContext";
 import { BevelCard } from "../../src/components/BevelCard";
+import { IndustrialBanner } from "../../src/components/IndustrialBanner";
 
 export default function DealersScreen() {
   const router = useRouter();
@@ -103,21 +104,21 @@ export default function DealersScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
-      <View style={styles.header}>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.title}>DEALERS</Text>
-          <Text style={styles.subtitle}>Companies & Sales Agents</Text>
-        </View>
-        <TouchableOpacity
-          testID="add-dealer-header-btn"
-          style={styles.headerAddBtn}
-          onPress={() => setShowAdd(true)}
-          activeOpacity={0.85}
-        >
-          <Ionicons name="add" size={16} color="#000" />
-          <Text style={styles.headerAddBtnText}>ADD DEALER</Text>
-        </TouchableOpacity>
-      </View>
+      <IndustrialBanner
+        title="DEALERS"
+        subtitle="Companies & Sales Agents"
+        rightSlot={
+          <TouchableOpacity
+            testID="add-dealer-header-btn"
+            style={styles.headerAddBtn}
+            onPress={() => setShowAdd(true)}
+            activeOpacity={0.85}
+          >
+            <Ionicons name="add" size={16} color="#000" />
+            <Text style={styles.headerAddBtnText}>ADD DEALER</Text>
+          </TouchableOpacity>
+        }
+      />
 
       <FlatList
         data={dealers}
