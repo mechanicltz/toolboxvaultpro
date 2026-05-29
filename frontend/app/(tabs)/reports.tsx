@@ -26,6 +26,7 @@ import { DateField } from "../../src/DateField";
 import { runReport, ReportAction, ReportFormat } from "../../src/reportRunner";
 
 import { themedStyles } from "../../src/themeContext";
+import { IndustrialBanner } from "../../src/components/IndustrialBanner";
 
 // ---- Types --------------------------------------------------------------
 
@@ -259,7 +260,7 @@ export default function ReportsHubScreen() {
   if (step === "type") {
     return (
       <SafeAreaView style={styles.container}>
-        <Header title="REPORTS" onBack={() => router.back()} />
+        <IndustrialBanner title="REPORTS" subtitle="Insurance · Inventory · Costs" />
         <ScrollView contentContainerStyle={styles.body}>
           <Text style={styles.intro}>
             Pick a report. Each one walks you through filters, fields and

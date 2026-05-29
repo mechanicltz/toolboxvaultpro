@@ -21,6 +21,7 @@ import { useAuth } from "../../src/AuthContext";
 
 import { themedStyles } from "../../src/themeContext";
 import { IndustrialBanner } from "../../src/components/IndustrialBanner";
+import { PillButton } from "../../src/components/PillButton";
 import { BevelCard } from "../../src/components/BevelCard";
 import { MaintenanceSection } from "../../src/sections/MaintenanceSection";
 import { formatDateUS } from "../../src/dateUtil";
@@ -848,14 +849,13 @@ export default function ToolEdit() {
               header row (title + outline ADD button) + thumbs OR helper text. */}
           <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
             <Text style={styles.label}>PHOTOS ({photos.length})</Text>
-            <TouchableOpacity
+            <PillButton
               testID="add-photo-btn"
+              label="ADD PHOTO"
+              icon="add-circle"
+              variant="active"
               onPress={() => pickPhoto(false)}
-              style={styles.smallScanBtn}
-            >
-              <Ionicons name="add-circle" size={12} color={theme.colors.accent} />
-              <Text style={styles.smallScanBtnText}>ADD PHOTO</Text>
-            </TouchableOpacity>
+            />
           </View>
           {photos.length > 0 ? (
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 8 }}>
@@ -895,14 +895,13 @@ export default function ToolEdit() {
               header row (title + outline ADD button) + list OR helper text. */}
           <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
             <Text style={styles.label}>DOCUMENTS ({documents.length})</Text>
-            <TouchableOpacity
+            <PillButton
               testID="add-doc-btn"
+              label="ADD DOCUMENT"
+              icon="add-circle"
+              variant="active"
               onPress={pickDocument}
-              style={styles.smallScanBtn}
-            >
-              <Ionicons name="add-circle" size={12} color={theme.colors.accent} />
-              <Text style={styles.smallScanBtnText}>ADD DOCUMENT</Text>
-            </TouchableOpacity>
+            />
           </View>
           {documents.length > 0 ? (
             <>
@@ -934,14 +933,13 @@ export default function ToolEdit() {
           {/* Receipts */}
           <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
             <Text style={styles.label}>RECEIPTS ({receipts.length})</Text>
-            <TouchableOpacity
+            <PillButton
               testID="add-receipt-btn"
+              label="ADD RECEIPT"
+              icon="add-circle"
+              variant="active"
               onPress={pickReceipt}
-              style={styles.smallScanBtn}
-            >
-              <Ionicons name="add-circle" size={12} color={theme.colors.accent} />
-              <Text style={styles.smallScanBtnText}>ADD RECEIPT</Text>
-            </TouchableOpacity>
+            />
           </View>
           {receipts.length > 0 ? (
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 8 }}>
