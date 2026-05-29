@@ -1171,6 +1171,30 @@ export default function InventoryScreen() {
                   ALL LOCATIONS
                 </Text>
               </TouchableOpacity>
+              {/* NEW (2026-06): "__none" — items with no location */}
+              <TouchableOpacity
+                testID="location-filter-none"
+                style={[styles.locOption, locationFilter === "__none" && styles.locOptionActive]}
+                onPress={() => {
+                  setLocationFilter("__none");
+                  setShowLocationPicker(false);
+                }}
+              >
+                <Ionicons
+                  name="ban"
+                  size={16}
+                  color={locationFilter === "__none" ? theme.colors.accent : theme.colors.textMuted}
+                />
+                <Text
+                  style={[
+                    styles.locOptName,
+                    locationFilter === "__none" && { color: theme.colors.accent },
+                    { fontStyle: "italic" },
+                  ]}
+                >
+                  (NO LOCATION)
+                </Text>
+              </TouchableOpacity>
               {flattenLocationTree(buildLocationTree(allLocations)).map((n) => {
                 const isActive = locationFilter === n.id;
                 const cnt = filterCounts.location[n.id] || 0;
@@ -1233,6 +1257,32 @@ export default function InventoryScreen() {
                 />
                 <Text style={[styles.locOptName, tagFilter.length === 0 && { color: theme.colors.accent }]}>
                   ALL TAGS
+                </Text>
+              </TouchableOpacity>
+              {/* NEW (2026-06): pseudo-tag "__none" — items with no tags */}
+              <TouchableOpacity
+                testID="tag-filter-none"
+                style={[styles.locOption, tagFilter.includes("__none") && styles.locOptionActive]}
+                onPress={() =>
+                  setTagFilter((curr) =>
+                    curr.includes("__none")
+                      ? curr.filter((x) => x !== "__none")
+                      : [...curr, "__none"]
+                  )
+                }
+              >
+                <View
+                  style={{
+                    width: 18, height: 18, borderRadius: 4, borderWidth: 2,
+                    borderColor: tagFilter.includes("__none") ? theme.colors.accent : theme.colors.border,
+                    backgroundColor: tagFilter.includes("__none") ? theme.colors.accent : "transparent",
+                    alignItems: "center", justifyContent: "center",
+                  }}
+                >
+                  {tagFilter.includes("__none") && <Ionicons name="checkmark" size={12} color="#000" />}
+                </View>
+                <Text style={[styles.locOptName, tagFilter.includes("__none") && { color: theme.colors.accent }, { fontStyle: "italic" }]}>
+                  (NO TAGS)
                 </Text>
               </TouchableOpacity>
               {[...allTags]
@@ -1316,6 +1366,30 @@ export default function InventoryScreen() {
                   ]}
                 >
                   ALL CATEGORIES
+                </Text>
+              </TouchableOpacity>
+              {/* NEW (2026-06): "__none" — items with no category */}
+              <TouchableOpacity
+                testID="category-filter-none"
+                style={[styles.locOption, categoryFilter === "__none" && styles.locOptionActive]}
+                onPress={() => {
+                  setCategoryFilter("__none");
+                  setShowCategoryPicker(false);
+                }}
+              >
+                <Ionicons
+                  name="ban"
+                  size={16}
+                  color={categoryFilter === "__none" ? theme.colors.accent : theme.colors.textMuted}
+                />
+                <Text
+                  style={[
+                    styles.locOptName,
+                    categoryFilter === "__none" && { color: theme.colors.accent },
+                    { fontStyle: "italic" },
+                  ]}
+                >
+                  (NO CATEGORY)
                 </Text>
               </TouchableOpacity>
               {[...allCategories]
