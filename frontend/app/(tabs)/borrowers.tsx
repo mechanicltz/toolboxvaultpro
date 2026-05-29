@@ -212,10 +212,6 @@ export default function BorrowersScreen() {
         </View>
       )}
 
-      <View style={styles.section}>
-        <Text style={styles.sectionLabel}>SAVED CONTACTS ({borrowers.length})</Text>
-      </View>
-
       <FlatList
         data={borrowers}
         keyExtractor={(i) => i.id}

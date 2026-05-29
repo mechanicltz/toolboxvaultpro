@@ -45,6 +45,7 @@ import { WarrantySection } from "../../src/sections/WarrantySection";
 import PinchZoomImageViewer from "../../src/components/PinchZoomImageViewer";
 import { themedStyles } from "../../src/themeContext";
 import { BevelCard } from "../../src/components/BevelCard";
+import { IndustrialBanner } from "../../src/components/IndustrialBanner";
 
 import {
   pickContactNativeIOS,
@@ -1446,33 +1447,29 @@ export default function ToolDetail() {
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
-      {/* HEADER — back arrow, name+serial, 3 action icons. Layout flexes safely. */}
-      <View style={newStyles.headerBar}>
-        <TouchableOpacity testID="back-btn" onPress={() => router.back()} hitSlop={10}>
-          <Ionicons name="arrow-back" size={26} color={theme.colors.textPrimary} />
-        </TouchableOpacity>
-        <View style={newStyles.headerTitleCol}>
-          <Text style={newStyles.headerTitle} numberOfLines={2}>
-            {tool.name || "Untitled tool"}
-          </Text>
-        </View>
-        {/* Edit + Delete moved to top-right header icons to match the
-            dealer detail screen's pattern, freeing up the bottom
-            "ACTIONS" section for state-change buttons only (check
-            out, mark broken, list for sale, etc.). */}
-        <View style={{ flexDirection: "row", gap: 16, alignItems: "center" }}>
-          <TouchableOpacity
-            testID="edit-tool-btn"
-            onPress={() => router.push({ pathname: "/tool/edit", params: { id: tool.id } })}
-            hitSlop={10}
-          >
-            <Ionicons name="create-outline" size={24} color={theme.colors.textPrimary} />
+      <IndustrialBanner
+        title={tool.name || "Untitled Tool"}
+        subtitle={tool.brand ? String(tool.brand) : "Item Details"}
+        leftSlot={
+          <TouchableOpacity testID="back-btn" onPress={() => router.back()} hitSlop={10}>
+            <Ionicons name="arrow-back" size={22} color="#FFFFFF" />
           </TouchableOpacity>
-          <TouchableOpacity testID="delete-tool-btn" onPress={doDelete} hitSlop={10}>
-            <Ionicons name="trash-outline" size={24} color={theme.colors.danger} />
-          </TouchableOpacity>
-        </View>
-      </View>
+        }
+        rightSlot={
+          <View style={{ flexDirection: "row", gap: 14, alignItems: "center" }}>
+            <TouchableOpacity
+              testID="edit-tool-btn"
+              onPress={() => router.push({ pathname: "/tool/edit", params: { id: tool.id } })}
+              hitSlop={10}
+            >
+              <Ionicons name="create-outline" size={22} color="#FFFFFF" />
+            </TouchableOpacity>
+            <TouchableOpacity testID="delete-tool-btn" onPress={doDelete} hitSlop={10}>
+              <Ionicons name="trash-outline" size={22} color="#FFFFFF" />
+            </TouchableOpacity>
+          </View>
+        }
+      />
 
       <ScrollView contentContainerStyle={{ paddingBottom: 40 }}>
         <View style={newStyles.page}>

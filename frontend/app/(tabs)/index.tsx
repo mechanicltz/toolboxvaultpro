@@ -424,25 +424,21 @@ export default function HomeScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
-      <IndustrialBanner title="TOOLBOX VAULT" subtitle="SUMMARY" />
-      <View style={styles.versionRow}>
-        <Text style={styles.versionLine} testID="home-version">
-          {APP_VERSION_LABEL}
-        </Text>
-        {/* Admin-only at-a-glance user-base counter.
-            Free vs subscribed counts come from /api/admin/user-stats which
-            is gated to ADMIN_EMAILS — non-admins simply never see this row
-            because the fetch silently fails. Auto-refreshes on every home
-            pull-to-refresh via the same `load()` cycle. */}
-        {userStats && (
-          <Text
-            style={[styles.versionLine, { marginLeft: 8 }]}
-            testID="home-admin-userstats"
-          >
+      <IndustrialBanner
+        title="TOOLBOX VAULT"
+        subtitle={`SUMMARY  ·  ${APP_VERSION_LABEL}`}
+      />
+      {/* Admin-only at-a-glance user-base counter.
+          Free vs subscribed counts come from /api/admin/user-stats which
+          is gated to ADMIN_EMAILS — non-admins simply never see this row
+          because the fetch silently fails. */}
+      {userStats && (
+        <View style={styles.versionRow}>
+          <Text style={styles.versionLine} testID="home-admin-userstats">
             FREE: {userStats.free}   SUB: {userStats.subscribed}
           </Text>
-        )}
-      </View>
+        </View>
+      )}
 
       <ScrollView
         contentContainerStyle={{ padding: 16, paddingBottom: 100 }}

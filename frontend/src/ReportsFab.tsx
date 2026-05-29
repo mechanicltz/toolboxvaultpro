@@ -21,12 +21,15 @@ export function ReportsFab() {
   // route-group-prefixed path ("/(tabs)/inventory") so we normalize first.
   // NOTE: /dealers, /borrowers (contacts), and detail pages get their own
   // page-specific "Add X" buttons in their own headers, so we exclude them here.
+  // Show on Inventory only — Home and More no longer surface a global
+  // "ADD ITEM" shortcut (user requested removal so the new industrial
+  // banner reads cleanly without overlap).
   const p = (path || "").replace("/(tabs)", "") || "/";
-  const TAB_PATHS = new Set(["/", "/inventory", "/more"]);
+  const TAB_PATHS = new Set(["/inventory"]);
   if (!TAB_PATHS.has(p)) return null;
 
   return (
-    <View pointerEvents="box-none" style={[styles.wrap, { top: insets.top + 18 }]}>
+    <View pointerEvents="box-none" style={[styles.wrap, { top: insets.top + 22 }]}>
       <TouchableOpacity
         testID="global-add-item-btn"
         style={styles.btn}
@@ -43,7 +46,7 @@ export function ReportsFab() {
 const styles = themedStyles((c) => ({
   wrap: {
     position: "absolute",
-    right: 12,
+    right: 44, // clears the industrial banner's top-right bolt (≈8px from edge, ~20px wide)
     zIndex: 50,
     flexDirection: "row",
     gap: 6,
