@@ -583,7 +583,12 @@ export default function ToolDetail() {
       "";
     setRepairForm({
       company_notified: dealerName,
-      notified_at: tool.repair_info?.notified_at || todayStr(),
+      // Only pre-fill notified_at when the user has previously notified
+      // the dealer. Previously this defaulted to today even when the
+      // claim was just freshly opened (status=Not Reported), which made
+      // the detail card show a misleading "Notified <today>" line for a
+      // tool the user had only marked as broken. Now: empty by default.
+      notified_at: tool.repair_info?.notified_at || "",
       expected_completion: tool.repair_info?.expected_completion || "",
       repair_status: tool.repair_info?.repair_status || "Not Reported",
       contact,
@@ -1546,7 +1551,18 @@ export default function ToolDetail() {
               {/* Inset inner card — data rows + action buttons (matches
                   WarrantySection.card style exactly) */}
               <View style={newStyles.claimCard}>
-                {!!tool.repair_info?.notified_at && (
+                {/*
+                  Only show "Notified" date when the user has explicitly
+                  notified the dealer — i.e. the repair_status is anything
+                  other than the default "Not Reported". Previously this
+                  block fired any time `notified_at` was set, which was
+                  auto-filled to today by the edit flow whenever the user
+                  toggled "Needs Repair" — confusing because the item was
+                  marked broken but no actual notification had been sent.
+                */}
+                {!!tool.repair_info?.notified_at &&
+                  !!tool.repair_info?.repair_status &&
+                  String(tool.repair_info.repair_status).toLowerCase() !== "not reported" && (
                   <View style={newStyles.claimRow}>
                     <Text style={newStyles.claimRowLabel} allowFontScaling={false}>Notified</Text>
                     <Text style={newStyles.claimRowValue} allowFontScaling={false}>{formatDateUS(tool.repair_info.notified_at)}</Text>
@@ -1732,11 +1748,29 @@ export default function ToolDetail() {
               ? tool.serial_numbers.filter((s: string) => !!s)
               : [];
 
+            // Helper to keep Ionicons name typed inline
+            type IconName = React.ComponentProps<typeof Ionicons>["name"];
             type Row =
-              | { kind: "value"; label: string; value: string; onPress?: () => void }
-              | { kind: "models"; label: string; values: string[] }
-              | { kind: "expandable"; key: "gallery" | "documents" | "receipts" | "maintenance" | "warranty" | "consumable"; label: string; value: string }
-              | { kind: "description"; value: string };
+              | { kind: "value"; label: string; icon?: IconName; value: string; onPress?: () => void }
+              | { kind: "models"; label: string; icon?: IconName; values: string[] }
+              | { kind: "expandable"; key: "gallery" | "documents" | "receipts" | "maintenance" | "warranty" | "consumable"; label: string; icon?: IconName; value: string }
+              | { kind: "description"; icon?: IconName; value: string };
+
+            // Helper renderer for a row label with optional leading icon.
+            // Used by ALL row kinds (value/models/expandable/description)
+            // so labels stay perfectly aligned across the description card.
+            const renderLabel = (label: string, icon?: IconName) => (
+              <View style={newStyles.detailsLabelWrap}>
+                {icon ? (
+                  <Ionicons
+                    name={icon}
+                    size={13}
+                    color={theme.colors.accent}
+                  />
+                ) : null}
+                <Text style={newStyles.detailsLabel}>{label}</Text>
+              </View>
+            );
 
             // ---- GROUPED ROWS (per user 2026-05-26) ------------------------
             // The Edit screen orders fields into 5 visual groups. The Detail
@@ -1759,22 +1793,26 @@ export default function ToolDetail() {
             groupPrimary.push({
               kind: "value",
               label: "LOCATION",
+              icon: "location",
               value: tool.location_name || "No location · tap to assign",
               onPress: () => setShowLocationPicker(true),
             });
             groupPrimary.push({
               kind: "models",
               label: modelNums.length > 1 ? "MODEL NUMBERS" : "MODEL #",
+              icon: "barcode",
               values: modelNums.length ? modelNums : ["—"],
             });
             groupPrimary.push({
               kind: "models",
               label: serialNums.length > 1 ? "SERIAL NUMBERS" : "SERIAL #",
+              icon: "key",
               values: serialNums.length ? serialNums : ["—"],
             });
             groupPrimary.push({
               kind: "value",
               label: "DEALER",
+              icon: "business",
               value: tool.dealer_name || "—",
               onPress: tool.dealer_id
                 ? () => router.push(`/dealer/${tool.dealer_id}`)
@@ -1783,6 +1821,7 @@ export default function ToolDetail() {
             groupPrimary.push({
               kind: "value",
               label: "BRAND",
+              icon: "ribbon",
               value: tool.brand ? String(tool.brand) : "—",
             });
 
@@ -1791,18 +1830,21 @@ export default function ToolDetail() {
               kind: "expandable",
               key: "gallery",
               label: "PHOTOS",
+              icon: "images",
               value: `${photos.length} photo${photos.length === 1 ? "" : "s"}`,
             });
             groupAttachments.push({
               kind: "expandable",
               key: "documents",
               label: "DOCUMENTS",
+              icon: "document-text",
               value: `${Array.isArray(tool.documents) ? tool.documents.length : 0} document${(Array.isArray(tool.documents) ? tool.documents.length : 0) === 1 ? "" : "s"}`,
             });
             groupAttachments.push({
               kind: "expandable",
               key: "receipts",
               label: "RECEIPTS",
+              icon: "receipt",
               value: `${Array.isArray(tool.receipts) ? tool.receipts.length : 0} receipt${(Array.isArray(tool.receipts) ? tool.receipts.length : 0) === 1 ? "" : "s"}`,
             });
 
@@ -1811,18 +1853,21 @@ export default function ToolDetail() {
               kind: "expandable",
               key: "warranty",
               label: "WARRANTY",
+              icon: "shield-checkmark",
               value: `${warrantyCount} record${warrantyCount === 1 ? "" : "s"}`,
             });
             groupServices.push({
               kind: "expandable",
               key: "maintenance",
               label: "MAINTENANCE",
+              icon: "construct",
               value: `${maintenanceCount} record${maintenanceCount === 1 ? "" : "s"}`,
             });
             groupServices.push({
               kind: "expandable",
               key: "consumable",
               label: "CONSUMABLE",
+              icon: "flask",
               value: tool.is_consumable ? "Yes" : "No",
             });
 
@@ -1830,6 +1875,7 @@ export default function ToolDetail() {
             groupClassify.push({
               kind: "value",
               label: "CATEGORY",
+              icon: "folder",
               value: tool.category_name ? String(tool.category_name) : "—",
             });
             const tagSummary = Array.isArray(tool.tag_names) && tool.tag_names.length
@@ -1838,17 +1884,20 @@ export default function ToolDetail() {
             groupClassify.push({
               kind: "value",
               label: "TAGS",
+              icon: "pricetags",
               value: tagSummary,
             });
             groupClassify.push({
               kind: "value",
               label: "PURCHASED",
+              icon: "calendar",
               value: tool.purchase_date ? formatDateUS(tool.purchase_date) : "—",
             });
             if (tool.msrp_price && Number(tool.msrp_price) > 0) {
               groupClassify.push({
                 kind: "value",
                 label: "MSRP",
+                icon: "cash",
                 value: `$${Number(tool.msrp_price).toFixed(2)}`,
               });
             }
@@ -1857,6 +1906,7 @@ export default function ToolDetail() {
             if (tool.description && String(tool.description).trim()) {
               groupDescription.push({
                 kind: "description",
+                icon: "document-text-outline",
                 value: String(tool.description),
               });
             }
@@ -1869,12 +1919,14 @@ export default function ToolDetail() {
             groupHistory.push({
               kind: "value",
               label: "CHECKOUT HISTORY",
+              icon: "swap-horizontal",
               value: `${checkoutCount} entr${checkoutCount === 1 ? "y" : "ies"}`,
               onPress: () => router.push(`/checkout-history/${tool.id}`),
             });
             groupHistory.push({
               kind: "value",
               label: "CLAIMS HISTORY",
+              icon: "alert-circle",
               value: "View",
               onPress: () => router.push(`/claims-history/${tool.id}`),
             });
@@ -1889,7 +1941,7 @@ export default function ToolDetail() {
                         key={`desc-${i}`}
                         style={[newStyles.detailsRow, isLast && newStyles.detailsRowLast, { flexDirection: "column", alignItems: "stretch", paddingVertical: 12, gap: 6 }]}
                       >
-                        <Text style={newStyles.detailsLabel}>DESCRIPTION / NOTES</Text>
+                        {renderLabel("DESCRIPTION / NOTES", r.icon)}
                         <Text style={[newStyles.detailsValue, { textAlign: "left", fontSize: 11, fontWeight: "500", lineHeight: 16 }]}>
                           {r.value}
                         </Text>
@@ -1902,7 +1954,7 @@ export default function ToolDetail() {
                         key={`m-${i}`}
                         style={[newStyles.detailsRow, isLast && newStyles.detailsRowLast]}
                       >
-                        <Text style={newStyles.detailsLabel}>{r.label}</Text>
+                        {renderLabel(r.label, r.icon)}
                         <View
                           style={{
                             flex: 1,
@@ -1939,7 +1991,7 @@ export default function ToolDetail() {
                           onPress={() => setAttachOpen(isOpen ? null : r.key)}
                           testID={`details-row-${r.key}`}
                         >
-                          <Text style={newStyles.detailsLabel}>{r.label}</Text>
+                          {renderLabel(r.label, r.icon)}
                           <View style={newStyles.detailsValueWrap}>
                             <Text style={newStyles.detailsValue} numberOfLines={1}>
                               {r.value}
@@ -2077,7 +2129,7 @@ export default function ToolDetail() {
                       testID={`details-row-${r.label.toLowerCase().replace(/\s+/g, "-")}`}
                       {...wrapperProps}
                     >
-                      <Text style={newStyles.detailsLabel}>{r.label}</Text>
+                      {renderLabel(r.label, r.icon)}
                       <View style={newStyles.detailsValueWrap}>
                         <Text style={newStyles.detailsValue} numberOfLines={1}>
                           {r.value}
@@ -4229,10 +4281,16 @@ const newStyles = themedStyles((c) => ({
     // Touchable variant keeps the same row look — only adds a subtle hint via chevron icon.
   },
   detailsLabel: {
-    color: c.textMuted,
-    fontSize: 7,
-    fontWeight: "800",
+    color: c.textPrimary,
+    fontSize: 8,
+    fontWeight: "900",
     letterSpacing: 1.5,
+  },
+  detailsLabelWrap: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    flexShrink: 0,
   },
   detailsValueWrap: {
     flexDirection: "row",

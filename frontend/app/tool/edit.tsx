@@ -111,6 +111,7 @@ export default function ToolEdit() {
   const [purchasedAgentId, setPurchasedAgentId] = useState<string | null>(null);
   const [purchasedAgentName, setPurchasedAgentName] = useState("");
   const [showDealerPicker, setShowDealerPicker] = useState(false);
+  const [lengthPickerOpen, setLengthPickerOpen] = useState(false);
 
   // Inline dealer creation
   const [showNewDealer, setShowNewDealer] = useState(false);
@@ -539,7 +540,6 @@ export default function ToolEdit() {
             onToggle={() => toggle("name")}
             testID="acc-name"
           >
-          <Text style={styles.label}>NAME *</Text>
           <TextInput testID="name-input" placeholder="Cordless Drill" placeholderTextColor={theme.colors.textMuted}
             value={name} onChangeText={setName} style={styles.input} />
           </AccordionRow>
@@ -590,7 +590,6 @@ export default function ToolEdit() {
             onToggle={() => toggle("location")}
             testID="acc-location"
           >
-          <Text style={styles.label}>LOCATION</Text>
           <LocationPicker
             locationId={locationId}
             locationName={locationName}
@@ -609,11 +608,12 @@ export default function ToolEdit() {
             onToggle={() => toggle("modelNumbers")}
             testID="acc-modelNumbers"
           >
-          {/* MODEL NUMBERS — header row matches the Photos/Documents/Receipts
-              pattern: "MODEL NUMBERS (n)" label on left + small orange OUTLINE
-              ADD button on right. Each row is a slim input + delete icon. */}
+          {/* MODEL NUMBERS — compact rows. AccordionRow header already
+              labels this card; show only the count + ADD button here. */}
           <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
-            <Text style={styles.label}>MODEL NUMBERS ({modelNumbers.filter(Boolean).length})</Text>
+            <Text style={[styles.label, { fontSize: 7, color: theme.colors.textMuted }]}>
+              {modelNumbers.filter(Boolean).length} {modelNumbers.filter(Boolean).length === 1 ? "ENTRY" : "ENTRIES"}
+            </Text>
             <TouchableOpacity
               testID="add-model-number"
               onPress={() => setModelNumbers([...modelNumbers, ""])}
@@ -666,7 +666,9 @@ export default function ToolEdit() {
           >
           {/* SERIAL NUMBERS — same compact pattern as Model #s. */}
           <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
-            <Text style={styles.label}>SERIAL NUMBERS ({serialNumbers.filter(Boolean).length})</Text>
+            <Text style={[styles.label, { fontSize: 7, color: theme.colors.textMuted }]}>
+              {serialNumbers.filter(Boolean).length} {serialNumbers.filter(Boolean).length === 1 ? "ENTRY" : "ENTRIES"}
+            </Text>
             <TouchableOpacity
               testID="add-serial-number"
               onPress={() => setSerialNumbers([...serialNumbers, ""])}
@@ -717,8 +719,7 @@ export default function ToolEdit() {
             onToggle={() => toggle("dealer")}
             testID="acc-dealer"
           >
-          {/* Dealer */}
-          <Text style={styles.label}>DEALER</Text>
+          {/* Dealer picker — no inner label; AccordionRow header already says "DEALER & AGENT" */}
           <BevelCard testID="pick-dealer-btn" style={styles.pickerRow} onPress={() => setShowDealerPicker(true)}>
             <Ionicons name="briefcase" size={18} color={theme.colors.accent} />
             <Text style={[styles.pickerText, !dealerName && { color: theme.colors.textMuted }]}>
@@ -763,7 +764,6 @@ export default function ToolEdit() {
               2026-05-27). New brands typed here are saved to the brands
               collection on tool-save and become future suggestions. */}
           <View>
-            <Text style={styles.label}>BRAND</Text>
             <TextInput
               testID="brand-input"
               placeholder="DeWalt"
@@ -995,64 +995,121 @@ export default function ToolEdit() {
               />
 
               <Text style={styles.labelSm}>WARRANTY LENGTH</Text>
-              <View style={styles.warrChipWrap}>
-                {[
-                  { lbl: "1 MO", t: "months", m: "1" },
-                  { lbl: "2 MO", t: "months", m: "2" },
-                  { lbl: "3 MO", t: "months", m: "3" },
-                  { lbl: "4 MO", t: "months", m: "4" },
-                  { lbl: "5 MO", t: "months", m: "5" },
-                  { lbl: "6 MO", t: "months", m: "6" },
-                  { lbl: "7 MO", t: "months", m: "7" },
-                  { lbl: "8 MO", t: "months", m: "8" },
-                  { lbl: "9 MO", t: "months", m: "9" },
-                  { lbl: "10 MO", t: "months", m: "10" },
-                  { lbl: "11 MO", t: "months", m: "11" },
-                  { lbl: "1 YR", t: "months", m: "12" },
-                  { lbl: "2 YR", t: "months", m: "24" },
-                  { lbl: "3 YR", t: "months", m: "36" },
-                  { lbl: "4 YR", t: "months", m: "48" },
-                  { lbl: "5 YR", t: "months", m: "60" },
-                  { lbl: "LIMITED", t: "limited", m: "0" },
-                  { lbl: "LIFETIME", t: "lifetime", m: "0" },
-                ].map((opt) => {
-                  const on =
-                    warranty.coverage_type === opt.t &&
-                    (opt.t !== "months" || warranty.length_months === opt.m);
-                  return (
+              {(() => {
+                const lengthOptions = [
+                  { lbl: "1 month", t: "months", m: "1" },
+                  { lbl: "2 months", t: "months", m: "2" },
+                  { lbl: "3 months", t: "months", m: "3" },
+                  { lbl: "4 months", t: "months", m: "4" },
+                  { lbl: "5 months", t: "months", m: "5" },
+                  { lbl: "6 months", t: "months", m: "6" },
+                  { lbl: "7 months", t: "months", m: "7" },
+                  { lbl: "8 months", t: "months", m: "8" },
+                  { lbl: "9 months", t: "months", m: "9" },
+                  { lbl: "10 months", t: "months", m: "10" },
+                  { lbl: "11 months", t: "months", m: "11" },
+                  { lbl: "1 year", t: "months", m: "12" },
+                  { lbl: "2 years", t: "months", m: "24" },
+                  { lbl: "3 years", t: "months", m: "36" },
+                  { lbl: "4 years", t: "months", m: "48" },
+                  { lbl: "5 years", t: "months", m: "60" },
+                  { lbl: "Limited warranty", t: "limited", m: "0" },
+                  { lbl: "Lifetime warranty", t: "lifetime", m: "0" },
+                ];
+                const current = lengthOptions.find((opt) =>
+                  warranty.coverage_type === opt.t &&
+                  (opt.t !== "months" || warranty.length_months === opt.m),
+                );
+                return (
+                  <>
                     <BevelCard
-                      key={opt.lbl}
-                      testID={`war-len-${opt.lbl.replace(/\s/g, "-")}`}
-                      style={[
-                        styles.warrChipSm,
-                        on && styles.warrChipOn,
-                        opt.t !== "months" &&
-                          !on && {
-                            borderColor: theme.colors.accent,
-                            borderWidth: 1.5,
-                          },
-                      ]}
-                      onPress={() => {
-                        const next: any = {
-                          ...warranty,
-                          coverage_type: opt.t,
-                          length_months: opt.m,
-                        };
-                        if (opt.t !== "months") {
-                          next.expiry_date = "";
-                        } else if (next.start_date) {
-                          next.expiry_date = computeExpiry(next.start_date, opt.m);
-                        }
-                        setWarranty(next);
-                      }}
+                      testID="war-length-picker"
+                      style={styles.pickerRow}
+                      onPress={() => setLengthPickerOpen(true)}
                     >
-                      <Text style={[styles.warrChipTextSm, on && styles.warrChipTextOn]}>
-                        {opt.lbl}
+                      <Ionicons
+                        name="time-outline"
+                        size={14}
+                        color={current ? theme.colors.accent : theme.colors.textMuted}
+                      />
+                      <Text
+                        style={[
+                          styles.pickerText,
+                          { color: current ? theme.colors.textPrimary : theme.colors.textMuted, flex: 1 },
+                        ]}
+                      >
+                        {current ? current.lbl : "Select length…"}
                       </Text>
+                      <Ionicons name="chevron-down" size={14} color={theme.colors.textMuted} />
                     </BevelCard>
-                  );
-                })}
-              </View>
+                    <Modal
+                      visible={lengthPickerOpen}
+                      transparent
+                      animationType="slide"
+                      onRequestClose={() => setLengthPickerOpen(false)}
+                    >
+                      <View style={styles.modalBg}>
+                        <View style={styles.modalSheet}>
+                          <View style={styles.modalHeader}>
+                            <Text style={styles.modalTitle}>WARRANTY LENGTH</Text>
+                            <TouchableOpacity
+                              onPress={() => setLengthPickerOpen(false)}
+                              hitSlop={8}
+                              testID="war-length-close"
+                            >
+                              <Ionicons name="close" size={22} color={theme.colors.textPrimary} />
+                            </TouchableOpacity>
+                          </View>
+                          <ScrollView style={{ maxHeight: 480 }}>
+                            {lengthOptions.map((opt) => {
+                              const on =
+                                warranty.coverage_type === opt.t &&
+                                (opt.t !== "months" || warranty.length_months === opt.m);
+                              return (
+                                <TouchableOpacity
+                                  key={opt.lbl}
+                                  testID={`war-length-${opt.lbl.replace(/\s/g, "-")}`}
+                                  style={[
+                                    styles.optionRow,
+                                    on && { backgroundColor: theme.colors.accent + "22" },
+                                  ]}
+                                  onPress={() => {
+                                    const next: any = {
+                                      ...warranty,
+                                      coverage_type: opt.t,
+                                      length_months: opt.m,
+                                    };
+                                    if (opt.t !== "months") {
+                                      next.expiry_date = "";
+                                    } else if (next.start_date) {
+                                      next.expiry_date = computeExpiry(next.start_date, opt.m);
+                                    }
+                                    setWarranty(next);
+                                    setLengthPickerOpen(false);
+                                  }}
+                                  activeOpacity={0.7}
+                                >
+                                  <Text
+                                    style={[
+                                      styles.optionText,
+                                      on && { color: theme.colors.accent, fontWeight: "900" },
+                                    ]}
+                                  >
+                                    {opt.lbl}
+                                  </Text>
+                                  {on ? (
+                                    <Ionicons name="checkmark" size={18} color={theme.colors.accent} />
+                                  ) : null}
+                                </TouchableOpacity>
+                              );
+                            })}
+                          </ScrollView>
+                        </View>
+                      </View>
+                    </Modal>
+                  </>
+                );
+              })()}
 
               {warranty.coverage_type === "months" ? (
                 <>
@@ -1155,7 +1212,6 @@ export default function ToolEdit() {
             onToggle={() => toggle("category")}
             testID="acc-category"
           >
-          <Text style={styles.label}>CATEGORY</Text>
           <CategoryPicker selected={category} onChange={setCategory} />
           </AccordionRow>
           <AccordionRow
@@ -1166,7 +1222,6 @@ export default function ToolEdit() {
             onToggle={() => toggle("tags")}
             testID="acc-tags"
           >
-          <Text style={styles.label}>TAGS</Text>
           <TagInput selected={tags} onChange={setTags} />
           </AccordionRow>
           <AccordionRow
@@ -1178,7 +1233,6 @@ export default function ToolEdit() {
             lastRow
             testID="acc-purchase"
           >
-          <Text style={styles.label}>PURCHASED</Text>
           <DateField
             testID="purchase-input"
             value={purchaseDate}
@@ -1198,7 +1252,6 @@ export default function ToolEdit() {
             lastRow
             testID="acc-description"
           >
-          <Text style={styles.label}>DESCRIPTION</Text>
           <TextInput testID="desc-input" placeholder="Detailed notes..." placeholderTextColor={theme.colors.textMuted}
             value={description} onChangeText={setDescription}
             style={[styles.input, { height: 90, textAlignVertical: "top" }]} multiline />
@@ -1540,6 +1593,21 @@ const styles = themedStyles((c) => ({
   },
   docAddText: { color: c.accent, fontWeight: "800", letterSpacing: 1.5, fontSize: 9 },
   modalBg: { flex: 1, backgroundColor: "rgba(0,0,0,0.7)", justifyContent: "flex-end" },
+  optionRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: c.borderSubtle,
+  },
+  optionText: {
+    color: c.textPrimary,
+    fontSize: 12,
+    fontWeight: "700",
+    letterSpacing: 0.5,
+  },
   modalCard: {
     backgroundColor: c.bgSecondary, padding: 20,
     borderTopWidth: 2, borderTopColor: c.accent,

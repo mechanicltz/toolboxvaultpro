@@ -94,19 +94,33 @@ function PickerModal({
           >
             {children}
           </ScrollView>
-          {onCreate && canCreate ? (
+          <View style={styles.footerRow}>
+            {onCreate && canCreate ? (
+              <TouchableOpacity
+                testID="picker-create"
+                style={[styles.createBtn, { flex: 1 }]}
+                onPress={onCreate}
+                activeOpacity={0.85}
+              >
+                <Ionicons name="add-circle" size={18} color="#000" />
+                <Text style={styles.createBtnText}>
+                  {createLabel || `Create "${searchText.trim()}"`}
+                </Text>
+              </TouchableOpacity>
+            ) : null}
             <TouchableOpacity
-              testID="picker-create"
-              style={styles.createBtn}
-              onPress={onCreate}
+              testID="picker-done"
+              style={[
+                styles.doneBtn,
+                onCreate && canCreate ? { flex: 0, minWidth: 110 } : { flex: 1 },
+              ]}
+              onPress={onClose}
               activeOpacity={0.85}
             >
-              <Ionicons name="add-circle" size={18} color="#000" />
-              <Text style={styles.createBtnText}>
-                {createLabel || `Create "${searchText.trim()}"`}
-              </Text>
+              <Ionicons name="checkmark-done" size={18} color="#000" />
+              <Text style={styles.createBtnText}>DONE</Text>
             </TouchableOpacity>
-          ) : null}
+          </View>
         </View>
       </KeyboardAvoidingView>
     </Modal>
@@ -668,10 +682,26 @@ const styles = themedStyles((c) => ({
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
-    margin: 12,
     paddingVertical: 13,
     backgroundColor: c.accent,
     borderRadius: 8,
+  },
+  doneBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingVertical: 13,
+    paddingHorizontal: 14,
+    backgroundColor: c.success,
+    borderRadius: 8,
+  },
+  footerRow: {
+    flexDirection: "row",
+    gap: 8,
+    paddingHorizontal: 12,
+    paddingTop: 8,
+    paddingBottom: 12,
   },
   createBtnText: {
     color: "#000",
