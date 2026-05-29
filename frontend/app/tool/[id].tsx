@@ -46,6 +46,7 @@ import PinchZoomImageViewer from "../../src/components/PinchZoomImageViewer";
 import { themedStyles } from "../../src/themeContext";
 import { BevelCard } from "../../src/components/BevelCard";
 import { IndustrialBanner } from "../../src/components/IndustrialBanner";
+import { PillButton } from "../../src/components/PillButton";
 
 import {
   pickContactNativeIOS,
@@ -1455,21 +1456,26 @@ export default function ToolDetail() {
             <Ionicons name="arrow-back" size={22} color="#FFFFFF" />
           </TouchableOpacity>
         }
-        rightSlot={
-          <View style={{ flexDirection: "row", gap: 14, alignItems: "center" }}>
-            <TouchableOpacity
-              testID="edit-tool-btn"
-              onPress={() => router.push({ pathname: "/tool/edit", params: { id: tool.id } })}
-              hitSlop={10}
-            >
-              <Ionicons name="create-outline" size={22} color="#FFFFFF" />
-            </TouchableOpacity>
-            <TouchableOpacity testID="delete-tool-btn" onPress={doDelete} hitSlop={10}>
-              <Ionicons name="trash-outline" size={22} color="#FFFFFF" />
-            </TouchableOpacity>
-          </View>
-        }
       />
+      {/* ACTION PILL BUTTONS — sits just below the banner so the title up there
+          gets every bit of available width. Mirrors the pattern we use on
+          other detail screens (dealer, claim, etc.). */}
+      <View style={newStyles.detailActionsRow}>
+        <PillButton
+          testID="edit-tool-btn"
+          label="EDIT"
+          icon="create-outline"
+          variant="active"
+          onPress={() => router.push({ pathname: "/tool/edit", params: { id: tool.id } })}
+        />
+        <PillButton
+          testID="delete-tool-btn"
+          label="DELETE"
+          icon="trash-outline"
+          variant="danger"
+          onPress={doDelete}
+        />
+      </View>
 
       <ScrollView contentContainerStyle={{ paddingBottom: 40 }}>
         <View style={newStyles.page}>
@@ -4061,6 +4067,32 @@ const styles = themedStyles((c) => ({
 // New styles for the redesigned Tool Detail layout. Kept in a separate
 // StyleSheet so the original `styles` object isn't disturbed.
 const newStyles = themedStyles((c) => ({
+  // ---------- DETAIL ACTIONS ROW (under banner) ----------
+  detailActionsRow: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingTop: 10,
+    paddingBottom: 4,
+  },
+  detailActionBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: "rgba(15,15,15,0.9)",
+    borderWidth: 1,
+    borderColor: c.accent,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 5,
+  },
+  detailActionText: {
+    color: c.accent,
+    fontSize: 8,
+    fontWeight: "900",
+    letterSpacing: 1.2,
+  },
   // ---------- HEADER ----------
   headerBar: {
     flexDirection: "row",
