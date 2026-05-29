@@ -19,6 +19,7 @@ import * as Sharing from "expo-sharing";
 import { theme } from "../theme";
 import { api } from "../api";
 import { confirm } from "../confirm";
+import { PillButton } from "../components/PillButton";
 
 import { themedStyles } from "../themeContext";
 
@@ -567,21 +568,14 @@ export function DocumentsSection({
         <Text style={styles.sectionLabel}>
           DOCUMENTS{docs.length > 0 ? ` (${docs.length})` : ""}
         </Text>
-        <TouchableOpacity
+        <PillButton
           testID="add-document-btn"
-          style={styles.addBtn}
-          onPress={pickAndUpload}
+          label={busy ? "..." : "ADD DOCUMENT"}
+          icon={busy ? undefined : "add-circle"}
+          variant="active"
           disabled={busy}
-        >
-          {busy ? (
-            <ActivityIndicator color={theme.colors.accent} size="small" />
-          ) : (
-            <>
-              <Ionicons name="add-circle" size={12} color={theme.colors.accent} />
-              <Text style={styles.addBtnText}>ADD DOCUMENT</Text>
-            </>
-          )}
-        </TouchableOpacity>
+          onPress={pickAndUpload}
+        />
       </View>
       {docs.length === 0 ? (
         <Text style={styles.empty}>

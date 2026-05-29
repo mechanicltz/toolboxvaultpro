@@ -2,6 +2,7 @@ import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { theme } from "../theme";
+import { PillButton } from "../components/PillButton";
 import { formatDateUS } from "../dateUtil";
 
 import { themedStyles } from "../themeContext";
@@ -36,16 +37,15 @@ export function WarrantySection({ tool }: { tool: any }) {
         </View>
         <View style={styles.emptyCard}>
           <Text style={styles.emptyText}>No warranty information available.</Text>
-          <TouchableOpacity
+          <PillButton
             testID="add-warranty-link"
-            style={styles.addBtn}
+            label="ADD WARRANTY INFORMATION"
+            icon="add-circle"
+            variant="active"
             onPress={() =>
               router.push({ pathname: "/tool/edit", params: { id: tool.id, focus: "warranty" } })
             }
-          >
-            <Ionicons name="add-circle" size={16} color={theme.colors.accent} />
-            <Text style={styles.addBtnText}>ADD WARRANTY INFORMATION</Text>
-          </TouchableOpacity>
+          />
         </View>
       </View>
     );

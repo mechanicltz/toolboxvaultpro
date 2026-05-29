@@ -11,6 +11,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { theme } from "../theme";
+import { PillButton } from "../components/PillButton";
 import { api } from "../api";
 import { confirm } from "../confirm";
 import { PaymentModal } from "./PaymentModal";
@@ -168,14 +169,22 @@ function BalanceCard({
       </Text>
       <Text style={styles.balSub}>{owed ? "Outstanding balance" : "Paid up"}</Text>
       <View style={{ flexDirection: "row", gap: 8, marginTop: 12 }}>
-        <TouchableOpacity testID={`pay-${label.replace(/\s/g, "-")}`} style={styles.payBtn} onPress={onPay}>
-          <Ionicons name="trending-down" size={14} color="#000" />
-          <Text style={styles.payText}>LOG PAYMENT</Text>
-        </TouchableOpacity>
-        <TouchableOpacity testID={`charge-${label.replace(/\s/g, "-")}`} style={styles.chargeBtn} onPress={onCharge}>
-          <Ionicons name="trending-up" size={14} color="#fff" />
-          <Text style={styles.chargeText}>ADD CHARGE</Text>
-        </TouchableOpacity>
+        <PillButton
+          testID={`pay-${label.replace(/\s/g, "-")}`}
+          label="LOG PAYMENT"
+          icon="trending-down"
+          variant="active"
+          onPress={onPay}
+          style={{ flex: 1, justifyContent: "center" }}
+        />
+        <PillButton
+          testID={`charge-${label.replace(/\s/g, "-")}`}
+          label="ADD CHARGE"
+          icon="trending-up"
+          variant="danger"
+          onPress={onCharge}
+          style={{ flex: 1, justifyContent: "center" }}
+        />
       </View>
     </BevelCard>
   );

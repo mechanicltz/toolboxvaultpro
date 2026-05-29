@@ -11,6 +11,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { theme } from "../theme";
+import { PillButton } from "../components/PillButton";
 
 import { themedStyles } from "../themeContext";
 
@@ -47,15 +48,13 @@ export function ReceiptsSection({ receipts, onAdd }: Props) {
       <View>
         <View style={styles.headerRow}>
           <Text style={styles.sectionLabel}>RECEIPTS</Text>
-          <TouchableOpacity
+          <PillButton
             testID="add-receipt-empty"
-            style={styles.addBtn}
+            label="ADD RECEIPT"
+            icon="add-circle"
+            variant="active"
             onPress={onAdd}
-            activeOpacity={0.8}
-          >
-            <Ionicons name="add-circle" size={12} color={theme.colors.accent} />
-            <Text style={styles.addBtnText}>ADD RECEIPT</Text>
-          </TouchableOpacity>
+          />
         </View>
         <Text style={styles.empty}>
           Attach receipt photos for insurance, warranty claims, and PDF reports.
@@ -70,15 +69,13 @@ export function ReceiptsSection({ receipts, onAdd }: Props) {
         <Text style={styles.sectionLabel}>RECEIPTS ({list.length})</Text>
         <View style={{ flexDirection: "row", gap: 8, alignItems: "center" }}>
           {onAdd && (
-            <TouchableOpacity
+            <PillButton
               testID="add-receipt-header"
-              style={styles.addBtn}
+              label="ADD RECEIPT"
+              icon="add-circle"
+              variant="active"
               onPress={onAdd}
-              activeOpacity={0.8}
-            >
-              <Ionicons name="add-circle" size={12} color={theme.colors.accent} />
-              <Text style={styles.addBtnText}>ADD RECEIPT</Text>
-            </TouchableOpacity>
+            />
           )}
         </View>
       </View>

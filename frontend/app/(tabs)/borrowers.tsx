@@ -23,6 +23,7 @@ import { parseContacts, openEmail, openPhone, openSms } from "../../src/contactL
 import { themedStyles } from "../../src/themeContext";
 import { BevelCard } from "../../src/components/BevelCard";
 import { IndustrialBanner } from "../../src/components/IndustrialBanner";
+import { PillButton } from "../../src/components/PillButton";
 
 import {
   isDeviceContactsAvailable,
@@ -163,15 +164,13 @@ export default function BorrowersScreen() {
     <SafeAreaView style={styles.container} edges={["top"]}>
       <IndustrialBanner title="CONTACTS" subtitle="Borrowers & Checkouts" />
       <View style={styles.actionsRow}>
-        <TouchableOpacity
+        <PillButton
           testID="add-contact-header-btn"
-          style={styles.headerAddBtn}
+          label="ADD CONTACT"
+          icon="add"
+          variant="active"
           onPress={() => setShowAdd(true)}
-          activeOpacity={0.85}
-        >
-          <Ionicons name="add" size={16} color="#000" />
-          <Text style={styles.headerAddBtnText}>ADD CONTACT</Text>
-        </TouchableOpacity>
+        />
       </View>
 
       {tools.length > 0 && (

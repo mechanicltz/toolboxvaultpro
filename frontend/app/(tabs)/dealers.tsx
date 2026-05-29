@@ -31,6 +31,7 @@ import { useAppResume } from "../../src/appLifecycle";
 import { themedStyles } from "../../src/themeContext";
 import { BevelCard } from "../../src/components/BevelCard";
 import { IndustrialBanner } from "../../src/components/IndustrialBanner";
+import { DiamondPlate } from "../../src/components/DiamondPlate";
 
 export default function DealersScreen() {
   const router = useRouter();
@@ -104,20 +105,19 @@ export default function DealersScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
+      <DiamondPlate />
       <IndustrialBanner
         title="DEALERS"
         subtitle="Companies & Sales Agents"
       />
       <View style={styles.actionsRow}>
-        <TouchableOpacity
+        <PillButton
           testID="add-dealer-header-btn"
-          style={styles.headerAddBtn}
+          label="ADD DEALER"
+          icon="add"
+          variant="active"
           onPress={() => setShowAdd(true)}
-          activeOpacity={0.85}
-        >
-          <Ionicons name="add" size={16} color="#000" />
-          <Text style={styles.headerAddBtnText}>ADD DEALER</Text>
-        </TouchableOpacity>
+        />
       </View>
 
       <FlatList

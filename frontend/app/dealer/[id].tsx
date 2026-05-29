@@ -399,16 +399,15 @@ export default function DealerDetail() {
               <Text style={styles.detailsHeaderLabel}>
                 AGENTS ({allAgents.length})
               </Text>
-              <TouchableOpacity
+              <PillButton
                 testID="add-agent-btn"
-                style={styles.detailsHeaderAdd}
+                label="ADD"
+                icon="add"
+                variant="active"
                 onPress={() => {
                   setAgentForm({ name: "", phone: "", email: "", location: "", notes: "" });
                 }}
-              >
-                <Ionicons name="add" size={14} color={theme.colors.accent} />
-                <Text style={styles.detailsHeaderAddText}>ADD</Text>
-              </TouchableOpacity>
+              />
             </View>
 
             {allAgents.length === 0 && (
