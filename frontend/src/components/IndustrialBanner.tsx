@@ -121,7 +121,7 @@ export function IndustrialBanner({ title, subtitle, rightSlot, leftSlot }: Props
       {/* content row */}
       <View style={styles.contentRow}>
         {leftSlot ? <View style={styles.leftSlot}>{leftSlot}</View> : null}
-        <View style={{ flex: 1 }}>
+        <View style={styles.titleCol}>
           <Text
             style={styles.title}
             numberOfLines={1}
@@ -135,6 +135,7 @@ export function IndustrialBanner({ title, subtitle, rightSlot, leftSlot }: Props
             <Text
               style={styles.subtitle}
               numberOfLines={1}
+              ellipsizeMode="tail"
               allowFontScaling={false}
             >
               {subtitle}
@@ -205,14 +206,22 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 44, // leave room for corner bolts
-    gap: 10,
+    gap: 8,
   },
   leftSlot: {
     justifyContent: "center",
+    flexShrink: 0,
+  },
+  titleCol: {
+    flex: 1,
+    minWidth: 0,
+    flexShrink: 1,
   },
   rightSlot: {
     justifyContent: "center",
     alignItems: "flex-end",
+    flexShrink: 0,
+    maxWidth: "45%",
   },
   title: {
     color: "#FFFFFF",

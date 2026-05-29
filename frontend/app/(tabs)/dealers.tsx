@@ -107,18 +107,18 @@ export default function DealersScreen() {
       <IndustrialBanner
         title="DEALERS"
         subtitle="Companies & Sales Agents"
-        rightSlot={
-          <TouchableOpacity
-            testID="add-dealer-header-btn"
-            style={styles.headerAddBtn}
-            onPress={() => setShowAdd(true)}
-            activeOpacity={0.85}
-          >
-            <Ionicons name="add" size={16} color="#000" />
-            <Text style={styles.headerAddBtnText}>ADD DEALER</Text>
-          </TouchableOpacity>
-        }
       />
+      <View style={styles.actionsRow}>
+        <TouchableOpacity
+          testID="add-dealer-header-btn"
+          style={styles.headerAddBtn}
+          onPress={() => setShowAdd(true)}
+          activeOpacity={0.85}
+        >
+          <Ionicons name="add" size={16} color="#000" />
+          <Text style={styles.headerAddBtnText}>ADD DEALER</Text>
+        </TouchableOpacity>
+      </View>
 
       <FlatList
         data={dealers}
@@ -353,6 +353,13 @@ export default function DealersScreen() {
 
 const styles = themedStyles((c) => ({
   container: { flex: 1, backgroundColor: c.bg },
+  actionsRow: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    paddingHorizontal: 16,
+    paddingTop: 10,
+    paddingBottom: 4,
+  },
   header: {
     flexDirection: "row",
     alignItems: "center",
