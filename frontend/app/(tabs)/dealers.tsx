@@ -31,7 +31,6 @@ import { useAppResume } from "../../src/appLifecycle";
 import { themedStyles } from "../../src/themeContext";
 import { BevelCard } from "../../src/components/BevelCard";
 import { IndustrialBanner } from "../../src/components/IndustrialBanner";
-import { DiamondPlate } from "../../src/components/DiamondPlate";
 import { PillButton } from "../../src/components/PillButton";
 
 export default function DealersScreen() {
@@ -106,7 +105,6 @@ export default function DealersScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
-      <DiamondPlate />
       <IndustrialBanner
         title="DEALERS"
         subtitle="Companies & Sales Agents"
