@@ -39,6 +39,7 @@ import {
   BlackOpsOne_400Regular,
 } from "@expo-google-fonts/black-ops-one";
 import { BebasNeue_400Regular } from "@expo-google-fonts/bebas-neue";
+import { Anton_400Regular } from "@expo-google-fonts/anton";
 import { theme } from "../src/theme";
 import { useAuth } from "../src/AuthContext";
 import {
@@ -63,7 +64,6 @@ const C = {
 
 const BG = require("../assets/images/textures/industrial-bg.jpg");
 const LOGO = require("../assets/images/textures/logo-badge.png");
-const PANEL = require("../assets/images/textures/panel-frame.jpg");
 const BTN_TEX = require("../assets/images/textures/button-texture.jpg");
 
 export default function LoginScreen() {
@@ -77,6 +77,7 @@ export default function LoginScreen() {
   const [fontsLoaded] = useBlackOps({
     BlackOpsOne_400Regular,
     BebasNeue_400Regular,
+    Anton_400Regular,
   });
 
   const [mode, setMode] = useState<"login" | "register">("login");
@@ -104,7 +105,7 @@ export default function LoginScreen() {
   // Font family helpers — these return the loaded font, or a sane
   // platform fallback if Google Fonts haven't loaded yet.
   const titleFont = fontsLoaded
-    ? "BlackOpsOne_400Regular"
+    ? "Anton_400Regular"
     : Platform.select({ ios: "Impact", android: "sans-serif-condensed", default: "Impact" });
   const labelFont = fontsLoaded
     ? "BebasNeue_400Regular"
@@ -226,32 +227,27 @@ export default function LoginScreen() {
                 <View style={styles.titleTextWrap}>
                   {/* Drop shadow layer (offset down/right, dark) */}
                   <Text
+                    numberOfLines={1}
+                    adjustsFontSizeToFit
                     style={[
                       styles.titleShadow,
                       { fontSize: titleSize, fontFamily: titleFont },
                     ]}
                   >
-                    TOOLBOX <Text style={{ color: "#7a3500" }}>VAULT</Text>
+                    TOOLBOX VAULT
                   </Text>
                   {/* Foreground layer with metallic gradient feel */}
                   <Text
+                    numberOfLines={1}
+                    adjustsFontSizeToFit
                     style={[
                       styles.titleFront,
                       { fontSize: titleSize, fontFamily: titleFont },
                     ]}
                   >
-                    <Text style={styles.titleSilver}>TOOLBOX</Text>{" "}
+                    <Text style={styles.titleSilver}>TOOLBOX</Text>
+                    <Text style={styles.titleSilver}> </Text>
                     <Text style={styles.titleOrange}>VAULT</Text>
-                  </Text>
-                  {/* Subtle scratch overlay using mid-gray opacity */}
-                  <Text
-                    style={[
-                      styles.titleScratch,
-                      { fontSize: titleSize, fontFamily: titleFont },
-                    ]}
-                    pointerEvents="none"
-                  >
-                    TOOLBOX VAULT
                   </Text>
                 </View>
                 {/* Right trim wing */}
@@ -269,18 +265,27 @@ export default function LoginScreen() {
                 <Text style={[styles.subtitleWord, { fontFamily: labelFont }]}>REPORTS</Text>
               </View>
 
-              {/* ============== PANEL ============== */}
+              {/* ============== PANEL (coded frame, no image) ============== */}
               <View style={styles.panelOuter}>
-                <ImageBackground
-                  source={PANEL}
-                  resizeMode="stretch"
-                  style={styles.panelImage}
-                  imageStyle={styles.panelImageStyle}
-                >
-                  {/* Orange perimeter glow rendered in code (so accent color can change) */}
-                  <View style={styles.panelOrangeBorder} pointerEvents="none" />
+                {/* Steel-textured background card behind the form */}
+                <View style={styles.panelBg} />
 
-                  <View style={styles.panelInner}>
+                {/* Orange perimeter glow (driven by code so accent color can swap) */}
+                <View style={styles.panelOrangeBorder} pointerEvents="none" />
+
+                {/* 6 hex bolts on the frame — 4 corners + 2 mid-side */}
+                <View style={[styles.frameBolt, { top: -8, left: -8 }]} />
+                <View style={[styles.frameBolt, { top: -8, right: -8 }]} />
+                <View style={[styles.frameBolt, { bottom: -8, left: -8 }]} />
+                <View style={[styles.frameBolt, { bottom: -8, right: -8 }]} />
+                <View
+                  style={[styles.frameBolt, { top: "50%", left: -8, marginTop: -8 }]}
+                />
+                <View
+                  style={[styles.frameBolt, { top: "50%", right: -8, marginTop: -8 }]}
+                />
+
+                <View style={styles.panelInner}>
                     {/* ============== TABS ============== */}
                     <View style={styles.tabsRow}>
                       <TabButton
@@ -450,7 +455,6 @@ export default function LoginScreen() {
                       </View>
                     )}
                   </View>
-                </ImageBackground>
               </View>
             </ScrollView>
           </KeyboardAvoidingView>
@@ -680,27 +684,46 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 0 },
   },
 
-  // ---- PANEL ----
+  // ---- PANEL (coded frame, no image) ----
   panelOuter: {
-    flex: 1,
-    borderRadius: 6,
-    overflow: "hidden",
+    position: "relative",
+    marginHorizontal: 4,
+    marginTop: 4,
+    marginBottom: 12,
+    borderRadius: 8,
   },
-  panelImage: {
-    width: "100%",
-    minHeight: 480,
-    borderRadius: 6,
+  panelBg: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(15,15,15,0.82)",
+    borderRadius: 8,
   },
-  panelImageStyle: { borderRadius: 6 },
+  panelImage: { width: "100%" }, // unused (legacy)
+  panelImageStyle: {},
   panelOrangeBorder: {
     ...StyleSheet.absoluteFillObject,
-    borderWidth: 1.5,
+    borderWidth: 2,
     borderColor: C.orange,
-    borderRadius: 6,
+    borderRadius: 8,
     shadowColor: C.orange,
-    shadowOpacity: 0.7,
-    shadowRadius: 12,
+    shadowOpacity: 0.65,
+    shadowRadius: 14,
     shadowOffset: { width: 0, height: 0 },
+    elevation: 8,
+  },
+  // hex bolts on the panel frame corners + side midpoints
+  frameBolt: {
+    position: "absolute",
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: "#0e0e0e",
+    borderWidth: 2,
+    borderColor: "#4a4a4a",
+    shadowColor: "#000",
+    shadowOpacity: 0.9,
+    shadowRadius: 3,
+    shadowOffset: { width: 1, height: 1 },
+    zIndex: 10,
   },
   panelInner: {
     padding: 18,
