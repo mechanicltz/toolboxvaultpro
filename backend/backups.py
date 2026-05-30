@@ -27,6 +27,7 @@ from datetime import datetime, timezone, timedelta
 from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Response
+from fastapi.responses import HTMLResponse, RedirectResponse
 from pydantic import BaseModel
 
 logger = logging.getLogger(__name__)
@@ -147,21 +148,24 @@ async def _create_backup_doc(db, *, trigger: str) -> Dict[str, Any]:
 
 
 async def _seconds_until_next_run() -> float:
-    """Return seconds until the next 1st-of-month 03:00 UTC."""
+    """Return seconds until the next 03:00 UTC (i.e. once per day)."""
     now = datetime.now(timezone.utc)
-    # Next month's 1st @ 03:00 UTC
-    if now.month == 12:
-        next_run = now.replace(year=now.year + 1, month=1, day=1, hour=3,
-                               minute=0, second=0, microsecond=0)
-    else:
-        next_run = now.replace(month=now.month + 1, day=1, hour=3,
-                               minute=0, second=0, microsecond=0)
+    next_run = now.replace(hour=3, minute=0, second=0, microsecond=0)
+    if next_run <= now:
+        # 03:00 already passed today → schedule for tomorrow
+        next_run = next_run + timedelta(days=1)
     return (next_run - now).total_seconds()
 
 
 async def _scheduler_loop(get_db):
-    """Background task — runs forever, fires a backup once per month."""
-    logger.info("Backup scheduler started (monthly, 1st @ 03:00 UTC, keep last %d)",
+    """Background task — runs forever, fires a backup once per day at 03:00 UTC.
+
+    Each cycle:
+      1) Creates an in-DB backup (existing behavior, prunes to MAX_BACKUPS_RETAINED)
+      2) If Google Drive is connected, uploads the backup ZIP to Drive
+      3) Applies Drive retention policy (keep min N, delete >30 days old)
+    """
+    logger.info("Backup scheduler started (daily @ 03:00 UTC, keep last %d in DB)",
                 MAX_BACKUPS_RETAINED)
     while True:
         try:
@@ -174,15 +178,48 @@ async def _scheduler_loop(get_db):
                     "Scheduled backup created: %s (%s, %d docs)",
                     row["id"], row["size_human"], row["document_count"],
                 )
+                # Push to Google Drive (best-effort; failures logged, not fatal)
+                try:
+                    await _push_latest_backup_to_drive(db, row["id"])
+                except Exception as drive_exc:
+                    logger.warning("Drive upload skipped/failed: %s", drive_exc)
             except Exception as e:
                 logger.exception("Scheduled backup failed: %s", e)
         except asyncio.CancelledError:
             logger.info("Backup scheduler cancelled")
             raise
         except Exception as e:
-            # Don't let any error kill the loop — log and wait a day.
             logger.exception("Backup scheduler hiccup, retrying tomorrow: %s", e)
             await asyncio.sleep(86400)
+
+
+async def _push_latest_backup_to_drive(db, backup_id: str) -> None:
+    """Download the just-created backup doc, upload to Drive, prune old Drive files."""
+    import gdrive  # local import — avoids circular at module load
+    # Skip silently if Drive not connected
+    status = await gdrive.get_status(db)
+    if not status.get("connected"):
+        logger.info("Drive not connected — skipping Drive upload for %s", backup_id)
+        return
+
+    # Fetch full backup payload (gzipped JSON) — this IS our backup file
+    doc = await db.backups.find_one({"id": backup_id})
+    if not doc:
+        raise RuntimeError(f"Backup {backup_id} not found")
+    raw = base64.b64decode(doc["payload_b64"])
+
+    # Name the file with timestamp so users can scan their Drive folder visually
+    ts = doc["created_at"].replace(":", "-").replace(".", "-")
+    filename = f"toolbox-vault-backup-{ts}.json.gz"
+
+    uploaded = await gdrive.upload_backup(
+        db, file_bytes=raw, filename=filename, mime_type="application/gzip",
+    )
+    logger.info("Backup mirrored to Drive: %s (id=%s)", filename, uploaded.get("id"))
+
+    # Enforce retention on Drive (keep last N + everything <30 days)
+    retention = await gdrive.apply_retention_policy(db)
+    logger.info("Drive retention applied: %s", retention)
 
 
 _scheduler_task: Optional[asyncio.Task] = None
@@ -250,8 +287,8 @@ def make_backup_router(
         seconds = await _seconds_until_next_run()
         next_run = datetime.now(timezone.utc) + timedelta(seconds=seconds)
         return {
-            "schedule": "monthly",
-            "schedule_human": "1st of every month at 03:00 UTC",
+            "schedule": "daily",
+            "schedule_human": "Every day at 03:00 UTC",
             "next_run_at": next_run.isoformat(),
             "next_run_in_seconds": int(seconds),
             "max_retained": MAX_BACKUPS_RETAINED,
@@ -296,5 +333,110 @@ def make_backup_router(
         if res.deleted_count == 0:
             raise HTTPException(404, "Backup not found")
         return {"ok": True, "deleted_id": backup_id}
+
+    # =========================================================================
+    # GOOGLE DRIVE OAUTH + OFFSITE BACKUP ENDPOINTS
+    # -------------------------------------------------------------------------
+    # The OAuth callback intentionally has NO auth dependency — Google itself
+    # initiates the redirect with the auth code in the query string, so we
+    # can't require a Bearer token there. We still verify the request by
+    # exchanging the code via Google's token endpoint (only the holder of
+    # OUR client_secret can succeed).
+    # =========================================================================
+
+    @router.get("/admin/gdrive/status")
+    async def gdrive_status(user=Depends(get_current_user)):
+        """Return whether Drive is currently connected and to what account."""
+        require_admin(user)
+        import gdrive
+        return await gdrive.get_status(get_db())
+
+    @router.get("/admin/gdrive/auth-url")
+    async def gdrive_auth_url(user=Depends(get_current_user)):
+        """Generate the URL the user opens in their browser to authorize."""
+        require_admin(user)
+        import gdrive
+        return {"url": gdrive.build_authorize_url()}
+
+    @router.get("/admin/gdrive/oauth-callback")
+    async def gdrive_oauth_callback(code: str = "", state: str = "", error: str = ""):
+        """Google redirects here after the user grants permission. We exchange
+        the authorization code for a long-lived refresh token and stash it in
+        Mongo. NOTE: no Bearer auth required (Google initiates this call)."""
+        if error:
+            return HTMLResponse(
+                f"<h2>Google Drive authorization failed</h2><p>{error}</p>",
+                status_code=400,
+            )
+        if not code:
+            return HTMLResponse(
+                "<h2>Missing authorization code</h2>", status_code=400,
+            )
+        import gdrive
+        try:
+            result = await gdrive.exchange_code_for_token(code, get_db())
+        except Exception as exc:
+            logger.exception("OAuth exchange failed")
+            return HTMLResponse(
+                f"<h2>Authorization failed</h2><pre>{exc}</pre>",
+                status_code=500,
+            )
+        return HTMLResponse(
+            f"""
+            <!doctype html>
+            <html><head><meta name="viewport" content="width=device-width,initial-scale=1">
+            <title>Drive Connected</title>
+            <style>
+              body {{ font-family: -apple-system, system-ui, sans-serif;
+                      background: #111; color: #eee; padding: 32px;
+                      max-width: 480px; margin: 0 auto; }}
+              h1   {{ color: #F97316; font-size: 22px; }}
+              .ok  {{ font-size: 60px; }}
+              .em  {{ color: #F97316; font-weight: 700; }}
+            </style></head><body>
+              <div class="ok">✅</div>
+              <h1>Google Drive Connected</h1>
+              <p>Backed up account: <span class="em">{result.get('connected_email')}</span></p>
+              <p>You can close this tab and return to the app.</p>
+            </body></html>
+            """,
+            status_code=200,
+        )
+
+    @router.post("/admin/gdrive/disconnect")
+    async def gdrive_disconnect(user=Depends(get_current_user)):
+        """Remove the stored refresh token. Daily backups will skip Drive
+        upload until the user re-authorizes."""
+        require_admin(user)
+        import gdrive
+        await gdrive.disconnect(get_db())
+        return {"ok": True}
+
+    @router.get("/admin/gdrive/files")
+    async def gdrive_list_files(user=Depends(get_current_user)):
+        """List backups currently sitting in the user's Drive folder."""
+        require_admin(user)
+        import gdrive
+        files = await gdrive.list_backups(get_db())
+        return {"files": files, "count": len(files)}
+
+    @router.post("/admin/gdrive/upload-latest")
+    async def gdrive_upload_latest(user=Depends(get_current_user)):
+        """Force-push the most recent in-DB backup to Drive right now (test btn)."""
+        require_admin(user)
+        db = get_db()
+        latest = await db.backups.find_one(sort=[("created_at", -1)])
+        if not latest:
+            raise HTTPException(404, "No in-DB backup exists yet — run a manual backup first.")
+        await _push_latest_backup_to_drive(db, latest["id"])
+        return {"ok": True, "uploaded_backup_id": latest["id"]}
+
+    @router.post("/admin/gdrive/retention")
+    async def gdrive_apply_retention(user=Depends(get_current_user)):
+        """Manually trigger Drive retention cleanup (also runs after each daily upload)."""
+        require_admin(user)
+        import gdrive
+        summary = await gdrive.apply_retention_policy(get_db())
+        return summary
 
     return router

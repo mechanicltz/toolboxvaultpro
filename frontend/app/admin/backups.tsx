@@ -21,6 +21,7 @@ import { api, getToken } from "../../src/api";
 import { themedStyles } from "../../src/themeContext";
 import { BevelCard } from "../../src/components/BevelCard";
 import { IndustrialBanner } from "../../src/components/IndustrialBanner";
+import { PillButton } from "../../src/components/PillButton";
 
 type BackupRow = {
   id: string;
@@ -39,6 +40,20 @@ type BackupConfig = {
   next_run_in_seconds: number;
   max_retained: number;
   collections_backed_up: string[];
+};
+
+type GdriveStatus = {
+  connected: boolean;
+  email?: string;
+  connected_at?: string;
+};
+
+type GdriveFile = {
+  id: string;
+  name: string;
+  createdTime: string;
+  size?: string;
+  webViewLink?: string;
 };
 
 function formatLocal(iso: string): string {
@@ -73,6 +88,8 @@ export default function AdminBackupsPage() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [busyAction, setBusyAction] = useState<string | null>(null);
+  const [gdrive, setGdrive] = useState<GdriveStatus | null>(null);
+  const [gdriveFiles, setGdriveFiles] = useState<GdriveFile[] | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -82,12 +99,25 @@ export default function AdminBackupsPage() {
         return;
       }
       setAllowed(true);
-      const [list, cfg] = await Promise.all([
+      const [list, cfg, gd] = await Promise.all([
         api.adminListBackups(),
         api.adminBackupConfig(),
+        api.adminGdriveStatus().catch(() => ({ connected: false })),
       ]);
       setRows(list);
       setConfig(cfg);
+      setGdrive(gd as GdriveStatus);
+      // If connected, load file list too (best-effort)
+      if ((gd as GdriveStatus).connected) {
+        try {
+          const f = await api.adminGdriveListFiles();
+          setGdriveFiles(f.files);
+        } catch {
+          setGdriveFiles(null);
+        }
+      } else {
+        setGdriveFiles(null);
+      }
     } catch (e: any) {
       Alert.alert("Failed to load backups", String(e?.message || e));
     } finally {
@@ -109,6 +139,60 @@ export default function AdminBackupsPage() {
       ]);
     }
   }, [allowed, router]);
+
+  const connectGdrive = useCallback(async () => {
+    setBusyAction("gdrive-connect");
+    try {
+      const { url } = await api.adminGdriveAuthUrl();
+      await Linking.openURL(url);
+      Alert.alert(
+        "Google Drive",
+        "Finish the consent flow in your browser, then return here and pull-to-refresh.",
+      );
+    } catch (e: any) {
+      Alert.alert("Failed to open Google sign-in", String(e?.message || e));
+    } finally {
+      setBusyAction(null);
+    }
+  }, []);
+
+  const disconnectGdrive = useCallback(async () => {
+    Alert.alert(
+      "Disconnect Google Drive?",
+      "Future automatic backups will no longer be uploaded to Drive until you re-connect.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Disconnect",
+          style: "destructive",
+          onPress: async () => {
+            setBusyAction("gdrive-disconnect");
+            try {
+              await api.adminGdriveDisconnect();
+              await load();
+            } catch (e: any) {
+              Alert.alert("Disconnect failed", String(e?.message || e));
+            } finally {
+              setBusyAction(null);
+            }
+          },
+        },
+      ],
+    );
+  }, [load]);
+
+  const pushLatestToDrive = useCallback(async () => {
+    setBusyAction("gdrive-push");
+    try {
+      const result = await api.adminGdriveUploadLatest();
+      Alert.alert("Uploaded to Drive ✓", `Backup ${result.uploaded_backup_id} pushed.`);
+      await load();
+    } catch (e: any) {
+      Alert.alert("Drive upload failed", String(e?.message || e));
+    } finally {
+      setBusyAction(null);
+    }
+  }, [load]);
 
   const triggerNow = useCallback(async () => {
     setBusyAction("trigger");
@@ -251,6 +335,67 @@ export default function AdminBackupsPage() {
           />
         }
       >
+        {/* Google Drive offsite backup status */}
+        <BevelCard style={styles.banner}>
+          <View style={styles.bannerHeader}>
+            <Ionicons
+              name={gdrive?.connected ? "cloud-done" : "cloud-offline"}
+              size={18}
+              color={gdrive?.connected ? theme.colors.success : theme.colors.textMuted}
+            />
+            <Text style={styles.bannerTitle}>Google Drive (offsite backup)</Text>
+          </View>
+          {gdrive?.connected ? (
+            <>
+              <Text style={styles.bannerLine}>
+                Connected as <Text style={{ fontWeight: "900" }}>{gdrive.email}</Text>
+              </Text>
+              <Text style={styles.bannerLine}>
+                {gdriveFiles
+                  ? `${gdriveFiles.length} backup(s) in Drive folder`
+                  : "Loading file list…"}
+              </Text>
+              <Text style={styles.bannerLine}>
+                Daily backups auto-upload at 03:00 UTC. Keeps the 3 most recent and anything &lt; 30 days.
+              </Text>
+              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 12 }}>
+                <PillButton
+                  testID="gdrive-push-now"
+                  label={busyAction === "gdrive-push" ? "..." : "BACKUP TO DRIVE NOW"}
+                  icon="cloud-upload"
+                  variant="active"
+                  onPress={pushLatestToDrive}
+                  disabled={busyAction === "gdrive-push"}
+                />
+                <PillButton
+                  testID="gdrive-disconnect"
+                  label="DISCONNECT"
+                  icon="log-out-outline"
+                  variant="danger"
+                  onPress={disconnectGdrive}
+                  disabled={busyAction === "gdrive-disconnect"}
+                />
+              </View>
+            </>
+          ) : (
+            <>
+              <Text style={styles.bannerLine}>
+                Not connected. Connect now so daily backups also get pushed to your Drive folder.
+              </Text>
+              <View style={{ marginTop: 12 }}>
+                <PillButton
+                  testID="gdrive-connect"
+                  label={busyAction === "gdrive-connect" ? "..." : "CONNECT GOOGLE DRIVE"}
+                  icon="logo-google"
+                  variant="active"
+                  onPress={connectGdrive}
+                  disabled={busyAction === "gdrive-connect"}
+                />
+              </View>
+            </>
+          )}
+        </BevelCard>
+
         {/* Schedule banner */}
         {config && (
           <BevelCard style={styles.banner}>

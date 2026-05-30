@@ -493,6 +493,40 @@ export const api = {
   adminBackupDownloadUrl: (id: string): string =>
     `${API_BASE}/api/admin/backups/${id}/download`,
 
+  // ---- Google Drive backup integration ----
+  adminGdriveStatus: () =>
+    request<{ connected: boolean; email?: string; connected_at?: string }>(
+      `/admin/gdrive/status`,
+    ),
+  adminGdriveAuthUrl: () =>
+    request<{ url: string }>(`/admin/gdrive/auth-url`),
+  adminGdriveDisconnect: () =>
+    request<{ ok: boolean }>(`/admin/gdrive/disconnect`, { method: "POST" }),
+  adminGdriveListFiles: () =>
+    request<{
+      files: Array<{
+        id: string;
+        name: string;
+        createdTime: string;
+        size?: string;
+        webViewLink?: string;
+      }>;
+      count: number;
+    }>(`/admin/gdrive/files`),
+  adminGdriveUploadLatest: () =>
+    request<{ ok: boolean; uploaded_backup_id: string }>(
+      `/admin/gdrive/upload-latest`,
+      { method: "POST" },
+    ),
+  adminGdriveApplyRetention: () =>
+    request<{
+      kept: number;
+      deleted: number;
+      deleted_names: string[];
+      retention_days: number;
+      keep_min: number;
+    }>(`/admin/gdrive/retention`, { method: "POST" }),
+
   forgotPassword: (data: { email: string }) =>
     request<{ ok: boolean; message: string }>(`/auth/forgot-password`, {
       method: "POST",

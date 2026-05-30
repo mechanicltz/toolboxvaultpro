@@ -278,6 +278,7 @@ async def attach_user_to_context(request: Request, call_next):
         or path == "/api/guides"
         or path == "/api/revenuecat/webhook"
         or path.startswith("/api/migration/")
+        or path == "/api/admin/gdrive/oauth-callback"
     ):
         return await call_next(request)
     auth = request.headers.get("Authorization", "")
