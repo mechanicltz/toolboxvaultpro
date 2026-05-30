@@ -87,3 +87,4 @@ migration/mongo-dump.tar.gz
 credentials.json
 *.key
 .credentials
+backend/secrets/
