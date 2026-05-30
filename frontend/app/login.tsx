@@ -34,6 +34,11 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
+import {
+  useFonts as useBlackOps,
+  BlackOpsOne_400Regular,
+} from "@expo-google-fonts/black-ops-one";
+import { BebasNeue_400Regular } from "@expo-google-fonts/bebas-neue";
 import { theme } from "../src/theme";
 import { useAuth } from "../src/AuthContext";
 import {
@@ -57,7 +62,7 @@ const C = {
 };
 
 const BG = require("../assets/images/textures/industrial-bg.jpg");
-const LOGO = require("../assets/images/textures/logo-badge.jpg");
+const LOGO = require("../assets/images/textures/logo-badge.png");
 const PANEL = require("../assets/images/textures/panel-frame.jpg");
 const BTN_TEX = require("../assets/images/textures/button-texture.jpg");
 
@@ -65,6 +70,14 @@ export default function LoginScreen() {
   const router = useRouter();
   const { login, register } = useAuth();
   const { width: screenW, height: screenH } = useWindowDimensions();
+
+  // Industrial typography — Black Ops One for the heavy stencil title,
+  // Bebas Neue for labels and chrome text. Both fall back gracefully if
+  // they haven't finished loading.
+  const [fontsLoaded] = useBlackOps({
+    BlackOpsOne_400Regular,
+    BebasNeue_400Regular,
+  });
 
   const [mode, setMode] = useState<"login" | "register">("login");
   const [email, setEmail] = useState("");
@@ -83,9 +96,19 @@ export default function LoginScreen() {
   } | null>(null);
   const autoPromptedRef = useRef(false);
 
-  // Responsive logo + title sizing
-  const logoSize = Math.min(screenW * 0.55, 240);
-  const titleSize = Math.min(screenW * 0.105, 44);
+  // Responsive logo + title sizing — logo is intentionally larger so the
+  // hammer+wrench reads cleanly.
+  const logoSize = Math.min(screenW * 0.42, 200);
+  const titleSize = Math.min(screenW * 0.115, 50);
+
+  // Font family helpers — these return the loaded font, or a sane
+  // platform fallback if Google Fonts haven't loaded yet.
+  const titleFont = fontsLoaded
+    ? "BlackOpsOne_400Regular"
+    : Platform.select({ ios: "Impact", android: "sans-serif-condensed", default: "Impact" });
+  const labelFont = fontsLoaded
+    ? "BebasNeue_400Regular"
+    : Platform.select({ ios: "Impact", android: "sans-serif-condensed", default: "Impact" });
 
   useEffect(() => {
     (async () => {
@@ -200,26 +223,50 @@ export default function LoginScreen() {
               <View style={styles.titleRow}>
                 {/* Left trim wing */}
                 <View style={styles.wingLeft} />
-                <Text style={[styles.titleWord, { fontSize: titleSize, color: C.textWhite }]}>
-                  TOOLBOX
-                </Text>
-                <Text style={[styles.titleSpacer, { fontSize: titleSize }]}> </Text>
-                <Text style={[styles.titleWord, { fontSize: titleSize, color: C.orange }]}>
-                  VAULT
-                </Text>
+                <View style={styles.titleTextWrap}>
+                  {/* Drop shadow layer (offset down/right, dark) */}
+                  <Text
+                    style={[
+                      styles.titleShadow,
+                      { fontSize: titleSize, fontFamily: titleFont },
+                    ]}
+                  >
+                    TOOLBOX <Text style={{ color: "#7a3500" }}>VAULT</Text>
+                  </Text>
+                  {/* Foreground layer with metallic gradient feel */}
+                  <Text
+                    style={[
+                      styles.titleFront,
+                      { fontSize: titleSize, fontFamily: titleFont },
+                    ]}
+                  >
+                    <Text style={styles.titleSilver}>TOOLBOX</Text>{" "}
+                    <Text style={styles.titleOrange}>VAULT</Text>
+                  </Text>
+                  {/* Subtle scratch overlay using mid-gray opacity */}
+                  <Text
+                    style={[
+                      styles.titleScratch,
+                      { fontSize: titleSize, fontFamily: titleFont },
+                    ]}
+                    pointerEvents="none"
+                  >
+                    TOOLBOX VAULT
+                  </Text>
+                </View>
                 {/* Right trim wing */}
                 <View style={styles.wingRight} />
               </View>
 
               {/* ============== SUBTITLE ============== */}
               <View style={styles.subtitleRow}>
-                <Text style={styles.subtitleWord}>INVENTORY</Text>
+                <Text style={[styles.subtitleWord, { fontFamily: labelFont }]}>INVENTORY</Text>
                 <View style={styles.subtitleDot} />
-                <Text style={styles.subtitleWord}>DEALERS</Text>
+                <Text style={[styles.subtitleWord, { fontFamily: labelFont }]}>DEALERS</Text>
                 <View style={styles.subtitleDot} />
-                <Text style={styles.subtitleWord}>WARRANTIES</Text>
+                <Text style={[styles.subtitleWord, { fontFamily: labelFont }]}>WARRANTIES</Text>
                 <View style={styles.subtitleDot} />
-                <Text style={styles.subtitleWord}>REPORTS</Text>
+                <Text style={[styles.subtitleWord, { fontFamily: labelFont }]}>REPORTS</Text>
               </View>
 
               {/* ============== PANEL ============== */}
@@ -530,20 +577,56 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    marginTop: -8,
+    marginTop: -2,
     marginBottom: 6,
+    paddingHorizontal: 4,
   },
+  titleTextWrap: {
+    position: "relative",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 12,
+  },
+  titleFront: {
+    fontWeight: "400",
+    letterSpacing: 2.5,
+    textAlign: "center",
+  },
+  titleSilver: {
+    color: "#E8E8E8",
+    // Multiple shadow layers create a metallic embossed look
+    textShadowColor: "rgba(0,0,0,0.9)",
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 2,
+  },
+  titleOrange: {
+    color: "#FF7E1B",
+    textShadowColor: "rgba(0,0,0,0.9)",
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 2,
+  },
+  titleShadow: {
+    position: "absolute",
+    top: 3,
+    left: 3,
+    color: "rgba(0,0,0,0.85)",
+    fontWeight: "400",
+    letterSpacing: 2.5,
+    textAlign: "center",
+  },
+  titleScratch: {
+    position: "absolute",
+    top: -1,
+    left: -1,
+    color: "rgba(255,255,255,0.04)",
+    fontWeight: "400",
+    letterSpacing: 2.5,
+    textAlign: "center",
+  },
+  // Legacy keys kept (used only if fonts haven't loaded yet)
   titleWord: {
     fontWeight: "900",
     letterSpacing: 3,
-    fontFamily: Platform.select({
-      ios: "Impact",
-      android: "sans-serif-condensed",
-      default: "Impact",
-    }),
-    textShadowColor: "rgba(0,0,0,0.8)",
-    textShadowOffset: { width: 1, height: 2 },
-    textShadowRadius: 3,
   },
   titleSpacer: { fontWeight: "900" },
   wingLeft: {
