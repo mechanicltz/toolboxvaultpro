@@ -1,9 +1,6 @@
-"""One-off script: generate a mockup of the Toolbox Vault industrial login
-screen using gpt-image-1. Saves the PNG to /app/backend/generated/ so we can
-preview & iterate before turning it into actual React Native code.
+"""Generate Toolbox Vault industrial login mockup with gpt-image-1.
 
-Usage:
-    cd /app/backend && python scripts/gen_login_mockup.py
+Run: cd /app/backend && python scripts/gen_login_mockup.py
 """
 import asyncio
 import os
@@ -14,71 +11,86 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 load_dotenv()
-
-# Make sibling modules importable when run from any cwd.
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from emergentintegrations.llm.openai.image_generation import OpenAIImageGeneration  # noqa: E402
 
-PROMPT = """Mobile app login screen for "Toolbox Vault" — a heavy-duty industrial tool inventory app for professional mechanics.
+PROMPT = """A photorealistic mobile app login screen rendered in portrait 9:16 aspect ratio. Industrial heavy-duty mechanic toolbox aesthetic — Snap-On meets military equipment meets diamond plate steel.
 
-OVERALL MOOD: Snap-On toolbox meets military equipment. Industrial machinery control panel. Heavy steel fabrication. Premium mechanic workstation. Rugged but modern. Built from steel, bolts, gears, and diamond plate metal. Photorealistic, AAA game UI quality. Portrait orientation, 9:16 aspect ratio.
+LAYOUT (top to bottom, exact proportions):
+- iPhone status bar at very top (time 3:51, location arrow, signal/wifi/100% battery)
+- COMPACT octagonal forged-steel badge centered at top (about 20% of screen height, NOT bigger)
+- "TOOLBOX VAULT" title text below badge
+- Two horizontal orange industrial trim bars extending out from the title bar to BOTH left and right screen edges, like brand nameplate wings, each with a single hex bolt and slight wear
+- Subtitle row below title with 4 words separated by orange dots
+- Login panel filling the rest of the screen
 
-COLOR PALETTE:
-- Deep industrial black background (#050505)
-- Dark steel layers (#111111, #1A1A1A)
-- Gunmetal accents (#2B2B2B)
-- Industrial burnt orange highlights (#FF6A00, #FF7E1B, #D84E00)
-- Bright text white (#F2F2F2)
-- Muted metal gray for secondary text (#8A8A8A)
+BADGE (top center, compact):
+- Octagon shape with chamfered edges
+- Heavy 3D forged dark steel frame, bright burnt-orange (#FF6A00) edge trim/lighting around the outer octagon perimeter
+- 6 visible industrial hex bolts: 4 at the corner intersections plus 2 at the midpoints of the longer sides
+- Inside the octagon: crossed black steel hammer (top-left to bottom-right) and wrench (top-right to bottom-left), 3D photorealistic with orange glow highlights on edges, slight depth
+- Background of octagon: subtle dark diamond plate texture
 
-BACKGROUND (multi-layer):
-- Dark brushed steel base texture
-- Large partially visible heavy iron gears in all 4 corners, very dark, low opacity, photoreal
-- Diamond plate steel pattern, subtle, 8% opacity overlay
-- Realistic scratches, wear marks, machined imperfections throughout
+TITLE TYPOGRAPHY (below badge, large, bold):
+- "TOOLBOX" in heavy condensed industrial stencil font, brushed silver-white color, subtle wear/scratches on letters, slight bevel
+- "VAULT" right next to it, same stencil font, bright burnt orange color (#FF7E1B), matching wear
+- Both words must look like they share the same font family and weight
+- Centered, both words on the same horizontal line
 
-LOGO AREA (top center, ~25% of screen height):
-- Forged steel octagonal badge with heavy steel frame, orange illuminated edge trim, hex bolts in each corner, slight bevel
-- Center: crossed 3D black steel hammer + wrench, photorealistic, orange glow accents, machined edges, slight depth
+DECORATIVE TRIM WINGS (this is critical — DO NOT OMIT):
+- Two horizontal thin industrial bars extending OUT from the title row to BOTH the left and right screen edges
+- Each wing is solid burnt orange metal with realistic scratches and a single hex bolt
+- They look like the side trim of a metal nameplate bolted onto the chassis
+- These bars run parallel to the title text at the same vertical level
 
-TITLE (below logo):
-- "TOOLBOX VAULT" in bold condensed industrial stencil font
-- "TOOLBOX" rendered as brushed silver steel with metal texture, subtle bevel
-- "VAULT" rendered as industrial burnt orange with metal texture
-- Drop shadow, premium industrial look
+SUBTITLE (right below title):
+- Small caps spaced letters in clean white: "INVENTORY  •  DEALERS  •  WARRANTIES  •  REPORTS"
+- Bullet separators are bright glowing orange dots
+- Letter spacing wide
 
-SUBTITLE:
-- "INVENTORY • DEALERS • WARRANTIES • REPORTS" in small caps, spaced lettering, muted steel gray with tiny orange separator dots
+LOGIN PANEL (large rectangle filling middle/bottom of screen):
+- Dark brushed-steel rectangular access door, chamfered corners
+- THIN BRIGHT ORANGE GLOW LINE outlining the entire panel perimeter
+- 6 visible hex bolts on the panel frame: 4 corners + 2 midpoints of the long vertical sides
+- Subtle diamond plate texture inside the panel
+- Slight wear, scratches, machined imperfections
 
-LOGIN PANEL (looks like a removable steel machine access door bolted onto a chassis):
-- Heavy steel border, chamfered corners, machined edges (12-16px visual depth)
-- Visible industrial hex bolts in all four corners and midpoints of long sides, with metal reflections and shadows
-- Dark brushed metal panel surface, subtle wear, slight scratches, very realistic
+TAB SELECTOR (top of panel, two equal halves):
+- LEFT tab "SIGN IN" — ACTIVE: solid burnt orange chamfered plate with 4 small hex bolts in its corners, bright orange glow strip underneath, black bold stencil text "SIGN IN" with a small person silhouette icon to its left in black
+- RIGHT tab "CREATE ACCOUNT" — INACTIVE: dark gunmetal flat, no glow, muted gray text "CREATE ACCOUNT" with a small gray person+plus icon to its left
 
-TAB SELECTOR (top of panel):
-- Two metal plates side by side
-- LEFT "SIGN IN" tab: ACTIVE — industrial orange powder-coated plate, rivets, surface scratches, beveled edge, orange glow underneath
-- RIGHT "CREATE ACCOUNT" tab: INACTIVE — dark steel, no glow, muted
+FORM (inside panel, below tabs):
+- Label "EMAIL" in tall narrow industrial stencil font, white-gray, with a thin orange dash trim to its right
+- Email input field: chamfered rectangular shape (corners clipped at 45 degrees), inset near-black background, thin bright orange L-bracket lighting on its top-left corner, an orange envelope outline icon inside on left, placeholder text "you@example.com"
+- Same pattern for "PASSWORD" label
+- Password input field with same chamfered shape, showing dots "•••••••"
+- To the right of the password field is a SEPARATE small chamfered eye-toggle button (square-ish, dark with thin orange edge, contains a bright orange outlined eye icon)
 
-FORM FIELDS:
-- Labels "EMAIL" and "PASSWORD" in tall condensed industrial font, 6-8% letter spacing, steel gray color
-- Input fields are angular machined hexagonal-ish shapes, NOT rounded rectangles. Near-black background, inset appearance like cut into metal, thin orange edge lighting
-- Email field shows industrial line-art envelope icon (orange) and placeholder "you@example.com"
-- Password field shows lock icon (orange), dotted password, and orange eye visibility toggle, all machined metal style
+PRIMARY SIGN IN BUTTON (large, near bottom of panel):
+- Wide chamfered/octagonal horizontal bar spanning almost the full panel width
+- Solid bright burnt orange (#FF6A00) powder-coated steel surface with realistic wear marks, scratches, edge chips
+- Two visible large hex bolts at the far left and far right ends of the button with small washers
+- Centered: a small black lock icon followed by bold black industrial stencil text "SIGN IN"
+- Bright hot-steel orange glow emanating from beneath the button
 
-SIGN IN BUTTON (most important element, near bottom):
-- Wide steel plate construction, angled corners, large (~60-70px tall)
-- Industrial orange powder-coated steel surface with visible wear marks, scratches, edge chips, realistic metal texture
-- Hex bolts in left and right corners with small metal washers and realistic shadows
-- "SIGN IN" in large bold black industrial stencil text
-- Subtle hot-steel orange glow beneath the button
+BOTTOM ROW (below button):
+- Centered burnt-orange text "FORGOT PASSWORD?" in technical/blueprint style, flanked by two short horizontal orange separator lines on each side
+- Below that: a small inset dark steel notice card with a tiny orange shield icon on the left and white text "New user? Use Create Account to get started for free."
 
-FORGOT PASSWORD: centered below button, orange text, thin technical appearance, small horizontal separator lines on both sides like blueprint styling
+BACKGROUND (behind the entire login screen, NOT inside the panel):
+- Dark industrial black with multiple large heavy iron gears visible at all four corners (partial gears bleeding off screen edges), low contrast but clearly visible
+- Subtle diamond plate steel texture overlay
+- Realistic scratches, oil smudges, machined imperfections, ambient occlusion
 
-FOOTER NOTICE: small dark gray text with tiny shield icon — "New user? Use Create Account to get started for free."
+COLOR PALETTE — STRICT:
+- Background black: #050505
+- Steel panels: #1A1A1A to #2B2B2B gunmetal
+- Industrial burnt orange: #FF6A00 (primary), #FF7E1B (highlights), #D84E00 (deep shadows)
+- White-silver text: #F2F2F2
+- Muted gray: #8A8A8A
 
-QUALITY: Photorealistic, ultra detailed, 4K design presentation quality, pixel-perfect mobile application interface, bevels, extrusions, ambient occlusion, steel reflections. AVOID: flat design, Material Design, iOS glassmorphism, rounded modern SaaS aesthetics. Every component must feel physically forged, bolted, machined, industrial. Status bar visible at top (3:51, signal, wifi, 100% battery)."""
+QUALITY: Photorealistic AAA game UI quality, ultra-detailed, 4K product concept art, pixel-perfect mobile interface. Heavy realism, physical bevels, ambient occlusion, steel reflections, hot-steel orange illumination. AVOID flat design, AVOID glassmorphism, AVOID rounded SaaS aesthetic. Everything must look physically forged, bolted, and machined."""
 
 
 async def main() -> None:
@@ -92,7 +104,7 @@ async def main() -> None:
     ts = datetime.utcnow().strftime("%Y%m%d-%H%M%S")
     out_path = out_dir / f"login-mockup-{ts}.png"
 
-    print("→ Generating image with gpt-image-1 (this can take ~30-60s)...")
+    print("→ Generating image with gpt-image-1 (high quality, ~45-75s)...")
     image_gen = OpenAIImageGeneration(api_key=api_key)
     images = await image_gen.generate_images(
         prompt=PROMPT,
@@ -102,7 +114,6 @@ async def main() -> None:
     if not images:
         print("ERROR: No image returned")
         sys.exit(1)
-
     out_path.write_bytes(images[0])
     print(f"✓ Saved: {out_path}")
     print(f"✓ Size:  {out_path.stat().st_size:,} bytes")
