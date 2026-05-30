@@ -297,8 +297,6 @@ export default function AdminBackupsPage() {
     );
   }, [load]);
 
-  const styles = useStyles;
-
   if (loading || allowed === null) {
     return (
       <SafeAreaView style={styles.safe}>
@@ -511,7 +509,7 @@ export default function AdminBackupsPage() {
   );
 }
 
-const useStyles = themedStyles((t) => ({
+const styles = themedStyles((t) => ({
   safe: { flex: 1, backgroundColor: t.colors.background },
   center: { flex: 1, alignItems: "center", justifyContent: "center" },
   header: {
