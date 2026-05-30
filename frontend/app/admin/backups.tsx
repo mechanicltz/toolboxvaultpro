@@ -428,10 +428,10 @@ export default function AdminBackupsPage() {
           testID="admin-backup-trigger"
         >
           {busyAction === "trigger" ? (
-            <ActivityIndicator color={theme.colors.background} />
+            <ActivityIndicator color={theme.colors.bg} />
           ) : (
             <>
-              <Ionicons name="cloud-upload" size={18} color={theme.colors.background} />
+              <Ionicons name="cloud-upload" size={18} color={theme.colors.bg} />
               <Text style={styles.triggerBtnText}>Backup Now</Text>
             </>
           )}

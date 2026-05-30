@@ -109,7 +109,7 @@ export default function PdfViewerScreen(): React.ReactElement {
       <Stack.Screen
         options={{
           title,
-          headerStyle: { backgroundColor: theme.colors.background },
+          headerStyle: { backgroundColor: theme.colors.bg },
           headerTintColor: theme.colors.textPrimary,
           headerTitleStyle: { color: theme.colors.textPrimary, fontWeight: "700" },
           headerLeft: () => (
@@ -155,7 +155,7 @@ export default function PdfViewerScreen(): React.ReactElement {
             border: 0,
             width: "100%",
             height: "100%",
-            backgroundColor: theme.colors.background,
+            backgroundColor: theme.colors.bg,
           }}
           title={title}
         />
@@ -165,7 +165,7 @@ export default function PdfViewerScreen(): React.ReactElement {
           // Loading file:// URIs needs allowFileAccess. originWhitelist
           // allows the file scheme on Android.
           source={{ uri }}
-          style={{ flex: 1, backgroundColor: theme.colors.background }}
+          style={{ flex: 1, backgroundColor: theme.colors.bg }}
           originWhitelist={["*"]}
           allowFileAccess
           allowFileAccessFromFileURLs
@@ -202,7 +202,7 @@ export default function PdfViewerScreen(): React.ReactElement {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.background,
+    backgroundColor: theme.colors.bg,
   },
   empty: {
     flex: 1,
@@ -243,7 +243,7 @@ const styles = StyleSheet.create({
     padding: 14,
     borderTopWidth: 1,
     borderTopColor: theme.colors.border,
-    backgroundColor: theme.colors.background,
+    backgroundColor: theme.colors.bg,
   },
   shareBtn: {
     flexDirection: "row",
