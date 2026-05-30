@@ -4326,6 +4326,24 @@ async def preview_login_mockup():
     )
 
 
+@app.get("/api/preview/texture/{name}")
+async def preview_texture(name: str):
+    """Preview a single generated industrial texture asset by filename stem
+    (e.g. /api/preview/texture/industrial-bg)."""
+    safe = name.replace("/", "").replace("..", "").strip()
+    p = _MOCKUP_DIR / "textures" / f"{safe}.png"
+    if not p.exists():
+        raise HTTPException(404, f"texture '{safe}' not found")
+    return FileResponse(
+        path=str(p),
+        media_type="image/png",
+        headers={
+            "Cache-Control": "no-store",
+            "Content-Disposition": f'inline; filename="{p.name}"',
+        },
+    )
+
+
 
 
 # ---------------------------------------------------------------------------
