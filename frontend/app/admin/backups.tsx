@@ -297,7 +297,7 @@ export default function AdminBackupsPage() {
     );
   }, [load]);
 
-  const styles = useStyles();
+  const styles = useStyles;
 
   if (loading || allowed === null) {
     return (
