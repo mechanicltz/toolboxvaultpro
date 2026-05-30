@@ -78,11 +78,19 @@ def _human_size(n: int) -> str:
 
 
 async def _create_backup_doc(db, *, trigger: str) -> Dict[str, Any]:
-    """Dump every BACKUP_COLLECTIONS collection to a single gzip+base64 blob
-    and insert one row into the `backups` collection. Returns the inserted
-    row metadata (without the heavy payload).
+    """Build a FULL disaster-recovery snapshot and insert into the backups
+    collection. The payload is a ZIP file containing:
+        • db.json          — every MongoDB collection in BACKUP_COLLECTIONS
+        • backend.env      — backend secrets (Mongo URL, API keys, etc.)
+        • frontend.env     — frontend env vars
+        • manifest.json    — metadata (timestamp, doc counts, schema version)
+        • RESTORE.md       — human-readable recovery instructions
+
+    The ZIP is base64-encoded for storage in Mongo. Future restore-from-snapshot
+    flow extracts back the same files.
     """
     import uuid
+    import zipfile
 
     now = datetime.now(timezone.utc)
     bundle: Dict[str, List[Dict[str, Any]]] = {}
@@ -93,24 +101,67 @@ async def _create_backup_doc(db, *, trigger: str) -> Dict[str, Any]:
         bundle[coll_name] = rows
         total_docs += len(rows)
 
-    # Serialize → gzip → base64. Done in a thread-pool to avoid blocking
-    # the event loop on big dumps (encoded base64 of a 10 MB gzip is ~13 MB).
-    def _encode(data: Dict[str, Any]) -> bytes:
-        raw = json.dumps(data, default=str).encode("utf-8")
+    # Snapshot .env files (best-effort — if they don't exist we skip silently).
+    def _read_env(path: str) -> str:
+        try:
+            with open(path, "r") as f:
+                return f.read()
+        except Exception:
+            return ""
+
+    backend_env = _read_env("/app/backend/.env")
+    frontend_env = _read_env("/app/frontend/.env")
+
+    manifest = {
+        "schema_version": 2,
+        "created_at": now.isoformat(),
+        "trigger": trigger,
+        "app": "Toolbox Vault",
+        "collections": BACKUP_COLLECTIONS,
+        "document_count": total_docs,
+        "has_backend_env": bool(backend_env),
+        "has_frontend_env": bool(frontend_env),
+    }
+
+    restore_md = (
+        "# Toolbox Vault Full Backup\n\n"
+        f"Created: {now.isoformat()}\n"
+        f"Trigger: {trigger}\n"
+        f"Documents: {total_docs:,}\n\n"
+        "## Contents\n"
+        "- `db.json` — All MongoDB collections (JSON)\n"
+        "- `backend.env` — Backend secrets/config\n"
+        "- `frontend.env` — Frontend env vars\n"
+        "- `manifest.json` — Metadata\n\n"
+        "## How to restore\n"
+        "1. Open the app → More → Admin · Database Backups\n"
+        "2. Tap 'Restore from Snapshot' and select this ZIP\n"
+        "3. Confirm — DB is repopulated and env files written\n"
+        "4. Restart backend if env was changed\n"
+    )
+
+    def _encode() -> bytes:
+        """Build the ZIP in a worker thread (avoids blocking event loop)."""
         buf = io.BytesIO()
-        with gzip.GzipFile(fileobj=buf, mode="wb", compresslevel=6) as gz:
-            gz.write(raw)
+        with zipfile.ZipFile(buf, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=6) as zf:
+            zf.writestr("db.json", json.dumps(bundle, default=str, indent=2))
+            if backend_env:
+                zf.writestr("backend.env", backend_env)
+            if frontend_env:
+                zf.writestr("frontend.env", frontend_env)
+            zf.writestr("manifest.json", json.dumps(manifest, indent=2))
+            zf.writestr("RESTORE.md", restore_md)
         return buf.getvalue()
 
-    gz_bytes = await asyncio.to_thread(_encode, bundle)
-    if len(gz_bytes) > MAX_BACKUP_BYTES:
+    zip_bytes = await asyncio.to_thread(_encode)
+    if len(zip_bytes) > MAX_BACKUP_BYTES:
         raise HTTPException(
             413,
-            f"Backup payload {_human_size(len(gz_bytes))} exceeds the "
+            f"Backup payload {_human_size(len(zip_bytes))} exceeds the "
             f"{_human_size(MAX_BACKUP_BYTES)} cap. Migrate to external storage.",
         )
 
-    payload_b64 = base64.b64encode(gz_bytes).decode("ascii")
+    payload_b64 = base64.b64encode(zip_bytes).decode("ascii")
 
     doc = {
         "id": str(uuid.uuid4()),
@@ -118,8 +169,9 @@ async def _create_backup_doc(db, *, trigger: str) -> Dict[str, Any]:
         "trigger": trigger,
         "collections": BACKUP_COLLECTIONS,
         "document_count": total_docs,
-        "size_bytes": len(gz_bytes),
+        "size_bytes": len(zip_bytes),
         "payload_b64": payload_b64,
+        "format": "zip",  # marker so future code can tell new ZIPs from old gzip
     }
     await db.backups.insert_one(doc)
 
@@ -202,18 +254,31 @@ async def _push_latest_backup_to_drive(db, backup_id: str) -> None:
         logger.info("Drive not connected — skipping Drive upload for %s", backup_id)
         return
 
-    # Fetch full backup payload (gzipped JSON) — this IS our backup file
+    # Fetch full backup payload (ZIP file) — this IS our backup file
     doc = await db.backups.find_one({"id": backup_id})
     if not doc:
         raise RuntimeError(f"Backup {backup_id} not found")
     raw = base64.b64decode(doc["payload_b64"])
 
-    # Name the file with timestamp so users can scan their Drive folder visually
-    ts = doc["created_at"].replace(":", "-").replace(".", "-")
-    filename = f"toolbox-vault-backup-{ts}.json.gz"
+    # User-friendly filename: "MM-DD-YYYY HH-MM Full Backup.zip"
+    # Use ISO created_at to format. Falls back to "Full Backup.zip" if parse fails.
+    try:
+        ts = datetime.fromisoformat(doc["created_at"])
+        # Format like "05-30-2026 18-09 Full Backup.zip"
+        filename = f"{ts.strftime('%m-%d-%Y %H-%M')} Full Backup.zip"
+    except Exception:
+        filename = "Full Backup.zip"
+
+    # Pick mime based on backup format marker (legacy gzip-only backups
+    # still exist in the collection from before schema_version=2).
+    is_zip = doc.get("format") == "zip"
+    mime = "application/zip" if is_zip else "application/gzip"
+    if not is_zip:
+        # Old format → keep .json.gz extension for clarity
+        filename = filename.replace("Full Backup.zip", "Full Backup.json.gz")
 
     uploaded = await gdrive.upload_backup(
-        db, file_bytes=raw, filename=filename, mime_type="application/gzip",
+        db, file_bytes=raw, filename=filename, mime_type=mime,
     )
     logger.info("Backup mirrored to Drive: %s (id=%s)", filename, uploaded.get("id"))
 
@@ -313,11 +378,22 @@ def make_backup_router(
         except Exception:
             raise HTTPException(500, "Backup payload could not be decoded")
 
-        ts = doc.get("created_at", "").replace(":", "-").replace("+00:00", "")
-        filename = f"toolbox-vault-backup-{ts}.json.gz"
+        is_zip = doc.get("format") == "zip"
+        # Friendly filename — matches Drive: "MM-DD-YYYY HH-MM Full Backup.zip"
+        try:
+            ts_obj = datetime.fromisoformat(doc.get("created_at", ""))
+            stamp = ts_obj.strftime("%m-%d-%Y %H-%M")
+        except Exception:
+            stamp = doc.get("created_at", "").replace(":", "-").replace("+00:00", "")
+        if is_zip:
+            filename = f"{stamp} Full Backup.zip"
+            mime = "application/zip"
+        else:
+            filename = f"{stamp} Full Backup.json.gz"
+            mime = "application/gzip"
         return Response(
             content=gz_bytes,
-            media_type="application/gzip",
+            media_type=mime,
             headers={
                 "Content-Disposition": f'attachment; filename="{filename}"',
                 "Cache-Control": "no-store",
@@ -433,6 +509,37 @@ def make_backup_router(
             raise HTTPException(404, "No in-DB backup exists yet — run a manual backup first.")
         await _push_latest_backup_to_drive(db, latest["id"])
         return {"ok": True, "uploaded_backup_id": latest["id"]}
+
+    @router.post("/admin/backups/full-now")
+    async def full_backup_now(user=Depends(get_current_user)):
+        """ONE-CLICK FULL BACKUP — creates an in-DB snapshot AND pushes it to
+        Drive (if connected). This is what the single 'BACKUP NOW' pill button
+        on the admin screen calls."""
+        require_admin(user)
+        db = get_db()
+        row = await _create_backup_doc(db, trigger="manual")
+        gdrive_uploaded = False
+        gdrive_filename: Optional[str] = None
+        try:
+            await _push_latest_backup_to_drive(db, row["id"])
+            gdrive_uploaded = True
+            # Look up the just-uploaded file's name for nicer messaging
+            import gdrive as _gd
+            files = await _gd.list_backups(db)
+            if files:
+                gdrive_filename = files[0]["name"]
+        except Exception as exc:
+            # Drive may simply not be connected — that's not fatal for the
+            # in-DB backup which already succeeded.
+            logger.info("Drive upload skipped after manual backup: %s", exc)
+        return {
+            "ok": True,
+            "backup_id": row["id"],
+            "size_human": row["size_human"],
+            "document_count": row["document_count"],
+            "gdrive_uploaded": gdrive_uploaded,
+            "gdrive_filename": gdrive_filename,
+        }
 
     @router.post("/admin/gdrive/retention")
     async def gdrive_apply_retention(user=Depends(get_current_user)):

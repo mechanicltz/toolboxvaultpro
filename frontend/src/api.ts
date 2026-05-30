@@ -527,6 +527,17 @@ export const api = {
       keep_min: number;
     }>(`/admin/gdrive/retention`, { method: "POST" }),
 
+  // Unified one-click backup: snapshots DB + uploads to Drive in one call
+  adminBackupFullNow: () =>
+    request<{
+      ok: boolean;
+      backup_id: string;
+      size_human: string;
+      document_count: number;
+      gdrive_uploaded: boolean;
+      gdrive_filename?: string;
+    }>(`/admin/backups/full-now`, { method: "POST" }),
+
   forgotPassword: (data: { email: string }) =>
     request<{ ok: boolean; message: string }>(`/auth/forgot-password`, {
       method: "POST",

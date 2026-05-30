@@ -181,26 +181,18 @@ export default function AdminBackupsPage() {
     );
   }, [load]);
 
-  const pushLatestToDrive = useCallback(async () => {
-    setBusyAction("gdrive-push");
+  // Unified one-click backup — creates a full ZIP snapshot (db + envs) and,
+  // if Google Drive is connected, immediately mirrors it offsite in one shot.
+  const triggerFullBackup = useCallback(async () => {
+    setBusyAction("full-backup");
     try {
-      const result = await api.adminGdriveUploadLatest();
-      Alert.alert("Uploaded to Drive ✓", `Backup ${result.uploaded_backup_id} pushed.`);
-      await load();
-    } catch (e: any) {
-      Alert.alert("Drive upload failed", String(e?.message || e));
-    } finally {
-      setBusyAction(null);
-    }
-  }, [load]);
-
-  const triggerNow = useCallback(async () => {
-    setBusyAction("trigger");
-    try {
-      const fresh = await api.adminTriggerBackup();
+      const r = await api.adminBackupFullNow();
+      const driveLine = r.gdrive_uploaded
+        ? `\n☁️ Uploaded to Google Drive${r.gdrive_filename ? `\n📄 ${r.gdrive_filename}` : ""}`
+        : "\n⚠️ Not uploaded to Drive (connect Google Drive to enable offsite copy).";
       Alert.alert(
-        "Backup created ✓",
-        `${fresh.size_human} · ${fresh.document_count.toLocaleString()} documents`,
+        "Backup complete ✓",
+        `${r.size_human} · ${r.document_count.toLocaleString()} documents${driveLine}`,
       );
       await load();
     } catch (e: any) {
@@ -237,7 +229,18 @@ export default function AdminBackupsPage() {
         const objUrl = URL.createObjectURL(blob);
         const a = _global.document.createElement("a");
         a.href = objUrl;
-        a.download = `toolbox-vault-backup-${row.created_at.replace(/[:.]/g, "-")}.json.gz`;
+        // Build a friendly filename — same format as Drive: "MM-DD-YYYY HH-MM Full Backup.zip"
+        let stamp = row.created_at;
+        try {
+          const d = new Date(row.created_at);
+          const mm = String(d.getMonth() + 1).padStart(2, "0");
+          const dd = String(d.getDate()).padStart(2, "0");
+          const yy = d.getFullYear();
+          const hh = String(d.getHours()).padStart(2, "0");
+          const mi = String(d.getMinutes()).padStart(2, "0");
+          stamp = `${mm}-${dd}-${yy} ${hh}-${mi}`;
+        } catch { /* fall back to raw */ }
+        a.download = `${stamp} Full Backup.zip`;
         _global.document.body.appendChild(a);
         a.click();
         a.remove();
@@ -246,7 +249,18 @@ export default function AdminBackupsPage() {
         // Native fallback: use Expo FileSystem + Sharing dynamic import.
         const FileSystem = await import("expo-file-system");
         const Sharing = await import("expo-sharing");
-        const fileName = `toolbox-vault-backup-${row.created_at.replace(/[:.]/g, "-")}.json.gz`;
+        // Friendly filename — matches Drive/web download
+        let stamp = row.created_at;
+        try {
+          const d = new Date(row.created_at);
+          const mm = String(d.getMonth() + 1).padStart(2, "0");
+          const dd = String(d.getDate()).padStart(2, "0");
+          const yy = d.getFullYear();
+          const hh = String(d.getHours()).padStart(2, "0");
+          const mi = String(d.getMinutes()).padStart(2, "0");
+          stamp = `${mm}-${dd}-${yy} ${hh}-${mi}`;
+        } catch { /* fall back to raw */ }
+        const fileName = `${stamp} Full Backup.zip`;
         const fileUri = `${FileSystem.cacheDirectory}${fileName}`;
         const reader = new FileReader();
         const dataUrl: string = await new Promise((resolve, reject) => {
@@ -358,14 +372,6 @@ export default function AdminBackupsPage() {
               </Text>
               <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 12 }}>
                 <PillButton
-                  testID="gdrive-push-now"
-                  label={busyAction === "gdrive-push" ? "..." : "BACKUP TO DRIVE NOW"}
-                  icon="cloud-upload"
-                  variant="active"
-                  onPress={pushLatestToDrive}
-                  disabled={busyAction === "gdrive-push"}
-                />
-                <PillButton
                   testID="gdrive-disconnect"
                   label="DISCONNECT"
                   icon="log-out-outline"
@@ -419,20 +425,22 @@ export default function AdminBackupsPage() {
           </BevelCard>
         )}
 
-        {/* Manual trigger */}
+        {/* Manual trigger — UNIFIED: snapshots DB + mirrors to Drive in one tap */}
         <TouchableOpacity
           style={styles.triggerBtn}
-          onPress={triggerNow}
-          disabled={busyAction === "trigger"}
+          onPress={triggerFullBackup}
+          disabled={busyAction === "full-backup"}
           activeOpacity={0.7}
           testID="admin-backup-trigger"
         >
-          {busyAction === "trigger" ? (
+          {busyAction === "full-backup" ? (
             <ActivityIndicator color={theme.colors.bg} />
           ) : (
             <>
               <Ionicons name="cloud-upload" size={18} color={theme.colors.bg} />
-              <Text style={styles.triggerBtnText}>Backup Now</Text>
+              <Text style={styles.triggerBtnText}>
+                {gdrive?.connected ? "BACKUP NOW (DB + DRIVE)" : "BACKUP NOW"}
+              </Text>
             </>
           )}
         </TouchableOpacity>
