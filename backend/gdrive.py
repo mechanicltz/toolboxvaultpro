@@ -145,12 +145,16 @@ async def exchange_code_for_token(code: str, db) -> Dict[str, Any]:
             "Revoke previous access at https://myaccount.google.com/permissions and try again."
         )
 
-    # Resolve the connected user's email for display
+    # Resolve the connected user's email for display.
+    # Use Drive's about().get() — works with drive.file scope (the scope we already have)
+    # without needing the userinfo.email scope.
     try:
-        userinfo = build("oauth2", "v2", credentials=creds, cache_discovery=False) \
-            .userinfo().get().execute()
-        email = userinfo.get("email", "unknown")
-    except Exception:
+        about = build("drive", "v3", credentials=creds, cache_discovery=False) \
+            .about().get(fields="user(emailAddress,displayName)").execute()
+        user_info = about.get("user", {}) or {}
+        email = user_info.get("emailAddress") or "unknown"
+    except Exception as exc:
+        logger.warning("Failed to resolve connected Drive email: %s", exc)
         email = "unknown"
 
     doc = {
@@ -167,14 +171,54 @@ async def exchange_code_for_token(code: str, db) -> Dict[str, Any]:
     return {"connected_email": email}
 
 
+def _credentials_from_doc(doc: Dict[str, Any]) -> Credentials:
+    """Construct a Credentials object from a stored OAuth doc and refresh it.
+    Shared helper so both get_status() and the Drive client can mint tokens.
+    """
+    creds = Credentials(
+        token=None,
+        refresh_token=doc["refresh_token"],
+        token_uri=doc["token_uri"],
+        client_id=doc["client_id"],
+        client_secret=doc["client_secret"],
+        scopes=doc.get("scopes") or SCOPES,
+    )
+    creds.refresh(GoogleAuthRequest())
+    return creds
+
+
 async def get_status(db) -> Dict[str, Any]:
-    """Return whether Drive is connected and what email."""
+    """Return whether Drive is connected and what email.
+
+    If the stored email is missing/"unknown" (legacy connections that were
+    made before we wired up the Drive about() lookup), lazily backfill it
+    by hitting Drive's about().get() with the cached refresh token. Cheap
+    and one-shot — the result is written back so we don't repeat the call.
+    """
     doc = await db.system_config.find_one({"_id": OAUTH_DOC_ID})
     if not doc:
         return {"connected": False}
+
+    email = doc.get("connected_email") or "unknown"
+    if email == "unknown":
+        try:
+            creds = _credentials_from_doc(doc)
+            about = build("drive", "v3", credentials=creds, cache_discovery=False) \
+                .about().get(fields="user(emailAddress,displayName)").execute()
+            fetched = (about.get("user") or {}).get("emailAddress") or ""
+            if fetched:
+                email = fetched
+                await db.system_config.update_one(
+                    {"_id": OAUTH_DOC_ID},
+                    {"$set": {"connected_email": fetched}},
+                )
+                logger.info("[gdrive] Backfilled connected_email -> %s", fetched)
+        except Exception as exc:
+            logger.warning("[gdrive] Email backfill failed: %s", exc)
+
     return {
         "connected": True,
-        "email": doc.get("connected_email", "unknown"),
+        "email": email,
         "connected_at": doc.get("connected_at"),
     }
 
