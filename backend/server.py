@@ -3369,9 +3369,6 @@ async def convert_wishlist_to_tool(item_id: str, user: User = Depends(get_curren
     return tool
 
 
-# ---------- AI Toolbox Analysis (REMOVED) ----------
-
-
 # ---------- Personal Profile (singleton) ----------
 class PersonalProfile(BaseModel):
     name: Optional[str] = ""
