@@ -64,6 +64,7 @@ const C = {
 
 const BG = require("../assets/images/textures/industrial-bg.jpg");
 const LOGO = require("../assets/images/textures/logo-badge.png");
+const PANEL = require("../assets/images/textures/panel-frame.jpg");
 const BTN_TEX = require("../assets/images/textures/button-texture.jpg");
 
 export default function LoginScreen() {
@@ -265,27 +266,15 @@ export default function LoginScreen() {
                 <Text style={[styles.subtitleWord, { fontFamily: labelFont }]}>REPORTS</Text>
               </View>
 
-              {/* ============== PANEL (coded frame, no image) ============== */}
+              {/* ============== PANEL — single image, no coded overlays ============== */}
               <View style={styles.panelOuter}>
-                {/* Steel-textured background card behind the form */}
-                <View style={styles.panelBg} />
-
-                {/* Orange perimeter glow (driven by code so accent color can swap) */}
-                <View style={styles.panelOrangeBorder} pointerEvents="none" />
-
-                {/* 6 hex bolts on the frame — 4 corners + 2 mid-side */}
-                <View style={[styles.frameBolt, { top: -8, left: -8 }]} />
-                <View style={[styles.frameBolt, { top: -8, right: -8 }]} />
-                <View style={[styles.frameBolt, { bottom: -8, left: -8 }]} />
-                <View style={[styles.frameBolt, { bottom: -8, right: -8 }]} />
-                <View
-                  style={[styles.frameBolt, { top: "50%", left: -8, marginTop: -8 }]}
-                />
-                <View
-                  style={[styles.frameBolt, { top: "50%", right: -8, marginTop: -8 }]}
-                />
-
-                <View style={styles.panelInner}>
+                <ImageBackground
+                  source={PANEL}
+                  resizeMode="stretch"
+                  style={styles.panelImage}
+                  imageStyle={styles.panelImageStyle}
+                >
+                  <View style={styles.panelInner}>
                     {/* ============== TABS ============== */}
                     <View style={styles.tabsRow}>
                       <TabButton
@@ -455,6 +444,7 @@ export default function LoginScreen() {
                       </View>
                     )}
                   </View>
+                </ImageBackground>
               </View>
             </ScrollView>
           </KeyboardAvoidingView>
@@ -684,49 +674,25 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 0 },
   },
 
-  // ---- PANEL (coded frame, no image) ----
+  // ---- PANEL (single image, no coded overlays) ----
   panelOuter: {
-    position: "relative",
-    marginHorizontal: 4,
+    marginHorizontal: 0,
     marginTop: 4,
     marginBottom: 12,
-    borderRadius: 8,
   },
-  panelBg: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(15,15,15,0.82)",
-    borderRadius: 8,
+  panelBg: { display: "none" }, // legacy, no longer used
+  panelImage: {
+    width: "100%",
   },
-  panelImage: { width: "100%" }, // unused (legacy)
   panelImageStyle: {},
-  panelOrangeBorder: {
-    ...StyleSheet.absoluteFillObject,
-    borderWidth: 2,
-    borderColor: C.orange,
-    borderRadius: 8,
-    shadowColor: C.orange,
-    shadowOpacity: 0.65,
-    shadowRadius: 14,
-    shadowOffset: { width: 0, height: 0 },
-    elevation: 8,
-  },
-  // hex bolts on the panel frame corners + side midpoints
-  frameBolt: {
-    position: "absolute",
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    backgroundColor: "#0e0e0e",
-    borderWidth: 2,
-    borderColor: "#4a4a4a",
-    shadowColor: "#000",
-    shadowOpacity: 0.9,
-    shadowRadius: 3,
-    shadowOffset: { width: 1, height: 1 },
-    zIndex: 10,
-  },
+  panelOrangeBorder: { display: "none" }, // legacy
+  frameBolt: { display: "none" }, // legacy
   panelInner: {
-    padding: 18,
+    // Generous padding so form content stays inside the painted steel border
+    // and away from the painted hex bolts. Tune these if you regenerate the
+    // panel-frame asset with a different border thickness.
+    paddingHorizontal: 32,
+    paddingVertical: 36,
     gap: 12,
   },
 
