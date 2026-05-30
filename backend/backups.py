@@ -353,10 +353,13 @@ def make_backup_router(
 
     @router.get("/admin/gdrive/auth-url")
     async def gdrive_auth_url(user=Depends(get_current_user)):
-        """Generate the URL the user opens in their browser to authorize."""
+        """Generate the URL the user opens in their browser to authorize.
+        Also persists any auto-generated PKCE code_verifier in DB so the
+        callback (separate request) can complete the exchange."""
         require_admin(user)
         import gdrive
-        return {"url": gdrive.build_authorize_url()}
+        url = await gdrive.build_authorize_url_async(get_db())
+        return {"url": url}
 
     @router.get("/admin/gdrive/oauth-callback")
     async def gdrive_oauth_callback(code: str = "", state: str = "", error: str = ""):

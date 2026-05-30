@@ -61,7 +61,7 @@ def _settings() -> Dict[str, str]:
 
 def _build_flow() -> Flow:
     cfg = _settings()
-    return Flow.from_client_config(
+    flow = Flow.from_client_config(
         {
             "web": {
                 "client_id": cfg["client_id"],
@@ -74,15 +74,46 @@ def _build_flow() -> Flow:
         scopes=SCOPES,
         redirect_uri=cfg["redirect_uri"],
     )
+    # Disable PKCE — we're a server-side confidential client (we hold the
+    # client_secret), so PKCE adds no security but complicates state across
+    # the redirect. Newer google-auth-oauthlib auto-enables it; explicitly
+    # blank the verifier so no challenge is generated.
+    try:
+        flow.code_verifier = None
+    except Exception:
+        pass
+    return flow
+
+
+async def build_authorize_url_async(db, state: str = "") -> str:
+    """Build the auth URL. Persists any auto-generated code_verifier in DB
+    so the OAuth callback (which runs in a different request) can reuse it."""
+    flow = _build_flow()
+    url, state_val = flow.authorization_url(
+        access_type="offline",
+        include_granted_scopes="true",
+        prompt="consent",
+        state=state or "toolbox-vault",
+    )
+    # If the library auto-generated a verifier despite our attempt to disable,
+    # stash it so exchange_code_for_token can recover it.
+    verifier = getattr(flow, "code_verifier", None)
+    await db.system_config.replace_one(
+        {"_id": "gdrive_oauth_pending"},
+        {"_id": "gdrive_oauth_pending", "state": state_val, "code_verifier": verifier},
+        upsert=True,
+    )
+    return url
 
 
 def build_authorize_url(state: str = "") -> str:
-    """Return the URL the user opens in their browser to grant access."""
+    """Legacy sync version — only used by tests. The real flow uses
+    build_authorize_url_async so the verifier gets persisted."""
     flow = _build_flow()
     url, _ = flow.authorization_url(
         access_type="offline",
         include_granted_scopes="true",
-        prompt="consent",  # forces Google to return a refresh_token even on re-auth
+        prompt="consent",
         state=state or "toolbox-vault",
     )
     return url
@@ -91,8 +122,20 @@ def build_authorize_url(state: str = "") -> str:
 async def exchange_code_for_token(code: str, db) -> Dict[str, Any]:
     """Exchange the auth code for refresh+access tokens, store in DB."""
     flow = _build_flow()
+
+    # Recover the code_verifier that was generated when we built the auth URL
+    # (PKCE links the two requests together). If the library auto-enabled PKCE
+    # and we have a stored verifier, restore it onto this Flow instance so
+    # fetch_token can send it to Google.
+    pending = await db.system_config.find_one({"_id": "gdrive_oauth_pending"})
+    if pending and pending.get("code_verifier"):
+        flow.code_verifier = pending["code_verifier"]
+
     flow.fetch_token(code=code)
     creds = flow.credentials
+
+    # Clean up pending state regardless of outcome
+    await db.system_config.delete_one({"_id": "gdrive_oauth_pending"})
 
     if not creds.refresh_token:
         # Google withholds refresh_token on subsequent grants unless prompt=consent.
