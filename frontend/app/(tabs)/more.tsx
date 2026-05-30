@@ -946,21 +946,15 @@ export default function MoreScreen() {
             testID="more-paywall"
             onPress={() => router.push("/paywall")}
           />
-          {/*
-            Admin · Database Backups — temporarily hidden because the screen
-            crashes the app on tap (2026-05-23). Feature still exists on the
-            backend (monthly auto-backups continue running), this just
-            removes the UI entry point until the crash is investigated.
           {isAdmin && (
             <SectionRow
               icon="cloud-download-outline"
               title="Admin · Database Backups"
-              subtitle="Monthly auto-backups · manual triggers · downloads"
+              subtitle="Daily auto-backups · Google Drive sync · 30-day retention"
               testID="more-admin-backups"
               onPress={() => router.push("/admin/backups")}
             />
           )}
-          */}
           <SectionRow
             icon="key"
             title="Change Password"
