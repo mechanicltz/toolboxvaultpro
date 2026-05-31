@@ -1,33 +1,21 @@
 // =============================================================================
-// login.tsx — Toolbox Vault Login
+// app/login.tsx — Toolbox Vault Login (industrial skin-based, fully responsive)
 // -----------------------------------------------------------------------------
-// Strategy:
-//   • The reference artwork (full_reference_clean.jpg, 852x1847) is used as
-//     the ENTIRE visual chrome: background, diamond plate, gears, logo,
-//     TOOLBOX VAULT title, panel frame with bolts, tab plates, input frames,
-//     and orange SIGN IN button. All baked-in TEXT/ICONS have been
-//     programmatically erased from the chrome.
-//   • Native React Native TextInput / Pressable / Text sit ON TOP of the
-//     chrome at proportional pixel positions that match the reference.
-//   • The whole screen is clamped to maxWidth on tablets so the chrome
-//     doesn't stretch awkwardly — it stays a phone-shaped form, centered.
+// Rules of engagement (per /app/memory/tbv-design-rules.md):
+//   • Use ToolboxVaultAssets skins via <Image> / <ImageBackground> with
+//     resizeMode="stretch". Source PNG aspect ratios are irrelevant — Flexbox
+//     decides final size.
+//   • Native text/icons/inputs are rendered as CHILDREN on top of the skins.
+//   • Layout is 100% Flexbox / gap / padding. NO `top: X%` positioning.
+//   • Phone: full single column. Tablet/web: same component tree, just wider
+//     content max-width — the form panel breathes, never letterboxed.
 // =============================================================================
 
 import { useState, useEffect, useRef } from "react";
 import {
-  View,
-  Text,
-  TextInput,
-  StyleSheet,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  Alert,
-  Image,
-  Pressable,
-  TouchableOpacity,
-  ActivityIndicator,
-  useWindowDimensions,
+  View, Text, TextInput, StyleSheet, KeyboardAvoidingView, Platform,
+  ScrollView, Alert, Image, ImageBackground, Pressable, TouchableOpacity,
+  ActivityIndicator, useWindowDimensions,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -35,9 +23,7 @@ import { useRouter } from "expo-router";
 import { useFonts as useGoogleFonts } from "@expo-google-fonts/bebas-neue";
 import { BebasNeue_400Regular } from "@expo-google-fonts/bebas-neue";
 import {
-  Rajdhani_500Medium,
-  Rajdhani_600SemiBold,
-  Rajdhani_700Bold,
+  Rajdhani_500Medium, Rajdhani_600SemiBold, Rajdhani_700Bold,
 } from "@expo-google-fonts/rajdhani";
 import {
   Exo_2_400Regular as Exo2_400Regular,
@@ -46,75 +32,50 @@ import {
 } from "@expo-google-fonts/exo-2";
 import { useAuth } from "../src/AuthContext";
 import {
-  getBiometricStatus,
-  tryBiometricLogin,
-  enableBiometric,
-  hasBeenPromptedForBiometric,
-  markBiometricPrompted,
+  getBiometricStatus, tryBiometricLogin, enableBiometric,
+  hasBeenPromptedForBiometric, markBiometricPrompted,
 } from "../src/biometric";
 
-const REF = require("../assets/tbv/slices/full_reference_clean.jpg");
-
-// Reference image dimensions — every Y/X below is a fraction of these.
-const REF_W = 852;
-const REF_H = 1847;
-const REF_AR = REF_W / REF_H; // ~0.4613
-
-// Pixel positions on the reference (used to compute % positions on the chrome).
-// All values are in source-image pixels (852x1847).
-// Y-coords for input/button BANDS are the FULL visible chrome frame, so the
-// native overlay sits at the vertical CENTER of the chrome frame.
-const COORDS = {
-  tabs:        { top: 765, bottom: 860 },
-  email_lbl:   { top: 895, bottom: 940 },
-  email_in:    { top: 950, bottom: 1080 },     // visible frame center ~1015
-  pw_lbl:      { top: 1085, bottom: 1130 },
-  pw_in:       { top: 1135, bottom: 1255 },    // visible frame center ~1195
-  signin_btn:  { top: 1285, bottom: 1400 },    // visible button center ~1342
-  forgot:      { top: 1430, bottom: 1480 },
-  footer:      { top: 1500, bottom: 1615 },
-  // Horizontal partitions inside the panel
-  tab_split:   { signin: [0.137, 0.539], create: [0.560, 0.875] }, // % of width
-  field_l:     0.124, // labels start
-  field_r:     0.890, // labels/inputs end
-  eye_l:       0.846,
-  eye_r:       0.928,
+// =====================================================================
+// Skin source files (single import block — easy to swap later)
+// =====================================================================
+const SKIN = {
+  bg:           require("../assets/tbv-v2/Textures/tbv_diamond_plate_dark.png"),
+  panel:        require("../assets/tbv-v2/Panels/tbv_login_panel_dark.png"),
+  tabActive:    require("../assets/tbv-v2/Tabs/tbv_tab_active_orange.png"),
+  tabInactive:  require("../assets/tbv-v2/Tabs/tbv_tab_inactive_dark.png"),
+  input:        require("../assets/tbv-v2/Inputs/tbv_input_dark.png"),
+  eyeBtn:       require("../assets/tbv-v2/Inputs/tbv_eye_button_dark.png"),
+  btnPrimary:   require("../assets/tbv-v2/Buttons/tbv_btn_primary_orange.png"),
+  btnSecondary: require("../assets/tbv-v2/Buttons/tbv_btn_secondary_dark.png"),
+  masterLogo:   require("../assets/tbv-v2/Branding/tbv_master_logo_dark_v2.png"),
+  wordmark:     require("../assets/tbv-v2/Branding/tbv_wordmark_dark.png"),
 };
-
-// Format: ratio of source image pixels (top/bottom Y → fraction of 1847)
-const pctY = (v: number) => (v / REF_H) * 100;
 
 export default function LoginScreen() {
   const router = useRouter();
   const { login, register } = useAuth();
-  const { width: winW, height: winH } = useWindowDimensions();
+  const { width: winW } = useWindowDimensions();
 
-  const [, ] = useGoogleFonts({
+  useGoogleFonts({
     BebasNeue_400Regular,
     Rajdhani_500Medium, Rajdhani_600SemiBold, Rajdhani_700Bold,
     Exo2_400Regular, Exo2_500Medium, Exo2_700Bold,
   });
 
+  // Form state
   const [mode, setMode] = useState<"login" | "register">("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [name, setName] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
+
+  // Biometric
   const [bio, setBio] = useState<{
     enabled: boolean; label: string; hasHardware: boolean; isEnrolled: boolean;
   } | null>(null);
   const autoPromptedRef = useRef(false);
-
-  // -------- Sizing -----------------------------------------------------------
-  // Clamp the chrome to a sensible width so on tablets/web it stays
-  // phone-shaped and centered.
-  const MAX_W = 480;
-  const chromeW = Math.min(winW, MAX_W);
-  const chromeH = chromeW / REF_AR;
-  // If the chrome would be taller than the window, we still let the scrollview
-  // handle it — Vault feels best at full width on phones.
 
   useEffect(() => {
     (async () => {
@@ -138,8 +99,9 @@ export default function LoginScreen() {
     if (!creds) return;
     setBusy(true);
     try { await login(creds.email, creds.password); }
-    catch { setErr("Saved credentials didn't work. Please sign in with your password to refresh them."); }
-    finally { setBusy(false); }
+    catch {
+      setErr("Saved credentials didn't work. Please sign in with your password.");
+    } finally { setBusy(false); }
   };
 
   const maybeOfferBiometricEnrol = async (mail: string, pw: string) => {
@@ -153,7 +115,9 @@ export default function LoginScreen() {
           `Sign in to Toolbox Vault with ${s.label} from now on.`,
           [
             { text: "Not now", style: "cancel", onPress: () => markBiometricPrompted() },
-            { text: `Enable ${s.label}`, onPress: async () => { try { await enableBiometric(mail, pw); } catch {} } },
+            { text: `Enable ${s.label}`, onPress: async () => {
+              try { await enableBiometric(mail, pw); } catch {}
+            }},
           ]);
       }, 700);
     } catch {}
@@ -164,10 +128,12 @@ export default function LoginScreen() {
     setErr("");
     if (!email.trim()) return setErr("Email is required");
     if (!password) return setErr("Password is required");
-    if (mode === "register" && password.length < 6) return setErr("Password must be at least 6 characters");
+    if (mode === "register" && password.length < 6) {
+      return setErr("Password must be at least 6 characters");
+    }
     setBusy(true);
     try {
-      if (mode === "register") await register(email, password, name);
+      if (mode === "register") await register(email, password, "");
       else await login(email, password);
       await maybeOfferBiometricEnrol(email, password);
     } catch (e: any) {
@@ -175,17 +141,18 @@ export default function LoginScreen() {
     } finally { setBusy(false); }
   };
 
-  // Helper to position an element at a Y% range of the chrome.
-  const yBand = (top: number, bottom: number) => ({
-    position: "absolute" as const,
-    top: `${pctY(top)}%` as any,
-    height: `${pctY(bottom - top)}%` as any,
-    left: 0,
-    right: 0,
-  });
+  // ---------- Responsive shell ----------
+  // Phone (<600): form takes full width
+  // Tablet/web (>=600): form uses 78% of viewport up to 720 — wide enough
+  // that the chrome breathes, not letterboxed phone-sized.
+  const isTablet = winW >= 600;
+  const FORM_MAX_W = isTablet ? Math.min(720, winW * 0.78) : 9999;
 
   return (
-    <View style={styles.root}>
+    <ImageBackground source={SKIN.bg} style={styles.bg} resizeMode="cover">
+      {/* subtle dark veil for legibility */}
+      <View style={styles.veil} />
+
       <SafeAreaView style={{ flex: 1 }} edges={["top", "bottom"]}>
         <KeyboardAvoidingView
           behavior={Platform.OS === "ios" ? "padding" : undefined}
@@ -196,402 +163,350 @@ export default function LoginScreen() {
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
           >
-            {/* Centered chrome stack — clamped to MAX_W for tablets/web */}
-            <View style={[styles.chrome, { width: chromeW, height: chromeH }]}>
-              <Image
-                source={REF}
-                style={styles.chromeImage}
-                resizeMode="cover"
-              />
-              <View style={StyleSheet.absoluteFill}>
-                {/* =================== TABS  (login mode only) ============= */}
-                {mode === "login" && (
-                  <View style={[
-                    yBand(COORDS.tabs.top, COORDS.tabs.bottom),
-                    { flexDirection: "row", paddingHorizontal: "3.5%", gap: 10 },
-                  ]}>
-                    {/* SIGN IN tab — active orange plate */}
-                    <Pressable
-                      onPress={() => setMode("login")}
-                      testID="tab-login"
-                      style={({ pressed }) => [
-                        styles.tabPlate,
-                        styles.tabActivePlate,
-                        { opacity: pressed ? 0.8 : 1 },
-                      ]}
-                    >
-                      <View style={styles.tabBolt}><View style={styles.tabBoltInner}/></View>
-                      <View style={styles.tabContent}>
-                        <Ionicons name="person" size={17} color="#0A0A0A" />
-                        <Text style={[styles.tabText, { color: "#0A0A0A" }]}>SIGN IN</Text>
-                      </View>
-                      <View style={styles.tabBoltR}><View style={styles.tabBoltInner}/></View>
-                    </Pressable>
+            <View style={[styles.formColumn, { maxWidth: FORM_MAX_W }]}>
 
-                    {/* CREATE ACCOUNT tab — inactive dark plate */}
-                    <Pressable
-                      onPress={() => setMode("register")}
-                      testID="tab-register"
-                      style={({ pressed }) => [
-                        styles.tabPlate,
-                        styles.tabInactivePlate,
-                        { opacity: pressed ? 0.8 : 1 },
-                      ]}
-                    >
-                      <View style={styles.tabBoltDark}><View style={styles.tabBoltInner}/></View>
-                      <View style={styles.tabContent}>
-                        <Ionicons name="person-add" size={15} color="#A8A8A8" />
-                        <Text style={[styles.tabTextSm, { color: "#C8C8C8" }]}>CREATE ACCOUNT</Text>
-                      </View>
-                      <View style={styles.tabBoltDarkR}><View style={styles.tabBoltInner}/></View>
-                    </Pressable>
-                  </View>
-                )}
+              {/* ===== BRAND HEADER ===== */}
+              <View style={styles.brand}>
+                <Image source={SKIN.masterLogo} style={styles.logo} resizeMode="contain" />
+                <Image source={SKIN.wordmark} style={styles.wordmark} resizeMode="contain" />
+                <Text style={styles.subtitle}>
+                  INVENTORY · DEALERS · WARRANTIES · REPORTS
+                </Text>
+              </View>
 
-                {/* =================== REGISTER-MODE TAB OVERLAY ============
-                     When in register mode, paint an opaque NAME field over
-                     the tabs row so the visual chrome doesn't show the old
-                     tab plates underneath, and provide a small "Back to
-                     Sign In" link to switch back. */}
-                {mode === "register" && (
-                  <View style={[
-                    yBand(COORDS.tabs.top, COORDS.tabs.bottom),
-                    {
-                      paddingHorizontal: `${COORDS.field_l * 100}%`,
-                      justifyContent: "center",
-                      backgroundColor: "rgba(8,8,8,0.78)",
-                    },
-                  ]}>
-                    <View style={styles.regHeader}>
-                      <Text style={styles.regHeaderTitle}>CREATE ACCOUNT</Text>
-                      <TouchableOpacity
-                        onPress={() => setMode("login")}
-                        activeOpacity={0.6}
-                        hitSlop={8}
-                        testID="back-to-signin"
-                      >
-                        <Text style={styles.regHeaderLink}>← SIGN IN</Text>
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-                )}
-
-                {/* =================== EMAIL LABEL =================== */}
-                <View style={[
-                  yBand(COORDS.email_lbl.top, COORDS.email_lbl.bottom),
-                  { paddingLeft: `${COORDS.field_l * 100}%`, justifyContent: "center" },
-                ]}>
-                  <Text style={styles.label}>EMAIL</Text>
+              {/* ===== PANEL (login skin) ===== */}
+              <View style={styles.panel}>
+                <Image
+                  source={SKIN.panel}
+                  style={[StyleSheet.absoluteFill, { width: "100%", height: "100%" }] as any}
+                  resizeMode="stretch"
+                />
+                <View style={styles.panelContent}>
+                {/* ----- TABS ROW ----- */}
+                <View style={styles.tabsRow}>
+                  <TabButton
+                    label="SIGN IN"
+                    icon="person"
+                    active={mode === "login"}
+                    onPress={() => setMode("login")}
+                    testID="tab-login"
+                  />
+                  <TabButton
+                    label="CREATE ACCOUNT"
+                    icon="person-add"
+                    active={mode === "register"}
+                    onPress={() => setMode("register")}
+                    testID="tab-register"
+                    small
+                  />
                 </View>
 
-                {/* =================== EMAIL INPUT =================== */}
-                <View style={[
-                  yBand(COORDS.email_in.top, COORDS.email_in.bottom),
-                  { paddingHorizontal: "3.5%" },
-                ]}>
-                  <View style={styles.inputFrame}>
-                    <View style={styles.fieldBolt}><View style={styles.tabBoltInner}/></View>
-                    <Ionicons name="mail-outline" size={18} color="#FF6A00" />
-                    <TextInput
-                      value={email}
-                      onChangeText={setEmail}
-                      placeholder="you@example.com"
-                      placeholderTextColor="rgba(242,242,242,0.42)"
-                      autoCapitalize="none"
-                      autoComplete="email"
-                      keyboardType="email-address"
-                      style={styles.input}
-                      testID="auth-email"
-                    />
-                    <View style={styles.fieldBoltR}><View style={styles.tabBoltInner}/></View>
-                  </View>
-                </View>
+                {/* ----- EMAIL ----- */}
+                <FieldLabel>EMAIL</FieldLabel>
+                <InputSkin>
+                  <Ionicons name="mail-outline" size={18} color="#FF8533" />
+                  <TextInput
+                    value={email}
+                    onChangeText={setEmail}
+                    placeholder="you@example.com"
+                    placeholderTextColor="rgba(242,242,242,0.42)"
+                    autoCapitalize="none"
+                    autoComplete="email"
+                    keyboardType="email-address"
+                    style={styles.input}
+                    testID="auth-email"
+                  />
+                </InputSkin>
 
-                {/* =================== PASSWORD LABEL =================== */}
-                <View style={[
-                  yBand(COORDS.pw_lbl.top, COORDS.pw_lbl.bottom),
-                  { paddingLeft: `${COORDS.field_l * 100}%`, justifyContent: "center" },
-                ]}>
-                  <Text style={styles.label}>PASSWORD</Text>
-                </View>
-
-                {/* =================== PASSWORD INPUT =================== */}
-                <View style={[
-                  yBand(COORDS.pw_in.top, COORDS.pw_in.bottom),
-                  { paddingHorizontal: "3.5%", flexDirection: "row", gap: 8 },
-                ]}>
-                  <View style={[styles.inputFrame, { flex: 1 }]}>
-                    <View style={styles.fieldBolt}><View style={styles.tabBoltInner}/></View>
-                    <Ionicons name="lock-closed-outline" size={18} color="#FF6A00" />
+                {/* ----- PASSWORD ----- */}
+                <FieldLabel>PASSWORD</FieldLabel>
+                <View style={styles.passRow}>
+                  <InputSkin style={{ flex: 1 }}>
+                    <Ionicons name="lock-closed-outline" size={18} color="#FF8533" />
                     <TextInput
                       value={password}
                       onChangeText={setPassword}
                       placeholder=""
-                      placeholderTextColor="rgba(242,242,242,0.42)"
                       secureTextEntry={!showPassword}
                       autoCapitalize="none"
                       style={styles.input}
                       testID="auth-password"
                     />
-                  </View>
-                  {/* Eye toggle as its own visible plate */}
-                  <TouchableOpacity
+                  </InputSkin>
+                  <Pressable
                     onPress={() => setShowPassword(s => !s)}
-                    activeOpacity={0.7}
+                    style={styles.eyeWrap}
                     testID="password-eye"
-                    style={styles.eyePlate}
                   >
-                    <Ionicons name={showPassword ? "eye-off" : "eye"} size={22} color="#FF6A00" />
-                  </TouchableOpacity>
+                    <ImageBackground
+                      source={SKIN.eyeBtn}
+                      style={styles.eyeBg}
+                      imageStyle={styles.skinImage}
+                      resizeMode="stretch"
+                    >
+                      <Ionicons
+                        name={showPassword ? "eye-off" : "eye"}
+                        size={22}
+                        color="#FF8533"
+                      />
+                    </ImageBackground>
+                  </Pressable>
                 </View>
 
-                {/* =================== ERROR BANNER (replaces FORGOT PASSWORD
-                     while active, so it never overlaps the SIGN IN button) === */}
+                {/* ----- ERROR ----- */}
                 {!!err && (
-                  <View style={[
-                    yBand(COORDS.forgot.top - 8, COORDS.forgot.bottom + 8),
-                    {
-                      marginHorizontal: `${COORDS.field_l * 100}%`,
-                      maxWidth: `${(COORDS.field_r - COORDS.field_l) * 100}%`,
-                      alignSelf: "center",
-                    },
-                    styles.errorBanner,
-                  ]}>
-                    <Ionicons name="alert-circle" size={13} color="#FF6F61" />
-                    <Text style={styles.errorText} numberOfLines={1}>{err}</Text>
+                  <View style={styles.errorRow}>
+                    <Ionicons name="alert-circle" size={14} color="#FF6F61" />
+                    <Text style={styles.errorText} numberOfLines={2}>{err}</Text>
                   </View>
                 )}
 
-                {/* =================== SIGN IN BUTTON =================== */}
-                <View style={yBand(COORDS.signin_btn.top, COORDS.signin_btn.bottom)}>
-                  <Pressable
-                    onPress={submit}
-                    disabled={busy}
-                    testID="auth-submit"
-                    style={({ pressed }) => [
-                      styles.signinHit,
-                      { opacity: pressed ? 0.75 : 1 },
-                    ]}
+                {/* ----- SUBMIT BUTTON ----- */}
+                <Pressable
+                  onPress={submit}
+                  disabled={busy}
+                  style={({ pressed }) => [
+                    styles.submitWrap,
+                    { opacity: busy ? 0.7 : (pressed ? 0.85 : 1) },
+                  ]}
+                  testID="auth-submit"
+                >
+                  <ImageBackground
+                    source={SKIN.btnPrimary}
+                    style={styles.submitBg}
+                    imageStyle={styles.skinImage}
+                    resizeMode="stretch"
                   >
                     {busy ? (
                       <ActivityIndicator color="#0A0A0A" />
                     ) : (
-                      <>
+                      <View style={styles.submitContent}>
                         <Ionicons name="lock-closed" size={20} color="#0A0A0A" />
-                        <Text style={styles.signinText}>
+                        <Text style={styles.submitText}>
                           {mode === "register" ? "CREATE ACCOUNT" : "SIGN IN"}
                         </Text>
-                      </>
+                      </View>
                     )}
-                  </Pressable>
-                </View>
+                  </ImageBackground>
+                </Pressable>
 
-                {/* =================== FORGOT PASSWORD =================== */}
-                {mode === "login" && !err && (
-                  <View style={[
-                    yBand(COORDS.forgot.top, COORDS.forgot.bottom),
-                    { alignItems: "center", justifyContent: "center" },
-                  ]}>
-                    <TouchableOpacity
-                      onPress={() => router.push("/forgot-password")}
-                      activeOpacity={0.65}
-                      testID="forgot-password-link"
-                      hitSlop={12}
-                    >
-                      <Text style={styles.forgotText}>FORGOT PASSWORD?</Text>
-                    </TouchableOpacity>
-                  </View>
+                {/* ----- FORGOT PASSWORD ----- */}
+                {mode === "login" && (
+                  <TouchableOpacity
+                    onPress={() => router.push("/forgot-password")}
+                    activeOpacity={0.6}
+                    style={styles.forgotWrap}
+                    hitSlop={12}
+                    testID="forgot-password-link"
+                  >
+                    <Text style={styles.forgotText}>FORGOT PASSWORD?</Text>
+                  </TouchableOpacity>
                 )}
 
-                {/* =================== FOOTER NOTICE =================== */}
-                <View style={[
-                  yBand(COORDS.footer.top, COORDS.footer.bottom),
-                  {
-                    paddingLeft: `${COORDS.field_l * 100}%`,
-                    paddingRight: `${(1 - COORDS.field_r) * 100}%`,
-                    flexDirection: "row",
-                    alignItems: "center",
-                    gap: 10,
-                  },
-                ]}>
-                  <Ionicons name="shield-checkmark" size={18} color="#9A9A9A" />
+                {/* ----- FOOTER NOTE ----- */}
+                <View style={styles.footer}>
+                  <Ionicons name="shield-checkmark" size={16} color="#A8A8A8" />
                   <Text style={styles.footerText} numberOfLines={2}>
                     {mode === "login"
-                      ? "New user? Use Create Account to get started for free."
+                      ? "New user? Tap CREATE ACCOUNT to get started for free."
                       : "Already have an account? Tap SIGN IN above."}
                   </Text>
                 </View>
-
-                {/* NAME field is collected later via profile — registration
-                    on this screen uses email/password only so it fits the
-                    existing chrome cleanly. */}
+                </View>
               </View>
-            </View>
 
-            {/* =================== BIOMETRIC ROW (outside chrome) =================== */}
-            {mode === "login" && bio?.enabled && bio.hasHardware && bio.isEnrolled && (
-              <TouchableOpacity
-                onPress={runBiometricLogin}
-                disabled={busy}
-                style={[styles.bioBtn, { maxWidth: MAX_W }]}
-                testID="auth-biometric"
-                activeOpacity={0.7}
-              >
-                <Ionicons
-                  name={
-                    bio.label.toLowerCase().includes("face") ? "scan" :
-                    bio.label.toLowerCase().includes("touch") ||
-                    bio.label.toLowerCase().includes("finger") ? "finger-print" : "lock-closed"
-                  }
-                  size={18} color="#FF6A00"
-                />
-                <Text style={styles.bioText}>
-                  {`SIGN IN WITH ${bio.label.toUpperCase()}`}
-                </Text>
-              </TouchableOpacity>
-            )}
+              {/* ===== BIOMETRIC ROW ===== */}
+              {mode === "login" && bio?.enabled && bio.hasHardware && bio.isEnrolled && (
+                <Pressable
+                  onPress={runBiometricLogin}
+                  disabled={busy}
+                  style={({ pressed }) => [
+                    styles.bioWrap,
+                    { opacity: pressed ? 0.85 : 1 },
+                  ]}
+                  testID="auth-biometric"
+                >
+                  <ImageBackground
+                    source={SKIN.btnSecondary}
+                    style={styles.bioBg}
+                    imageStyle={styles.skinImage}
+                    resizeMode="stretch"
+                  >
+                    <View style={styles.submitContent}>
+                      <Ionicons
+                        name={
+                          bio.label.toLowerCase().includes("face") ? "scan"
+                          : bio.label.toLowerCase().includes("touch") ||
+                            bio.label.toLowerCase().includes("finger") ? "finger-print"
+                          : "lock-closed"
+                        }
+                        size={18}
+                        color="#FF8533"
+                      />
+                      <Text style={styles.bioText}>
+                        {`SIGN IN WITH ${bio.label.toUpperCase()}`}
+                      </Text>
+                    </View>
+                  </ImageBackground>
+                </Pressable>
+              )}
+            </View>
           </ScrollView>
         </KeyboardAvoidingView>
       </SafeAreaView>
-    </View>
+    </ImageBackground>
   );
 }
 
+// =====================================================================
+// Tab button — uses tab_active / tab_inactive skin with native content
+// =====================================================================
+function TabButton({
+  label, icon, active, onPress, testID, small,
+}: {
+  label: string; icon: any; active: boolean; onPress: () => void;
+  testID?: string; small?: boolean;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      testID={testID}
+      style={({ pressed }) => [
+        styles.tabPressable,
+        { opacity: pressed ? 0.85 : 1 },
+      ]}
+    >
+      <ImageBackground
+        source={active ? SKIN.tabActive : SKIN.tabInactive}
+        style={styles.tabBg}
+        imageStyle={styles.skinImage}
+        resizeMode="stretch"
+      >
+        <View style={styles.tabContent}>
+          <Ionicons
+            name={icon}
+            size={small ? 14 : 16}
+            color={active ? "#0A0A0A" : "#C8C8C8"}
+          />
+          <Text style={[
+            small ? styles.tabTextSm : styles.tabText,
+            { color: active ? "#0A0A0A" : "#C8C8C8" },
+          ]}>
+            {label}
+          </Text>
+        </View>
+      </ImageBackground>
+    </Pressable>
+  );
+}
+
+// =====================================================================
+// Field label (Rajdhani uppercase letterspaced)
+// =====================================================================
+function FieldLabel({ children }: { children: React.ReactNode }) {
+  return <Text style={styles.label}>{children}</Text>;
+}
+
+// =====================================================================
+// Input skin wrapper — uses tbv_input_dark.png with native children
+// =====================================================================
+function InputSkin({
+  children, style,
+}: { children: React.ReactNode; style?: any }) {
+  return (
+    <ImageBackground
+      source={SKIN.input}
+      style={[styles.inputBg, style]}
+      imageStyle={styles.skinImage}
+      resizeMode="stretch"
+    >
+      <View style={styles.inputInner}>{children}</View>
+    </ImageBackground>
+  );
+}
+
+// =====================================================================
+// Styles
+// =====================================================================
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: "transparent" },
+  bg: { flex: 1, backgroundColor: "#0A0A0A" },
+  veil: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0,0,0,0.45)",
+  },
+
   scroll: {
     flexGrow: 1,
     alignItems: "center",
-    justifyContent: "flex-start",
-    paddingVertical: 0,
+    justifyContent: "center",
+    paddingVertical: 24,
+    paddingHorizontal: 16,
   },
 
-  chrome: {
-    // width / height set inline based on screen size
-    position: "relative",
-    overflow: "hidden",
-    zIndex: 1,
-    // Force a new stacking context so the Image's internal negative
-    // z-index doesn't fall behind the page root's black background.
-  },
-  chromeImage: {
-    position: "absolute",
-    top: 0, left: 0,
+  formColumn: {
     width: "100%",
-    height: "100%",
-    zIndex: 0,
+    alignItems: "stretch",
+    gap: 16,
   },
 
-  // ---- TAB PLATES (native, full bordered chrome) -------------------------
-  tabPlate: {
-    flex: 1,
-    height: "78%",
-    flexDirection: "row",
+  // ---- BRAND ----
+  brand: {
     alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 6,
-    borderRadius: 3,
-    borderWidth: 1.5,
-    overflow: "hidden",
+    gap: 6,
+    marginBottom: 4,
   },
-  tabActivePlate: {
-    backgroundColor: "#E66200",
-    borderColor: "#FFB266",
-    shadowColor: "#FF6A00",
-    shadowOpacity: 0.6,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 0 },
+  logo:     { width: 92, height: 92 },
+  wordmark: { width: 260, height: 60 },
+  subtitle: {
+    fontFamily: "Rajdhani_600SemiBold",
+    fontSize: 11,
+    letterSpacing: 2.2,
+    color: "#FFB266",
+    textAlign: "center",
   },
-  tabInactivePlate: {
-    backgroundColor: "rgba(20,20,20,0.92)",
-    borderColor: "rgba(255,106,0,0.45)",
+
+  // ---- PANEL ----
+  // The login-panel skin has thick bolted chrome on all four sides plus
+  // corner bolts. Padding has to clear those so children land in the
+  // panel's clean interior, not on top of the bolts.
+  panel: {
+    width: "100%",
+    position: "relative",
+    paddingHorizontal: 40,
+    paddingTop: 64,
+    paddingBottom: 56,
+  },
+  panelContent: {
+    width: "100%",
+    gap: 12,
+  },
+
+  // ---- TABS ----
+  tabsRow: {
+    flexDirection: "row",
+    gap: 10,
+    marginBottom: 4,
+  },
+  tabPressable: {
+    flex: 1,
+  },
+  tabBg: {
+    width: "100%",
+    height: 56,
+    alignItems: "center",
+    justifyContent: "center",
   },
   tabContent: {
-    flex: 1,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
-  },
-  tabBolt: {
-    width: 12, height: 12, borderRadius: 6,
-    backgroundColor: "#7A2E00",
-    alignItems: "center", justifyContent: "center",
-    borderWidth: 1, borderColor: "#FFB266",
-  },
-  tabBoltR: {
-    width: 12, height: 12, borderRadius: 6,
-    backgroundColor: "#7A2E00",
-    alignItems: "center", justifyContent: "center",
-    borderWidth: 1, borderColor: "#FFB266",
-  },
-  tabBoltDark: {
-    width: 10, height: 10, borderRadius: 5,
-    backgroundColor: "#1A1A1A",
-    alignItems: "center", justifyContent: "center",
-    borderWidth: 1, borderColor: "#3A3A3A",
-  },
-  tabBoltDarkR: {
-    width: 10, height: 10, borderRadius: 5,
-    backgroundColor: "#1A1A1A",
-    alignItems: "center", justifyContent: "center",
-    borderWidth: 1, borderColor: "#3A3A3A",
-  },
-  tabBoltInner: {
-    width: 3, height: 3, borderRadius: 1.5,
-    backgroundColor: "#0A0A0A",
-  },
-
-  // ---- INPUT FRAME (native bordered chrome plate) ------------------------
-  inputFrame: {
-    flex: 1,
-    height: "85%",
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 10,
-    gap: 10,
-    backgroundColor: "rgba(10,10,10,0.85)",
-    borderRadius: 4,
-    borderWidth: 1.5,
-    borderColor: "rgba(255,106,0,0.75)",
-  },
-  fieldBolt: {
-    width: 8, height: 8, borderRadius: 4,
-    backgroundColor: "#3A1A00",
-    alignItems: "center", justifyContent: "center",
-    borderWidth: 1, borderColor: "rgba(255,106,0,0.7)",
-  },
-  fieldBoltR: {
-    width: 8, height: 8, borderRadius: 4,
-    backgroundColor: "#3A1A00",
-    alignItems: "center", justifyContent: "center",
-    borderWidth: 1, borderColor: "rgba(255,106,0,0.7)",
-  },
-  eyePlate: {
-    width: "16%",
-    minWidth: 52,
-    height: "85%",
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "rgba(10,10,10,0.85)",
-    borderRadius: 4,
-    borderWidth: 1.5,
-    borderColor: "rgba(255,106,0,0.75)",
-  },
-
-  // ---- TABS (legacy hit area — kept for any reference) -------------------
-  tabHit: {
-    position: "absolute",
-    top: 0, bottom: 0,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
+    paddingHorizontal: 8,
   },
   tabText: {
     fontFamily: "BebasNeue_400Regular",
     fontSize: 18,
-    letterSpacing: 1.5,
+    letterSpacing: 2,
   },
   tabTextSm: {
     fontFamily: "BebasNeue_400Regular",
@@ -599,21 +514,28 @@ const styles = StyleSheet.create({
     letterSpacing: 1.2,
   },
 
-  // ---- LABELS ------------------------------------------------------------
+  // ---- LABELS ----
   label: {
     fontFamily: "Rajdhani_700Bold",
-    fontSize: 13,
+    fontSize: 12,
     letterSpacing: 2,
     color: "#D8D8D8",
+    paddingLeft: 4,
+    marginTop: 4,
   },
 
-  // ---- INPUT ROW ---------------------------------------------------------
-  inputRow: {
+  // ---- INPUTS ----
+  inputBg: {
+    width: "100%",
+    height: 56,
+    justifyContent: "center",
+  },
+  inputInner: {
     flexDirection: "row",
     alignItems: "center",
-    paddingLeft: "13.5%",
-    paddingRight: "12%",
-    gap: 8,
+    gap: 10,
+    paddingHorizontal: 22,
+    height: "100%",
   },
   input: {
     flex: 1,
@@ -621,52 +543,36 @@ const styles = StyleSheet.create({
     fontFamily: "Exo2_500Medium",
     fontSize: 15,
     paddingVertical: 0,
-    paddingLeft: 6,
     includeFontPadding: false,
   },
 
-  // ---- SIGN IN BUTTON ----------------------------------------------------
-  signinHit: {
-    position: "absolute",
-    top: 0, bottom: 0, left: 0, right: 0,
+  // ---- PASSWORD ROW ----
+  passRow: {
     flexDirection: "row",
     alignItems: "center",
+    gap: 10,
+  },
+  eyeWrap: {
+    width: 56,
+    height: 56,
+  },
+  eyeBg: {
+    width: "100%",
+    height: "100%",
+    alignItems: "center",
     justifyContent: "center",
-    gap: 12,
-  },
-  signinText: {
-    fontFamily: "BebasNeue_400Regular",
-    fontSize: 24,
-    color: "#0A0A0A",
-    letterSpacing: 3,
   },
 
-  // ---- FORGOT ------------------------------------------------------------
-  forgotText: {
-    fontFamily: "Rajdhani_700Bold",
-    color: "#FF6A00",
-    fontSize: 13,
-    letterSpacing: 2,
-  },
-
-  // ---- FOOTER ------------------------------------------------------------
-  footerText: {
-    flex: 1,
-    fontFamily: "Exo2_400Regular",
-    fontSize: 12,
-    color: "#9A9A9A",
-    lineHeight: 16,
-  },
-
-  // ---- ERROR BANNER ------------------------------------------------------
-  errorBanner: {
+  // ---- ERROR ----
+  errorRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    paddingHorizontal: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
     backgroundColor: "rgba(170,20,20,0.55)",
+    borderColor: "rgba(255,80,80,0.55)",
     borderWidth: 1,
-    borderColor: "rgba(255,80,80,0.6)",
     borderRadius: 4,
   },
   errorText: {
@@ -676,57 +582,80 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
 
-  // ---- NAME (register mode) ----------------------------------------------
-  nameFrame: {
-    flexDirection: "row",
+  // ---- SUBMIT BUTTON ----
+  submitWrap: {
+    width: "100%",
+    marginTop: 4,
+  },
+  submitBg: {
+    width: "100%",
+    height: 64,
     alignItems: "center",
-    gap: 8,
-    paddingHorizontal: 12,
-    height: 42,
-    borderRadius: 4,
-    borderWidth: 1,
-    borderColor: "rgba(255,106,0,0.6)",
-    backgroundColor: "rgba(8,8,8,0.85)",
+    justifyContent: "center",
   },
-
-  // ---- Register-mode header (replaces tabs row) --------------------------
-  regHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  regHeaderTitle: {
-    fontFamily: "BebasNeue_400Regular",
-    fontSize: 22,
-    letterSpacing: 2.4,
-    color: "#FF6A00",
-  },
-  regHeaderLink: {
-    fontFamily: "Rajdhani_700Bold",
-    fontSize: 13,
-    letterSpacing: 1.5,
-    color: "#A8A8A8",
-  },
-
-  // ---- BIOMETRIC --------------------------------------------------------
-  bioBtn: {
-    width: "92%",
+  submitContent: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 10,
-    paddingVertical: 12,
-    marginTop: 10,
-    marginBottom: 20,
-    borderRadius: 4,
-    borderWidth: 1,
-    borderColor: "#FF6A00",
-    backgroundColor: "rgba(0,0,0,0.55)",
+  },
+  submitText: {
+    fontFamily: "BebasNeue_400Regular",
+    fontSize: 22,
+    letterSpacing: 3,
+    color: "#0A0A0A",
+  },
+
+  // ---- FORGOT ----
+  forgotWrap: {
+    alignSelf: "center",
+    paddingVertical: 6,
+  },
+  forgotText: {
+    fontFamily: "Rajdhani_700Bold",
+    fontSize: 12,
+    letterSpacing: 2,
+    color: "#FF8533",
+  },
+
+  // ---- FOOTER ----
+  footer: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 4,
+    marginTop: 4,
+  },
+  footerText: {
+    flex: 1,
+    color: "#A8A8A8",
+    fontFamily: "Exo2_400Regular",
+    fontSize: 12,
+    lineHeight: 16,
+  },
+
+  // ---- BIOMETRIC ----
+  bioWrap: {
+    width: "100%",
+    marginTop: 4,
+  },
+  bioBg: {
+    width: "100%",
+    height: 56,
+    alignItems: "center",
+    justifyContent: "center",
   },
   bioText: {
     fontFamily: "BebasNeue_400Regular",
-    color: "#FF6A00",
-    fontSize: 15,
-    letterSpacing: 1.5,
+    fontSize: 16,
+    letterSpacing: 2,
+    color: "#FF8533",
+  },
+
+  // ---- shared skin image style ----
+  skinImage: {
+    // Force RN-Web to stretch instead of natural-size the underlying <img>
+    width: "100%",
+    height: "100%",
   },
 });
