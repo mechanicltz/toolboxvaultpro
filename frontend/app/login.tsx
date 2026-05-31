@@ -293,7 +293,7 @@ export default function LoginScreen() {
                   <TextInput
                     value={password}
                     onChangeText={setPassword}
-                    placeholder="••••••••"
+                    placeholder=""
                     placeholderTextColor="rgba(242,242,242,0.42)"
                     secureTextEntry={!showPassword}
                     autoCapitalize="none"
@@ -455,7 +455,7 @@ export default function LoginScreen() {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: "#000" },
+  root: { flex: 1, backgroundColor: "transparent" },
   scroll: {
     flexGrow: 1,
     alignItems: "center",
