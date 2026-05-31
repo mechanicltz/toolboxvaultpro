@@ -41,7 +41,8 @@ import {
 // =====================================================================
 const SKIN = {
   bg:           require("../assets/tbv-v2/Backgrounds/tbv_background_industrial_dark.png"),
-  panel:        require("../assets/tbv-v2/Panels/tbv_login_panel_dark.png"),
+  panel:        require("../assets/tbv-v2/Panels/tbv_login_panel_dark_v2.png"),
+  card:         require("../assets/tbv-v2/Cards/tbv_card_dark.png"),
   tabActive:    require("../assets/tbv-v2/Tabs/tbv_tab_active_orange.png"),
   tabInactive:  require("../assets/tbv-v2/Tabs/tbv_tab_inactive_dark.png"),
   input:        require("../assets/tbv-v2/Inputs/tbv_input_dark.png"),
@@ -141,12 +142,13 @@ export default function LoginScreen() {
     } finally { setBusy(false); }
   };
 
-  // ---------- Responsive shell ----------
-  // Phone (<600): form takes full width
-  // Tablet/web (>=600): form uses 78% of viewport up to 720 — wide enough
-  // that the chrome breathes, not letterboxed phone-sized.
+  // ---------- Responsive sizing (relative to screen width) -----------------
+  // Per design spec: logo 30-40% of screen width, panel 60-70% of screen width on phones.
   const isTablet = winW >= 600;
-  const FORM_MAX_W = isTablet ? Math.min(720, winW * 0.78) : 9999;
+  const LOGO_W       = Math.min(220, winW * 0.36);
+  const WORDMARK_W   = Math.min(320, winW * 0.55);
+  const PANEL_W      = isTablet ? Math.min(560, winW * 0.55) : winW * 0.86;
+  const FORM_MAX_W   = isTablet ? Math.min(720, winW * 0.78) : 9999;
 
   return (
     <ImageBackground source={SKIN.bg} style={styles.bg} resizeMode="cover">
@@ -167,20 +169,24 @@ export default function LoginScreen() {
 
               {/* ===== BRAND HEADER ===== */}
               <View style={styles.brand}>
-                <Image source={SKIN.masterLogo} style={styles.logo} resizeMode="contain" />
-                <Image source={SKIN.wordmark} style={styles.wordmark} resizeMode="contain" />
-                <Text style={styles.subtitle}>
+                <Image source={SKIN.masterLogo}
+                  style={{ width: LOGO_W, height: LOGO_W }}
+                  resizeMode="contain" />
+                <Image source={SKIN.wordmark}
+                  style={{ width: WORDMARK_W, height: WORDMARK_W * 0.28 }}
+                  resizeMode="contain" />
+                <Text style={styles.subtitle} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.5}>
                   INVENTORY · DEALERS · WARRANTIES · REPORTS
                 </Text>
               </View>
 
-              {/* ===== PANEL (login skin) ===== */}
-              <View style={styles.panel}>
-                <Image
-                  source={SKIN.panel}
-                  style={[StyleSheet.absoluteFill, { width: "100%", height: "100%" }] as any}
-                  resizeMode="stretch"
-                />
+              {/* ===== PANEL (login skin v2) ===== */}
+              <ImageBackground
+                source={SKIN.panel}
+                style={[styles.panel, { width: PANEL_W, alignSelf: "center" }]}
+                imageStyle={{ width: "100%", height: "100%" }}
+                resizeMode="stretch"
+              >
                 <View style={styles.panelContent}>
                 {/* ----- TABS ROW ----- */}
                 <View style={styles.tabsRow}>
@@ -295,17 +301,20 @@ export default function LoginScreen() {
                   </TouchableOpacity>
                 )}
 
-                {/* ----- FOOTER NOTE ----- */}
-                <View style={styles.footer}>
-                  <Ionicons name="shield-checkmark" size={16} color="#A8A8A8" />
-                  <Text style={styles.footerText} numberOfLines={2}>
-                    {mode === "login"
-                      ? "New user? Tap CREATE ACCOUNT to get started for free."
-                      : "Already have an account? Tap SIGN IN above."}
-                  </Text>
+                {/* ----- FOOTER NOTE (in card skin) ----- */}
+                <View style={styles.footerCardWrap}>
+                  <Image source={SKIN.card} style={StyleSheet.absoluteFill as any} resizeMode="stretch" />
+                  <View style={styles.footer}>
+                    <Ionicons name="shield-checkmark" size={16} color="#A8A8A8" />
+                    <Text style={styles.footerText} numberOfLines={2}>
+                      {mode === "login"
+                        ? "New user? Tap CREATE ACCOUNT to get started for free."
+                        : "Already have an account? Tap SIGN IN above."}
+                    </Text>
+                  </View>
                 </View>
                 </View>
-              </View>
+              </ImageBackground>
 
               {/* ===== BIOMETRIC ROW ===== */}
               {mode === "login" && bio?.enabled && bio.hasHardware && bio.isEnrolled && (
@@ -462,15 +471,23 @@ const styles = StyleSheet.create({
   // corner bolts. Padding has to clear those so children land in the
   // panel's clean interior, not on top of the bolts.
   panel: {
-    width: "100%",
     position: "relative",
-    paddingHorizontal: 50,
-    paddingTop: 72,
-    paddingBottom: 72,
+    paddingHorizontal: 36,
+    paddingTop: 64,
+    paddingBottom: 64,
   },
   panelContent: {
     width: "100%",
-    gap: 14,
+    gap: 12,
+  },
+  footerCardWrap: {
+    width: "100%",
+    minHeight: 56,
+    position: "relative",
+    marginTop: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    justifyContent: "center",
   },
 
   eyeInline: {
