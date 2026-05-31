@@ -220,38 +220,30 @@ export default function LoginScreen() {
 
                 {/* ----- PASSWORD ----- */}
                 <FieldLabel>PASSWORD</FieldLabel>
-                <View style={styles.passRow}>
-                  <InputSkin style={{ flex: 1 }}>
-                    <Ionicons name="lock-closed-outline" size={18} color="#FF8533" />
-                    <TextInput
-                      value={password}
-                      onChangeText={setPassword}
-                      placeholder=""
-                      secureTextEntry={!showPassword}
-                      autoCapitalize="none"
-                      style={styles.input}
-                      testID="auth-password"
-                    />
-                  </InputSkin>
-                  <Pressable
+                <InputSkin>
+                  <Ionicons name="lock-closed-outline" size={18} color="#FF8533" />
+                  <TextInput
+                    value={password}
+                    onChangeText={setPassword}
+                    placeholder=""
+                    secureTextEntry={!showPassword}
+                    autoCapitalize="none"
+                    style={styles.input}
+                    testID="auth-password"
+                  />
+                  <TouchableOpacity
                     onPress={() => setShowPassword(s => !s)}
-                    style={styles.eyeWrap}
+                    hitSlop={8}
                     testID="password-eye"
+                    style={styles.eyeInline}
                   >
-                    <ImageBackground
-                      source={SKIN.eyeBtn}
-                      style={styles.eyeBg}
-                      imageStyle={styles.skinImage}
-                      resizeMode="stretch"
-                    >
-                      <Ionicons
-                        name={showPassword ? "eye-off" : "eye"}
-                        size={22}
-                        color="#FF8533"
-                      />
-                    </ImageBackground>
-                  </Pressable>
-                </View>
+                    <Ionicons
+                      name={showPassword ? "eye-off" : "eye"}
+                      size={22}
+                      color="#FF8533"
+                    />
+                  </TouchableOpacity>
+                </InputSkin>
 
                 {/* ----- ERROR ----- */}
                 {!!err && (
@@ -455,8 +447,8 @@ const styles = StyleSheet.create({
     gap: 6,
     marginBottom: 4,
   },
-  logo:     { width: 260, height: 260 },
-  wordmark: { width: 400, height: 110 },
+  logo:     { width: 220, height: 220 },
+  wordmark: { width: 320, height: 90 },
   subtitle: {
     fontFamily: "Rajdhani_600SemiBold",
     fontSize: 12,
@@ -472,27 +464,29 @@ const styles = StyleSheet.create({
   panel: {
     width: "100%",
     position: "relative",
-    paddingHorizontal: 56,
-    paddingTop: 88,
-    paddingBottom: 88,
+    paddingHorizontal: 50,
+    paddingTop: 72,
+    paddingBottom: 72,
   },
   panelContent: {
     width: "100%",
-    gap: 12,
+    gap: 14,
+  },
+
+  eyeInline: {
+    paddingHorizontal: 4,
   },
 
   // ---- TABS ----
   tabsRow: {
     flexDirection: "row",
     gap: 10,
-    marginBottom: 4,
+    marginBottom: 8,
   },
-  tabPressable: {
-    flex: 1,
-  },
+  tabPressable: { flex: 1 },
   tabBg: {
     width: "100%",
-    height: 56,
+    height: 64,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -501,11 +495,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
-    paddingHorizontal: 8,
+    paddingHorizontal: 22,
   },
   tabText: {
     fontFamily: "BebasNeue_400Regular",
-    fontSize: 18,
+    fontSize: 20,
     letterSpacing: 2,
   },
   tabTextSm: {
@@ -521,27 +515,27 @@ const styles = StyleSheet.create({
     letterSpacing: 2,
     color: "#D8D8D8",
     paddingLeft: 4,
-    marginTop: 4,
+    marginTop: 6,
   },
 
   // ---- INPUTS ----
   inputBg: {
     width: "100%",
-    height: 56,
+    height: 64,
     justifyContent: "center",
   },
   inputInner: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
-    paddingHorizontal: 22,
+    gap: 12,
+    paddingHorizontal: 26,
     height: "100%",
   },
   input: {
     flex: 1,
     color: "#F2F2F2",
     fontFamily: "Exo2_500Medium",
-    fontSize: 15,
+    fontSize: 16,
     paddingVertical: 0,
     includeFontPadding: false,
   },
@@ -590,7 +584,7 @@ const styles = StyleSheet.create({
   },
   submitBg: {
     width: "100%",
-    height: 64,
+    height: 78,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -598,11 +592,11 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 10,
+    gap: 12,
   },
   submitText: {
     fontFamily: "BebasNeue_400Regular",
-    fontSize: 22,
+    fontSize: 26,
     letterSpacing: 3,
     color: "#0A0A0A",
   },
