@@ -66,13 +66,13 @@ const REF_AR = REF_W / REF_H; // ~0.4613
 // native overlay sits at the vertical CENTER of the chrome frame.
 const COORDS = {
   tabs:        { top: 765, bottom: 860 },
-  email_lbl:   { top: 880, bottom: 925 },
-  email_in:    { top: 940, bottom: 1060 },     // full email frame
-  pw_lbl:      { top: 1035, bottom: 1080 },
-  pw_in:       { top: 1090, bottom: 1210 },    // full password frame (incl. eye chrome)
-  signin_btn:  { top: 1278, bottom: 1395 },
-  forgot:      { top: 1428, bottom: 1480 },
-  footer:      { top: 1500, bottom: 1610 },
+  email_lbl:   { top: 895, bottom: 940 },
+  email_in:    { top: 950, bottom: 1080 },     // visible frame center ~1015
+  pw_lbl:      { top: 1085, bottom: 1130 },
+  pw_in:       { top: 1135, bottom: 1255 },    // visible frame center ~1195
+  signin_btn:  { top: 1285, bottom: 1400 },    // visible button center ~1342
+  forgot:      { top: 1430, bottom: 1480 },
+  footer:      { top: 1500, bottom: 1615 },
   // Horizontal partitions inside the panel
   tab_split:   { signin: [0.137, 0.539], create: [0.560, 0.875] }, // % of width
   field_l:     0.124, // labels start
@@ -349,15 +349,15 @@ export default function LoginScreen() {
                   </TouchableOpacity>
                 </View>
 
-                {/* =================== ERROR BANNER (above sign-in btn) =================== */}
+                {/* =================== ERROR BANNER (replaces FORGOT PASSWORD
+                     while active, so it never overlaps the SIGN IN button) === */}
                 {!!err && (
                   <View style={[
+                    yBand(COORDS.forgot.top - 8, COORDS.forgot.bottom + 8),
                     {
-                      position: "absolute",
-                      top: `${pctY(COORDS.signin_btn.top - 50)}%`,
-                      left: `${COORDS.field_l * 100}%`,
-                      right: `${(1 - COORDS.field_r) * 100}%`,
-                      height: 28,
+                      marginHorizontal: `${COORDS.field_l * 100}%`,
+                      maxWidth: `${(COORDS.field_r - COORDS.field_l) * 100}%`,
+                      alignSelf: "center",
                     },
                     styles.errorBanner,
                   ]}>
@@ -391,7 +391,7 @@ export default function LoginScreen() {
                 </View>
 
                 {/* =================== FORGOT PASSWORD =================== */}
-                {mode === "login" && (
+                {mode === "login" && !err && (
                   <View style={[
                     yBand(COORDS.forgot.top, COORDS.forgot.bottom),
                     { alignItems: "center", justifyContent: "center" },
