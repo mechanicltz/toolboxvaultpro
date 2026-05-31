@@ -62,12 +62,14 @@ const REF_AR = REF_W / REF_H; // ~0.4613
 
 // Pixel positions on the reference (used to compute % positions on the chrome).
 // All values are in source-image pixels (852x1847).
+// Y-coords for input/button BANDS are the FULL visible chrome frame, so the
+// native overlay sits at the vertical CENTER of the chrome frame.
 const COORDS = {
-  tabs:        { top: 765, bottom: 855 },
-  email_lbl:   { top: 895, bottom: 935 },
-  email_in:    { top: 965, bottom: 1040 },
-  pw_lbl:      { top: 1045, bottom: 1085 },
-  pw_in:       { top: 1080, bottom: 1180 },
+  tabs:        { top: 765, bottom: 860 },
+  email_lbl:   { top: 880, bottom: 925 },
+  email_in:    { top: 940, bottom: 1060 },     // full email frame
+  pw_lbl:      { top: 1035, bottom: 1080 },
+  pw_in:       { top: 1090, bottom: 1210 },    // full password frame (incl. eye chrome)
   signin_btn:  { top: 1278, bottom: 1395 },
   forgot:      { top: 1428, bottom: 1480 },
   footer:      { top: 1500, bottom: 1610 },
@@ -202,8 +204,10 @@ export default function LoginScreen() {
                 resizeMode="cover"
               />
               <View style={StyleSheet.absoluteFill}>
-                {/* =================== TABS =================== */}
-                <View style={yBand(COORDS.tabs.top, COORDS.tabs.bottom)}>
+                {/* =================== TABS  (login mode only — in register
+                     mode the tabs row is replaced by a NAME field overlay) === */}
+                {mode === "login" && (
+                  <View style={yBand(COORDS.tabs.top, COORDS.tabs.bottom)}>
                   {/* SIGN IN tab — left side, hits the orange plate */}
                   <Pressable
                     onPress={() => setMode("login")}
@@ -217,13 +221,10 @@ export default function LoginScreen() {
                     ]}
                   >
                     <Ionicons name="person" size={18}
-                      color={mode === "login" ? "#0A0A0A" : "#9A9A9A"} />
+                      color={mode === "login" ? "#FF6A00" : "#A8A8A8"} />
                     <Text style={[
                       styles.tabText,
-                      { color: mode === "login" ? "#0A0A0A" : "#9A9A9A",
-                        textShadowColor: mode === "login" ? "rgba(255,255,255,0.25)" : "transparent",
-                        textShadowOffset: { width: 0, height: 1 },
-                        textShadowRadius: 2 }
+                      { color: mode === "login" ? "#FF8533" : "#A8A8A8" }
                     ]}>SIGN IN</Text>
                   </Pressable>
 
@@ -247,6 +248,35 @@ export default function LoginScreen() {
                     ]}>CREATE ACCOUNT</Text>
                   </Pressable>
                 </View>
+                )}
+
+                {/* =================== REGISTER-MODE TAB OVERLAY ============
+                     When in register mode, paint an opaque NAME field over
+                     the tabs row so the visual chrome doesn't show the old
+                     tab plates underneath, and provide a small "Back to
+                     Sign In" link to switch back. */}
+                {mode === "register" && (
+                  <View style={[
+                    yBand(COORDS.tabs.top, COORDS.tabs.bottom),
+                    {
+                      paddingHorizontal: `${COORDS.field_l * 100}%`,
+                      justifyContent: "center",
+                      backgroundColor: "rgba(8,8,8,0.78)",
+                    },
+                  ]}>
+                    <View style={styles.regHeader}>
+                      <Text style={styles.regHeaderTitle}>CREATE ACCOUNT</Text>
+                      <TouchableOpacity
+                        onPress={() => setMode("login")}
+                        activeOpacity={0.6}
+                        hitSlop={8}
+                        testID="back-to-signin"
+                      >
+                        <Text style={styles.regHeaderLink}>← SIGN IN</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                )}
 
                 {/* =================== EMAIL LABEL =================== */}
                 <View style={[
@@ -396,32 +426,9 @@ export default function LoginScreen() {
                   </Text>
                 </View>
 
-                {/* =================== NAME FIELD (register only) =================== */}
-                {mode === "register" && (
-                  <View style={[
-                    {
-                      position: "absolute",
-                      top: `${pctY(COORDS.email_lbl.top - 130)}%`,
-                      left: `${COORDS.field_l * 100}%`,
-                      right: `${(1 - COORDS.field_r) * 100}%`,
-                      height: 64,
-                    },
-                  ]}>
-                    <Text style={[styles.label, { fontSize: 11, marginBottom: 4 }]}>NAME</Text>
-                    <View style={styles.nameFrame}>
-                      <Ionicons name="person-circle-outline" size={20} color="#FF6A00" />
-                      <TextInput
-                        value={name}
-                        onChangeText={setName}
-                        placeholder="Your full name"
-                        placeholderTextColor="rgba(242,242,242,0.42)"
-                        autoCapitalize="words"
-                        style={styles.input}
-                        testID="auth-name"
-                      />
-                    </View>
-                  </View>
-                )}
+                {/* NAME field is collected later via profile — registration
+                    on this screen uses email/password only so it fits the
+                    existing chrome cleanly. */}
               </View>
             </View>
 
@@ -587,6 +594,25 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "rgba(255,106,0,0.6)",
     backgroundColor: "rgba(8,8,8,0.85)",
+  },
+
+  // ---- Register-mode header (replaces tabs row) --------------------------
+  regHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  regHeaderTitle: {
+    fontFamily: "BebasNeue_400Regular",
+    fontSize: 22,
+    letterSpacing: 2.4,
+    color: "#FF6A00",
+  },
+  regHeaderLink: {
+    fontFamily: "Rajdhani_700Bold",
+    fontSize: 13,
+    letterSpacing: 1.5,
+    color: "#A8A8A8",
   },
 
   // ---- BIOMETRIC --------------------------------------------------------
