@@ -1,57 +1,42 @@
 /**
- * IndustrialCard — a smaller bolted dashboard tile.
- * Used for stat tiles, inventory rows, etc.
+ * IndustrialCard — PURE CODE card (per Part 6 rules: no image-based cards).
+ * Card spec from Part 5C / user clarifications:
+ *   Dark:  #171A1F bg, #2A2E35 border, 14px radius
+ *   Light: #FFFFFF bg, #B7BCC3 border, 14px radius
  */
 import React from "react";
-import { ImageBackground, StyleSheet, View, ViewStyle } from "react-native";
-import { useIndustrialTheme } from "./IndustrialThemeContext";
-import { getAsset } from "./assets";
+import { Pressable, View, ViewStyle } from "react-native";
+import { useTBV } from "./TBVThemeContext";
 
 interface Props {
   children: React.ReactNode;
-  style?: ViewStyle | ViewStyle[];
+  onPress?: () => void;
+  /** Visual weight: flat (no shadow), raised (sm shadow), elevated (md shadow) */
+  elevation?: "flat" | "raised" | "elevated";
   padding?: number;
+  style?: ViewStyle | ViewStyle[];
   testID?: string;
 }
 
-export function IndustrialCard({ children, style, padding = 14, testID }: Props) {
-  const { palette } = useIndustrialTheme();
-  const src = getAsset("dashboard_tile");
-
-  const inner = (
-    <View style={{ padding }} testID={testID}>
-      {children}
-    </View>
-  );
-
-  if (src) {
+export function IndustrialCard({
+  children, onPress, elevation = "flat", padding = 16, style, testID,
+}: Props) {
+  const { palette, radius, shadow } = useTBV();
+  const cardStyle: ViewStyle = {
+    backgroundColor: palette.card,
+    borderColor: palette.border,
+    borderWidth: 1,
+    borderRadius: radius.lg,
+    padding,
+  };
+  const shadowStyle = elevation === "raised" ? shadow.sm : elevation === "elevated" ? shadow.md : undefined;
+  const inner = <View style={[cardStyle, shadowStyle, style as any]} testID={testID}>{children}</View>;
+  if (onPress) {
     return (
-      <View style={[styles.outer, style]}>
-        <ImageBackground source={src} resizeMode="stretch" style={styles.bg}>
-          {inner}
-        </ImageBackground>
-      </View>
+      <Pressable onPress={onPress} style={({ pressed }) => ({ opacity: pressed ? 0.92 : 1 })}>
+        {inner}
+      </Pressable>
     );
   }
-
-  return (
-    <View style={[styles.outer, style]}>
-      <View style={[styles.fallback, { backgroundColor: palette.panel, borderColor: palette.accent }]} />
-      {[["top","left"],["top","right"],["bottom","left"],["bottom","right"]].map(([v,h], i)=>(
-        <View key={i} style={[styles.bolt, { [v]: -5, [h]: -5 } as any]} />
-      ))}
-      {inner}
-    </View>
-  );
+  return inner;
 }
-
-const styles = StyleSheet.create({
-  outer: { position: "relative" },
-  bg: { width: "100%" },
-  fallback: { ...StyleSheet.absoluteFillObject, borderWidth: 1.2, borderRadius: 6 },
-  bolt: {
-    position: "absolute",
-    width: 10, height: 10, borderRadius: 5,
-    backgroundColor: "#0e0e0e", borderWidth: 1, borderColor: "#4a4a4a", zIndex: 10,
-  },
-});

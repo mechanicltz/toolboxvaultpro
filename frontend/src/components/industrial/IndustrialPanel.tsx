@@ -1,104 +1,62 @@
 /**
- * IndustrialPanel — a bolted steel frame container.
- *
- * Renders the `panel_large_dark` image as a stretchable background and lays
- * the children inside generous padding so they fall within the painted
- * frame border (not under the painted bolts).
- *
- * If the asset hasn't been generated yet, falls back to a code-rendered
- * card with the same visual intent so the app keeps working.
+ * IndustrialPanel — industrial bolted frame container.
+ * Uses tbv_panel_frame asset selectively (Login, Splash, Empty States).
+ * For operational screens prefer IndustrialCard instead.
  */
 import React from "react";
-import { Image, ImageBackground, ImageSourcePropType, StyleSheet, View, ViewStyle } from "react-native";
-import { useIndustrialTheme } from "./IndustrialThemeContext";
-import { getAsset } from "./assets";
+import { ImageBackground, StyleSheet, View, ViewStyle } from "react-native";
+import { useTBV } from "./TBVThemeContext";
+import { usePanelFrame } from "./tbvAssets";
 
 interface Props {
   children: React.ReactNode;
   style?: ViewStyle | ViewStyle[];
-  /** Inner padding override (px). Defaults to 32×36 to clear the painted bolts. */
+  /** If true, renders the textured panel-frame background. */
+  framed?: boolean;
   padding?: { horizontal?: number; vertical?: number };
   testID?: string;
 }
 
-export function IndustrialPanel({ children, style, padding, testID }: Props) {
-  const { palette } = useIndustrialTheme();
-  const src = getAsset("panel_large_dark");
-  // Bigger default padding so children stay INSIDE the painted steel border
-  // and clear the painted bolts at the corners + side midpoints.
-  const padH = padding?.horizontal ?? 38;
-  const padV = padding?.vertical ?? 48;
-
+export function IndustrialPanel({ children, style, framed = true, padding, testID }: Props) {
+  const { palette, radius } = useTBV();
+  const src = usePanelFrame();
+  // Generous default padding so content sits inside the painted frame border.
+  const padH = padding?.horizontal ?? (framed ? 30 : 16);
+  const padV = padding?.vertical ?? (framed ? 36 : 16);
   const inner = (
-    <View style={[styles.inner, { paddingHorizontal: padH, paddingVertical: padV }]} testID={testID}>
+    <View style={[{ paddingHorizontal: padH, paddingVertical: padV }, styles.inner]} testID={testID}>
       {children}
     </View>
   );
-
-  if (src) {
+  if (framed && src) {
     return (
-      <View style={[styles.outer, style]}>
-        <ImageBackground source={src} resizeMode="stretch" style={styles.bg} imageStyle={styles.bgImg}>
+      <View style={[styles.outer, style as any]}>
+        <ImageBackground source={src} resizeMode="stretch" style={styles.bg}>
           {inner}
         </ImageBackground>
       </View>
     );
   }
-
-  // Fallback: coded steel card with orange border + 6 bolt sprites
   return (
-    <View style={[styles.outer, style]}>
-      <View style={[styles.fallbackBg, { backgroundColor: palette.steel }]} />
-      <View style={[styles.fallbackBorder, { borderColor: palette.accent }]} pointerEvents="none" />
-      <Bolt position={{ top: -7, left: -7 }} />
-      <Bolt position={{ top: -7, right: -7 }} />
-      <Bolt position={{ bottom: -7, left: -7 }} />
-      <Bolt position={{ bottom: -7, right: -7 }} />
-      <Bolt position={{ top: "50%", left: -7, marginTop: -7 }} />
-      <Bolt position={{ top: "50%", right: -7, marginTop: -7 }} />
+    <View
+      style={[
+        styles.outer,
+        {
+          backgroundColor: palette.card,
+          borderColor: palette.border,
+          borderWidth: 1,
+          borderRadius: radius.lg,
+        },
+        style as any,
+      ]}
+    >
       {inner}
     </View>
   );
 }
 
-function Bolt({ position }: { position: any }) {
-  return (
-    <View
-      style={[
-        styles.bolt,
-        position,
-      ]}
-    />
-  );
-}
-
 const styles = StyleSheet.create({
-  outer: {
-    position: "relative",
-  },
+  outer: { overflow: "hidden" },
   bg: { width: "100%" },
-  bgImg: {},
-  inner: {
-    width: "100%",
-  },
-  fallbackBg: {
-    ...StyleSheet.absoluteFillObject,
-    borderRadius: 8,
-    opacity: 0.85,
-  },
-  fallbackBorder: {
-    ...StyleSheet.absoluteFillObject,
-    borderWidth: 2,
-    borderRadius: 8,
-  },
-  bolt: {
-    position: "absolute",
-    width: 14,
-    height: 14,
-    borderRadius: 7,
-    backgroundColor: "#0e0e0e",
-    borderWidth: 1.5,
-    borderColor: "#4a4a4a",
-    zIndex: 10,
-  },
+  inner: { width: "100%" },
 });

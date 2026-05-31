@@ -1,33 +1,30 @@
 /**
- * IndustrialModal — full-screen overlay panel wrapped in IndustrialPanel.
- * Provides the bolted-frame container for any modal/popup content.
+ * IndustrialModal — fullscreen overlay with a card / panel inside.
  */
 import React from "react";
 import { Modal, Pressable, StyleSheet, View } from "react-native";
-import { IndustrialPanel } from "./IndustrialPanel";
-import { useIndustrialTheme } from "./IndustrialThemeContext";
+import { useTBV } from "./TBVThemeContext";
+import { IndustrialCard } from "./IndustrialCard";
 
 interface Props {
   visible: boolean;
   onClose: () => void;
   children: React.ReactNode;
   closeOnBackdrop?: boolean;
+  width?: number | "auto";
 }
 
-export function IndustrialModal({ visible, onClose, children, closeOnBackdrop = true }: Props) {
-  const { mode } = useIndustrialTheme();
+export function IndustrialModal({ visible, onClose, children, closeOnBackdrop = true, width = "auto" }: Props) {
+  const { palette } = useTBV();
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <Pressable
-        style={[
-          styles.backdrop,
-          { backgroundColor: mode === "light" ? "rgba(0,0,0,0.55)" : "rgba(0,0,0,0.78)" },
-        ]}
+        style={[styles.backdrop, { backgroundColor: palette.overlay }]}
         onPress={closeOnBackdrop ? onClose : undefined}
       >
-        <Pressable onPress={() => undefined}>
+        <Pressable onPress={() => undefined} style={{ width: width === "auto" ? "100%" : width, maxWidth: 480 }}>
           <View style={styles.inner}>
-            <IndustrialPanel>{children}</IndustrialPanel>
+            <IndustrialCard elevation="elevated" padding={20}>{children}</IndustrialCard>
           </View>
         </Pressable>
       </Pressable>
@@ -36,11 +33,6 @@ export function IndustrialModal({ visible, onClose, children, closeOnBackdrop = 
 }
 
 const styles = StyleSheet.create({
-  backdrop: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    padding: 16,
-  },
-  inner: { width: "100%", maxWidth: 480 },
+  backdrop: { flex: 1, alignItems: "center", justifyContent: "center", padding: 16 },
+  inner: { width: "100%" },
 });

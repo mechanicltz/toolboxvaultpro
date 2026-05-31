@@ -1,23 +1,17 @@
 // =============================================================================
-// login.tsx — Toolbox Vault industrial sign-in
+// login.tsx — Toolbox Vault Login (Phase 5 of Part 6 migration)
 // -----------------------------------------------------------------------------
-// Composed entirely from the IndustrialDesignSystem (per ChatGPT spec):
-//   IndustrialBackground (full screen, theme-aware)
-//   <Image> logo badge + emblem (no surrounding box, transparent PNG)
-//   Native <Text> for TOOLBOX VAULT title (Anton font for nameplate feel)
-//   IndustrialPanel wrapping the form area
-//   IndustrialTabBar for SIGN IN / CREATE ACCOUNT
-//   IndustrialInput x2 for email + password (chamfered, with orange L-bracket)
-//   IndustrialButton for the primary submit action
-//
-// All auth logic (biometric, login/register, forgot password) preserved
-// verbatim from the previous version.
+// Uses ONLY official Toolbox Vault assets:
+//   • tbv_background_dark.jpg / tbv_background_light.jpg  → page background
+//   • tbv_master_logo_dark_v2.png / tbv_master_logo_light.png → top logo
+//   • tbv_wordmark_dark.png / tbv_wordmark_light.png → wordmark beneath logo
+//   • Everything else (form, buttons, tabs) is pure React Native code
+//     per Part 6 Rule #2-4 (no image-based buttons/cards).
 // =============================================================================
 
 import { useState, useEffect, useRef } from "react";
 import {
   View,
-  Text,
   StyleSheet,
   KeyboardAvoidingView,
   Platform,
@@ -25,18 +19,25 @@ import {
   Alert,
   ImageBackground,
   Image,
+  Pressable,
+  TouchableOpacity,
   useWindowDimensions,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import {
-  useFonts as useGoogleFonts,
-  BlackOpsOne_400Regular,
-} from "@expo-google-fonts/black-ops-one";
+import { useFonts as useGoogleFonts } from "@expo-google-fonts/bebas-neue";
 import { BebasNeue_400Regular } from "@expo-google-fonts/bebas-neue";
-import { Anton_400Regular } from "@expo-google-fonts/anton";
-import { theme } from "../src/theme";
+import {
+  Rajdhani_500Medium,
+  Rajdhani_600SemiBold,
+  Rajdhani_700Bold,
+} from "@expo-google-fonts/rajdhani";
+import {
+  Exo_2_400Regular as Exo2_400Regular,
+  Exo_2_500Medium as Exo2_500Medium,
+  Exo_2_700Bold as Exo2_700Bold,
+} from "@expo-google-fonts/exo-2";
 import { useAuth } from "../src/AuthContext";
 import {
   getBiometricStatus,
@@ -48,29 +49,32 @@ import {
 import {
   IndustrialButton,
   IndustrialInput,
-  IndustrialPanel,
-  IndustrialTabBar,
+  IndustrialCard,
   PasswordEyeToggle,
-  useBackgroundAsset,
-  useIndustrialTheme,
-  INDUSTRIAL_FONTS,
-  getAsset,
+  TBVText,
+  useTBV,
+  useBackground,
+  useMasterLogo,
+  useWordmark,
 } from "../src/components/industrial";
 
 export default function LoginScreen() {
   const router = useRouter();
   const { login, register } = useAuth();
   const { width: screenW } = useWindowDimensions();
-  const { palette, mode } = useIndustrialTheme();
-  const bgAsset = useBackgroundAsset();
-  const combinedLogo = getAsset("logo_combined");
-  const logoBadge = getAsset("logo_badge_octagon");
-  const emblem = getAsset("hammer_wrench_emblem");
+  const { palette, resolvedMode, spacing } = useTBV();
+  const bg = useBackground();
+  const logo = useMasterLogo();
+  const wordmark = useWordmark();
 
   const [fontsLoaded] = useGoogleFonts({
-    BlackOpsOne_400Regular,
     BebasNeue_400Regular,
-    Anton_400Regular,
+    Rajdhani_500Medium,
+    Rajdhani_600SemiBold,
+    Rajdhani_700Bold,
+    Exo2_400Regular,
+    Exo2_500Medium,
+    Exo2_700Bold,
   });
 
   const [mode_, setMode] = useState<"login" | "register">("login");
@@ -90,17 +94,10 @@ export default function LoginScreen() {
   } | null>(null);
   const autoPromptedRef = useRef(false);
 
-  // Logo sizing — roughly matches the reference image proportions
-  const badgeSize = Math.min(screenW * 0.42, 200);
-  const emblemSize = badgeSize * 0.55;
-  const titleSize = Math.min(screenW * 0.115, 48);
-
-  const titleFont = fontsLoaded
-    ? "Anton_400Regular"
-    : Platform.select({ ios: "Impact", android: "sans-serif-condensed", default: "Impact" });
-  const subFont = fontsLoaded
-    ? "BebasNeue_400Regular"
-    : Platform.select({ ios: "Impact", android: "sans-serif-condensed", default: "Impact" });
+  // Responsive logo sizing — premium nameplate proportions.
+  const logoWidth = Math.min(screenW * 0.55, 280);
+  const logoHeight = logoWidth * 0.66;
+  const wordmarkWidth = Math.min(screenW * 0.5, 240);
 
   useEffect(() => {
     (async () => {
@@ -181,18 +178,45 @@ export default function LoginScreen() {
     }
   };
 
+  // Tab styling for SIGN IN / CREATE ACCOUNT — pure code
+  const renderTab = (key: "login" | "register", label: string, icon: keyof typeof Ionicons.glyphMap) => {
+    const active = mode_ === key;
+    return (
+      <Pressable
+        key={key}
+        onPress={() => setMode(key)}
+        style={[
+          styles.tab,
+          {
+            backgroundColor: active ? palette.accent : "transparent",
+            borderColor: active ? palette.accent : palette.border,
+          },
+        ]}
+        testID={`tab-${key}`}
+      >
+        <Ionicons name={icon} size={14} color={active ? palette.textInverse : palette.textMuted} />
+        <TBVText
+          variant="buttonSm"
+          color={active ? palette.textInverse : palette.textMuted}
+        >
+          {label}
+        </TBVText>
+      </Pressable>
+    );
+  };
+
   return (
     <View style={[styles.root, { backgroundColor: palette.bg }]}>
-      {bgAsset ? (
-        <ImageBackground source={bgAsset} style={StyleSheet.absoluteFill} resizeMode="cover" />
+      {bg ? (
+        <ImageBackground source={bg} style={StyleSheet.absoluteFill} resizeMode="cover" />
       ) : null}
-      {/* slight darkening so content always pops on the textured bg */}
+      {/* Subtle darkening so card content stays legible on the textured bg */}
       <View
+        pointerEvents="none"
         style={[
           styles.bgVignette,
-          { backgroundColor: mode === "light" ? "rgba(255,255,255,0.10)" : "rgba(5,5,5,0.18)" },
+          { backgroundColor: resolvedMode === "light" ? "rgba(236,236,236,0.20)" : "rgba(5,5,5,0.30)" },
         ]}
-        pointerEvents="none"
       />
 
       <SafeAreaView style={{ flex: 1 }} edges={["top", "bottom"]}>
@@ -201,181 +225,167 @@ export default function LoginScreen() {
           style={{ flex: 1 }}
         >
           <ScrollView
-            contentContainerStyle={styles.scroll}
+            contentContainerStyle={[styles.scroll, { paddingHorizontal: spacing.xl }]}
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
-            bounces={false}
           >
-            {/* ============== LOGO (single combined image) ============== */}
-            <View style={[styles.logoWrap, { width: badgeSize * 1.05, height: badgeSize }]}>
-              {combinedLogo ? (
-                <Image
-                  source={combinedLogo}
-                  style={{ width: badgeSize * 1.05, height: badgeSize }}
-                  resizeMode="contain"
-                />
-              ) : logoBadge ? (
-                <>
-                  <Image
-                    source={logoBadge}
-                    style={{ width: badgeSize, height: badgeSize }}
-                    resizeMode="contain"
-                  />
-                  {emblem ? (
-                    <Image
-                      source={emblem}
-                      style={[styles.emblem, { width: emblemSize, height: emblemSize }]}
-                      resizeMode="contain"
-                    />
-                  ) : null}
-                </>
-              ) : null}
-            </View>
+            {/* ============== MASTER LOGO ============== */}
+            {logo ? (
+              <Image
+                source={logo}
+                style={{
+                  width: logoWidth,
+                  height: logoHeight,
+                  alignSelf: "center",
+                  marginTop: spacing.lg,
+                }}
+                resizeMode="contain"
+              />
+            ) : null}
 
-            {/* ============== TITLE ============== */}
-            <View style={styles.titleRow}>
-              <View style={[styles.wing, { backgroundColor: palette.accent, marginRight: 10 }]} />
-              <Text
-                numberOfLines={1}
-                adjustsFontSizeToFit
-                style={[styles.title, { fontSize: titleSize, fontFamily: titleFont }]}
-              >
-                <Text style={{ color: palette.text }}>TOOLBOX</Text>
-                <Text style={{ color: palette.text }}> </Text>
-                <Text style={{ color: palette.accent }}>VAULT</Text>
-              </Text>
-              <View style={[styles.wing, { backgroundColor: palette.accent, marginLeft: 10 }]} />
-            </View>
+            {/* ============== WORDMARK ============== */}
+            {wordmark ? (
+              <Image
+                source={wordmark}
+                style={{
+                  width: wordmarkWidth,
+                  height: wordmarkWidth * 0.22,
+                  alignSelf: "center",
+                  marginTop: spacing.sm,
+                }}
+                resizeMode="contain"
+              />
+            ) : null}
 
             {/* ============== SUBTITLE ============== */}
-            <View style={styles.subRow}>
+            <View style={[styles.subRow, { marginTop: spacing.sm }]}>
               {["INVENTORY", "DEALERS", "WARRANTIES", "REPORTS"].map((w, i) => (
                 <View key={w} style={styles.subItem}>
-                  <Text style={[styles.subText, { color: palette.text, fontFamily: subFont }]}>{w}</Text>
-                  {i < 3 && (
-                    <View style={[styles.subDot, { backgroundColor: palette.accent }]} />
-                  )}
+                  <TBVText variant="labelSmall" color={palette.text}>{w}</TBVText>
+                  {i < 3 && <View style={[styles.subDot, { backgroundColor: palette.accent }]} />}
                 </View>
               ))}
             </View>
 
-            {/* ============== PANEL ============== */}
-            <IndustrialPanel style={{ marginTop: 18 }}>
-              <View style={{ gap: 14 }}>
-                <IndustrialTabBar
-                  tabs={[
-                    { key: "login", label: "SIGN IN", icon: "person" },
-                    { key: "register", label: "CREATE ACCOUNT", icon: "person-add" },
-                  ]}
-                  activeKey={mode_}
-                  onChange={(k) => setMode(k as "login" | "register")}
+            {/* ============== AUTH CARD ============== */}
+            <IndustrialCard
+              elevation="elevated"
+              padding={spacing.xl}
+              style={{ marginTop: spacing.xl, gap: spacing.md }}
+            >
+              {/* Tabs */}
+              <View style={[styles.tabsRow, { gap: spacing.sm }]}>
+                {renderTab("login", "SIGN IN", "person")}
+                {renderTab("register", "CREATE ACCOUNT", "person-add")}
+              </View>
+
+              {/* Error / info banner */}
+              {!!err && (
+                <View style={[styles.banner, { backgroundColor: "rgba(220,53,69,0.18)", borderColor: palette.danger }]}>
+                  <Ionicons name="alert-circle" size={16} color={palette.danger} />
+                  <TBVText variant="bodySmall" color={palette.danger} style={{ flex: 1 }}>{err}</TBVText>
+                </View>
+              )}
+              {!!info && !err && (
+                <View style={[styles.banner, { backgroundColor: "rgba(46,160,67,0.18)", borderColor: palette.success }]}>
+                  <Ionicons name="checkmark-circle" size={16} color={palette.success} />
+                  <TBVText variant="bodySmall" color={palette.success} style={{ flex: 1 }}>{info}</TBVText>
+                </View>
+              )}
+
+              {mode_ === "register" && (
+                <IndustrialInput
+                  label="FULL NAME"
+                  leftIcon="person-outline"
+                  placeholder="Enter your name"
+                  value={name}
+                  onChangeText={setName}
+                  autoCapitalize="words"
+                  testID="auth-name"
                 />
+              )}
 
-                {!!err && (
-                  <View style={[styles.banner, { backgroundColor: "rgba(220,53,69,0.92)", borderColor: theme.colors.danger }]}>
-                    <Ionicons name="alert-circle" size={16} color="#fff" />
-                    <Text style={styles.bannerText}>{err}</Text>
-                  </View>
-                )}
-                {!!info && !err && (
-                  <View style={[styles.banner, { backgroundColor: "rgba(46,160,67,0.92)", borderColor: theme.colors.success }]}>
-                    <Ionicons name="checkmark-circle" size={16} color="#fff" />
-                    <Text style={styles.bannerText}>{info}</Text>
-                  </View>
-                )}
+              <IndustrialInput
+                label="EMAIL"
+                leftIcon="mail-outline"
+                placeholder="you@example.com"
+                value={email}
+                onChangeText={setEmail}
+                autoCapitalize="none"
+                autoComplete="email"
+                keyboardType="email-address"
+                testID="auth-email"
+              />
 
-                {mode_ === "register" && (
-                  <IndustrialInput
-                    label="FULL NAME"
-                    leftIcon="person-outline"
-                    placeholder="Enter your name"
-                    value={name}
-                    onChangeText={setName}
-                    autoCapitalize="words"
-                    testID="auth-name"
+              <IndustrialInput
+                label="PASSWORD"
+                leftIcon="lock-closed-outline"
+                placeholder="••••••••"
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry={!showPassword}
+                autoCapitalize="none"
+                testID="auth-password"
+                rightAccessory={
+                  <PasswordEyeToggle visible={showPassword} onToggle={() => setShowPassword((s) => !s)} />
+                }
+              />
+
+              <IndustrialButton
+                label={mode_ === "register" ? "CREATE ACCOUNT" : "SIGN IN"}
+                icon="lock-closed"
+                onPress={submit}
+                loading={busy}
+                size="lg"
+                testID="auth-submit"
+                style={{ marginTop: spacing.xs }}
+              />
+
+              {mode_ === "login" && (
+                <View style={[styles.forgotRow, { marginTop: spacing.sm }]}>
+                  <View style={[styles.forgotLine, { backgroundColor: palette.accent }]} />
+                  <TouchableOpacity
+                    onPress={() => router.push("/forgot-password")}
+                    activeOpacity={0.6}
+                    testID="forgot-password-link"
+                  >
+                    <TBVText variant="button" color={palette.accent}>FORGOT PASSWORD?</TBVText>
+                  </TouchableOpacity>
+                  <View style={[styles.forgotLine, { backgroundColor: palette.accent }]} />
+                </View>
+              )}
+
+              {mode_ === "login" &&
+                bio?.enabled &&
+                bio.hasHardware &&
+                bio.isEnrolled && (
+                  <IndustrialButton
+                    label={`SIGN IN WITH ${bio.label.toUpperCase()}`}
+                    icon={
+                      bio.label.toLowerCase().includes("face") ? "scan" :
+                      bio.label.toLowerCase().includes("touch") ||
+                      bio.label.toLowerCase().includes("finger") ? "finger-print" : "lock-closed"
+                    }
+                    variant="ghost"
+                    onPress={runBiometricLogin}
+                    disabled={busy}
+                    testID="auth-biometric"
                   />
                 )}
 
-                <IndustrialInput
-                  label="EMAIL"
-                  leftIcon="mail-outline"
-                  placeholder="you@example.com"
-                  value={email}
-                  onChangeText={setEmail}
-                  autoCapitalize="none"
-                  autoComplete="email"
-                  keyboardType="email-address"
-                  testID="auth-email"
-                />
-
-                <IndustrialInput
-                  label="PASSWORD"
-                  leftIcon="lock-closed-outline"
-                  placeholder="••••••••"
-                  value={password}
-                  onChangeText={setPassword}
-                  secureTextEntry={!showPassword}
-                  autoCapitalize="none"
-                  testID="auth-password"
-                  rightAccessory={
-                    <PasswordEyeToggle visible={showPassword} onToggle={() => setShowPassword((s) => !s)} />
-                  }
-                />
-
-                <IndustrialButton
-                  label={mode_ === "register" ? "CREATE ACCOUNT" : "SIGN IN"}
-                  icon="lock-closed"
-                  onPress={submit}
-                  loading={busy}
-                  testID="auth-submit"
-                  style={{ marginTop: 4 }}
-                />
-
-                {mode_ === "login" && (
-                  <View style={styles.forgotRow}>
-                    <View style={[styles.forgotLine, { backgroundColor: palette.accent }]} />
-                    <Text
-                      onPress={() => router.push("/forgot-password")}
-                      style={[styles.forgotText, { color: palette.accent, fontFamily: subFont }]}
-                      testID="forgot-password-link"
-                    >
-                      FORGOT PASSWORD?
-                    </Text>
-                    <View style={[styles.forgotLine, { backgroundColor: palette.accent }]} />
-                  </View>
-                )}
-
-                {mode_ === "login" &&
-                  bio?.enabled &&
-                  bio.hasHardware &&
-                  bio.isEnrolled && (
-                    <IndustrialButton
-                      label={`SIGN IN WITH ${bio.label.toUpperCase()}`}
-                      icon={
-                        bio.label.toLowerCase().includes("face")
-                          ? "scan"
-                          : bio.label.toLowerCase().includes("touch") ||
-                            bio.label.toLowerCase().includes("finger")
-                          ? "finger-print"
-                          : "lock-closed"
-                      }
-                      variant="secondary"
-                      onPress={runBiometricLogin}
-                      disabled={busy}
-                      testID="auth-biometric"
-                    />
-                  )}
-
-                {mode_ === "login" && (
-                  <View style={[styles.footerNotice, { backgroundColor: mode === "light" ? "rgba(0,0,0,0.04)" : "rgba(0,0,0,0.5)", borderColor: mode === "light" ? "rgba(0,0,0,0.06)" : "rgba(255,255,255,0.06)" }]}>
-                    <Ionicons name="shield-checkmark" size={14} color={palette.accent} />
-                    <Text style={[styles.footerText, { color: palette.textMuted }]}>
-                      New user? Use Create Account to get started for free.
-                    </Text>
-                  </View>
-                )}
-              </View>
-            </IndustrialPanel>
+              {mode_ === "login" && (
+                <View style={[styles.footerNotice, {
+                  backgroundColor: palette.accentSoft,
+                  borderColor: palette.border,
+                  marginTop: spacing.sm,
+                }]}>
+                  <Ionicons name="shield-checkmark" size={14} color={palette.accent} />
+                  <TBVText variant="caption" muted style={{ flex: 1 }}>
+                    New user? Use Create Account to get started for free.
+                  </TBVText>
+                </View>
+              )}
+            </IndustrialCard>
           </ScrollView>
         </KeyboardAvoidingView>
       </SafeAreaView>
@@ -386,91 +396,54 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   root: { flex: 1 },
   bgVignette: { ...StyleSheet.absoluteFillObject },
-  scroll: {
-    flexGrow: 1,
-    paddingHorizontal: 20,
-    paddingTop: 8,
-    paddingBottom: 24,
-  },
-
-  // ---- LOGO ----
-  logoWrap: {
-    alignSelf: "center",
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: 8,
-    marginBottom: 4,
-  },
-  emblem: {
-    position: "absolute",
-    alignSelf: "center",
-  },
-
-  // ---- TITLE ----
-  titleRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 4,
-    marginTop: -2,
-  },
-  title: {
-    letterSpacing: 2.5,
-    textAlign: "center",
-    textShadowColor: "rgba(0,0,0,0.6)",
-    textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 2,
-  },
-  wing: {
-    flex: 1,
-    height: 3,
-    opacity: 0.7,
-    borderRadius: 1,
-  },
+  scroll: { flexGrow: 1, paddingTop: 8, paddingBottom: 24 },
 
   // ---- SUBTITLE ----
   subRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    marginTop: 4,
     flexWrap: "wrap",
   },
   subItem: { flexDirection: "row", alignItems: "center" },
-  subText: { fontSize: 12, fontWeight: "700", letterSpacing: 2, marginHorizontal: 5 },
-  subDot: { width: 4, height: 4, borderRadius: 2, marginHorizontal: 4 },
+  subDot: { width: 4, height: 4, borderRadius: 2, marginHorizontal: 6 },
+
+  // ---- TABS ----
+  tabsRow: { flexDirection: "row" },
+  tab: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    height: 40,
+    borderWidth: 1,
+    borderRadius: 6,
+  },
 
   // ---- BANNER ----
   banner: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    borderRadius: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 6,
     borderWidth: 1,
   },
-  bannerText: { flex: 1, color: "#fff", fontSize: 12, fontWeight: "700" },
 
   // ---- FORGOT ----
-  forgotRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    marginTop: 4,
-  },
+  forgotRow: { flexDirection: "row", alignItems: "center", gap: 10 },
   forgotLine: { flex: 1, height: 1, opacity: 0.4 },
-  forgotText: { fontSize: 13, fontWeight: "800", letterSpacing: 2 },
 
   // ---- FOOTER ----
   footerNotice: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    paddingVertical: 8,
-    paddingHorizontal: 10,
-    borderRadius: 4,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 6,
     borderWidth: 1,
   },
-  footerText: { flex: 1, fontSize: 11, fontWeight: "600" },
 });
