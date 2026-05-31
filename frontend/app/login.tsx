@@ -40,7 +40,7 @@ import {
 // Skin source files (single import block — easy to swap later)
 // =====================================================================
 const SKIN = {
-  bg:           require("../assets/tbv-v2/Textures/tbv_diamond_plate_dark.png"),
+  bg:           require("../assets/tbv-v2/Backgrounds/tbv_background_industrial_dark.png"),
   panel:        require("../assets/tbv-v2/Panels/tbv_login_panel_dark.png"),
   tabActive:    require("../assets/tbv-v2/Tabs/tbv_tab_active_orange.png"),
   tabInactive:  require("../assets/tbv-v2/Tabs/tbv_tab_inactive_dark.png"),
@@ -455,8 +455,8 @@ const styles = StyleSheet.create({
     gap: 6,
     marginBottom: 4,
   },
-  logo:     { width: 92, height: 92 },
-  wordmark: { width: 260, height: 60 },
+  logo:     { width: 200, height: 200 },
+  wordmark: { width: 340, height: 90 },
   subtitle: {
     fontFamily: "Rajdhani_600SemiBold",
     fontSize: 11,
