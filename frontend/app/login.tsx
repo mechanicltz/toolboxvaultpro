@@ -455,13 +455,13 @@ const styles = StyleSheet.create({
     gap: 6,
     marginBottom: 4,
   },
-  logo:     { width: 200, height: 200 },
-  wordmark: { width: 340, height: 90 },
+  logo:     { width: 260, height: 260 },
+  wordmark: { width: 400, height: 110 },
   subtitle: {
     fontFamily: "Rajdhani_600SemiBold",
-    fontSize: 11,
-    letterSpacing: 2.2,
-    color: "#FFB266",
+    fontSize: 12,
+    letterSpacing: 2.4,
+    color: "#F2F2F2",
     textAlign: "center",
   },
 
@@ -472,9 +472,9 @@ const styles = StyleSheet.create({
   panel: {
     width: "100%",
     position: "relative",
-    paddingHorizontal: 40,
-    paddingTop: 64,
-    paddingBottom: 56,
+    paddingHorizontal: 56,
+    paddingTop: 88,
+    paddingBottom: 88,
   },
   panelContent: {
     width: "100%",
@@ -553,8 +553,9 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   eyeWrap: {
-    width: 56,
-    height: 56,
+    width: 48,
+    height: 48,
+    alignSelf: "center",
   },
   eyeBg: {
     width: "100%",
