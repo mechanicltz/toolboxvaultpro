@@ -24,6 +24,7 @@ import { setPaymentRequiredHandler, api, abortAllInFlight } from "../src/api";
 import { shouldShowIntro, markAppActive } from "../src/idle";
 import { IntroOverlay } from "../src/IntroOverlay";
 import { ThemeProvider, useColors, useThemeMode } from "../src/themeContext";
+import { IndustrialThemeProvider } from "../src/components/industrial";
 import { notifyAppResume } from "../src/appLifecycle";
 
 /**
@@ -279,18 +280,20 @@ export default function RootLayout() {
           above my phone's clock so I can't tap back".) */}
       <SafeAreaProvider>
         <ThemeProvider>
-          <ThemedStatusBar />
-          <AuthProvider>
-            <NetworkProvider>
-              <AuroraBackground>
-                <AuthGate>
-                  <BiometricLockGate>
-                    <ShellNav />
-                  </BiometricLockGate>
-                </AuthGate>
-              </AuroraBackground>
-            </NetworkProvider>
-          </AuthProvider>
+          <IndustrialThemeProvider>
+            <ThemedStatusBar />
+            <AuthProvider>
+              <NetworkProvider>
+                <AuroraBackground>
+                  <AuthGate>
+                    <BiometricLockGate>
+                      <ShellNav />
+                    </BiometricLockGate>
+                  </AuthGate>
+                </AuroraBackground>
+              </NetworkProvider>
+            </AuthProvider>
+          </IndustrialThemeProvider>
         </ThemeProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
