@@ -204,50 +204,48 @@ export default function LoginScreen() {
                 resizeMode="cover"
               />
               <View style={StyleSheet.absoluteFill}>
-                {/* =================== TABS  (login mode only — in register
-                     mode the tabs row is replaced by a NAME field overlay) === */}
+                {/* =================== TABS  (login mode only) ============= */}
                 {mode === "login" && (
-                  <View style={yBand(COORDS.tabs.top, COORDS.tabs.bottom)}>
-                  {/* SIGN IN tab — left side, hits the orange plate */}
-                  <Pressable
-                    onPress={() => setMode("login")}
-                    testID="tab-login"
-                    style={[
-                      styles.tabHit,
-                      {
-                        left: `${COORDS.tab_split.signin[0] * 100}%`,
-                        right: `${(1 - COORDS.tab_split.signin[1]) * 100}%`,
-                      },
-                    ]}
-                  >
-                    <Ionicons name="person" size={18}
-                      color={mode === "login" ? "#FF6A00" : "#A8A8A8"} />
-                    <Text style={[
-                      styles.tabText,
-                      { color: mode === "login" ? "#FF8533" : "#A8A8A8" }
-                    ]}>SIGN IN</Text>
-                  </Pressable>
+                  <View style={[
+                    yBand(COORDS.tabs.top, COORDS.tabs.bottom),
+                    { flexDirection: "row", paddingHorizontal: "3.5%", gap: 10 },
+                  ]}>
+                    {/* SIGN IN tab — active orange plate */}
+                    <Pressable
+                      onPress={() => setMode("login")}
+                      testID="tab-login"
+                      style={({ pressed }) => [
+                        styles.tabPlate,
+                        styles.tabActivePlate,
+                        { opacity: pressed ? 0.8 : 1 },
+                      ]}
+                    >
+                      <View style={styles.tabBolt}><View style={styles.tabBoltInner}/></View>
+                      <View style={styles.tabContent}>
+                        <Ionicons name="person" size={17} color="#0A0A0A" />
+                        <Text style={[styles.tabText, { color: "#0A0A0A" }]}>SIGN IN</Text>
+                      </View>
+                      <View style={styles.tabBoltR}><View style={styles.tabBoltInner}/></View>
+                    </Pressable>
 
-                  {/* CREATE ACCOUNT tab — right side, hits the dark plate */}
-                  <Pressable
-                    onPress={() => setMode("register")}
-                    testID="tab-register"
-                    style={[
-                      styles.tabHit,
-                      {
-                        left: `${COORDS.tab_split.create[0] * 100}%`,
-                        right: `${(1 - COORDS.tab_split.create[1]) * 100}%`,
-                      },
-                    ]}
-                  >
-                    <Ionicons name="person-add" size={16}
-                      color={mode === "register" ? "#FF6A00" : "#8A8A8A"} />
-                    <Text style={[
-                      styles.tabTextSm,
-                      { color: mode === "register" ? "#FF6A00" : "#8A8A8A" }
-                    ]}>CREATE ACCOUNT</Text>
-                  </Pressable>
-                </View>
+                    {/* CREATE ACCOUNT tab — inactive dark plate */}
+                    <Pressable
+                      onPress={() => setMode("register")}
+                      testID="tab-register"
+                      style={({ pressed }) => [
+                        styles.tabPlate,
+                        styles.tabInactivePlate,
+                        { opacity: pressed ? 0.8 : 1 },
+                      ]}
+                    >
+                      <View style={styles.tabBoltDark}><View style={styles.tabBoltInner}/></View>
+                      <View style={styles.tabContent}>
+                        <Ionicons name="person-add" size={15} color="#A8A8A8" />
+                        <Text style={[styles.tabTextSm, { color: "#C8C8C8" }]}>CREATE ACCOUNT</Text>
+                      </View>
+                      <View style={styles.tabBoltDarkR}><View style={styles.tabBoltInner}/></View>
+                    </Pressable>
+                  </View>
                 )}
 
                 {/* =================== REGISTER-MODE TAB OVERLAY ============
@@ -289,21 +287,24 @@ export default function LoginScreen() {
                 {/* =================== EMAIL INPUT =================== */}
                 <View style={[
                   yBand(COORDS.email_in.top, COORDS.email_in.bottom),
-                  styles.inputRow,
+                  { paddingHorizontal: "3.5%" },
                 ]}>
-                  <Ionicons name="mail-outline" size={20} color="#FF6A00"
-                    style={{ marginLeft: 4 }} />
-                  <TextInput
-                    value={email}
-                    onChangeText={setEmail}
-                    placeholder="you@example.com"
-                    placeholderTextColor="rgba(242,242,242,0.42)"
-                    autoCapitalize="none"
-                    autoComplete="email"
-                    keyboardType="email-address"
-                    style={styles.input}
-                    testID="auth-email"
-                  />
+                  <View style={styles.inputFrame}>
+                    <View style={styles.fieldBolt}><View style={styles.tabBoltInner}/></View>
+                    <Ionicons name="mail-outline" size={18} color="#FF6A00" />
+                    <TextInput
+                      value={email}
+                      onChangeText={setEmail}
+                      placeholder="you@example.com"
+                      placeholderTextColor="rgba(242,242,242,0.42)"
+                      autoCapitalize="none"
+                      autoComplete="email"
+                      keyboardType="email-address"
+                      style={styles.input}
+                      testID="auth-email"
+                    />
+                    <View style={styles.fieldBoltR}><View style={styles.tabBoltInner}/></View>
+                  </View>
                 </View>
 
                 {/* =================== PASSWORD LABEL =================== */}
@@ -317,33 +318,28 @@ export default function LoginScreen() {
                 {/* =================== PASSWORD INPUT =================== */}
                 <View style={[
                   yBand(COORDS.pw_in.top, COORDS.pw_in.bottom),
-                  styles.inputRow,
-                  { right: `${(1 - COORDS.eye_l) * 100 + 1}%` }, // shorter so eye stays
+                  { paddingHorizontal: "3.5%", flexDirection: "row", gap: 8 },
                 ]}>
-                  <TextInput
-                    value={password}
-                    onChangeText={setPassword}
-                    placeholder=""
-                    placeholderTextColor="rgba(242,242,242,0.42)"
-                    secureTextEntry={!showPassword}
-                    autoCapitalize="none"
-                    style={[styles.input, { paddingLeft: 12 }]}
-                    testID="auth-password"
-                  />
-                </View>
-                {/* Eye toggle — independent hit area over the eye-button chrome */}
-                <View style={yBand(COORDS.pw_in.top, COORDS.pw_in.bottom)}>
+                  <View style={[styles.inputFrame, { flex: 1 }]}>
+                    <View style={styles.fieldBolt}><View style={styles.tabBoltInner}/></View>
+                    <Ionicons name="lock-closed-outline" size={18} color="#FF6A00" />
+                    <TextInput
+                      value={password}
+                      onChangeText={setPassword}
+                      placeholder=""
+                      placeholderTextColor="rgba(242,242,242,0.42)"
+                      secureTextEntry={!showPassword}
+                      autoCapitalize="none"
+                      style={styles.input}
+                      testID="auth-password"
+                    />
+                  </View>
+                  {/* Eye toggle as its own visible plate */}
                   <TouchableOpacity
                     onPress={() => setShowPassword(s => !s)}
                     activeOpacity={0.7}
                     testID="password-eye"
-                    style={{
-                      position: "absolute",
-                      left: `${COORDS.eye_l * 100}%`,
-                      right: `${(1 - COORDS.eye_r) * 100}%`,
-                      top: 0, bottom: 0,
-                      alignItems: "center", justifyContent: "center",
-                    }}
+                    style={styles.eyePlate}
                   >
                     <Ionicons name={showPassword ? "eye-off" : "eye"} size={22} color="#FF6A00" />
                   </TouchableOpacity>
@@ -486,7 +482,104 @@ const styles = StyleSheet.create({
     zIndex: 0,
   },
 
-  // ---- TABS --------------------------------------------------------------
+  // ---- TAB PLATES (native, full bordered chrome) -------------------------
+  tabPlate: {
+    flex: 1,
+    height: "78%",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 6,
+    borderRadius: 3,
+    borderWidth: 1.5,
+    overflow: "hidden",
+  },
+  tabActivePlate: {
+    backgroundColor: "#E66200",
+    borderColor: "#FFB266",
+    shadowColor: "#FF6A00",
+    shadowOpacity: 0.6,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 0 },
+  },
+  tabInactivePlate: {
+    backgroundColor: "rgba(20,20,20,0.92)",
+    borderColor: "rgba(255,106,0,0.45)",
+  },
+  tabContent: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+  },
+  tabBolt: {
+    width: 12, height: 12, borderRadius: 6,
+    backgroundColor: "#7A2E00",
+    alignItems: "center", justifyContent: "center",
+    borderWidth: 1, borderColor: "#FFB266",
+  },
+  tabBoltR: {
+    width: 12, height: 12, borderRadius: 6,
+    backgroundColor: "#7A2E00",
+    alignItems: "center", justifyContent: "center",
+    borderWidth: 1, borderColor: "#FFB266",
+  },
+  tabBoltDark: {
+    width: 10, height: 10, borderRadius: 5,
+    backgroundColor: "#1A1A1A",
+    alignItems: "center", justifyContent: "center",
+    borderWidth: 1, borderColor: "#3A3A3A",
+  },
+  tabBoltDarkR: {
+    width: 10, height: 10, borderRadius: 5,
+    backgroundColor: "#1A1A1A",
+    alignItems: "center", justifyContent: "center",
+    borderWidth: 1, borderColor: "#3A3A3A",
+  },
+  tabBoltInner: {
+    width: 3, height: 3, borderRadius: 1.5,
+    backgroundColor: "#0A0A0A",
+  },
+
+  // ---- INPUT FRAME (native bordered chrome plate) ------------------------
+  inputFrame: {
+    flex: 1,
+    height: "85%",
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 10,
+    gap: 10,
+    backgroundColor: "rgba(10,10,10,0.85)",
+    borderRadius: 4,
+    borderWidth: 1.5,
+    borderColor: "rgba(255,106,0,0.75)",
+  },
+  fieldBolt: {
+    width: 8, height: 8, borderRadius: 4,
+    backgroundColor: "#3A1A00",
+    alignItems: "center", justifyContent: "center",
+    borderWidth: 1, borderColor: "rgba(255,106,0,0.7)",
+  },
+  fieldBoltR: {
+    width: 8, height: 8, borderRadius: 4,
+    backgroundColor: "#3A1A00",
+    alignItems: "center", justifyContent: "center",
+    borderWidth: 1, borderColor: "rgba(255,106,0,0.7)",
+  },
+  eyePlate: {
+    width: "16%",
+    minWidth: 52,
+    height: "85%",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(10,10,10,0.85)",
+    borderRadius: 4,
+    borderWidth: 1.5,
+    borderColor: "rgba(255,106,0,0.75)",
+  },
+
+  // ---- TABS (legacy hit area — kept for any reference) -------------------
   tabHit: {
     position: "absolute",
     top: 0, bottom: 0,
