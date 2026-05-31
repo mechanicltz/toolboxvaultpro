@@ -80,8 +80,8 @@ export function IndustrialTabBar({ tabs, activeKey, onChange, style }: Props) {
 const styles = StyleSheet.create({
   row: { flexDirection: "row", gap: 6 },
   tabWrap: { flex: 1, borderRadius: 4, overflow: "hidden" },
-  tabImg: { minHeight: 42, alignItems: "center", justifyContent: "center", paddingHorizontal: 8 },
-  tabFallback: { minHeight: 42, alignItems: "center", justifyContent: "center", paddingHorizontal: 8, borderRadius: 4 },
+  tabImg: { height: 38, alignItems: "center", justifyContent: "center", paddingHorizontal: 8 },
+  tabFallback: { height: 38, alignItems: "center", justifyContent: "center", paddingHorizontal: 8, borderRadius: 4 },
   contentRow: { flexDirection: "row", alignItems: "center", gap: 6 },
   label: { fontSize: 13, fontWeight: "800", letterSpacing: 1.6 },
 });

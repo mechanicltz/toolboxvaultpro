@@ -63,6 +63,7 @@ export default function LoginScreen() {
   const { width: screenW } = useWindowDimensions();
   const { palette, mode } = useIndustrialTheme();
   const bgAsset = useBackgroundAsset();
+  const combinedLogo = getAsset("logo_combined");
   const logoBadge = getAsset("logo_badge_octagon");
   const emblem = getAsset("hammer_wrench_emblem");
 
@@ -189,7 +190,7 @@ export default function LoginScreen() {
       <View
         style={[
           styles.bgVignette,
-          { backgroundColor: mode === "light" ? "rgba(255,255,255,0.18)" : "rgba(5,5,5,0.42)" },
+          { backgroundColor: mode === "light" ? "rgba(255,255,255,0.10)" : "rgba(5,5,5,0.18)" },
         ]}
         pointerEvents="none"
       />
@@ -205,24 +206,29 @@ export default function LoginScreen() {
             showsVerticalScrollIndicator={false}
             bounces={false}
           >
-            {/* ============== LOGO BADGE + EMBLEM (overlaid) ============== */}
-            <View style={[styles.logoWrap, { width: badgeSize, height: badgeSize }]}>
-              {logoBadge ? (
+            {/* ============== LOGO (single combined image) ============== */}
+            <View style={[styles.logoWrap, { width: badgeSize * 1.05, height: badgeSize }]}>
+              {combinedLogo ? (
                 <Image
-                  source={logoBadge}
-                  style={{ width: badgeSize, height: badgeSize }}
+                  source={combinedLogo}
+                  style={{ width: badgeSize * 1.05, height: badgeSize }}
                   resizeMode="contain"
                 />
-              ) : null}
-              {emblem ? (
-                <Image
-                  source={emblem}
-                  style={[
-                    styles.emblem,
-                    { width: emblemSize, height: emblemSize },
-                  ]}
-                  resizeMode="contain"
-                />
+              ) : logoBadge ? (
+                <>
+                  <Image
+                    source={logoBadge}
+                    style={{ width: badgeSize, height: badgeSize }}
+                    resizeMode="contain"
+                  />
+                  {emblem ? (
+                    <Image
+                      source={emblem}
+                      style={[styles.emblem, { width: emblemSize, height: emblemSize }]}
+                      resizeMode="contain"
+                    />
+                  ) : null}
+                </>
               ) : null}
             </View>
 

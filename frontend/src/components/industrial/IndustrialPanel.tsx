@@ -24,8 +24,10 @@ interface Props {
 export function IndustrialPanel({ children, style, padding, testID }: Props) {
   const { palette } = useIndustrialTheme();
   const src = getAsset("panel_large_dark");
-  const padH = padding?.horizontal ?? 28;
-  const padV = padding?.vertical ?? 32;
+  // Bigger default padding so children stay INSIDE the painted steel border
+  // and clear the painted bolts at the corners + side midpoints.
+  const padH = padding?.horizontal ?? 38;
+  const padV = padding?.vertical ?? 48;
 
   const inner = (
     <View style={[styles.inner, { paddingHorizontal: padH, paddingVertical: padV }]} testID={testID}>

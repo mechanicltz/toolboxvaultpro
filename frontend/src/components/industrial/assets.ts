@@ -20,6 +20,7 @@ function tryRequire(loader: () => ImageSourcePropType): ImageSourcePropType | nu
 const REGISTRY = {
   background_dark: tryRequire(() => require("../../../assets/industrial/01_industrial_background_dark.jpg")),
   background_light: tryRequire(() => require("../../../assets/industrial/02_industrial_background_light.jpg")),
+  logo_combined: tryRequire(() => require("../../../assets/industrial/03_logo_combined.png")),
   logo_badge_octagon: tryRequire(() => require("../../../assets/industrial/03_logo_badge_octagon.png")),
   hammer_wrench_emblem: tryRequire(() => require("../../../assets/industrial/04_hammer_wrench_emblem.png")),
   panel_large_dark: tryRequire(() => require("../../../assets/industrial/05_panel_large_dark.png")),
