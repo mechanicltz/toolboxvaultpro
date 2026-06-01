@@ -172,7 +172,7 @@ export default function LoginScreen() {
   // Panel — wider (92% of screen) so the form reads as one cohesive interface,
   // not a narrow stack. (Outer width is a composition choice; the measured
   // responsive scaling itself is unchanged.) Capped for tablet/web sanity.
-  const panelW = Math.min(cw * 0.92, 560);
+  const panelW = Math.min(cw * 0.94, 600);
   const panelH = clamp(ch * 0.42, 320, 440);
   const padX = panelW * 0.085;
   const padTop = panelH * 0.115;
