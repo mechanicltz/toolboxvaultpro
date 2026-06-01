@@ -315,6 +315,14 @@ export default function LoginScreen() {
                   it. This is what ImageBackground does internally, but doing
                   it by hand sidesteps the iOS compression bug that was
                   dropping the panel's width + padding. */}
+              {/* ===================== LOGIN PANEL ===================== */}
+              {/* Outer frame: NO padding, explicit size. The skin Image fills
+                  it with EXPLICIT NUMERIC dimensions (panelW×panelH) so it
+                  covers edge-to-edge identically on iOS and web. Padding lives
+                  on the INNER wrapper, because iOS resolves a child's "100%"
+                  against the parent CONTENT box (inside padding) while web uses
+                  the border box — that mismatch was squeezing the frame art
+                  into the center and leaving forgot-password on bare metal. */}
               <View
                 onLayout={(e) => {
                   const { width, height } = e.nativeEvent.layout;
@@ -325,9 +333,6 @@ export default function LoginScreen() {
                 style={{
                   width: panelW,
                   height: panelH,
-                  paddingHorizontal: padX,
-                  paddingTop: padTop,
-                  paddingBottom: padBot,
                   overflow: "hidden",
                 }}
               >
@@ -339,9 +344,17 @@ export default function LoginScreen() {
                       Math.abs(d.imgW - width) > 0.5 || Math.abs(d.imgH - height) > 0.5
                         ? { ...d, imgW: width, imgH: height } : d);
                   }}
-                  style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%" }}
+                  style={{ position: "absolute", top: 0, left: 0, width: panelW, height: panelH }}
                   resizeMode="stretch"
                 />
+                <View
+                  style={{
+                    flex: 1,
+                    paddingHorizontal: padX,
+                    paddingTop: padTop,
+                    paddingBottom: padBot,
+                  }}
+                >
                 <View
                   style={styles.panelInner}
                   onLayout={(e) => {
@@ -490,6 +503,7 @@ export default function LoginScreen() {
                     </TouchableOpacity>
                   )}
                 </View>
+                </View>
               </View>
 
               {/* ===================== HELP BLOCK ===================== */}
@@ -546,7 +560,7 @@ export default function LoginScreen() {
               )}
 
               {/* Build stamp (also mirrored in the pinned top overlay). */}
-              <Text style={styles.buildStamp}>BUILD #006</Text>
+              <Text style={styles.buildStamp}>BUILD #007</Text>
             </ScrollView>
 
             {/* ===== PINNED DIAGNOSTIC OVERLAY (cannot be clipped) ===== */}
@@ -556,7 +570,7 @@ export default function LoginScreen() {
                 taps on the form underneath. */}
             <View pointerEvents="none" style={styles.dbgOverlay}>
               <Text style={styles.dbgText}>
-                {`BUILD #006  OS:${Platform.OS}\n`}
+                {`BUILD #007  OS:${Platform.OS}\n`}
                 {`box:${Math.round(cw)}x${Math.round(ch)}  win:${Math.round(win.width)}x${Math.round(win.height)}\n`}
                 {`want panel:${Math.round(panelW)}x${Math.round(panelH)} contentW:${Math.round(contentW)}\n`}
                 {`pad T:${Math.round(padTop)} B:${Math.round(padBot)} X:${Math.round(padX)}\n`}
