@@ -1,12 +1,14 @@
 /**
- * Forgot Password flow.
+ * Forgot / Reset Password — Toolbox Vault industrial reskin (Phase 1).
  *
- * Two-step:
- *  1) User enters email → we call /auth/forgot-password → backend emails a
- *     6-digit code. The screen transitions to Step 2 regardless of whether
- *     the email exists (security: no enumeration).
- *  2) User enters the 6-digit code + new password → /auth/reset-password →
- *     on success, we set the auth token and route the user into the app.
+ * Visual language matches the LOCKED login screen (same skins + sizing rules:
+ * measured-width column, content-driven panel height, image skins). The
+ * FUNCTIONAL flow is UNCHANGED — a secure 2-step 6-digit code reset:
+ *   1) request : enter email   -> /auth/forgot-password (emails a 6-digit code)
+ *   2) verify  : code + new pw  -> /auth/reset-password  -> signed in
+ *
+ * NOTE: the app uses a 6-digit CODE (not a magic link), so the primary button
+ * reads "SEND RESET CODE".
  */
 import { useState } from "react";
 import {
@@ -14,27 +16,51 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
+  Pressable,
   StyleSheet,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
   ActivityIndicator,
   Alert,
+  ImageBackground,
+  Image,
+  useWindowDimensions,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { theme } from "../src/theme";
+import { useFonts as useGoogleFonts, BebasNeue_400Regular } from "@expo-google-fonts/bebas-neue";
+import {
+  Rajdhani_500Medium,
+  Rajdhani_600SemiBold,
+  Rajdhani_700Bold,
+} from "@expo-google-fonts/rajdhani";
+import { Exo2_400Regular, Exo2_500Medium, Exo2_700Bold } from "@expo-google-fonts/exo-2";
 import { api, setToken } from "../src/api";
 import { useAuth } from "../src/AuthContext";
-
-import { themedStyles } from "../src/themeContext";
+import { SKIN, AR, TBV, clamp } from "../src/tbv/skins";
+import { TbvHeader } from "../src/tbv/TbvHeader";
 
 type Step = "request" | "verify";
 
 export default function ForgotPasswordScreen() {
   const router = useRouter();
   const { refresh } = useAuth();
+  const win = useWindowDimensions();
+
+  const [fontsLoaded, fontError] = useGoogleFonts({
+    BebasNeue_400Regular,
+    Rajdhani_500Medium,
+    Rajdhani_600SemiBold,
+    Rajdhani_700Bold,
+    Exo2_400Regular,
+    Exo2_500Medium,
+    Exo2_700Bold,
+  });
+
+  const [box, setBox] = useState({ w: win.width, h: win.height });
+  const [measuredInnerH, setMeasuredInnerH] = useState(0);
 
   const [step, setStep] = useState<Step>("request");
   const [email, setEmail] = useState("");
@@ -44,6 +70,7 @@ export default function ForgotPasswordScreen() {
   const [showPw, setShowPw] = useState(false);
   const [busy, setBusy] = useState(false);
 
+  // ---------- logic (UNCHANGED behaviour) ----------
   const submitEmail = async () => {
     const trimmed = email.trim().toLowerCase();
     if (!trimmed || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
@@ -53,9 +80,9 @@ export default function ForgotPasswordScreen() {
     setBusy(true);
     try {
       await api.forgotPassword({ email: trimmed });
-      // Always transition — backend does not reveal whether email exists.
       setEmail(trimmed);
       setStep("verify");
+      setMeasuredInnerH(0); // re-measure for the taller verify panel
       Alert.alert(
         "Check your email",
         "If that email is registered, we've sent a 6-digit code. It expires in 15 minutes.",
@@ -83,20 +110,12 @@ export default function ForgotPasswordScreen() {
     }
     setBusy(true);
     try {
-      const res = await api.resetPassword({
-        email,
-        code: codeTrim,
-        new_password: newPassword,
-      });
-      if (res?.token) {
-        await setToken(res.token);
-      }
+      const res = await api.resetPassword({ email, code: codeTrim, new_password: newPassword });
+      if (res?.token) await setToken(res.token);
       await refresh();
-      Alert.alert(
-        "Password reset",
-        "Your password has been updated and you're now signed in.",
-        [{ text: "OK", onPress: () => router.replace("/") }],
-      );
+      Alert.alert("Password reset", "Your password has been updated and you're now signed in.", [
+        { text: "OK", onPress: () => router.replace("/") },
+      ]);
     } catch (e: any) {
       Alert.alert("Error", e?.message || "Invalid or expired code.");
     } finally {
@@ -116,231 +135,398 @@ export default function ForgotPasswordScreen() {
     }
   };
 
-  return (
-    <SafeAreaView style={styles.container} edges={["top"]}>
-      <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() => (step === "verify" ? setStep("request") : router.back())}
-          hitSlop={10}
-        >
-          <Ionicons name="chevron-back" size={24} color={theme.colors.textPrimary} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>
-          {step === "request" ? "FORGOT PASSWORD" : "RESET PASSWORD"}
-        </Text>
-        <View style={{ width: 24 }} />
-      </View>
+  // ---------- responsive sizing (mirrors login) ----------
+  const cw = box.w;
+  const ch = box.h;
+  const SCROLL_PAD_X = 8;
+  const avail = Math.max(0, cw - SCROLL_PAD_X * 2);
+  const WORK_W = Math.min(avail, 430);
 
-      <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-        style={{ flex: 1 }}
+  const logoW = Math.min(WORK_W * 0.3, 132);
+  const logoH = logoW / AR.logo;
+  const headerSize = clamp(WORK_W * 0.105, 30, 42);
+
+  const panelW = WORK_W;
+  // The skin's metal rails are a fixed FRACTION of the stretched art, so the
+  // padding scales with the final panel height (content sits in the middle).
+  const TOP_FRAC = 0.13;
+  const BOT_FRAC = 0.18;
+  const fallbackInnerH = step === "request" ? 235 : 430;
+  const innerH = measuredInnerH > 0 ? measuredInnerH : fallbackInnerH;
+  const panelH = innerH / (1 - TOP_FRAC - BOT_FRAC);
+  const padTop = panelH * TOP_FRAC;
+  const padBot = panelH * BOT_FRAC;
+  const padX = panelW * 0.11;
+  const contentW = panelW - padX * 2;
+  const fieldInset = clamp(contentW * 0.04, 8, 16);
+  const fieldW = contentW - fieldInset * 2;
+
+  const inputH = clamp(WORK_W * 0.125, 46, 54);
+  const btnH = clamp(WORK_W * 0.145, 52, 60);
+  const innerGap = clamp(WORK_W * 0.03, 11, 15);
+
+  const topPad = clamp(ch * 0.04, 16, 46);
+  const headerGap = clamp(ch * 0.016, 10, 16);
+
+  // ---------- font gate ----------
+  if (!fontsLoaded && !fontError) {
+    return (
+      <ImageBackground source={SKIN.bg} style={styles.bg} resizeMode="cover">
+        <View style={styles.veil} />
+        <View style={styles.loading}>
+          <ActivityIndicator color={TBV.orange} size="large" />
+        </View>
+      </ImageBackground>
+    );
+  }
+
+  const goBack = () => (step === "verify" ? (setStep("request"), setMeasuredInnerH(0)) : router.back());
+
+  const PrimaryButton = ({
+    label,
+    icon,
+    onPress,
+  }: {
+    label: string;
+    icon: keyof typeof Ionicons.glyphMap;
+    onPress: () => void;
+  }) => (
+    <Pressable onPress={onPress} disabled={busy} style={{ marginTop: innerGap * 1.2 }}>
+      <ImageBackground
+        source={SKIN.btnPrimary}
+        style={{ width: contentW, height: btnH, justifyContent: "center", alignItems: "center" }}
+        imageStyle={styles.fillImage}
+        resizeMode="stretch"
       >
-        <ScrollView
-          contentContainerStyle={styles.body}
-          keyboardShouldPersistTaps="handled"
+        {busy ? (
+          <ActivityIndicator color={TBV.ink} />
+        ) : (
+          <View style={styles.row}>
+            <Ionicons name={icon} size={18} color={TBV.ink} />
+            <Text style={styles.submitText}>{label}</Text>
+          </View>
+        )}
+      </ImageBackground>
+    </Pressable>
+  );
+
+  return (
+    <ImageBackground source={SKIN.bg} style={styles.bg} resizeMode="cover">
+      <View style={styles.veil} />
+      <SafeAreaView style={{ flex: 1 }} edges={["top", "bottom"]}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+          style={{ flex: 1 }}
         >
-          {step === "request" ? (
-            <>
-              <Text style={styles.intro}>
-                Enter the email address on your account. We&apos;ll send you a 6-digit
-                code so you can set a new password.
-              </Text>
+          <View
+            style={{ flex: 1 }}
+            onLayout={(e) => {
+              const { width, height } = e.nativeEvent.layout;
+              if (Math.abs(width - box.w) > 1 || Math.abs(height - box.h) > 1)
+                setBox({ w: width, h: height });
+            }}
+          >
+            <ScrollView
+              contentContainerStyle={[
+                styles.scroll,
+                { minHeight: ch, gap: headerGap, paddingTop: topPad, paddingBottom: headerGap },
+              ]}
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false}
+            >
+              {/* logo */}
+              <Image source={SKIN.masterLogo} style={{ width: logoW, height: logoH }} resizeMode="contain" />
 
-              <Text style={styles.label}>EMAIL</Text>
-              <TextInput
-                testID="fp-email"
-                style={styles.input}
-                placeholder="you@example.com"
-                placeholderTextColor={theme.colors.textMuted}
-                value={email}
-                onChangeText={setEmail}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                autoCorrect={false}
+              {/* industrial header (native steel wordmark styling) */}
+              <TbvHeader
+                title={step === "request" ? "FORGOT PASSWORD" : "RESET PASSWORD"}
+                size={headerSize}
+                onBack={goBack}
+                style={{ width: WORK_W }}
               />
 
-              <TouchableOpacity
-                style={[styles.submit, busy && { opacity: 0.6 }]}
-                onPress={submitEmail}
-                disabled={busy}
-                testID="fp-send-code"
-              >
-                {busy ? (
-                  <ActivityIndicator color="#000" />
-                ) : (
-                  <>
-                    <Ionicons name="mail" size={16} color="#000" />
-                    <Text style={styles.submitText}>SEND CODE</Text>
-                  </>
-                )}
-              </TouchableOpacity>
-            </>
-          ) : (
-            <>
-              <Text style={styles.intro}>
-                Enter the 6-digit code we sent to{" "}
-                <Text style={{ color: theme.colors.accent, fontWeight: "800" }}>
-                  {email}
-                </Text>
-                , then choose a new password.
-              </Text>
-
-              <Text style={styles.label}>6-DIGIT CODE</Text>
-              <TextInput
-                testID="fp-code"
-                style={[styles.input, styles.codeInput]}
-                placeholder="000000"
-                placeholderTextColor={theme.colors.textMuted}
-                value={code}
-                onChangeText={(v) => setCode(v.replace(/[^0-9]/g, "").slice(0, 6))}
-                keyboardType="number-pad"
-                maxLength={6}
-                autoFocus
-              />
-
-              <Text style={styles.label}>NEW PASSWORD</Text>
-              <View style={styles.pwWrap}>
-                <TextInput
-                  testID="fp-new-password"
-                  style={[styles.input, { flex: 1, marginBottom: 0 }]}
-                  placeholder="At least 6 characters"
-                  placeholderTextColor={theme.colors.textMuted}
-                  value={newPassword}
-                  onChangeText={setNewPassword}
-                  secureTextEntry={!showPw}
-                  autoCapitalize="none"
-                  autoCorrect={false}
+              {/* ===================== PANEL ===================== */}
+              <View style={{ width: panelW, height: panelH, overflow: "hidden" }}>
+                <Image
+                  source={SKIN.panel}
+                  style={{ position: "absolute", top: 0, left: 0, width: panelW, height: panelH }}
+                  resizeMode="stretch"
                 />
-                <TouchableOpacity
-                  onPress={() => setShowPw((s) => !s)}
-                  style={styles.pwToggle}
-                  hitSlop={10}
+                <View
+                  style={{ flex: 1, paddingHorizontal: padX, paddingTop: padTop, paddingBottom: padBot }}
                 >
-                  <Ionicons
-                    name={showPw ? "eye-off" : "eye"}
-                    size={20}
-                    color={theme.colors.textMuted}
-                  />
-                </TouchableOpacity>
+                  {/* build stamp so the new screen is easy to confirm */}
+                  <View pointerEvents="none" style={styles.stampAnchor}>
+                    <View style={styles.stampInline}>
+                      <Text numberOfLines={1} style={styles.stampHighlight}>FP·1</Text>
+                      <Text numberOfLines={1} style={styles.stampGroove}>FP·1</Text>
+                    </View>
+                  </View>
+
+                  <View
+                    style={styles.panelInner}
+                    onLayout={(e) => {
+                      const h = e.nativeEvent.layout.height;
+                      if (Math.abs(h - measuredInnerH) > 0.5) setMeasuredInnerH(h);
+                    }}
+                  >
+                    {step === "request" ? (
+                      <>
+                        <Text style={styles.subhead}>RESET PASSWORD</Text>
+                        <Text style={styles.intro}>
+                          Enter the email associated with your account and we&apos;ll send a 6-digit
+                          reset code.
+                        </Text>
+
+                        <View style={[styles.fieldGroup, { marginTop: innerGap, paddingHorizontal: fieldInset }]}>
+                          <Text style={styles.label}>EMAIL ADDRESS</Text>
+                          <ImageBackground
+                            source={SKIN.input}
+                            style={{ width: fieldW, height: inputH, justifyContent: "center" }}
+                            imageStyle={styles.fillImage}
+                            resizeMode="stretch"
+                          >
+                            <View style={styles.inputInner}>
+                              <Ionicons name="mail" size={18} color={TBV.orange} />
+                              <TextInput
+                                testID="fp-email"
+                                style={styles.input}
+                                placeholder="you@example.com"
+                                placeholderTextColor={TBV.placeholder}
+                                value={email}
+                                onChangeText={setEmail}
+                                keyboardType="email-address"
+                                autoCapitalize="none"
+                                autoCorrect={false}
+                              />
+                            </View>
+                          </ImageBackground>
+                        </View>
+
+                        <PrimaryButton label="SEND RESET CODE" icon="mail" onPress={submitEmail} />
+                      </>
+                    ) : (
+                      <>
+                        <Text style={styles.intro}>
+                          Enter the 6-digit code we sent to{" "}
+                          <Text style={styles.introEmail}>{email}</Text>, then choose a new password.
+                        </Text>
+
+                        {/* code */}
+                        <View style={[styles.fieldGroup, { marginTop: innerGap, paddingHorizontal: fieldInset }]}>
+                          <Text style={styles.label}>6-DIGIT CODE</Text>
+                          <ImageBackground
+                            source={SKIN.input}
+                            style={{ width: fieldW, height: inputH, justifyContent: "center" }}
+                            imageStyle={styles.fillImage}
+                            resizeMode="stretch"
+                          >
+                            <TextInput
+                              testID="fp-code"
+                              style={[styles.input, styles.codeInput]}
+                              placeholder="000000"
+                              placeholderTextColor={TBV.placeholder}
+                              value={code}
+                              onChangeText={(v) => setCode(v.replace(/[^0-9]/g, "").slice(0, 6))}
+                              keyboardType="number-pad"
+                              maxLength={6}
+                            />
+                          </ImageBackground>
+                        </View>
+
+                        {/* new password */}
+                        <View style={[styles.fieldGroup, { marginTop: innerGap, paddingHorizontal: fieldInset }]}>
+                          <Text style={styles.label}>NEW PASSWORD</Text>
+                          <ImageBackground
+                            source={SKIN.input}
+                            style={{ width: fieldW, height: inputH, justifyContent: "center" }}
+                            imageStyle={styles.fillImage}
+                            resizeMode="stretch"
+                          >
+                            <View style={styles.inputInner}>
+                              <Ionicons name="lock-closed" size={18} color={TBV.orange} />
+                              <TextInput
+                                testID="fp-new-password"
+                                style={styles.input}
+                                placeholder="At least 6 characters"
+                                placeholderTextColor={TBV.placeholder}
+                                value={newPassword}
+                                onChangeText={setNewPassword}
+                                secureTextEntry={!showPw}
+                                autoCapitalize="none"
+                                autoCorrect={false}
+                              />
+                              <TouchableOpacity onPress={() => setShowPw((s) => !s)} hitSlop={10}>
+                                <Ionicons
+                                  name={showPw ? "eye-off" : "eye"}
+                                  size={18}
+                                  color={TBV.textMuted}
+                                />
+                              </TouchableOpacity>
+                            </View>
+                          </ImageBackground>
+                        </View>
+
+                        {/* confirm password */}
+                        <View style={[styles.fieldGroup, { marginTop: innerGap, paddingHorizontal: fieldInset }]}>
+                          <Text style={styles.label}>CONFIRM NEW PASSWORD</Text>
+                          <ImageBackground
+                            source={SKIN.input}
+                            style={{ width: fieldW, height: inputH, justifyContent: "center" }}
+                            imageStyle={styles.fillImage}
+                            resizeMode="stretch"
+                          >
+                            <View style={styles.inputInner}>
+                              <Ionicons name="lock-closed" size={18} color={TBV.orange} />
+                              <TextInput
+                                testID="fp-confirm-password"
+                                style={styles.input}
+                                placeholder="Re-enter new password"
+                                placeholderTextColor={TBV.placeholder}
+                                value={confirmPassword}
+                                onChangeText={setConfirmPassword}
+                                secureTextEntry={!showPw}
+                                autoCapitalize="none"
+                                autoCorrect={false}
+                              />
+                            </View>
+                          </ImageBackground>
+                        </View>
+
+                        <PrimaryButton label="RESET PASSWORD" icon="checkmark-circle" onPress={submitCode} />
+
+                        <TouchableOpacity style={styles.resendWrap} onPress={resendCode} disabled={busy} hitSlop={8}>
+                          <Text style={styles.resendText}>Didn&apos;t get it?  RESEND CODE</Text>
+                        </TouchableOpacity>
+                      </>
+                    )}
+
+                    {/* BACK TO SIGN IN */}
+                    <TouchableOpacity
+                      style={styles.backLink}
+                      onPress={() => router.replace("/login")}
+                      hitSlop={10}
+                      testID="fp-back-to-signin"
+                    >
+                      <Text style={styles.backLinkText}>BACK TO SIGN IN</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
               </View>
-
-              <Text style={styles.label}>CONFIRM NEW PASSWORD</Text>
-              <TextInput
-                testID="fp-confirm-password"
-                style={styles.input}
-                placeholder="Re-enter your new password"
-                placeholderTextColor={theme.colors.textMuted}
-                value={confirmPassword}
-                onChangeText={setConfirmPassword}
-                secureTextEntry={!showPw}
-                autoCapitalize="none"
-                autoCorrect={false}
-              />
-
-              <TouchableOpacity
-                style={[styles.submit, busy && { opacity: 0.6 }]}
-                onPress={submitCode}
-                disabled={busy}
-                testID="fp-reset"
-              >
-                {busy ? (
-                  <ActivityIndicator color="#000" />
-                ) : (
-                  <>
-                    <Ionicons name="checkmark-circle" size={16} color="#000" />
-                    <Text style={styles.submitText}>RESET PASSWORD</Text>
-                  </>
-                )}
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={{ alignSelf: "center", marginTop: 18 }}
-                onPress={resendCode}
-                disabled={busy}
-              >
-                <Text style={{ color: theme.colors.accent, fontSize: 10, fontWeight: "700" }}>
-                  Didn&apos;t get it? Resend code
-                </Text>
-              </TouchableOpacity>
-            </>
-          )}
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+            </ScrollView>
+          </View>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
+    </ImageBackground>
   );
 }
 
-const styles = themedStyles((c) => ({
-  container: { flex: 1, backgroundColor: c.bg },
-  header: {
+const styles = StyleSheet.create({
+  bg: { flex: 1, backgroundColor: "#0A0A0A" },
+  veil: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(0,0,0,0.38)" },
+  loading: { flex: 1, alignItems: "center", justifyContent: "center" },
+
+  scroll: { flexGrow: 1, alignItems: "center", justifyContent: "flex-start", paddingHorizontal: 8 },
+
+  panelInner: { width: "100%" },
+
+  subhead: {
+    alignSelf: "center",
+    fontFamily: "BebasNeue_400Regular",
+    fontSize: 18,
+    letterSpacing: 2,
+    color: TBV.orange,
+    marginBottom: 4,
+  },
+  intro: {
+    color: TBV.textMuted,
+    fontFamily: "Exo2_400Regular",
+    fontSize: 12.5,
+    lineHeight: 17,
+    textAlign: "center",
+  },
+  introEmail: { color: TBV.orange, fontFamily: "Exo2_700Bold" },
+
+  fieldGroup: { width: "100%" },
+  label: {
+    fontFamily: "Rajdhani_700Bold",
+    fontSize: 11,
+    letterSpacing: 2,
+    color: TBV.steelDim,
+    paddingLeft: 8,
+    marginBottom: 2,
+  },
+  inputInner: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: c.border,
-  },
-  headerTitle: {
-    color: c.textPrimary,
-    fontSize: 10,
-    fontWeight: "900",
-    letterSpacing: 2,
-  },
-  body: { padding: 20, paddingBottom: 40 },
-  intro: {
-    color: c.textSecondary,
-    fontSize: 10,
-    lineHeight: 14,
-    marginBottom: 22,
-  },
-  label: {
-    color: c.accent,
-    fontSize: 7,
-    fontWeight: "900",
-    letterSpacing: 1.5,
-    marginTop: 14,
-    marginBottom: 6,
+    gap: 9,
+    paddingHorizontal: 15,
+    height: "100%",
   },
   input: {
-    backgroundColor: c.bgSecondary,
-    color: c.textPrimary,
-    borderWidth: 1,
-    borderColor: c.border,
-    borderRadius: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    fontSize: 11,
-  
-    ...(theme.elevation.input as object),
+    flex: 1,
+    color: TBV.text,
+    fontFamily: "Exo2_500Medium",
+    fontSize: 15,
+    paddingVertical: 0,
+    includeFontPadding: false,
   },
   codeInput: {
-    fontSize: 19,
-    letterSpacing: 10,
     textAlign: "center",
-    fontWeight: "900",
-    fontFamily: Platform.select({ ios: "Menlo", android: "monospace", default: "monospace" }),
+    fontSize: 22,
+    letterSpacing: 8,
+    fontFamily: "BebasNeue_400Regular",
+    paddingHorizontal: 15,
   },
-  pwWrap: { flexDirection: "row", alignItems: "center" },
-  pwToggle: {
-    position: "absolute",
-    right: 10,
-    padding: 6,
-  },
-  submit: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    backgroundColor: c.accent,
-    paddingVertical: 14,
-    borderRadius: 8,
-    marginTop: 20,
-  },
+
   submitText: {
-    color: "#000",
-    fontSize: 10,
-    fontWeight: "900",
-    letterSpacing: 2,
+    fontFamily: "BebasNeue_400Regular",
+    fontSize: 22,
+    letterSpacing: 2.5,
+    color: "#0A0A0A",
   },
-}));
+
+  resendWrap: { alignSelf: "center", marginTop: 14 },
+  resendText: {
+    fontFamily: "Rajdhani_600SemiBold",
+    fontSize: 12,
+    letterSpacing: 1,
+    color: TBV.textMuted,
+  },
+
+  backLink: { alignSelf: "center", marginTop: 16, paddingVertical: 2 },
+  backLinkText: {
+    fontFamily: "Rajdhani_700Bold",
+    fontSize: 13,
+    letterSpacing: 2,
+    color: TBV.orange,
+  },
+
+  // build stamp (debossed) — top band of panel
+  stampAnchor: { position: "absolute", top: 2, left: 0, right: 0, alignItems: "center", zIndex: 5 },
+  stampInline: { transform: [{ rotate: "-2deg" }], opacity: 0.95 },
+  stampGroove: {
+    color: TBV.orangeDeep,
+    fontFamily: "BebasNeue_400Regular",
+    fontSize: 14,
+    letterSpacing: 1,
+    textShadowColor: "rgba(0,0,0,0.75)",
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 1.5,
+  },
+  stampHighlight: {
+    position: "absolute",
+    left: 0,
+    top: 0,
+    color: "rgba(0,0,0,0.9)",
+    fontFamily: "BebasNeue_400Regular",
+    fontSize: 14,
+    letterSpacing: 1,
+    textShadowColor: "rgba(0,0,0,0.85)",
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 2.5,
+  },
+
+  fillImage: { width: "100%", height: "100%" },
+  row: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8 },
+});
