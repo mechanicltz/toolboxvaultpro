@@ -51,11 +51,10 @@ const SKIN = {
   btnPrimary:   require("../assets/tbv-v2/cropped/btn_primary.png"),
   btnSecondary: require("../assets/tbv-v2/cropped/btn_secondary.png"),
   masterLogo:   require("../assets/tbv-v2/cropped/logo.png"),
-  wordmark:     require("../assets/tbv-v2/cropped/wordmark.png"),
 };
 
 // True aspect ratios of the cropped graphics (w / h)
-const AR = { logo: 0.968, wordmark: 2.4, card: 2.429 };
+const AR = { logo: 0.968, card: 2.429 };
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -153,9 +152,10 @@ export default function LoginScreen() {
   const availH = Math.max(480, winH - insets.top - insets.bottom);
   const isTablet = winW >= 600;
 
-  // Brand sizing (driven by usable height so it always fits the 25% region)
-  const logoH     = availH * 0.135;
-  const wordmarkH = availH * 0.058;
+  // Brand sizing — only the master emblem is shown (no wordmark).
+  // Driven by the smaller of height/width so it scales to EVERY device
+  // and never overflows its region on short or narrow screens.
+  const logoH = Math.min(availH * 0.215, winW * 0.5);
 
   // Panel geometry
   const panelW = isTablet ? Math.min(540, winW * 0.6) : winW * 0.88;
@@ -188,11 +188,6 @@ export default function LoginScreen() {
               <Image
                 source={SKIN.masterLogo}
                 style={{ height: logoH, width: logoH * AR.logo }}
-                resizeMode="contain"
-              />
-              <Image
-                source={SKIN.wordmark}
-                style={{ height: wordmarkH, width: wordmarkH * AR.wordmark, marginTop: 6 }}
                 resizeMode="contain"
               />
             </View>
@@ -467,7 +462,7 @@ const styles = StyleSheet.create({
   regionStack: { flex: 1, paddingHorizontal: 8 },
 
   // ---- regions ----
-  logoArea:    { flex: 25, alignItems: "center", justifyContent: "flex-end", paddingBottom: 4 },
+  logoArea:    { flex: 25, alignItems: "center", justifyContent: "center", paddingBottom: 2 },
   taglineArea: { flex: 5,  alignItems: "center", justifyContent: "center" },
   panelArea:   { flex: 55, alignItems: "center", justifyContent: "center" },
   footerArea:  { flex: 15, alignItems: "center", justifyContent: "center" },
