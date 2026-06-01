@@ -44,7 +44,7 @@ import {
 // =====================================================================
 const SKIN = {
   bg:           require("../assets/tbv-v2/trimmed/Backgrounds/tbv_background_industrial_dark.png"),
-  panel:        require("../assets/tbv-v2/trimmed/Panels/tbv_login_panel_dark_v2.png"),
+  panel:        require("../assets/tbv-v2/trimmed/Panels/tbv_login_panel_dark.png"),
   card:         require("../assets/tbv-v2/trimmed/Cards/tbv_card_dark.png"),
   tabActive:    require("../assets/tbv-v2/trimmed/Tabs/tbv_tab_active_orange.png"),
   tabInactive:  require("../assets/tbv-v2/trimmed/Tabs/tbv_tab_inactive_dark.png"),
@@ -275,8 +275,8 @@ export default function LoginScreen() {
         pointerEvents="none"
         style={[styles.stampWrap, { top: insets.top + 8, right: 22 }]}
       >
-        <Text numberOfLines={1} style={styles.stampHighlight}>#015</Text>
-        <Text numberOfLines={1} style={styles.stampGroove}>#015</Text>
+        <Text numberOfLines={1} style={styles.stampHighlight}>#016</Text>
+        <Text numberOfLines={1} style={styles.stampGroove}>#016</Text>
       </View>
 
       <SafeAreaView style={{ flex: 1 }} edges={["top", "bottom"]}>
