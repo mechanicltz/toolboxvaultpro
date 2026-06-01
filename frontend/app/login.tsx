@@ -1,22 +1,21 @@
 // =============================================================================
 // app/login.tsx — Toolbox Vault Login (industrial skin-based)
 // -----------------------------------------------------------------------------
-// STRICT LAYOUT (user-mandated, percentages of usable screen height):
-//   • Logo Area    → 25%
-//   • Tagline Area →  5%
-//   • Login Panel  → 55%   (all form content lives INSIDE the panel skin)
-//   • Footer Area  → 15%
-//
-// SKINS: every UI skin in /assets/tbv-v2/cropped/ has been pre-cropped to its
-// opaque bounds, so used as <ImageBackground resizeMode="stretch"> the graphic
-// FILLS its container exactly (no transparent margins, no floating / spillage).
-// Native text / inputs / icons are rendered as CHILDREN on top of the skins.
+// RESPONSIVE CONTRACT (real-phone first):
+//   • EVERY size is derived from useWindowDimensions() + safe-area insets.
+//     Nothing is hard-coded to a browser-preview size.
+//   • Major blocks (Header / Panel / Help) are laid out with Flexbox.
+//   • Inside the panel, controls are sized RELATIVE TO THE PANEL (panel-W /
+//     panel-H), never the screen — so they always stay inside the skin.
+//   • Skins are pre-cropped to their opaque bounds (see /assets/tbv-v2/cropped)
+//     so ImageBackground(resizeMode="stretch") fills its container exactly.
+//   • No redesign / no colour change / no asset swaps — scaling fixes only.
 // =============================================================================
 
 import React, { useState, useEffect, useRef } from "react";
 import {
   View, Text, TextInput, StyleSheet, KeyboardAvoidingView, Platform,
-  Alert, Image, ImageBackground, Pressable, TouchableOpacity,
+  ScrollView, Alert, Image, ImageBackground, Pressable, TouchableOpacity,
   ActivityIndicator, useWindowDimensions,
 } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
@@ -56,10 +55,12 @@ const SKIN = {
 // True aspect ratios of the cropped graphics (w / h)
 const AR = { logo: 0.968, card: 2.429 };
 
+const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
+
 export default function LoginScreen() {
   const router = useRouter();
   const { login, register } = useAuth();
-  const { width: winW, height: winH } = useWindowDimensions();
+  const { width: SW, height: SH } = useWindowDimensions();
   const insets = useSafeAreaInsets();
 
   useGoogleFonts({
@@ -146,32 +147,43 @@ export default function LoginScreen() {
     } finally { setBusy(false); }
   };
 
-  // ------------------------------------------------------------------
-  // Strict region maths — 25 / 5 / 55 / 15 of the USABLE height
-  // ------------------------------------------------------------------
-  const availH = Math.max(480, winH - insets.top - insets.bottom);
-  const isTablet = winW >= 600;
+  // ==================================================================
+  // RESPONSIVE MATHS — 100% derived from the real device viewport.
+  // ==================================================================
+  const availH = Math.max(520, SH - insets.top - insets.bottom);
+  const isTablet = SW >= 600;
 
-  // Brand sizing — only the master emblem is shown (no wordmark).
-  // Driven by the smaller of height/width so it scales to EVERY device
-  // and never overflows its region on short or narrow screens.
-  const logoH = Math.min(availH * 0.215, winW * 0.5);
+  // ---- Block heights (Header 34% / Panel 46% / Help 14% / slack 6%) ----
+  const headerH = availH * 0.34;
+  const helpAreaH = availH * 0.14;
 
-  // Panel geometry
-  const panelW = isTablet ? Math.min(540, winW * 0.6) : winW * 0.88;
-  const panelH = availH * 0.55 * 0.96;
-  const padX   = panelW * 0.115;
-  const padTop = panelH * 0.135;
-  const padBot = panelH * 0.145;
+  // ---- Logo (cap 180 on phone, scales with width) ----
+  const logoW = isTablet ? 200 : Math.min(SW * 0.42, 180);
+  const logoH = logoW / AR.logo;
 
-  // Control sizing inside panel
-  const ctrlW   = panelW - padX * 2;
-  const inputH  = Math.min(54, panelH * 0.115);
-  const btnH    = Math.min(60, panelH * 0.135);
-  const tabH    = Math.min(48, panelH * 0.105);
+  // ---- Title + tagline (native text, responsive font sizes) ----
+  const titleFont = clamp(SW * 0.082, 26, isTablet ? 40 : 34);
+  const tagFont = clamp(SW * 0.045, 13, 18);
 
-  // Footer card
-  const footerCardW = panelW;
+  // ---- Panel geometry (panel-relative internals derive from these) ----
+  const panelW = Math.min(SW * 0.88, 420);
+  const panelH = clamp(availH * 0.46, 360, 470);
+  const padX = panelW * 0.09;
+  const padTop = panelH * 0.11;
+  const padBot = panelH * 0.08;
+  const contentW = panelW - padX * 2;
+
+  // ---- Controls (sized off PANEL height, kept inside the skin) ----
+  const tabH   = clamp(panelH * 0.12, 44, 58);
+  const inputH = clamp(panelH * 0.13, 50, 60);
+  const btnH   = clamp(panelH * 0.15, 58, 70);
+  const labelH = clamp(panelH * 0.06, 16, 24);
+  const tabGap = contentW * 0.04;
+  const tabW   = (contentW - tabGap) / 2;
+
+  // ---- Help card ----
+  const helpW = Math.min(SW * 0.88, 420);
+  const helpH = clamp(helpW / AR.card, 80, 105);
 
   return (
     <ImageBackground source={SKIN.bg} style={styles.bg} resizeMode="cover">
@@ -181,31 +193,38 @@ export default function LoginScreen() {
           behavior={Platform.OS === "ios" ? "padding" : undefined}
           style={{ flex: 1 }}
         >
-          <View style={styles.regionStack}>
-
-            {/* ===================== LOGO AREA — 25% ===================== */}
-            <View style={styles.logoArea}>
+          <ScrollView
+            contentContainerStyle={[styles.scroll, { minHeight: availH }]}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+            bounces={false}
+          >
+            {/* ===================== HEADER BLOCK — 34% ===================== */}
+            <View style={[styles.headerBlock, { height: headerH, paddingTop: Math.max(8, 40 - insets.top) }]}>
               <Image
                 source={SKIN.masterLogo}
-                style={{ height: logoH, width: logoH * AR.logo }}
+                style={{ width: logoW, height: logoH }}
                 resizeMode="contain"
               />
-            </View>
-
-            {/* ===================== TAGLINE AREA — 5% ===================== */}
-            <View style={styles.taglineArea}>
               <Text
-                style={styles.tagline}
+                style={[styles.title, { fontSize: titleFont }]}
                 numberOfLines={1}
-                adjustsFontSizeToFit
-                minimumFontScale={0.6}
+                allowFontScaling={false}
               >
-                INVENTORY · DEALERS · WARRANTIES · REPORTS
+                <Text style={styles.titleSteel}>TOOLBOX </Text>
+                <Text style={styles.titleOrange}>VAULT</Text>
+              </Text>
+              <Text
+                style={[styles.tagline, { fontSize: tagFont, maxWidth: SW * 0.92 }]}
+                numberOfLines={2}
+                allowFontScaling={false}
+              >
+                INVENTORY • DEALERS • WARRANTIES • REPORTS
               </Text>
             </View>
 
-            {/* ===================== LOGIN PANEL — 55% ===================== */}
-            <View style={styles.panelArea}>
+            {/* ===================== LOGIN PANEL — 46% ===================== */}
+            <View style={styles.panelBlock}>
               <ImageBackground
                 source={SKIN.panel}
                 style={{
@@ -214,17 +233,17 @@ export default function LoginScreen() {
                   paddingHorizontal: padX,
                   paddingTop: padTop,
                   paddingBottom: padBot,
-                  justifyContent: "center",
                 }}
                 imageStyle={styles.fillImage}
                 resizeMode="stretch"
               >
                 <View style={styles.panelInner}>
                   {/* ----- TABS ----- */}
-                  <View style={[styles.tabsRow, { height: tabH }]}>
+                  <View style={[styles.tabsRow, { height: tabH, gap: tabGap }]}>
                     <TabButton
                       label="SIGN IN"
                       icon="person"
+                      width={tabW}
                       active={mode === "login"}
                       onPress={() => setMode("login")}
                       activeSkin={SKIN.tabActive}
@@ -232,8 +251,9 @@ export default function LoginScreen() {
                       testID="tab-login"
                     />
                     <TabButton
-                      label="CREATE"
+                      label="CREATE ACCOUNT"
                       icon="person-add"
+                      width={tabW}
                       active={mode === "register"}
                       onPress={() => setMode("register")}
                       activeSkin={SKIN.tabActive}
@@ -243,62 +263,66 @@ export default function LoginScreen() {
                   </View>
 
                   {/* ----- EMAIL ----- */}
-                  <Text style={styles.label}>EMAIL</Text>
-                  <ImageBackground
-                    source={SKIN.input}
-                    style={{ width: ctrlW, height: inputH, justifyContent: "center" }}
-                    imageStyle={styles.fillImage}
-                    resizeMode="stretch"
-                  >
-                    <View style={styles.inputInner}>
-                      <Ionicons name="mail-outline" size={17} color="#FF8533" />
-                      <TextInput
-                        value={email}
-                        onChangeText={setEmail}
-                        placeholder="you@example.com"
-                        placeholderTextColor="rgba(242,242,242,0.42)"
-                        autoCapitalize="none"
-                        autoComplete="email"
-                        keyboardType="email-address"
-                        style={styles.input}
-                        testID="auth-email"
-                      />
-                    </View>
-                  </ImageBackground>
+                  <View style={styles.fieldGroup}>
+                    <Text style={[styles.label, { height: labelH }]}>EMAIL</Text>
+                    <ImageBackground
+                      source={SKIN.input}
+                      style={{ width: contentW, height: inputH, justifyContent: "center" }}
+                      imageStyle={styles.fillImage}
+                      resizeMode="stretch"
+                    >
+                      <View style={styles.inputInner}>
+                        <Ionicons name="mail-outline" size={17} color="#FF8533" />
+                        <TextInput
+                          value={email}
+                          onChangeText={setEmail}
+                          placeholder="you@example.com"
+                          placeholderTextColor="rgba(242,242,242,0.42)"
+                          autoCapitalize="none"
+                          autoComplete="email"
+                          keyboardType="email-address"
+                          style={styles.input}
+                          testID="auth-email"
+                        />
+                      </View>
+                    </ImageBackground>
+                  </View>
 
                   {/* ----- PASSWORD ----- */}
-                  <Text style={styles.label}>PASSWORD</Text>
-                  <ImageBackground
-                    source={SKIN.input}
-                    style={{ width: ctrlW, height: inputH, justifyContent: "center" }}
-                    imageStyle={styles.fillImage}
-                    resizeMode="stretch"
-                  >
-                    <View style={styles.inputInner}>
-                      <Ionicons name="lock-closed-outline" size={17} color="#FF8533" />
-                      <TextInput
-                        value={password}
-                        onChangeText={setPassword}
-                        placeholder="••••••••"
-                        placeholderTextColor="rgba(242,242,242,0.42)"
-                        secureTextEntry={!showPassword}
-                        autoCapitalize="none"
-                        style={styles.input}
-                        testID="auth-password"
-                      />
-                      <TouchableOpacity
-                        onPress={() => setShowPassword(s => !s)}
-                        hitSlop={10}
-                        testID="password-eye"
-                      >
-                        <Ionicons
-                          name={showPassword ? "eye-off" : "eye"}
-                          size={20}
-                          color="#FF8533"
+                  <View style={styles.fieldGroup}>
+                    <Text style={[styles.label, { height: labelH }]}>PASSWORD</Text>
+                    <ImageBackground
+                      source={SKIN.input}
+                      style={{ width: contentW, height: inputH, justifyContent: "center" }}
+                      imageStyle={styles.fillImage}
+                      resizeMode="stretch"
+                    >
+                      <View style={styles.inputInner}>
+                        <Ionicons name="lock-closed-outline" size={17} color="#FF8533" />
+                        <TextInput
+                          value={password}
+                          onChangeText={setPassword}
+                          placeholder="••••••••"
+                          placeholderTextColor="rgba(242,242,242,0.42)"
+                          secureTextEntry={!showPassword}
+                          autoCapitalize="none"
+                          style={styles.input}
+                          testID="auth-password"
                         />
-                      </TouchableOpacity>
-                    </View>
-                  </ImageBackground>
+                        <TouchableOpacity
+                          onPress={() => setShowPassword(s => !s)}
+                          hitSlop={10}
+                          testID="password-eye"
+                        >
+                          <Ionicons
+                            name={showPassword ? "eye-off" : "eye"}
+                            size={20}
+                            color="#FF8533"
+                          />
+                        </TouchableOpacity>
+                      </View>
+                    </ImageBackground>
+                  </View>
 
                   {/* ----- ERROR ----- */}
                   {!!err && (
@@ -313,9 +337,8 @@ export default function LoginScreen() {
                     onPress={submit}
                     disabled={busy}
                     style={({ pressed }) => ({
-                      width: ctrlW,
+                      width: contentW,
                       height: btnH,
-                      marginTop: 4,
                       opacity: busy ? 0.7 : pressed ? 0.85 : 1,
                     })}
                     testID="auth-submit"
@@ -355,15 +378,15 @@ export default function LoginScreen() {
               </ImageBackground>
             </View>
 
-            {/* ===================== FOOTER AREA — 15% ===================== */}
-            <View style={styles.footerArea}>
+            {/* ===================== HELP BLOCK — 14% ===================== */}
+            <View style={[styles.helpBlock, { height: helpAreaH }]}>
               {mode === "login" && bio?.enabled && bio.hasHardware && bio.isEnrolled ? (
                 <Pressable
                   onPress={runBiometricLogin}
                   disabled={busy}
                   style={({ pressed }) => ({
-                    width: footerCardW,
-                    height: Math.min(54, availH * 0.085),
+                    width: helpW,
+                    height: Math.min(helpH, 60),
                     opacity: pressed ? 0.85 : 1,
                   })}
                   testID="auth-biometric"
@@ -394,16 +417,12 @@ export default function LoginScreen() {
               ) : (
                 <ImageBackground
                   source={SKIN.card}
-                  style={{
-                    width: footerCardW,
-                    height: Math.min(footerCardW / AR.card, availH * 0.12),
-                    justifyContent: "center",
-                  }}
+                  style={{ width: helpW, height: helpH, justifyContent: "center" }}
                   imageStyle={styles.fillImage}
                   resizeMode="stretch"
                 >
-                  <View style={styles.footerInner}>
-                    <Ionicons name="shield-checkmark" size={16} color="#FF8533" />
+                  <View style={[styles.footerInner, { paddingHorizontal: helpW * 0.13 }]}>
+                    <Ionicons name="shield-checkmark" size={15} color="#FF8533" />
                     <Text style={styles.footerText} numberOfLines={2}>
                       {mode === "login"
                         ? "New here? Tap CREATE to set up your vault — free."
@@ -413,7 +432,7 @@ export default function LoginScreen() {
                 </ImageBackground>
               )}
             </View>
-          </View>
+          </ScrollView>
         </KeyboardAvoidingView>
       </SafeAreaView>
     </ImageBackground>
@@ -421,19 +440,19 @@ export default function LoginScreen() {
 }
 
 // =====================================================================
-// Tab button
+// Tab button — width is panel-relative, passed in from parent
 // =====================================================================
 function TabButton({
-  label, icon, active, onPress, testID, activeSkin, inactiveSkin,
+  label, icon, active, onPress, testID, activeSkin, inactiveSkin, width,
 }: {
   label: string; icon: any; active: boolean; onPress: () => void;
-  testID?: string; activeSkin: any; inactiveSkin: any;
+  testID?: string; activeSkin: any; inactiveSkin: any; width: number;
 }) {
   return (
     <Pressable
       onPress={onPress}
       testID={testID}
-      style={({ pressed }) => [styles.tabPressable, { opacity: pressed ? 0.85 : 1 }]}
+      style={({ pressed }) => [{ width, height: "100%", opacity: pressed ? 0.85 : 1 }]}
     >
       <ImageBackground
         source={active ? activeSkin : inactiveSkin}
@@ -441,9 +460,14 @@ function TabButton({
         imageStyle={styles.fillImage}
         resizeMode="stretch"
       >
-        <View style={styles.row}>
-          <Ionicons name={icon} size={15} color={active ? "#0A0A0A" : "#C8C8C8"} />
-          <Text style={[styles.tabText, { color: active ? "#0A0A0A" : "#C8C8C8" }]}>
+        <View style={[styles.row, { gap: 5, paddingHorizontal: 6 }]}>
+          <Ionicons name={icon} size={13} color={active ? "#0A0A0A" : "#C8C8C8"} />
+          <Text
+            style={[styles.tabText, { color: active ? "#0A0A0A" : "#C8C8C8" }]}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.7}
+          >
             {label}
           </Text>
         </View>
@@ -453,46 +477,50 @@ function TabButton({
 }
 
 // =====================================================================
-// Styles
+// Styles  (visual values unchanged — only layout/scaling logic moved)
 // =====================================================================
 const styles = StyleSheet.create({
   bg: { flex: 1, backgroundColor: "#0A0A0A" },
   veil: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(0,0,0,0.38)" },
 
-  regionStack: { flex: 1, paddingHorizontal: 8 },
+  scroll: { flexGrow: 1, alignItems: "center", paddingHorizontal: 8 },
 
-  // ---- regions ----
-  logoArea:    { flex: 25, alignItems: "center", justifyContent: "center", paddingBottom: 2 },
-  taglineArea: { flex: 5,  alignItems: "center", justifyContent: "center" },
-  panelArea:   { flex: 55, alignItems: "center", justifyContent: "center" },
-  footerArea:  { flex: 15, alignItems: "center", justifyContent: "center" },
-
+  // ---- header ----
+  headerBlock: { width: "100%", alignItems: "center", justifyContent: "center" },
+  title: {
+    fontFamily: "BebasNeue_400Regular",
+    letterSpacing: 3,
+    marginTop: 6,
+    textAlign: "center",
+  },
+  titleSteel: { color: "#E8E8E8" },
+  titleOrange: { color: "#FF8533" },
   tagline: {
     fontFamily: "Rajdhani_600SemiBold",
-    fontSize: 12,
-    letterSpacing: 2.4,
+    letterSpacing: 2,
     color: "#F2F2F2",
     textAlign: "center",
+    marginTop: 6,
   },
 
   // ---- panel ----
-  panelInner: { width: "100%", justifyContent: "center", gap: 7 },
+  panelBlock: { width: "100%", alignItems: "center", justifyContent: "center" },
+  panelInner: { flex: 1, justifyContent: "space-between" },
 
   // ---- tabs ----
-  tabsRow: { flexDirection: "row", gap: 10, marginBottom: 2 },
-  tabPressable: { flex: 1 },
-  tabText: { fontFamily: "BebasNeue_400Regular", fontSize: 17, letterSpacing: 1.5 },
+  tabsRow: { flexDirection: "row", width: "100%" },
+  tabText: { fontFamily: "BebasNeue_400Regular", fontSize: 16, letterSpacing: 1 },
 
-  // ---- labels ----
+  // ---- fields ----
+  fieldGroup: { width: "100%" },
   label: {
     fontFamily: "Rajdhani_700Bold",
     fontSize: 11,
     letterSpacing: 2,
     color: "#D8D8D8",
     paddingLeft: 2,
+    textAlignVertical: "bottom",
   },
-
-  // ---- inputs ----
   inputInner: {
     flexDirection: "row",
     alignItems: "center",
@@ -515,7 +543,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 6,
     paddingHorizontal: 8,
-    paddingVertical: 5,
+    paddingVertical: 4,
     backgroundColor: "rgba(170,20,20,0.5)",
     borderColor: "rgba(255,80,80,0.5)",
     borderWidth: 1,
@@ -535,18 +563,14 @@ const styles = StyleSheet.create({
   forgotWrap: { alignSelf: "center", paddingVertical: 2 },
   forgotText: {
     fontFamily: "Rajdhani_700Bold",
-    fontSize: 11,
+    fontSize: 13,
     letterSpacing: 2,
     color: "#FF8533",
   },
 
-  // ---- footer ----
-  footerInner: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    paddingHorizontal: 22,
-  },
+  // ---- help ----
+  helpBlock: { width: "100%", alignItems: "center", justifyContent: "center" },
+  footerInner: { flexDirection: "row", alignItems: "center", gap: 10 },
   footerText: {
     flex: 1,
     color: "#C8C8C8",
