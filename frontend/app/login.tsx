@@ -1,23 +1,25 @@
 // =============================================================================
-// app/login.tsx — Toolbox Vault Login (industrial skin-based, fully responsive)
+// app/login.tsx — Toolbox Vault Login (industrial skin-based)
 // -----------------------------------------------------------------------------
-// Rules of engagement (per /app/memory/tbv-design-rules.md):
-//   • Use ToolboxVaultAssets skins via <Image> / <ImageBackground> with
-//     resizeMode="stretch". Source PNG aspect ratios are irrelevant — Flexbox
-//     decides final size.
-//   • Native text/icons/inputs are rendered as CHILDREN on top of the skins.
-//   • Layout is 100% Flexbox / gap / padding. NO `top: X%` positioning.
-//   • Phone: full single column. Tablet/web: same component tree, just wider
-//     content max-width — the form panel breathes, never letterboxed.
+// STRICT LAYOUT (user-mandated, percentages of usable screen height):
+//   • Logo Area    → 25%
+//   • Tagline Area →  5%
+//   • Login Panel  → 55%   (all form content lives INSIDE the panel skin)
+//   • Footer Area  → 15%
+//
+// SKINS: every UI skin in /assets/tbv-v2/cropped/ has been pre-cropped to its
+// opaque bounds, so used as <ImageBackground resizeMode="stretch"> the graphic
+// FILLS its container exactly (no transparent margins, no floating / spillage).
+// Native text / inputs / icons are rendered as CHILDREN on top of the skins.
 // =============================================================================
 
-import { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   View, Text, TextInput, StyleSheet, KeyboardAvoidingView, Platform,
-  ScrollView, Alert, Image, ImageBackground, Pressable, TouchableOpacity,
+  Alert, Image, ImageBackground, Pressable, TouchableOpacity,
   ActivityIndicator, useWindowDimensions,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useFonts as useGoogleFonts } from "@expo-google-fonts/bebas-neue";
@@ -37,26 +39,29 @@ import {
 } from "../src/biometric";
 
 // =====================================================================
-// Skin source files (single import block — easy to swap later)
+// Cropped skin sources (opaque-bounds only — fill their containers)
 // =====================================================================
 const SKIN = {
   bg:           require("../assets/tbv-v2/Backgrounds/tbv_background_industrial_dark.png"),
-  panel:        require("../assets/tbv-v2/Panels/tbv_login_panel_dark_v2.png"),
-  card:         require("../assets/tbv-v2/Cards/tbv_card_dark.png"),
-  tabActive:    require("../assets/tbv-v2/Tabs/tbv_tab_active_orange.png"),
-  tabInactive:  require("../assets/tbv-v2/Tabs/tbv_tab_inactive_dark.png"),
-  input:        require("../assets/tbv-v2/Inputs/tbv_input_dark.png"),
-  eyeBtn:       require("../assets/tbv-v2/Inputs/tbv_eye_button_dark.png"),
-  btnPrimary:   require("../assets/tbv-v2/Buttons/tbv_btn_primary_orange.png"),
-  btnSecondary: require("../assets/tbv-v2/Buttons/tbv_btn_secondary_dark.png"),
-  masterLogo:   require("../assets/tbv-v2/Branding/tbv_master_logo_dark_v2.png"),
-  wordmark:     require("../assets/tbv-v2/Branding/tbv_wordmark_dark.png"),
+  panel:        require("../assets/tbv-v2/cropped/panel.png"),
+  card:         require("../assets/tbv-v2/cropped/card.png"),
+  tabActive:    require("../assets/tbv-v2/cropped/tab_active.png"),
+  tabInactive:  require("../assets/tbv-v2/cropped/tab_inactive.png"),
+  input:        require("../assets/tbv-v2/cropped/input.png"),
+  btnPrimary:   require("../assets/tbv-v2/cropped/btn_primary.png"),
+  btnSecondary: require("../assets/tbv-v2/cropped/btn_secondary.png"),
+  masterLogo:   require("../assets/tbv-v2/cropped/logo.png"),
+  wordmark:     require("../assets/tbv-v2/cropped/wordmark.png"),
 };
+
+// True aspect ratios of the cropped graphics (w / h)
+const AR = { logo: 0.968, wordmark: 2.4, card: 2.429 };
 
 export default function LoginScreen() {
   const router = useRouter();
   const { login, register } = useAuth();
-  const { width: winW } = useWindowDimensions();
+  const { width: winW, height: winH } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
 
   useGoogleFonts({
     BebasNeue_400Regular,
@@ -142,198 +147,239 @@ export default function LoginScreen() {
     } finally { setBusy(false); }
   };
 
-  // ---------- Responsive sizing (relative to screen width) -----------------
-  // Per design spec: logo 30-40% of screen width, panel 60-70% of screen width on phones.
+  // ------------------------------------------------------------------
+  // Strict region maths — 25 / 5 / 55 / 15 of the USABLE height
+  // ------------------------------------------------------------------
+  const availH = Math.max(480, winH - insets.top - insets.bottom);
   const isTablet = winW >= 600;
-  const LOGO_W       = Math.min(220, winW * 0.36);
-  const WORDMARK_W   = Math.min(320, winW * 0.55);
-  const PANEL_W      = isTablet ? Math.min(560, winW * 0.55) : winW * 0.86;
-  const FORM_MAX_W   = isTablet ? Math.min(720, winW * 0.78) : 9999;
+
+  // Brand sizing (driven by usable height so it always fits the 25% region)
+  const logoH     = availH * 0.135;
+  const wordmarkH = availH * 0.058;
+
+  // Panel geometry
+  const panelW = isTablet ? Math.min(540, winW * 0.6) : winW * 0.88;
+  const panelH = availH * 0.55 * 0.96;
+  const padX   = panelW * 0.115;
+  const padTop = panelH * 0.135;
+  const padBot = panelH * 0.145;
+
+  // Control sizing inside panel
+  const ctrlW   = panelW - padX * 2;
+  const inputH  = Math.min(54, panelH * 0.115);
+  const btnH    = Math.min(60, panelH * 0.135);
+  const tabH    = Math.min(48, panelH * 0.105);
+
+  // Footer card
+  const footerCardW = panelW;
 
   return (
     <ImageBackground source={SKIN.bg} style={styles.bg} resizeMode="cover">
-      {/* subtle dark veil for legibility */}
       <View style={styles.veil} />
-
       <SafeAreaView style={{ flex: 1 }} edges={["top", "bottom"]}>
         <KeyboardAvoidingView
           behavior={Platform.OS === "ios" ? "padding" : undefined}
           style={{ flex: 1 }}
         >
-          <ScrollView
-            contentContainerStyle={styles.scroll}
-            keyboardShouldPersistTaps="handled"
-            showsVerticalScrollIndicator={false}
-          >
-            <View style={[styles.formColumn, { maxWidth: FORM_MAX_W }]}>
+          <View style={styles.regionStack}>
 
-              {/* ===== BRAND HEADER ===== */}
-              <View style={styles.brand}>
-                <Image source={SKIN.masterLogo}
-                  style={{ width: LOGO_W, height: LOGO_W }}
-                  resizeMode="contain" />
-                <Image source={SKIN.wordmark}
-                  style={{ width: WORDMARK_W, height: WORDMARK_W * 0.28 }}
-                  resizeMode="contain" />
-                <Text style={styles.subtitle} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.5}>
-                  INVENTORY · DEALERS · WARRANTIES · REPORTS
-                </Text>
-              </View>
+            {/* ===================== LOGO AREA — 25% ===================== */}
+            <View style={styles.logoArea}>
+              <Image
+                source={SKIN.masterLogo}
+                style={{ height: logoH, width: logoH * AR.logo }}
+                resizeMode="contain"
+              />
+              <Image
+                source={SKIN.wordmark}
+                style={{ height: wordmarkH, width: wordmarkH * AR.wordmark, marginTop: 6 }}
+                resizeMode="contain"
+              />
+            </View>
 
-              {/* ===== PANEL (login skin v2) ===== */}
+            {/* ===================== TAGLINE AREA — 5% ===================== */}
+            <View style={styles.taglineArea}>
+              <Text
+                style={styles.tagline}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.6}
+              >
+                INVENTORY · DEALERS · WARRANTIES · REPORTS
+              </Text>
+            </View>
+
+            {/* ===================== LOGIN PANEL — 55% ===================== */}
+            <View style={styles.panelArea}>
               <ImageBackground
                 source={SKIN.panel}
-                style={[styles.panel, { width: PANEL_W, alignSelf: "center" }]}
-                imageStyle={{ width: "100%", height: "100%" }}
+                style={{
+                  width: panelW,
+                  height: panelH,
+                  paddingHorizontal: padX,
+                  paddingTop: padTop,
+                  paddingBottom: padBot,
+                  justifyContent: "center",
+                }}
+                imageStyle={styles.fillImage}
                 resizeMode="stretch"
               >
-                <View style={styles.panelContent}>
-                {/* ----- TABS ROW ----- */}
-                <View style={styles.tabsRow}>
-                  <TabButton
-                    label="SIGN IN"
-                    icon="person"
-                    active={mode === "login"}
-                    onPress={() => setMode("login")}
-                    testID="tab-login"
-                  />
-                  <TabButton
-                    label="CREATE ACCOUNT"
-                    icon="person-add"
-                    active={mode === "register"}
-                    onPress={() => setMode("register")}
-                    testID="tab-register"
-                    small
-                  />
-                </View>
-
-                {/* ----- EMAIL ----- */}
-                <FieldLabel>EMAIL</FieldLabel>
-                <InputSkin>
-                  <Ionicons name="mail-outline" size={18} color="#FF8533" />
-                  <TextInput
-                    value={email}
-                    onChangeText={setEmail}
-                    placeholder="you@example.com"
-                    placeholderTextColor="rgba(242,242,242,0.42)"
-                    autoCapitalize="none"
-                    autoComplete="email"
-                    keyboardType="email-address"
-                    style={styles.input}
-                    testID="auth-email"
-                  />
-                </InputSkin>
-
-                {/* ----- PASSWORD ----- */}
-                <FieldLabel>PASSWORD</FieldLabel>
-                <InputSkin>
-                  <Ionicons name="lock-closed-outline" size={18} color="#FF8533" />
-                  <TextInput
-                    value={password}
-                    onChangeText={setPassword}
-                    placeholder=""
-                    secureTextEntry={!showPassword}
-                    autoCapitalize="none"
-                    style={styles.input}
-                    testID="auth-password"
-                  />
-                  <TouchableOpacity
-                    onPress={() => setShowPassword(s => !s)}
-                    hitSlop={8}
-                    testID="password-eye"
-                    style={styles.eyeInline}
-                  >
-                    <Ionicons
-                      name={showPassword ? "eye-off" : "eye"}
-                      size={22}
-                      color="#FF8533"
+                <View style={styles.panelInner}>
+                  {/* ----- TABS ----- */}
+                  <View style={[styles.tabsRow, { height: tabH }]}>
+                    <TabButton
+                      label="SIGN IN"
+                      icon="person"
+                      active={mode === "login"}
+                      onPress={() => setMode("login")}
+                      activeSkin={SKIN.tabActive}
+                      inactiveSkin={SKIN.tabInactive}
+                      testID="tab-login"
                     />
-                  </TouchableOpacity>
-                </InputSkin>
-
-                {/* ----- ERROR ----- */}
-                {!!err && (
-                  <View style={styles.errorRow}>
-                    <Ionicons name="alert-circle" size={14} color="#FF6F61" />
-                    <Text style={styles.errorText} numberOfLines={2}>{err}</Text>
+                    <TabButton
+                      label="CREATE"
+                      icon="person-add"
+                      active={mode === "register"}
+                      onPress={() => setMode("register")}
+                      activeSkin={SKIN.tabActive}
+                      inactiveSkin={SKIN.tabInactive}
+                      testID="tab-register"
+                    />
                   </View>
-                )}
 
-                {/* ----- SUBMIT BUTTON ----- */}
-                <Pressable
-                  onPress={submit}
-                  disabled={busy}
-                  style={({ pressed }) => [
-                    styles.submitWrap,
-                    { opacity: busy ? 0.7 : (pressed ? 0.85 : 1) },
-                  ]}
-                  testID="auth-submit"
-                >
+                  {/* ----- EMAIL ----- */}
+                  <Text style={styles.label}>EMAIL</Text>
                   <ImageBackground
-                    source={SKIN.btnPrimary}
-                    style={styles.submitBg}
-                    imageStyle={styles.skinImage}
+                    source={SKIN.input}
+                    style={{ width: ctrlW, height: inputH, justifyContent: "center" }}
+                    imageStyle={styles.fillImage}
                     resizeMode="stretch"
                   >
-                    {busy ? (
-                      <ActivityIndicator color="#0A0A0A" />
-                    ) : (
-                      <View style={styles.submitContent}>
-                        <Ionicons name="lock-closed" size={20} color="#0A0A0A" />
-                        <Text style={styles.submitText}>
-                          {mode === "register" ? "CREATE ACCOUNT" : "SIGN IN"}
-                        </Text>
-                      </View>
-                    )}
+                    <View style={styles.inputInner}>
+                      <Ionicons name="mail-outline" size={17} color="#FF8533" />
+                      <TextInput
+                        value={email}
+                        onChangeText={setEmail}
+                        placeholder="you@example.com"
+                        placeholderTextColor="rgba(242,242,242,0.42)"
+                        autoCapitalize="none"
+                        autoComplete="email"
+                        keyboardType="email-address"
+                        style={styles.input}
+                        testID="auth-email"
+                      />
+                    </View>
                   </ImageBackground>
-                </Pressable>
 
-                {/* ----- FORGOT PASSWORD ----- */}
-                {mode === "login" && (
-                  <TouchableOpacity
-                    onPress={() => router.push("/forgot-password")}
-                    activeOpacity={0.6}
-                    style={styles.forgotWrap}
-                    hitSlop={12}
-                    testID="forgot-password-link"
+                  {/* ----- PASSWORD ----- */}
+                  <Text style={styles.label}>PASSWORD</Text>
+                  <ImageBackground
+                    source={SKIN.input}
+                    style={{ width: ctrlW, height: inputH, justifyContent: "center" }}
+                    imageStyle={styles.fillImage}
+                    resizeMode="stretch"
                   >
-                    <Text style={styles.forgotText}>FORGOT PASSWORD?</Text>
-                  </TouchableOpacity>
-                )}
+                    <View style={styles.inputInner}>
+                      <Ionicons name="lock-closed-outline" size={17} color="#FF8533" />
+                      <TextInput
+                        value={password}
+                        onChangeText={setPassword}
+                        placeholder="••••••••"
+                        placeholderTextColor="rgba(242,242,242,0.42)"
+                        secureTextEntry={!showPassword}
+                        autoCapitalize="none"
+                        style={styles.input}
+                        testID="auth-password"
+                      />
+                      <TouchableOpacity
+                        onPress={() => setShowPassword(s => !s)}
+                        hitSlop={10}
+                        testID="password-eye"
+                      >
+                        <Ionicons
+                          name={showPassword ? "eye-off" : "eye"}
+                          size={20}
+                          color="#FF8533"
+                        />
+                      </TouchableOpacity>
+                    </View>
+                  </ImageBackground>
 
-                {/* ----- FOOTER NOTE (in card skin) ----- */}
-                <View style={styles.footerCardWrap}>
-                  <Image source={SKIN.card} style={StyleSheet.absoluteFill as any} resizeMode="stretch" />
-                  <View style={styles.footer}>
-                    <Ionicons name="shield-checkmark" size={16} color="#A8A8A8" />
-                    <Text style={styles.footerText} numberOfLines={2}>
-                      {mode === "login"
-                        ? "New user? Tap CREATE ACCOUNT to get started for free."
-                        : "Already have an account? Tap SIGN IN above."}
-                    </Text>
-                  </View>
-                </View>
+                  {/* ----- ERROR ----- */}
+                  {!!err && (
+                    <View style={styles.errorRow}>
+                      <Ionicons name="alert-circle" size={13} color="#FF6F61" />
+                      <Text style={styles.errorText} numberOfLines={2}>{err}</Text>
+                    </View>
+                  )}
+
+                  {/* ----- SUBMIT ----- */}
+                  <Pressable
+                    onPress={submit}
+                    disabled={busy}
+                    style={({ pressed }) => ({
+                      width: ctrlW,
+                      height: btnH,
+                      marginTop: 4,
+                      opacity: busy ? 0.7 : pressed ? 0.85 : 1,
+                    })}
+                    testID="auth-submit"
+                  >
+                    <ImageBackground
+                      source={SKIN.btnPrimary}
+                      style={styles.center}
+                      imageStyle={styles.fillImage}
+                      resizeMode="stretch"
+                    >
+                      {busy ? (
+                        <ActivityIndicator color="#0A0A0A" />
+                      ) : (
+                        <View style={styles.row}>
+                          <Ionicons name="lock-closed" size={18} color="#0A0A0A" />
+                          <Text style={styles.submitText}>
+                            {mode === "register" ? "CREATE ACCOUNT" : "SIGN IN"}
+                          </Text>
+                        </View>
+                      )}
+                    </ImageBackground>
+                  </Pressable>
+
+                  {/* ----- FORGOT ----- */}
+                  {mode === "login" && (
+                    <TouchableOpacity
+                      onPress={() => router.push("/forgot-password")}
+                      activeOpacity={0.6}
+                      style={styles.forgotWrap}
+                      hitSlop={10}
+                      testID="forgot-password-link"
+                    >
+                      <Text style={styles.forgotText}>FORGOT PASSWORD?</Text>
+                    </TouchableOpacity>
+                  )}
                 </View>
               </ImageBackground>
+            </View>
 
-              {/* ===== BIOMETRIC ROW ===== */}
-              {mode === "login" && bio?.enabled && bio.hasHardware && bio.isEnrolled && (
+            {/* ===================== FOOTER AREA — 15% ===================== */}
+            <View style={styles.footerArea}>
+              {mode === "login" && bio?.enabled && bio.hasHardware && bio.isEnrolled ? (
                 <Pressable
                   onPress={runBiometricLogin}
                   disabled={busy}
-                  style={({ pressed }) => [
-                    styles.bioWrap,
-                    { opacity: pressed ? 0.85 : 1 },
-                  ]}
+                  style={({ pressed }) => ({
+                    width: footerCardW,
+                    height: Math.min(54, availH * 0.085),
+                    opacity: pressed ? 0.85 : 1,
+                  })}
                   testID="auth-biometric"
                 >
                   <ImageBackground
                     source={SKIN.btnSecondary}
-                    style={styles.bioBg}
-                    imageStyle={styles.skinImage}
+                    style={styles.center}
+                    imageStyle={styles.fillImage}
                     resizeMode="stretch"
                   >
-                    <View style={styles.submitContent}>
+                    <View style={styles.row}>
                       <Ionicons
                         name={
                           bio.label.toLowerCase().includes("face") ? "scan"
@@ -350,9 +396,29 @@ export default function LoginScreen() {
                     </View>
                   </ImageBackground>
                 </Pressable>
+              ) : (
+                <ImageBackground
+                  source={SKIN.card}
+                  style={{
+                    width: footerCardW,
+                    height: Math.min(footerCardW / AR.card, availH * 0.12),
+                    justifyContent: "center",
+                  }}
+                  imageStyle={styles.fillImage}
+                  resizeMode="stretch"
+                >
+                  <View style={styles.footerInner}>
+                    <Ionicons name="shield-checkmark" size={16} color="#FF8533" />
+                    <Text style={styles.footerText} numberOfLines={2}>
+                      {mode === "login"
+                        ? "New here? Tap CREATE to set up your vault — free."
+                        : "Already registered? Tap SIGN IN above."}
+                    </Text>
+                  </View>
+                </ImageBackground>
               )}
             </View>
-          </ScrollView>
+          </View>
         </KeyboardAvoidingView>
       </SafeAreaView>
     </ImageBackground>
@@ -360,39 +426,29 @@ export default function LoginScreen() {
 }
 
 // =====================================================================
-// Tab button — uses tab_active / tab_inactive skin with native content
+// Tab button
 // =====================================================================
 function TabButton({
-  label, icon, active, onPress, testID, small,
+  label, icon, active, onPress, testID, activeSkin, inactiveSkin,
 }: {
   label: string; icon: any; active: boolean; onPress: () => void;
-  testID?: string; small?: boolean;
+  testID?: string; activeSkin: any; inactiveSkin: any;
 }) {
   return (
     <Pressable
       onPress={onPress}
       testID={testID}
-      style={({ pressed }) => [
-        styles.tabPressable,
-        { opacity: pressed ? 0.85 : 1 },
-      ]}
+      style={({ pressed }) => [styles.tabPressable, { opacity: pressed ? 0.85 : 1 }]}
     >
       <ImageBackground
-        source={active ? SKIN.tabActive : SKIN.tabInactive}
-        style={styles.tabBg}
-        imageStyle={styles.skinImage}
+        source={active ? activeSkin : inactiveSkin}
+        style={styles.center}
+        imageStyle={styles.fillImage}
         resizeMode="stretch"
       >
-        <View style={styles.tabContent}>
-          <Ionicons
-            name={icon}
-            size={small ? 14 : 16}
-            color={active ? "#0A0A0A" : "#C8C8C8"}
-          />
-          <Text style={[
-            small ? styles.tabTextSm : styles.tabText,
-            { color: active ? "#0A0A0A" : "#C8C8C8" },
-          ]}>
+        <View style={styles.row}>
+          <Ionicons name={icon} size={15} color={active ? "#0A0A0A" : "#C8C8C8"} />
+          <Text style={[styles.tabText, { color: active ? "#0A0A0A" : "#C8C8C8" }]}>
             {label}
           </Text>
         </View>
@@ -402,63 +458,21 @@ function TabButton({
 }
 
 // =====================================================================
-// Field label (Rajdhani uppercase letterspaced)
-// =====================================================================
-function FieldLabel({ children }: { children: React.ReactNode }) {
-  return <Text style={styles.label}>{children}</Text>;
-}
-
-// =====================================================================
-// Input skin wrapper — uses tbv_input_dark.png with native children
-// =====================================================================
-function InputSkin({
-  children, style,
-}: { children: React.ReactNode; style?: any }) {
-  return (
-    <ImageBackground
-      source={SKIN.input}
-      style={[styles.inputBg, style]}
-      imageStyle={styles.skinImage}
-      resizeMode="stretch"
-    >
-      <View style={styles.inputInner}>{children}</View>
-    </ImageBackground>
-  );
-}
-
-// =====================================================================
 // Styles
 // =====================================================================
 const styles = StyleSheet.create({
   bg: { flex: 1, backgroundColor: "#0A0A0A" },
-  veil: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0,0,0,0.45)",
-  },
+  veil: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(0,0,0,0.38)" },
 
-  scroll: {
-    flexGrow: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 24,
-    paddingHorizontal: 16,
-  },
+  regionStack: { flex: 1, paddingHorizontal: 8 },
 
-  formColumn: {
-    width: "100%",
-    alignItems: "stretch",
-    gap: 16,
-  },
+  // ---- regions ----
+  logoArea:    { flex: 25, alignItems: "center", justifyContent: "flex-end", paddingBottom: 4 },
+  taglineArea: { flex: 5,  alignItems: "center", justifyContent: "center" },
+  panelArea:   { flex: 55, alignItems: "center", justifyContent: "center" },
+  footerArea:  { flex: 15, alignItems: "center", justifyContent: "center" },
 
-  // ---- BRAND ----
-  brand: {
-    alignItems: "center",
-    gap: 6,
-    marginBottom: 4,
-  },
-  logo:     { width: 220, height: 220 },
-  wordmark: { width: 320, height: 90 },
-  subtitle: {
+  tagline: {
     fontFamily: "Rajdhani_600SemiBold",
     fontSize: 12,
     letterSpacing: 2.4,
@@ -466,196 +480,84 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
 
-  // ---- PANEL ----
-  // The login-panel skin has thick bolted chrome on all four sides plus
-  // corner bolts. Padding has to clear those so children land in the
-  // panel's clean interior, not on top of the bolts.
-  panel: {
-    position: "relative",
-    paddingHorizontal: 36,
-    paddingTop: 64,
-    paddingBottom: 64,
-  },
-  panelContent: {
-    width: "100%",
-    gap: 12,
-  },
-  footerCardWrap: {
-    width: "100%",
-    minHeight: 56,
-    position: "relative",
-    marginTop: 6,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    justifyContent: "center",
-  },
+  // ---- panel ----
+  panelInner: { width: "100%", justifyContent: "center", gap: 7 },
 
-  eyeInline: {
-    paddingHorizontal: 4,
-  },
-
-  // ---- TABS ----
-  tabsRow: {
-    flexDirection: "row",
-    gap: 10,
-    marginBottom: 8,
-  },
+  // ---- tabs ----
+  tabsRow: { flexDirection: "row", gap: 10, marginBottom: 2 },
   tabPressable: { flex: 1 },
-  tabBg: {
-    width: "100%",
-    height: 64,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  tabContent: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    paddingHorizontal: 22,
-  },
-  tabText: {
-    fontFamily: "BebasNeue_400Regular",
-    fontSize: 20,
-    letterSpacing: 2,
-  },
-  tabTextSm: {
-    fontFamily: "BebasNeue_400Regular",
-    fontSize: 14,
-    letterSpacing: 1.2,
-  },
+  tabText: { fontFamily: "BebasNeue_400Regular", fontSize: 17, letterSpacing: 1.5 },
 
-  // ---- LABELS ----
+  // ---- labels ----
   label: {
     fontFamily: "Rajdhani_700Bold",
-    fontSize: 12,
+    fontSize: 11,
     letterSpacing: 2,
     color: "#D8D8D8",
-    paddingLeft: 4,
-    marginTop: 6,
+    paddingLeft: 2,
   },
 
-  // ---- INPUTS ----
-  inputBg: {
-    width: "100%",
-    height: 64,
-    justifyContent: "center",
-  },
+  // ---- inputs ----
   inputInner: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
-    paddingHorizontal: 26,
+    gap: 10,
+    paddingHorizontal: 18,
     height: "100%",
   },
   input: {
     flex: 1,
     color: "#F2F2F2",
     fontFamily: "Exo2_500Medium",
-    fontSize: 16,
+    fontSize: 15,
     paddingVertical: 0,
     includeFontPadding: false,
   },
 
-  // ---- PASSWORD ROW ----
-  passRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-  },
-  eyeWrap: {
-    width: 48,
-    height: 48,
-    alignSelf: "center",
-  },
-  eyeBg: {
-    width: "100%",
-    height: "100%",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
-  // ---- ERROR ----
+  // ---- error ----
   errorRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    backgroundColor: "rgba(170,20,20,0.55)",
-    borderColor: "rgba(255,80,80,0.55)",
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    backgroundColor: "rgba(170,20,20,0.5)",
+    borderColor: "rgba(255,80,80,0.5)",
     borderWidth: 1,
     borderRadius: 4,
   },
-  errorText: {
-    flex: 1,
-    color: "#FFE0E0",
-    fontFamily: "Exo2_500Medium",
-    fontSize: 12,
-  },
+  errorText: { flex: 1, color: "#FFE0E0", fontFamily: "Exo2_500Medium", fontSize: 12 },
 
-  // ---- SUBMIT BUTTON ----
-  submitWrap: {
-    width: "100%",
-    marginTop: 4,
-  },
-  submitBg: {
-    width: "100%",
-    height: 78,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  submitContent: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 12,
-  },
+  // ---- submit ----
   submitText: {
     fontFamily: "BebasNeue_400Regular",
-    fontSize: 26,
-    letterSpacing: 3,
+    fontSize: 22,
+    letterSpacing: 2.5,
     color: "#0A0A0A",
   },
 
-  // ---- FORGOT ----
-  forgotWrap: {
-    alignSelf: "center",
-    paddingVertical: 6,
-  },
+  // ---- forgot ----
+  forgotWrap: { alignSelf: "center", paddingVertical: 2 },
   forgotText: {
     fontFamily: "Rajdhani_700Bold",
-    fontSize: 12,
+    fontSize: 11,
     letterSpacing: 2,
     color: "#FF8533",
   },
 
-  // ---- FOOTER ----
-  footer: {
+  // ---- footer ----
+  footerInner: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
-    paddingHorizontal: 4,
-    marginTop: 4,
+    gap: 10,
+    paddingHorizontal: 22,
   },
   footerText: {
     flex: 1,
-    color: "#A8A8A8",
+    color: "#C8C8C8",
     fontFamily: "Exo2_400Regular",
     fontSize: 12,
     lineHeight: 16,
-  },
-
-  // ---- BIOMETRIC ----
-  bioWrap: {
-    width: "100%",
-    marginTop: 4,
-  },
-  bioBg: {
-    width: "100%",
-    height: 56,
-    alignItems: "center",
-    justifyContent: "center",
   },
   bioText: {
     fontFamily: "BebasNeue_400Regular",
@@ -664,10 +566,8 @@ const styles = StyleSheet.create({
     color: "#FF8533",
   },
 
-  // ---- shared skin image style ----
-  skinImage: {
-    // Force RN-Web to stretch instead of natural-size the underlying <img>
-    width: "100%",
-    height: "100%",
-  },
+  // ---- shared ----
+  center: { flex: 1, width: "100%", height: "100%", alignItems: "center", justifyContent: "center" },
+  row: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8 },
+  fillImage: { width: "100%", height: "100%" },
 });
