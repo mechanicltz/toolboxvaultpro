@@ -52,9 +52,10 @@ const SKIN = {
   btnPrimary:   require("../assets/tbv-v2/trimmed/Buttons/tbv_btn_primary_orange.png"),
   btnSecondary: require("../assets/tbv-v2/trimmed/Buttons/tbv_btn_secondary_dark.png"),
   masterLogo:   require("../assets/tbv-v2/trimmed/Branding/tbv_master_logo_dark_v2.png"),
+  nameplate:    require("../assets/tbv-v2/trimmed/Branding/tbv_master_nameplate.png"),
 };
 
-const AR = { logo: 0.968, card: 2.407 };
+const AR = { logo: 0.968, card: 2.407, nameplate: 3.746 };
 const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
 
 export default function LoginScreen() {
@@ -193,8 +194,12 @@ export default function LoginScreen() {
   const WORK_W = Math.min(avail, 430);
 
   // Logo (never larger than the cap; scales down on small phones)
-  const logoW = Math.min(WORK_W * 0.34, 150);
+  const logoW = Math.min(WORK_W * 0.30, 132);
   const logoH = logoW / AR.logo;
+
+  // Metal "TOOLBOX VAULT" nameplate (wordmark) — wide horizontal plaque.
+  const nameplateW = Math.min(WORK_W * 0.94, 400);
+  const nameplateH = nameplateW / AR.nameplate;
 
   // Native title + tagline fonts (scale with the real column width)
   const titleFont = clamp(WORK_W * 0.072, 22, 30);
@@ -206,7 +211,7 @@ export default function LoginScreen() {
   // INSIDE the frame's inner screen (not on top of the bolted borders).
   const panelW   = WORK_W;
   const padX     = clamp(panelW * 0.125, 38, 58);   // side rails (wide, insets inputs)
-  const padTop   = clamp(panelW * 0.14, 44, 64);    // top rail band (taller; tabs sit inside)
+  const padTop   = clamp(panelW * 0.17, 54, 78);    // top rail band (taller; tabs sit fully inside)
   const padBot   = clamp(panelW * 0.20, 62, 92);    // bottom rail band (thick; raises forgot above it)
   const contentW = panelW - padX * 2;               // sits INSIDE the borders
   const tabGap   = 6;                                // tabs sit closer together
@@ -291,16 +296,13 @@ export default function LoginScreen() {
                   style={{ width: logoW, height: logoH }}
                   resizeMode="contain"
                 />
+                <Image
+                  source={SKIN.nameplate}
+                  style={{ width: nameplateW, height: nameplateH, marginTop: headerGap * 0.25 }}
+                  resizeMode="contain"
+                />
                 <Text
-                  style={[styles.title, { fontSize: titleFont }]}
-                  numberOfLines={1}
-                  allowFontScaling={false}
-                >
-                  <Text style={styles.titleSteel}>TOOLBOX </Text>
-                  <Text style={styles.titleOrange}>VAULT</Text>
-                </Text>
-                <Text
-                  style={[styles.tagline, { fontSize: tagFont, maxWidth: WORK_W * 0.96 }]}
+                  style={[styles.tagline, { fontSize: tagFont, maxWidth: WORK_W * 0.96, marginTop: headerGap * 0.4 }]}
                   numberOfLines={1}
                   adjustsFontSizeToFit
                   minimumFontScale={0.8}
@@ -561,7 +563,7 @@ export default function LoginScreen() {
               )}
 
               {/* Build stamp (also mirrored in the pinned top overlay). */}
-              <Text style={styles.buildStamp}>BUILD #010</Text>
+              <Text style={styles.buildStamp}>BUILD #012</Text>
             </ScrollView>
           </View>
         </KeyboardAvoidingView>
