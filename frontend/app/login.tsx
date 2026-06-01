@@ -181,9 +181,15 @@ export default function LoginScreen() {
   const cw = box.w;
   const ch = box.h;
 
-  // The one and only working column. Capped to a phone width so the web
-  // preview renders the IDENTICAL phone-shaped layout you get on device.
-  const WORK_W = Math.min(cw, 430);
+  // IMPORTANT: the ScrollView content has 8px horizontal padding and CENTERS
+  // its children. A panel WIDER than this available space gets COMPRESSED by
+  // iOS's flex engine — it collapses to its widest fixed child and DROPS its
+  // padding (this is the exact bug we measured on device: want 402 → REAL
+  // 334, with padding T/B totally ignored). Web simply overflows, hiding it.
+  // So the working column must NEVER exceed the available width.
+  const SCROLL_PAD_X = 8;
+  const avail = Math.max(0, cw - SCROLL_PAD_X * 2);
+  const WORK_W = Math.min(avail, 430);
 
   // Logo (never larger than the cap; scales down on small phones)
   const logoW = Math.min(WORK_W * 0.34, 150);
@@ -287,11 +293,12 @@ export default function LoginScreen() {
               </View>
 
               {/* ===================== LOGIN PANEL ===================== */}
-              {/* CONTENT-DRIVEN: no fixed height. The ImageBackground grows
-                  to fit its children + padding; the skin stretches to match.
-                  This makes vertical overflow impossible on ANY device. */}
-              <ImageBackground
-                source={SKIN.panel}
+              {/* Plain padded View drives layout (iOS always honours padding
+                  on a plain View); the skin is an ABSOLUTE-FILL Image behind
+                  it. This is what ImageBackground does internally, but doing
+                  it by hand sidesteps the iOS compression bug that was
+                  dropping the panel's width + padding. */}
+              <View
                 onLayout={(e) => {
                   const { width, height } = e.nativeEvent.layout;
                   setDbg((d) =>
@@ -303,10 +310,14 @@ export default function LoginScreen() {
                   paddingHorizontal: padX,
                   paddingTop: padTop,
                   paddingBottom: padBot,
+                  overflow: "hidden",
                 }}
-                imageStyle={styles.fillImage}
-                resizeMode="stretch"
               >
+                <Image
+                  source={SKIN.panel}
+                  style={[StyleSheet.absoluteFill, { width: "100%", height: "100%" }]}
+                  resizeMode="stretch"
+                />
                 <View
                   style={styles.panelInner}
                   onLayout={(e) => {
@@ -455,7 +466,7 @@ export default function LoginScreen() {
                     </TouchableOpacity>
                   )}
                 </View>
-              </ImageBackground>
+              </View>
 
               {/* ===================== HELP BLOCK ===================== */}
               {mode === "login" && bio?.enabled && bio.hasHardware && bio.isEnrolled ? (
@@ -511,7 +522,7 @@ export default function LoginScreen() {
               )}
 
               {/* Build stamp (also mirrored in the pinned top overlay). */}
-              <Text style={styles.buildStamp}>BUILD #003</Text>
+              <Text style={styles.buildStamp}>BUILD #004</Text>
             </ScrollView>
 
             {/* ===== PINNED DIAGNOSTIC OVERLAY (cannot be clipped) ===== */}
@@ -521,7 +532,7 @@ export default function LoginScreen() {
                 taps on the form underneath. */}
             <View pointerEvents="none" style={styles.dbgOverlay}>
               <Text style={styles.dbgText}>
-                {`BUILD #003  OS:${Platform.OS}\n`}
+                {`BUILD #004  OS:${Platform.OS}\n`}
                 {`box:${Math.round(cw)}x${Math.round(ch)}  win:${Math.round(win.width)}x${Math.round(win.height)}\n`}
                 {`want panelW:${Math.round(panelW)} contentW:${Math.round(contentW)}\n`}
                 {`pad T:${Math.round(padTop)} B:${Math.round(padBot)} X:${Math.round(padX)}\n`}
