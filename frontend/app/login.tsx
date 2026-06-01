@@ -173,7 +173,7 @@ export default function LoginScreen() {
   // not a narrow stack. (Outer width is a composition choice; the measured
   // responsive scaling itself is unchanged.) Capped for tablet/web sanity.
   const panelW = Math.min(cw * 0.92, 560);
-  const panelH = clamp(ch * 0.46, 340, 470);
+  const panelH = clamp(ch * 0.42, 320, 440);
   const padX = panelW * 0.085;
   const padTop = panelH * 0.115;
   const padBot = panelH * 0.115;
@@ -187,11 +187,12 @@ export default function LoginScreen() {
   const tabW   = (contentW - tabGap) / 2;
   const innerGap = clamp(panelH * 0.028, 8, 16);
 
-  // Help card — lighter & secondary: ~25% shorter, less inner padding.
+  // Help card — supporting note, not a second panel: shorter + tight padding.
   const helpW = panelW;
-  const helpH = clamp((helpW / AR.card) * 0.72, 54, 78);
+  const helpH = clamp((helpW / AR.card) * 0.62, 46, 66);
 
   const blockGap = clamp(ch * 0.022, 10, 22);
+  const headerGap = clamp(ch * 0.028, 16, 26);   // extra breathing room below logo
 
   return (
     <ImageBackground source={SKIN.bg} style={styles.bg} resizeMode="cover">
@@ -221,7 +222,7 @@ export default function LoginScreen() {
               bounces={false}
             >
               {/* ===================== HEADER ===================== */}
-              <View style={[styles.block, { width: WORK_W }]}>
+              <View style={[styles.block, { width: WORK_W, marginBottom: headerGap }]}>
                 <Image
                   source={SKIN.masterLogo}
                   style={{ width: logoW, height: logoH }}
@@ -325,7 +326,7 @@ export default function LoginScreen() {
                           value={password}
                           onChangeText={setPassword}
                           placeholder="••••••••"
-                          placeholderTextColor="rgba(242,242,242,0.42)"
+                          placeholderTextColor="rgba(242,242,242,0.62)"
                           secureTextEntry={!showPassword}
                           autoCapitalize="none"
                           style={styles.input}
@@ -441,7 +442,7 @@ export default function LoginScreen() {
                   imageStyle={styles.fillImage}
                   resizeMode="stretch"
                 >
-                  <View style={[styles.footerInner, { paddingHorizontal: helpW * 0.075 }]}>
+                  <View style={[styles.footerInner, { paddingHorizontal: helpW * 0.06 }]}>
                     <Ionicons name="shield-checkmark" size={14} color="#FF8533" />
                     <Text style={[styles.footerText, { fontSize: clamp(WORK_W * 0.029, 10, 12) }]} numberOfLines={2}>
                       {mode === "login"
@@ -528,7 +529,7 @@ const styles = StyleSheet.create({
 
   // ---- tabs ----
   tabsRow: { flexDirection: "row", width: "100%" },
-  tabText: { fontFamily: "BebasNeue_400Regular", fontSize: 15, letterSpacing: 1 },
+  tabText: { fontFamily: "BebasNeue_400Regular", fontSize: 13.5, letterSpacing: 0.8 },
 
   // ---- fields ----
   fieldGroup: { width: "100%" },
