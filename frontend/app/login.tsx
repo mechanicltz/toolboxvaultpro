@@ -20,7 +20,7 @@ import {
   ScrollView, Alert, Image, ImageBackground, Pressable, TouchableOpacity,
   ActivityIndicator, useWindowDimensions,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useFonts as useGoogleFonts } from "@expo-google-fonts/bebas-neue";
@@ -62,6 +62,7 @@ export default function LoginScreen() {
   const router = useRouter();
   const { login, register } = useAuth();
   const win = useWindowDimensions();
+  const insets = useSafeAreaInsets();
 
   const [fontsLoaded, fontError] = useGoogleFonts({
     BebasNeue_400Regular,
@@ -266,6 +267,18 @@ export default function LoginScreen() {
   return (
     <ImageBackground source={SKIN.bg} style={styles.bg} resizeMode="cover">
       <View style={styles.veil} />
+
+      {/* Build number "stamped" into the metal: a dark recessed groove with a
+          faint warm highlight peeking from the lower-right edge = debossed /
+          etched illusion. Slight tilt like a hand stamp. Pinned top-right. */}
+      <View
+        pointerEvents="none"
+        style={[styles.stampWrap, { top: insets.top + 8, right: 22 }]}
+      >
+        <Text numberOfLines={1} style={styles.stampHighlight}>BUILD #014</Text>
+        <Text numberOfLines={1} style={styles.stampGroove}>BUILD #014</Text>
+      </View>
+
       <SafeAreaView style={{ flex: 1 }} edges={["top", "bottom"]}>
         <KeyboardAvoidingView
           behavior={Platform.OS === "ios" ? "padding" : undefined}
@@ -564,7 +577,6 @@ export default function LoginScreen() {
               )}
 
               {/* Build stamp (also mirrored in the pinned top overlay). */}
-              <Text style={styles.buildStamp}>BUILD #013</Text>
             </ScrollView>
           </View>
         </KeyboardAvoidingView>
@@ -718,32 +730,30 @@ const styles = StyleSheet.create({
   },
 
   // ---- shared ----
-  buildStamp: {
-    marginTop: 10,
-    color: "#FF8533",
-    fontFamily: "Rajdhani_700Bold",
-    fontSize: 13,
-    letterSpacing: 2,
-    textAlign: "center",
-  },
-  dbgOverlay: {
+  // Build number "stamped" into the metal (debossed/engraved illusion).
+  stampWrap: {
     position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    paddingTop: Platform.OS === "ios" ? 58 : 28,
-    paddingBottom: 8,
-    alignItems: "center",
-    backgroundColor: "rgba(0,0,0,0.78)",
-    zIndex: 9999,
+    zIndex: 50,
+    transform: [{ rotate: "-3deg" }],
+    opacity: 0.9,
   },
-  dbgText: {
-    marginTop: 4,
-    color: "#7CFC00",
-    fontFamily: Platform.OS === "ios" ? "Courier" : "monospace",
+  stampGroove: {
+    color: "rgba(8,7,6,0.82)",            // dark recessed groove
+    fontFamily: "Rajdhani_700Bold",
     fontSize: 12,
-    lineHeight: 16,
-    textAlign: "center",
+    letterSpacing: 3,
+    textShadowColor: "rgba(0,0,0,0.5)",   // inner depth at top edge
+    textShadowOffset: { width: 0, height: -0.5 },
+    textShadowRadius: 0.5,
+  },
+  stampHighlight: {
+    position: "absolute",
+    left: 1,
+    top: 1.2,                             // peeks from lower-right = etched edge
+    color: "rgba(224,168,104,0.30)",      // faint warm metal highlight
+    fontFamily: "Rajdhani_700Bold",
+    fontSize: 12,
+    letterSpacing: 3,
   },
   center: { flex: 1, width: "100%", height: "100%", alignItems: "center", justifyContent: "center" },
   row: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8 },
