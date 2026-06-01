@@ -85,7 +85,8 @@ export default function LoginScreen() {
   // display-only (never fed back into sizing) so they can't cause a loop.
   const [dbg, setDbg] = useState({
     pw: 0, ph: 0,        // panel rendered width / height
-    innerW: 0, innerH: 0 // inner control-stack rendered width / height
+    innerW: 0, innerH: 0, // inner control-stack rendered width / height
+    imgW: 0, imgH: 0,     // background skin image rendered width / height
   });
 
   // Biometric
@@ -332,7 +333,13 @@ export default function LoginScreen() {
               >
                 <Image
                   source={SKIN.panel}
-                  style={[StyleSheet.absoluteFill, { width: "100%", height: "100%" }]}
+                  onLayout={(e) => {
+                    const { width, height } = e.nativeEvent.layout;
+                    setDbg((d) =>
+                      Math.abs(d.imgW - width) > 0.5 || Math.abs(d.imgH - height) > 0.5
+                        ? { ...d, imgW: width, imgH: height } : d);
+                  }}
+                  style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%" }}
                   resizeMode="stretch"
                 />
                 <View
@@ -539,7 +546,7 @@ export default function LoginScreen() {
               )}
 
               {/* Build stamp (also mirrored in the pinned top overlay). */}
-              <Text style={styles.buildStamp}>BUILD #005</Text>
+              <Text style={styles.buildStamp}>BUILD #006</Text>
             </ScrollView>
 
             {/* ===== PINNED DIAGNOSTIC OVERLAY (cannot be clipped) ===== */}
@@ -549,13 +556,13 @@ export default function LoginScreen() {
                 taps on the form underneath. */}
             <View pointerEvents="none" style={styles.dbgOverlay}>
               <Text style={styles.dbgText}>
-                {`BUILD #005  OS:${Platform.OS}\n`}
+                {`BUILD #006  OS:${Platform.OS}\n`}
                 {`box:${Math.round(cw)}x${Math.round(ch)}  win:${Math.round(win.width)}x${Math.round(win.height)}\n`}
-                {`want panelW:${Math.round(panelW)} contentW:${Math.round(contentW)}\n`}
-                {`want panelH:${Math.round(panelH)}  pad T:${Math.round(padTop)} B:${Math.round(padBot)} X:${Math.round(padX)}\n`}
+                {`want panel:${Math.round(panelW)}x${Math.round(panelH)} contentW:${Math.round(contentW)}\n`}
+                {`pad T:${Math.round(padTop)} B:${Math.round(padBot)} X:${Math.round(padX)}\n`}
                 {`REAL panel:${Math.round(dbg.pw)}x${Math.round(dbg.ph)}\n`}
                 {`REAL inner:${Math.round(dbg.innerW)}x${Math.round(dbg.innerH)}\n`}
-                {`tabH:${Math.round(tabH)} inputH:${Math.round(inputH)} btnH:${Math.round(btnH)}`}
+                {`REAL skinImg:${Math.round(dbg.imgW)}x${Math.round(dbg.imgH)}`}
               </Text>
             </View>
           </View>
