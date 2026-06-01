@@ -584,10 +584,10 @@ function TabButton({
       >
         <View style={[styles.row, { gap: 5, paddingHorizontal: 6 }]}>
           {icon ? (
-            <Ionicons name={icon} size={13} color={active ? "#0A0A0A" : "#C8C8C8"} />
+            <Ionicons name={icon} size={13} color={active ? "#FFFFFF" : "#C8C8C8"} />
           ) : null}
           <Text
-            style={[styles.tabText, { color: active ? "#0A0A0A" : "#C8C8C8" }]}
+            style={[styles.tabText, active ? styles.tabTextActive : styles.tabTextInactive]}
             numberOfLines={1}
             adjustsFontSizeToFit
             minimumFontScale={0.6}
@@ -633,6 +633,15 @@ const styles = StyleSheet.create({
   // ---- tabs ----
   tabsRow: { flexDirection: "row", width: "100%" },
   tabText: { fontFamily: "BebasNeue_400Regular", fontSize: 13.5, letterSpacing: 0.8 },
+  // Active tab: light text + dark outline-style shadow so it reads clearly on
+  // the bright orange skin. Inactive: muted steel.
+  tabTextActive: {
+    color: "#FFFFFF",
+    textShadowColor: "rgba(0,0,0,0.65)",
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
+  },
+  tabTextInactive: { color: "#C8C8C8" },
 
   // ---- fields ----
   fieldGroup: { width: "100%" },
@@ -649,7 +658,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 9,
-    paddingHorizontal: 15,
+    paddingHorizontal: 22,
     height: "100%",
   },
   input: {
