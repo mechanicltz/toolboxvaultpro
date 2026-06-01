@@ -43,18 +43,18 @@ import {
 // Cropped skin sources (opaque-bounds only — fill their containers)
 // =====================================================================
 const SKIN = {
-  bg:           require("../assets/tbv-v2/Backgrounds/tbv_background_industrial_dark.png"),
-  panel:        require("../assets/tbv-v2/cropped/panel.png"),
-  card:         require("../assets/tbv-v2/cropped/card.png"),
-  tabActive:    require("../assets/tbv-v2/cropped/tab_active.png"),
-  tabInactive:  require("../assets/tbv-v2/cropped/tab_inactive.png"),
-  input:        require("../assets/tbv-v2/cropped/input_slim.png"),
-  btnPrimary:   require("../assets/tbv-v2/cropped/btn_primary.png"),
-  btnSecondary: require("../assets/tbv-v2/cropped/btn_secondary.png"),
-  masterLogo:   require("../assets/tbv-v2/cropped/logo.png"),
+  bg:           require("../assets/tbv-v2/trimmed/Backgrounds/tbv_background_industrial_dark.png"),
+  panel:        require("../assets/tbv-v2/trimmed/Panels/tbv_login_panel_dark_v2.png"),
+  card:         require("../assets/tbv-v2/trimmed/Cards/tbv_card_dark.png"),
+  tabActive:    require("../assets/tbv-v2/trimmed/Tabs/tbv_tab_active_orange.png"),
+  tabInactive:  require("../assets/tbv-v2/trimmed/Tabs/tbv_tab_inactive_dark.png"),
+  input:        require("../assets/tbv-v2/trimmed/Inputs/tbv_input_dark_slim.png"),
+  btnPrimary:   require("../assets/tbv-v2/trimmed/Buttons/tbv_btn_primary_orange.png"),
+  btnSecondary: require("../assets/tbv-v2/trimmed/Buttons/tbv_btn_secondary_dark.png"),
+  masterLogo:   require("../assets/tbv-v2/trimmed/Branding/tbv_master_logo_dark_v2.png"),
 };
 
-const AR = { logo: 0.968, card: 2.429 };
+const AR = { logo: 0.968, card: 2.407 };
 const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
 
 export default function LoginScreen() {
