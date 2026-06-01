@@ -151,14 +151,31 @@ export default function LoginScreen() {
   };
 
   // ==================================================================
-  // RESPONSIVE MATHS — derived from the MEASURED container only.
+  // RESPONSIVE MATHS — single phone-shaped column, CONTENT-DRIVEN panel.
+  //
+  // ROOT-CAUSE FIX (why iPhone was wrong while web looked fine):
+  //   1) The whole app is wrapped in <ResponsiveContainer variant="wide">
+  //      (see app/_layout.tsx). On WEB that gives a ~1080px column, on a
+  //      PHONE it's a no-op (~393px). So login received TWO completely
+  //      different widths. Worse, the OLD code sized fonts off WORK_W(≤440)
+  //      but sized the PANEL off a SEPARATE path (PANEL_MAX 760 on web).
+  //      Result: the geometry you tuned on web (760-wide panel) was NOT
+  //      what rendered on the 393-wide phone. The preview was lying.
+  //   2) The panel had a FIXED height = content/0.70 with rails = 0.30,
+  //      i.e. content fit with ZERO slack. The taller native control stack
+  //      (or a sub-pixel/error-row change) spilled straight out of the frame.
+  //
+  // FIX: ONE phone-shaped column (panelW = WORK_W) so web == phone, and a
+  // CONTENT-DRIVEN panel — the ImageBackground has NO fixed height, so it
+  // GROWS to fit its children + padding and the skin stretches to match.
+  // Overflow is now mathematically impossible on any device/engine.
   // ==================================================================
   const cw = box.w;
   const ch = box.h;
 
-  // Cap the working column to a phone width so phones AND the web preview
-  // render the identical phone-shaped layout. Everything scales off WORK_W.
-  const WORK_W = Math.min(cw, 440);
+  // The one and only working column. Capped to a phone width so the web
+  // preview renders the IDENTICAL phone-shaped layout you get on device.
+  const WORK_W = Math.min(cw, 430);
 
   // Logo (never larger than the cap; scales down on small phones)
   const logoW = Math.min(WORK_W * 0.34, 150);
@@ -168,41 +185,26 @@ export default function LoginScreen() {
   const titleFont = clamp(WORK_W * 0.072, 22, 30);
   const tagFont = clamp(WORK_W * 0.034, 11, 14);
 
-  // ====================================================================
-  // PANEL SIZING — CONTENT-DRIVEN (this is the real fix).
-  // OLD BUG: panelH = clamp(ch * 0.42, 320, 440) — a fraction of SCREEN
-  // height with a 320px floor. On a phone that floor is SHORTER than the
-  // stacked controls (~355px), so tabs/inputs/button/forgot overflowed the
-  // frame (spilling over top, bottom AND the side rails). The tall web
-  // preview hid it. FIX: size controls off the column width, measure the
-  // real content height, then GROW the panel to contain it on ANY device.
-  // ====================================================================
-  const tabH   = clamp(WORK_W * 0.11, 42, 48);
-  const inputH = clamp(WORK_W * 0.12, 46, 52);
-  const btnH   = clamp(WORK_W * 0.14, 52, 60);
-  const labelH = 16;
-  const innerGap = clamp(WORK_W * 0.025, 9, 12);
-  const forgotH = 20;
+  // ---- PANEL (content-driven; NO fixed height) ----
+  // panelW == WORK_W → the panel IS the column, so web preview mirrors phone.
+  // Padding is derived from panelW only (stable) and clears the skin rails.
+  const panelW   = WORK_W;
+  const padX     = clamp(panelW * 0.085, 22, 40);   // side rails
+  const padTop   = clamp(panelW * 0.085, 24, 36);   // top rail band
+  const padBot   = clamp(panelW * 0.11, 32, 48);    // bottom rail band
+  const contentW = panelW - padX * 2;               // sits INSIDE the borders
+  const tabGap   = 10;
+  const tabW     = (contentW - tabGap) / 2;
 
-  const groupH = labelH + 2 + inputH;                  // label + margin + input
-  const contentH =
-    tabH + innerGap +
-    groupH + innerGap +
-    groupH + innerGap * 0.6 +
-    btnH + (10 + forgotH);
+  // ---- Controls (explicit heights; the panel grows to contain them) ----
+  const tabH     = clamp(WORK_W * 0.115, 44, 50);
+  const inputH   = clamp(WORK_W * 0.125, 46, 54);
+  const btnH     = clamp(WORK_W * 0.145, 52, 60);
+  const labelH   = 16;
+  const innerGap = clamp(WORK_W * 0.03, 10, 14);
 
-  const PANEL_MAX = cw >= 600 ? 760 : cw;
-  const panelW = Math.min(cw * 0.96, PANEL_MAX);
-  const panelH = contentH / 0.70;                      // frame grows to fit content
-  const padX   = panelW * 0.115;                       // clear side rails (~8.5%) + margin
-  const padTop = panelH * 0.11;
-  const padBot = panelH * 0.17;                        // extra clearance so FORGOT clears bottom rail
-  const contentW = panelW - padX * 2;                  // sits INSIDE the borders
-  const tabGap = 10;
-  const tabW   = (contentW - tabGap) / 2;
-
-  // Help card — narrower secondary note.
-  const helpW = Math.min(cw * 0.86, 500);
+  // Help card — narrower secondary note, same column max.
+  const helpW = Math.min(cw * 0.9, WORK_W);
   const helpH = clamp((helpW / AR.card) * 0.52, 40, 54);
 
   const blockGap = clamp(ch * 0.016, 8, 16);
@@ -277,11 +279,13 @@ export default function LoginScreen() {
               </View>
 
               {/* ===================== LOGIN PANEL ===================== */}
+              {/* CONTENT-DRIVEN: no fixed height. The ImageBackground grows
+                  to fit its children + padding; the skin stretches to match.
+                  This makes vertical overflow impossible on ANY device. */}
               <ImageBackground
                 source={SKIN.panel}
                 style={{
                   width: panelW,
-                  height: panelH,
                   paddingHorizontal: padX,
                   paddingTop: padTop,
                   paddingBottom: padBot,
@@ -486,7 +490,7 @@ export default function LoginScreen() {
 
               {/* Build stamp — read this back after reloading to confirm the
                   phone is actually pulling the latest bundle. */}
-              <Text style={styles.buildStamp}>BUILD: 2026-06-01 · TAG-A7</Text>
+              <Text style={styles.buildStamp}>BUILD: 2026-06-01 · TAG-B1 (content-fit)</Text>
             </ScrollView>
           </View>
         </KeyboardAvoidingView>
@@ -560,7 +564,7 @@ const styles = StyleSheet.create({
   },
 
   // ---- panel ----
-  panelInner: { flex: 1, justifyContent: "center" },
+  panelInner: { width: "100%" },
 
   // ---- tabs ----
   tabsRow: { flexDirection: "row", width: "100%" },
