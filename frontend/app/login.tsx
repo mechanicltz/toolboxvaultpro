@@ -80,6 +80,14 @@ export default function LoginScreen() {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
 
+  // DEVICE-INSTRUMENTATION: capture the ACTUAL rendered sizes from the
+  // native layout engine so we can read them back off the phone. These are
+  // display-only (never fed back into sizing) so they can't cause a loop.
+  const [dbg, setDbg] = useState({
+    pw: 0, ph: 0,        // panel rendered width / height
+    innerW: 0, innerH: 0 // inner control-stack rendered width / height
+  });
+
   // Biometric
   const [bio, setBio] = useState<{
     enabled: boolean; label: string; hasHardware: boolean; isEnrolled: boolean;
@@ -284,6 +292,12 @@ export default function LoginScreen() {
                   This makes vertical overflow impossible on ANY device. */}
               <ImageBackground
                 source={SKIN.panel}
+                onLayout={(e) => {
+                  const { width, height } = e.nativeEvent.layout;
+                  setDbg((d) =>
+                    Math.abs(d.pw - width) > 0.5 || Math.abs(d.ph - height) > 0.5
+                      ? { ...d, pw: width, ph: height } : d);
+                }}
                 style={{
                   width: panelW,
                   paddingHorizontal: padX,
@@ -293,7 +307,15 @@ export default function LoginScreen() {
                 imageStyle={styles.fillImage}
                 resizeMode="stretch"
               >
-                <View style={styles.panelInner}>
+                <View
+                  style={styles.panelInner}
+                  onLayout={(e) => {
+                    const { width, height } = e.nativeEvent.layout;
+                    setDbg((d) =>
+                      Math.abs(d.innerW - width) > 0.5 || Math.abs(d.innerH - height) > 0.5
+                        ? { ...d, innerW: width, innerH: height } : d);
+                  }}
+                >
                   {/* ----- TABS ----- */}
                   <View style={[styles.tabsRow, { height: tabH, gap: tabGap }]}>
                     <TabButton
@@ -490,7 +512,17 @@ export default function LoginScreen() {
 
               {/* Build stamp — read this back after reloading to confirm the
                   phone is actually pulling the latest bundle. */}
-              <Text style={styles.buildStamp}>BUILD: 2026-06-01 · TAG-B1 (content-fit)</Text>
+              {/* Build stamp + LIVE device measurements. Read these numbers
+                  off the phone so we can see exactly what the native engine
+                  computed vs. what we expect. Step BUILD up by 1 each change. */}
+              <Text style={styles.buildStamp}>BUILD #002</Text>
+              <Text style={styles.dbgText}>
+                {`OS:${Platform.OS}  box:${Math.round(cw)}x${Math.round(ch)}\n`}
+                {`want panelW:${Math.round(panelW)} contentW:${Math.round(contentW)}\n`}
+                {`padT:${Math.round(padTop)} padB:${Math.round(padBot)} padX:${Math.round(padX)}\n`}
+                {`REAL panel:${Math.round(dbg.pw)}x${Math.round(dbg.ph)}  inner:${Math.round(dbg.innerW)}x${Math.round(dbg.innerH)}\n`}
+                {`tabH:${Math.round(tabH)} inputH:${Math.round(inputH)} btnH:${Math.round(btnH)}`}
+              </Text>
             </ScrollView>
           </View>
         </KeyboardAvoidingView>
@@ -650,6 +682,14 @@ const styles = StyleSheet.create({
     fontFamily: "Rajdhani_700Bold",
     fontSize: 13,
     letterSpacing: 2,
+    textAlign: "center",
+  },
+  dbgText: {
+    marginTop: 4,
+    color: "#7CFC00",
+    fontFamily: Platform.OS === "ios" ? "Courier" : "monospace",
+    fontSize: 11,
+    lineHeight: 15,
     textAlign: "center",
   },
   center: { flex: 1, width: "100%", height: "100%", alignItems: "center", justifyContent: "center" },
