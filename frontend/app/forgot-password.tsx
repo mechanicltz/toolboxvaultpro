@@ -160,8 +160,10 @@ export default function ForgotPasswordScreen() {
   const padBot = panelH * BOT_FRAC;
   const padX = panelW * 0.11;
   const contentW = panelW - padX * 2;
-  const fieldInset = clamp(contentW * 0.04, 8, 16);
-  const fieldW = contentW - fieldInset * 2;
+  // Inputs span the FULL content width so the EMAIL field matches the button
+  // width below it (and every row shares the same left/right edges).
+  const fieldInset = 0;
+  const fieldW = contentW;
 
   const inputH = clamp(WORK_W * 0.125, 46, 54);
   const btnH = clamp(WORK_W * 0.145, 52, 60);
@@ -183,34 +185,6 @@ export default function ForgotPasswordScreen() {
   }
 
   const goBack = () => (step === "verify" ? (setStep("request"), setMeasuredInnerH(0)) : router.back());
-
-  const PrimaryButton = ({
-    label,
-    icon,
-    onPress,
-  }: {
-    label: string;
-    icon: keyof typeof Ionicons.glyphMap;
-    onPress: () => void;
-  }) => (
-    <Pressable onPress={onPress} disabled={busy} style={{ marginTop: innerGap * 1.2 }}>
-      <ImageBackground
-        source={SKIN.btnPrimary}
-        style={{ width: contentW, height: btnH, justifyContent: "center", alignItems: "center" }}
-        imageStyle={styles.fillImage}
-        resizeMode="stretch"
-      >
-        {busy ? (
-          <ActivityIndicator color={TBV.ink} />
-        ) : (
-          <View style={styles.row}>
-            <Ionicons name={icon} size={18} color={TBV.ink} />
-            <Text style={styles.submitText}>{label}</Text>
-          </View>
-        )}
-      </ImageBackground>
-    </Pressable>
-  );
 
   return (
     <ImageBackground source={SKIN.bg} style={styles.bg} resizeMode="cover">
@@ -297,7 +271,14 @@ export default function ForgotPasswordScreen() {
                           </ImageBackground>
                         </View>
 
-                        <PrimaryButton label="SEND RESET CODE" icon="mail" onPress={submitEmail} />
+                        <PrimaryButton
+                          label="SEND RESET CODE"
+                          onPress={submitEmail}
+                          busy={busy}
+                          width={contentW}
+                          height={btnH}
+                          marginTop={innerGap * 1.2}
+                        />
                       </>
                     ) : (
                       <>
@@ -387,7 +368,15 @@ export default function ForgotPasswordScreen() {
                           </ImageBackground>
                         </View>
 
-                        <PrimaryButton label="RESET PASSWORD" icon="checkmark-circle" onPress={submitCode} />
+                        <PrimaryButton
+                          label="RESET PASSWORD"
+                          icon="checkmark-circle"
+                          onPress={submitCode}
+                          busy={busy}
+                          width={contentW}
+                          height={btnH}
+                          marginTop={innerGap * 1.2}
+                        />
 
                         <TouchableOpacity style={styles.resendWrap} onPress={resendCode} disabled={busy} hitSlop={8}>
                           <Text style={styles.resendText}>Didn&apos;t get it?  RESEND CODE</Text>
@@ -412,6 +401,52 @@ export default function ForgotPasswordScreen() {
         </KeyboardAvoidingView>
       </SafeAreaView>
     </ImageBackground>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// PrimaryButton — defined at MODULE scope (NOT inside the screen component).
+// Defining it inside the screen made React create a new component type on
+// every keystroke, which remounted the <ImageBackground> and reloaded its PNG
+// — that's what made the orange button flicker dark while typing. At module
+// scope its identity is stable, so it reconciles in place and never reloads.
+// `icon` is optional so the SEND RESET CODE button can render with no icon.
+// ---------------------------------------------------------------------------
+function PrimaryButton({
+  label,
+  icon,
+  onPress,
+  busy,
+  width,
+  height,
+  marginTop,
+}: {
+  label: string;
+  icon?: keyof typeof Ionicons.glyphMap;
+  onPress: () => void;
+  busy: boolean;
+  width: number;
+  height: number;
+  marginTop: number;
+}) {
+  return (
+    <Pressable onPress={onPress} disabled={busy} style={{ marginTop }}>
+      <ImageBackground
+        source={SKIN.btnPrimary}
+        style={{ width, height, justifyContent: "center", alignItems: "center" }}
+        imageStyle={styles.fillImage}
+        resizeMode="stretch"
+      >
+        {busy ? (
+          <ActivityIndicator color={TBV.ink} />
+        ) : (
+          <View style={styles.row}>
+            {icon ? <Ionicons name={icon} size={18} color={TBV.ink} /> : null}
+            <Text style={styles.submitText}>{label}</Text>
+          </View>
+        )}
+      </ImageBackground>
+    </Pressable>
   );
 }
 

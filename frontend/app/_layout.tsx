@@ -9,6 +9,7 @@ import {
   TextInput as RNTextInput,
   AppState,
   AppStateStatus,
+  InteractionManager,
 } from "react-native";
 import { useEffect, useRef, useState } from "react";
 import { AuroraBackground } from "../src/Aurora";
@@ -74,11 +75,16 @@ function AuthGate({ children }: { children: React.ReactNode }) {
   const [showIntro, setShowIntro] = useState(true);
   const [bootDecided] = useState(true);
 
-  // Warm the industrial image-skin cache on first mount (runs behind the
-  // boot intro video) so skin-based screens — login / forgot-password /
-  // (future) home — paint fully-decorated with no black-then-pop-in.
+  // Warm the industrial image-skin cache shortly AFTER first mount so it
+  // never competes with the boot intro video for the JS thread (decoding the
+  // PNGs up-front was delaying the video's first frame). InteractionManager
+  // lets the intro start playing first; the skins then decode during it, so
+  // login / forgot-password still appear fully-decorated with no pop-in.
   useEffect(() => {
-    preloadTbvSkins();
+    const handle = InteractionManager.runAfterInteractions(() => {
+      preloadTbvSkins();
+    });
+    return () => handle.cancel();
   }, []);
 
   // (No async shouldShowIntro check here anymore — the intro just runs
