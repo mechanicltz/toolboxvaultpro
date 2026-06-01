@@ -48,7 +48,7 @@ const SKIN = {
   card:         require("../assets/tbv-v2/cropped/card.png"),
   tabActive:    require("../assets/tbv-v2/cropped/tab_active.png"),
   tabInactive:  require("../assets/tbv-v2/cropped/tab_inactive.png"),
-  input:        require("../assets/tbv-v2/cropped/input.png"),
+  input:        require("../assets/tbv-v2/cropped/input_slim.png"),
   btnPrimary:   require("../assets/tbv-v2/cropped/btn_primary.png"),
   btnSecondary: require("../assets/tbv-v2/cropped/btn_secondary.png"),
   masterLogo:   require("../assets/tbv-v2/cropped/logo.png"),
@@ -187,9 +187,10 @@ export default function LoginScreen() {
   const tabW   = (contentW - tabGap) / 2;
   const innerGap = clamp(panelH * 0.028, 8, 16);
 
-  // Help card — supporting note, not a second panel: shorter + tight padding.
-  const helpW = panelW;
-  const helpH = clamp((helpW / AR.card) * 0.62, 46, 66);
+  // Help card — clearly narrower than the panel (≈82% screen) so it reads as a
+  // secondary supporting note, not a second console.
+  const helpW = Math.min(cw * 0.82, 500);
+  const helpH = clamp((helpW / AR.card) * 0.62, 44, 64);
 
   const blockGap = clamp(ch * 0.022, 10, 22);
   const headerGap = clamp(ch * 0.028, 16, 26);   // extra breathing room below logo
@@ -260,7 +261,7 @@ export default function LoginScreen() {
                 imageStyle={styles.fillImage}
                 resizeMode="stretch"
               >
-                <View style={[styles.panelInner, { gap: innerGap }]}>
+                <View style={styles.panelInner}>
                   {/* ----- TABS ----- */}
                   <View style={[styles.tabsRow, { height: tabH, gap: tabGap }]}>
                     <TabButton
@@ -286,7 +287,7 @@ export default function LoginScreen() {
                   </View>
 
                   {/* ----- EMAIL ----- */}
-                  <View style={styles.fieldGroup}>
+                  <View style={[styles.fieldGroup, { marginTop: innerGap }]}>
                     <Text style={[styles.label, { height: labelH }]}>EMAIL</Text>
                     <ImageBackground
                       source={SKIN.input}
@@ -300,7 +301,7 @@ export default function LoginScreen() {
                           value={email}
                           onChangeText={setEmail}
                           placeholder="you@example.com"
-                          placeholderTextColor="rgba(242,242,242,0.42)"
+                          placeholderTextColor="rgba(242,242,242,0.62)"
                           autoCapitalize="none"
                           autoComplete="email"
                           keyboardType="email-address"
@@ -312,7 +313,7 @@ export default function LoginScreen() {
                   </View>
 
                   {/* ----- PASSWORD ----- */}
-                  <View style={styles.fieldGroup}>
+                  <View style={[styles.fieldGroup, { marginTop: innerGap }]}>
                     <Text style={[styles.label, { height: labelH }]}>PASSWORD</Text>
                     <ImageBackground
                       source={SKIN.input}
@@ -349,19 +350,21 @@ export default function LoginScreen() {
 
                   {/* ----- ERROR ----- */}
                   {!!err && (
-                    <View style={styles.errorRow}>
+                    <View style={[styles.errorRow, { marginTop: innerGap * 0.55 }]}>
                       <Ionicons name="alert-circle" size={13} color="#FF6F61" />
                       <Text style={styles.errorText} numberOfLines={2}>{err}</Text>
                     </View>
                   )}
 
-                  {/* ----- SUBMIT ----- */}
+                  {/* ----- SUBMIT (tight under password — part of the form) ----- */}
                   <Pressable
                     onPress={submit}
                     disabled={busy}
                     style={({ pressed }) => ({
                       width: contentW,
                       height: btnH,
+                      marginTop: innerGap * 0.5,
+                      alignSelf: "center",
                       opacity: busy ? 0.7 : pressed ? 0.85 : 1,
                     })}
                     testID="auth-submit"
@@ -538,7 +541,8 @@ const styles = StyleSheet.create({
     fontSize: 11,
     letterSpacing: 2,
     color: "#D8D8D8",
-    paddingLeft: 6,
+    paddingLeft: 18,
+    marginBottom: 2,
     textAlignVertical: "bottom",
   },
   inputInner: {
@@ -580,7 +584,7 @@ const styles = StyleSheet.create({
   },
 
   // ---- forgot ----
-  forgotWrap: { alignSelf: "center", paddingVertical: 2 },
+  forgotWrap: { alignSelf: "center", paddingVertical: 2, marginTop: 10 },
   forgotText: {
     fontFamily: "Rajdhani_700Bold",
     fontSize: 13,
