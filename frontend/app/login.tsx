@@ -510,20 +510,26 @@ export default function LoginScreen() {
                 </ImageBackground>
               )}
 
-              {/* Build stamp — read this back after reloading to confirm the
-                  phone is actually pulling the latest bundle. */}
-              {/* Build stamp + LIVE device measurements. Read these numbers
-                  off the phone so we can see exactly what the native engine
-                  computed vs. what we expect. Step BUILD up by 1 each change. */}
-              <Text style={styles.buildStamp}>BUILD #002</Text>
+              {/* Build stamp (also mirrored in the pinned top overlay). */}
+              <Text style={styles.buildStamp}>BUILD #003</Text>
+            </ScrollView>
+
+            {/* ===== PINNED DIAGNOSTIC OVERLAY (cannot be clipped) ===== */}
+            {/* Absolutely positioned at the very top so it is ALWAYS visible
+                regardless of how the form lays out / overflows. Read these
+                numbers off the phone. pointerEvents=none so it never blocks
+                taps on the form underneath. */}
+            <View pointerEvents="none" style={styles.dbgOverlay}>
               <Text style={styles.dbgText}>
-                {`OS:${Platform.OS}  box:${Math.round(cw)}x${Math.round(ch)}\n`}
+                {`BUILD #003  OS:${Platform.OS}\n`}
+                {`box:${Math.round(cw)}x${Math.round(ch)}  win:${Math.round(win.width)}x${Math.round(win.height)}\n`}
                 {`want panelW:${Math.round(panelW)} contentW:${Math.round(contentW)}\n`}
-                {`padT:${Math.round(padTop)} padB:${Math.round(padBot)} padX:${Math.round(padX)}\n`}
-                {`REAL panel:${Math.round(dbg.pw)}x${Math.round(dbg.ph)}  inner:${Math.round(dbg.innerW)}x${Math.round(dbg.innerH)}\n`}
+                {`pad T:${Math.round(padTop)} B:${Math.round(padBot)} X:${Math.round(padX)}\n`}
+                {`REAL panel:${Math.round(dbg.pw)}x${Math.round(dbg.ph)}\n`}
+                {`REAL inner:${Math.round(dbg.innerW)}x${Math.round(dbg.innerH)}\n`}
                 {`tabH:${Math.round(tabH)} inputH:${Math.round(inputH)} btnH:${Math.round(btnH)}`}
               </Text>
-            </ScrollView>
+            </View>
           </View>
         </KeyboardAvoidingView>
       </SafeAreaView>
@@ -684,12 +690,23 @@ const styles = StyleSheet.create({
     letterSpacing: 2,
     textAlign: "center",
   },
+  dbgOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    paddingTop: Platform.OS === "ios" ? 58 : 28,
+    paddingBottom: 8,
+    alignItems: "center",
+    backgroundColor: "rgba(0,0,0,0.78)",
+    zIndex: 9999,
+  },
   dbgText: {
     marginTop: 4,
     color: "#7CFC00",
     fontFamily: Platform.OS === "ios" ? "Courier" : "monospace",
-    fontSize: 11,
-    lineHeight: 15,
+    fontSize: 12,
+    lineHeight: 16,
     textAlign: "center",
   },
   center: { flex: 1, width: "100%", height: "100%", alignItems: "center", justifyContent: "center" },
