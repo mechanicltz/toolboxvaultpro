@@ -275,8 +275,8 @@ export default function LoginScreen() {
         pointerEvents="none"
         style={[styles.stampWrap, { top: insets.top + 8, right: 22 }]}
       >
-        <Text numberOfLines={1} style={styles.stampHighlight}>#014</Text>
-        <Text numberOfLines={1} style={styles.stampGroove}>#014</Text>
+        <Text numberOfLines={1} style={styles.stampHighlight}>#015</Text>
+        <Text numberOfLines={1} style={styles.stampGroove}>#015</Text>
       </View>
 
       <SafeAreaView style={{ flex: 1 }} edges={["top", "bottom"]}>
@@ -498,7 +498,9 @@ export default function LoginScreen() {
                         <ActivityIndicator color="#0A0A0A" />
                       ) : (
                         <View style={styles.row}>
-                          <Ionicons name="lock-closed" size={18} color="#0A0A0A" />
+                          {mode !== "register" && (
+                            <Ionicons name="lock-closed" size={18} color="#0A0A0A" />
+                          )}
                           <Text style={styles.submitText}>
                             {mode === "register" ? "CREATE ACCOUNT" : "SIGN IN"}
                           </Text>
@@ -507,8 +509,8 @@ export default function LoginScreen() {
                     </ImageBackground>
                   </Pressable>
 
-                  {/* ----- FORGOT ----- */}
-                  {mode === "login" && (
+                  {/* ----- FORGOT (placeholder keeps height in register mode) ----- */}
+                  {mode === "login" ? (
                     <TouchableOpacity
                       onPress={() => router.push("/forgot-password")}
                       activeOpacity={0.6}
@@ -518,6 +520,10 @@ export default function LoginScreen() {
                     >
                       <Text style={styles.forgotText}>FORGOT PASSWORD?</Text>
                     </TouchableOpacity>
+                  ) : (
+                    <View style={styles.forgotWrap} pointerEvents="none">
+                      <Text style={[styles.forgotText, { opacity: 0 }]}>FORGOT PASSWORD?</Text>
+                    </View>
                   )}
                 </View>
                 </View>
@@ -713,29 +719,32 @@ const styles = StyleSheet.create({
   },
 
   // ---- shared ----
-  // Build number "stamped" into the metal — orange accent, embossed/raised.
+  // Build number DEBOSSED (pressed) into the metal: dark burnt-orange recess
+  // with a warm lit lower lip + dark inner top shadow. Thick Bebas font so the
+  // engraving reads cleanly. Lower opacity lets the plate texture bleed through.
   stampWrap: {
     position: "absolute",
     zIndex: 50,
-    transform: [{ rotate: "-3deg" }],
+    transform: [{ rotate: "-4deg" }],
+    opacity: 0.88,
   },
   stampGroove: {
-    color: "#FF8A2B",                       // bright orange face
-    fontFamily: "Rajdhani_700Bold",
-    fontSize: 15,
-    letterSpacing: 2,
-    textShadowColor: "rgba(0,0,0,0.6)",     // dark bevel for a pressed-metal look
-    textShadowOffset: { width: 0, height: 1 },
+    color: "rgba(86,38,12,0.92)",           // dark burnt-orange recess (the groove)
+    fontFamily: "BebasNeue_400Regular",
+    fontSize: 26,
+    letterSpacing: 1,
+    textShadowColor: "rgba(0,0,0,0.55)",    // inner shadow on the top edge = pressed in
+    textShadowOffset: { width: 0, height: -1 },
     textShadowRadius: 1,
   },
   stampHighlight: {
     position: "absolute",
-    left: 1.2,
-    top: 1.4,                               // dark drop shadow = raised stamp
-    color: "rgba(0,0,0,0.55)",
-    fontFamily: "Rajdhani_700Bold",
-    fontSize: 15,
-    letterSpacing: 2,
+    left: 0.5,
+    top: 2,                                  // warm light catches the lower engraved lip
+    color: "rgba(255,170,84,0.55)",
+    fontFamily: "BebasNeue_400Regular",
+    fontSize: 26,
+    letterSpacing: 1,
   },
   center: { flex: 1, width: "100%", height: "100%", alignItems: "center", justifyContent: "center" },
   row: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8 },
