@@ -20,7 +20,7 @@ import {
   ScrollView, Alert, Image, ImageBackground, Pressable, TouchableOpacity,
   ActivityIndicator, useWindowDimensions,
 } from "react-native";
-import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useFonts as useGoogleFonts } from "@expo-google-fonts/bebas-neue";
@@ -62,7 +62,6 @@ export default function LoginScreen() {
   const router = useRouter();
   const { login, register } = useAuth();
   const win = useWindowDimensions();
-  const insets = useSafeAreaInsets();
 
   const [fontsLoaded, fontError] = useGoogleFonts({
     BebasNeue_400Regular,
@@ -82,14 +81,9 @@ export default function LoginScreen() {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
 
-  // DEVICE-INSTRUMENTATION: capture the ACTUAL rendered sizes from the
-  // native layout engine so we can read them back off the phone. These are
-  // display-only (never fed back into sizing) so they can't cause a loop.
-  const [dbg, setDbg] = useState({
-    pw: 0, ph: 0,        // panel rendered width / height
-    innerW: 0, innerH: 0, // inner control-stack rendered width / height
-    imgW: 0, imgH: 0,     // background skin image rendered width / height
-  });
+  // Device-measured height of the panel's inner control stack. Drives the
+  // panel's explicit height so the frame always wraps the controls exactly.
+  const [measuredInnerH, setMeasuredInnerH] = useState(0);
 
   // Biometric
   const [bio, setBio] = useState<{
@@ -242,7 +236,7 @@ export default function LoginScreen() {
     (labelH + 2 + inputH) + innerGap +
     (labelH + 2 + inputH) + innerGap * 0.5 +
     btnH + (10 + 20);                       // submit margin + forgot row
-  const innerH = dbg.innerH > 0 ? dbg.innerH : fallbackInnerH;
+  const innerH = measuredInnerH > 0 ? measuredInnerH : fallbackInnerH;
   const panelH = innerH + padTop + padBot;  // frame exactly contains content
 
   // Help card — narrower secondary note, same column max.
@@ -334,12 +328,6 @@ export default function LoginScreen() {
                   the border box — that mismatch was squeezing the frame art
                   into the center and leaving forgot-password on bare metal. */}
               <View
-                onLayout={(e) => {
-                  const { width, height } = e.nativeEvent.layout;
-                  setDbg((d) =>
-                    Math.abs(d.pw - width) > 0.5 || Math.abs(d.ph - height) > 0.5
-                      ? { ...d, pw: width, ph: height } : d);
-                }}
                 style={{
                   width: panelW,
                   height: panelH,
@@ -348,12 +336,6 @@ export default function LoginScreen() {
               >
                 <Image
                   source={SKIN.panel}
-                  onLayout={(e) => {
-                    const { width, height } = e.nativeEvent.layout;
-                    setDbg((d) =>
-                      Math.abs(d.imgW - width) > 0.5 || Math.abs(d.imgH - height) > 0.5
-                        ? { ...d, imgW: width, imgH: height } : d);
-                  }}
                   style={{ position: "absolute", top: 0, left: 0, width: panelW, height: panelH }}
                   resizeMode="stretch"
                 />
@@ -368,10 +350,8 @@ export default function LoginScreen() {
                 <View
                   style={styles.panelInner}
                   onLayout={(e) => {
-                    const { width, height } = e.nativeEvent.layout;
-                    setDbg((d) =>
-                      Math.abs(d.innerW - width) > 0.5 || Math.abs(d.innerH - height) > 0.5
-                        ? { ...d, innerW: width, innerH: height } : d);
+                    const h = e.nativeEvent.layout.height;
+                    if (Math.abs(h - measuredInnerH) > 0.5) setMeasuredInnerH(h);
                   }}
                 >
                   {/* ----- TABS ----- */}
