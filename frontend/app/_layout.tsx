@@ -26,6 +26,7 @@ import { IntroOverlay } from "../src/IntroOverlay";
 import { ThemeProvider, useColors, useThemeMode } from "../src/themeContext";
 import { IndustrialThemeProvider } from "../src/components/industrial";
 import { notifyAppResume } from "../src/appLifecycle";
+import { preloadTbvSkins } from "../src/tbv/useTbvSkins";
 
 /**
  * Make native (iOS Expo Go / TestFlight) layouts visually match the web
@@ -72,6 +73,13 @@ function AuthGate({ children }: { children: React.ReactNode }) {
   // actually torn down.
   const [showIntro, setShowIntro] = useState(true);
   const [bootDecided] = useState(true);
+
+  // Warm the industrial image-skin cache on first mount (runs behind the
+  // boot intro video) so skin-based screens — login / forgot-password /
+  // (future) home — paint fully-decorated with no black-then-pop-in.
+  useEffect(() => {
+    preloadTbvSkins();
+  }, []);
 
   // (No async shouldShowIntro check here anymore — the intro just runs
   // whenever this component first mounts.)

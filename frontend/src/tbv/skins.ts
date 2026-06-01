@@ -22,6 +22,9 @@ export const SKIN: Record<string, ImageSourcePropType> = {
   nameplate:    require("../../assets/tbv-v2/trimmed/Branding/tbv_master_nameplate.png"),
 };
 
+/** Flat list of every skin module — used to preload/decode them up front. */
+export const SKIN_LIST = Object.values(SKIN);
+
 /** Aspect ratios (width / height) of key skins. */
 export const AR = { logo: 0.968, card: 2.407, nameplate: 3.746, panel: 0.778 };
 

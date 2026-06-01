@@ -41,6 +41,7 @@ import { api, setToken } from "../src/api";
 import { useAuth } from "../src/AuthContext";
 import { SKIN, AR, TBV, clamp } from "../src/tbv/skins";
 import { TbvHeader } from "../src/tbv/TbvHeader";
+import { useTbvSkinsReady } from "../src/tbv/useTbvSkins";
 
 type Step = "request" | "verify";
 
@@ -61,6 +62,7 @@ export default function ForgotPasswordScreen() {
 
   const [box, setBox] = useState({ w: win.width, h: win.height });
   const [measuredInnerH, setMeasuredInnerH] = useState(0);
+  const skinsReady = useTbvSkinsReady();
 
   const [step, setStep] = useState<Step>("request");
   const [email, setEmail] = useState("");
@@ -168,8 +170,8 @@ export default function ForgotPasswordScreen() {
   const topPad = clamp(ch * 0.04, 16, 46);
   const headerGap = clamp(ch * 0.016, 10, 16);
 
-  // ---------- font gate ----------
-  if (!fontsLoaded && !fontError) {
+  // ---------- font + skin gate ----------
+  if ((!fontsLoaded && !fontError) || !skinsReady) {
     return (
       <ImageBackground source={SKIN.bg} style={styles.bg} resizeMode="cover">
         <View style={styles.veil} />
@@ -255,14 +257,6 @@ export default function ForgotPasswordScreen() {
                 <View
                   style={{ flex: 1, paddingHorizontal: padX, paddingTop: padTop, paddingBottom: padBot }}
                 >
-                  {/* build stamp so the new screen is easy to confirm */}
-                  <View pointerEvents="none" style={styles.stampAnchor}>
-                    <View style={styles.stampInline}>
-                      <Text numberOfLines={1} style={styles.stampHighlight}>FP·1</Text>
-                      <Text numberOfLines={1} style={styles.stampGroove}>FP·1</Text>
-                    </View>
-                  </View>
-
                   <View
                     style={styles.panelInner}
                     onLayout={(e) => {
@@ -500,31 +494,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     letterSpacing: 2,
     color: TBV.orange,
-  },
-
-  // build stamp (debossed) — top band of panel
-  stampAnchor: { position: "absolute", top: 2, left: 0, right: 0, alignItems: "center", zIndex: 5 },
-  stampInline: { transform: [{ rotate: "-2deg" }], opacity: 0.95 },
-  stampGroove: {
-    color: TBV.orangeDeep,
-    fontFamily: "BebasNeue_400Regular",
-    fontSize: 14,
-    letterSpacing: 1,
-    textShadowColor: "rgba(0,0,0,0.75)",
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 1.5,
-  },
-  stampHighlight: {
-    position: "absolute",
-    left: 0,
-    top: 0,
-    color: "rgba(0,0,0,0.9)",
-    fontFamily: "BebasNeue_400Regular",
-    fontSize: 14,
-    letterSpacing: 1,
-    textShadowColor: "rgba(0,0,0,0.85)",
-    textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 2.5,
   },
 
   fillImage: { width: "100%", height: "100%" },

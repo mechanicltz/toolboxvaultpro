@@ -38,6 +38,7 @@ import {
   getBiometricStatus, tryBiometricLogin, enableBiometric,
   hasBeenPromptedForBiometric, markBiometricPrompted,
 } from "../src/biometric";
+import { useTbvSkinsReady } from "../src/tbv/useTbvSkins";
 
 // =====================================================================
 // Cropped skin sources (opaque-bounds only — fill their containers)
@@ -68,6 +69,7 @@ export default function LoginScreen() {
     Rajdhani_500Medium, Rajdhani_600SemiBold, Rajdhani_700Bold,
     Exo2_400Regular, Exo2_500Medium, Exo2_700Bold,
   });
+  const skinsReady = useTbvSkinsReady();
 
   // Measured container size (post safe-area, post keyboard-avoid). This is the
   // REAL space we render into — identical logic on web preview and phone.
@@ -247,11 +249,13 @@ export default function LoginScreen() {
   const headerGap = clamp(ch * 0.018, 10, 18);   // breathing room below logo
   const topPad = clamp(ch * 0.035, 14, 44);      // shifts the whole stack toward the top
 
-  // Gate the render until the industrial fonts are actually loaded. Without
+  // Gate the render until the industrial fonts AND skins are loaded. Without
   // this, the iPhone lays out with the system font (San Francisco) — whose
   // metrics are far wider/taller than the condensed industrial fonts — so the
   // tagline wraps and every label/tab/title mis-sizes vs the web preview.
-  if (!fontsLoaded && !fontError) {
+  // We also wait for the image skins to decode so the panel/background art
+  // never "pops in" after the layout has already painted.
+  if ((!fontsLoaded && !fontError) || !skinsReady) {
     return (
       <ImageBackground source={SKIN.bg} style={styles.bg} resizeMode="cover">
         <View style={styles.veil} />
