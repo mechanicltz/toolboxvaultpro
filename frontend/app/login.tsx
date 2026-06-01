@@ -62,7 +62,7 @@ export default function LoginScreen() {
   const { login, register } = useAuth();
   const win = useWindowDimensions();
 
-  useGoogleFonts({
+  const [fontsLoaded, fontError] = useGoogleFonts({
     BebasNeue_400Regular,
     Rajdhani_500Medium, Rajdhani_600SemiBold, Rajdhani_700Bold,
     Exo2_400Regular, Exo2_500Medium, Exo2_700Bold,
@@ -195,6 +195,21 @@ export default function LoginScreen() {
 
   const blockGap = clamp(ch * 0.022, 10, 22);
   const headerGap = clamp(ch * 0.028, 16, 26);   // extra breathing room below logo
+
+  // Gate the render until the industrial fonts are actually loaded. Without
+  // this, the iPhone lays out with the system font (San Francisco) — whose
+  // metrics are far wider/taller than the condensed industrial fonts — so the
+  // tagline wraps and every label/tab/title mis-sizes vs the web preview.
+  if (!fontsLoaded && !fontError) {
+    return (
+      <ImageBackground source={SKIN.bg} style={styles.bg} resizeMode="cover">
+        <View style={styles.veil} />
+        <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
+          <ActivityIndicator color="#FF8533" size="large" />
+        </View>
+      </ImageBackground>
+    );
+  }
 
   return (
     <ImageBackground source={SKIN.bg} style={styles.bg} resizeMode="cover">
