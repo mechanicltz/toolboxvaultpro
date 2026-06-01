@@ -9,6 +9,8 @@ import {
   Alert,
   Platform,
   Image,
+  ImageBackground,
+  ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -29,9 +31,29 @@ import { IndustrialBanner } from "../../src/components/IndustrialBanner";
 import { useSubscriptionChange } from "../../src/subscriptionEvents";
 import { useAppResume } from "../../src/appLifecycle";
 
+// --- Industrial skin (matches the locked login North Star) ---
+import { SKIN, TBV } from "../../src/tbv/skins";
+import { useTbvSkinsReady } from "../../src/tbv/useTbvSkins";
+import { useFonts as useGoogleFonts } from "@expo-google-fonts/bebas-neue";
+import { BebasNeue_400Regular } from "@expo-google-fonts/bebas-neue";
+import {
+  Rajdhani_500Medium, Rajdhani_600SemiBold, Rajdhani_700Bold,
+} from "@expo-google-fonts/rajdhani";
+import {
+  Exo_2_400Regular as Exo2_400Regular,
+  Exo_2_500Medium as Exo2_500Medium,
+  Exo_2_700Bold as Exo2_700Bold,
+} from "@expo-google-fonts/exo-2";
+
 export default function HomeScreen() {
   const router = useRouter();
   const { prefs } = usePrefs();
+  const [fontsLoaded, fontError] = useGoogleFonts({
+    BebasNeue_400Regular,
+    Rajdhani_500Medium, Rajdhani_600SemiBold, Rajdhani_700Bold,
+    Exo2_400Regular, Exo2_500Medium, Exo2_700Bold,
+  });
+  const skinsReady = useTbvSkinsReady();
   const [stats, setStats] = useState<any>(() => getCached("home_stats", {}));
   const [agg, setAgg] = useState<any>(() => getCached("home_agg", {}));
   const [tools, setTools] = useState<any[]>(() => getCached("tools", []));
@@ -422,12 +444,28 @@ export default function HomeScreen() {
     })
     .filter((x): x is RenderItem => x !== null);
 
+  // Gate on the industrial fonts + skins so the page never paints with the
+  // system font / un-decoded textures (matches login / forgot-password).
+  if ((!fontsLoaded && !fontError) || !skinsReady) {
+    return (
+      <ImageBackground source={SKIN.bg} style={styles.bg} resizeMode="cover">
+        <View style={styles.gateVeil}>
+          <ActivityIndicator color={TBV.orange} />
+        </View>
+      </ImageBackground>
+    );
+  }
+
   return (
-    <SafeAreaView style={styles.container} edges={["top"]}>
-      <IndustrialBanner
-        title="TOOLBOX VAULT"
-        subtitle={`SUMMARY  ·  ${APP_VERSION_LABEL}`}
-      />
+    <ImageBackground source={SKIN.bg} style={styles.bg} resizeMode="cover">
+      {/* dark veil so the textured plate reads but content stays legible */}
+      <View style={styles.bgVeil} pointerEvents="none" />
+      <SafeAreaView style={styles.container} edges={["top"]}>
+        {/* Industrial header — TOOLBOX VAULT nameplate (matches login) */}
+        <View style={styles.header}>
+          <Image source={SKIN.nameplate} style={styles.nameplate} resizeMode="contain" />
+          <Text style={styles.headerSub}>SUMMARY  ·  {APP_VERSION_LABEL}</Text>
+        </View>
       {/* Admin-only at-a-glance user-base counter.
           Free vs subscribed counts come from /api/admin/user-stats which
           is gated to ADMIN_EMAILS — non-admins simply never see this row
@@ -669,7 +707,8 @@ export default function HomeScreen() {
           }}
         />
       )}
-    </SafeAreaView>
+      </SafeAreaView>
+    </ImageBackground>
   );
 }
 
@@ -802,7 +841,15 @@ function DealerBalanceRow({
 }
 
 const styles = themedStyles((c) => ({
-  container: { flex: 1, backgroundColor: c.bg },
+  container: { flex: 1, backgroundColor: "transparent" },
+  bg: { flex: 1, backgroundColor: TBV.ink },
+  bgVeil: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(10,10,10,0.60)" },
+  gateVeil: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(10,10,10,0.55)",
+  },
   versionRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -811,15 +858,26 @@ const styles = themedStyles((c) => ({
     paddingTop: 8,
     paddingBottom: 2,
   },
+  // Industrial header — centered TOOLBOX VAULT nameplate over the textured
+  // steel plate, with an orange hairline groove beneath (matches login).
   header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
+    paddingTop: 8,
+    paddingBottom: 14,
     paddingHorizontal: 20,
-    paddingVertical: 14,
     borderBottomWidth: 1,
-    borderBottomColor: c.border,
-    gap: 8,
+    borderBottomColor: "rgba(255,133,51,0.30)",
+  },
+  nameplate: { width: "80%", maxWidth: 330, height: 56 },
+  headerSub: {
+    color: TBV.orange,
+    fontFamily: "Rajdhani_700Bold",
+    fontSize: 11,
+    letterSpacing: 3,
+    marginTop: 6,
+    textShadowColor: "rgba(0,0,0,0.6)",
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
   },
   title: {
     color: c.textPrimary,
@@ -862,35 +920,35 @@ const styles = themedStyles((c) => ({
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
-    backgroundColor: `${c.accent}15`,
-    borderWidth: 1,
-    borderColor: c.accent,
+    backgroundColor: "rgba(18,18,18,0.92)",
+    borderWidth: 1.5,
+    borderColor: TBV.orange,
     borderLeftWidth: 5,
-    borderRadius: 10,
+    borderRadius: 8,
     paddingHorizontal: 14,
     paddingVertical: 12,
-    marginBottom: 16,
+    marginBottom: 14,
   },
   routeIconWrap: {
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: c.bg,
+    backgroundColor: "rgba(0,0,0,0.6)",
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
-    borderColor: c.accent,
+    borderColor: TBV.orange,
   },
   routeBannerLabel: {
-    color: c.accent,
-    fontSize: 7,
-    fontWeight: "900",
+    color: TBV.orange,
+    fontFamily: "BebasNeue_400Regular",
+    fontSize: 12,
     letterSpacing: 1.4,
   },
   routeBannerText: {
-    color: c.textPrimary,
-    fontSize: 11,
-    fontWeight: "800",
+    color: TBV.steel,
+    fontFamily: "Rajdhani_700Bold",
+    fontSize: 13,
     marginTop: 2,
   },
 
@@ -901,13 +959,16 @@ const styles = themedStyles((c) => ({
 
   // ---------- DETAILS BOX (warranty-card style, mirrors tool/dealer detail) ----------
   detailsBox: {
-    backgroundColor: c.bgSecondary,
-    borderWidth: 1,
-    borderColor: c.border,
-    borderRadius: 6,
-    padding: 12,
-    marginBottom: 12,
-    ...(theme.elevation.md as object),
+    backgroundColor: "rgba(18,18,18,0.92)",
+    borderWidth: 1.5,
+    borderColor: "rgba(255,133,51,0.45)",
+    borderRadius: 8,
+    padding: 14,
+    marginBottom: 14,
+    ...(Platform.select({
+      web: { boxShadow: "0 4px 14px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.06)" as any },
+      default: { shadowColor: "#000", shadowOpacity: 0.6, shadowOffset: { width: 0, height: 5 }, shadowRadius: 10, elevation: 8 },
+    }) as object),
   },
   detailsRow: {
     flexDirection: "row",
@@ -922,15 +983,15 @@ const styles = themedStyles((c) => ({
     borderBottomWidth: 0,
   },
   detailsLabel: {
-    color: c.textMuted,
-    fontSize: 9,
-    fontWeight: "800",
-    letterSpacing: 1.5,
+    color: TBV.textMuted,
+    fontFamily: "BebasNeue_400Regular",
+    fontSize: 14,
+    letterSpacing: 1.2,
   },
   detailsRowSub: {
-    color: c.textMuted,
-    fontSize: 8,
-    fontWeight: "600",
+    color: TBV.orange,
+    fontFamily: "Rajdhani_600SemiBold",
+    fontSize: 9,
     letterSpacing: 1.2,
     marginTop: 2,
   },
@@ -942,9 +1003,9 @@ const styles = themedStyles((c) => ({
     justifyContent: "flex-end",
   },
   detailsValue: {
-    color: c.textPrimary,
-    fontSize: 12,
-    fontWeight: "700",
+    color: TBV.steel,
+    fontFamily: "Rajdhani_700Bold",
+    fontSize: 15,
     textAlign: "right",
     flexShrink: 1,
   },
@@ -952,30 +1013,30 @@ const styles = themedStyles((c) => ({
   // since the dealer name is the row's primary identifier (analogous to the
   // agent rows on the dealer detail screen).
   dealerRowName: {
-    color: c.textPrimary,
-    fontSize: 12,
-    fontWeight: "700",
+    color: TBV.steel,
+    fontFamily: "Rajdhani_700Bold",
+    fontSize: 14,
   },
   dealerAdjustChip: {
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderWidth: 1.5,
-    borderColor: c.accent,
+    borderColor: TBV.orange,
     borderRadius: 6,
   },
   dealerAdjustChipText: {
-    color: c.accent,
-    fontSize: 8,
-    fontWeight: "900",
+    color: TBV.orange,
+    fontFamily: "BebasNeue_400Regular",
+    fontSize: 11,
     letterSpacing: 1,
   },
 
   // ---------- NESTED SUB-CARD (used for DEALER ACCOUNTS inside the main
   // Description Card so the dealer cluster reads as a card-within-a-card). ----------
   nestedCard: {
-    backgroundColor: c.bg,
+    backgroundColor: "rgba(8,8,8,0.85)",
     borderWidth: 1,
-    borderColor: c.borderSubtle,
+    borderColor: "rgba(255,133,51,0.22)",
     borderRadius: 6,
     paddingHorizontal: 10,
     paddingVertical: 4,
@@ -997,15 +1058,15 @@ const styles = themedStyles((c) => ({
     marginTop: 2,
   },
   nestedTotalLabel: {
-    color: c.textMuted,
-    fontSize: 9,
-    fontWeight: "800",
+    color: TBV.steel,
+    fontFamily: "BebasNeue_400Regular",
+    fontSize: 14,
     letterSpacing: 1.5,
   },
   nestedTotalValue: {
-    color: c.accent,
-    fontSize: 12,
-    fontWeight: "700",
+    color: TBV.orange,
+    fontFamily: "Rajdhani_700Bold",
+    fontSize: 16,
   },
 
   row: {
@@ -1231,30 +1292,32 @@ const styles = themedStyles((c) => ({
     paddingHorizontal: 14,
     paddingVertical: 12,
     marginTop: 16,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: c.border,
-    backgroundColor: c.bgSecondary,
-  
-    ...(theme.elevation.md as object),
+    borderRadius: 8,
+    borderWidth: 1.5,
+    borderColor: "rgba(255,133,51,0.35)",
+    backgroundColor: "rgba(18,18,18,0.92)",
+    ...(Platform.select({
+      web: { boxShadow: "0 4px 14px rgba(0,0,0,0.6)" as any },
+      default: { shadowColor: "#000", shadowOpacity: 0.5, shadowOffset: { width: 0, height: 4 }, shadowRadius: 8, elevation: 6 },
+    }) as object),
   },
   feedbackTitle: {
-    color: c.textPrimary,
-    fontSize: 9,
-    fontWeight: "900",
+    color: TBV.steel,
+    fontFamily: "BebasNeue_400Regular",
+    fontSize: 14,
     letterSpacing: 1,
   },
   feedbackSub: {
-    color: c.textMuted,
-    fontSize: 9,
-    fontWeight: "600",
+    color: TBV.textMuted,
+    fontFamily: "Rajdhani_600SemiBold",
+    fontSize: 11,
     marginTop: 3,
   },
   tip: {
-    color: c.textMuted,
-    fontSize: 8,
+    color: TBV.textMuted,
+    fontFamily: "Rajdhani_500Medium",
+    fontSize: 10,
     textAlign: "center",
-    fontStyle: "italic",
     marginTop: 14,
   },
 }));
