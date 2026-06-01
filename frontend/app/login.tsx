@@ -217,6 +217,22 @@ export default function LoginScreen() {
   const labelH   = 16;
   const innerGap = clamp(WORK_W * 0.03, 10, 14);
 
+  // ---- PANEL HEIGHT (EXPLICIT, measured-driven) ----
+  // The skin Image fills the panel via height:"100%", which only resolves
+  // against a parent with a DEFINITE height. A content-driven (auto) height
+  // leaves the image unable to stretch on iOS — so the frame art collapsed
+  // to its natural aspect and the bottom controls (forgot password) fell
+  // OUTSIDE the art. Fix: give the panel an explicit height = the REAL
+  // measured inner height (proven reliable) + top/bottom padding. Falls back
+  // to a JS estimate only for the very first paint, before onLayout fires.
+  const fallbackInnerH =
+    tabH + innerGap +
+    (labelH + 2 + inputH) + innerGap +
+    (labelH + 2 + inputH) + innerGap * 0.5 +
+    btnH + (10 + 20);                       // submit margin + forgot row
+  const innerH = dbg.innerH > 0 ? dbg.innerH : fallbackInnerH;
+  const panelH = innerH + padTop + padBot;  // frame exactly contains content
+
   // Help card — narrower secondary note, same column max.
   const helpW = Math.min(cw * 0.9, WORK_W);
   const helpH = clamp((helpW / AR.card) * 0.52, 40, 54);
@@ -307,6 +323,7 @@ export default function LoginScreen() {
                 }}
                 style={{
                   width: panelW,
+                  height: panelH,
                   paddingHorizontal: padX,
                   paddingTop: padTop,
                   paddingBottom: padBot,
@@ -522,7 +539,7 @@ export default function LoginScreen() {
               )}
 
               {/* Build stamp (also mirrored in the pinned top overlay). */}
-              <Text style={styles.buildStamp}>BUILD #004</Text>
+              <Text style={styles.buildStamp}>BUILD #005</Text>
             </ScrollView>
 
             {/* ===== PINNED DIAGNOSTIC OVERLAY (cannot be clipped) ===== */}
@@ -532,10 +549,10 @@ export default function LoginScreen() {
                 taps on the form underneath. */}
             <View pointerEvents="none" style={styles.dbgOverlay}>
               <Text style={styles.dbgText}>
-                {`BUILD #004  OS:${Platform.OS}\n`}
+                {`BUILD #005  OS:${Platform.OS}\n`}
                 {`box:${Math.round(cw)}x${Math.round(ch)}  win:${Math.round(win.width)}x${Math.round(win.height)}\n`}
                 {`want panelW:${Math.round(panelW)} contentW:${Math.round(contentW)}\n`}
-                {`pad T:${Math.round(padTop)} B:${Math.round(padBot)} X:${Math.round(padX)}\n`}
+                {`want panelH:${Math.round(panelH)}  pad T:${Math.round(padTop)} B:${Math.round(padBot)} X:${Math.round(padX)}\n`}
                 {`REAL panel:${Math.round(dbg.pw)}x${Math.round(dbg.ph)}\n`}
                 {`REAL inner:${Math.round(dbg.innerW)}x${Math.round(dbg.innerH)}\n`}
                 {`tabH:${Math.round(tabH)} inputH:${Math.round(inputH)} btnH:${Math.round(btnH)}`}
