@@ -483,6 +483,10 @@ export default function LoginScreen() {
                   </View>
                 </ImageBackground>
               )}
+
+              {/* Build stamp — read this back after reloading to confirm the
+                  phone is actually pulling the latest bundle. */}
+              <Text style={styles.buildStamp}>BUILD: 2026-06-01 · TAG-A7</Text>
             </ScrollView>
           </View>
         </KeyboardAvoidingView>
@@ -636,6 +640,14 @@ const styles = StyleSheet.create({
   },
 
   // ---- shared ----
+  buildStamp: {
+    marginTop: 10,
+    color: "#FF8533",
+    fontFamily: "Rajdhani_700Bold",
+    fontSize: 13,
+    letterSpacing: 2,
+    textAlign: "center",
+  },
   center: { flex: 1, width: "100%", height: "100%", alignItems: "center", justifyContent: "center" },
   row: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8 },
   fillImage: { width: "100%", height: "100%" },
