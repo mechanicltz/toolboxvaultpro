@@ -2,14 +2,16 @@
 // app/login.tsx — Toolbox Vault Login (industrial skin-based)
 // -----------------------------------------------------------------------------
 // RESPONSIVE CONTRACT (real-phone first):
-//   • EVERY size is derived from useWindowDimensions() + safe-area insets.
-//     Nothing is hard-coded to a browser-preview size.
-//   • Major blocks (Header / Panel / Help) are laid out with Flexbox.
-//   • Inside the panel, controls are sized RELATIVE TO THE PANEL (panel-W /
-//     panel-H), never the screen — so they always stay inside the skin.
-//   • Skins are pre-cropped to their opaque bounds (see /assets/tbv-v2/cropped)
-//     so ImageBackground(resizeMode="stretch") fills its container exactly.
-//   • No redesign / no colour change / no asset swaps — scaling fixes only.
+//   • We DO NOT trust useWindowDimensions() for sizing — on the web preview it
+//     reports the desktop window (~1920) while the real phone reports ~390,
+//     which is exactly why preview ≠ phone. Instead we MEASURE the actual
+//     rendered container with onLayout and size everything from that.
+//   • The working column is capped to a phone width (WORK_W), so the web
+//     preview renders the SAME phone-shaped layout you get on device.
+//   • Every font / logo / control size is derived from the MEASURED width or
+//     the panel's own dimensions — never from a hard-coded preview number.
+//   • Skins are pre-cropped to opaque bounds so ImageBackground(stretch) fills
+//     its container exactly. No redesign / no colour change / no asset swaps.
 // =============================================================================
 
 import React, { useState, useEffect, useRef } from "react";
@@ -18,7 +20,7 @@ import {
   ScrollView, Alert, Image, ImageBackground, Pressable, TouchableOpacity,
   ActivityIndicator, useWindowDimensions,
 } from "react-native";
-import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useFonts as useGoogleFonts } from "@expo-google-fonts/bebas-neue";
@@ -52,22 +54,23 @@ const SKIN = {
   masterLogo:   require("../assets/tbv-v2/cropped/logo.png"),
 };
 
-// True aspect ratios of the cropped graphics (w / h)
 const AR = { logo: 0.968, card: 2.429 };
-
 const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
 
 export default function LoginScreen() {
   const router = useRouter();
   const { login, register } = useAuth();
-  const { width: SW, height: SH } = useWindowDimensions();
-  const insets = useSafeAreaInsets();
+  const win = useWindowDimensions();
 
   useGoogleFonts({
     BebasNeue_400Regular,
     Rajdhani_500Medium, Rajdhani_600SemiBold, Rajdhani_700Bold,
     Exo2_400Regular, Exo2_500Medium, Exo2_700Bold,
   });
+
+  // Measured container size (post safe-area, post keyboard-avoid). This is the
+  // REAL space we render into — identical logic on web preview and phone.
+  const [box, setBox] = useState({ w: win.width, h: win.height });
 
   // Form state
   const [mode, setMode] = useState<"login" | "register">("login");
@@ -148,42 +151,43 @@ export default function LoginScreen() {
   };
 
   // ==================================================================
-  // RESPONSIVE MATHS — 100% derived from the real device viewport.
+  // RESPONSIVE MATHS — derived from the MEASURED container only.
   // ==================================================================
-  const availH = Math.max(520, SH - insets.top - insets.bottom);
-  const isTablet = SW >= 600;
+  const cw = box.w;
+  const ch = box.h;
 
-  // ---- Block heights (Header 34% / Panel 46% / Help 14% / slack 6%) ----
-  const headerH = availH * 0.34;
-  const helpAreaH = availH * 0.14;
+  // Cap the working column to a phone width so phones AND the web preview
+  // render the identical phone-shaped layout. Everything scales off WORK_W.
+  const WORK_W = Math.min(cw, 440);
 
-  // ---- Logo (cap 180 on phone, scales with width) ----
-  const logoW = isTablet ? 200 : Math.min(SW * 0.42, 180);
+  // Logo (never larger than the cap; scales down on small phones)
+  const logoW = Math.min(WORK_W * 0.34, 150);
   const logoH = logoW / AR.logo;
 
-  // ---- Title + tagline (native text, responsive font sizes) ----
-  const titleFont = clamp(SW * 0.082, 26, isTablet ? 40 : 34);
-  const tagFont = clamp(SW * 0.045, 13, 18);
+  // Native title + tagline fonts (scale with the real column width)
+  const titleFont = clamp(WORK_W * 0.072, 22, 30);
+  const tagFont = clamp(WORK_W * 0.034, 11, 14);
 
-  // ---- Panel geometry (panel-relative internals derive from these) ----
-  const panelW = Math.min(SW * 0.88, 420);
-  const panelH = clamp(availH * 0.46, 360, 470);
+  // Panel geometry — controls inside are sized off THESE, not the screen.
+  const panelW = WORK_W * 0.94;
+  const panelH = clamp(ch * 0.46, 340, 470);
   const padX = panelW * 0.09;
   const padTop = panelH * 0.11;
-  const padBot = panelH * 0.08;
+  const padBot = panelH * 0.13;
   const contentW = panelW - padX * 2;
 
-  // ---- Controls (sized off PANEL height, kept inside the skin) ----
-  const tabH   = clamp(panelH * 0.12, 44, 58);
-  const inputH = clamp(panelH * 0.13, 50, 60);
-  const btnH   = clamp(panelH * 0.15, 58, 70);
-  const labelH = clamp(panelH * 0.06, 16, 24);
+  const tabH   = clamp(panelH * 0.12, 42, 56);
+  const inputH = clamp(panelH * 0.13, 48, 60);
+  const btnH   = clamp(panelH * 0.15, 54, 70);
+  const labelH = clamp(panelH * 0.055, 15, 22);
   const tabGap = contentW * 0.04;
   const tabW   = (contentW - tabGap) / 2;
 
-  // ---- Help card ----
-  const helpW = Math.min(SW * 0.88, 420);
-  const helpH = clamp(helpW / AR.card, 80, 105);
+  // Help card
+  const helpW = panelW;
+  const helpH = clamp(helpW / AR.card, 78, 104);
+
+  const blockGap = clamp(ch * 0.022, 10, 22);
 
   return (
     <ImageBackground source={SKIN.bg} style={styles.bg} resizeMode="cover">
@@ -193,38 +197,52 @@ export default function LoginScreen() {
           behavior={Platform.OS === "ios" ? "padding" : undefined}
           style={{ flex: 1 }}
         >
-          <ScrollView
-            contentContainerStyle={[styles.scroll, { minHeight: availH }]}
-            keyboardShouldPersistTaps="handled"
-            showsVerticalScrollIndicator={false}
-            bounces={false}
+          <View
+            style={{ flex: 1 }}
+            onLayout={(e) => {
+              const { width, height } = e.nativeEvent.layout;
+              if (width > 0 && height > 0 &&
+                  (Math.abs(width - box.w) > 1 || Math.abs(height - box.h) > 1)) {
+                setBox({ w: width, h: height });
+              }
+            }}
           >
-            {/* ===================== HEADER BLOCK — 34% ===================== */}
-            <View style={[styles.headerBlock, { height: headerH, paddingTop: Math.max(8, 40 - insets.top) }]}>
-              <Image
-                source={SKIN.masterLogo}
-                style={{ width: logoW, height: logoH }}
-                resizeMode="contain"
-              />
-              <Text
-                style={[styles.title, { fontSize: titleFont }]}
-                numberOfLines={1}
-                allowFontScaling={false}
-              >
-                <Text style={styles.titleSteel}>TOOLBOX </Text>
-                <Text style={styles.titleOrange}>VAULT</Text>
-              </Text>
-              <Text
-                style={[styles.tagline, { fontSize: tagFont, maxWidth: SW * 0.92 }]}
-                numberOfLines={2}
-                allowFontScaling={false}
-              >
-                INVENTORY • DEALERS • WARRANTIES • REPORTS
-              </Text>
-            </View>
+            <ScrollView
+              contentContainerStyle={[
+                styles.scroll,
+                { minHeight: ch, gap: blockGap, paddingVertical: blockGap },
+              ]}
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false}
+              bounces={false}
+            >
+              {/* ===================== HEADER ===================== */}
+              <View style={[styles.block, { width: WORK_W }]}>
+                <Image
+                  source={SKIN.masterLogo}
+                  style={{ width: logoW, height: logoH }}
+                  resizeMode="contain"
+                />
+                <Text
+                  style={[styles.title, { fontSize: titleFont }]}
+                  numberOfLines={1}
+                  allowFontScaling={false}
+                >
+                  <Text style={styles.titleSteel}>TOOLBOX </Text>
+                  <Text style={styles.titleOrange}>VAULT</Text>
+                </Text>
+                <Text
+                  style={[styles.tagline, { fontSize: tagFont, maxWidth: WORK_W * 0.96 }]}
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                  minimumFontScale={0.8}
+                  allowFontScaling={false}
+                >
+                  INVENTORY • DEALERS • WARRANTIES • REPORTS
+                </Text>
+              </View>
 
-            {/* ===================== LOGIN PANEL — 46% ===================== */}
-            <View style={styles.panelBlock}>
+              {/* ===================== LOGIN PANEL ===================== */}
               <ImageBackground
                 source={SKIN.panel}
                 style={{
@@ -376,17 +394,15 @@ export default function LoginScreen() {
                   )}
                 </View>
               </ImageBackground>
-            </View>
 
-            {/* ===================== HELP BLOCK — 14% ===================== */}
-            <View style={[styles.helpBlock, { height: helpAreaH }]}>
+              {/* ===================== HELP BLOCK ===================== */}
               {mode === "login" && bio?.enabled && bio.hasHardware && bio.isEnrolled ? (
                 <Pressable
                   onPress={runBiometricLogin}
                   disabled={busy}
                   style={({ pressed }) => ({
                     width: helpW,
-                    height: Math.min(helpH, 60),
+                    height: Math.min(helpH, 58),
                     opacity: pressed ? 0.85 : 1,
                   })}
                   testID="auth-biometric"
@@ -421,9 +437,9 @@ export default function LoginScreen() {
                   imageStyle={styles.fillImage}
                   resizeMode="stretch"
                 >
-                  <View style={[styles.footerInner, { paddingHorizontal: helpW * 0.13 }]}>
+                  <View style={[styles.footerInner, { paddingHorizontal: helpW * 0.12 }]}>
                     <Ionicons name="shield-checkmark" size={15} color="#FF8533" />
-                    <Text style={styles.footerText} numberOfLines={2}>
+                    <Text style={[styles.footerText, { fontSize: clamp(WORK_W * 0.032, 11, 13) }]} numberOfLines={2}>
                       {mode === "login"
                         ? "New here? Tap CREATE to set up your vault — free."
                         : "Already registered? Tap SIGN IN above."}
@@ -431,8 +447,8 @@ export default function LoginScreen() {
                   </View>
                 </ImageBackground>
               )}
-            </View>
-          </ScrollView>
+            </ScrollView>
+          </View>
         </KeyboardAvoidingView>
       </SafeAreaView>
     </ImageBackground>
@@ -466,7 +482,7 @@ function TabButton({
             style={[styles.tabText, { color: active ? "#0A0A0A" : "#C8C8C8" }]}
             numberOfLines={1}
             adjustsFontSizeToFit
-            minimumFontScale={0.7}
+            minimumFontScale={0.6}
           >
             {label}
           </Text>
@@ -483,10 +499,10 @@ const styles = StyleSheet.create({
   bg: { flex: 1, backgroundColor: "#0A0A0A" },
   veil: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(0,0,0,0.38)" },
 
-  scroll: { flexGrow: 1, alignItems: "center", paddingHorizontal: 8 },
+  scroll: { flexGrow: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 8 },
 
   // ---- header ----
-  headerBlock: { width: "100%", alignItems: "center", justifyContent: "center" },
+  block: { alignItems: "center", justifyContent: "center" },
   title: {
     fontFamily: "BebasNeue_400Regular",
     letterSpacing: 3,
@@ -497,19 +513,18 @@ const styles = StyleSheet.create({
   titleOrange: { color: "#FF8533" },
   tagline: {
     fontFamily: "Rajdhani_600SemiBold",
-    letterSpacing: 2,
+    letterSpacing: 1,
     color: "#F2F2F2",
     textAlign: "center",
-    marginTop: 6,
+    marginTop: 5,
   },
 
   // ---- panel ----
-  panelBlock: { width: "100%", alignItems: "center", justifyContent: "center" },
   panelInner: { flex: 1, justifyContent: "space-between" },
 
   // ---- tabs ----
   tabsRow: { flexDirection: "row", width: "100%" },
-  tabText: { fontFamily: "BebasNeue_400Regular", fontSize: 16, letterSpacing: 1 },
+  tabText: { fontFamily: "BebasNeue_400Regular", fontSize: 15, letterSpacing: 1 },
 
   // ---- fields ----
   fieldGroup: { width: "100%" },
@@ -569,13 +584,11 @@ const styles = StyleSheet.create({
   },
 
   // ---- help ----
-  helpBlock: { width: "100%", alignItems: "center", justifyContent: "center" },
   footerInner: { flexDirection: "row", alignItems: "center", gap: 10 },
   footerText: {
     flex: 1,
     color: "#C8C8C8",
     fontFamily: "Exo2_400Regular",
-    fontSize: 12,
     lineHeight: 16,
   },
   bioText: {
