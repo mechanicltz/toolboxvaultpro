@@ -215,7 +215,7 @@ export default function LoginScreen() {
   const padTop   = clamp(panelW * 0.225, 66, 94);   // top rail band (taller panel)
   const padBot   = clamp(panelW * 0.255, 78, 110);  // bottom rail band (taller panel)
   const contentW = panelW - padX * 2;               // sits INSIDE the borders
-  const tabGap   = 6;                                // tabs sit closer together
+  const tabGap   = 3;                                // tabs almost touch in the center
   const tabW     = (contentW - tabGap) / 2;
 
   // ---- Controls (explicit heights; the panel grows to contain them) ----
@@ -275,8 +275,8 @@ export default function LoginScreen() {
         pointerEvents="none"
         style={[styles.stampWrap, { top: insets.top + 8, right: 22 }]}
       >
-        <Text numberOfLines={1} style={styles.stampHighlight}>#016</Text>
-        <Text numberOfLines={1} style={styles.stampGroove}>#016</Text>
+        <Text numberOfLines={1} style={styles.stampHighlight}>#017</Text>
+        <Text numberOfLines={1} style={styles.stampGroove}>#017</Text>
       </View>
 
       <SafeAreaView style={{ flex: 1 }} edges={["top", "bottom"]}>
@@ -395,7 +395,6 @@ export default function LoginScreen() {
                     />
                     <TabButton
                       label="CREATE ACCOUNT"
-                      icon="person-add"
                       width={tabW}
                       active={mode === "register"}
                       onPress={() => setMode("register")}
@@ -596,7 +595,9 @@ function TabButton({
         resizeMode="stretch"
       >
         <View style={[styles.row, { gap: 5, paddingHorizontal: 6 }]}>
-          <Ionicons name={icon} size={13} color={active ? "#0A0A0A" : "#C8C8C8"} />
+          {icon ? (
+            <Ionicons name={icon} size={13} color={active ? "#0A0A0A" : "#C8C8C8"} />
+          ) : null}
           <Text
             style={[styles.tabText, { color: active ? "#0A0A0A" : "#C8C8C8" }]}
             numberOfLines={1}
