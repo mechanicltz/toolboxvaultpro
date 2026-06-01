@@ -206,10 +206,10 @@ export default function LoginScreen() {
   // INSIDE the frame's inner screen (not on top of the bolted borders).
   const panelW   = WORK_W;
   const padX     = clamp(panelW * 0.125, 38, 58);   // side rails (wide, insets inputs)
-  const padTop   = clamp(panelW * 0.095, 28, 42);   // top rail band
+  const padTop   = clamp(panelW * 0.14, 44, 64);    // top rail band (taller; tabs sit inside)
   const padBot   = clamp(panelW * 0.20, 62, 92);    // bottom rail band (thick; raises forgot above it)
   const contentW = panelW - padX * 2;               // sits INSIDE the borders
-  const tabGap   = 10;
+  const tabGap   = 6;                                // tabs sit closer together
   const tabW     = (contentW - tabGap) / 2;
 
   // ---- Controls (explicit heights; the panel grows to contain them) ----
@@ -561,25 +561,8 @@ export default function LoginScreen() {
               )}
 
               {/* Build stamp (also mirrored in the pinned top overlay). */}
-              <Text style={styles.buildStamp}>BUILD #009</Text>
+              <Text style={styles.buildStamp}>BUILD #010</Text>
             </ScrollView>
-
-            {/* ===== PINNED DIAGNOSTIC OVERLAY (cannot be clipped) ===== */}
-            {/* Absolutely positioned at the very top so it is ALWAYS visible
-                regardless of how the form lays out / overflows. Read these
-                numbers off the phone. pointerEvents=none so it never blocks
-                taps on the form underneath. */}
-            <View pointerEvents="none" style={styles.dbgOverlay}>
-              <Text style={styles.dbgText}>
-                {`BUILD #009  OS:${Platform.OS}\n`}
-                {`box:${Math.round(cw)}x${Math.round(ch)}  win:${Math.round(win.width)}x${Math.round(win.height)}\n`}
-                {`want panel:${Math.round(panelW)}x${Math.round(panelH)} contentW:${Math.round(contentW)}\n`}
-                {`pad T:${Math.round(padTop)} B:${Math.round(padBot)} X:${Math.round(padX)}\n`}
-                {`REAL panel:${Math.round(dbg.pw)}x${Math.round(dbg.ph)}\n`}
-                {`REAL inner:${Math.round(dbg.innerW)}x${Math.round(dbg.innerH)}\n`}
-                {`REAL skinImg:${Math.round(dbg.imgW)}x${Math.round(dbg.imgH)}`}
-              </Text>
-            </View>
           </View>
         </KeyboardAvoidingView>
       </SafeAreaView>
