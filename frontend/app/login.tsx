@@ -211,8 +211,8 @@ export default function LoginScreen() {
   // INSIDE the frame's inner screen (not on top of the bolted borders).
   const panelW   = WORK_W;
   const padX     = clamp(panelW * 0.125, 38, 58);   // side rails (wide, insets inputs)
-  const padTop   = clamp(panelW * 0.17, 54, 78);    // top rail band (taller; tabs sit fully inside)
-  const padBot   = clamp(panelW * 0.20, 62, 92);    // bottom rail band (thick; raises forgot above it)
+  const padTop   = clamp(panelW * 0.20, 60, 86);    // top rail band (taller panel)
+  const padBot   = clamp(panelW * 0.23, 70, 100);   // bottom rail band (taller panel)
   const contentW = panelW - padX * 2;               // sits INSIDE the borders
   const tabGap   = 6;                                // tabs sit closer together
   const tabW     = (contentW - tabGap) / 2;
@@ -222,7 +222,7 @@ export default function LoginScreen() {
   const inputH   = clamp(WORK_W * 0.125, 46, 54);
   const btnH     = clamp(WORK_W * 0.145, 52, 60);
   const labelH   = 16;
-  const innerGap = clamp(WORK_W * 0.03, 10, 14);
+  const innerGap = clamp(WORK_W * 0.022, 8, 11);    // tighter: closes gaps between fields/button
 
   // ---- PANEL HEIGHT (EXPLICIT, measured-driven) ----
   // The skin Image fills the panel via height:"100%", which only resolves
@@ -244,8 +244,9 @@ export default function LoginScreen() {
   const helpW = Math.min(cw * 0.9, WORK_W);
   const helpH = clamp((helpW / AR.card) * 0.52, 40, 54);
 
-  const blockGap = clamp(ch * 0.016, 8, 16);
+  const blockGap = clamp(ch * 0.01, 5, 11);
   const headerGap = clamp(ch * 0.018, 10, 18);   // breathing room below logo
+  const topPad = clamp(ch * 0.035, 14, 44);      // shifts the whole stack toward the top
 
   // Gate the render until the industrial fonts are actually loaded. Without
   // this, the iPhone lays out with the system font (San Francisco) — whose
@@ -283,14 +284,14 @@ export default function LoginScreen() {
             <ScrollView
               contentContainerStyle={[
                 styles.scroll,
-                { minHeight: ch, gap: blockGap, paddingVertical: blockGap },
+                { minHeight: ch, gap: blockGap, paddingTop: topPad, paddingBottom: blockGap },
               ]}
               keyboardShouldPersistTaps="handled"
               showsVerticalScrollIndicator={false}
               bounces={false}
             >
               {/* ===================== HEADER ===================== */}
-              <View style={[styles.block, { width: WORK_W, marginBottom: headerGap }]}>
+              <View style={[styles.block, { width: WORK_W, marginBottom: headerGap * 0.3 }]}>
                 <Image
                   source={SKIN.masterLogo}
                   style={{ width: logoW, height: logoH }}
@@ -298,11 +299,11 @@ export default function LoginScreen() {
                 />
                 <Image
                   source={SKIN.nameplate}
-                  style={{ width: nameplateW, height: nameplateH, marginTop: headerGap * 0.25 }}
+                  style={{ width: nameplateW, height: nameplateH, marginTop: headerGap * 0.08 }}
                   resizeMode="contain"
                 />
                 <Text
-                  style={[styles.tagline, { fontSize: tagFont, maxWidth: WORK_W * 0.96, marginTop: headerGap * 0.4 }]}
+                  style={[styles.tagline, { fontSize: tagFont, maxWidth: WORK_W * 0.96, marginTop: headerGap * 0.06 }]}
                   numberOfLines={1}
                   adjustsFontSizeToFit
                   minimumFontScale={0.8}
@@ -563,7 +564,7 @@ export default function LoginScreen() {
               )}
 
               {/* Build stamp (also mirrored in the pinned top overlay). */}
-              <Text style={styles.buildStamp}>BUILD #012</Text>
+              <Text style={styles.buildStamp}>BUILD #013</Text>
             </ScrollView>
           </View>
         </KeyboardAvoidingView>
@@ -616,7 +617,7 @@ const styles = StyleSheet.create({
   bg: { flex: 1, backgroundColor: "#0A0A0A" },
   veil: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(0,0,0,0.38)" },
 
-  scroll: { flexGrow: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 8 },
+  scroll: { flexGrow: 1, alignItems: "center", justifyContent: "flex-start", paddingHorizontal: 8 },
 
   // ---- header ----
   block: { alignItems: "center", justifyContent: "center" },
