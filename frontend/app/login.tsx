@@ -215,6 +215,10 @@ export default function LoginScreen() {
   const padTop   = clamp(panelW * 0.225, 66, 94);   // top rail band (taller panel)
   const padBot   = clamp(panelW * 0.255, 78, 110);  // bottom rail band (taller panel)
   const contentW = panelW - padX * 2;               // sits INSIDE the borders
+  // EMAIL / PASSWORD fields are inset a bit more than the tabs/button so they
+  // don't run rail-to-rail (label + input move inward together).
+  const fieldInset = clamp(contentW * 0.055, 12, 22);
+  const fieldW = contentW - fieldInset * 2;
   const tabGap   = 3;                                // tabs almost touch in the center
   const tabW     = (contentW - tabGap) / 2;
 
@@ -394,11 +398,11 @@ export default function LoginScreen() {
                   </View>
 
                   {/* ----- EMAIL ----- */}
-                  <View style={[styles.fieldGroup, { marginTop: innerGap }]}>
+                  <View style={[styles.fieldGroup, { marginTop: innerGap, paddingHorizontal: fieldInset }]}>
                     <Text style={[styles.label, { height: labelH }]}>EMAIL</Text>
                     <ImageBackground
                       source={SKIN.input}
-                      style={{ width: contentW, height: inputH, justifyContent: "center" }}
+                      style={{ width: fieldW, height: inputH, justifyContent: "center" }}
                       imageStyle={styles.fillImage}
                       resizeMode="stretch"
                     >
@@ -420,11 +424,11 @@ export default function LoginScreen() {
                   </View>
 
                   {/* ----- PASSWORD ----- */}
-                  <View style={[styles.fieldGroup, { marginTop: innerGap }]}>
+                  <View style={[styles.fieldGroup, { marginTop: innerGap, paddingHorizontal: fieldInset }]}>
                     <Text style={[styles.label, { height: labelH }]}>PASSWORD</Text>
                     <ImageBackground
                       source={SKIN.input}
-                      style={{ width: contentW, height: inputH, justifyContent: "center" }}
+                      style={{ width: fieldW, height: inputH, justifyContent: "center" }}
                       imageStyle={styles.fillImage}
                       resizeMode="stretch"
                     >
@@ -519,10 +523,10 @@ export default function LoginScreen() {
                 {/* Build number floats (absolute) high in the panel's top band,
                     above the tabs. Absolute = takes NO flex space, so nothing
                     else shifts. */}
-                <View pointerEvents="none" style={[styles.stampAnchor, { top: padTop * 0.34 }]}>
+                <View pointerEvents="none" style={[styles.stampAnchor, { top: padTop * 0.52 }]}>
                   <View style={styles.stampInline}>
-                    <Text numberOfLines={1} style={styles.stampHighlight}>#019</Text>
-                    <Text numberOfLines={1} style={styles.stampGroove}>#019</Text>
+                    <Text numberOfLines={1} style={styles.stampHighlight}>#020</Text>
+                    <Text numberOfLines={1} style={styles.stampGroove}>#020</Text>
                   </View>
                 </View>
               </View>
