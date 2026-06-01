@@ -525,8 +525,8 @@ export default function LoginScreen() {
                     else shifts. */}
                 <View pointerEvents="none" style={[styles.stampAnchor, { top: padTop * 0.52 }]}>
                   <View style={styles.stampInline}>
-                    <Text numberOfLines={1} style={styles.stampHighlight}>#020</Text>
-                    <Text numberOfLines={1} style={styles.stampGroove}>#020</Text>
+                    <Text numberOfLines={1} style={styles.stampHighlight}>#021</Text>
+                    <Text numberOfLines={1} style={styles.stampGroove}>#021</Text>
                   </View>
                 </View>
               </View>
@@ -734,25 +734,28 @@ const styles = StyleSheet.create({
   },
   stampInline: {
     transform: [{ rotate: "-2deg" }],
-    opacity: 0.92,
+    opacity: 0.96,
   },
   stampGroove: {
-    color: "rgba(86,38,12,0.92)",           // dark burnt-orange recess (the groove)
+    color: "#FFA046",                        // brighter orange face = readable
     fontFamily: "BebasNeue_400Regular",
-    fontSize: 20,
+    fontSize: 21,
     letterSpacing: 1,
-    textShadowColor: "rgba(0,0,0,0.55)",    // inner shadow on the top edge = pressed in
-    textShadowOffset: { width: 0, height: -1 },
-    textShadowRadius: 1,
+    textShadowColor: "rgba(0,0,0,0.75)",     // tight drop shadow for contrast
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 1.5,
   },
   stampHighlight: {
     position: "absolute",
-    left: 0.5,
-    top: 1.6,                                // warm light catches the lower engraved lip
-    color: "rgba(255,170,84,0.5)",
+    left: 0,
+    top: 0,                                  // sits directly behind the face
+    color: "rgba(0,0,0,0.9)",                // black base + soft halo = outline
     fontFamily: "BebasNeue_400Regular",
-    fontSize: 20,
+    fontSize: 21,
     letterSpacing: 1,
+    textShadowColor: "rgba(0,0,0,0.85)",
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 3.5,                    // light black glow around the number
   },
   center: { flex: 1, width: "100%", height: "100%", alignItems: "center", justifyContent: "center" },
   row: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8 },
