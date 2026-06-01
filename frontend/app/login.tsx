@@ -169,10 +169,11 @@ export default function LoginScreen() {
   const tagFont = clamp(WORK_W * 0.034, 11, 14);
 
   // Panel geometry — controls inside are sized off THESE, not the screen.
-  // Panel — wider (92% of screen) so the form reads as one cohesive interface,
-  // not a narrow stack. (Outer width is a composition choice; the measured
-  // responsive scaling itself is unchanged.) Capped for tablet/web sanity.
-  const panelW = Math.min(cw * 0.94, 600);
+  // Panel outer width. Drives every interior control. On a phone (cw < 600)
+  // this is 94% of the real screen. The cap below only limits very wide
+  // surfaces (browser preview / tablet) so the form stays a sane column.
+  const PANEL_MAX = cw >= 600 ? 760 : cw;     // was a hard 600 — THAT was the ceiling holding it back
+  const panelW = Math.min(cw * 0.94, PANEL_MAX);
   const panelH = clamp(ch * 0.42, 320, 440);
   const padX = panelW * 0.085;
   const padTop = panelH * 0.115;
