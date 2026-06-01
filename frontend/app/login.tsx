@@ -168,33 +168,45 @@ export default function LoginScreen() {
   const titleFont = clamp(WORK_W * 0.072, 22, 30);
   const tagFont = clamp(WORK_W * 0.034, 11, 14);
 
-  // Panel geometry — controls inside are sized off THESE, not the screen.
-  // Panel outer width. Drives every interior control. On a phone (cw < 600)
-  // this is 94% of the real screen. The cap below only limits very wide
-  // surfaces (browser preview / tablet) so the form stays a sane column.
-  const PANEL_MAX = cw >= 600 ? 760 : cw;     // was a hard 600 — THAT was the ceiling holding it back
-  const panelW = Math.min(cw * 0.94, PANEL_MAX);
-  const panelH = clamp(ch * 0.42, 320, 440);
-  const padX = panelW * 0.085;
-  const padTop = panelH * 0.115;
-  const padBot = panelH * 0.115;
-  const contentW = panelW - padX * 2;            // ~85% of panel width
+  // ====================================================================
+  // PANEL SIZING — CONTENT-DRIVEN (this is the real fix).
+  // OLD BUG: panelH = clamp(ch * 0.42, 320, 440) — a fraction of SCREEN
+  // height with a 320px floor. On a phone that floor is SHORTER than the
+  // stacked controls (~355px), so tabs/inputs/button/forgot overflowed the
+  // frame (spilling over top, bottom AND the side rails). The tall web
+  // preview hid it. FIX: size controls off the column width, measure the
+  // real content height, then GROW the panel to contain it on ANY device.
+  // ====================================================================
+  const tabH   = clamp(WORK_W * 0.11, 42, 48);
+  const inputH = clamp(WORK_W * 0.12, 46, 52);
+  const btnH   = clamp(WORK_W * 0.14, 52, 60);
+  const labelH = 16;
+  const innerGap = clamp(WORK_W * 0.025, 9, 12);
+  const forgotH = 20;
 
-  const tabH   = clamp(panelH * 0.12, 42, 54);
-  const inputH = clamp(panelH * 0.115, 46, 56);  // shorter → text field, not nameplate
-  const btnH   = clamp(panelH * 0.15, 54, 70);
-  const labelH = clamp(panelH * 0.05, 14, 20);
-  const tabGap = 8;                              // tight, integrated tab bar
+  const groupH = labelH + 2 + inputH;                  // label + margin + input
+  const contentH =
+    tabH + innerGap +
+    groupH + innerGap +
+    groupH + innerGap * 0.6 +
+    btnH + (10 + forgotH);
+
+  const PANEL_MAX = cw >= 600 ? 760 : cw;
+  const panelW = Math.min(cw * 0.96, PANEL_MAX);
+  const panelH = contentH / 0.70;                      // frame grows to fit content
+  const padX   = panelW * 0.115;                       // clear side rails (~8.5%) + margin
+  const padTop = panelH * 0.11;
+  const padBot = panelH * 0.17;                        // extra clearance so FORGOT clears bottom rail
+  const contentW = panelW - padX * 2;                  // sits INSIDE the borders
+  const tabGap = 10;
   const tabW   = (contentW - tabGap) / 2;
-  const innerGap = clamp(panelH * 0.028, 8, 16);
 
-  // Help card — clearly narrower than the panel (≈82% screen) so it reads as a
-  // secondary supporting note, not a second console.
-  const helpW = Math.min(cw * 0.82, 500);
-  const helpH = clamp((helpW / AR.card) * 0.62, 44, 64);
+  // Help card — narrower secondary note.
+  const helpW = Math.min(cw * 0.86, 500);
+  const helpH = clamp((helpW / AR.card) * 0.52, 40, 54);
 
-  const blockGap = clamp(ch * 0.022, 10, 22);
-  const headerGap = clamp(ch * 0.028, 16, 26);   // extra breathing room below logo
+  const blockGap = clamp(ch * 0.016, 8, 16);
+  const headerGap = clamp(ch * 0.018, 10, 18);   // breathing room below logo
 
   // Gate the render until the industrial fonts are actually loaded. Without
   // this, the iPhone lays out with the system font (San Francisco) — whose
