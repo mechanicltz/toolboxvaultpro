@@ -370,13 +370,6 @@ export default function LoginScreen() {
                         ? { ...d, innerW: width, innerH: height } : d);
                   }}
                 >
-                  {/* Build number stamped into the inner plate, centered
-                      directly above the SIGN IN / CREATE ACCOUNT tabs. */}
-                  <View style={styles.stampInline}>
-                    <Text numberOfLines={1} style={styles.stampHighlight}>#018</Text>
-                    <Text numberOfLines={1} style={styles.stampGroove}>#018</Text>
-                  </View>
-
                   {/* ----- TABS ----- */}
                   <View style={[styles.tabsRow, { height: tabH, gap: tabGap }]}>
                     <TabButton
@@ -521,6 +514,16 @@ export default function LoginScreen() {
                     </View>
                   )}
                 </View>
+                </View>
+
+                {/* Build number floats (absolute) high in the panel's top band,
+                    above the tabs. Absolute = takes NO flex space, so nothing
+                    else shifts. */}
+                <View pointerEvents="none" style={[styles.stampAnchor, { top: padTop * 0.34 }]}>
+                  <View style={styles.stampInline}>
+                    <Text numberOfLines={1} style={styles.stampHighlight}>#019</Text>
+                    <Text numberOfLines={1} style={styles.stampGroove}>#019</Text>
+                  </View>
                 </View>
               </View>
 
@@ -716,10 +719,16 @@ const styles = StyleSheet.create({
   },
 
   // ---- shared ----
-  // Build number stamped into the inner plate (debossed), centered above tabs.
+  // Build number stamped into the inner plate (debossed). Floated via an
+  // absolute anchor so it never takes flex space / shifts the form.
+  stampAnchor: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    alignItems: "center",
+    zIndex: 5,
+  },
   stampInline: {
-    alignSelf: "center",
-    marginBottom: 7,
     transform: [{ rotate: "-2deg" }],
     opacity: 0.92,
   },
