@@ -200,13 +200,14 @@ export default function LoginScreen() {
   const titleFont = clamp(WORK_W * 0.072, 22, 30);
   const tagFont = clamp(WORK_W * 0.034, 11, 14);
 
-  // ---- PANEL (content-driven; NO fixed height) ----
+  // ---- PANEL (explicit height; see PANEL HEIGHT block below) ----
   // panelW == WORK_W → the panel IS the column, so web preview mirrors phone.
-  // Padding is derived from panelW only (stable) and clears the skin rails.
+  // Padding clears the thick metal rails of the skin so the controls sit
+  // INSIDE the frame's inner screen (not on top of the bolted borders).
   const panelW   = WORK_W;
-  const padX     = clamp(panelW * 0.085, 22, 40);   // side rails
-  const padTop   = clamp(panelW * 0.085, 24, 36);   // top rail band
-  const padBot   = clamp(panelW * 0.11, 32, 48);    // bottom rail band
+  const padX     = clamp(panelW * 0.125, 38, 58);   // side rails (wide, insets inputs)
+  const padTop   = clamp(panelW * 0.095, 28, 42);   // top rail band
+  const padBot   = clamp(panelW * 0.20, 62, 92);    // bottom rail band (thick; raises forgot above it)
   const contentW = panelW - padX * 2;               // sits INSIDE the borders
   const tabGap   = 10;
   const tabW     = (contentW - tabGap) / 2;
@@ -548,7 +549,7 @@ export default function LoginScreen() {
                   imageStyle={styles.fillImage}
                   resizeMode="stretch"
                 >
-                  <View style={[styles.footerInner, { paddingHorizontal: helpW * 0.06 }]}>
+                  <View style={[styles.footerInner, { paddingHorizontal: helpW * 0.16 }]}>
                     <Ionicons name="shield-checkmark" size={14} color="#FF8533" />
                     <Text style={[styles.footerText, { fontSize: clamp(WORK_W * 0.029, 10, 12) }]} numberOfLines={2}>
                       {mode === "login"
@@ -560,7 +561,7 @@ export default function LoginScreen() {
               )}
 
               {/* Build stamp (also mirrored in the pinned top overlay). */}
-              <Text style={styles.buildStamp}>BUILD #007</Text>
+              <Text style={styles.buildStamp}>BUILD #009</Text>
             </ScrollView>
 
             {/* ===== PINNED DIAGNOSTIC OVERLAY (cannot be clipped) ===== */}
@@ -570,7 +571,7 @@ export default function LoginScreen() {
                 taps on the form underneath. */}
             <View pointerEvents="none" style={styles.dbgOverlay}>
               <Text style={styles.dbgText}>
-                {`BUILD #007  OS:${Platform.OS}\n`}
+                {`BUILD #009  OS:${Platform.OS}\n`}
                 {`box:${Math.round(cw)}x${Math.round(ch)}  win:${Math.round(win.width)}x${Math.round(win.height)}\n`}
                 {`want panel:${Math.round(panelW)}x${Math.round(panelH)} contentW:${Math.round(contentW)}\n`}
                 {`pad T:${Math.round(padTop)} B:${Math.round(padBot)} X:${Math.round(padX)}\n`}
