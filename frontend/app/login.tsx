@@ -268,17 +268,6 @@ export default function LoginScreen() {
     <ImageBackground source={SKIN.bg} style={styles.bg} resizeMode="cover">
       <View style={styles.veil} />
 
-      {/* Build number "stamped" into the metal: a dark recessed groove with a
-          faint warm highlight peeking from the lower-right edge = debossed /
-          etched illusion. Slight tilt like a hand stamp. Pinned top-right. */}
-      <View
-        pointerEvents="none"
-        style={[styles.stampWrap, { top: insets.top + 8, right: 22 }]}
-      >
-        <Text numberOfLines={1} style={styles.stampHighlight}>#017</Text>
-        <Text numberOfLines={1} style={styles.stampGroove}>#017</Text>
-      </View>
-
       <SafeAreaView style={{ flex: 1 }} edges={["top", "bottom"]}>
         <KeyboardAvoidingView
           behavior={Platform.OS === "ios" ? "padding" : undefined}
@@ -381,6 +370,13 @@ export default function LoginScreen() {
                         ? { ...d, innerW: width, innerH: height } : d);
                   }}
                 >
+                  {/* Build number stamped into the inner plate, centered
+                      directly above the SIGN IN / CREATE ACCOUNT tabs. */}
+                  <View style={styles.stampInline}>
+                    <Text numberOfLines={1} style={styles.stampHighlight}>#018</Text>
+                    <Text numberOfLines={1} style={styles.stampGroove}>#018</Text>
+                  </View>
+
                   {/* ----- TABS ----- */}
                   <View style={[styles.tabsRow, { height: tabH, gap: tabGap }]}>
                     <TabButton
@@ -720,19 +716,17 @@ const styles = StyleSheet.create({
   },
 
   // ---- shared ----
-  // Build number DEBOSSED (pressed) into the metal: dark burnt-orange recess
-  // with a warm lit lower lip + dark inner top shadow. Thick Bebas font so the
-  // engraving reads cleanly. Lower opacity lets the plate texture bleed through.
-  stampWrap: {
-    position: "absolute",
-    zIndex: 50,
-    transform: [{ rotate: "-4deg" }],
-    opacity: 0.88,
+  // Build number stamped into the inner plate (debossed), centered above tabs.
+  stampInline: {
+    alignSelf: "center",
+    marginBottom: 7,
+    transform: [{ rotate: "-2deg" }],
+    opacity: 0.92,
   },
   stampGroove: {
     color: "rgba(86,38,12,0.92)",           // dark burnt-orange recess (the groove)
     fontFamily: "BebasNeue_400Regular",
-    fontSize: 26,
+    fontSize: 20,
     letterSpacing: 1,
     textShadowColor: "rgba(0,0,0,0.55)",    // inner shadow on the top edge = pressed in
     textShadowOffset: { width: 0, height: -1 },
@@ -741,10 +735,10 @@ const styles = StyleSheet.create({
   stampHighlight: {
     position: "absolute",
     left: 0.5,
-    top: 2,                                  // warm light catches the lower engraved lip
-    color: "rgba(255,170,84,0.55)",
+    top: 1.6,                                // warm light catches the lower engraved lip
+    color: "rgba(255,170,84,0.5)",
     fontFamily: "BebasNeue_400Regular",
-    fontSize: 26,
+    fontSize: 20,
     letterSpacing: 1,
   },
   center: { flex: 1, width: "100%", height: "100%", alignItems: "center", justifyContent: "center" },
