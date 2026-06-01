@@ -523,10 +523,10 @@ export default function LoginScreen() {
                 {/* Build number floats (absolute) high in the panel's top band,
                     above the tabs. Absolute = takes NO flex space, so nothing
                     else shifts. */}
-                <View pointerEvents="none" style={[styles.stampAnchor, { top: padTop * 0.52 }]}>
+                <View pointerEvents="none" style={[styles.stampAnchor, { top: padTop * 0.22 }]}>
                   <View style={styles.stampInline}>
-                    <Text numberOfLines={1} style={styles.stampHighlight}>#021</Text>
-                    <Text numberOfLines={1} style={styles.stampGroove}>#021</Text>
+                    <Text numberOfLines={1} style={styles.stampHighlight}>#023</Text>
+                    <Text numberOfLines={1} style={styles.stampGroove}>#023</Text>
                   </View>
                 </View>
               </View>
@@ -737,9 +737,9 @@ const styles = StyleSheet.create({
     opacity: 0.96,
   },
   stampGroove: {
-    color: "#FFA046",                        // brighter orange face = readable
+    color: "#FF6A1A",                        // true orange (was reading yellow)
     fontFamily: "BebasNeue_400Regular",
-    fontSize: 21,
+    fontSize: 15,
     letterSpacing: 1,
     textShadowColor: "rgba(0,0,0,0.75)",     // tight drop shadow for contrast
     textShadowOffset: { width: 0, height: 1 },
@@ -751,11 +751,11 @@ const styles = StyleSheet.create({
     top: 0,                                  // sits directly behind the face
     color: "rgba(0,0,0,0.9)",                // black base + soft halo = outline
     fontFamily: "BebasNeue_400Regular",
-    fontSize: 21,
+    fontSize: 15,
     letterSpacing: 1,
     textShadowColor: "rgba(0,0,0,0.85)",
     textShadowOffset: { width: 0, height: 0 },
-    textShadowRadius: 3.5,                    // light black glow around the number
+    textShadowRadius: 2.5,                    // light black glow around the number
   },
   center: { flex: 1, width: "100%", height: "100%", alignItems: "center", justifyContent: "center" },
   row: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8 },
