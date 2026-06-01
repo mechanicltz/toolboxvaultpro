@@ -169,23 +169,27 @@ export default function LoginScreen() {
   const tagFont = clamp(WORK_W * 0.034, 11, 14);
 
   // Panel geometry — controls inside are sized off THESE, not the screen.
-  const panelW = WORK_W * 0.94;
+  // Panel — wider (92% of screen) so the form reads as one cohesive interface,
+  // not a narrow stack. (Outer width is a composition choice; the measured
+  // responsive scaling itself is unchanged.) Capped for tablet/web sanity.
+  const panelW = Math.min(cw * 0.92, 560);
   const panelH = clamp(ch * 0.46, 340, 470);
-  const padX = panelW * 0.09;
-  const padTop = panelH * 0.11;
-  const padBot = panelH * 0.13;
-  const contentW = panelW - padX * 2;
+  const padX = panelW * 0.085;
+  const padTop = panelH * 0.115;
+  const padBot = panelH * 0.115;
+  const contentW = panelW - padX * 2;            // ~85% of panel width
 
-  const tabH   = clamp(panelH * 0.12, 42, 56);
-  const inputH = clamp(panelH * 0.13, 48, 60);
+  const tabH   = clamp(panelH * 0.12, 42, 54);
+  const inputH = clamp(panelH * 0.115, 46, 56);  // shorter → text field, not nameplate
   const btnH   = clamp(panelH * 0.15, 54, 70);
-  const labelH = clamp(panelH * 0.055, 15, 22);
-  const tabGap = contentW * 0.04;
+  const labelH = clamp(panelH * 0.05, 14, 20);
+  const tabGap = 8;                              // tight, integrated tab bar
   const tabW   = (contentW - tabGap) / 2;
+  const innerGap = clamp(panelH * 0.028, 8, 16);
 
-  // Help card
+  // Help card — lighter & secondary: ~25% shorter, less inner padding.
   const helpW = panelW;
-  const helpH = clamp(helpW / AR.card, 78, 104);
+  const helpH = clamp((helpW / AR.card) * 0.72, 54, 78);
 
   const blockGap = clamp(ch * 0.022, 10, 22);
 
@@ -255,7 +259,7 @@ export default function LoginScreen() {
                 imageStyle={styles.fillImage}
                 resizeMode="stretch"
               >
-                <View style={styles.panelInner}>
+                <View style={[styles.panelInner, { gap: innerGap }]}>
                   {/* ----- TABS ----- */}
                   <View style={[styles.tabsRow, { height: tabH, gap: tabGap }]}>
                     <TabButton
@@ -437,9 +441,9 @@ export default function LoginScreen() {
                   imageStyle={styles.fillImage}
                   resizeMode="stretch"
                 >
-                  <View style={[styles.footerInner, { paddingHorizontal: helpW * 0.12 }]}>
-                    <Ionicons name="shield-checkmark" size={15} color="#FF8533" />
-                    <Text style={[styles.footerText, { fontSize: clamp(WORK_W * 0.032, 11, 13) }]} numberOfLines={2}>
+                  <View style={[styles.footerInner, { paddingHorizontal: helpW * 0.075 }]}>
+                    <Ionicons name="shield-checkmark" size={14} color="#FF8533" />
+                    <Text style={[styles.footerText, { fontSize: clamp(WORK_W * 0.029, 10, 12) }]} numberOfLines={2}>
                       {mode === "login"
                         ? "New here? Tap CREATE to set up your vault — free."
                         : "Already registered? Tap SIGN IN above."}
@@ -520,7 +524,7 @@ const styles = StyleSheet.create({
   },
 
   // ---- panel ----
-  panelInner: { flex: 1, justifyContent: "space-between" },
+  panelInner: { flex: 1, justifyContent: "center" },
 
   // ---- tabs ----
   tabsRow: { flexDirection: "row", width: "100%" },
@@ -533,14 +537,14 @@ const styles = StyleSheet.create({
     fontSize: 11,
     letterSpacing: 2,
     color: "#D8D8D8",
-    paddingLeft: 2,
+    paddingLeft: 6,
     textAlignVertical: "bottom",
   },
   inputInner: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
-    paddingHorizontal: 18,
+    gap: 9,
+    paddingHorizontal: 15,
     height: "100%",
   },
   input: {
