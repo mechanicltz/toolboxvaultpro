@@ -1,0 +1,18 @@
+
+ASSET NAMING STANDARD
+
+dark_background_main.webp
+dark_gear_overlay.webp
+dark_diamond_plate.webp
+dark_scratch_overlay.webp
+
+light_background_main.webp
+light_gear_overlay.webp
+light_diamond_plate.webp
+light_scratch_overlay.webp
+
+brand_octagon_badge.png
+brand_hammer_wrench.png
+
+button_primary_orange.png
+button_secondary_steel.png
