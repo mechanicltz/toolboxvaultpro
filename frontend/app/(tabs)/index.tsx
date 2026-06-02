@@ -52,7 +52,7 @@ import { Anton_400Regular } from "@expo-google-fonts/anton";
 
 // Manual verification beacon — bump this on every change so we can confirm
 // the device is actually showing the latest bundle. Rendered top-right of Home.
-const HOME_BUILD = "BUILD 108";
+const HOME_BUILD = "BUILD 109";
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -475,23 +475,14 @@ export default function HomeScreen() {
         <Text style={styles.buildStamp} allowFontScaling={false} testID="home-build-stamp">
           {HOME_BUILD}
         </Text>
-        {/* Industrial header — machined-steel native text (TBVSteelHeader):
-            layered shadow + metallic gradient + highlight + orange glow on VAULT. */}
+        {/* Header — PNG nameplate wordmark (uniform across all pages). */}
         <View style={styles.header}>
-          <TBVSteelHeader size={34} />
-          <Text style={styles.headerSub}>SUMMARY  ·  {APP_VERSION_LABEL}</Text>
-        </View>
-      {/* Admin-only at-a-glance user-base counter.
-          Free vs subscribed counts come from /api/admin/user-stats which
-          is gated to ADMIN_EMAILS — non-admins simply never see this row
-          because the fetch silently fails. */}
-      {userStats && (
-        <View style={styles.versionRow}>
-          <Text style={styles.versionLine} testID="home-admin-userstats">
-            FREE: {userStats.free}   SUB: {userStats.subscribed}
+          <Image source={SKIN.nameplate} style={styles.nameplate} resizeMode="contain" />
+          <Text style={styles.headerSub} testID="home-admin-userstats">
+            {`SUMMARY  ·  ${APP_VERSION_LABEL}`}
+            {userStats ? `   ·   FREE: ${userStats.free}   SUB: ${userStats.subscribed}` : ""}
           </Text>
         </View>
-      )}
 
       <ScrollView
         contentContainerStyle={{ padding: 16, paddingBottom: 100 }}
