@@ -32,10 +32,11 @@ import { useSubscriptionChange } from "../../src/subscriptionEvents";
 import { useAppResume } from "../../src/appLifecycle";
 
 // --- Industrial skin (matches the locked login North Star) ---
-import { SKIN, TBV } from "../../src/tbv/skins";
-import { TbvWordmark } from "../../src/tbv/components/TbvWordmark";
-import { TBVSteelHeader } from "../../src/tbv/components/TBVSteelHeader";
-import { IndustrialPanel } from "../../src/tbv/components/IndustrialPanel";
+// Every container is a REAL trimmed metal frame PNG (the same tbv-v2/trimmed
+// set the login screen uses), wrapped via TbvFrame's 9-slice so the corner
+// bolts never smear. No code-drawn gradient panels anymore.
+import { SKIN, TBV, CAP } from "../../src/tbv/skins";
+import { TbvFrame } from "../../src/tbv/components/TbvFrame";
 import { useTbvSkinsReady } from "../../src/tbv/useTbvSkins";
 import { useFonts as useGoogleFonts } from "@expo-google-fonts/bebas-neue";
 import { BebasNeue_400Regular } from "@expo-google-fonts/bebas-neue";
@@ -52,7 +53,7 @@ import { Anton_400Regular } from "@expo-google-fonts/anton";
 
 // Manual verification beacon — bump this on every change so we can confirm
 // the device is actually showing the latest bundle. Rendered top-right of Home.
-const HOME_BUILD = "BUILD 114";
+const HOME_BUILD = "BUILD 116";
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -544,7 +545,15 @@ export default function HomeScreen() {
         {/* DEALER ACCOUNTS — its own distinct widget panel (configurable;
             only renders when the user has the dealers row enabled). */}
         {renderSequence.some((it) => it.kind !== "stat") && (
-          <IndustrialPanel style={styles.detailsBoxLayout} testID="home-dealers-widget">
+          <TbvFrame
+            source={SKIN.card}
+            capInsets={CAP.card}
+            style={styles.detailsBoxLayout}
+            padX={50}
+            padTop={32}
+            padBottom={30}
+            testID="home-dealers-widget"
+          >
             <TouchableOpacity
               style={styles.detailsRow}
               activeOpacity={0.6}
@@ -608,18 +617,26 @@ export default function HomeScreen() {
                 </View>
               </>
             )}
-          </IndustrialPanel>
+          </TbvFrame>
         )}
 
         {/* STAT LIST PANEL — stat rows only, in the user's chosen order. */}
         {renderSequence.some((it) => it.kind === "stat") && (
-          <IndustrialPanel style={styles.detailsBoxLayout} testID="home-details-box">
+          <TbvFrame
+            source={SKIN.card}
+            capInsets={CAP.card}
+            style={styles.detailsBoxLayout}
+            padX={50}
+            padTop={32}
+            padBottom={30}
+            testID="home-details-box"
+          >
             {renderSequence
               .filter((it) => it.kind === "stat")
               .map((item, idx, arr) =>
                 renderHomeRow(item.row, idx === arr.length - 1, item.key),
               )}
-          </IndustrialPanel>
+          </TbvFrame>
         )}
 
         {/* Render any other custom rows the user has set up but that
