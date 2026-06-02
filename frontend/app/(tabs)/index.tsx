@@ -49,7 +49,7 @@ import {
 
 // Manual verification beacon — bump this on every change so we can confirm
 // the device is actually showing the latest bundle. Rendered top-right of Home.
-const HOME_BUILD = "BUILD 104";
+const HOME_BUILD = "BUILD 105";
 
 export default function HomeScreen() {
   const router = useRouter();

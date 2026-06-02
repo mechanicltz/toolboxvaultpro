@@ -1,20 +1,29 @@
 /**
  * TbvWordmark — native-text "TOOLBOX VAULT" styled to resemble the metallic
- * logo PNG: heavy condensed Bebas Neue, tight spacing, steel TOOLBOX + orange
- * VAULT, with a stacked 3D bevel (dark drop-shadow layer + light top-edge
- * highlight) for an embossed, machined look. 100% native text (no image).
+ * logo: heavy condensed Bebas Neue, tight spacing, with a brushed-metal
+ * gradient FILL (silver for TOOLBOX, copper-orange for VAULT) via MaskedView,
+ * plus a dark drop-shadow layer for 3D depth. 100% native text (no image).
  *
- * Renders identically on web + iOS + Android (no MaskedView dependency).
+ * NOTE: the metallic gradient renders on iOS/Android (Expo Go). On the web
+ * preview MaskedView may fall back to flat, so verify the metallic look on the
+ * phone.
  */
 import React from "react";
-import { View, Text, StyleSheet, StyleProp, ViewStyle, TextStyle } from "react-native";
+import { View, Text, StyleSheet, StyleProp, ViewStyle, TextStyle, Platform } from "react-native";
+import MaskedView from "@react-native-masked-view/masked-view";
+import { LinearGradient } from "expo-linear-gradient";
 
 const FONT = "BebasNeue_400Regular";
 
-const STEEL = "#DCDEE1";   // TOOLBOX — brushed steel
-const ORANGE = "#FF6A00";  // VAULT — brand accent
+// Brushed-metal gradients (top highlight → mid → deep → lower sheen).
+const SILVER = ["#FFFFFF", "#E4E7EA", "#9AA0A8", "#CED3D9"];
+const COPPER = ["#FFD29A", "#FF9A3D", "#FF6A00", "#B84300"];
 
-function BevelWord({ text, color, size }: { text: string; color: string; size: number }) {
+// Flat fallbacks (web, or if MaskedView ever fails).
+const SILVER_FLAT = "#DCDEE1";
+const COPPER_FLAT = "#FF6A00";
+
+function GradientWord({ text, colors, flat, size }: { text: string; colors: string[]; flat: string; size: number }) {
   const base: TextStyle = {
     fontFamily: FONT,
     fontSize: size,
@@ -22,6 +31,7 @@ function BevelWord({ text, color, size }: { text: string; color: string; size: n
     lineHeight: size * 1.02,
     includeFontPadding: false,
   };
+  const useGradient = Platform.OS !== "web";
   return (
     <View>
       {/* dark drop-shadow / depth layer */}
@@ -30,8 +40,19 @@ function BevelWord({ text, color, size }: { text: string; color: string; size: n
       {/* light top-edge highlight (emboss) */}
       <Text allowFontScaling={false} numberOfLines={1}
         style={[base, styles.highlight, { color: "rgba(255,255,255,0.28)" }]}>{text}</Text>
-      {/* main face */}
-      <Text allowFontScaling={false} numberOfLines={1} style={[base, { color }]}>{text}</Text>
+      {useGradient ? (
+        <MaskedView
+          maskElement={
+            <Text allowFontScaling={false} numberOfLines={1} style={[base, { color: "#000" }]}>{text}</Text>
+          }
+        >
+          <LinearGradient colors={colors} start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }}>
+            <Text allowFontScaling={false} numberOfLines={1} style={[base, { opacity: 0 }]}>{text}</Text>
+          </LinearGradient>
+        </MaskedView>
+      ) : (
+        <Text allowFontScaling={false} numberOfLines={1} style={[base, { color: flat }]}>{text}</Text>
+      )}
     </View>
   );
 }
@@ -45,9 +66,9 @@ interface Props {
 export function TbvWordmark({ size = 46, style }: Props) {
   return (
     <View style={[styles.row, style]}>
-      <BevelWord text="TOOLBOX" color={STEEL} size={size} />
+      <GradientWord text="TOOLBOX" colors={SILVER} flat={SILVER_FLAT} size={size} />
       <View style={{ width: size * 0.2 }} />
-      <BevelWord text="VAULT" color={ORANGE} size={size} />
+      <GradientWord text="VAULT" colors={COPPER} flat={COPPER_FLAT} size={size} />
     </View>
   );
 }
