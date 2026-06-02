@@ -53,7 +53,7 @@ import { Anton_400Regular } from "@expo-google-fonts/anton";
 
 // Manual verification beacon — bump this on every change so we can confirm
 // the device is actually showing the latest bundle. Rendered top-right of Home.
-const HOME_BUILD = "BUILD 118";
+const HOME_BUILD = "BUILD 119";
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -516,23 +516,32 @@ export default function HomeScreen() {
 
         {/* Next dealer route — kept prominent and highlighted */}
         {nextRouteBanner && prefs.show_dealer_route_reminder && (
-          <TouchableOpacity
-            testID="next-route-banner"
-            style={styles.routeBanner}
-            onPress={() => router.push("/dealers")}
-            activeOpacity={0.85}
+          <TbvFrame
+            source={SKIN.card}
+            capInsets={CAP.card}
+            style={styles.bannerLayout}
+            padX={50}
+            padTop={22}
+            padBottom={22}
           >
-            <View style={styles.routeIconWrap}>
-              <Ionicons name="map" size={22} color={theme.colors.accent} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.routeBannerLabel}>NEXT DEALER ROUTE</Text>
-              <Text style={styles.routeBannerText}>
-                {nextRouteBanner.dealers.join(" & ")} · {nextRouteBanner.dateStr}
-              </Text>
-            </View>
-            <Ionicons name="chevron-forward" size={18} color={theme.colors.accent} />
-          </TouchableOpacity>
+            <TouchableOpacity
+              testID="next-route-banner"
+              style={styles.routeBanner}
+              onPress={() => router.push("/dealers")}
+              activeOpacity={0.85}
+            >
+              <View style={styles.routeIconWrap}>
+                <Ionicons name="map" size={22} color={TBV.orange} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.routeBannerLabel}>NEXT DEALER ROUTE</Text>
+                <Text style={styles.routeBannerText}>
+                  {nextRouteBanner.dealers.join(" & ")} · {nextRouteBanner.dateStr}
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color={TBV.orange} />
+            </TouchableOpacity>
+          </TbvFrame>
         )}
 
         {/* UNIFIED HOME DESCRIPTION CARD — single warranty-card-style box
@@ -654,31 +663,40 @@ export default function HomeScreen() {
         </View>
 
         {/* Feedback link at the bottom of the first page */}
-        <TouchableOpacity
-          testID="feedback-banner"
-          style={styles.feedbackRow}
-          onPress={() => router.push("/feedback")}
-          activeOpacity={0.85}
+        <TbvFrame
+          source={SKIN.card}
+          capInsets={CAP.card}
+          style={styles.feedbackLayout}
+          padX={50}
+          padTop={20}
+          padBottom={20}
         >
-          <Ionicons
-            name="chatbubble-ellipses"
-            size={18}
-            color={theme.colors.accent}
-          />
-          <View style={{ flex: 1 }}>
-            <Text style={styles.feedbackTitle}>
-              REPORT A BUG · REQUEST A FEATURE
-            </Text>
-            <Text style={styles.feedbackSub}>
-              Have an idea or hit a snag? Let us know.
-            </Text>
-          </View>
-          <Ionicons
-            name="chevron-forward"
-            size={18}
-            color={theme.colors.textMuted}
-          />
-        </TouchableOpacity>
+          <TouchableOpacity
+            testID="feedback-banner"
+            style={styles.feedbackRow}
+            onPress={() => router.push("/feedback")}
+            activeOpacity={0.85}
+          >
+            <Ionicons
+              name="chatbubble-ellipses"
+              size={18}
+              color={TBV.orange}
+            />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.feedbackTitle}>
+                REPORT A BUG · REQUEST A FEATURE
+              </Text>
+              <Text style={styles.feedbackSub}>
+                Have an idea or hit a snag? Let us know.
+              </Text>
+            </View>
+            <Ionicons
+              name="chevron-forward"
+              size={18}
+              color={TBV.textMuted}
+            />
+          </TouchableOpacity>
+        </TbvFrame>
 
         <Text style={styles.tip}>
           Pull to refresh · Customize this list under MORE → CUSTOMIZE
@@ -930,18 +948,11 @@ const styles = themedStyles((c) => ({
   },
 
   /* Highlighted next-route banner */
+  bannerLayout: { marginBottom: 14 },
   routeBanner: {
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
-    backgroundColor: "rgba(18,18,18,0.92)",
-    borderWidth: 1.5,
-    borderColor: TBV.orange,
-    borderLeftWidth: 5,
-    borderRadius: 8,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    marginBottom: 14,
   },
   routeIconWrap: {
     width: 32,
@@ -1336,21 +1347,11 @@ const styles = themedStyles((c) => ({
   },
 
   /* Feedback */
+  feedbackLayout: { marginTop: 16 },
   feedbackRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    marginTop: 16,
-    borderRadius: 8,
-    borderWidth: 1.5,
-    borderColor: "rgba(255,133,51,0.35)",
-    backgroundColor: "rgba(18,18,18,0.92)",
-    ...(Platform.select({
-      web: { boxShadow: "0 4px 14px rgba(0,0,0,0.6)" as any },
-      default: { shadowColor: "#000", shadowOpacity: 0.5, shadowOffset: { width: 0, height: 4 }, shadowRadius: 8, elevation: 6 },
-    }) as object),
   },
   feedbackTitle: {
     color: TBV.steel,
