@@ -33,6 +33,7 @@ import { useAppResume } from "../../src/appLifecycle";
 
 // --- Industrial skin (matches the locked login North Star) ---
 import { SKIN, TBV } from "../../src/tbv/skins";
+import { TbvWordmark } from "../../src/tbv/components/TbvWordmark";
 import { useTbvSkinsReady } from "../../src/tbv/useTbvSkins";
 import { useFonts as useGoogleFonts } from "@expo-google-fonts/bebas-neue";
 import { BebasNeue_400Regular } from "@expo-google-fonts/bebas-neue";
@@ -47,7 +48,7 @@ import {
 
 // Manual verification beacon — bump this on every change so we can confirm
 // the device is actually showing the latest bundle. Rendered top-right of Home.
-const HOME_BUILD = "BUILD 101";
+const HOME_BUILD = "BUILD 103";
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -469,13 +470,10 @@ export default function HomeScreen() {
         <Text style={styles.buildStamp} allowFontScaling={false} testID="home-build-stamp">
           {HOME_BUILD}
         </Text>
-        {/* Industrial header — NATIVE-TEXT TOOLBOX VAULT wordmark (no PNG).
-            TOOLBOX = steel #D8D8D8, VAULT = orange #FF6A00. */}
+        {/* Industrial header — NATIVE-TEXT TOOLBOX VAULT wordmark styled to
+            resemble the metallic logo (silver + copper-orange, bevel/shadow). */}
         <View style={styles.header}>
-          <Text style={styles.wordmark} allowFontScaling={false} numberOfLines={1}>
-            <Text style={styles.wordmarkSteel}>TOOLBOX </Text>
-            <Text style={styles.wordmarkVault}>VAULT</Text>
-          </Text>
+          <TbvWordmark size={46} />
           <Text style={styles.headerSub}>SUMMARY  ·  {APP_VERSION_LABEL}</Text>
         </View>
       {/* Admin-only at-a-glance user-base counter.
@@ -877,8 +875,6 @@ const styles = themedStyles((c) => ({
     paddingTop: 8,
     paddingBottom: 14,
     paddingHorizontal: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: "rgba(255,133,51,0.30)",
   },
   nameplate: { width: "80%", maxWidth: 330, height: 56 },
   // Native-text TOOLBOX VAULT wordmark (replaces the PNG nameplate).
@@ -897,7 +893,7 @@ const styles = themedStyles((c) => ({
   buildStamp: {
     position: "absolute",
     top: 10,
-    right: 14,
+    right: 92,
     zIndex: 100,
     color: TBV.orange,
     fontFamily: "Rajdhani_700Bold",
