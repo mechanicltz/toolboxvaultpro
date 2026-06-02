@@ -34,6 +34,7 @@ import { useAppResume } from "../../src/appLifecycle";
 // --- Industrial skin (matches the locked login North Star) ---
 import { SKIN, TBV } from "../../src/tbv/skins";
 import { TbvWordmark } from "../../src/tbv/components/TbvWordmark";
+import { IndustrialPanel } from "../../src/tbv/components/IndustrialPanel";
 import { useTbvSkinsReady } from "../../src/tbv/useTbvSkins";
 import { useFonts as useGoogleFonts } from "@expo-google-fonts/bebas-neue";
 import { BebasNeue_400Regular } from "@expo-google-fonts/bebas-neue";
@@ -48,7 +49,7 @@ import {
 
 // Manual verification beacon — bump this on every change so we can confirm
 // the device is actually showing the latest bundle. Rendered top-right of Home.
-const HOME_BUILD = "BUILD 103";
+const HOME_BUILD = "BUILD 104";
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -543,7 +544,7 @@ export default function HomeScreen() {
             hardcoded-order cards, which ignored the user's row-order
             preference for `owed_to_dealers`. */}
         {renderSequence.length > 0 && (
-          <View style={styles.detailsBox} testID="home-details-box">
+          <IndustrialPanel style={styles.detailsBoxLayout} testID="home-details-box">
             {renderSequence.map((item, idx) => {
               const isLastItem = idx === renderSequence.length - 1;
               if (item.kind === "stat") {
@@ -557,13 +558,11 @@ export default function HomeScreen() {
               // Description Card so the dealer cluster is visually distinct
               // from the surrounding stat rows.
               return (
-                <View
+                <IndustrialPanel
+                  variant="nested"
                   key="owed_to_dealers"
                   style={[
-                    styles.nestedCard,
-                    // Only the divider between the dealer block and the next
-                    // outer row should remain visible — the nested card's
-                    // own border supplies the bottom edge already.
+                    styles.nestedCardLayout,
                     isLastItem && { marginBottom: 0 },
                   ]}
                 >
@@ -653,10 +652,10 @@ export default function HomeScreen() {
                       </View>
                     </>
                   )}
-                </View>
+                </IndustrialPanel>
               );
             })}
-          </View>
+          </IndustrialPanel>
         )}
 
         {/* Render any other custom rows the user has set up but that
@@ -992,6 +991,8 @@ const styles = themedStyles((c) => ({
   },
 
   // ---------- DETAILS BOX (warranty-card style, mirrors tool/dealer detail) ----------
+  detailsBoxLayout: { marginBottom: 14 },
+  nestedCardLayout: { marginVertical: 6 },
   detailsBox: {
     backgroundColor: "rgba(18,18,18,0.92)",
     borderWidth: 1.5,
