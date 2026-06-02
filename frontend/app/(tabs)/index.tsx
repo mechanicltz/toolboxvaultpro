@@ -34,6 +34,7 @@ import { useAppResume } from "../../src/appLifecycle";
 // --- Industrial skin (matches the locked login North Star) ---
 import { SKIN, TBV } from "../../src/tbv/skins";
 import { TbvWordmark } from "../../src/tbv/components/TbvWordmark";
+import { TBVSteelHeader } from "../../src/tbv/components/TBVSteelHeader";
 import { IndustrialPanel } from "../../src/tbv/components/IndustrialPanel";
 import { useTbvSkinsReady } from "../../src/tbv/useTbvSkins";
 import { useFonts as useGoogleFonts } from "@expo-google-fonts/bebas-neue";
@@ -46,10 +47,11 @@ import {
   Exo_2_500Medium as Exo2_500Medium,
   Exo_2_700Bold as Exo2_700Bold,
 } from "@expo-google-fonts/exo-2";
+import { Teko_600SemiBold, Teko_700Bold } from "@expo-google-fonts/teko";
 
 // Manual verification beacon — bump this on every change so we can confirm
 // the device is actually showing the latest bundle. Rendered top-right of Home.
-const HOME_BUILD = "BUILD 105";
+const HOME_BUILD = "BUILD 106";
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -58,6 +60,7 @@ export default function HomeScreen() {
     BebasNeue_400Regular,
     Rajdhani_500Medium, Rajdhani_600SemiBold, Rajdhani_700Bold,
     Exo2_400Regular, Exo2_500Medium, Exo2_700Bold,
+    Teko_600SemiBold, Teko_700Bold,
   });
   const skinsReady = useTbvSkinsReady();
   const [stats, setStats] = useState<any>(() => getCached("home_stats", {}));
@@ -471,10 +474,10 @@ export default function HomeScreen() {
         <Text style={styles.buildStamp} allowFontScaling={false} testID="home-build-stamp">
           {HOME_BUILD}
         </Text>
-        {/* Industrial header — NATIVE-TEXT TOOLBOX VAULT wordmark styled to
-            resemble the metallic logo (silver + copper-orange, bevel/shadow). */}
+        {/* Industrial header — machined-steel native text (TBVSteelHeader):
+            layered shadow + metallic gradient + highlight + orange glow on VAULT. */}
         <View style={styles.header}>
-          <TbvWordmark size={46} />
+          <TBVSteelHeader size={52} />
           <Text style={styles.headerSub}>SUMMARY  ·  {APP_VERSION_LABEL}</Text>
         </View>
       {/* Admin-only at-a-glance user-base counter.
