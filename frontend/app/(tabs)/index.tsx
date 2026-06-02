@@ -53,7 +53,7 @@ import { Anton_400Regular } from "@expo-google-fonts/anton";
 
 // Manual verification beacon — bump this on every change so we can confirm
 // the device is actually showing the latest bundle. Rendered top-right of Home.
-const HOME_BUILD = "BUILD 119";
+const HOME_BUILD = "BUILD 120";
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -664,12 +664,12 @@ export default function HomeScreen() {
 
         {/* Feedback link at the bottom of the first page */}
         <TbvFrame
-          source={SKIN.card}
-          capInsets={CAP.card}
+          source={SKIN.panelFrame}
+          capInsets={CAP.panel}
           style={styles.feedbackLayout}
-          padX={50}
-          padTop={20}
-          padBottom={20}
+          padX={38}
+          padTop={50}
+          padBottom={60}
         >
           <TouchableOpacity
             testID="feedback-banner"
