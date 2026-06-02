@@ -1,18 +1,21 @@
 /**
- * TBVSteelHeader — reusable "machined steel" native-text header.
+ * TBVSteelHeader — reusable "machined steel nameplate" native-text header for
+ * ALL authenticated screens (Dashboard, Inventory, Contacts, Claims, Settings,
+ * Reports). 100% native text — never an image / SVG / PNG.
  *
- * Recreates the MATERIAL FEELING of the Toolbox Vault logo (not the logo
- * itself) by stacking multiple native <Text> layers — no images / SVG / PNG.
+ * Goal: the letters should read as forged steel BOLTED onto equipment, not as
+ * styled mobile text. The "metal" is an illusion built from layered native
+ * <Text>, back → front, per word:
  *
- * Per-word layer stack (back → front):
- *   1. Deep drop shadow      (#000 @60%, Y+4, blur ~10)
- *   2. Orange glow           (accent words only — rgba(255,106,0,.4), blur ~16)
- *   3. Main metallic fill     (vertical gradient #F8F8F8 → #D2D2D2 → #8E8E8E
- *                              via MaskedView; flat steel on web)
- *   4. Top-edge highlight    (#FFFFFF @20%, Y-1)
- *   5. Inner-shadow sim       (#5A5A5A @15%, Y+0.75)
+ *   1. Grounding cast shadow   — lifts the letters off the surface (#000)
+ *   2. Orange reflected light  — warm industrial lighting bouncing off steel
+ *                                (a glow, NOT orange letters)
+ *   3. Top-edge highlight      — bright bevel where light hits the top edge
+ *   4. Metallic gradient face  — #F5F5F5 → #D0D0D0 → #8C8C8C (curved steel)
+ *   5. Inner-shadow recess     — subtle darkening low in each letter (engraved)
  *
- * Font: Teko Bold (condensed, heavy) → falls back to Rajdhani/Bebas if absent.
+ * Font: Anton (heaviest available; Teko maxes at Bold which reads thin). Tight
+ * letter spacing + condensed mass = manufactured, not elegant.
  */
 import React from "react";
 import { View, Text, StyleSheet, Platform, StyleProp, ViewStyle, TextStyle } from "react-native";
@@ -21,14 +24,14 @@ import { LinearGradient } from "expo-linear-gradient";
 
 const FONT = "Anton_400Regular";
 
-// Brushed-steel vertical gradient (top sheen → mid → lower steel).
-const STEEL = ["#F8F8F8", "#D2D2D2", "#8E8E8E"];
-const STEEL_LOC = [0, 0.5, 1];
-const STEEL_FLAT = "#D2D2D2"; // web fallback
+// High-contrast brushed-steel gradient (top sheen → mid → lower steel).
+const STEEL = ["#F5F5F5", "#D0D0D0", "#8C8C8C"];
+const STEEL_LOC = [0, 0.55, 1];
+const STEEL_FLAT = "#CFCFCF"; // web fallback (MaskedView is native-only)
 
 export interface SteelSegment {
   text: string;
-  /** Highlighted word — gets the orange glow (e.g. "VAULT"). */
+  /** Highlighted word — receives the orange reflected-light glow (e.g. VAULT). */
   accent?: boolean;
 }
 
@@ -42,7 +45,7 @@ function SteelWord({ text, accent, size }: { text: string; accent?: boolean; siz
   const base: TextStyle = {
     fontFamily: FONT,
     fontSize: size,
-    letterSpacing: 0.5,
+    letterSpacing: -size * 0.02, // tight, packed
     lineHeight: size * 1.0,
     includeFontPadding: false,
   };
@@ -50,7 +53,7 @@ function SteelWord({ text, accent, size }: { text: string; accent?: boolean; siz
 
   return (
     <View>
-      {/* Layer 1 — deep drop shadow */}
+      {/* 1 — grounding cast shadow (depth / lift) */}
       <Text
         allowFontScaling={false}
         numberOfLines={1}
@@ -58,18 +61,18 @@ function SteelWord({ text, accent, size }: { text: string; accent?: boolean; siz
           base,
           styles.abs,
           {
-            top: 4,
-            color: "rgba(0,0,0,0.6)",
-            textShadowColor: "rgba(0,0,0,0.6)",
-            textShadowOffset: { width: 0, height: 4 },
-            textShadowRadius: 10,
+            top: 2.5,
+            color: "rgba(0,0,0,0.9)",
+            textShadowColor: "rgba(0,0,0,0.85)",
+            textShadowOffset: { width: 0, height: 3 },
+            textShadowRadius: 5,
           },
         ]}
       >
         {text}
       </Text>
 
-      {/* Layer 2 — orange glow (accent words only) */}
+      {/* 2 — orange reflected industrial light (glow, not orange text) */}
       {accent && (
         <Text
           allowFontScaling={false}
@@ -78,10 +81,10 @@ function SteelWord({ text, accent, size }: { text: string; accent?: boolean; siz
             base,
             styles.abs,
             {
-              top: 0,
-              color: "rgba(255,106,0,0.40)",
-              textShadowColor: "rgba(255,106,0,0.65)",
-              textShadowOffset: { width: 0, height: 0 },
+              top: 3,
+              color: "rgba(35,18,4,0.92)",
+              textShadowColor: "rgba(255,106,0,0.6)",
+              textShadowOffset: { width: 0, height: 4 },
               textShadowRadius: 16,
             },
           ]}
@@ -90,7 +93,16 @@ function SteelWord({ text, accent, size }: { text: string; accent?: boolean; siz
         </Text>
       )}
 
-      {/* Layer 3 — main metallic fill */}
+      {/* 3 — bright top-edge highlight (bevel) — sits behind face, peeks at top */}
+      <Text
+        allowFontScaling={false}
+        numberOfLines={1}
+        style={[base, styles.abs, { top: -1.5, color: "rgba(255,255,255,0.55)" }]}
+      >
+        {text}
+      </Text>
+
+      {/* 4 — metallic gradient face */}
       {useGradient ? (
         <MaskedView
           maskElement={
@@ -111,20 +123,11 @@ function SteelWord({ text, accent, size }: { text: string; accent?: boolean; siz
         </Text>
       )}
 
-      {/* Layer 4 — top-edge highlight */}
+      {/* 5 — inner-shadow recess (engraved depth low in the letters) */}
       <Text
         allowFontScaling={false}
         numberOfLines={1}
-        style={[base, styles.abs, { top: -1, color: "rgba(255,255,255,0.20)" }]}
-      >
-        {text}
-      </Text>
-
-      {/* Layer 5 — inner shadow simulation */}
-      <Text
-        allowFontScaling={false}
-        numberOfLines={1}
-        style={[base, styles.abs, { top: 0.75, color: "rgba(90,90,90,0.15)" }]}
+        style={[base, styles.abs, { top: 1.75, color: "rgba(0,0,0,0.22)" }]}
       >
         {text}
       </Text>
@@ -134,14 +137,19 @@ function SteelWord({ text, accent, size }: { text: string; accent?: boolean; siz
 
 export function TBVSteelHeader({
   segments = [{ text: "TOOLBOX" }, { text: "VAULT", accent: true }],
-  size = 50,
+  size = 29,
   style,
 }: Props) {
+  const label = segments.map((s) => s.text).join(" ");
   return (
-    <View style={[styles.row, style]}>
+    <View
+      style={[styles.row, style]}
+      accessibilityRole="header"
+      accessibilityLabel={label}
+    >
       {segments.map((seg, i) => (
         <React.Fragment key={`${seg.text}-${i}`}>
-          {i > 0 && <View style={{ width: size * 0.18 }} />}
+          {i > 0 && <View style={{ width: size * 0.16 }} />}
           <SteelWord text={seg.text} accent={seg.accent} size={size} />
         </React.Fragment>
       ))}
