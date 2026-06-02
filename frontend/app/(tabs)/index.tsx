@@ -52,7 +52,7 @@ import { Anton_400Regular } from "@expo-google-fonts/anton";
 
 // Manual verification beacon — bump this on every change so we can confirm
 // the device is actually showing the latest bundle. Rendered top-right of Home.
-const HOME_BUILD = "BUILD 111";
+const HOME_BUILD = "BUILD 112";
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -973,17 +973,17 @@ const styles = themedStyles((c) => ({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingVertical: 10,
+    paddingVertical: 11,
     paddingHorizontal: 12,
-    marginVertical: 4,
+    marginVertical: 5,
     borderRadius: 6,
-    // Recessed "machined slot" — each line is its own seated container.
-    backgroundColor: "rgba(0,0,0,0.26)",
+    // Deep recessed "machined slot" — each line is its own seated container.
+    backgroundColor: "rgba(0,0,0,0.5)",
     borderWidth: 1,
-    borderTopColor: "rgba(0,0,0,0.55)",
-    borderLeftColor: "rgba(0,0,0,0.4)",
-    borderRightColor: "rgba(255,255,255,0.05)",
-    borderBottomColor: "rgba(255,255,255,0.08)",
+    borderTopColor: "rgba(0,0,0,0.85)",
+    borderLeftColor: "rgba(0,0,0,0.7)",
+    borderRightColor: "rgba(255,255,255,0.07)",
+    borderBottomColor: "rgba(255,255,255,0.11)",
     gap: 8,
   },
   // Orange accent tick to the left of every row label (control-panel readout).

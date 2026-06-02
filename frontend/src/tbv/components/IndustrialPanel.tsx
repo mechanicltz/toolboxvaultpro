@@ -1,109 +1,64 @@
 /**
- * IndustrialPanel — native, scale-safe "machined steel" container skinned with
- * the REAL worn-gunmetal metal texture (tbv_worn_gunmetal_dark.png). No
- * stretched frame art, so it never smears on long lists. Adds beveled metal
- * edges, a top orange accent bar, and hardware bolts in the corners.
+ * IndustrialPanel — section container skinned to match the Toolbox Vault theme.
  *
- * variant="panel"  → primary section panel (bolts + accent bar + full texture)
- * variant="nested" → inset sub-card (slim accent, darker texture)
+ * variant="panel"  → uses the actual LOGIN PANEL FRAME asset (metal rim, corner
+ *                    bolts, orange edge glow) scaled to fit, so dashboard panels
+ *                    match the login screen ("same machine"). Content is inset
+ *                    to sit inside the visible metal frame.
+ * variant="nested" → lighter worn-gunmetal texture sub-card (legacy/sub use).
  */
 import React from "react";
 import { View, Image, StyleSheet, StyleProp, ViewStyle } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 
+const FRAME = require("../../../assets/tbv-v2/trimmed/Panels/tbv_login_panel_dark.png");
 const METAL = require("../../../assets/tbv-v2/trimmed/Textures/tbv_worn_gunmetal_dark.png");
 
 interface Props {
   children?: React.ReactNode;
   style?: StyleProp<ViewStyle>;
   variant?: "panel" | "nested";
-  accentBar?: boolean;
   testID?: string;
 }
 
-function Bolt({ style }: { style: StyleProp<ViewStyle> }) {
-  return (
-    <View style={[styles.bolt, style]}>
-      <View style={styles.boltDot} />
-    </View>
-  );
-}
-
-export function IndustrialPanel({
-  children,
-  style,
-  variant = "panel",
-  accentBar = true,
-  testID,
-}: Props) {
-  const nested = variant === "nested";
-  return (
-    <View testID={testID} style={[nested ? styles.wrapNested : styles.wrap, style]}>
-      {/* Real machined-metal texture surface */}
-      <Image source={METAL} resizeMode="cover" style={StyleSheet.absoluteFill} />
-      {/* Depth + contrast overlay so text stays crisp */}
-      <LinearGradient
-        colors={
-          nested
-            ? ["rgba(10,11,13,0.55)", "rgba(10,11,13,0.82)"]
-            : ["rgba(18,19,22,0.28)", "rgba(10,11,13,0.62)"]
-        }
-        start={{ x: 0, y: 0 }}
-        end={{ x: 0, y: 1 }}
-        style={StyleSheet.absoluteFill}
-      />
-      {accentBar && (
+export function IndustrialPanel({ children, style, variant = "panel", testID }: Props) {
+  if (variant === "nested") {
+    return (
+      <View testID={testID} style={[styles.wrapNested, style]}>
+        <Image source={METAL} resizeMode="cover" style={StyleSheet.absoluteFill} />
         <LinearGradient
-          colors={["#FF8A33", "#FF6A00"]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 0 }}
-          style={nested ? styles.accentBarNested : styles.accentBar}
+          colors={["rgba(10,11,13,0.55)", "rgba(10,11,13,0.82)"]}
+          style={StyleSheet.absoluteFill}
         />
-      )}
-      {!nested && (
-        <>
-          <Bolt style={styles.boltTL} />
-          <Bolt style={styles.boltTR} />
-          <Bolt style={styles.boltBL} />
-          <Bolt style={styles.boltBR} />
-        </>
-      )}
-      <View style={nested ? styles.innerNested : styles.inner}>{children}</View>
+        <View style={styles.innerNested}>{children}</View>
+      </View>
+    );
+  }
+
+  // Primary panel — login frame asset (matches login screen).
+  return (
+    <View testID={testID} style={[styles.wrapFrame, style]}>
+      <Image source={FRAME} resizeMode="stretch" style={StyleSheet.absoluteFill} />
+      <View style={styles.innerFrame}>{children}</View>
     </View>
   );
 }
 
 const BEVEL = {
-  borderTopColor: "rgba(255,255,255,0.16)",
-  borderLeftColor: "rgba(255,255,255,0.08)",
-  borderRightColor: "rgba(0,0,0,0.6)",
-  borderBottomColor: "rgba(0,0,0,0.65)",
+  borderTopColor: "rgba(255,255,255,0.14)",
+  borderLeftColor: "rgba(255,255,255,0.07)",
+  borderRightColor: "rgba(0,0,0,0.55)",
+  borderBottomColor: "rgba(0,0,0,0.6)",
 } as const;
 
 const styles = StyleSheet.create({
-  wrap: { borderRadius: 12, overflow: "hidden", borderWidth: 1.5, ...BEVEL },
+  // Frame panel — content inset to clear the metal rim (sides/top/bottom).
+  wrapFrame: { borderRadius: 10, overflow: "hidden" },
+  innerFrame: { paddingHorizontal: 26, paddingTop: 26, paddingBottom: 30 },
+
+  // Nested texture sub-card
   wrapNested: { borderRadius: 8, overflow: "hidden", borderWidth: 1, ...BEVEL },
-  inner: { paddingHorizontal: 16, paddingTop: 16, paddingBottom: 14 },
   innerNested: { paddingHorizontal: 12, paddingTop: 10, paddingBottom: 6 },
-  accentBar: { position: "absolute", top: 0, left: 0, right: 0, height: 3 },
-  accentBarNested: { position: "absolute", top: 0, left: 0, right: 0, height: 2, opacity: 0.85 },
-  bolt: {
-    position: "absolute",
-    width: 13,
-    height: 13,
-    borderRadius: 7,
-    backgroundColor: "#0A0B0D",
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.14)",
-    alignItems: "center",
-    justifyContent: "center",
-    zIndex: 2,
-  },
-  boltDot: { width: 4, height: 4, borderRadius: 2, backgroundColor: "rgba(255,255,255,0.22)" },
-  boltTL: { top: 7, left: 7 },
-  boltTR: { top: 7, right: 7 },
-  boltBL: { bottom: 7, left: 7 },
-  boltBR: { bottom: 7, right: 7 },
 });
 
 export default IndustrialPanel;
