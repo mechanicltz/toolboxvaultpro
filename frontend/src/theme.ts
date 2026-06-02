@@ -78,8 +78,8 @@ export const darkPalette: ColorPalette = {
   surfaceAlt: "#171717",
   glass: "rgba(249, 115, 22, 0.08)",
   glassBorder: "rgba(249, 115, 22, 0.22)",
-  accent: "#F97316",
-  accentSecondary: "#EA580C",
+  accent: "#FF6A00",
+  accentSecondary: "#E55F00",
   textPrimary: "#FFFFFF",
   textSecondary: "#E5E5E5",
   textMuted: "#737373",
@@ -120,8 +120,8 @@ export const lightPalette: ColorPalette = {
   surfaceAlt: "#E9EDF3",      // alternate surface (table stripes, etc.)
   glass: "rgba(234, 88, 12, 0.10)",
   glassBorder: "rgba(234, 88, 12, 0.30)",
-  accent: "#EA580C",          // deep orange — high contrast on white
-  accentSecondary: "#C2410C",
+  accent: "#FF6A00",          // unified industrial orange (entire app)
+  accentSecondary: "#E55F00",
   textPrimary: "#0F172A",     // near-black
   textSecondary: "#334155",
   textMuted: "#64748B",
