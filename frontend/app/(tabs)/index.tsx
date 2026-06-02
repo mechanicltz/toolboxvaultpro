@@ -53,7 +53,7 @@ import { Anton_400Regular } from "@expo-google-fonts/anton";
 
 // Manual verification beacon — bump this on every change so we can confirm
 // the device is actually showing the latest bundle. Rendered top-right of Home.
-const HOME_BUILD = "BUILD 117";
+const HOME_BUILD = "BUILD 118";
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -546,12 +546,12 @@ export default function HomeScreen() {
             only renders when the user has the dealers row enabled). */}
         {renderSequence.some((it) => it.kind !== "stat") && (
           <TbvFrame
-            source={SKIN.card}
-            capInsets={CAP.card}
+            source={SKIN.panelFrame}
+            capInsets={CAP.panel}
             style={styles.detailsBoxLayout}
-            padX={50}
-            padTop={32}
-            padBottom={30}
+            padX={38}
+            padTop={40}
+            padBottom={48}
             testID="home-dealers-widget"
           >
             <TouchableOpacity
@@ -600,7 +600,7 @@ export default function HomeScreen() {
                           onPress={() => openAdjustForDealer(d)}
                           activeOpacity={0.7}
                         >
-                          <Text style={styles.dealerAdjustChipText}>ADJUST</Text>
+                          <Text style={styles.dealerAdjustChipText}>$</Text>
                         </TouchableOpacity>
                       </View>
                     </View>
@@ -623,12 +623,12 @@ export default function HomeScreen() {
         {/* STAT LIST PANEL — stat rows only, in the user's chosen order. */}
         {renderSequence.some((it) => it.kind === "stat") && (
           <TbvFrame
-            source={SKIN.card}
-            capInsets={CAP.card}
+            source={SKIN.panelFrame}
+            capInsets={CAP.panel}
             style={styles.detailsBoxLayout}
-            padX={50}
-            padTop={32}
-            padBottom={30}
+            padX={38}
+            padTop={40}
+            padBottom={48}
             testID="home-details-box"
           >
             {renderSequence
@@ -1067,8 +1067,10 @@ const styles = themedStyles((c) => ({
     fontSize: 14,
   },
   dealerAdjustChip: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    width: 36,
+    height: 32,
+    alignItems: "center",
+    justifyContent: "center",
     borderWidth: 1.5,
     borderColor: TBV.orange,
     borderRadius: 6,
@@ -1076,8 +1078,8 @@ const styles = themedStyles((c) => ({
   dealerAdjustChipText: {
     color: TBV.orange,
     fontFamily: "BebasNeue_400Regular",
-    fontSize: 11,
-    letterSpacing: 1,
+    fontSize: 19,
+    letterSpacing: 0,
   },
 
   // ---------- NESTED SUB-CARD (used for DEALER ACCOUNTS inside the main
