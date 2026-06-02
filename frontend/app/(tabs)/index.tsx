@@ -45,6 +45,10 @@ import {
   Exo_2_700Bold as Exo2_700Bold,
 } from "@expo-google-fonts/exo-2";
 
+// Manual verification beacon — bump this on every change so we can confirm
+// the device is actually showing the latest bundle. Rendered top-right of Home.
+const HOME_BUILD = "BUILD 101";
+
 export default function HomeScreen() {
   const router = useRouter();
   const { prefs } = usePrefs();
@@ -461,6 +465,10 @@ export default function HomeScreen() {
       {/* dark veil so the textured plate reads but content stays legible */}
       <View style={styles.bgVeil} pointerEvents="none" />
       <SafeAreaView style={styles.container} edges={["top"]}>
+        {/* BUILD STAMP — top-right verification beacon. */}
+        <Text style={styles.buildStamp} allowFontScaling={false} testID="home-build-stamp">
+          {HOME_BUILD}
+        </Text>
         {/* Industrial header — NATIVE-TEXT TOOLBOX VAULT wordmark (no PNG).
             TOOLBOX = steel #D8D8D8, VAULT = orange #FF6A00. */}
         <View style={styles.header}>
@@ -885,6 +893,20 @@ const styles = themedStyles((c) => ({
   },
   wordmarkSteel: { color: "#D8D8D8" },
   wordmarkVault: { color: TBV.orange },
+  // Top-right build beacon — bright + bold so it's unmistakable.
+  buildStamp: {
+    position: "absolute",
+    top: 10,
+    right: 14,
+    zIndex: 100,
+    color: TBV.orange,
+    fontFamily: "Rajdhani_700Bold",
+    fontSize: 13,
+    letterSpacing: 1.5,
+    textShadowColor: "rgba(0,0,0,0.7)",
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
+  },
   headerSub: {
     color: TBV.orange,
     fontFamily: "Rajdhani_700Bold",
