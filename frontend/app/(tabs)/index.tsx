@@ -48,10 +48,11 @@ import {
   Exo_2_700Bold as Exo2_700Bold,
 } from "@expo-google-fonts/exo-2";
 import { Teko_600SemiBold, Teko_700Bold } from "@expo-google-fonts/teko";
+import { Anton_400Regular } from "@expo-google-fonts/anton";
 
 // Manual verification beacon — bump this on every change so we can confirm
 // the device is actually showing the latest bundle. Rendered top-right of Home.
-const HOME_BUILD = "BUILD 106";
+const HOME_BUILD = "BUILD 107";
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -60,7 +61,7 @@ export default function HomeScreen() {
     BebasNeue_400Regular,
     Rajdhani_500Medium, Rajdhani_600SemiBold, Rajdhani_700Bold,
     Exo2_400Regular, Exo2_500Medium, Exo2_700Bold,
-    Teko_600SemiBold, Teko_700Bold,
+    Teko_600SemiBold, Teko_700Bold, Anton_400Regular,
   });
   const skinsReady = useTbvSkinsReady();
   const [stats, setStats] = useState<any>(() => getCached("home_stats", {}));
@@ -477,7 +478,7 @@ export default function HomeScreen() {
         {/* Industrial header — machined-steel native text (TBVSteelHeader):
             layered shadow + metallic gradient + highlight + orange glow on VAULT. */}
         <View style={styles.header}>
-          <TBVSteelHeader size={52} />
+          <TBVSteelHeader size={34} />
           <Text style={styles.headerSub}>SUMMARY  ·  {APP_VERSION_LABEL}</Text>
         </View>
       {/* Admin-only at-a-glance user-base counter.

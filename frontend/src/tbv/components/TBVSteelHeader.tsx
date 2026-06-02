@@ -19,7 +19,7 @@ import { View, Text, StyleSheet, Platform, StyleProp, ViewStyle, TextStyle } fro
 import MaskedView from "@react-native-masked-view/masked-view";
 import { LinearGradient } from "expo-linear-gradient";
 
-const FONT = "Teko_700Bold";
+const FONT = "Anton_400Regular";
 
 // Brushed-steel vertical gradient (top sheen → mid → lower steel).
 const STEEL = ["#F8F8F8", "#D2D2D2", "#8E8E8E"];
@@ -42,7 +42,7 @@ function SteelWord({ text, accent, size }: { text: string; accent?: boolean; siz
   const base: TextStyle = {
     fontFamily: FONT,
     fontSize: size,
-    letterSpacing: Math.max(0.5, Math.min(1.2, size * 0.022)),
+    letterSpacing: 0.5,
     lineHeight: size * 1.0,
     includeFontPadding: false,
   };
