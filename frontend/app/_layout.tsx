@@ -2,7 +2,6 @@ import { Stack, useRouter, useSegments } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
-import { KeyboardProvider } from "react-native-keyboard-controller";
 import {
   View,
   ActivityIndicator,
@@ -288,10 +287,6 @@ function ThemedStatusBar() {
 export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1, backgroundColor: theme.colors.bg }}>
-      {/* KeyboardProvider powers react-native-keyboard-controller (used by
-          KeyboardAwareScrollView on login/forms so the focused field shifts
-          above the keyboard). Must sit high in the tree. */}
-      <KeyboardProvider>
       {/* SafeAreaProvider MUST wrap everything that uses <SafeAreaView> or
           useSafeAreaInsets — without it, both fall back to 0 insets on
           iOS which makes top-bars and back buttons render UNDER the
@@ -315,7 +310,6 @@ export default function RootLayout() {
           </IndustrialThemeProvider>
         </ThemeProvider>
       </SafeAreaProvider>
-      </KeyboardProvider>
     </GestureHandlerRootView>
   );
 }

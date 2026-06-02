@@ -21,7 +21,6 @@ import {
   ActivityIndicator, useWindowDimensions,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useFonts as useGoogleFonts } from "@expo-google-fonts/bebas-neue";
@@ -283,7 +282,7 @@ export default function LoginScreen() {
               }
             }}
           >
-            <KeyboardAwareScrollView
+            <ScrollView
               contentContainerStyle={[
                 styles.scroll,
                 { minHeight: ch, gap: blockGap, paddingTop: topPad, paddingBottom: blockGap },
@@ -291,7 +290,7 @@ export default function LoginScreen() {
               keyboardShouldPersistTaps="handled"
               showsVerticalScrollIndicator={false}
               bounces={false}
-              bottomOffset={24}
+              automaticallyAdjustKeyboardInsets={true}
             >
               {/* ===================== HEADER ===================== */}
               <View style={[styles.block, { width: WORK_W, marginBottom: headerGap * 0.3 }]}>
@@ -551,7 +550,7 @@ export default function LoginScreen() {
                 </Pressable>
               ) : null}
 
-            </KeyboardAwareScrollView>
+            </ScrollView>
           </View>
       </SafeAreaView>
     </ImageBackground>
