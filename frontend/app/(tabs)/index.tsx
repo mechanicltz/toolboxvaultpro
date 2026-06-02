@@ -52,7 +52,7 @@ import { Anton_400Regular } from "@expo-google-fonts/anton";
 
 // Manual verification beacon — bump this on every change so we can confirm
 // the device is actually showing the latest bundle. Rendered top-right of Home.
-const HOME_BUILD = "BUILD 109";
+const HOME_BUILD = "BUILD 111";
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -356,9 +356,12 @@ export default function HomeScreen() {
         style={[styles.detailsRow, isLast && styles.detailsRowLast]}
         {...wrapperProps}
       >
-        <View style={{ flex: 1, minWidth: 0, marginRight: 8 }}>
-          <Text style={styles.detailsLabel} numberOfLines={1}>{r.label}</Text>
-          {!!r.sub && <Text style={styles.detailsRowSub} numberOfLines={1}>{r.sub}</Text>}
+        <View style={styles.rowLabelWrap}>
+          <View style={styles.rowTick} />
+          <View style={{ flex: 1, minWidth: 0 }}>
+            <Text style={styles.detailsLabel} numberOfLines={1}>{r.label}</Text>
+            {!!r.sub && <Text style={styles.detailsRowSub} numberOfLines={1}>{r.sub}</Text>}
+          </View>
         </View>
         <View style={styles.detailsValueWrap}>
           {!!r.value && (
@@ -538,118 +541,84 @@ export default function HomeScreen() {
             Previously the stats and dealer-accounts lived in two separate
             hardcoded-order cards, which ignored the user's row-order
             preference for `owed_to_dealers`. */}
-        {renderSequence.length > 0 && (
-          <IndustrialPanel style={styles.detailsBoxLayout} testID="home-details-box">
-            {renderSequence.map((item, idx) => {
-              const isLastItem = idx === renderSequence.length - 1;
-              if (item.kind === "stat") {
-                // For stat rows, only mark as "last" when this is the final
-                // item in the sequence (so no trailing divider on the very
-                // last row of the card).
-                return renderHomeRow(item.row, isLastItem, item.key);
-              }
-              // DEALER ACCOUNTS block — header row + N dealer sub-rows +
-              // TOTAL footer, all nested inside a sub-card within the main
-              // Description Card so the dealer cluster is visually distinct
-              // from the surrounding stat rows.
-              return (
-                <IndustrialPanel
-                  variant="nested"
-                  key="owed_to_dealers"
-                  style={[
-                    styles.nestedCardLayout,
-                    isLastItem && { marginBottom: 0 },
-                  ]}
-                >
-                  <TouchableOpacity
-                    style={[styles.detailsRow, styles.nestedHeaderRow]}
-                    activeOpacity={0.6}
-                    testID="home-dealers-header"
-                    onPress={() => router.push("/dealers")}
-                  >
-                    <Text style={styles.detailsLabel}>DEALER ACCOUNTS</Text>
-                    <View style={styles.detailsValueWrap}>
-                      <Ionicons name="chevron-forward" size={14} color={theme.colors.textMuted} />
-                    </View>
-                  </TouchableOpacity>
-                  {dealersAll.length === 0 ? (
-                    <View style={[styles.detailsRow, styles.detailsRowLast]}>
-                      <Text
-                        style={[
-                          styles.detailsValue,
-                          {
-                            color: theme.colors.textMuted,
-                            textAlign: "left",
-                            flex: 1,
-                            fontWeight: "500",
-                          },
-                        ]}
+        {/* DEALER ACCOUNTS — its own distinct widget panel (configurable;
+            only renders when the user has the dealers row enabled). */}
+        {renderSequence.some((it) => it.kind !== "stat") && (
+          <IndustrialPanel style={styles.detailsBoxLayout} testID="home-dealers-widget">
+            <TouchableOpacity
+              style={styles.detailsRow}
+              activeOpacity={0.6}
+              testID="home-dealers-header"
+              onPress={() => router.push("/dealers")}
+            >
+              <View style={styles.rowLabelWrap}>
+                <View style={styles.rowTick} />
+                <Text style={styles.detailsLabel}>DEALER ACCOUNTS</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={14} color={theme.colors.textMuted} />
+            </TouchableOpacity>
+
+            {dealersAll.length === 0 ? (
+              <View style={[styles.detailsRow, styles.detailsRowLast]}>
+                <Text style={[styles.detailsValue, styles.noChip, { color: theme.colors.textMuted, textAlign: "left", flex: 1 }]}>
+                  No dealers yet.
+                </Text>
+              </View>
+            ) : (
+              <>
+                {dealersAll.map((d) => {
+                  const credit = Number(d.credit_balance) || 0;
+                  const truck = Number(d.personal_balance) || 0;
+                  const dTotal = credit + truck;
+                  return (
+                    <View key={d.id} style={styles.detailsRow}>
+                      <TouchableOpacity
+                        onPress={() => router.push(`/dealer/${d.id}`)}
+                        activeOpacity={0.6}
+                        style={styles.rowLabelWrap}
+                        testID={`home-dealer-${d.id}`}
                       >
-                        No dealers yet.
-                      </Text>
-                    </View>
-                  ) : (
-                    <>
-                      {dealersAll.map((d, i) => {
-                        const credit = Number(d.credit_balance) || 0;
-                        const truck = Number(d.personal_balance) || 0;
-                        const dTotal = credit + truck;
-                        void i;
-                        return (
-                          <View key={d.id} style={styles.detailsRow}>
-                            <TouchableOpacity
-                              onPress={() => router.push(`/dealer/${d.id}`)}
-                              activeOpacity={0.6}
-                              style={{ flex: 1, minWidth: 0, marginRight: 8 }}
-                              testID={`home-dealer-${d.id}`}
-                            >
-                              <Text style={styles.dealerRowName} numberOfLines={1}>
-                                {d.name}
-                              </Text>
-                            </TouchableOpacity>
-                            <View style={styles.detailsValueWrap}>
-                              <Text
-                                style={[
-                                  styles.detailsValue,
-                                  dTotal === 0 && { color: theme.colors.textMuted },
-                                ]}
-                              >
-                                ${dTotal.toFixed(2)}
-                              </Text>
-                              <TouchableOpacity
-                                testID={`adjust-${d.id}`}
-                                style={styles.dealerAdjustChip}
-                                onPress={() => openAdjustForDealer(d)}
-                                activeOpacity={0.7}
-                              >
-                                <Text style={styles.dealerAdjustChipText}>ADJUST</Text>
-                              </TouchableOpacity>
-                            </View>
-                          </View>
-                        );
-                      })}
-                      {/* TOTAL footer — sum of every dealer balance shown above.
-                          Always rendered when there's at least one dealer so the
-                          user can see the grand total without scrolling back up. */}
-                      <View
-                        style={[styles.detailsRow, styles.detailsRowLast, styles.nestedTotalRow]}
-                        testID="home-dealers-total"
-                      >
-                        <Text style={styles.nestedTotalLabel}>TOTAL</Text>
-                        <Text
-                          style={[
-                            styles.nestedTotalValue,
-                            totalOwed === 0 && { color: theme.colors.textMuted },
-                          ]}
-                        >
-                          ${totalOwed.toFixed(2)}
+                        <View style={styles.rowTick} />
+                        <Text style={styles.dealerRowName} numberOfLines={1}>{d.name}</Text>
+                      </TouchableOpacity>
+                      <View style={styles.detailsValueWrap}>
+                        <Text style={[styles.detailsValue, dTotal === 0 && styles.valueMuted]}>
+                          ${dTotal.toFixed(2)}
                         </Text>
+                        <TouchableOpacity
+                          testID={`adjust-${d.id}`}
+                          style={styles.dealerAdjustChip}
+                          onPress={() => openAdjustForDealer(d)}
+                          activeOpacity={0.7}
+                        >
+                          <Text style={styles.dealerAdjustChipText}>ADJUST</Text>
+                        </TouchableOpacity>
                       </View>
-                    </>
-                  )}
-                </IndustrialPanel>
-              );
-            })}
+                    </View>
+                  );
+                })}
+                <View
+                  style={[styles.detailsRow, styles.detailsRowLast, styles.nestedTotalRow]}
+                  testID="home-dealers-total"
+                >
+                  <Text style={styles.nestedTotalLabel}>TOTAL</Text>
+                  <Text style={[styles.nestedTotalValue, totalOwed === 0 && styles.valueMuted]}>
+                    ${totalOwed.toFixed(2)}
+                  </Text>
+                </View>
+              </>
+            )}
+          </IndustrialPanel>
+        )}
+
+        {/* STAT LIST PANEL — stat rows only, in the user's chosen order. */}
+        {renderSequence.some((it) => it.kind === "stat") && (
+          <IndustrialPanel style={styles.detailsBoxLayout} testID="home-details-box">
+            {renderSequence
+              .filter((it) => it.kind === "stat")
+              .map((item, idx, arr) =>
+                renderHomeRow(item.row, idx === arr.length - 1, item.key),
+              )}
           </IndustrialPanel>
         )}
 
@@ -1004,10 +973,33 @@ const styles = themedStyles((c) => ({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: c.borderSubtle,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    marginVertical: 4,
+    borderRadius: 6,
+    // Recessed "machined slot" — each line is its own seated container.
+    backgroundColor: "rgba(0,0,0,0.26)",
+    borderWidth: 1,
+    borderTopColor: "rgba(0,0,0,0.55)",
+    borderLeftColor: "rgba(0,0,0,0.4)",
+    borderRightColor: "rgba(255,255,255,0.05)",
+    borderBottomColor: "rgba(255,255,255,0.08)",
     gap: 8,
+  },
+  // Orange accent tick to the left of every row label (control-panel readout).
+  rowTick: {
+    width: 3,
+    height: 16,
+    borderRadius: 1.5,
+    backgroundColor: TBV.orange,
+    marginRight: 10,
+  },
+  rowLabelWrap: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+    minWidth: 0,
+    marginRight: 8,
   },
   detailsRowLast: {
     borderBottomWidth: 0,
@@ -1035,10 +1027,20 @@ const styles = themedStyles((c) => ({
   detailsValue: {
     color: TBV.steel,
     fontFamily: "Rajdhani_700Bold",
-    fontSize: 15,
+    fontSize: 16,
     textAlign: "right",
     flexShrink: 1,
+    // Recessed "gauge readout" chip
+    backgroundColor: "rgba(0,0,0,0.34)",
+    borderColor: "rgba(0,0,0,0.55)",
+    borderWidth: 1,
+    borderRadius: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    overflow: "hidden",
   },
+  valueMuted: { color: TBV.textMuted },
+  noChip: { backgroundColor: "transparent", borderWidth: 0, paddingHorizontal: 0 },
   // Dealer rows inside the dealer-accounts card use a slightly larger name
   // since the dealer name is the row's primary identifier (analogous to the
   // agent rows on the dealer detail screen).
