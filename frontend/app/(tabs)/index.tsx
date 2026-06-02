@@ -53,7 +53,7 @@ import { Anton_400Regular } from "@expo-google-fonts/anton";
 
 // Manual verification beacon — bump this on every change so we can confirm
 // the device is actually showing the latest bundle. Rendered top-right of Home.
-const HOME_BUILD = "BUILD 120";
+const HOME_BUILD = "BUILD 121";
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -517,12 +517,12 @@ export default function HomeScreen() {
         {/* Next dealer route — kept prominent and highlighted */}
         {nextRouteBanner && prefs.show_dealer_route_reminder && (
           <TbvFrame
-            source={SKIN.card}
-            capInsets={CAP.card}
+            source={SKIN.panelFrame}
+            capInsets={CAP.panel}
             style={styles.bannerLayout}
-            padX={50}
-            padTop={22}
-            padBottom={22}
+            padX={38}
+            padTop={48}
+            padBottom={60}
           >
             <TouchableOpacity
               testID="next-route-banner"
