@@ -597,17 +597,6 @@ export default function MoreScreen() {
           />
         </BevelCard>
 
-        {/* TEMP (Phase 0 review) — entry point to the new Toolbox Vault UI
-            Foundation Kit gallery so it can be previewed in Expo Go. Remove
-            this Row once the kit is signed off. */}
-        <Row
-          icon="construct"
-          title="UI Kit Preview (TBV)"
-          subtitle="Preview the new industrial component kit · Light/Dark"
-          testID="more-tbv-kit"
-          onPress={() => router.push("/tbv-kit" as any)}
-        />
-
         <Row
           icon="chatbubble-ellipses"
           title="Report a Bug · Request a Feature"

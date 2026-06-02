@@ -461,9 +461,13 @@ export default function HomeScreen() {
       {/* dark veil so the textured plate reads but content stays legible */}
       <View style={styles.bgVeil} pointerEvents="none" />
       <SafeAreaView style={styles.container} edges={["top"]}>
-        {/* Industrial header — TOOLBOX VAULT nameplate (matches login) */}
+        {/* Industrial header — NATIVE-TEXT TOOLBOX VAULT wordmark (no PNG).
+            TOOLBOX = steel #D8D8D8, VAULT = orange #FF6A00. */}
         <View style={styles.header}>
-          <Image source={SKIN.nameplate} style={styles.nameplate} resizeMode="contain" />
+          <Text style={styles.wordmark} allowFontScaling={false} numberOfLines={1}>
+            <Text style={styles.wordmarkSteel}>TOOLBOX </Text>
+            <Text style={styles.wordmarkVault}>VAULT</Text>
+          </Text>
           <Text style={styles.headerSub}>SUMMARY  ·  {APP_VERSION_LABEL}</Text>
         </View>
       {/* Admin-only at-a-glance user-base counter.
@@ -869,6 +873,18 @@ const styles = themedStyles((c) => ({
     borderBottomColor: "rgba(255,133,51,0.30)",
   },
   nameplate: { width: "80%", maxWidth: 330, height: 56 },
+  // Native-text TOOLBOX VAULT wordmark (replaces the PNG nameplate).
+  wordmark: {
+    fontFamily: "BebasNeue_400Regular",
+    fontSize: 40,
+    letterSpacing: 2.5,
+    textAlign: "center",
+    textShadowColor: "rgba(0,0,0,0.6)",
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 4,
+  },
+  wordmarkSteel: { color: "#D8D8D8" },
+  wordmarkVault: { color: TBV.orange },
   headerSub: {
     color: TBV.orange,
     fontFamily: "Rajdhani_700Bold",
