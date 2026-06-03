@@ -53,7 +53,7 @@ import { Anton_400Regular } from "@expo-google-fonts/anton";
 
 // Manual verification beacon — bump this on every change so we can confirm
 // the device is actually showing the latest bundle. Rendered top-right of Home.
-const HOME_BUILD = "BUILD 126";
+const HOME_BUILD = "BUILD 127";
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -598,7 +598,7 @@ export default function HomeScreen() {
                         testID={`home-dealer-${d.id}`}
                       >
                         <View style={styles.rowTick} />
-                        <Text style={styles.dealerRowName} numberOfLines={1}>{d.name}</Text>
+                        <Text style={styles.detailsLabel} numberOfLines={1}>{d.name}</Text>
                       </TouchableOpacity>
                       <View style={styles.detailsValueWrap}>
                         <Text style={[styles.detailsValue, dTotal === 0 && styles.valueMuted]}>
@@ -875,7 +875,7 @@ const styles = themedStyles((c) => ({
     paddingBottom: 14,
     paddingHorizontal: 20,
   },
-  nameplate: { width: "80%", maxWidth: 330, height: 56 },
+  nameplate: { width: "92%", maxWidth: 380, height: 82 },
   // Native-text TOOLBOX VAULT wordmark (replaces the PNG nameplate).
   wordmark: {
     fontFamily: "BebasNeue_400Regular",
@@ -1002,9 +1002,9 @@ const styles = themedStyles((c) => ({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingVertical: 11,
+    paddingVertical: 10,
     paddingHorizontal: 12,
-    marginVertical: 5,
+    marginVertical: 3,
     borderRadius: 6,
     // Deep recessed "machined slot" — each line is its own seated container.
     backgroundColor: "rgba(0,0,0,0.5)",
