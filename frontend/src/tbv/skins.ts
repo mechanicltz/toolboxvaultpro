@@ -64,9 +64,9 @@ export const CAP = {
   // tbv_modal_panel_dark.png — 1118x607 (legacy raw, plain stretch).
   modalPanel:{ top: 90, left: 110, bottom: 96, right: 110 },
   // tbv_window_frame.png — 400x267 logical (NEW thinner border, ar 1.5).
-  window:    { top: 24, left: 34, bottom: 26, right: 34 },
+  window:    { top: 32, left: 38, bottom: 34, right: 38 },
   // tbv_plate_frame.png — 400x200 logical (NEW thinner border, ar 2.0 wide).
-  plate:     { top: 20, left: 34, bottom: 22, right: 34 },
+  plate:     { top: 12, left: 46, bottom: 12, right: 46 },
 };
 
 /** Core palette pulled straight from the approved login screen. */
