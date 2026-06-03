@@ -53,7 +53,7 @@ import { Anton_400Regular } from "@expo-google-fonts/anton";
 
 // Manual verification beacon — bump this on every change so we can confirm
 // the device is actually showing the latest bundle. Rendered top-right of Home.
-const HOME_BUILD = "BUILD 127";
+const HOME_BUILD = "BUILD 128";
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -1002,9 +1002,9 @@ const styles = themedStyles((c) => ({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingVertical: 10,
+    paddingVertical: 8,
     paddingHorizontal: 12,
-    marginVertical: 3,
+    marginVertical: 2,
     borderRadius: 6,
     // Deep recessed "machined slot" — each line is its own seated container.
     backgroundColor: "rgba(0,0,0,0.5)",
@@ -1055,8 +1055,9 @@ const styles = themedStyles((c) => ({
   },
   detailsValue: {
     color: TBV.steel,
-    fontFamily: "Rajdhani_700Bold",
-    fontSize: 16,
+    fontFamily: "BebasNeue_400Regular",
+    fontSize: 14,
+    letterSpacing: 1.2,
     textAlign: "right",
     flexShrink: 1,
     // Recessed "gauge readout" chip
@@ -1128,8 +1129,9 @@ const styles = themedStyles((c) => ({
   },
   nestedTotalValue: {
     color: TBV.orange,
-    fontFamily: "Rajdhani_700Bold",
-    fontSize: 16,
+    fontFamily: "BebasNeue_400Regular",
+    fontSize: 14,
+    letterSpacing: 1.2,
   },
 
   row: {
