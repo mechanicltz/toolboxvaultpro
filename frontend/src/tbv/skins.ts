@@ -56,17 +56,17 @@ export const AR = { logo: 0.968, card: 2.407, nameplate: 3.746, panel: 0.778 };
  */
 export const CAP = {
   // tbv_card_frame.png — 400x164 logical. Freeze corner brackets + rails.
-  card:      { top: 38, left: 60, bottom: 42, right: 60 },
+  card:      { top: 38, left: 60, bottom: 42, right: 60, w: 400, h: 164 },
   // tbv_panel_frame.png — 400x514 logical (tall form panel).
-  panel:     { top: 64, left: 56, bottom: 86, right: 56 },
+  panel:     { top: 64, left: 56, bottom: 86, right: 56, w: 400, h: 514 },
   // tbv_stat_frame.png — 400x209 logical.
-  cardStat:  { top: 40, left: 56, bottom: 44, right: 56 },
+  cardStat:  { top: 40, left: 56, bottom: 44, right: 56, w: 400, h: 209 },
   // tbv_modal_panel_dark.png — 1118x607 (legacy raw, plain stretch).
-  modalPanel:{ top: 90, left: 110, bottom: 96, right: 110 },
-  // tbv_window_frame.png — 400x267 logical (NEW thinner border, ar 1.5).
-  window:    { top: 32, left: 38, bottom: 34, right: 38 },
-  // tbv_plate_frame.png — 400x200 logical (NEW thinner border, ar 2.0 wide).
-  plate:     { top: 12, left: 46, bottom: 12, right: 46 },
+  modalPanel:{ top: 90, left: 110, bottom: 96, right: 110, w: 1118, h: 607 },
+  // tbv_window_frame.png — 400x273 logical (NEW thinner border).
+  window:    { top: 32, left: 38, bottom: 34, right: 38, w: 400, h: 273 },
+  // tbv_plate_frame.png — 400x85 logical (NEW thinner border, wide).
+  plate:     { top: 12, left: 46, bottom: 12, right: 46, w: 400, h: 85 },
 };
 
 /** Core palette pulled straight from the approved login screen. */
