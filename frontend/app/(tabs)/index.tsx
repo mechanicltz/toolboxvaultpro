@@ -53,7 +53,7 @@ import { Anton_400Regular } from "@expo-google-fonts/anton";
 
 // Manual verification beacon — bump this on every change so we can confirm
 // the device is actually showing the latest bundle. Rendered top-right of Home.
-const HOME_BUILD = "BUILD 121";
+const HOME_BUILD = "BUILD 122";
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -517,12 +517,12 @@ export default function HomeScreen() {
         {/* Next dealer route — kept prominent and highlighted */}
         {nextRouteBanner && prefs.show_dealer_route_reminder && (
           <TbvFrame
-            source={SKIN.panelFrame}
-            capInsets={CAP.panel}
+            source={SKIN.plate}
+            capInsets={CAP.plate}
             style={styles.bannerLayout}
-            padX={38}
-            padTop={48}
-            padBottom={60}
+            padX={30}
+            padTop={22}
+            padBottom={24}
           >
             <TouchableOpacity
               testID="next-route-banner"
@@ -555,12 +555,12 @@ export default function HomeScreen() {
             only renders when the user has the dealers row enabled). */}
         {renderSequence.some((it) => it.kind !== "stat") && (
           <TbvFrame
-            source={SKIN.panelFrame}
-            capInsets={CAP.panel}
+            source={SKIN.window}
+            capInsets={CAP.window}
             style={styles.detailsBoxLayout}
-            padX={38}
-            padTop={40}
-            padBottom={48}
+            padX={30}
+            padTop={24}
+            padBottom={26}
             testID="home-dealers-widget"
           >
             <TouchableOpacity
@@ -632,12 +632,12 @@ export default function HomeScreen() {
         {/* STAT LIST PANEL — stat rows only, in the user's chosen order. */}
         {renderSequence.some((it) => it.kind === "stat") && (
           <TbvFrame
-            source={SKIN.panelFrame}
-            capInsets={CAP.panel}
+            source={SKIN.window}
+            capInsets={CAP.window}
             style={styles.detailsBoxLayout}
-            padX={38}
-            padTop={40}
-            padBottom={48}
+            padX={30}
+            padTop={24}
+            padBottom={26}
             testID="home-details-box"
           >
             {renderSequence
@@ -664,12 +664,12 @@ export default function HomeScreen() {
 
         {/* Feedback link at the bottom of the first page */}
         <TbvFrame
-          source={SKIN.panelFrame}
-          capInsets={CAP.panel}
+          source={SKIN.plate}
+          capInsets={CAP.plate}
           style={styles.feedbackLayout}
-          padX={38}
-          padTop={50}
-          padBottom={60}
+          padX={30}
+          padTop={22}
+          padBottom={24}
         >
           <TouchableOpacity
             testID="feedback-banner"

@@ -18,6 +18,9 @@ export const SKIN: Record<string, ImageSourcePropType> = {
   card:         require("../../assets/tbv-v2/trimmed/Frames/tbv_card_frame.png"),
   panelFrame:   require("../../assets/tbv-v2/trimmed/Frames/tbv_panel_frame.png"),
   statFrame:    require("../../assets/tbv-v2/trimmed/Frames/tbv_stat_frame.png"),
+  // ---- NEW thinner-border frames (better containment, clean 9-slice) ----
+  window:       require("../../assets/tbv-v2/trimmed/Frames/tbv_window_frame.png"),
+  plate:        require("../../assets/tbv-v2/trimmed/Frames/tbv_plate_frame.png"),
   cardRaw:      require("../../assets/tbv-v2/trimmed/Cards/tbv_card_dark.png"),
   cardStat:     require("../../assets/tbv-v2/trimmed/Cards/tbv_card_stat_dark.png"),
   cardDealer:   require("../../assets/tbv-v2/trimmed/Cards/tbv_card_dealer_dark.png"),
@@ -60,6 +63,10 @@ export const CAP = {
   cardStat:  { top: 40, left: 56, bottom: 44, right: 56 },
   // tbv_modal_panel_dark.png — 1118x607 (legacy raw, plain stretch).
   modalPanel:{ top: 90, left: 110, bottom: 96, right: 110 },
+  // tbv_window_frame.png — 400x267 logical (NEW thinner border, ar 1.5).
+  window:    { top: 24, left: 34, bottom: 26, right: 34 },
+  // tbv_plate_frame.png — 400x200 logical (NEW thinner border, ar 2.0 wide).
+  plate:     { top: 20, left: 34, bottom: 22, right: 34 },
 };
 
 /** Core palette pulled straight from the approved login screen. */
