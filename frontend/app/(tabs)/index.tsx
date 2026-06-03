@@ -53,7 +53,7 @@ import { Anton_400Regular } from "@expo-google-fonts/anton";
 
 // Manual verification beacon — bump this on every change so we can confirm
 // the device is actually showing the latest bundle. Rendered top-right of Home.
-const HOME_BUILD = "BUILD 128";
+const HOME_BUILD = "BUILD 129";
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -1080,18 +1080,18 @@ const styles = themedStyles((c) => ({
     fontSize: 14,
   },
   dealerAdjustChip: {
-    width: 36,
-    height: 32,
+    width: 28,
+    height: 26,
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1.5,
     borderColor: TBV.orange,
-    borderRadius: 6,
+    borderRadius: 5,
   },
   dealerAdjustChipText: {
     color: TBV.orange,
     fontFamily: "BebasNeue_400Regular",
-    fontSize: 19,
+    fontSize: 15,
     letterSpacing: 0,
   },
 
