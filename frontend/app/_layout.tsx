@@ -247,7 +247,7 @@ function ShellNav() {
           <Stack
             screenOptions={{
               headerShown: false,
-              contentStyle: { backgroundColor: "transparent" },
+              contentStyle: { backgroundColor: "#0A0A0A" },
               animation: "slide_from_right",
             }}
           >
