@@ -195,6 +195,7 @@ function AuthGate({ children }: { children: React.ReactNode }) {
 function ShellNav() {
   const { user } = useAuth();
   const router = useRouter();
+  const c = useColors();
   const showShell = !!user;
 
   // Register the 402 (payment required) interceptor exactly once.
@@ -247,7 +248,7 @@ function ShellNav() {
           <Stack
             screenOptions={{
               headerShown: false,
-              contentStyle: { backgroundColor: "#0A0A0A" },
+              contentStyle: { backgroundColor: c.bg },
               animation: "slide_from_right",
             }}
           >

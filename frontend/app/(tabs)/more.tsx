@@ -22,7 +22,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter, useFocusEffect } from "expo-router";
 import { useAppResume } from "../../src/appLifecycle";
 import { theme } from "../../src/theme";
-import { useThemeMode } from "../../src/themeContext";
+import { useThemeMode, useSkin } from "../../src/themeContext";
 import {
   getBiometricStatus,
   enableBiometric,
@@ -201,6 +201,7 @@ export default function MoreScreen() {
   const [customDaysInput, setCustomDaysInput] = useState("");
   const [homeRowsModal, setHomeRowsModal] = useState(false);
   const { mode: themeMode, setMode: setThemeMode } = useThemeMode();
+  const { skin, setSkin } = useSkin();
 
   // Subscription + admin gates.
   const [sub, setSub] = useState<any>(null);
@@ -570,32 +571,108 @@ export default function MoreScreen() {
         </Text>
       </View>
       <ScrollView contentContainerStyle={{ paddingBottom: 100 }}>
-        {/* Light / Dark mode toggle — placed at top of the More tab so
-            users can flip themes without scrolling. */}
-        <BevelCard style={styles.toggleRow}>
-          <View style={styles.iconBox}>
+        {/* APPEARANCE — choose the app's presentation:
+            • Industrial Skin (textured metal look, no light/dark)
+            • Plain · Light / Plain · Dark (flat cards, pick a mode)
+            Placed at the top of More so it's easy to find. */}
+        <View style={styles.appearanceCard}>
+          <View style={styles.appearanceHeader}>
+            <Ionicons name="color-palette" size={18} color={theme.colors.accent} />
+            <Text style={styles.appearanceTitle}>APPEARANCE</Text>
+          </View>
+
+          {/* Option 1 — Industrial Skin */}
+          <TouchableOpacity
+            testID="appearance-industrial"
+            activeOpacity={0.7}
+            style={[styles.optRow, skin === "industrial" && styles.optRowActive]}
+            onPress={() => setSkin("industrial")}
+          >
+            <View style={styles.iconBox}>
+              <Ionicons name="construct" size={18} color={theme.colors.accent} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.rowTitle}>Industrial Skin</Text>
+              <Text style={styles.rowSub}>Textured metal panels · always dark</Text>
+            </View>
             <Ionicons
-              name={themeMode === "light" ? "sunny" : "moon"}
+              name={skin === "industrial" ? "radio-button-on" : "radio-button-off"}
               size={20}
-              color={theme.colors.accent}
+              color={skin === "industrial" ? theme.colors.accent : theme.colors.textMuted}
             />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.rowTitle}>Light / Dark Theme</Text>
-            <Text style={styles.rowSub}>
-              {themeMode === "light"
-                ? "Soft grey-blue background, dark text"
-                : "Industrial dark workshop look"}
-            </Text>
-          </View>
-          <Switch
-            testID="toggle-light-mode"
-            value={themeMode === "light"}
-            onValueChange={(v) => setThemeMode(v ? "light" : "dark")}
-            trackColor={{ true: theme.colors.accent, false: theme.colors.border }}
-            thumbColor="#fff"
-          />
-        </BevelCard>
+          </TouchableOpacity>
+
+          {/* Option 2 — Plain · Light */}
+          <TouchableOpacity
+            testID="appearance-plain-light"
+            activeOpacity={0.7}
+            style={[
+              styles.optRow,
+              skin === "plain" && themeMode === "light" && styles.optRowActive,
+            ]}
+            onPress={async () => {
+              await setSkin("plain");
+              await setThemeMode("light");
+            }}
+          >
+            <View style={styles.iconBox}>
+              <Ionicons name="sunny" size={18} color={theme.colors.accent} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.rowTitle}>Plain · Light</Text>
+              <Text style={styles.rowSub}>No skins · soft grey-blue, dark text</Text>
+            </View>
+            <Ionicons
+              name={
+                skin === "plain" && themeMode === "light"
+                  ? "radio-button-on"
+                  : "radio-button-off"
+              }
+              size={20}
+              color={
+                skin === "plain" && themeMode === "light"
+                  ? theme.colors.accent
+                  : theme.colors.textMuted
+              }
+            />
+          </TouchableOpacity>
+
+          {/* Option 3 — Plain · Dark */}
+          <TouchableOpacity
+            testID="appearance-plain-dark"
+            activeOpacity={0.7}
+            style={[
+              styles.optRow,
+              styles.optRowLast,
+              skin === "plain" && themeMode === "dark" && styles.optRowActive,
+            ]}
+            onPress={async () => {
+              await setSkin("plain");
+              await setThemeMode("dark");
+            }}
+          >
+            <View style={styles.iconBox}>
+              <Ionicons name="moon" size={18} color={theme.colors.accent} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.rowTitle}>Plain · Dark</Text>
+              <Text style={styles.rowSub}>No skins · flat dark cards</Text>
+            </View>
+            <Ionicons
+              name={
+                skin === "plain" && themeMode === "dark"
+                  ? "radio-button-on"
+                  : "radio-button-off"
+              }
+              size={20}
+              color={
+                skin === "plain" && themeMode === "dark"
+                  ? theme.colors.accent
+                  : theme.colors.textMuted
+              }
+            />
+          </TouchableOpacity>
+        </View>
 
         <Row
           icon="chatbubble-ellipses"
@@ -1670,6 +1747,44 @@ const styles = themedStyles((c) => ({
   },
   rowTitle: { color: c.textPrimary, fontWeight: "700", fontSize: 11 },
   rowSub: { color: c.textSecondary, fontSize: 9, marginTop: 2 },
+  // ---- Appearance selector (skin + light/dark) ----
+  appearanceCard: {
+    backgroundColor: c.bgSecondary,
+    marginHorizontal: 16,
+    marginTop: 10,
+    borderRadius: theme.radii.md,
+    borderWidth: 1,
+    borderColor: c.borderSubtle,
+    overflow: "hidden",
+    ...(theme.elevation.md as object),
+  },
+  appearanceHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingTop: 14,
+    paddingBottom: 8,
+  },
+  appearanceTitle: {
+    color: c.textSecondary,
+    fontSize: 11,
+    fontWeight: "800",
+    letterSpacing: 1.2,
+  },
+  optRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderTopWidth: 1,
+    borderTopColor: c.borderSubtle,
+  },
+  optRowLast: {},
+  optRowActive: {
+    backgroundColor: c.glass,
+  },
   timeValue: {
     color: c.accent,
     fontSize: 13,

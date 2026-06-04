@@ -31,6 +31,7 @@ import React, {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import { StyleSheet } from "react-native";
@@ -44,32 +45,68 @@ import {
 } from "./theme";
 
 export type ThemeMode = "dark" | "light";
+/**
+ * Presentation skin:
+ *  - "industrial" → the textured metal/PNG-frame look (Dashboard style).
+ *    This mode IGNORES light/dark and always uses the dark industrial palette.
+ *  - "plain"      → no skins; clean flat cards that honour the light/dark mode.
+ */
+export type SkinMode = "industrial" | "plain";
 
 type Ctx = {
   mode: ThemeMode;
+  skin: SkinMode;
   colors: ColorPalette;
   setMode: (m: ThemeMode) => Promise<void>;
+  setSkin: (s: SkinMode) => Promise<void>;
   toggle: () => Promise<void>;
 };
 
 const STORAGE_KEY = "toolbox.themeMode";
+const STORAGE_KEY_SKIN = "toolbox.skinMode";
+
+/**
+ * The palette that should actually be applied for a given skin + mode combo.
+ * Industrial always renders on the dark workshop palette so any palette-driven
+ * sub-components inside a skinned screen stay consistent with the metal art.
+ */
+function effectivePalette(skin: SkinMode, mode: ThemeMode): ColorPalette {
+  if (skin === "industrial") return darkPalette;
+  return mode === "light" ? lightPalette : darkPalette;
+}
 
 const ThemeContext = createContext<Ctx | null>(null);
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [mode, setModeState] = useState<ThemeMode>("dark");
+  const [skin, setSkinState] = useState<SkinMode>("industrial");
   const [hydrated, setHydrated] = useState(false);
 
-  // Hydrate from disk on first mount. Default = dark (preserves the
-  // pre-feature look so existing users don't get a sudden flip).
+  // Refs mirror the latest mode/skin so the setters always compute the
+  // effective palette from up-to-date values — even when both are changed
+  // back-to-back (e.g. tapping "Plain · Light" calls setSkin then setMode).
+  // Closures alone would capture stale state and apply the wrong palette.
+  const modeRef = useRef<ThemeMode>("dark");
+  const skinRef = useRef<SkinMode>("industrial");
+
+  // Hydrate both prefs from disk on first mount. Defaults: skin = industrial
+  // (the premium textured look), mode = dark. Industrial forces the dark
+  // palette regardless of the stored light/dark mode.
   useEffect(() => {
     (async () => {
       try {
-        const stored = await AsyncStorage.getItem(STORAGE_KEY);
-        if (stored === "light" || stored === "dark") {
-          applyPalette(stored === "light" ? lightPalette : darkPalette);
-          setModeState(stored);
-        }
+        const [storedMode, storedSkin] = await Promise.all([
+          AsyncStorage.getItem(STORAGE_KEY),
+          AsyncStorage.getItem(STORAGE_KEY_SKIN),
+        ]);
+        const m: ThemeMode = storedMode === "light" ? "light" : "dark";
+        const s: SkinMode = storedSkin === "plain" ? "plain" : "industrial";
+        modeRef.current = m;
+        skinRef.current = s;
+        applyPalette(effectivePalette(s, m));
+        bumpStyleCacheVersion();
+        setModeState(m);
+        setSkinState(s);
       } catch {
         /* ignore */
       } finally {
@@ -79,7 +116,9 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const setMode = useCallback(async (m: ThemeMode) => {
-    applyPalette(m === "light" ? lightPalette : darkPalette);
+    modeRef.current = m;
+    // Use the latest skin (ref) so chained skin+mode changes resolve correctly.
+    applyPalette(effectivePalette(skinRef.current, m));
     bumpStyleCacheVersion();
     setModeState(m);
     try {
@@ -89,21 +128,32 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  const setSkin = useCallback(async (s: SkinMode) => {
+    skinRef.current = s;
+    applyPalette(effectivePalette(s, modeRef.current));
+    bumpStyleCacheVersion();
+    setSkinState(s);
+    try {
+      await AsyncStorage.setItem(STORAGE_KEY_SKIN, s);
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
   const toggle = useCallback(async () => {
-    await setMode(mode === "dark" ? "light" : "dark");
-  }, [mode, setMode]);
+    await setMode(modeRef.current === "dark" ? "light" : "dark");
+  }, [setMode]);
 
   // The `colors` exposed here is a snapshot of currentPalette at this render,
-  // which forces consumers to re-render when mode changes. The Proxy in
+  // which forces consumers to re-render when mode/skin changes. The Proxy in
   // theme.ts also reads from currentPalette, so inline usages stay in sync.
   const value = useMemo<Ctx>(
-    () => ({ mode, colors: { ...currentPalette }, setMode, toggle }),
-    [mode, setMode, toggle],
+    () => ({ mode, skin, colors: { ...currentPalette }, setMode, setSkin, toggle }),
+    [mode, skin, setMode, setSkin, toggle],
   );
 
   // Render the tree only AFTER hydration so the first paint already has the
-  // user's saved theme — prevents a one-frame dark→light flash on light-mode
-  // users.
+  // user's saved theme — prevents a one-frame default→saved flash.
   if (!hydrated) return null;
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
@@ -121,6 +171,19 @@ export function useThemeMode() {
     };
   }
   return { mode: ctx.mode, setMode: ctx.setMode, toggle: ctx.toggle };
+}
+
+/**
+ * Returns the active presentation skin + a setter. `skin === "industrial"`
+ * means render the textured metal look; `"plain"` means flat cards that honour
+ * the light/dark mode. Future skinned screens branch on this.
+ */
+export function useSkin() {
+  const ctx = useContext(ThemeContext);
+  if (!ctx) {
+    return { skin: "industrial" as SkinMode, setSkin: async (_s: SkinMode) => {} };
+  }
+  return { skin: ctx.skin, setSkin: ctx.setSkin };
 }
 
 /**
