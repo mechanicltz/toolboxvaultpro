@@ -649,12 +649,12 @@ export default function AdminBackupsPage() {
               .slice(0, 12)
               .map((f) => (
                 <View key={f.id} style={styles.driveRow}>
-                  <View style={{ flex: 1, paddingRight: 8 }}>
+                  <View style={{ flex: 1, minWidth: 0, paddingRight: 8 }}>
                     <Text style={styles.driveName} numberOfLines={1}>{f.name}</Text>
                     <Text style={styles.rowSub}>{formatLocal(f.createdTime)}</Text>
                   </View>
                   <TouchableOpacity
-                    style={[styles.actionBtn, styles.actionDelete, { flex: 0, paddingHorizontal: 14 }]}
+                    style={[styles.actionBtn, styles.actionDelete, { flex: 0, flexShrink: 0, minWidth: 96, justifyContent: "center", paddingHorizontal: 12 }]}
                     onPress={() => { setConfirmEmailText(""); setRestoreTarget(f); }}
                     testID={`dr-restore-${f.id}`}
                     activeOpacity={0.7}
