@@ -53,7 +53,7 @@ import { Anton_400Regular } from "@expo-google-fonts/anton";
 
 // Manual verification beacon — bump this on every change so we can confirm
 // the device is actually showing the latest bundle. Rendered top-right of Home.
-const HOME_BUILD = "BUILD 138";
+const HOME_BUILD = "BUILD 139";
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -1354,9 +1354,7 @@ const styles = themedStyles((c) => ({
   },
   rowLabel: {
     color: c.textPrimary,
-    fontSize: 10,
-    fontWeight: "800",
-    letterSpacing: 0.3,
+    ...theme.text.default,
   },
   rowSub: {
     color: c.textMuted,
@@ -1378,8 +1376,7 @@ const styles = themedStyles((c) => ({
   },
   rowValue: {
     color: c.textPrimary,
-    fontSize: 9,
-    fontWeight: "900",
+    ...theme.text.default,
   },
 
   /* Dealer rows (two-line) — nested inside the OWED TO DEALERS card */
@@ -1438,9 +1435,7 @@ const styles = themedStyles((c) => ({
   dealerName: {
     flex: 1,
     color: c.textPrimary,
-    fontSize: 11,
-    fontWeight: "800",
-    letterSpacing: 0.3,
+    ...theme.text.default,
   },
   dealerTotal: {
     color: c.textPrimary,
@@ -1520,8 +1515,7 @@ const styles = themedStyles((c) => ({
   },
   plainBannerText: {
     color: c.textPrimary,
-    fontSize: 13,
-    fontWeight: "600",
+    ...theme.text.default,
     marginTop: 3,
   },
   plainBuildStamp: {

@@ -197,6 +197,14 @@ export const theme = {
   spacing: { xs: 4, sm: 8, md: 16, lg: 24, xl: 32, xxl: 48 },
   radii: { none: 0, sm: 4, md: 8, lg: 12, pill: 999 },
   font: { h1: 32, h2: 24, h3: 20, body: 16, sm: 14, xs: 12 },
+  // Centralized "DEFAULT" body text — a single knob controlling the font size,
+  // weight + letter-spacing used by the home dealer rows, the data rows and the
+  // report-a-bug subtext (and reusable anywhere else). Colour is applied
+  // separately per-theme via the palette. Change the values HERE to update the
+  // size/style everywhere at once.
+  text: {
+    default: { fontSize: 14, fontWeight: "600" as const, letterSpacing: 0.2 },
+  },
   // 3D elevation system — theme-reactive. Each elevation level is a getter
   // on a Proxy so every access reads `currentPalette.shadowColor` / opacities
   // at lookup time. In dark mode the shadow is brand orange (so cards glow
