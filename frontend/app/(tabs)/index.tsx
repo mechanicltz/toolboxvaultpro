@@ -57,7 +57,7 @@ import { Anton_400Regular } from "@expo-google-fonts/anton";
 
 // Manual verification beacon — bump this on every change so we can confirm
 // the device is actually showing the latest bundle. Rendered top-right of Home.
-const HOME_BUILD = "BUILD 159";
+const HOME_BUILD = "BUILD 160";
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -537,6 +537,9 @@ export default function HomeScreen() {
             </View>
           )}
 
+          {/* Payments-due banner (gated internally by show_payments_banner). */}
+          <PaymentsDueBanner />
+
           {nextRouteBanner && prefs.show_dealer_route_reminder && (
             <BevelCard style={styles.plainBanner} onPress={() => router.push("/dealers")}>
               <Ionicons name="map" size={22} color={theme.colors.accent} />
@@ -738,6 +741,9 @@ export default function HomeScreen() {
             />
           </View>
         )}
+
+        {/* Payments-due banner (gated internally by show_payments_banner). */}
+        <PaymentsDueBanner />
 
         {/* Next dealer route — kept prominent and highlighted */}
         {nextRouteBanner && prefs.show_dealer_route_reminder && (
