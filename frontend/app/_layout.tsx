@@ -131,7 +131,7 @@ function AuthGate({ children }: { children: React.ReactNode }) {
     if (showIntro) return;
     if (!bootDecided) return;
     const first = segments[0];
-    const publicRoute = first === "login" || first === "forgot-password" || first === "oldhome-preview";
+    const publicRoute = first === "login" || first === "forgot-password";
     if (!user && !publicRoute) {
       router.replace("/login");
     } else if (user && publicRoute) {

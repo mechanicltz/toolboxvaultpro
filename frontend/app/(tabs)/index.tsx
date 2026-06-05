@@ -53,7 +53,7 @@ import { Anton_400Regular } from "@expo-google-fonts/anton";
 
 // Manual verification beacon — bump this on every change so we can confirm
 // the device is actually showing the latest bundle. Rendered top-right of Home.
-const HOME_BUILD = "BUILD 144";
+const HOME_BUILD = "BUILD 145";
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -386,42 +386,6 @@ export default function HomeScreen() {
     );
   };
 
-  // Plain-mode stat row — a flat list line (label left, value right, optional
-  // chevron) matching the pre-skin home layout. It deliberately uses the SAME
-  // `theme.text.default` size/weight as the dealer rows so the dealer section
-  // and the rows below it read as one uniform list (no icon chips / raised
-  // per-row cards that made them look larger).
-  const renderPlainStatRow = (r: HomeDetailRow, isLast: boolean, key: string) => {
-    const Wrapper: any = r.onPress ? TouchableOpacity : View;
-    const wp = r.onPress ? { onPress: r.onPress, activeOpacity: 0.6 } : {};
-    return (
-      <Wrapper
-        key={key}
-        testID={`home-row-${key}`}
-        style={[styles.plainStatRow, isLast && styles.plainStatRowLast]}
-        {...wp}
-      >
-        <View style={{ flex: 1, minWidth: 0 }}>
-          <Text style={styles.plainStatLabel} numberOfLines={1}>{r.label}</Text>
-          {!!r.sub && <Text style={styles.plainStatSub} numberOfLines={1}>{r.sub}</Text>}
-        </View>
-        <View style={styles.plainStatValueWrap}>
-          {!!r.value && (
-            <Text
-              style={[styles.plainStatValue, r.valueColor ? { color: r.valueColor } : null]}
-              numberOfLines={1}
-            >
-              {r.value}
-            </Text>
-          )}
-          {r.onPress && (
-            <Ionicons name="chevron-forward" size={16} color={theme.colors.textMuted} />
-          )}
-        </View>
-      </Wrapper>
-    );
-  };
-
   // Build the list of stat rows the user has opted in to, in their preferred
   // order. The dealer-accounts row lives in its own separate card below.
   const STAT_ROW_DATA: Record<string, HomeDetailRow | null> = {
@@ -548,56 +512,52 @@ export default function HomeScreen() {
             </BevelCard>
           )}
 
-          {/* UNIFIED DESCRIPTION CARD — the dealer-accounts section AND the
-              stat rows below it now live inside ONE raised card, rendered in
-              the user's chosen order, so the whole summary reads as a single
-              uniform panel. */}
-          {renderSequence.length > 0 && (
-            <BevelCard style={styles.owedCluster} testID="home-summary-card">
-              {renderSequence.map((item, idx) => {
-                if (item.kind === "dealers") {
-                  return (
-                    <View key={`dealers-${idx}`} testID="home-dealers-widget">
-                      <TouchableOpacity
-                        style={styles.dealerRow}
-                        onPress={() => router.push("/dealers")}
-                        activeOpacity={0.7}
-                      >
-                        <Text style={[styles.dealerName, { fontWeight: "900", flex: 1 }]}>
-                          DEALER ACCOUNTS
-                        </Text>
-                        <Ionicons name="chevron-forward" size={16} color={theme.colors.textMuted} />
-                      </TouchableOpacity>
-                      {dealersAll.length === 0 ? (
-                        <Text style={styles.emptyInline}>No dealers yet.</Text>
-                      ) : (
-                        <>
-                          {dealersAll.map((d) => (
-                            <View key={d.id} style={styles.owedDivider}>
-                              <DealerBalanceRow
-                                dealer={d}
-                                onAdjust={() => openAdjustForDealer(d)}
-                                onOpenDealer={() => router.push(`/dealer/${d.id}`)}
-                              />
-                            </View>
-                          ))}
-                          <View style={styles.owedTotalRow} testID="home-dealers-total">
-                            <Text style={styles.owedTotalLabel}>TOTAL OWED</Text>
-                            <Text style={styles.owedTotalValue}>${totalOwed.toFixed(2)}</Text>
-                          </View>
-                        </>
-                      )}
-                    </View>
-                  );
-                }
-                return renderPlainStatRow(
-                  item.row,
-                  idx === renderSequence.length - 1,
-                  item.key,
+          {/* PRE-SKIN LAYOUT (restored from the user's original backup) —
+              each stat row is its OWN icon card, and DEALER ACCOUNTS is a
+              grouped card with a wallet-icon header + dealer sub-rows. Rendered
+              in the user's chosen order. Palette-aware, so Plain Light & Plain
+              Dark both work. Skinned mode is untouched. */}
+          <View style={styles.list}>
+            {renderSequence.map((item, idx) => {
+              if (item.kind === "dealers") {
+                return (
+                  <BevelCard
+                    key={`dealers-${idx}`}
+                    style={styles.owedCluster}
+                    testID="home-dealers-widget"
+                  >
+                    <SummaryRow
+                      icon="wallet"
+                      label="DEALER ACCOUNTS"
+                      value={`$${totalOwed.toFixed(2)}`}
+                      onPress={() => router.push("/dealers")}
+                      nested
+                    />
+                    {dealersAll.length === 0 ? (
+                      <Text style={styles.emptyInline}>No dealers yet.</Text>
+                    ) : (
+                      dealersAll.map((d, i) => (
+                        <View
+                          key={d.id}
+                          style={[
+                            styles.owedDivider,
+                            i === dealersAll.length - 1 && { borderBottomWidth: 0 },
+                          ]}
+                        >
+                          <DealerBalanceRow
+                            dealer={d}
+                            onAdjust={() => openAdjustForDealer(d)}
+                            onOpenDealer={() => router.push(`/dealer/${d.id}`)}
+                          />
+                        </View>
+                      ))
+                    )}
+                  </BevelCard>
                 );
-              })}
-            </BevelCard>
-          )}
+              }
+              return <View key={item.key}>{ROW_RENDERERS[item.key]?.()}</View>;
+            })}
+          </View>
 
           <BevelCard
             style={styles.plainBanner}
@@ -1480,8 +1440,6 @@ const styles = themedStyles((c) => ({
     flex: 1,
     color: c.textPrimary,
     ...theme.text.default,
-    letterSpacing: 0.5,
-    textTransform: "uppercase",
   },
   dealerTotal: {
     color: c.textPrimary,
