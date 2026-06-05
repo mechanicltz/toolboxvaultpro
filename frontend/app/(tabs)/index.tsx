@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef, ReactNode } from "react";
+import { useState, useCallback, ReactNode } from "react";
 import {
   View,
   Text,
@@ -29,6 +29,7 @@ import { useSkin } from "../../src/themeContext";
 import { styles } from "../../src/screens/home/homeStyles";
 import { SummaryRow } from "../../src/screens/home/SummaryRow";
 import { DealerBalanceRow } from "../../src/screens/home/DealerBalanceRow";
+import { useDealerPaymentsDue } from "../../src/screens/home/useDealerPaymentsDue";
 import { BevelCard } from "../../src/components/BevelCard";
 import { IndustrialBanner } from "../../src/components/IndustrialBanner";
 import { PaymentsDueBanner } from "../../src/components/PaymentsDueBanner";
@@ -57,7 +58,7 @@ import { Anton_400Regular } from "@expo-google-fonts/anton";
 
 // Manual verification beacon — bump this on every change so we can confirm
 // the device is actually showing the latest bundle. Rendered top-right of Home.
-const HOME_BUILD = "BUILD 161";
+const HOME_BUILD = "BUILD 162";
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -236,111 +237,11 @@ export default function HomeScreen() {
     0,
   );
 
-  // ---------- Scheduled payments (per-account: Truck/Credit) ----------
-  // Derived entirely from the dealers we already fetched (each dealer now
-  // carries personal_schedule / credit_schedule), so no extra network call.
-  const daysUntil = (iso?: string): number | null => {
-    if (!iso) return null;
-    const parts = iso.split("-").map(Number);
-    const [y, m, d] = parts;
-    if (!y || !m || !d) return null;
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const due = new Date(y, m - 1, d);
-    return Math.round((due.getTime() - today.getTime()) / 86400000);
-  };
-  const dueLabel = (days: number) =>
-    days < 0
-      ? `overdue ${Math.abs(days)}d`
-      : days === 0
-        ? "due today"
-        : days === 1
-          ? "due tomorrow"
-          : `due in ${days}d`;
-
-  const paymentSubByDealer: Record<string, string> = {};
-  const duePaymentsNow: {
-    dealerId: string;
-    dealerName: string;
-    account: "credit" | "personal";
-    accountLabel: string;
-    amount: number;
-    nextDue: string;
-  }[] = [];
-  for (const d of dealers) {
-    const entries: { account: "credit" | "personal"; label: string; sched: any }[] = [
-      { account: "personal", label: "Truck", sched: (d as any).personal_schedule },
-      { account: "credit", label: "Credit", sched: (d as any).credit_schedule },
-    ];
-    let soonest: { days: number; label: string; amount: number } | null = null;
-    for (const e of entries) {
-      if (!e.sched?.enabled || !e.sched?.next_due_date) continue;
-      const days = daysUntil(e.sched.next_due_date);
-      if (days == null) continue;
-      if (days <= 0) {
-        duePaymentsNow.push({
-          dealerId: d.id,
-          dealerName: d.name,
-          account: e.account,
-          accountLabel: e.label,
-          amount: Number(e.sched.amount) || 0,
-          nextDue: e.sched.next_due_date,
-        });
-      }
-      if (days <= 7 && (!soonest || days < soonest.days)) {
-        soonest = { days, label: e.label, amount: Number(e.sched.amount) || 0 };
-      }
-    }
-    if (soonest) {
-      paymentSubByDealer[d.id] = `${soonest.label} • $${soonest.amount.toFixed(2)} ${dueLabel(soonest.days)}`;
-    }
-  }
-
-  // In-app "was it processed?" confirmation for any payment due today/overdue.
-  // Mirrors the local notification's intent. We prompt once per due item per
-  // session (keyed by dealer:account:date) so it doesn't nag on every refresh.
-  const promptedRef = useRef<Set<string>>(new Set());
-  const promptingRef = useRef(false);
-  useEffect(() => {
-    if (promptingRef.current) return;
-    const pending = duePaymentsNow.filter(
-      (p) => !promptedRef.current.has(`${p.dealerId}:${p.account}:${p.nextDue}`),
-    );
-    if (pending.length === 0) return;
-    promptingRef.current = true;
-
-    const runNext = (idx: number) => {
-      if (idx >= pending.length) {
-        promptingRef.current = false;
-        return;
-      }
-      const p = pending[idx];
-      const key = `${p.dealerId}:${p.account}:${p.nextDue}`;
-      promptedRef.current.add(key);
-      Alert.alert(
-        "Payment due",
-        `You have a ${p.dealerName} ${p.accountLabel} payment of $${p.amount.toFixed(2)} due. Was it processed?`,
-        [
-          { text: "No", style: "cancel", onPress: () => runNext(idx + 1) },
-          {
-            text: "Yes",
-            onPress: async () => {
-              try {
-                await api.confirmAccountPayment(p.dealerId, p.account);
-                await load({ forceFresh: true });
-              } catch {
-                /* ignore — user can retry from dealer screen */
-              }
-              runNext(idx + 1);
-            },
-          },
-        ],
-        { cancelable: false },
-      );
-    };
-    runNext(0);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [duePaymentsNow.map((p) => `${p.dealerId}:${p.account}:${p.nextDue}`).join("|")]);
+  // Scheduled-payment sub-lines + the in-app "was it processed?" prompt, all
+  // derived from the dealers we already have (see the hook for details).
+  const { paymentSubByDealer } = useDealerPaymentsDue(dealers, () =>
+    load({ forceFresh: true }),
+  );
 
   // ---------- Next-route banner ----------
   const upcomingRoutes = dealers

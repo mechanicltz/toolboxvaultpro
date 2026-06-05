@@ -438,51 +438,6 @@ const qs = (params?: Record<string, any>) => {
   return q ? `?${q}` : "";
 };
 
-export interface PaymentRecord {
-  paid_on: string;
-  amount: number;
-  was_due?: string;
-  auto?: boolean;
-}
-export interface PaymentAccount {
-  id: string;
-  dealer_id: string;
-  dealer_name: string;
-  label: string;
-  amount: number;
-  frequency: "weekly" | "biweekly" | "monthly";
-  next_due_date: string;
-  autopay: boolean;
-  remind_day_before: boolean;
-  remind_day_of: boolean;
-  payments: PaymentRecord[];
-  created_at?: string;
-  updated_at?: string;
-}
-export interface PaymentAccountInput {
-  label: string;
-  amount: number;
-  frequency: "weekly" | "biweekly" | "monthly";
-  next_due_date: string;
-  autopay: boolean;
-  remind_day_before: boolean;
-  remind_day_of: boolean;
-}
-export interface UpcomingPayment {
-  id: string;
-  dealer_id: string;
-  dealer_name: string;
-  label: string;
-  amount: number;
-  frequency: string;
-  next_due_date: string;
-  autopay: boolean;
-  remind_day_before: boolean;
-  remind_day_of: boolean;
-  days_until: number;
-  overdue: boolean;
-}
-
 // ---- Per-account payment schedule (attached to a dealer's Truck/Credit acct) ----
 export interface AccountSchedule {
   enabled: boolean;
