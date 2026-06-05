@@ -12,7 +12,7 @@
 import React from "react";
 import { View, Text, Pressable, StyleSheet, StyleProp, ViewStyle } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { TBV } from "./skins";
+import { TBV, getIndustrialVariant } from "./skins";
 
 export interface TbvHeaderProps {
   /** Main title text (rendered UPPERCASE in steel). */
@@ -29,12 +29,14 @@ export interface TbvHeaderProps {
 }
 
 export function TbvHeader({ title, accent, size = 30, onBack, right, style }: TbvHeaderProps) {
+  // Accent follows the active industrial colour variant (orange ↔ pink).
+  const accentColor = getIndustrialVariant() === "pink" ? "#FF1A6B" : TBV.orange;
   return (
     <View style={[styles.row, style]}>
       <View style={styles.side}>
         {onBack ? (
           <Pressable onPress={onBack} hitSlop={12} style={styles.iconBtn} testID="tbv-back">
-            <Ionicons name="chevron-back" size={26} color={TBV.orange} />
+            <Ionicons name="chevron-back" size={26} color={accentColor} />
           </Pressable>
         ) : null}
       </View>
@@ -55,7 +57,7 @@ export function TbvHeader({ title, accent, size = 30, onBack, right, style }: Tb
             style={[styles.face, { fontSize: size }]}
           >
             {title.toUpperCase()}
-            {accent ? <Text style={{ color: TBV.orange }}>{` ${accent.toUpperCase()}`}</Text> : null}
+            {accent ? <Text style={{ color: accentColor }}>{` ${accent.toUpperCase()}`}</Text> : null}
           </Text>
         </View>
       </View>
@@ -63,7 +65,7 @@ export function TbvHeader({ title, accent, size = 30, onBack, right, style }: Tb
       <View style={[styles.side, { alignItems: "flex-end" }]}>
         {right ? (
           <Pressable onPress={right.onPress} hitSlop={12} style={styles.iconBtn} testID={right.testID}>
-            <Ionicons name={right.icon} size={22} color={TBV.orange} />
+            <Ionicons name={right.icon} size={22} color={accentColor} />
           </Pressable>
         ) : null}
       </View>

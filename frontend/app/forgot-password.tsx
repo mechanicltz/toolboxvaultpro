@@ -239,7 +239,7 @@ export default function ForgotPasswordScreen() {
                   >
                     {step === "request" ? (
                       <>
-                        <Text style={styles.subhead}>RESET PASSWORD</Text>
+                        <Text style={[styles.subhead, { color: TINT }]}>RESET PASSWORD</Text>
                         <Text style={styles.intro}>
                           Enter the email associated with your account and we&apos;ll send a 6-digit
                           reset code.
@@ -283,7 +283,7 @@ export default function ForgotPasswordScreen() {
                       <>
                         <Text style={styles.intro}>
                           Enter the 6-digit code we sent to{" "}
-                          <Text style={styles.introEmail}>{email}</Text>, then choose a new password.
+                          <Text style={[styles.introEmail, { color: TINT }]}>{email}</Text>, then choose a new password.
                         </Text>
 
                         {/* code */}
@@ -390,7 +390,7 @@ export default function ForgotPasswordScreen() {
                       hitSlop={10}
                       testID="fp-back-to-signin"
                     >
-                      <Text style={styles.backLinkText}>BACK TO SIGN IN</Text>
+                      <Text style={[styles.backLinkText, { color: TINT }]}>BACK TO SIGN IN</Text>
                     </TouchableOpacity>
                   </View>
                 </View>

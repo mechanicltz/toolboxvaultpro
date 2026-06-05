@@ -53,7 +53,7 @@ import { Anton_400Regular } from "@expo-google-fonts/anton";
 
 // Manual verification beacon — bump this on every change so we can confirm
 // the device is actually showing the latest bundle. Rendered top-right of Home.
-const HOME_BUILD = "BUILD 149";
+const HOME_BUILD = "BUILD 150";
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -685,7 +685,7 @@ export default function HomeScreen() {
     return (
       <ImageBackground source={SKIN.bg} style={styles.bg} resizeMode="cover">
         <View style={styles.gateVeil}>
-          <ActivityIndicator color={TBV.orange} />
+          <ActivityIndicator color={theme.colors.accent} />
         </View>
       </ImageBackground>
     );
@@ -752,7 +752,7 @@ export default function HomeScreen() {
               activeOpacity={0.85}
             >
               <View style={styles.routeIconWrap}>
-                <Ionicons name="map" size={22} color={TBV.orange} />
+                <Ionicons name="map" size={22} color={theme.colors.accent} />
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={styles.routeBannerLabel}>NEXT DEALER ROUTE</Text>
@@ -760,7 +760,7 @@ export default function HomeScreen() {
                   {nextRouteBanner.dealers.join(" & ")} · {nextRouteBanner.dateStr}
                 </Text>
               </View>
-              <Ionicons name="chevron-forward" size={18} color={TBV.orange} />
+              <Ionicons name="chevron-forward" size={18} color={theme.colors.accent} />
             </TouchableOpacity>
           </TbvFrame>
         )}
@@ -901,7 +901,7 @@ export default function HomeScreen() {
             <Ionicons
               name="chatbubble-ellipses"
               size={18}
-              color={TBV.orange}
+              color={theme.colors.accent}
             />
             <View style={{ flex: 1 }}>
               <Text style={styles.feedbackTitle}>
@@ -1107,14 +1107,14 @@ const styles = themedStyles((c) => ({
     textShadowRadius: 4,
   },
   wordmarkSteel: { color: "#D8D8D8" },
-  wordmarkVault: { color: TBV.orange },
+  wordmarkVault: { color: c.accent },
   // Top-right build beacon — bright + bold so it's unmistakable.
   buildStamp: {
     position: "absolute",
     top: 10,
     right: 92,
     zIndex: 100,
-    color: TBV.orange,
+    color: c.accent,
     fontFamily: "Rajdhani_700Bold",
     fontSize: 13,
     letterSpacing: 1.5,
@@ -1123,7 +1123,7 @@ const styles = themedStyles((c) => ({
     textShadowRadius: 2,
   },
   headerSub: {
-    color: TBV.orange,
+    color: c.accent,
     fontFamily: "Rajdhani_700Bold",
     fontSize: 11,
     letterSpacing: 3,
@@ -1183,10 +1183,10 @@ const styles = themedStyles((c) => ({
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
-    borderColor: TBV.orange,
+    borderColor: c.accent,
   },
   routeBannerLabel: {
-    color: TBV.orange,
+    color: c.accent,
     fontFamily: "BebasNeue_400Regular",
     fontSize: 12,
     letterSpacing: 1.4,
@@ -1240,7 +1240,7 @@ const styles = themedStyles((c) => ({
     width: 3,
     height: 16,
     borderRadius: 1.5,
-    backgroundColor: TBV.orange,
+    backgroundColor: c.accent,
     marginRight: 10,
   },
   rowLabelWrap: {
@@ -1260,7 +1260,7 @@ const styles = themedStyles((c) => ({
     letterSpacing: 1.2,
   },
   detailsRowSub: {
-    color: TBV.orange,
+    color: c.accent,
     fontFamily: "Rajdhani_600SemiBold",
     fontSize: 9,
     letterSpacing: 1.2,
@@ -1305,11 +1305,11 @@ const styles = themedStyles((c) => ({
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1.5,
-    borderColor: TBV.orange,
+    borderColor: c.accent,
     borderRadius: 5,
   },
   dealerAdjustChipText: {
-    color: TBV.orange,
+    color: c.accent,
     fontFamily: "BebasNeue_400Regular",
     fontSize: 15,
     letterSpacing: 0,
@@ -1348,7 +1348,7 @@ const styles = themedStyles((c) => ({
     letterSpacing: 1.5,
   },
   nestedTotalValue: {
-    color: TBV.orange,
+    color: c.accent,
     fontFamily: "BebasNeue_400Regular",
     fontSize: 14,
     letterSpacing: 1.2,

@@ -56,7 +56,7 @@ export function IndustrialBanner({ title, subtitle, rightSlot, leftSlot }: Props
           aligned over the "VAULT" word (right side of the plate). */}
       <View style={{ width: nameplateW, alignSelf: "center", marginBottom: 6 }}>
         <Text
-          style={[styles.version, { marginRight: nameplateW * 0.16, marginBottom: -7 }]}
+          style={[styles.version, { marginRight: nameplateW * 0.16, marginBottom: -7, color: c.accent }]}
           allowFontScaling={false}
         >
           {APP_VERSION_LABEL}
@@ -73,7 +73,7 @@ export function IndustrialBanner({ title, subtitle, rightSlot, leftSlot }: Props
       <View style={styles.labelRow}>
         {leftSlot ? <View style={styles.leftSlot}>{leftSlot}</View> : null}
         <View style={styles.titleCol}>
-          <Text style={styles.title} numberOfLines={1} allowFontScaling={false}>
+          <Text style={[styles.title, { color: c.accent }]} numberOfLines={1} allowFontScaling={false}>
             {(title || "").toUpperCase()}
           </Text>
           {!!subtitle && (

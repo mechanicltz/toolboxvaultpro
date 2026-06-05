@@ -518,8 +518,8 @@ export default function LoginScreen() {
                     else shifts. */}
                 <View pointerEvents="none" style={[styles.stampAnchor, { top: padTop * 0.22 }]}>
                   <View style={styles.stampInline}>
-                    <Text numberOfLines={1} style={styles.stampHighlight}>#024</Text>
-                    <Text numberOfLines={1} style={styles.stampGroove}>#024</Text>
+                    <Text numberOfLines={1} style={styles.stampHighlight}>#025</Text>
+                    <Text numberOfLines={1} style={styles.stampGroove}>#025</Text>
                   </View>
                 </View>
               </View>
