@@ -438,6 +438,51 @@ const qs = (params?: Record<string, any>) => {
   return q ? `?${q}` : "";
 };
 
+export interface PaymentRecord {
+  paid_on: string;
+  amount: number;
+  was_due?: string;
+  auto?: boolean;
+}
+export interface PaymentAccount {
+  id: string;
+  dealer_id: string;
+  dealer_name: string;
+  label: string;
+  amount: number;
+  frequency: "weekly" | "biweekly" | "monthly";
+  next_due_date: string;
+  autopay: boolean;
+  remind_day_before: boolean;
+  remind_day_of: boolean;
+  payments: PaymentRecord[];
+  created_at?: string;
+  updated_at?: string;
+}
+export interface PaymentAccountInput {
+  label: string;
+  amount: number;
+  frequency: "weekly" | "biweekly" | "monthly";
+  next_due_date: string;
+  autopay: boolean;
+  remind_day_before: boolean;
+  remind_day_of: boolean;
+}
+export interface UpcomingPayment {
+  id: string;
+  dealer_id: string;
+  dealer_name: string;
+  label: string;
+  amount: number;
+  frequency: string;
+  next_due_date: string;
+  autopay: boolean;
+  remind_day_before: boolean;
+  remind_day_of: boolean;
+  days_until: number;
+  overdue: boolean;
+}
+
 export const api = {
   // Auth
   register: (data: { email: string; password: string; name?: string }) =>
@@ -629,6 +674,28 @@ export const api = {
     if (!res.ok) throw new Error((data as any)?.detail || `Server ${res.status}`);
     return data as { ok: boolean; dry_run?: boolean; would_restore?: Record<string, number>; restored?: Record<string, number>; total_documents: number };
   },
+
+  // ---- Dealer Payment Accounts (scheduled recurring payments) ----
+  listPaymentAccounts: (dealerId: string) =>
+    request<PaymentAccount[]>(`/dealers/${dealerId}/payment-accounts`),
+  createPaymentAccount: (dealerId: string, body: PaymentAccountInput) =>
+    request<PaymentAccount>(`/dealers/${dealerId}/payment-accounts`, {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+  updatePaymentAccount: (accountId: string, body: Partial<PaymentAccountInput>) =>
+    request<PaymentAccount>(`/payment-accounts/${accountId}`, {
+      method: "PUT",
+      body: JSON.stringify(body),
+    }),
+  deletePaymentAccount: (accountId: string) =>
+    request<{ ok: boolean }>(`/payment-accounts/${accountId}`, { method: "DELETE" }),
+  confirmPayment: (accountId: string) =>
+    request<PaymentAccount>(`/payment-accounts/${accountId}/confirm`, { method: "POST" }),
+  upcomingPayments: (days = 7) =>
+    request<{ days: number; count: number; items: UpcomingPayment[] }>(
+      `/payment-accounts/upcoming?days=${days}`,
+    ),
 
   forgotPassword: (data: { email: string }) =>
     request<{ ok: boolean; message: string }>(`/auth/forgot-password`, {

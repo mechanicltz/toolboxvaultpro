@@ -25,6 +25,7 @@ import { confirm } from "../../src/confirm";
 import { formatDateUS } from "../../src/dateUtil";
 import { formatPhone, formatPhonesInText, openPhone, openSms, openEmail } from "../../src/contactLinks";
 import { BalanceSection } from "../../src/sections/BalanceSection";
+import { PaymentAccountsSection } from "../../src/sections/PaymentAccountsSection";
 import { ROUTE_FREQUENCIES, DAY_NAMES, routeLabel, nextRouteText } from "../../src/route";
 import { DateField } from "../../src/DateField";
 import { useAuth } from "../../src/AuthContext";
@@ -393,6 +394,9 @@ export default function DealerDetail() {
                 </View>
               );
             })()}
+
+            {/* Scheduled recurring payments (loans / bills) for this dealer. */}
+            <PaymentAccountsSection dealerId={String(id)} onChange={load} />
 
             {/* AGENTS header — non-interactive divider row */}
             <View style={styles.detailsHeaderRow}>

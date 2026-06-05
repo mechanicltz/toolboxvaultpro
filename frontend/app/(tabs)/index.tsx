@@ -28,6 +28,7 @@ import { APP_VERSION_LABEL } from "../../src/version";
 import { themedStyles, useSkin } from "../../src/themeContext";
 import { BevelCard } from "../../src/components/BevelCard";
 import { IndustrialBanner } from "../../src/components/IndustrialBanner";
+import { PaymentsDueBanner } from "../../src/components/PaymentsDueBanner";
 import { useSubscriptionChange } from "../../src/subscriptionEvents";
 import { useAppResume } from "../../src/appLifecycle";
 
@@ -53,7 +54,7 @@ import { Anton_400Regular } from "@expo-google-fonts/anton";
 
 // Manual verification beacon — bump this on every change so we can confirm
 // the device is actually showing the latest bundle. Rendered top-right of Home.
-const HOME_BUILD = "BUILD 156";
+const HOME_BUILD = "BUILD 157";
 
 export default function HomeScreen() {
   const router = useRouter();

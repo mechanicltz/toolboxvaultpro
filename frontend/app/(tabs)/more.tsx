@@ -39,6 +39,7 @@ import { IndustrialBanner } from "../../src/components/IndustrialBanner";
 import {
   requestPermissions as requestNotificationPermissions,
   rescheduleDealerNotifications,
+  reschedulePaymentRemindersNow,
   cancelDealerNotifications,
   sendTestNotification,
 } from "../../src/notifications";
@@ -634,6 +635,43 @@ export default function MoreScreen() {
               </TouchableOpacity>
             );
           })}
+
+          <View style={styles.customizeSubHeader}>
+            <Ionicons name="card" size={16} color={theme.colors.accent} />
+            <Text style={styles.customizeSubLabel}>Payments</Text>
+          </View>
+          <SectionRow
+            icon="card"
+            title="Payments due banner"
+            subtitle="Show 'payments due this week' at the top of home"
+            rightSlot={
+              <Switch
+                testID="toggle-payments-banner"
+                value={prefs.show_payments_banner}
+                onValueChange={(v) => update({ show_payments_banner: v })}
+                trackColor={{ true: theme.colors.accent, false: theme.colors.border }}
+                thumbColor="#fff"
+              />
+            }
+          />
+          <SectionRow
+            icon="notifications"
+            title="Payment reminders"
+            subtitle="Day-before / day-of alerts (choose per account)"
+            isLast
+            rightSlot={
+              <Switch
+                testID="toggle-payment-notifications"
+                value={prefs.payment_notifications_enabled}
+                onValueChange={(v) => {
+                  update({ payment_notifications_enabled: v });
+                  reschedulePaymentRemindersNow().catch(() => {});
+                }}
+                trackColor={{ true: theme.colors.accent, false: theme.colors.border }}
+                thumbColor="#fff"
+              />
+            }
+          />
         </SectionCard>
 
         <Row

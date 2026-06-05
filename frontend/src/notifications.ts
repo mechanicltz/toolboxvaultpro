@@ -16,6 +16,8 @@
 import * as Notifications from "expo-notifications";
 import { Platform } from "react-native";
 import { nextRouteDate } from "./route";
+import { loadPrefs } from "./prefs";
+import { api, UpcomingPayment } from "./api";
 
 // ---- Foreground behaviour: show banner+sound even when the app is open. ----
 Notifications.setNotificationHandler({
@@ -231,6 +233,103 @@ export async function rescheduleDealerNotifications(
 /** Cancels everything we scheduled — used when the user turns the toggle off. */
 export async function cancelDealerNotifications(): Promise<void> {
   await cancelOurNotifications();
+}
+
+// ---------------------------------------------------------------------------
+// Dealer Payment reminders (separate tag so they don't collide with routes)
+// ---------------------------------------------------------------------------
+const PAYMENT_TAG = "payment-due";
+
+async function cancelTaggedNotifications(tag: string): Promise<void> {
+  try {
+    const all = await Notifications.getAllScheduledNotificationsAsync();
+    await Promise.all(
+      all
+        .filter((n) => (n.content?.data as any)?.tag === tag)
+        .map((n) => Notifications.cancelScheduledNotificationAsync(n.identifier)),
+    );
+  } catch {
+    /* best effort */
+  }
+}
+
+/**
+ * Recompute payment reminders from scratch. Cancels our existing payment
+ * notifications, then (if enabled) schedules a day-before and/or day-of
+ * reminder for every payment account due within the next 60 days, using the
+ * same time-of-day the user picked for dealer routes. Per-account toggles
+ * (remind_day_before / remind_day_of) decide which fire.
+ *
+ * Local-only — must be (re)called after any account change and on app resume.
+ * NOTE: won't fire in Expo Go web preview; needs a real device build.
+ */
+export async function reschedulePaymentRemindersNow(): Promise<void> {
+  await cancelTaggedNotifications(PAYMENT_TAG);
+  let prefs;
+  try {
+    prefs = await loadPrefs();
+  } catch {
+    return;
+  }
+  if (!prefs.payment_notifications_enabled) return;
+  const hour = prefs.dealer_notification_hour ?? 7;
+  const minute = prefs.dealer_notification_minute ?? 0;
+
+  let items: UpcomingPayment[] = [];
+  try {
+    const res = await api.upcomingPayments(HORIZON_DAYS);
+    items = res.items || [];
+  } catch {
+    return;
+  }
+
+  const now = Date.now();
+  for (const it of items) {
+    const parts = (it.next_due_date || "").split("-").map(Number);
+    const [y, m, d] = parts;
+    if (!y || !m || !d) continue;
+    const who = it.dealer_name ? `${it.dealer_name} — ` : "";
+    const money = `${who}${it.label} ($${Number(it.amount).toFixed(2)})`;
+
+    if (it.remind_day_of) {
+      const dayOf = new Date(y, m - 1, d, hour, minute, 0, 0);
+      if (dayOf.getTime() > now) {
+        await Notifications.scheduleNotificationAsync({
+          content: {
+            title: "💳 Payment due today",
+            body: `${money} is due today.`,
+            sound: "default",
+            data: { tag: PAYMENT_TAG, kind: "day-of", id: it.id },
+          },
+          trigger: {
+            type: Notifications.SchedulableTriggerInputTypes.DATE,
+            date: dayOf,
+            ...(Platform.OS === "android" ? { channelId: CHANNEL_ID } : {}),
+          } as any,
+        });
+      }
+    }
+
+    if (it.remind_day_before) {
+      const dayBefore = new Date(y, m - 1, d, hour, minute, 0, 0);
+      dayBefore.setDate(dayBefore.getDate() - 1);
+      if (dayBefore.getTime() > now) {
+        await Notifications.scheduleNotificationAsync({
+          content: {
+            title: "💳 Payment tomorrow",
+            body: `${money} is due tomorrow.`,
+            sound: "default",
+            data: { tag: PAYMENT_TAG, kind: "day-before", id: it.id },
+          },
+          trigger: {
+            type: Notifications.SchedulableTriggerInputTypes.DATE,
+            date: dayBefore,
+            ...(Platform.OS === "android" ? { channelId: CHANNEL_ID } : {}),
+          } as any,
+        });
+      }
+    }
+  }
 }
 
 /** For a debug/diagnostic UI — returns count of currently-scheduled dealer notifs. */

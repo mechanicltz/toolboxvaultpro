@@ -41,6 +41,7 @@ BACKUP_COLLECTIONS = [
     "categories",
     "borrowers",
     "dealers",
+    "dealer_payment_accounts",
     "checkouts",
     "wishlist_items",
     "transactions",

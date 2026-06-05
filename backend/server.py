@@ -490,6 +490,53 @@ class DealerUpdate(BaseModel):
     route_anchor_date: Optional[str] = None
 
 
+# ---------- Dealer Payment Accounts (scheduled recurring payments) ----------
+PAYMENT_FREQUENCIES = ("weekly", "biweekly", "monthly")
+
+
+class PaymentRecord(BaseModel):
+    paid_on: str                 # YYYY-MM-DD the payment was recorded
+    amount: float
+    was_due: Optional[str] = ""  # the due date this payment satisfied
+    auto: bool = False           # True = recorded by autopay catch-up
+
+
+class PaymentAccount(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    dealer_id: str
+    dealer_name: str = ""
+    label: str                          # e.g. "Truck Loan", "Tool Account"
+    amount: float = 0.0
+    frequency: str = "monthly"          # weekly | biweekly | monthly
+    next_due_date: str                  # YYYY-MM-DD
+    autopay: bool = False
+    remind_day_before: bool = True
+    remind_day_of: bool = True
+    payments: List[PaymentRecord] = []  # history (most-recent appended last)
+    created_at: str = Field(default_factory=now_iso)
+    updated_at: str = Field(default_factory=now_iso)
+
+
+class PaymentAccountCreate(BaseModel):
+    label: str
+    amount: float = 0.0
+    frequency: str = "monthly"
+    next_due_date: str
+    autopay: bool = False
+    remind_day_before: bool = True
+    remind_day_of: bool = True
+
+
+class PaymentAccountUpdate(BaseModel):
+    label: Optional[str] = None
+    amount: Optional[float] = None
+    frequency: Optional[str] = None
+    next_due_date: Optional[str] = None
+    autopay: Optional[bool] = None
+    remind_day_before: Optional[bool] = None
+    remind_day_of: Optional[bool] = None
+
+
 # Documents
 class Document(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
@@ -1468,6 +1515,184 @@ async def add_dealer_transaction(dealer_id: str, payload: TransactionCreate):
     return Dealer(**new)
 
 
+# ---------- Dealer Payment Accounts (scheduled recurring payments) ----------
+def _advance_payment_date(date_str: str, frequency: str) -> str:
+    """Return the next due date after `date_str` for the given frequency."""
+    import calendar
+    d = datetime.strptime(date_str, "%Y-%m-%d").date()
+    if frequency == "weekly":
+        d = d + timedelta(days=7)
+    elif frequency == "biweekly":
+        d = d + timedelta(days=14)
+    else:  # monthly — add one calendar month, clamping the day
+        month = d.month + 1
+        year = d.year
+        if month > 12:
+            month, year = 1, year + 1
+        day = min(d.day, calendar.monthrange(year, month)[1])
+        d = d.replace(year=year, month=month, day=day)
+    return d.isoformat()
+
+
+def _catch_up_autopay(acct: dict) -> dict:
+    """For autopay accounts, record a payment for every due date that has
+    arrived (<= today) and roll `next_due_date` into the future. Sets a
+    transient `_changed` flag when anything advanced. No-op for manual accounts."""
+    if not acct.get("autopay"):
+        return acct
+    freq = acct.get("frequency", "monthly")
+    today = datetime.now(timezone.utc).date()
+    payments = list(acct.get("payments") or [])
+    nd = acct.get("next_due_date")
+    changed = False
+    guard = 0
+    while nd and guard < 120:
+        try:
+            due = datetime.strptime(nd, "%Y-%m-%d").date()
+        except Exception:
+            break
+        if due > today:
+            break
+        payments.append({
+            "paid_on": nd, "amount": float(acct.get("amount") or 0),
+            "was_due": nd, "auto": True,
+        })
+        nd = _advance_payment_date(nd, freq)
+        changed = True
+        guard += 1
+    if changed:
+        acct["payments"] = payments
+        acct["next_due_date"] = nd
+        acct["_changed"] = True
+    return acct
+
+
+async def _persist_autopay(acct: dict) -> None:
+    if acct.pop("_changed", False):
+        await db.dealer_payment_accounts.update_one(
+            {"id": acct["id"]},
+            {"$set": {
+                "next_due_date": acct["next_due_date"],
+                "payments": acct["payments"],
+                "updated_at": now_iso(),
+            }},
+        )
+
+
+@api_router.get("/dealers/{dealer_id}/payment-accounts", response_model=List[PaymentAccount])
+async def list_payment_accounts(dealer_id: str):
+    items = await db.dealer_payment_accounts.find({"dealer_id": dealer_id}, {"_id": 0}).to_list(500)
+    out: List[PaymentAccount] = []
+    for it in items:
+        _catch_up_autopay(it)
+        await _persist_autopay(it)
+        it.pop("_changed", None)
+        out.append(PaymentAccount(**it))
+    out.sort(key=lambda a: a.next_due_date or "9999-12-31")
+    return out
+
+
+@api_router.post("/dealers/{dealer_id}/payment-accounts", response_model=PaymentAccount)
+async def create_payment_account(
+    dealer_id: str, payload: PaymentAccountCreate, user: User = Depends(get_current_user),
+):
+    dealer = await db.dealers.find_one({"id": dealer_id}, {"_id": 0})
+    if not dealer:
+        raise HTTPException(404, "Dealer not found")
+    if payload.frequency not in PAYMENT_FREQUENCIES:
+        raise HTTPException(400, "frequency must be weekly, biweekly, or monthly")
+    if not (payload.label or "").strip():
+        raise HTTPException(400, "label is required")
+    acct = PaymentAccount(
+        dealer_id=dealer_id, dealer_name=dealer.get("name", ""), **payload.dict(),
+    )
+    await db.dealer_payment_accounts.insert_one(acct.dict())
+    return acct
+
+
+@api_router.get("/payment-accounts/upcoming")
+async def upcoming_payments(days: int = 7):
+    """All payment accounts due within `days` days (across every dealer). Powers
+    the Home 'payments due this week' banner. Autopay accounts are caught up
+    first so their next due date is always in the future."""
+    items = await db.dealer_payment_accounts.find({}, {"_id": 0}).to_list(2000)
+    today = datetime.now(timezone.utc).date()
+    horizon = today + timedelta(days=max(0, days))
+    out = []
+    for it in items:
+        _catch_up_autopay(it)
+        await _persist_autopay(it)
+        it.pop("_changed", None)
+        nd = it.get("next_due_date")
+        try:
+            due = datetime.strptime(nd, "%Y-%m-%d").date()
+        except Exception:
+            continue
+        if due <= horizon:
+            out.append({
+                "id": it["id"],
+                "dealer_id": it.get("dealer_id"),
+                "dealer_name": it.get("dealer_name", ""),
+                "label": it.get("label", ""),
+                "amount": it.get("amount", 0),
+                "frequency": it.get("frequency"),
+                "next_due_date": nd,
+                "autopay": bool(it.get("autopay")),
+                "remind_day_before": bool(it.get("remind_day_before", True)),
+                "remind_day_of": bool(it.get("remind_day_of", True)),
+                "days_until": (due - today).days,
+                "overdue": due < today,
+            })
+    out.sort(key=lambda x: x["next_due_date"])
+    return {"days": days, "count": len(out), "items": out}
+
+
+@api_router.put("/payment-accounts/{account_id}", response_model=PaymentAccount)
+async def update_payment_account(account_id: str, payload: PaymentAccountUpdate):
+    acct = await db.dealer_payment_accounts.find_one({"id": account_id}, {"_id": 0})
+    if not acct:
+        raise HTTPException(404, "Payment account not found")
+    updates = {k: v for k, v in payload.dict().items() if v is not None}
+    if "frequency" in updates and updates["frequency"] not in PAYMENT_FREQUENCIES:
+        raise HTTPException(400, "invalid frequency")
+    updates["updated_at"] = now_iso()
+    await db.dealer_payment_accounts.update_one({"id": account_id}, {"$set": updates})
+    new = await db.dealer_payment_accounts.find_one({"id": account_id}, {"_id": 0})
+    return PaymentAccount(**new)
+
+
+@api_router.delete("/payment-accounts/{account_id}")
+async def delete_payment_account(account_id: str):
+    res = await db.dealer_payment_accounts.delete_one({"id": account_id})
+    if res.deleted_count == 0:
+        raise HTTPException(404, "Payment account not found")
+    return {"ok": True}
+
+
+@api_router.post("/payment-accounts/{account_id}/confirm", response_model=PaymentAccount)
+async def confirm_payment(account_id: str, user: User = Depends(get_current_user)):
+    """Record a manual payment ('the user made a payment on that account') and
+    advance the account to its next due date."""
+    acct = await db.dealer_payment_accounts.find_one({"id": account_id}, {"_id": 0})
+    if not acct:
+        raise HTTPException(404, "Payment account not found")
+    freq = acct.get("frequency", "monthly")
+    due = acct.get("next_due_date")
+    payments = list(acct.get("payments") or [])
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    payments.append({
+        "paid_on": today, "amount": float(acct.get("amount") or 0),
+        "was_due": due or "", "auto": False,
+    })
+    new_due = _advance_payment_date(due, freq) if due else due
+    await db.dealer_payment_accounts.update_one(
+        {"id": account_id},
+        {"$set": {"payments": payments, "next_due_date": new_due, "updated_at": now_iso()}},
+    )
+    new = await db.dealer_payment_accounts.find_one({"id": account_id}, {"_id": 0})
+    return PaymentAccount(**new)
+
+
 @api_router.delete("/dealers/{dealer_id}/transactions/{tx_id}", response_model=Dealer)
 async def delete_dealer_transaction(dealer_id: str, tx_id: str):
     d = await db.dealers.find_one({"id": dealer_id}, {"_id": 0})
@@ -1781,8 +2006,8 @@ async def _do_export(chosen_field_ids: List[str], fmt: str) -> Dict[str, Any]:
     } if cat_ids else {}
     loc_ids = {t.get("location_id") for t in tools if t.get("location_id")}
     locs = {
-        l["id"]: l.get("name") or ""
-        for l in await db.locations.find(
+        lc["id"]: lc.get("name") or ""
+        for lc in await db.locations.find(
             {"id": {"$in": list(loc_ids)}}, {"_id": 0, "id": 1, "name": 1}
         ).to_list(5000)
     } if loc_ids else {}
@@ -1979,7 +2204,7 @@ async def tools_import(payload: ImportPayload, user: User = Depends(get_current_
     tags = await db.tags.find({}, {"_id": 0}).to_list(5000)
     tags_by_name = {(_norm_lower(t.get("name"))): t for t in tags if t.get("name")}
     locs = await db.locations.find({}, {"_id": 0}).to_list(5000)
-    locs_by_name = {(_norm_lower(l.get("name"))): l for l in locs if l.get("name")}
+    locs_by_name = {(_norm_lower(lc.get("name"))): lc for lc in locs if lc.get("name")}
     dlrs = await db.dealers.find({}, {"_id": 0}).to_list(5000)
     dlrs_by_name = {(_norm_lower(d.get("name"))): d for d in dlrs if d.get("name")}
 
@@ -2023,9 +2248,9 @@ async def tools_import(payload: ImportPayload, user: User = Depends(get_current_
             if lname:
                 key = lname.lower()
                 if key in locs_by_name:
-                    l = locs_by_name[key]
-                    location_id = l.get("id")
-                    location_name = l.get("name") or lname
+                    lc = locs_by_name[key]
+                    location_id = lc.get("id")
+                    location_name = lc.get("name") or lname
                 elif payload.create_missing_locations:
                     new_loc = Location(name=lname)
                     await db.locations.insert_one(new_loc.dict())

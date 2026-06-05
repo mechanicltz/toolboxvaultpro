@@ -47,6 +47,11 @@ export type Prefs = {
   // Defaults to TRUE (preserves prior behavior). User can hide via the
   // CUSTOMIZE section in the More tab.
   show_dealer_route_reminder: boolean;
+  // Show the "Payments due this week" banner on the home screen (CUSTOMIZE).
+  show_payments_banner: boolean;
+  // Master switch for dealer-payment reminders (day-before / day-of are set
+  // per payment account). Uses the same notification time as dealer routes.
+  payment_notifications_enabled: boolean;
 };
 
 const KEY = "toolbox_prefs_v2";
@@ -94,6 +99,8 @@ const DEFAULTS: Prefs = {
   home_logo_mode: "hidden",
   home_logo_data: null,
   show_dealer_route_reminder: true,
+  show_payments_banner: true,
+  payment_notifications_enabled: true,
 };
 
 export const loadPrefs = async (): Promise<Prefs> => {

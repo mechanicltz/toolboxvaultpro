@@ -1,0 +1,49 @@
+{
+  "summary": "Dealer Payments feature tested end-to-end. BACKEND: 21/21 pytest cases PASS in /app/backend/tests/test_payment_accounts.py — auth gating (401 without bearer on create/list/upcoming/PUT/DELETE/confirm), create validation (frequency/empty-label 400, bogus dealer 404), list sorted by next_due_date, monthly day-clamp (2026-03-31+1mo→2026-04-30) and weekly (+7d) advance on confirm, autopay catch-up (past due 2026-05-01 monthly → multiple auto:true payment records + next_due_date is FUTURE), upcoming?days=7 includes near-due and excludes far-future + exposes days_until/overdue/autopay/remind_day_before/remind_day_of, PUT update + invalid frequency 400, DELETE 404 on bogus, owner scoping (2nd test user TEST_payacct_*@example.com cannot see admin payment accounts via list or upcoming — confirmed via _ScopedCollection proxy that auto-injects owner_id), 'dealer_payment_accounts' present in BACKUP_COLLECTIONS in /app/backend/backups.py. FRONTEND: After fixing a CRITICAL syntax error in /app/frontend/app/(tabs)/index.tsx (stray garbage lines 1818-1821 'nter\",\\n    marginTop: 16,...' that broke the Metro bundler and prevented the entire frontend from compiling — Expo was returning HTTP 500), the dealer detail screen now renders the SCHEDULED PAYMENTS section with the ADD PAYMENT ACCOUNT button (testID add-payment-account) and the empty-state copy. Note: I was unable to fully verify the modal opening via Playwright (force-click on the PillButton didn't fire the React onPress in the headless web preview, so modal testIDs pay-label/pay-amount/freq-*/pay-due-date/pay-autopay/pay-remind-before/pay-remind-dayof/pay-save were not visible — recommend main agent self-verify the modal flow). Home payments banner and More→CUSTOMIZE toggles could not be verified in this run for the same reason. All testIDs are present in source code (verified in /app/frontend/src/sections/PaymentAccountsSection.tsx and /app/frontend/src/components/PaymentsDueBanner.tsx).",
+  "backend_issues": { "critical": [], "minor": [] },
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "/app/frontend/app/(tabs)/index.tsx (lines 1818-1821)",
+        "issue": "CRITICAL SYNTAX ERROR — stray leftover edit at end of file: 'nter\",\\n    marginTop: 16,\\n  },\\n}));' caused Metro to fail with 'SyntaxError: Unterminated string constant. (1818:4)'. Entire Expo frontend returned HTTP 500 and NOTHING rendered (including the new SCHEDULED PAYMENTS section). FIXED by removing the four stray lines after the legitimate closing '}));' on line 1817.",
+        "testID": "n/a (file-level)",
+        "priority": "CRITICAL (now resolved by testing agent)"
+      }
+    ],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_payment_accounts.py",
+    "/app/test_reports/pytest/iter4_results.xml"
+  ],
+  "action_items": [
+    "Self-verify the ADD PAYMENT ACCOUNT modal flow on web preview — tap 'ADD PAYMENT ACCOUNT' on a dealer detail screen, confirm the bottom-sheet Modal opens with testIDs pay-label, pay-amount, freq-weekly/biweekly/monthly, pay-due-date, pay-autopay, pay-remind-before, pay-remind-dayof and SAVE button pay-save. (My headless Playwright force-click on the PillButton did not consistently fire onPress; the API + section render are both verified.)",
+    "Self-verify the Home banner (testID home-payments-banner) renders when an account is due within 7 days, and that More→CUSTOMIZE toggle-payments-banner / toggle-payment-notifications switches are present and the banner toggle actually hides the banner.",
+    "Investigate Metro disk cache corruption: 'Error while reading cache, falling back to a full crawl: Error: Unable to deserialize cloned data due to invalid or unsupported version' appears on every Expo restart. Clearing /app/frontend/.metro-cache fixed the run but the cache may rot again across container restarts."
+  ],
+  "critical_code_review_comments": [
+    "Backend implementation is solid: a single _advance_payment_date helper handles weekly/biweekly/monthly with proper day-clamp (verified 2026-03-31 monthly → 2026-04-30). Autopay catch-up has a guard=120 loop bound — safe.",
+    "Owner scoping is implemented globally via the _ScopedCollection proxy (server.py L71+) which auto-injects {owner_id: <current_user>} on every find/update/insert/delete — so even though the PaymentAccount endpoints don't explicitly filter, isolation is enforced. Verified live by registering a second user and confirming none of admin's accounts leak through list or upcoming.",
+    "Auth gating is global via the @app.middleware('http') attach_user_to_context middleware (server.py L264-322), so all /api/payment-accounts/* and /api/dealers/*/payment-accounts endpoints return 401 without a bearer token (verified live for all 6 verbs).",
+    "BACKUP_COLLECTIONS in backups.py correctly includes 'dealer_payment_accounts' on line 44.",
+    "PaymentAccountsSection.tsx is well structured (~449 lines, under the 700 guideline) with testIDs on every interactive element. PaymentsDueBanner.tsx is self-contained and reads pref show_payments_banner.",
+    "The /app/frontend/app/(tabs)/index.tsx file is ~1817 lines — over the 700-line guideline — and the broken edit at lines 1818-1821 demonstrates the risk of large files. Recommend splitting the Home screen into smaller modules (HomeStats, HomeBanners, HomeBacklog, etc.)."
+  ],
+  "updated_files": [
+    "/app/frontend/app/(tabs)/index.tsx (removed 4 stray garbage lines that caused Metro syntax error)",
+    "/app/backend/tests/test_payment_accounts.py (new — 21 pytest cases)",
+    "/app/test_reports/pytest/iter4_results.xml",
+    "/app/test_reports/iteration_4.json"
+  ],
+  "success_rate": {
+    "backend": "100% (21/21 pytest cases pass)",
+    "frontend": "~60% — SCHEDULED PAYMENTS section + ADD PAYMENT ACCOUNT button verified rendering after syntax-error fix; modal/banner/CUSTOMIZE toggle flows could not be fully exercised via headless Playwright. Source-code testIDs all present."
+  },
+  "seed_data_creation": "Backend test created a few TEST_-prefixed payment accounts during pytest. Module teardown deletes them. Created secondary test user TEST_payacct_<ts>@example.com for owner-scoping check (cannot be auto-deleted via API).",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "BASE = https://login-stretch-layout.preview.emergentagent.com . Admin: MechanicLTZ@gmail.com / Blue321!. Reusable backend tests at /app/backend/tests/test_payment_accounts.py — 21 pass. To open dealer detail via Playwright: login via fetch /api/auth/login, store JWT under BOTH 'tt.auth.token' AND '@tt.auth.token' in localStorage, then navigate to /dealer/{first dealer id}. Confirm 'SCHEDULED PAYMENTS' label is in document.body.innerText BEFORE attempting to click [data-testid=\"add-payment-account\"]. The headless web preview's PillButton onPress may need page.evaluate dispatch (e.g. dispatchEvent or page.locator(...).tap()) rather than force-click — that's why this run could not open the modal. The Metro disk cache corruption issue happens on every cold restart — rm -rf /app/frontend/.metro-cache before restarting expo if frontend returns 500.",
+  "rca_of_issue": "Frontend feature appeared totally broken (PaymentAccountsSection missing from DOM, dealer detail showed ACCOUNTS jumping straight to AGENTS) until I checked /var/log/supervisor/expo.out.log and found 'Metro error: SyntaxError: /app/frontend/app/(tabs)/index.tsx: Unterminated string constant. (1818:4)'. Lines 1818-1821 contained leftover garbage from a prior incomplete edit ('nter\",\\n    marginTop: 16,\\n  },\\n}));') AFTER the legitimate end-of-file '}));' on line 1817. Because Metro bundles all routes in a single graph, ONE file's syntax error cascades — Expo serves HTTP 500 for everything, AND the previously-cached bundle (which predated the new PaymentAccountsSection JSX) was being served from the browser making it LOOK like only the new feature failed. Removing the 4 stray lines restored the bundle and the SCHEDULED PAYMENTS section appeared immediately."
+}

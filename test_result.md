@@ -112,10 +112,55 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Disaster Recovery / Backup system — encryption + passphrase-to-Drive + restore (Phases 1-3)"
+    - "Dealer Payments — scheduled recurring payment accounts (CRUD, confirm, autopay, upcoming, Home banner, notifications)"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
+
+dealer_payments:
+  - task: "Dealer Payment Accounts backend (per dealer, per account)"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/server.py"
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: >
+          New scoped collection `dealer_payment_accounts`. Endpoints (all owner-scoped,
+          auth required): GET /api/dealers/{dealer_id}/payment-accounts (lists +
+          auto-advances autopay accounts), POST /api/dealers/{dealer_id}/payment-accounts
+          (create; validates frequency weekly|biweekly|monthly + label), GET
+          /api/payment-accounts/upcoming?days=7 (due within N days across all dealers,
+          for the Home banner; returns days_until/overdue/remind flags), PUT
+          /api/payment-accounts/{id}, DELETE /api/payment-accounts/{id}, POST
+          /api/payment-accounts/{id}/confirm (records a manual payment + advances
+          next_due_date). Date math verified: weekly +7, biweekly +14, monthly +1mo
+          with day-clamp + year rollover. Autopay catch-up records a payment for each
+          passed due date and rolls next_due into the future. Added
+          dealer_payment_accounts to BACKUP_COLLECTIONS.
+  - task: "Dealer Payments frontend (section, Home banner, CUSTOMIZE toggles, reminders)"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/src/sections/PaymentAccountsSection.tsx, /app/frontend/src/components/PaymentsDueBanner.tsx, /app/frontend/app/dealer/[id].tsx, /app/frontend/app/(tabs)/index.tsx, /app/frontend/app/(tabs)/more.tsx, /app/frontend/src/notifications.ts, /app/frontend/src/api.ts, /app/frontend/src/prefs.ts"
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: >
+          Dealer detail screen now shows a SCHEDULED PAYMENTS section: list accounts
+          (label, amount, frequency, due status, AUTOPAY badge), ADD PAYMENT ACCOUNT,
+          edit/delete, and MARK PAID (confirm). Add/Edit modal: label, amount,
+          frequency chips, next-due DateField, autopay + remind-day-before +
+          remind-day-of switches. Home has a 'payments due this week' banner
+          (PaymentsDueBanner, testID home-payments-banner) gated by CUSTOMIZE →
+          'Payments due banner' toggle (toggle-payments-banner). CUSTOMIZE also has a
+          'Payment reminders' master toggle (toggle-payment-notifications). Local
+          day-before/day-of reminders scheduled via reschedulePaymentRemindersNow
+          (NOTE: notifications can't be validated in Expo Go web — needs a device build).
+
 
 backup_disaster_recovery:
   - task: "Encrypted full snapshot + passphrase-to-Drive + restore engine"
