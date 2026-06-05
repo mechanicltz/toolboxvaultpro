@@ -53,7 +53,7 @@ import { Anton_400Regular } from "@expo-google-fonts/anton";
 
 // Manual verification beacon — bump this on every change so we can confirm
 // the device is actually showing the latest bundle. Rendered top-right of Home.
-const HOME_BUILD = "BUILD 143";
+const HOME_BUILD = "BUILD 144";
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -548,72 +548,56 @@ export default function HomeScreen() {
             </BevelCard>
           )}
 
-          {(() => {
-            // Render the user's ordered sequence, but COLLAPSE consecutive
-            // stat rows into one flat hairline-divided list so they sit tight
-            // together (mimics the pre-skin layout). The dealer card keeps its
-            // own raised treatment and flushes any buffered stats before it.
-            const out: ReactNode[] = [];
-            let statBuf: { key: string; row: HomeDetailRow }[] = [];
-            const flushStats = (fid: number) => {
-              if (!statBuf.length) return;
-              const buf = statBuf;
-              statBuf = [];
-              out.push(
-                <View key={`stats-${fid}`} style={styles.plainStatList}>
-                  {buf.map((s, i) =>
-                    renderPlainStatRow(s.row, i === buf.length - 1, s.key),
-                  )}
-                </View>,
-              );
-            };
-            renderSequence.forEach((item, idx) => {
-              if (item.kind === "dealers") {
-                flushStats(idx);
-                out.push(
-                  <BevelCard
-                    key={`dealers-${idx}`}
-                    style={styles.owedCluster}
-                    testID="home-dealers-widget"
-                  >
-                    <TouchableOpacity
-                      style={styles.dealerRow}
-                      onPress={() => router.push("/dealers")}
-                      activeOpacity={0.7}
-                    >
-                      <Text style={[styles.dealerName, { fontWeight: "900", flex: 1 }]}>
-                        DEALER ACCOUNTS
-                      </Text>
-                      <Ionicons name="chevron-forward" size={16} color={theme.colors.textMuted} />
-                    </TouchableOpacity>
-                    {dealersAll.length === 0 ? (
-                      <Text style={styles.emptyInline}>No dealers yet.</Text>
-                    ) : (
-                      <>
-                        {dealersAll.map((d) => (
-                          <View key={d.id} style={styles.owedDivider}>
-                            <DealerBalanceRow
-                              dealer={d}
-                              onAdjust={() => openAdjustForDealer(d)}
-                              onOpenDealer={() => router.push(`/dealer/${d.id}`)}
-                            />
+          {/* UNIFIED DESCRIPTION CARD — the dealer-accounts section AND the
+              stat rows below it now live inside ONE raised card, rendered in
+              the user's chosen order, so the whole summary reads as a single
+              uniform panel. */}
+          {renderSequence.length > 0 && (
+            <BevelCard style={styles.owedCluster} testID="home-summary-card">
+              {renderSequence.map((item, idx) => {
+                if (item.kind === "dealers") {
+                  return (
+                    <View key={`dealers-${idx}`} testID="home-dealers-widget">
+                      <TouchableOpacity
+                        style={styles.dealerRow}
+                        onPress={() => router.push("/dealers")}
+                        activeOpacity={0.7}
+                      >
+                        <Text style={[styles.dealerName, { fontWeight: "900", flex: 1 }]}>
+                          DEALER ACCOUNTS
+                        </Text>
+                        <Ionicons name="chevron-forward" size={16} color={theme.colors.textMuted} />
+                      </TouchableOpacity>
+                      {dealersAll.length === 0 ? (
+                        <Text style={styles.emptyInline}>No dealers yet.</Text>
+                      ) : (
+                        <>
+                          {dealersAll.map((d) => (
+                            <View key={d.id} style={styles.owedDivider}>
+                              <DealerBalanceRow
+                                dealer={d}
+                                onAdjust={() => openAdjustForDealer(d)}
+                                onOpenDealer={() => router.push(`/dealer/${d.id}`)}
+                              />
+                            </View>
+                          ))}
+                          <View style={styles.owedTotalRow} testID="home-dealers-total">
+                            <Text style={styles.owedTotalLabel}>TOTAL OWED</Text>
+                            <Text style={styles.owedTotalValue}>${totalOwed.toFixed(2)}</Text>
                           </View>
-                        ))}
-                        <View style={styles.owedTotalRow} testID="home-dealers-total">
-                          <Text style={styles.owedTotalLabel}>TOTAL OWED</Text>
-                          <Text style={styles.owedTotalValue}>${totalOwed.toFixed(2)}</Text>
-                        </View>
-                      </>
-                    )}
-                  </BevelCard>,
+                        </>
+                      )}
+                    </View>
+                  );
+                }
+                return renderPlainStatRow(
+                  item.row,
+                  idx === renderSequence.length - 1,
+                  item.key,
                 );
-              } else {
-                statBuf.push({ key: item.key, row: item.row });
-              }
-            });
-            flushStats(renderSequence.length);
-            return out;
-          })()}
+              })}
+            </BevelCard>
+          )}
 
           <BevelCard
             style={styles.plainBanner}
@@ -1592,6 +1576,7 @@ const styles = themedStyles((c) => ({
     alignItems: "center",
     justifyContent: "space-between",
     paddingVertical: 14,
+    paddingHorizontal: 14,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: c.border,
     gap: 10,
