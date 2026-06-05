@@ -24,7 +24,7 @@
 // =============================================================================
 
 import React from "react";
-import { View, Text, StyleSheet, Image } from "react-native";
+import { View, Text, StyleSheet, Image, useWindowDimensions } from "react-native";
 import { SKIN } from "../tbv/skins";
 import { useColors } from "../themeContext";
 
@@ -43,12 +43,17 @@ const ACCENT = "#F97316";
 
 export function IndustrialBanner({ title, subtitle, rightSlot, leftSlot }: Props) {
   const c = useColors();
+  // Match the LOGIN page nameplate size exactly: width = min(94% of the
+  // screen width, 400), height derived from the master nameplate ratio.
+  const { width } = useWindowDimensions();
+  const nameplateW = Math.min(width * 0.94, 400);
+  const nameplateH = nameplateW / 3.746;
   return (
     <View style={styles.wrap}>
-      {/* The constant brand nameplate — same in every theme. */}
+      {/* The constant brand nameplate — same size + look as the login page. */}
       <Image
         source={SKIN.nameplate}
-        style={styles.nameplate}
+        style={[styles.nameplate, { width: nameplateW, height: nameplateH }]}
         resizeMode="contain"
         fadeDuration={0}
       />
@@ -84,8 +89,6 @@ const styles = StyleSheet.create({
     paddingBottom: 8,
   },
   nameplate: {
-    height: 44,
-    aspectRatio: 3.746, // master nameplate intrinsic ratio
     alignSelf: "center",
     marginBottom: 6,
   },
