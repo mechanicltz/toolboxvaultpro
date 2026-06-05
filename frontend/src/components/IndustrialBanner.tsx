@@ -24,8 +24,9 @@
 // =============================================================================
 
 import React from "react";
-import { View, Text, StyleSheet, Image, Platform } from "react-native";
+import { View, Text, StyleSheet, Image } from "react-native";
 import { SKIN } from "../tbv/skins";
+import { useColors } from "../themeContext";
 
 type Props = {
   /** Page name shown under the nameplate (uppercased automatically). */
@@ -41,6 +42,7 @@ type Props = {
 const ACCENT = "#F97316";
 
 export function IndustrialBanner({ title, subtitle, rightSlot, leftSlot }: Props) {
+  const c = useColors();
   return (
     <View style={styles.wrap}>
       {/* The constant brand nameplate — same in every theme. */}
@@ -60,7 +62,7 @@ export function IndustrialBanner({ title, subtitle, rightSlot, leftSlot }: Props
           </Text>
           {!!subtitle && (
             <Text
-              style={styles.subtitle}
+              style={[styles.subtitle, { color: c.textSecondary }]}
               numberOfLines={1}
               ellipsizeMode="tail"
               allowFontScaling={false}
@@ -77,20 +79,9 @@ export function IndustrialBanner({ title, subtitle, rightSlot, leftSlot }: Props
 
 const styles = StyleSheet.create({
   wrap: {
-    backgroundColor: "#0E0E0E",
-    paddingTop: 10,
-    paddingBottom: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: "rgba(249,115,22,0.30)",
-    ...Platform.select({
-      ios: {
-        shadowColor: "#000",
-        shadowOpacity: 0.4,
-        shadowRadius: 6,
-        shadowOffset: { width: 0, height: 3 },
-      },
-      android: { elevation: 6 },
-    }),
+    backgroundColor: "transparent",
+    paddingTop: 8,
+    paddingBottom: 8,
   },
   nameplate: {
     height: 44,
