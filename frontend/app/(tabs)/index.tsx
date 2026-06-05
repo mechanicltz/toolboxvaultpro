@@ -53,7 +53,7 @@ import { Anton_400Regular } from "@expo-google-fonts/anton";
 
 // Manual verification beacon — bump this on every change so we can confirm
 // the device is actually showing the latest bundle. Rendered top-right of Home.
-const HOME_BUILD = "BUILD 132";
+const HOME_BUILD = "BUILD 133";
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -472,25 +472,12 @@ export default function HomeScreen() {
         <Text style={styles.plainBuildStamp} allowFontScaling={false} testID="home-build-stamp">
           {HOME_BUILD}
         </Text>
-        <View style={styles.plainHeader}>
-          <View style={{ flex: 1, paddingRight: 12 }}>
-            <Text style={styles.plainTitle}>TOOLBOX VAULT</Text>
-            <Text style={styles.plainSummary}>SUMMARY</Text>
-            <Text style={styles.plainVersion} testID="home-admin-userstats">
-              {APP_VERSION_LABEL}
-              {userStats ? `   ·   FREE ${userStats.free} / SUB ${userStats.subscribed}` : ""}
-            </Text>
-          </View>
-          <TouchableOpacity
-            testID="home-add-item"
-            style={styles.addItemBtn}
-            onPress={() => router.push("/tool/edit")}
-            activeOpacity={0.85}
-          >
-            <Ionicons name="add" size={18} color={theme.colors.accent} />
-            <Text style={styles.addItemText}>ADD ITEM</Text>
-          </TouchableOpacity>
-        </View>
+        <IndustrialBanner
+          title="SUMMARY"
+          subtitle={`${APP_VERSION_LABEL}${
+            userStats ? `  ·  FREE ${userStats.free} / SUB ${userStats.subscribed}` : ""
+          }`}
+        />
         <ScrollView
           contentContainerStyle={styles.plainContent}
           refreshControl={
@@ -621,14 +608,13 @@ export default function HomeScreen() {
         <Text style={styles.buildStamp} allowFontScaling={false} testID="home-build-stamp">
           {HOME_BUILD}
         </Text>
-        {/* Header — PNG nameplate wordmark (uniform across all pages). */}
-        <View style={styles.header}>
-          <Image source={SKIN.nameplate} style={styles.nameplate} resizeMode="contain" />
-          <Text style={styles.headerSub} testID="home-admin-userstats">
-            {`SUMMARY  ·  ${APP_VERSION_LABEL}`}
-            {userStats ? `   ·   FREE: ${userStats.free}   SUB: ${userStats.subscribed}` : ""}
-          </Text>
-        </View>
+        {/* Unified nameplate header (same on every page / theme). */}
+        <IndustrialBanner
+          title="SUMMARY"
+          subtitle={`${APP_VERSION_LABEL}${
+            userStats ? `  ·  FREE ${userStats.free} / SUB ${userStats.subscribed}` : ""
+          }`}
+        />
 
       <ScrollView
         style={{ backgroundColor: "transparent" }}
