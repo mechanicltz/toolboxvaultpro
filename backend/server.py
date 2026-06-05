@@ -278,6 +278,7 @@ async def attach_user_to_context(request: Request, call_next):
         or path == "/api/guides"
         or path == "/api/revenuecat/webhook"
         or path.startswith("/api/migration/")
+        or path.startswith("/api/bootstrap/")
         or path == "/api/admin/gdrive/oauth-callback"
         or path.startswith("/api/preview/")
     ):
@@ -4155,6 +4156,17 @@ from subscriptions import _require_admin as _require_admin_for_backups  # noqa: 
 
 app.include_router(
     _make_backup_router(
+        lambda: real_db,
+        get_current_user,
+        _require_admin_for_backups,
+    )
+)
+
+# Disaster-recovery: full snapshots (incl. code) + restore engine + bootstrap.
+from recovery import make_recovery_router as _make_recovery_router  # noqa: E402
+
+app.include_router(
+    _make_recovery_router(
         lambda: real_db,
         get_current_user,
         _require_admin_for_backups,
