@@ -209,13 +209,56 @@ async def _seconds_until_next_run() -> float:
     return (next_run - now).total_seconds()
 
 
+async def _run_full_snapshot_to_drive(db, *, trigger: str = "scheduled") -> Dict[str, Any]:
+    """Build the FULL ENCRYPTED snapshot (code+data+env), self-check it, then
+    upload it + its passphrase to Google Drive and apply retention. Skips
+    silently if Drive isn't connected. Raises if the self-check fails (so a
+    corrupt archive is never trusted/uploaded)."""
+    import gdrive  # local import — avoids circular at module load
+    import recovery
+
+    status = await gdrive.get_status(db)
+    if not status.get("connected"):
+        logger.info("Drive not connected — skipping scheduled full snapshot.")
+        return {"uploaded": False, "reason": "drive_not_connected"}
+
+    snap = await recovery._build_full_snapshot(db, trigger=trigger, encrypt=True)
+    check = await asyncio.to_thread(
+        recovery.selfcheck_snapshot, snap["zip_bytes"], snap["passphrase"]
+    )
+    if not check.get("ok"):
+        logger.error("Full snapshot self-check FAILED — NOT uploading: %s",
+                     check.get("error"))
+        raise RuntimeError(f"Snapshot self-check failed: {check.get('error')}")
+
+    up = await gdrive.upload_backup(
+        db, file_bytes=snap["zip_bytes"], filename=snap["filename"],
+        mime_type="application/zip",
+    )
+    try:
+        await gdrive.upload_passphrase(
+            db, passphrase=snap["passphrase"], backup_filename=snap["filename"],
+        )
+    except Exception as pexc:
+        logger.warning("Scheduled passphrase upload failed: %s", pexc)
+    retention = await gdrive.apply_retention_policy(db)
+    logger.info(
+        "Scheduled FULL snapshot mirrored to Drive: %s (id=%s, selfcheck OK, "
+        "retention=%s)", snap["filename"], up.get("id"), retention,
+    )
+    return {"uploaded": True, "filename": snap["filename"], "id": up.get("id"),
+            "selfcheck": check, "retention": retention}
+
+
 async def _scheduler_loop(get_db):
     """Background task — runs forever, fires a backup once per day at 03:00 UTC.
 
     Each cycle:
-      1) Creates an in-DB backup (existing behavior, prunes to MAX_BACKUPS_RETAINED)
-      2) If Google Drive is connected, uploads the backup ZIP to Drive
-      3) Applies Drive retention policy (keep min N, delete >30 days old)
+      1) Creates a small in-DB data backup (for the in-app restore list +
+         pre-restore safety snapshots, prunes to MAX_BACKUPS_RETAINED).
+      2) Builds the FULL ENCRYPTED snapshot (code+data+env), self-checks it,
+         and uploads it + its passphrase to Google Drive (if connected).
+      3) Applies the Drive retention policy (keep min N + delete >15 days old).
     """
     logger.info("Backup scheduler started (daily @ 03:00 UTC, keep last %d in DB)",
                 MAX_BACKUPS_RETAINED)
@@ -227,16 +270,16 @@ async def _scheduler_loop(get_db):
             try:
                 row = await _create_backup_doc(db, trigger="scheduled")
                 logger.info(
-                    "Scheduled backup created: %s (%s, %d docs)",
+                    "Scheduled in-DB backup created: %s (%s, %d docs)",
                     row["id"], row["size_human"], row["document_count"],
                 )
-                # Push to Google Drive (best-effort; failures logged, not fatal)
-                try:
-                    await _push_latest_backup_to_drive(db, row["id"])
-                except Exception as drive_exc:
-                    logger.warning("Drive upload skipped/failed: %s", drive_exc)
             except Exception as e:
-                logger.exception("Scheduled backup failed: %s", e)
+                logger.exception("Scheduled in-DB backup failed: %s", e)
+            # Push the FULL encrypted snapshot to Drive (best-effort).
+            try:
+                await _run_full_snapshot_to_drive(db, trigger="scheduled")
+            except Exception as drive_exc:
+                logger.warning("Scheduled full snapshot to Drive failed: %s", drive_exc)
         except asyncio.CancelledError:
             logger.info("Backup scheduler cancelled")
             raise

@@ -538,6 +538,98 @@ export const api = {
       gdrive_filename?: string;
     }>(`/admin/backups/full-now`, { method: "POST" }),
 
+  // ---- Disaster recovery: encrypted full snapshot + restore + verify/sandbox ----
+  // Build the complete ENCRYPTED code+data+env snapshot and push to Drive +
+  // passphrase file. Heavy (hundreds of MB) — uses raw fetch with NO client
+  // timeout so the long Drive upload isn't aborted mid-flight.
+  adminFullSnapshot: async () => {
+    const token = await getToken();
+    const res = await fetch(`${API_BASE}/api/admin/backups/full-snapshot`, {
+      method: "POST",
+      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error((data as any)?.detail || `Server ${res.status}`);
+    return data as {
+      ok: boolean;
+      filename: string;
+      size_human: string;
+      size_bytes: number;
+      document_count: number;
+      encrypted: boolean;
+      selfcheck_ok: boolean;
+      gdrive_uploaded: boolean;
+      passphrase_uploaded: boolean;
+    };
+  },
+
+  // Restore production DB directly from a Drive backup file id. The server
+  // auto-fetches the matching passphrase from Drive for encrypted archives.
+  adminRestoreFromDrive: async (fileId: string, confirmEmail: string) => {
+    const token = await getToken();
+    const form = new FormData();
+    form.append("file_id", fileId);
+    form.append("confirm_email", confirmEmail);
+    const res = await fetch(`${API_BASE}/api/admin/backups/restore-from-drive`, {
+      method: "POST",
+      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      body: form as any,
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error((data as any)?.detail || `Server ${res.status}`);
+    return data as { ok: boolean; total_documents: number; restored: Record<string, number>; pre_restore_backup_id?: string };
+  },
+
+  // Verify a backup file (no DB writes). Accepts a local file uri + passphrase.
+  adminVerifyBackup: async (fileUri: string, fileName: string, passphrase: string) => {
+    const token = await getToken();
+    const form = new FormData();
+    form.append("file", { uri: fileUri, name: fileName, type: "application/zip" } as any);
+    if (passphrase) form.append("passphrase", passphrase);
+    const res = await fetch(`${API_BASE}/api/admin/backups/verify`, {
+      method: "POST",
+      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      body: form as any,
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error((data as any)?.detail || `Server ${res.status}`);
+    return data as { ok: boolean; valid: boolean; encrypted: boolean; total_documents: number; has_code: boolean; has_env: boolean; summary: Record<string, number> };
+  },
+
+  // Test-restore a backup into a throwaway sandbox DB (production untouched).
+  adminTestSandbox: async (fileUri: string, fileName: string, passphrase: string) => {
+    const token = await getToken();
+    const form = new FormData();
+    form.append("file", { uri: fileUri, name: fileName, type: "application/zip" } as any);
+    if (passphrase) form.append("passphrase", passphrase);
+    const res = await fetch(`${API_BASE}/api/admin/backups/test-sandbox`, {
+      method: "POST",
+      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      body: form as any,
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error((data as any)?.detail || `Server ${res.status}`);
+    return data as { ok: boolean; restored: Record<string, number>; comparison: Record<string, { sandbox: number; production: number; match: boolean }> };
+  },
+
+  // ---- Bootstrap (public, only works on an empty DB) ----
+  bootstrapStatus: () =>
+    request<{ fresh: boolean; user_count: number }>(`/bootstrap/status`, { auth: false } as any),
+
+  bootstrapRestore: async (fileUri: string, fileName: string, passphrase: string, dryRun: boolean) => {
+    const form = new FormData();
+    form.append("file", { uri: fileUri, name: fileName, type: "application/zip" } as any);
+    form.append("dry_run", dryRun ? "true" : "false");
+    if (passphrase) form.append("passphrase", passphrase);
+    const res = await fetch(`${API_BASE}/api/bootstrap/restore`, {
+      method: "POST",
+      body: form as any,
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error((data as any)?.detail || `Server ${res.status}`);
+    return data as { ok: boolean; dry_run?: boolean; would_restore?: Record<string, number>; restored?: Record<string, number>; total_documents: number };
+  },
+
   forgotPassword: (data: { email: string }) =>
     request<{ ok: boolean; message: string }>(`/auth/forgot-password`, {
       method: "POST",

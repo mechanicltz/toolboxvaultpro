@@ -86,6 +86,9 @@ function AuthGate({ children }: { children: React.ReactNode }) {
   // actually torn down.
   const [showIntro, setShowIntro] = useState(true);
   const [bootDecided] = useState(true);
+  // When logged-out, learn whether the DB is empty so we can route to the
+  // "Fresh Install Detected" bootstrap screen instead of login.
+  const [bootstrapFresh, setBootstrapFresh] = useState<boolean | null>(null);
 
   // Warm the industrial image-skin cache shortly AFTER first mount so it
   // never competes with the boot intro video for the JS thread (decoding the
@@ -138,18 +141,39 @@ function AuthGate({ children }: { children: React.ReactNode }) {
 
   // Auth routing — public vs private routes. Skip while the intro is
   // showing or while we're still resolving cold-boot state.
+  // When logged-out and not loading, check whether the DB is fresh (empty).
+  useEffect(() => {
+    if (loading || user) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const s = await api.bootstrapStatus();
+        if (!cancelled) setBootstrapFresh(s.fresh);
+      } catch {
+        if (!cancelled) setBootstrapFresh(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [user, loading]);
+
   useEffect(() => {
     if (loading) return;
     if (showIntro) return;
     if (!bootDecided) return;
     const first = segments[0];
-    const publicRoute = first === "login" || first === "forgot-password";
-    if (!user && !publicRoute) {
-      router.replace("/login");
+    const publicRoute =
+      first === "login" || first === "forgot-password" || first === "bootstrap";
+    if (!user) {
+      // Empty DB → send to the "Fresh Install Detected" restore screen.
+      if (bootstrapFresh === true && first !== "bootstrap") {
+        router.replace("/bootstrap");
+      } else if (!publicRoute) {
+        router.replace("/login");
+      }
     } else if (user && publicRoute) {
       router.replace("/");
     }
-  }, [user, loading, segments, router, showIntro, bootDecided]);
+  }, [user, loading, segments, router, showIntro, bootDecided, bootstrapFresh]);
 
   const handleIntroDone = () => {
     markAppActive();
@@ -271,6 +295,7 @@ function ShellNav() {
             }}
           >
             <Stack.Screen name="login" options={{ animation: "fade" }} />
+            <Stack.Screen name="bootstrap" options={{ animation: "fade", gestureEnabled: false }} />
             <Stack.Screen name="intro" options={{ animation: "fade", headerShown: false, gestureEnabled: false }} />
             <Stack.Screen name="(tabs)" />
             <Stack.Screen name="tool/[id]" />

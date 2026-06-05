@@ -33,33 +33,46 @@ import backups  # noqa: E402
 import recovery  # noqa: E402
 
 
-async def _load_raw(db, args) -> bytes:
+async def _load_raw(db, args):
+    """Return (raw_bytes, passphrase_or_None)."""
     if args.drive_latest:
         import gdrive
         items = await gdrive.list_backups(db)
-        if not items:
+        # newest .zip backup
+        zips = [i for i in items if i.get("name", "").lower().endswith(".zip")]
+        if not zips:
             raise SystemExit("No backups found on Google Drive.")
-        latest = items[0]
+        latest = zips[0]
         print(f"[rescue] Using latest Drive backup: {latest.get('name')} ({latest.get('id')})")
-        return await gdrive.download_backup(db, file_id=latest["id"])
+        raw = await gdrive.download_backup(db, file_id=latest["id"])
+        pw = args.passphrase
+        if not pw:
+            try:
+                pw = await gdrive.fetch_passphrase_for_backup(db, file_id=latest["id"])
+                if pw:
+                    print("[rescue] Auto-loaded passphrase from Drive companion file.")
+            except Exception as exc:
+                print(f"[rescue] WARN passphrase auto-fetch failed: {exc!r}")
+        return raw, pw
     if not args.file:
         raise SystemExit("Provide --file PATH or --drive-latest")
     with open(args.file, "rb") as fh:
-        return fh.read()
+        return fh.read(), args.passphrase
 
 
 async def main() -> None:
     ap = argparse.ArgumentParser(description="Rescue restore for Toolbox Vault")
     ap.add_argument("--file", help="Path to a backup ZIP")
     ap.add_argument("--drive-latest", action="store_true", help="Use latest Google Drive backup")
+    ap.add_argument("--passphrase", default="", help="Passphrase for an encrypted backup")
     ap.add_argument("--yes", action="store_true", help="Actually perform the restore (wipes data)")
     args = ap.parse_args()
 
     client = AsyncIOMotorClient(os.environ["MONGO_URL"])
     db = client[os.environ["DB_NAME"]]
 
-    raw = await _load_raw(db, args)
-    parsed = recovery._parse_backup_bytes(raw)
+    raw, passphrase = await _load_raw(db, args)
+    parsed = recovery._parse_backup_bytes(raw, passphrase=passphrase or None)
     recovery._validate_bundle(parsed["bundle"])
     summary = recovery._summarize(parsed["bundle"])
     print(f"[rescue] Backup contains {sum(summary.values())} documents:")

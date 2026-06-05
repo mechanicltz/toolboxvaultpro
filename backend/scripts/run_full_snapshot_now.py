@@ -20,9 +20,13 @@ import recovery  # noqa: E402
 async def main() -> None:
     client = AsyncIOMotorClient(os.environ["MONGO_URL"])
     db = client[os.environ["DB_NAME"]]
-    snap = await recovery._build_full_snapshot(db, trigger="manual-baseline")
-    print(f"[OK] Full snapshot built: {snap['filename']} "
+    snap = await recovery._build_full_snapshot(
+        db, trigger="manual-baseline", encrypt=True,
+    )
+    print(f"[OK] Full ENCRYPTED snapshot built: {snap['filename']} "
           f"size={snap['size_human']} docs={snap['document_count']}")
+    check = recovery.selfcheck_snapshot(snap["zip_bytes"], snap["passphrase"])
+    print(f"[OK] Self-check: {check}")
     try:
         import gdrive
         status = await gdrive.get_status(db)
@@ -31,7 +35,12 @@ async def main() -> None:
                 db, file_bytes=snap["zip_bytes"],
                 filename=snap["filename"], mime_type="application/zip",
             )
-            print(f"[OK] Mirrored to Google Drive: {up.get('name')} (id={up.get('id')})")
+            await gdrive.upload_passphrase(
+                db, passphrase=snap["passphrase"], backup_filename=snap["filename"],
+            )
+            ret = await gdrive.apply_retention_policy(db)
+            print(f"[OK] Mirrored to Google Drive + passphrase: {up.get('name')} "
+                  f"(id={up.get('id')}); retention={ret}")
         else:
             print("[WARN] Drive not connected — snapshot built but not uploaded.")
     except Exception as exc:  # pragma: no cover

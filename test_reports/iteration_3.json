@@ -1,0 +1,63 @@
+{
+  "summary": "Phase-3 Disaster Recovery endpoints + UI verified. Backend: 8/8 pytest cases PASS in /app/backend/tests/test_recovery.py. /api/bootstrap/status -> {fresh:false, user_count>0}. /api/admin/backups/verify with test_plain.zip -> 200 {valid:true, encrypted:false, total_documents:3, has_code:true, has_env:true}. /api/admin/backups/verify with test_encrypted.zip + 'TestPass1234567890' -> 200 {valid:true, encrypted:true, total_documents:3}. Missing-passphrase -> 400 with 'encrypted/passphrase required'. Wrong-passphrase -> 400 'Could not decrypt backup — wrong passphrase.'. /api/admin/backups/test-sandbox with encrypted ZIP + correct pass -> 200 with restored counts + comparison object; production /api/stats counts (total_tools, total_dealers) UNCHANGED before & after, and top-level stats keys identical (prod untouched). 401 enforced on /api/admin/backups/verify and /api/admin/backups/test-sandbox when called without bearer token. Frontend: logged-in admin loads /admin/backups successfully. 'Disaster Recovery' section renders with dr-full-snapshot, dr-verify, dr-sandbox PillButtons all present. 'Restore from Google Drive' lists 12 .zip rows each with testID starting 'dr-restore-' (real Drive file ids visible, e.g. dr-restore-1dUGWFpo8JVv_10gLKO2MhxTGDOpXdnps). Tapping a row opens the confirmation Modal with dr-confirm-email TextInput + dr-confirm-restore PillButton + Cancel button (verified by screenshot). Auth-routing regression check: clearing localStorage and visiting root lands on /login (NOT /bootstrap) — DB-not-empty rule honored. NO destructive endpoints were invoked. NOTE: The per-row 'Restore' TouchableOpacity on the Drive list is visually clipped on a 390-px wide screen (its bounding box is only 30 px wide on the right edge, and the label text 'Restore' is cut to 'Restor'); the button still works but is hard to tap with a finger.",
+  "backend_issues": { "critical": [], "minor": [] },
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "admin/backups.tsx — Restore from Google Drive row 'Restore' button",
+        "issue": "On 390-px wide mobile viewport each dr-restore-{id} TouchableOpacity bounding box is only ~30 px wide (x=328, width=30) and the visible label is clipped to 'Restor'. Cause: in styles.driveRow the right-side action button uses flex:0 with paddingHorizontal:14 but the parent row gives the LEFT name+date View flex:1 with no maxWidth, so when filename is long the action gets squeezed off-screen. Playwright click via mouse only opened the modal when bypassed via dispatchEvent; real touch in some areas would miss.",
+        "testID": "dr-restore-{id}",
+        "priority": "MEDIUM"
+      }
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {
+        "screen": "admin/backups.tsx — Restore from Google Drive list",
+        "issues": [
+          "Long filenames (e.g. '06-05-2026 11-45 FULL SNAPSHOT.zip') push the right-aligned Restore button partially off-screen on a 390 px viewport.",
+          "Suggestion: set the name View to flex:1 with minWidth:0 (or use numberOfLines + flexShrink) AND give the Restore button a fixed width / minWidth so it stays fully visible & tappable."
+        ]
+      },
+      {
+        "screen": "global",
+        "issues": [
+          "Existing console deprecation warnings persist: 'textShadow*' style props (use textShadow), props.pointerEvents (use style.pointerEvents). Cosmetic only — non-blocking."
+        ]
+      }
+    ],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_recovery.py",
+    "/app/test_reports/pytest/iter3_results.xml"
+  ],
+  "action_items": [
+    "Fix the clipped Restore button on the Drive list in /app/frontend/app/admin/backups.tsx — wrap the filename column with minWidth:0 (or flexShrink:1) and give the action button a fixed width like 96–110 px so the label stays visible on 390-px screens.",
+    "(Optional) Add testID='dr-confirm-cancel' to the modal's Cancel TouchableOpacity for future automated cancel-flow tests (currently only a textual 'Cancel' control)."
+  ],
+  "critical_code_review_comments": [
+    "recovery.py is a well-isolated module: a single asyncio.Lock prevents concurrent restores, every production restore takes a pre-restore safety snapshot via backups._create_backup_doc, and every action writes a restore_log entry — solid auditability.",
+    "_parse_backup_bytes correctly distinguishes ZIP vs gzip vs plain-JSON and surfaces a CLEAN 400 'Could not decrypt backup — wrong passphrase.' when pyzipper raises on bad keys (verified live).",
+    "_sandbox_db uses real_db.client[real_db.name + '_sandbox'] and is dropped immediately after the test_sandbox endpoint completes — confirmed prod stats unchanged in pytest.",
+    "AES-256 (WZ_AES, nbits=256) via pyzipper for full_snapshot; passphrase NEVER embedded in archive — only mirrored to Drive as 'X PASSPHRASE.txt'. Matches the user's Phase-3 spec.",
+    "Bootstrap endpoint correctly returns 410 if user_count>0 (closes the public restore window) — verified indirectly by /api/bootstrap/status returning {fresh:false, user_count>0}.",
+    "Restore-from-drive auto-fetches the companion passphrase file when caller omits it AND the ZIP is encrypted — nice UX safeguard.",
+    "Frontend _layout.tsx auth routing no longer regresses: unauthenticated root navigation lands on /login (NOT /bootstrap) because DB is non-empty.",
+    "Minor: admin/backups.tsx is now ~890 lines (over the 700-line guideline) — splitting Disaster-Recovery UI into its own component (e.g. <DisasterRecoveryPanel/>) would help."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_recovery.py",
+    "/app/test_reports/pytest/iter3_results.xml",
+    "/app/test_reports/iteration_3.json"
+  ],
+  "success_rate": {
+    "backend": "100% (8/8 recovery tests pass)",
+    "frontend": "~95% — all required testIDs present and modal opens with correct controls; one clipped-button UX issue on Drive rows."
+  },
+  "seed_data_creation": "No new seed data created. test-sandbox uses a throwaway sibling DB that is auto-dropped after the call (verified — no _sandbox DB lingers).",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "BASE = https://login-stretch-layout.preview.emergentagent.com . Admin: MechanicLTZ@gmail.com / Blue321!. Test fixtures: /app/backend/test_artifacts/test_plain.zip (3 docs, unencrypted, code+env present) and /app/backend/test_artifacts/test_encrypted.zip (passphrase TestPass1234567890, 3 docs). Recovery testIDs: dr-full-snapshot, dr-verify, dr-sandbox, dr-restore-{driveFileId}, dr-confirm-email, dr-confirm-restore. DO NOT click 'CREATE FULL SNAPSHOT' (builds ~500MB) and DO NOT confirm any restore in UI. Verify-only and sandbox endpoints are SAFE. To open the admin screen in headless Playwright, login via fetch and write the token to localStorage under BOTH 'tt.auth.token' and '@tt.auth.token' before navigating.",
+  "rca_of_issue": "The clipped Restore button (frontend issue) is layout-only — in admin/backups.tsx driveRow the name column is flex:1 but lacks minWidth:0, so on narrow screens with long filenames the Restore TouchableOpacity (flex:0, paddingHorizontal:14) gets pushed past the right edge of the parent container; only ~30 px remains hit-tappable and only 'Restor' renders. Fix: add {minWidth:0} (and ideally numberOfLines wrapper) to the name View AND set a fixed minWidth on the action button."
+}

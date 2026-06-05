@@ -11,7 +11,10 @@ import {
   Alert,
   Linking,
   RefreshControl,
+  Modal,
+  TextInput,
 } from "react-native";
+import * as DocumentPicker from "expo-document-picker";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter, useFocusEffect } from "expo-router";
@@ -90,6 +93,10 @@ export default function AdminBackupsPage() {
   const [busyAction, setBusyAction] = useState<string | null>(null);
   const [gdrive, setGdrive] = useState<GdriveStatus | null>(null);
   const [gdriveFiles, setGdriveFiles] = useState<GdriveFile[] | null>(null);
+  // Disaster-recovery UI state
+  const [restoreTarget, setRestoreTarget] = useState<GdriveFile | null>(null);
+  const [confirmEmailText, setConfirmEmailText] = useState("");
+  const [recoveryResult, setRecoveryResult] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -201,6 +208,123 @@ export default function AdminBackupsPage() {
       setBusyAction(null);
     }
   }, [load]);
+
+  // ---- Disaster recovery handlers ----
+  const runFullSnapshot = useCallback(async () => {
+    Alert.alert(
+      "Create full encrypted snapshot?",
+      "Bundles ALL code + database + secrets into one AES-256 password-protected " +
+        "ZIP, uploads it to Google Drive, and saves its passphrase next to it.\n\n" +
+        "This is large (~500 MB) and can take a few minutes. Keep the screen open.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Create",
+          onPress: async () => {
+            setBusyAction("full-snapshot");
+            setRecoveryResult(null);
+            try {
+              const r = await api.adminFullSnapshot();
+              setRecoveryResult(
+                `✅ ${r.filename}\n${r.size_human} · ${r.document_count.toLocaleString()} docs\n` +
+                  `Self-check: ${r.selfcheck_ok ? "PASSED" : "FAILED"} · ` +
+                  `Drive: ${r.gdrive_uploaded ? "uploaded" : "skipped"} · ` +
+                  `Passphrase: ${r.passphrase_uploaded ? "saved" : "not saved"}`,
+              );
+              await load();
+            } catch (e: any) {
+              Alert.alert("Snapshot failed", String(e?.message || e));
+            } finally {
+              setBusyAction(null);
+            }
+          },
+        },
+      ],
+    );
+  }, [load]);
+
+  const doRestoreFromDrive = useCallback(async () => {
+    if (!restoreTarget) return;
+    const email = confirmEmailText.trim();
+    if (!email) {
+      Alert.alert("Email required", "Type your account email to confirm the restore.");
+      return;
+    }
+    setBusyAction("restore-drive");
+    try {
+      const r = await api.adminRestoreFromDrive(restoreTarget.id, email);
+      setRestoreTarget(null);
+      setConfirmEmailText("");
+      Alert.alert(
+        "Restore complete ✓",
+        `Restored ${r.total_documents.toLocaleString()} documents.\n` +
+          `A safety snapshot of the previous data was taken first.`,
+      );
+      await load();
+    } catch (e: any) {
+      Alert.alert("Restore failed", String(e?.message || e));
+    } finally {
+      setBusyAction(null);
+    }
+  }, [restoreTarget, confirmEmailText, load]);
+
+  const pickAndCheck = useCallback(async (mode: "verify" | "sandbox") => {
+    try {
+      const picked = await DocumentPicker.getDocumentAsync({
+        type: ["application/zip", "application/octet-stream", "*/*"],
+        copyToCacheDirectory: true,
+      });
+      if (picked.canceled || !picked.assets?.[0]) return;
+      const asset = picked.assets[0];
+      // Ask for a passphrase (encrypted backups need it). Use a simple prompt
+      // on iOS; on Android fall back to attempting without, then guide the user.
+      const runWith = async (passphrase: string) => {
+        setBusyAction(mode === "verify" ? "verify" : "sandbox");
+        setRecoveryResult(null);
+        try {
+          if (mode === "verify") {
+            const r = await api.adminVerifyBackup(asset.uri, asset.name || "backup.zip", passphrase);
+            setRecoveryResult(
+              `✅ Valid backup ${r.encrypted ? "(encrypted)" : ""}\n` +
+                `${r.total_documents.toLocaleString()} documents · ` +
+                `code: ${r.has_code ? "yes" : "no"} · secrets: ${r.has_env ? "yes" : "no"}`,
+            );
+          } else {
+            const r = await api.adminTestSandbox(asset.uri, asset.name || "backup.zip", passphrase);
+            const allMatch = Object.values(r.comparison).every((c) => c.match);
+            const total = Object.values(r.restored).reduce((a, b) => a + b, 0);
+            setRecoveryResult(
+              `🧪 Sandbox restore OK · ${total.toLocaleString()} docs\n` +
+                `Matches production: ${allMatch ? "yes ✓" : "differences found"}\n` +
+                `(sandbox auto-deleted — production untouched)`,
+            );
+          }
+        } catch (e: any) {
+          Alert.alert(mode === "verify" ? "Verify failed" : "Sandbox test failed", String(e?.message || e));
+        } finally {
+          setBusyAction(null);
+        }
+      };
+      // @ts-ignore Alert.prompt is iOS-only
+      if (Alert.prompt) {
+        // @ts-ignore
+        Alert.prompt(
+          "Passphrase",
+          "If this backup is encrypted, paste its passphrase (leave blank for unencrypted).",
+          [
+            { text: "Cancel", style: "cancel" },
+            { text: mode === "verify" ? "Verify" : "Test", onPress: (txt?: string) => runWith((txt || "").trim()) },
+          ],
+          "plain-text",
+        );
+      } else {
+        // Android: attempt without passphrase; backend returns a clear error if needed.
+        await runWith("");
+      }
+    } catch (e: any) {
+      Alert.alert("Could not open file", String(e?.message || e));
+    }
+  }, []);
 
   const downloadBackup = useCallback(async (row: BackupRow) => {
     setBusyAction(`dl-${row.id}`);
@@ -445,6 +569,108 @@ export default function AdminBackupsPage() {
           )}
         </TouchableOpacity>
 
+        {/* ============ DISASTER RECOVERY ============ */}
+        <Text style={styles.sectionTitle}>Disaster Recovery</Text>
+
+        <BevelCard style={styles.banner}>
+          <View style={styles.bannerHeader}>
+            <Ionicons name="shield-checkmark" size={18} color={theme.colors.accent} />
+            <Text style={styles.bannerTitle}>Full encrypted snapshot</Text>
+          </View>
+          <Text style={styles.bannerLine}>
+            One AES-256 password-protected ZIP with ALL code + database +
+            secrets, pushed to Drive with its passphrase saved alongside.
+            Runs automatically every day at 03:00 UTC.
+          </Text>
+          <View style={{ marginTop: 12 }}>
+            <PillButton
+              testID="dr-full-snapshot"
+              label={busyAction === "full-snapshot" ? "WORKING… (a few min)" : "CREATE FULL SNAPSHOT NOW"}
+              icon="cube-outline"
+              variant="active"
+              onPress={runFullSnapshot}
+              disabled={!!busyAction}
+            />
+          </View>
+          {recoveryResult && (
+            <Text style={[styles.bannerLine, { marginTop: 10, color: theme.colors.success }]}>
+              {recoveryResult}
+            </Text>
+          )}
+        </BevelCard>
+
+        {/* Verify / Sandbox (prove a backup works) */}
+        <BevelCard style={styles.banner}>
+          <View style={styles.bannerHeader}>
+            <Ionicons name="flask" size={18} color={theme.colors.accent} />
+            <Text style={styles.bannerTitle}>Prove a backup works</Text>
+          </View>
+          <Text style={styles.bannerLine}>
+            Pick a backup file to verify it, or test-restore it into a throwaway
+            sandbox DB (your live data is never touched).
+          </Text>
+          <View style={{ flexDirection: "row", gap: 8, marginTop: 12, flexWrap: "wrap" }}>
+            <View style={{ flex: 1, minWidth: 140 }}>
+              <PillButton
+                testID="dr-verify"
+                label={busyAction === "verify" ? "…" : "VERIFY FILE"}
+                icon="checkmark-done-outline"
+                variant="active"
+                onPress={() => pickAndCheck("verify")}
+                disabled={!!busyAction}
+              />
+            </View>
+            <View style={{ flex: 1, minWidth: 140 }}>
+              <PillButton
+                testID="dr-sandbox"
+                label={busyAction === "sandbox" ? "…" : "TEST TO SANDBOX"}
+                icon="flask-outline"
+                variant="active"
+                onPress={() => pickAndCheck("sandbox")}
+                disabled={!!busyAction}
+              />
+            </View>
+          </View>
+        </BevelCard>
+
+        {/* Restore from Google Drive */}
+        {gdrive?.connected && (
+          <BevelCard style={styles.banner}>
+            <View style={styles.bannerHeader}>
+              <Ionicons name="cloud-download" size={18} color={theme.colors.danger} />
+              <Text style={styles.bannerTitle}>Restore from Google Drive</Text>
+            </View>
+            <Text style={styles.bannerLine}>
+              Replaces ALL current data with the chosen backup. A safety snapshot
+              is taken first. Encrypted backups auto-use their Drive passphrase.
+            </Text>
+            {(gdriveFiles || [])
+              .filter((f) => f.name.toLowerCase().endsWith(".zip"))
+              .slice(0, 12)
+              .map((f) => (
+                <View key={f.id} style={styles.driveRow}>
+                  <View style={{ flex: 1, paddingRight: 8 }}>
+                    <Text style={styles.driveName} numberOfLines={1}>{f.name}</Text>
+                    <Text style={styles.rowSub}>{formatLocal(f.createdTime)}</Text>
+                  </View>
+                  <TouchableOpacity
+                    style={[styles.actionBtn, styles.actionDelete, { flex: 0, paddingHorizontal: 14 }]}
+                    onPress={() => { setConfirmEmailText(""); setRestoreTarget(f); }}
+                    testID={`dr-restore-${f.id}`}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons name="refresh" size={16} color={theme.colors.danger} />
+                    <Text style={styles.actionTextDanger}>Restore</Text>
+                  </TouchableOpacity>
+                </View>
+              ))}
+            {(!gdriveFiles ||
+              gdriveFiles.filter((f) => f.name.toLowerCase().endsWith(".zip")).length === 0) && (
+              <Text style={[styles.rowSub, { marginTop: 8 }]}>No backup ZIPs in Drive yet.</Text>
+            )}
+          </BevelCard>
+        )}
+
         {/* List of existing backups */}
         <Text style={styles.sectionTitle}>
           Backups ({rows.length})
@@ -513,6 +739,59 @@ export default function AdminBackupsPage() {
 
         <View style={{ height: 40 }} />
       </ScrollView>
+
+      {/* Restore confirmation modal (type-email-to-confirm) */}
+      <Modal
+        visible={!!restoreTarget}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setRestoreTarget(null)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>Confirm restore</Text>
+            <Text style={styles.bannerLine} numberOfLines={2}>
+              {restoreTarget?.name}
+            </Text>
+            <Text style={[styles.bannerLine, { marginTop: 8, color: theme.colors.danger }]}>
+              This WIPES current data and restores this backup. A safety snapshot
+              is taken first. Type your account email to confirm.
+            </Text>
+            <TextInput
+              testID="dr-confirm-email"
+              style={styles.modalInput}
+              placeholder="your@email.com"
+              placeholderTextColor={theme.colors.textMuted}
+              autoCapitalize="none"
+              autoCorrect={false}
+              keyboardType="email-address"
+              value={confirmEmailText}
+              onChangeText={setConfirmEmailText}
+            />
+            <View style={{ flexDirection: "row", gap: 8, marginTop: 14 }}>
+              <TouchableOpacity
+                style={[styles.actionBtn, { borderColor: theme.colors.border, flex: 1 }]}
+                onPress={() => { setRestoreTarget(null); setConfirmEmailText(""); }}
+                disabled={busyAction === "restore-drive"}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="close" size={16} color={theme.colors.textSecondary} />
+                <Text style={[styles.actionTextAccent, { color: theme.colors.textSecondary }]}>Cancel</Text>
+              </TouchableOpacity>
+              <View style={{ flex: 1 }}>
+                <PillButton
+                  testID="dr-confirm-restore"
+                  label={busyAction === "restore-drive" ? "RESTORING…" : "RESTORE"}
+                  icon="refresh"
+                  variant="danger"
+                  onPress={doRestoreFromDrive}
+                  disabled={busyAction === "restore-drive"}
+                />
+              </View>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -571,4 +850,41 @@ const styles = themedStyles((c) => ({
   actionDelete: { borderColor: "#d9534f" },
   actionTextAccent: { color: c.accent, fontSize: 13, fontWeight: "700" },
   actionTextDanger: { color: "#d9534f", fontSize: 13, fontWeight: "700" },
+  driveRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 10,
+    borderTopWidth: 1,
+    borderTopColor: c.borderSubtle,
+    marginTop: 6,
+  },
+  driveName: { fontSize: 13, fontWeight: "700", color: c.textPrimary },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.6)",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 24,
+  },
+  modalCard: {
+    width: "100%",
+    maxWidth: 420,
+    backgroundColor: c.bgSecondary,
+    borderRadius: 14,
+    padding: 18,
+    borderWidth: 1,
+    borderColor: c.border,
+  },
+  modalTitle: { fontSize: 17, fontWeight: "800", color: c.textPrimary, marginBottom: 8 },
+  modalInput: {
+    marginTop: 12,
+    borderWidth: 1,
+    borderColor: c.border,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    color: c.textPrimary,
+    backgroundColor: c.surface,
+    fontSize: 15,
+  },
 }));

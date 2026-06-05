@@ -291,6 +291,77 @@ async def list_backups(db) -> List[Dict[str, Any]]:
     return res.get("files", [])
 
 
+# ---------------------------------------------------------------------------
+# Passphrase companion files (Phase 3 — encrypted backups)
+# ---------------------------------------------------------------------------
+def _passphrase_name(backup_filename: str) -> str:
+    """Companion passphrase filename: '<base> PASSPHRASE.txt'."""
+    base = backup_filename
+    if base.lower().endswith(".zip"):
+        base = base[:-4]
+    return f"{base} PASSPHRASE.txt"
+
+
+async def upload_passphrase(db, *, passphrase: str, backup_filename: str) -> Dict[str, Any]:
+    """Save the backup's passphrase as a sibling .txt file in the Drive folder.
+    Named like the backup but with the word PASSPHRASE so they sort together."""
+    cfg = _settings()
+    drive = await _build_drive_service(db)
+    name = _passphrase_name(backup_filename)
+    content = (
+        "Toolbox Vault — backup passphrase\n"
+        "=================================\n"
+        f"Backup file : {backup_filename}\n"
+        f"Passphrase  : {passphrase}\n\n"
+        "How to use: open the backup .zip with 7-Zip / WinZip / Keka and paste\n"
+        "this passphrase, OR use the app's Restore screen (it can auto-read this\n"
+        "file from Drive).\n"
+    )
+    media = MediaIoBaseUpload(
+        io.BytesIO(content.encode("utf-8")), mimetype="text/plain", resumable=False,
+    )
+    created = drive.files().create(
+        body={
+            "name": name,
+            "parents": [cfg["folder_id"]],
+            "description": "Toolbox Vault backup passphrase",
+        },
+        media_body=media,
+        fields="id,name",
+    ).execute()
+    logger.info("[gdrive] Uploaded passphrase file: %s (id=%s)",
+                created.get("name"), created.get("id"))
+    return created
+
+
+async def fetch_passphrase_for_backup(db, *, file_id: str) -> Optional[str]:
+    """Given a backup file id, locate its companion PASSPHRASE.txt in the same
+    folder and return the parsed passphrase (or None)."""
+    cfg = _settings()
+    drive = await _build_drive_service(db)
+    meta = drive.files().get(fileId=file_id, fields="name").execute()
+    backup_name = meta.get("name", "")
+    if not backup_name:
+        return None
+    pname = _passphrase_name(backup_name).replace("'", "\\'")
+    res = drive.files().list(
+        q=f"'{cfg['folder_id']}' in parents and name='{pname}' and trashed=false",
+        spaces="drive", fields="files(id,name)", pageSize=5,
+    ).execute()
+    files = res.get("files", [])
+    if not files:
+        return None
+    raw = await download_backup(db, file_id=files[0]["id"])
+    text = raw.decode("utf-8", errors="replace")
+    for line in text.splitlines():
+        low = line.lower().strip()
+        if low.startswith("passphrase"):
+            # "Passphrase  : XXXX"
+            if ":" in line:
+                return line.split(":", 1)[1].strip()
+    return text.strip() or None
+
+
 async def delete_backup(db, *, file_id: str) -> None:
     drive = await _build_drive_service(db)
     drive.files().delete(fileId=file_id).execute()
@@ -298,8 +369,11 @@ async def delete_backup(db, *, file_id: str) -> None:
 
 
 async def apply_retention_policy(db) -> Dict[str, Any]:
-    """Enforce: keep at least GDRIVE_BACKUP_KEEP_MIN most-recent backups,
-    delete anything older than GDRIVE_BACKUP_RETENTION_DAYS days.
+    """Enforce retention on the Drive folder:
+      - Always keep the GDRIVE_BACKUP_KEEP_MIN most-recent backup ZIPs (and
+        each one's companion PASSPHRASE.txt), even if older than the cutoff.
+      - Delete everything else (old backups AND old passphrase files) older
+        than GDRIVE_BACKUP_RETENTION_DAYS days.
 
     Returns a summary dict of how many were kept / deleted.
     """
@@ -308,17 +382,26 @@ async def apply_retention_policy(db) -> Dict[str, Any]:
     retention_days = int(cfg["retention_days"])
     cutoff = datetime.now(timezone.utc) - timedelta(days=retention_days)
 
-    files = await list_backups(db)  # already newest-first
+    files = await list_backups(db)  # all files, newest-first
+    backup_zips = [f for f in files if f["name"].lower().endswith(".zip")]
+
+    # Names we must never delete: the keep_min newest backups + their passphrases.
+    keep_names: set = set()
+    for f in backup_zips[:keep_min]:
+        keep_names.add(f["name"])
+        keep_names.add(_passphrase_name(f["name"]))
+
     deleted: List[str] = []
     kept: List[str] = []
-
-    for idx, f in enumerate(files):
-        # Always keep the N most recent
-        if idx < keep_min:
+    for f in files:
+        if f["name"] in keep_names:
             kept.append(f["name"])
             continue
-        # Older than cutoff → delete
-        created = datetime.fromisoformat(f["createdTime"].replace("Z", "+00:00"))
+        try:
+            created = datetime.fromisoformat(f["createdTime"].replace("Z", "+00:00"))
+        except Exception:
+            kept.append(f["name"])
+            continue
         if created < cutoff:
             try:
                 await delete_backup(db, file_id=f["id"])

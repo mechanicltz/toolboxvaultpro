@@ -40,11 +40,14 @@ import io
 import json
 import logging
 import os
+import secrets
+import string
 import tarfile
 import zipfile
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
+import pyzipper
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from fastapi.responses import JSONResponse
 
@@ -55,34 +58,104 @@ logger = logging.getLogger(__name__)
 # Only one restore may run at a time, per process.
 _restore_lock = asyncio.Lock()
 
-# Code-archive exclusions (keep the snapshot lean but complete).
-_FE_EXCLUDE_DIRS = {"node_modules", ".expo", ".git", "dist", "web-build", ".vercel", ".idea"}
+# Code-archive exclusions (keep the snapshot lean but complete). We drop
+# build caches / generated output (rebuildable) but keep ALL hand-written
+# source + design assets so the app can be rebuilt from the snapshot alone.
+_FE_EXCLUDE_DIRS = {
+    "node_modules", ".expo", ".git", "dist", "web-build", ".vercel", ".idea",
+    ".metro-cache", ".turbo", "coverage", ".next", "test-results",
+}
 _BE_EXCLUDE_DIRS = {"__pycache__", ".git", ".pytest_cache", ".mypy_cache", "venv", ".venv"}
 _EXCLUDE_SUFFIXES = (".pyc", ".log", ".DS_Store")
 
 
 # ---------------------------------------------------------------------------
+# Encryption (AES-256 password-protected ZIP) — Phase 3
+#
+# We build the snapshot as a WinZip-AES (AES-256) encrypted ZIP via pyzipper.
+# That format is openable on ANY computer with 7-Zip / WinZip / Keka using the
+# passphrase, so a user can recover their code+data even if this app is gone.
+# A fresh random passphrase is generated per backup; the passphrase itself is
+# stored next to the backup on Google Drive (see gdrive.upload_passphrase).
+# ---------------------------------------------------------------------------
+_PASSPHRASE_ALPHABET = string.ascii_letters + string.digits
+
+
+def generate_passphrase(length: int = 40) -> str:
+    """Cryptographically-strong random passphrase (alnum, no ambiguous syms)."""
+    return "".join(secrets.choice(_PASSPHRASE_ALPHABET) for _ in range(length))
+
+
+def _build_encrypted_zip(members: Dict[str, bytes], passphrase: str) -> bytes:
+    """Pack {arcname: bytes} into an AES-256 password-protected ZIP."""
+    buf = io.BytesIO()
+    with pyzipper.AESZipFile(
+        buf, "w", compression=pyzipper.ZIP_DEFLATED, encryption=pyzipper.WZ_AES
+    ) as zf:
+        zf.setpassword(passphrase.encode("utf-8"))
+        zf.setencryption(pyzipper.WZ_AES, nbits=256)
+        for name, data in members.items():
+            zf.writestr(name, data)
+    return buf.getvalue()
+
+
+def _zip_is_encrypted(raw: bytes) -> bool:
+    """Best-effort: does this ZIP have any AES/encrypted entries?"""
+    try:
+        with pyzipper.AESZipFile(io.BytesIO(raw)) as zf:
+            for zi in zf.infolist():
+                # bit 0 of flag_bits set => encrypted entry
+                if zi.flag_bits & 0x1:
+                    return True
+        return False
+    except Exception:
+        return False
+
+
+# ---------------------------------------------------------------------------
 # Parsing / summarizing backup files
 # ---------------------------------------------------------------------------
-def _parse_backup_bytes(raw: bytes) -> Dict[str, Any]:
-    """Accept a backup file (new ZIP, legacy .json.gz, or plain JSON) and return:
-        { bundle: {coll: [rows]}, backend_env, frontend_env, manifest, has_code }
+def _parse_backup_bytes(raw: bytes, passphrase: Optional[str] = None) -> Dict[str, Any]:
+    """Accept a backup file (encrypted/plain ZIP, legacy .json.gz, or plain JSON)
+    and return:
+        { bundle: {coll: [rows]}, backend_env, frontend_env, manifest,
+          has_code, encrypted }
+
+    If the ZIP is AES-encrypted, a `passphrase` is required; passing the wrong
+    (or no) passphrase raises a clear 400.
     """
     out: Dict[str, Any] = {
         "bundle": {}, "backend_env": None, "frontend_env": None,
-        "manifest": None, "has_code": False,
+        "manifest": None, "has_code": False, "encrypted": False,
     }
     if not raw:
         raise HTTPException(400, "Empty backup file")
 
-    # ZIP (current format)
+    # ZIP (current format) — use pyzipper so we can read BOTH plain and
+    # AES-encrypted archives with one code path.
     if raw[:2] == b"PK":
+        encrypted = _zip_is_encrypted(raw)
+        out["encrypted"] = encrypted
+        if encrypted and not passphrase:
+            raise HTTPException(
+                400,
+                "This backup is encrypted. Provide the passphrase "
+                "(saved in the matching '… PASSPHRASE.txt' file).",
+            )
         try:
-            with zipfile.ZipFile(io.BytesIO(raw)) as zf:
+            with pyzipper.AESZipFile(io.BytesIO(raw)) as zf:
+                if passphrase:
+                    zf.setpassword(passphrase.encode("utf-8"))
                 names = set(zf.namelist())
                 if "db.json" not in names:
                     raise HTTPException(400, "Invalid backup: db.json missing")
-                out["bundle"] = json.loads(zf.read("db.json").decode("utf-8"))
+                try:
+                    out["bundle"] = json.loads(zf.read("db.json").decode("utf-8"))
+                except (RuntimeError, zipfile.BadZipFile) as dec_exc:
+                    # Wrong password yields a decrypt/CRC error from pyzipper.
+                    raise HTTPException(
+                        400, "Could not decrypt backup — wrong passphrase."
+                    ) from dec_exc
                 if "backend.env" in names:
                     out["backend_env"] = zf.read("backend.env").decode("utf-8")
                 if "frontend.env" in names:
@@ -168,8 +241,20 @@ def _tar_dir_bytes(root: str, arcname: str, exclude_dirs: set, exclude_suffixes:
     return buf.getvalue()
 
 
-async def _build_full_snapshot(real_db, *, trigger: str = "manual") -> Dict[str, Any]:
+async def _build_full_snapshot(
+    real_db, *, trigger: str = "manual",
+    encrypt: bool = False, passphrase: Optional[str] = None,
+) -> Dict[str, Any]:
+    """Build the complete code+data+env snapshot.
+
+    When `encrypt` is True a fresh random `passphrase` is generated (unless one
+    is supplied) and the archive is written as an AES-256 password-protected
+    ZIP. The plaintext passphrase is returned in the result so the caller can
+    mirror it to Drive — it is NEVER embedded in the archive.
+    """
     now = datetime.now(timezone.utc)
+    if encrypt and not passphrase:
+        passphrase = generate_passphrase()
 
     bundle: Dict[str, List[Dict[str, Any]]] = {}
     total = 0
@@ -198,7 +283,7 @@ async def _build_full_snapshot(real_db, *, trigger: str = "manual") -> Dict[str,
         fe = _tar_dir_bytes("/app/frontend", "frontend", _FE_EXCLUDE_DIRS, _EXCLUDE_SUFFIXES)
         be = _tar_dir_bytes("/app/backend", "backend", _BE_EXCLUDE_DIRS, _EXCLUDE_SUFFIXES)
         manifest = {
-            "schema_version": 3,
+            "schema_version": 4,
             "kind": "full_snapshot",
             "created_at": now.isoformat(),
             "trigger": trigger,
@@ -208,12 +293,14 @@ async def _build_full_snapshot(real_db, *, trigger: str = "manual") -> Dict[str,
             "document_count": total,
             "includes_code": True,
             "includes_env": bool(backend_env or frontend_env),
+            "encrypted": bool(encrypt),
             "frontend_src_bytes": len(fe),
             "backend_src_bytes": len(be),
         }
         restore_md = (
             "# Toolbox Vault — FULL SNAPSHOT (code + data + env)\n\n"
-            f"Created: {now.isoformat()}\nDocuments: {total:,}\n\n"
+            f"Created: {now.isoformat()}\nDocuments: {total:,}\n"
+            f"Encrypted: {'YES (AES-256, password-protected ZIP)' if encrypt else 'no'}\n\n"
             "## Contents\n"
             "- `db.json` — every MongoDB collection (incl. base64 photos)\n"
             "- `backend.env` / `frontend.env` — secrets & config\n"
@@ -221,22 +308,32 @@ async def _build_full_snapshot(real_db, *, trigger: str = "manual") -> Dict[str,
             "- `code/backend_src.tar.gz` — full FastAPI source (no caches)\n"
             "- `manifest.json` — metadata\n\n"
             "## Restore\n"
-            "- DATA: open the app → if DB is empty you'll see 'Fresh Install Detected' →\n"
-            "  Restore from Backup → pick this ZIP. (Or Admin → Backups → Restore.)\n"
-            "- CODE: extract the tarballs, or pull from GitHub, then rebuild.\n"
+            "- PASSPHRASE: the matching '… PASSPHRASE.txt' file on Google Drive "
+            "holds the password for this archive.\n"
+            "- Open with 7-Zip / WinZip / Keka using that passphrase, OR\n"
+            "- DATA: open the app → if DB is empty you'll see 'Fresh Install "
+            "Detected' → Restore from Backup → pick this ZIP + paste the passphrase.\n"
+            "- CODE: extract the tarballs, then rebuild.\n"
             "- ENV: copy values from backend.env/frontend.env into the new project.\n"
         )
+        members = {
+            "db.json": json.dumps(bundle, default=str).encode("utf-8"),
+            "manifest.json": json.dumps(manifest, indent=2).encode("utf-8"),
+            "RESTORE.md": restore_md.encode("utf-8"),
+            "code/frontend_src.tar.gz": fe,
+            "code/backend_src.tar.gz": be,
+        }
+        if backend_env:
+            members["backend.env"] = backend_env.encode("utf-8")
+        if frontend_env:
+            members["frontend.env"] = frontend_env.encode("utf-8")
+
+        if encrypt:
+            return _build_encrypted_zip(members, passphrase)  # type: ignore[arg-type]
         buf = io.BytesIO()
         with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED, compresslevel=6) as zf:
-            zf.writestr("db.json", json.dumps(bundle, default=str))
-            if backend_env:
-                zf.writestr("backend.env", backend_env)
-            if frontend_env:
-                zf.writestr("frontend.env", frontend_env)
-            zf.writestr("manifest.json", json.dumps(manifest, indent=2))
-            zf.writestr("RESTORE.md", restore_md)
-            zf.writestr("code/frontend_src.tar.gz", fe)
-            zf.writestr("code/backend_src.tar.gz", be)
+            for name, data in members.items():
+                zf.writestr(name, data)
         return buf.getvalue()
 
     zip_bytes = await asyncio.to_thread(_encode)
@@ -248,7 +345,40 @@ async def _build_full_snapshot(real_db, *, trigger: str = "manual") -> Dict[str,
         "size_human": backups._human_size(len(zip_bytes)),
         "document_count": total,
         "created_at": now.isoformat(),
+        "encrypted": bool(encrypt),
+        "passphrase": passphrase,
     }
+
+
+def passphrase_filename(backup_filename: str) -> str:
+    """Companion passphrase filename for a backup, e.g.
+    '06-05-2026 11-18 FULL SNAPSHOT.zip' -> '06-05-2026 11-18 FULL SNAPSHOT PASSPHRASE.txt'.
+    """
+    base = backup_filename
+    if base.lower().endswith(".zip"):
+        base = base[:-4]
+    return f"{base} PASSPHRASE.txt"
+
+
+def selfcheck_snapshot(zip_bytes: bytes, passphrase: Optional[str]) -> Dict[str, Any]:
+    """Open the just-built archive and confirm it is restorable (db.json present,
+    decrypts cleanly, has the users collection). Never writes to any DB.
+    Returns {ok, total_documents, collections, error?}.
+    """
+    try:
+        parsed = _parse_backup_bytes(zip_bytes, passphrase=passphrase)
+        _validate_bundle(parsed["bundle"])
+        summary = _summarize(parsed["bundle"])
+        return {
+            "ok": True,
+            "total_documents": sum(summary.values()),
+            "collections": len(summary),
+            "has_code": parsed["has_code"],
+        }
+    except HTTPException as exc:
+        return {"ok": False, "error": exc.detail}
+    except Exception as exc:  # pragma: no cover
+        return {"ok": False, "error": str(exc)}
 
 
 async def _audit(real_db, action: str, detail: Dict[str, Any]) -> None:
@@ -278,12 +408,19 @@ def make_recovery_router(get_real_db, get_current_user, require_admin) -> APIRou
     # ---------------- Full snapshot ----------------
     @router.post("/admin/backups/full-snapshot")
     async def full_snapshot(user=Depends(get_current_user)):
-        """Build the complete code+data+env snapshot and push it to Google Drive."""
+        """Build the complete ENCRYPTED code+data+env snapshot, push it to Google
+        Drive, mirror the passphrase next to it, run an integrity self-check, and
+        apply 15-day retention."""
         require_admin(user)
         real_db = get_real_db()
-        snap = await _build_full_snapshot(real_db, trigger="manual")
+        snap = await _build_full_snapshot(real_db, trigger="manual", encrypt=True)
+        # Integrity self-check BEFORE we rely on it (decrypt + validate).
+        check = await asyncio.to_thread(
+            selfcheck_snapshot, snap["zip_bytes"], snap["passphrase"]
+        )
         gdrive_uploaded = False
         gdrive_id = None
+        passphrase_uploaded = False
         try:
             import gdrive
             status = await gdrive.get_status(real_db)
@@ -294,11 +431,28 @@ def make_recovery_router(get_real_db, get_current_user, require_admin) -> APIRou
                 )
                 gdrive_uploaded = True
                 gdrive_id = up.get("id")
+                # Mirror the passphrase alongside the backup.
+                try:
+                    await gdrive.upload_passphrase(
+                        real_db,
+                        passphrase=snap["passphrase"],
+                        backup_filename=snap["filename"],
+                    )
+                    passphrase_uploaded = True
+                except Exception as pexc:
+                    logger.warning("Passphrase upload failed: %s", pexc)
+                # Enforce 15-day retention on Drive (backups + passphrases).
+                try:
+                    await gdrive.apply_retention_policy(real_db)
+                except Exception as rexc:
+                    logger.warning("Drive retention after full snapshot failed: %s", rexc)
         except Exception as exc:
             logger.warning("Full snapshot Drive upload failed: %s", exc)
         await _audit(real_db, "full_snapshot", {
             "filename": snap["filename"], "size": snap["size_human"],
+            "encrypted": True, "selfcheck": check,
             "gdrive_uploaded": gdrive_uploaded,
+            "passphrase_uploaded": passphrase_uploaded,
         })
         return {
             "ok": True,
@@ -306,21 +460,30 @@ def make_recovery_router(get_real_db, get_current_user, require_admin) -> APIRou
             "size_human": snap["size_human"],
             "size_bytes": snap["size_bytes"],
             "document_count": snap["document_count"],
+            "encrypted": True,
+            "selfcheck_ok": check.get("ok", False),
+            "selfcheck": check,
             "gdrive_uploaded": gdrive_uploaded,
             "gdrive_id": gdrive_id,
+            "passphrase_uploaded": passphrase_uploaded,
         }
 
     # ---------------- Verify (no writes) ----------------
     @router.post("/admin/backups/verify")
-    async def verify_backup(user=Depends(get_current_user), file: UploadFile = File(...)):
+    async def verify_backup(
+        user=Depends(get_current_user),
+        file: UploadFile = File(...),
+        passphrase: str = Form(""),
+    ):
         require_admin(user)
         raw = await file.read()
-        parsed = _parse_backup_bytes(raw)
+        parsed = _parse_backup_bytes(raw, passphrase=passphrase or None)
         _validate_bundle(parsed["bundle"])
         summary = _summarize(parsed["bundle"])
         return {
             "ok": True,
             "valid": True,
+            "encrypted": parsed.get("encrypted", False),
             "summary": summary,
             "total_documents": sum(summary.values()),
             "has_code": parsed["has_code"],
@@ -330,12 +493,16 @@ def make_recovery_router(get_real_db, get_current_user, require_admin) -> APIRou
 
     # ---------------- Test restore to sandbox ----------------
     @router.post("/admin/backups/test-sandbox")
-    async def test_sandbox(user=Depends(get_current_user), file: UploadFile = File(...)):
+    async def test_sandbox(
+        user=Depends(get_current_user),
+        file: UploadFile = File(...),
+        passphrase: str = Form(""),
+    ):
         """Restore into a throwaway sandbox DB and compare to production. Prod untouched."""
         require_admin(user)
         real_db = get_real_db()
         raw = await file.read()
-        parsed = _parse_backup_bytes(raw)
+        parsed = _parse_backup_bytes(raw, passphrase=passphrase or None)
         _validate_bundle(parsed["bundle"])
         sandbox = _sandbox_db(real_db)
         # Clean sandbox first
@@ -383,12 +550,13 @@ def make_recovery_router(get_real_db, get_current_user, require_admin) -> APIRou
         user=Depends(get_current_user),
         file: UploadFile = File(...),
         confirm_email: str = Form(""),
+        passphrase: str = Form(""),
     ):
         require_admin(user)
         if confirm_email.strip().lower() != _user_email(user):
             raise HTTPException(400, "Confirmation email does not match your account.")
         raw = await file.read()
-        parsed = _parse_backup_bytes(raw)
+        parsed = _parse_backup_bytes(raw, passphrase=passphrase or None)
         return await _do_production_restore(
             real_db=get_real_db(), parsed=parsed,
             source="upload", actor=_user_email(user),
@@ -413,14 +581,23 @@ def make_recovery_router(get_real_db, get_current_user, require_admin) -> APIRou
 
     @router.post("/admin/backups/restore-from-drive")
     async def restore_from_drive(user=Depends(get_current_user),
-                                 file_id: str = Form(...), confirm_email: str = Form("")):
+                                 file_id: str = Form(...), confirm_email: str = Form(""),
+                                 passphrase: str = Form("")):
         require_admin(user)
         if confirm_email.strip().lower() != _user_email(user):
             raise HTTPException(400, "Confirmation email does not match your account.")
         real_db = get_real_db()
         import gdrive
         raw = await gdrive.download_backup(real_db, file_id=file_id)
-        parsed = _parse_backup_bytes(raw)
+        pw = passphrase or None
+        # If the archive is encrypted and no passphrase supplied, auto-fetch the
+        # companion '… PASSPHRASE.txt' from the same Drive folder.
+        if pw is None and _zip_is_encrypted(raw):
+            try:
+                pw = await gdrive.fetch_passphrase_for_backup(real_db, file_id=file_id)
+            except Exception as exc:
+                logger.warning("Auto passphrase fetch failed: %s", exc)
+        parsed = _parse_backup_bytes(raw, passphrase=pw)
         return await _do_production_restore(
             real_db=real_db, parsed=parsed,
             source=f"drive:{file_id}", actor=_user_email(user),
@@ -434,13 +611,17 @@ def make_recovery_router(get_real_db, get_current_user, require_admin) -> APIRou
         return {"fresh": user_count == 0, "user_count": user_count}
 
     @router.post("/bootstrap/restore")
-    async def bootstrap_restore(file: UploadFile = File(...), dry_run: bool = Form(False)):
+    async def bootstrap_restore(
+        file: UploadFile = File(...),
+        dry_run: bool = Form(False),
+        passphrase: str = Form(""),
+    ):
         real_db = get_real_db()
         user_count = await real_db.users.count_documents({})
         if user_count > 0 and not dry_run:
             raise HTTPException(410, "Bootstrap window closed — the database already has data.")
         raw = await file.read()
-        parsed = _parse_backup_bytes(raw)
+        parsed = _parse_backup_bytes(raw, passphrase=passphrase or None)
         _validate_bundle(parsed["bundle"])
         if dry_run:
             sandbox = _sandbox_db(real_db)

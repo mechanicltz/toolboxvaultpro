@@ -112,10 +112,65 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Perf Phase A — backend optimizations: /stats $facet, /aggregate $facet pipeline, claim-purge throttle. Verify counts/sums correctness across free-cap, lifetime-PRO, and regular paths."
+    - "Disaster Recovery / Backup system — encryption + passphrase-to-Drive + restore (Phases 1-3)"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
+
+backup_disaster_recovery:
+  - task: "Encrypted full snapshot + passphrase-to-Drive + restore engine"
+    implemented: true
+    working: true
+    file: "/app/backend/recovery.py, /app/backend/gdrive.py, /app/backend/backups.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: true
+        agent: "main"
+        comment: >
+          Implemented Phases 1-3 of the backup/disaster-recovery system.
+          (1) Daily scheduler now builds the FULL encrypted snapshot (code+data+env)
+          as an AES-256 password-protected ZIP (pyzipper, WZ_AES), self-checks it,
+          uploads it to Google Drive, mirrors the passphrase as a sibling
+          '<name> PASSPHRASE.txt', and applies 15-day Drive retention (keep_min 3).
+          (2) _parse_backup_bytes now reads encrypted ZIPs with a passphrase and
+          rejects wrong/missing passphrase with a clear 400.
+          (3) New/updated endpoints: POST /api/admin/backups/full-snapshot (encrypt
+          + upload + passphrase + selfcheck + retention), /verify (passphrase form),
+          /test-sandbox (passphrase form, throwaway DB), /restore + /{id}/restore +
+          /restore-from-drive (restore-from-drive auto-fetches the Drive passphrase),
+          GET /api/bootstrap/status, POST /api/bootstrap/restore (passphrase form,
+          dry_run supported). Rescue CLI supports --passphrase + Drive auto-fetch.
+          MANUALLY VALIDATED end-to-end with real Drive data: built 540MB encrypted
+          snapshot, uploaded + passphrase companion, auto-fetched passphrase from
+          Drive, downloaded, decrypted, validated 223 docs (code+env present),
+          wrong-passphrase rejected, retention=15/keep_min=3 confirmed.
+          DESTRUCTIVE endpoints (production restore / non-dry-run bootstrap) were
+          NOT executed against live data and MUST NOT be by the testing agent.
+
+frontend_disaster_recovery:
+  - task: "Admin Backups Disaster Recovery UI + Bootstrap (Fresh Install) screen"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/app/admin/backups.tsx, /app/frontend/app/bootstrap.tsx, /app/frontend/app/_layout.tsx, /app/frontend/src/api.ts"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: >
+          Added a 'Disaster Recovery' section to Admin → Backups: CREATE FULL
+          SNAPSHOT button, VERIFY FILE + TEST TO SANDBOX (expo-document-picker),
+          and 'Restore from Google Drive' list with a type-email-to-confirm modal.
+          Added a public 'Fresh Install Detected' bootstrap screen (app/bootstrap.tsx)
+          that restores from an uploaded ZIP + passphrase (with PREVIEW/dry-run).
+          _layout.tsx routes logged-out users to /bootstrap when the DB is empty
+          (GET /bootstrap/status), else /login. Login & forgot-password untouched.
+          Needs UI verification (render + reachability). DO NOT execute a real
+          production restore from the UI during testing (it wipes data).
+
 
 backend_perf_phase_a:
   - task: "Performance — /stats, /aggregate, /warranty-claims/summary rewrites"
