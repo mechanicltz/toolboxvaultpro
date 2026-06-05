@@ -62,7 +62,7 @@ export function IndustrialBanner({ title, subtitle, rightSlot, leftSlot }: Props
           fadeDuration={0}
         />
         <Text
-          style={[styles.version, { marginRight: nameplateW * 0.16, marginTop: -nameplateH * 0.13 }]}
+          style={[styles.version, { marginRight: nameplateW * 0.16, marginTop: -nameplateH * 0.22 }]}
           allowFontScaling={false}
         >
           {APP_VERSION_LABEL}

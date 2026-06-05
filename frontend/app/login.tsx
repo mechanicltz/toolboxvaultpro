@@ -39,6 +39,7 @@ import {
   hasBeenPromptedForBiometric, markBiometricPrompted,
 } from "../src/biometric";
 import { useTbvSkinsReady } from "../src/tbv/useTbvSkins";
+import { APP_VERSION_LABEL } from "../src/version";
 
 // =====================================================================
 // Cropped skin sources (opaque-bounds only — fill their containers)
@@ -299,11 +300,27 @@ export default function LoginScreen() {
                   style={{ width: logoW, height: logoH }}
                   resizeMode="contain"
                 />
-                <Image
-                  source={SKIN.nameplate}
-                  style={{ width: nameplateW, height: nameplateH, marginTop: headerGap * 0.08 }}
-                  resizeMode="contain"
-                />
+                <View style={{ width: nameplateW, marginTop: headerGap * 0.08 }}>
+                  <Image
+                    source={SKIN.nameplate}
+                    style={{ width: nameplateW, height: nameplateH }}
+                    resizeMode="contain"
+                  />
+                  <Text
+                    style={{
+                      alignSelf: "flex-end",
+                      marginRight: nameplateW * 0.16,
+                      marginTop: -nameplateH * 0.22,
+                      color: "#F97316",
+                      fontSize: 11,
+                      fontWeight: "800",
+                      letterSpacing: 1,
+                    }}
+                    allowFontScaling={false}
+                  >
+                    {APP_VERSION_LABEL}
+                  </Text>
+                </View>
                 <Text
                   style={[styles.tagline, { fontSize: tagFont, maxWidth: WORK_W * 0.96, marginTop: headerGap * 0.06 }]}
                   numberOfLines={1}
