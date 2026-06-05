@@ -308,7 +308,7 @@ function ContactActions({ raw }: { raw?: string | null }) {
 }
 
 const styles = themedStyles((c) => ({
-  container: { flex: 1, backgroundColor: c.bg },
+  container: { flex: 1, backgroundColor: c.canvas },
   detailActionsRow: { flexDirection: "row", justifyContent: "flex-end", paddingHorizontal: 16, paddingTop: 10, paddingBottom: 4, gap: 8 },
   topBar: {
     flexDirection: "row",

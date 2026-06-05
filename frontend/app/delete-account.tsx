@@ -309,7 +309,7 @@ export default function DeleteAccountScreen() {
 }
 
 const styles = themedStyles((c) => ({
-  container: { flex: 1, backgroundColor: c.bg },
+  container: { flex: 1, backgroundColor: c.canvas },
   body: { flex: 1, padding: 20, justifyContent: "center" },
   warnCard: {
     backgroundColor: "#2a0d0d",

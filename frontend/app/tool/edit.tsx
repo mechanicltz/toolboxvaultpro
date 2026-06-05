@@ -1472,7 +1472,7 @@ export default function ToolEdit() {
 }
 
 const styles = themedStyles((c) => ({
-  container: { flex: 1, backgroundColor: c.bg },
+  container: { flex: 1, backgroundColor: c.canvas },
   topBar: {
     flexDirection: "row", alignItems: "center", justifyContent: "space-between",
     paddingHorizontal: 12, paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: c.border,

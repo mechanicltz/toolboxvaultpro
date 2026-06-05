@@ -220,7 +220,7 @@ function Section({ label, children }: { label: string; children: React.ReactNode
 }
 
 const styles = themedStyles((c) => ({
-  container: { flex: 1, backgroundColor: c.bg },
+  container: { flex: 1, backgroundColor: c.canvas },
   loading: { flex: 1, alignItems: "center", justifyContent: "center" },
   header: {
     flexDirection: "row",

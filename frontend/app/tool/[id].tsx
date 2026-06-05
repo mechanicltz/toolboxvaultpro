@@ -3578,7 +3578,7 @@ const qsStyles = themedStyles((c) => ({
 
 
 const styles = themedStyles((c) => ({
-  container: { flex: 1, backgroundColor: c.bg },
+  container: { flex: 1, backgroundColor: c.canvas },
   bodyContainer: { paddingHorizontal: 16, paddingBottom: 12 },
   infoCard: {
     backgroundColor: c.bgSecondary,

@@ -53,7 +53,7 @@ import { Anton_400Regular } from "@expo-google-fonts/anton";
 
 // Manual verification beacon — bump this on every change so we can confirm
 // the device is actually showing the latest bundle. Rendered top-right of Home.
-const HOME_BUILD = "BUILD 150";
+const HOME_BUILD = "BUILD 151";
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -1685,7 +1685,7 @@ const styles = themedStyles((c) => ({
     marginTop: 14,
   },
   // ---- PLAIN MODE (non-skinned) Home layout ----
-  plainSafe: { flex: 1, backgroundColor: c.bg },
+  plainSafe: { flex: 1, backgroundColor: c.canvas },
   plainContent: { padding: 16, paddingBottom: 110, gap: 10 },
   plainBanner: {
     flexDirection: "row",

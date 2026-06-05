@@ -513,7 +513,7 @@ function RowContactChips({ raw }: { raw?: string | null }) {
 }
 
 const styles = themedStyles((c) => ({
-  container: { flex: 1, backgroundColor: c.bg },
+  container: { flex: 1, backgroundColor: c.canvas },
   actionsRow: {
     flexDirection: "row",
     justifyContent: "flex-end",

@@ -890,7 +890,7 @@ function Stat({ label, value, color }: { label: string; value: string; color?: s
 }
 
 const styles = themedStyles((c) => ({
-  container: { flex: 1, backgroundColor: c.bg },
+  container: { flex: 1, backgroundColor: c.canvas },
   topBar: { flexDirection: "row", alignItems: "center", paddingHorizontal: 20, paddingVertical: 12, borderBottomColor: c.border, borderBottomWidth: 1 },
   wishActionsRow: { flexDirection: "row", justifyContent: "flex-end", paddingHorizontal: 16, paddingTop: 10, paddingBottom: 4, gap: 8 },
   title: { color: c.textPrimary, fontSize: 14, fontWeight: "900", letterSpacing: 2 },

@@ -23,6 +23,11 @@ import { Platform } from "react-native";
 
 export type ColorPalette = {
   bg: string;
+  // Full-screen page background used by every screen's ROOT container. For
+  // dark-family themes (Industrial Orange/Pink, Plain Dark) this is
+  // "transparent" so the global industrial photo (AppBackground) shows through
+  // on every page. Light theme keeps its solid page colour (no photo).
+  canvas: string;
   bgSecondary: string;
   surface: string;
   surfaceAlt: string;
@@ -73,6 +78,7 @@ export type ColorPalette = {
 // Original Industrial Dark — orange/black workshop with 3D depth.
 export const darkPalette: ColorPalette = {
   bg: "#0A0A0A",
+  canvas: "transparent",
   bgSecondary: "#1A1A1A",
   surface: "#0F0F0F",
   surfaceAlt: "#171717",
@@ -127,6 +133,7 @@ export const darkPalettePink: ColorPalette = {
 // AAA contrast against both the grey-blue background and the white cards.
 export const lightPalette: ColorPalette = {
   bg: "#F1F4F8",              // soft cool grey-blue page background
+  canvas: "#F1F4F8",         // light theme keeps a solid page bg (NO photo)
   bgSecondary: "#FFFFFF",     // raised cards
   surface: "#FFFFFF",         // input fields / chips
   surfaceAlt: "#E9EDF3",      // alternate surface (table stripes, etc.)

@@ -18,6 +18,7 @@ import { ReportsFab } from "../src/ReportsFab";
 import { AuthProvider, useAuth } from "../src/AuthContext";
 import { BiometricLockGate } from "../src/BiometricLockGate";
 import { ResponsiveContainer } from "../src/ResponsiveContainer";
+import { AppBackground } from "../src/AppBackground";
 import { NetworkProvider, OfflineBanner } from "../src/NetworkProvider";
 import { theme } from "../src/theme";
 import { initRevenueCat, identifyRevenueCatUser, getCurrentCustomerInfo, buildSyncPayload } from "../src/revenuecat";
@@ -242,13 +243,18 @@ function ShellNav() {
 
   return (
     <View style={{ flex: 1 }}>
+      {/* Global industrial photo backdrop — shows on every page for all
+          non-light themes (Industrial Orange/Pink, Plain Dark). Renders
+          nothing in light theme. Sits behind all content; the bottom bar and
+          screens paint on top. */}
+      <AppBackground />
       <OfflineBanner />
       <View style={{ flex: 1 }}>
         <ResponsiveContainer variant="wide">
           <Stack
             screenOptions={{
               headerShown: false,
-              contentStyle: { backgroundColor: c.bg },
+              contentStyle: { backgroundColor: c.canvas },
               animation: "slide_from_right",
             }}
           >

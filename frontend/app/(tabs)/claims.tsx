@@ -444,7 +444,7 @@ function Stat({ label, value, color }: { label: string; value: number; color?: s
 
 
 const styles = themedStyles((c) => ({
-  container: { flex: 1, backgroundColor: c.bg },
+  container: { flex: 1, backgroundColor: c.canvas },
   statRow: {
     flexDirection: "row",
     gap: 6,

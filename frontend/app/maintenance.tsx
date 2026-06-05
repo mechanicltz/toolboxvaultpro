@@ -192,7 +192,7 @@ export default function MaintenanceScreen() {
 }
 
 const styles = themedStyles((c) => ({
-  container: { flex: 1, backgroundColor: c.bg },
+  container: { flex: 1, backgroundColor: c.canvas },
   topBar: {
     flexDirection: "row",
     alignItems: "center",

@@ -366,7 +366,7 @@ function ChipSelect({ items, value, onChange, testIDPrefix }: { items: any[]; va
 
 
 const styles = themedStyles((c) => ({
-  container: { flex: 1, backgroundColor: c.bg },
+  container: { flex: 1, backgroundColor: c.canvas },
   actionsRow: {
     flexDirection: "row",
     justifyContent: "flex-end",

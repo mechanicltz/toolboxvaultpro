@@ -1217,7 +1217,7 @@ function SummaryRow({ k, v }: { k: string; v: string }) {
 // ---- Styles -------------------------------------------------------------
 
 const styles = themedStyles((c) => ({
-  container: { flex: 1, backgroundColor: c.bg },
+  container: { flex: 1, backgroundColor: c.canvas },
   center: { flex: 1, alignItems: "center", justifyContent: "center" },
   header: {
     flexDirection: "row",

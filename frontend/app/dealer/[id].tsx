@@ -879,7 +879,7 @@ function CopyableRow({
 }
 
 const styles = themedStyles((c) => ({
-  container: { flex: 1, backgroundColor: c.bg },
+  container: { flex: 1, backgroundColor: c.canvas },
   detailActionsRowDealer: { flexDirection: "row", justifyContent: "flex-end", gap: 8, paddingHorizontal: 16, paddingTop: 10, paddingBottom: 4 },
   topBar: {
     flexDirection: "row",

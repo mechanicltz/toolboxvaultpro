@@ -11,7 +11,7 @@ export default function TabsLayout() {
     <Stack
       screenOptions={{
         headerShown: false,
-        contentStyle: { backgroundColor: c.bg },
+        contentStyle: { backgroundColor: c.canvas },
       }}
     />
   );

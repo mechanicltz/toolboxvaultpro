@@ -706,7 +706,7 @@ function CountPill({ label, value, color }: { label: string; value: number; colo
 }
 
 const styles = themedStyles((c) => ({
-  container: { flex: 1, backgroundColor: c.bg },
+  container: { flex: 1, backgroundColor: c.canvas },
   topBar: {
     flexDirection: "row",
     alignItems: "center",

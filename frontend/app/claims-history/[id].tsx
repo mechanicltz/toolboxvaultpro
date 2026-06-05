@@ -167,7 +167,7 @@ export default function ClaimsHistoryPage() {
 }
 
 const styles = themedStyles((c) => ({
-  container: { flex: 1, backgroundColor: c.bg },
+  container: { flex: 1, backgroundColor: c.canvas },
   headerBar: {
     flexDirection: "row",
     alignItems: "center",
