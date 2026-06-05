@@ -53,7 +53,7 @@ import { Anton_400Regular } from "@expo-google-fonts/anton";
 
 // Manual verification beacon — bump this on every change so we can confirm
 // the device is actually showing the latest bundle. Rendered top-right of Home.
-const HOME_BUILD = "BUILD 136";
+const HOME_BUILD = "BUILD 137";
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -474,9 +474,9 @@ export default function HomeScreen() {
         </Text>
         <IndustrialBanner
           title="SUMMARY"
-          subtitle={`${APP_VERSION_LABEL}${
-            userStats ? `  ·  FREE ${userStats.free} / SUB ${userStats.subscribed}` : ""
-          }`}
+          subtitle={
+            userStats ? `FREE ${userStats.free} / SUB ${userStats.subscribed}` : undefined
+          }
         />
         <ScrollView
           contentContainerStyle={styles.plainContent}
@@ -611,9 +611,9 @@ export default function HomeScreen() {
         {/* Unified nameplate header (same on every page / theme). */}
         <IndustrialBanner
           title="SUMMARY"
-          subtitle={`${APP_VERSION_LABEL}${
-            userStats ? `  ·  FREE ${userStats.free} / SUB ${userStats.subscribed}` : ""
-          }`}
+          subtitle={
+            userStats ? `FREE ${userStats.free} / SUB ${userStats.subscribed}` : undefined
+          }
         />
 
       <ScrollView

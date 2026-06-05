@@ -27,6 +27,7 @@ import React from "react";
 import { View, Text, StyleSheet, Image, useWindowDimensions } from "react-native";
 import { SKIN } from "../tbv/skins";
 import { useColors } from "../themeContext";
+import { APP_VERSION_LABEL } from "../version";
 
 type Props = {
   /** Page name shown under the nameplate (uppercased automatically). */
@@ -50,13 +51,23 @@ export function IndustrialBanner({ title, subtitle, rightSlot, leftSlot }: Props
   const nameplateH = nameplateW / 3.746;
   return (
     <View style={styles.wrap}>
-      {/* The constant brand nameplate — same size + look as the login page. */}
-      <Image
-        source={SKIN.nameplate}
-        style={[styles.nameplate, { width: nameplateW, height: nameplateH }]}
-        resizeMode="contain"
-        fadeDuration={0}
-      />
+      {/* The constant brand nameplate — same size + look as the login page.
+          The app version is stamped just under the "VAULT" word (right side of
+          the plate), so it appears on every screen as part of the header. */}
+      <View style={{ width: nameplateW, alignSelf: "center", marginBottom: 6 }}>
+        <Image
+          source={SKIN.nameplate}
+          style={{ width: nameplateW, height: nameplateH }}
+          resizeMode="contain"
+          fadeDuration={0}
+        />
+        <Text
+          style={[styles.version, { marginRight: nameplateW * 0.16, marginTop: -nameplateH * 0.13 }]}
+          allowFontScaling={false}
+        >
+          {APP_VERSION_LABEL}
+        </Text>
+      </View>
 
       {/* Label row: back (left) · PAGE NAME (center) · action (right). */}
       <View style={styles.labelRow}>
@@ -91,6 +102,13 @@ const styles = StyleSheet.create({
   nameplate: {
     alignSelf: "center",
     marginBottom: 6,
+  },
+  version: {
+    alignSelf: "flex-end",
+    color: ACCENT,
+    fontSize: 11,
+    fontWeight: "800",
+    letterSpacing: 1,
   },
   labelRow: {
     flexDirection: "row",
