@@ -515,6 +515,19 @@ export const styles = themedStyles((c) => ({
     fontSize: 12,
     fontWeight: "700",
   },
+  pdDealerPaySub: {
+    color: c.accent,
+    fontSize: 10,
+    fontWeight: "700",
+    marginTop: 2,
+  },
+  detailsDealerPaySub: {
+    color: c.accent,
+    fontFamily: "Rajdhani_600SemiBold",
+    fontSize: 11,
+    letterSpacing: 0.3,
+    marginTop: 1,
+  },
   pdAdjustChip: {
     paddingHorizontal: 8,
     paddingVertical: 4,

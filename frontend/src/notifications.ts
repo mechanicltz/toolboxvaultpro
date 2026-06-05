@@ -17,7 +17,7 @@ import * as Notifications from "expo-notifications";
 import { Platform } from "react-native";
 import { nextRouteDate } from "./route";
 import { loadPrefs } from "./prefs";
-import { api, UpcomingPayment } from "./api";
+import { api, DealerPaymentDue } from "./api";
 
 // ---- Foreground behaviour: show banner+sound even when the app is open. ----
 Notifications.setNotificationHandler({
@@ -275,9 +275,9 @@ export async function reschedulePaymentRemindersNow(): Promise<void> {
   const hour = prefs.dealer_notification_hour ?? 7;
   const minute = prefs.dealer_notification_minute ?? 0;
 
-  let items: UpcomingPayment[] = [];
+  let items: DealerPaymentDue[] = [];
   try {
-    const res = await api.upcomingPayments(HORIZON_DAYS);
+    const res = await api.dealerPaymentsUpcoming(HORIZON_DAYS);
     items = res.items || [];
   } catch {
     return;
@@ -288,8 +288,9 @@ export async function reschedulePaymentRemindersNow(): Promise<void> {
     const parts = (it.next_due_date || "").split("-").map(Number);
     const [y, m, d] = parts;
     if (!y || !m || !d) continue;
-    const who = it.dealer_name ? `${it.dealer_name} — ` : "";
-    const money = `${who}${it.label} ($${Number(it.amount).toFixed(2)})`;
+    const who = it.dealer_name ? `${it.dealer_name} ` : "";
+    const acct = it.account_label || "";
+    const money = `${who}${acct} payment ($${Number(it.amount).toFixed(2)})`;
 
     if (it.remind_day_of) {
       const dayOf = new Date(y, m - 1, d, hour, minute, 0, 0);
@@ -297,9 +298,14 @@ export async function reschedulePaymentRemindersNow(): Promise<void> {
         await Notifications.scheduleNotificationAsync({
           content: {
             title: "💳 Payment due today",
-            body: `${money} is due today.`,
+            body: `${money} is due today — open the app to confirm if it was processed.`,
             sound: "default",
-            data: { tag: PAYMENT_TAG, kind: "day-of", id: it.id },
+            data: {
+              tag: PAYMENT_TAG,
+              kind: "day-of",
+              dealer_id: it.dealer_id,
+              account: it.account,
+            },
           },
           trigger: {
             type: Notifications.SchedulableTriggerInputTypes.DATE,
@@ -319,7 +325,12 @@ export async function reschedulePaymentRemindersNow(): Promise<void> {
             title: "💳 Payment tomorrow",
             body: `${money} is due tomorrow.`,
             sound: "default",
-            data: { tag: PAYMENT_TAG, kind: "day-before", id: it.id },
+            data: {
+              tag: PAYMENT_TAG,
+              kind: "day-before",
+              dealer_id: it.dealer_id,
+              account: it.account,
+            },
           },
           trigger: {
             type: Notifications.SchedulableTriggerInputTypes.DATE,

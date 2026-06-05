@@ -440,6 +440,10 @@ class Dealer(BaseModel):
     current_agent_id: Optional[str] = None
     credit_balance: float = 0.0
     personal_balance: float = 0.0
+    # Optional recurring-payment schedule attached directly to each account.
+    # Shape = AccountSchedule. None means "no schedule set" for that account.
+    credit_schedule: Optional[Dict[str, Any]] = None
+    personal_schedule: Optional[Dict[str, Any]] = None
     transactions: List[Dict[str, Any]] = []  # list of BalanceTransaction
     created_at: str = Field(default_factory=now_iso)
 
@@ -488,6 +492,19 @@ class DealerUpdate(BaseModel):
     route_frequency: Optional[str] = None
     route_day_of_week: Optional[str] = None
     route_anchor_date: Optional[str] = None
+
+
+class AccountSchedule(BaseModel):
+    """A recurring-payment schedule attached to ONE dealer account (the Truck/
+    personal account or the Credit account). Drives reminders + the in-app
+    'was it processed?' confirmation flow."""
+    enabled: bool = False
+    amount: float = 0.0
+    frequency: str = "monthly"          # weekly | biweekly | monthly
+    next_due_date: Optional[str] = ""   # YYYY-MM-DD
+    remind_day_before: bool = True
+    remind_day_of: bool = True
+    last_paid_date: Optional[str] = ""
 
 
 # ---------- Dealer Payment Accounts (scheduled recurring payments) ----------
@@ -1532,6 +1549,133 @@ def _advance_payment_date(date_str: str, frequency: str) -> str:
         day = min(d.day, calendar.monthrange(year, month)[1])
         d = d.replace(year=year, month=month, day=day)
     return d.isoformat()
+
+
+# ---------- Per-account payment schedules (Truck / Credit) ----------
+def _schedule_field(account: str) -> str:
+    return "credit_schedule" if account == "credit" else "personal_schedule"
+
+
+@api_router.put("/dealers/{dealer_id}/accounts/{account}/schedule", response_model=Dealer)
+async def set_account_schedule(
+    dealer_id: str,
+    account: str,
+    payload: AccountSchedule,
+    user: User = Depends(get_current_user),
+):
+    """Create / update the recurring-payment schedule on a single dealer account
+    (account = 'credit' or 'personal'/truck)."""
+    if account not in ("credit", "personal"):
+        raise HTTPException(400, "account must be 'credit' or 'personal'")
+    d = await db.dealers.find_one({"id": dealer_id}, {"_id": 0})
+    if not d:
+        raise HTTPException(404, "Dealer not found")
+    if payload.frequency not in PAYMENT_FREQUENCIES:
+        raise HTTPException(400, "frequency must be weekly, biweekly, or monthly")
+    sched = payload.model_dump()
+    if not sched.get("next_due_date"):
+        sched["next_due_date"] = ""
+    await db.dealers.update_one(
+        {"id": dealer_id}, {"$set": {_schedule_field(account): sched}},
+    )
+    new = await db.dealers.find_one({"id": dealer_id}, {"_id": 0})
+    return Dealer(**new)
+
+
+@api_router.delete("/dealers/{dealer_id}/accounts/{account}/schedule", response_model=Dealer)
+async def clear_account_schedule(
+    dealer_id: str, account: str, user: User = Depends(get_current_user),
+):
+    if account not in ("credit", "personal"):
+        raise HTTPException(400, "account must be 'credit' or 'personal'")
+    d = await db.dealers.find_one({"id": dealer_id}, {"_id": 0})
+    if not d:
+        raise HTTPException(404, "Dealer not found")
+    await db.dealers.update_one(
+        {"id": dealer_id}, {"$set": {_schedule_field(account): None}},
+    )
+    new = await db.dealers.find_one({"id": dealer_id}, {"_id": 0})
+    return Dealer(**new)
+
+
+@api_router.post("/dealers/{dealer_id}/accounts/{account}/confirm-payment", response_model=Dealer)
+async def confirm_account_payment(
+    dealer_id: str, account: str, user: User = Depends(get_current_user),
+):
+    """Record the scheduled payment as made today: logs a 'payment' transaction
+    (decreases the balance), then advances next_due_date to the next cycle."""
+    if account not in ("credit", "personal"):
+        raise HTTPException(400, "account must be 'credit' or 'personal'")
+    d = await db.dealers.find_one({"id": dealer_id}, {"_id": 0})
+    if not d:
+        raise HTTPException(404, "Dealer not found")
+    sched = d.get(_schedule_field(account)) or {}
+    if not sched or not sched.get("enabled"):
+        raise HTTPException(400, "No active payment schedule for this account")
+    amount = float(sched.get("amount") or 0)
+    if amount <= 0:
+        raise HTTPException(400, "Schedule amount must be greater than 0")
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    due = sched.get("next_due_date") or today
+    tx = BalanceTransaction(
+        account=account, type="payment", amount=amount,
+        note="Scheduled payment", date=today,
+    ).model_dump()
+    txs = list(d.get("transactions") or [])
+    txs.append(tx)
+    field = "credit_balance" if account == "credit" else "personal_balance"
+    new_balance = float(d.get(field) or 0.0) - amount
+    try:
+        sched["next_due_date"] = _advance_payment_date(due, sched.get("frequency", "monthly"))
+    except Exception:
+        sched["next_due_date"] = _advance_payment_date(today, sched.get("frequency", "monthly"))
+    sched["last_paid_date"] = today
+    await db.dealers.update_one(
+        {"id": dealer_id},
+        {"$set": {field: new_balance, "transactions": txs, _schedule_field(account): sched}},
+    )
+    new = await db.dealers.find_one({"id": dealer_id}, {"_id": 0})
+    return Dealer(**new)
+
+
+@api_router.get("/dealers/payments/upcoming")
+async def dealer_payments_upcoming(days: int = 7, user: User = Depends(get_current_user)):
+    """Account schedules due within `days` days (negative days_until = overdue).
+    Powers the Home banner, the per-dealer sub-line and local reminders."""
+    dealers = await db.dealers.find({}, {"_id": 0}).to_list(2000)
+    today = datetime.now(timezone.utc).date()
+    horizon = today + timedelta(days=max(0, days))
+    out = []
+    for d in dealers:
+        for account, label in (("personal", "Truck"), ("credit", "Credit")):
+            sched = d.get(_schedule_field(account)) or {}
+            if not sched or not sched.get("enabled"):
+                continue
+            nd = sched.get("next_due_date")
+            if not nd:
+                continue
+            try:
+                due = datetime.strptime(nd, "%Y-%m-%d").date()
+            except Exception:
+                continue
+            if due <= horizon:
+                out.append({
+                    "id": f"{d.get('id')}:{account}",
+                    "dealer_id": d.get("id"),
+                    "dealer_name": d.get("name", ""),
+                    "account": account,
+                    "account_label": label,
+                    "amount": float(sched.get("amount") or 0),
+                    "frequency": sched.get("frequency"),
+                    "next_due_date": nd,
+                    "remind_day_before": bool(sched.get("remind_day_before", True)),
+                    "remind_day_of": bool(sched.get("remind_day_of", True)),
+                    "days_until": (due - today).days,
+                    "overdue": due < today,
+                })
+    out.sort(key=lambda x: x["next_due_date"])
+    return {"days": days, "count": len(out), "items": out}
+
 
 
 def _catch_up_autopay(acct: dict) -> dict:

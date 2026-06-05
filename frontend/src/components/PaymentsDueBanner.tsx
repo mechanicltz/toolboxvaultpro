@@ -6,7 +6,7 @@ import { Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter, useFocusEffect } from "expo-router";
 import { theme } from "../theme";
-import { api, UpcomingPayment } from "../api";
+import { api, DealerPaymentDue } from "../api";
 import { usePrefs } from "../prefs";
 import { BevelCard } from "./BevelCard";
 import { themedStyles } from "../themeContext";
@@ -14,13 +14,13 @@ import { themedStyles } from "../themeContext";
 export function PaymentsDueBanner() {
   const router = useRouter();
   const { prefs } = usePrefs();
-  const [items, setItems] = useState<UpcomingPayment[]>([]);
+  const [items, setItems] = useState<DealerPaymentDue[]>([]);
 
   useFocusEffect(
     useCallback(() => {
       let alive = true;
       api
-        .upcomingPayments(7)
+        .dealerPaymentsUpcoming(7)
         .then((r) => { if (alive) setItems(r.items || []); })
         .catch(() => {});
       return () => { alive = false; };
@@ -33,6 +33,7 @@ export function PaymentsDueBanner() {
   const overdue = items.some((i) => i.overdue);
   const first = items[0];
   const extra = items.length > 1 ? ` +${items.length - 1} more` : "";
+  const firstLabel = first ? `${first.dealer_name} ${first.account_label}` : "";
 
   return (
     <BevelCard
@@ -46,7 +47,7 @@ export function PaymentsDueBanner() {
           {overdue ? "PAYMENTS DUE / OVERDUE" : "PAYMENTS DUE THIS WEEK"}
         </Text>
         <Text style={styles.text} numberOfLines={1}>
-          {items.length} due · ${total.toFixed(2)} — {first?.label}{extra}
+          {items.length} due · ${total.toFixed(2)} — {firstLabel}{extra}
         </Text>
       </View>
       <Ionicons name="chevron-forward" size={18} color={theme.colors.textMuted} />

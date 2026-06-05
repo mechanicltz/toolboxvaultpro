@@ -112,10 +112,44 @@ metadata:
 
 test_plan:
   current_focus:
-    - "More screen reorganization: merged CUSTOMIZE, Theme accordion, theme renames, Notifications master gate + accordion + permission flow"
+    - "Per-account payment schedules (Truck/Credit): schedule CRUD, confirm-payment, upcoming, Home banner + per-dealer sub-line + due-today prompt"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
+
+dealer_payment_schedules_v2:
+  - task: "Restructure Dealer Payments — attach recurring schedule to Truck/Credit accounts (replaces separate Payment Accounts)"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/server.py, /app/frontend/src/sections/BalanceSection.tsx, /app/frontend/src/components/PaymentsDueBanner.tsx, /app/frontend/app/(tabs)/index.tsx, /app/frontend/src/notifications.ts, /app/frontend/src/api.ts"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: >
+          BACKEND (new endpoints, all owner-scoped via db proxy, require Bearer auth):
+          1) PUT /api/dealers/{dealer_id}/accounts/{account}/schedule  (account = 'credit' | 'personal')
+             body AccountSchedule {enabled, amount, frequency(weekly|biweekly|monthly), next_due_date 'YYYY-MM-DD', remind_day_before, remind_day_of}. Stored on dealer.credit_schedule / dealer.personal_schedule. Returns full Dealer.
+          2) DELETE /api/dealers/{dealer_id}/accounts/{account}/schedule  -> sets schedule to null.
+          3) POST /api/dealers/{dealer_id}/accounts/{account}/confirm-payment -> appends a BalanceTransaction type 'payment' (note 'Scheduled payment') of schedule.amount, DECREASES that account balance (credit_balance/personal_balance), advances next_due_date by frequency, sets last_paid_date. Returns Dealer. 400 if no enabled schedule or amount<=0.
+          4) GET /api/dealers/payments/upcoming?days=7 -> {days,count,items:[{id,dealer_id,dealer_name,account,account_label('Truck'|'Credit'),amount,frequency,next_due_date,days_until,overdue,...}]}. Only enabled schedules with a next_due_date, due within N days (overdue => negative days_until).
+          NOTE: the OLD /api/payment-accounts/* endpoints still exist but are now UNUSED by the app.
+
+          FRONTEND:
+          - Dealer detail (BalanceSection): account labels are now "CREDIT ACCOUNT" and "TRUCK ACCOUNT" (was PERSONAL). Each card shows a schedule strip: if none -> "SET PAYMENT SCHEDULE" (testID set-schedule-CREDIT-ACCOUNT / set-schedule-TRUCK-ACCOUNT) opens a ScheduleModal (testIDs sched-amount, sched-freq-weekly/biweekly/monthly, sched-due-date, sched-remind-before, sched-remind-dayof, sched-save, sched-remove). If a schedule exists -> shows amount/frequency/due status + "MARK PAYMENT PAID" (testID mark-paid-CREDIT-ACCOUNT / mark-paid-TRUCK-ACCOUNT) which calls confirm-payment, and an edit pencil (edit-schedule-...). The separate "Scheduled Payments / Add Payment Account" section was REMOVED.
+          - Home: PaymentsDueBanner now reads /dealers/payments/upcoming (testID home-payments-banner). Each dealer row in DEALER ACCOUNTS shows a sub-line like "Truck • $250 due tomorrow" when a schedule is due within 7 days. The dealer $ total still = credit_balance + personal_balance.
+          - Home in-app prompt: when a schedule is due today or overdue, an Alert "Payment due — was it processed?" appears with No/Yes; Yes calls confirm-payment then reloads. (Alert-based; best verified on device — on web it may not render buttons.)
+          - notifications.ts payment reminders now use /dealers/payments/upcoming with "was it processed?" wording.
+
+          TEST PRIORITIES (use admin MechanicLTZ@gmail.com / Blue321!):
+          BACKEND: create a dealer (or reuse), PUT a schedule on 'personal' with next_due_date = tomorrow and amount 250; GET /dealers/payments/upcoming?days=7 should include it with account_label 'Truck', days_until 1. POST confirm-payment -> personal_balance decreases by 250, a 'payment' transaction added, next_due_date advanced by frequency. PUT schedule with next_due_date today on 'credit', confirm-payment, verify credit_balance decreases. DELETE schedule -> dealer.personal_schedule null. Validate 400 on confirm with no schedule and on invalid frequency.
+          FRONTEND: dealer detail shows TRUCK ACCOUNT + CREDIT ACCOUNT, set a schedule via modal, see the schedule strip + MARK PAYMENT PAID; Home shows the sub-line and the payments-due banner. Verify the old Add Payment Account UI is gone.
+          NOTE: local-notification delivery + native permission cannot be validated on Expo Go web — only verify UI/state/endpoints.
+        agent: "main"
+
+
 
 more_screen_reorg:
   - task: "More screen reorg — merged CUSTOMIZE, Theme accordion (Iron Forge/Crimson Steel), Notifications master gate + accordion + native permission"

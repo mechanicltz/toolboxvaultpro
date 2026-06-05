@@ -483,6 +483,32 @@ export interface UpcomingPayment {
   overdue: boolean;
 }
 
+// ---- Per-account payment schedule (attached to a dealer's Truck/Credit acct) ----
+export interface AccountSchedule {
+  enabled: boolean;
+  amount: number;
+  frequency: "weekly" | "biweekly" | "monthly";
+  next_due_date: string;
+  remind_day_before: boolean;
+  remind_day_of: boolean;
+  last_paid_date?: string;
+}
+
+export interface DealerPaymentDue {
+  id: string;
+  dealer_id: string;
+  dealer_name: string;
+  account: "credit" | "personal";
+  account_label: string; // "Truck" | "Credit"
+  amount: number;
+  frequency: string;
+  next_due_date: string;
+  remind_day_before: boolean;
+  remind_day_of: boolean;
+  days_until: number;
+  overdue: boolean;
+}
+
 export const api = {
   // Auth
   register: (data: { email: string; password: string; name?: string }) =>
@@ -695,6 +721,29 @@ export const api = {
   upcomingPayments: (days = 7) =>
     request<{ days: number; count: number; items: UpcomingPayment[] }>(
       `/payment-accounts/upcoming?days=${days}`,
+    ),
+
+  // ---- Per-account payment schedules (Truck/Credit) — new model ----
+  setAccountSchedule: (
+    dealerId: string,
+    account: "credit" | "personal",
+    body: AccountSchedule,
+  ) =>
+    request<any>(`/dealers/${dealerId}/accounts/${account}/schedule`, {
+      method: "PUT",
+      body: JSON.stringify(body),
+    }),
+  clearAccountSchedule: (dealerId: string, account: "credit" | "personal") =>
+    request<any>(`/dealers/${dealerId}/accounts/${account}/schedule`, {
+      method: "DELETE",
+    }),
+  confirmAccountPayment: (dealerId: string, account: "credit" | "personal") =>
+    request<any>(`/dealers/${dealerId}/accounts/${account}/confirm-payment`, {
+      method: "POST",
+    }),
+  dealerPaymentsUpcoming: (days = 7) =>
+    request<{ days: number; count: number; items: DealerPaymentDue[] }>(
+      `/dealers/payments/upcoming?days=${days}`,
     ),
 
   forgotPassword: (data: { email: string }) =>
