@@ -105,6 +105,12 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   // Closures alone would capture stale state and apply the wrong palette.
   const modeRef = useRef<ThemeMode>("dark");
   const skinRef = useRef<SkinMode>("industrial");
+  // Mirrors the latest industrial colour variant (orange/pink) so the setters
+  // resolve the correct palette + skin art even when skin/mode/variant are
+  // changed back-to-back. (Previously referenced but never declared — that
+  // crashed setMode/setAppearance and prevented the pink variant from ever
+  // being applied on cold start.)
+  const variantRef = useRef<IndustrialVariant>("orange");
 
   // Hydrate both prefs from disk on first mount. Defaults: skin = industrial
   // (the premium textured look), mode = dark. Industrial forces the dark

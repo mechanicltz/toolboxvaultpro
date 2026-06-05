@@ -18,8 +18,6 @@ import {
   TouchableOpacity,
   Pressable,
   StyleSheet,
-  KeyboardAvoidingView,
-  Platform,
   ScrollView,
   ActivityIndicator,
   Alert,
@@ -39,7 +37,7 @@ import {
 import { Exo2_400Regular, Exo2_500Medium, Exo2_700Bold } from "@expo-google-fonts/exo-2";
 import { api, setToken } from "../src/api";
 import { useAuth } from "../src/AuthContext";
-import { SKIN, AR, TBV, clamp } from "../src/tbv/skins";
+import { SKIN, AR, TBV, clamp, getIndustrialVariant } from "../src/tbv/skins";
 import { TbvHeader } from "../src/tbv/TbvHeader";
 import { useTbvSkinsReady } from "../src/tbv/useTbvSkins";
 
@@ -49,6 +47,9 @@ export default function ForgotPasswordScreen() {
   const router = useRouter();
   const { refresh } = useAuth();
   const win = useWindowDimensions();
+
+  // Accent tint honours the Industrial-Pink variant on this LOCKED screen.
+  const TINT = getIndustrialVariant() === "pink" ? "#FF1A6B" : TBV.orange;
 
   const [fontsLoaded, fontError] = useGoogleFonts({
     BebasNeue_400Regular,
@@ -178,7 +179,7 @@ export default function ForgotPasswordScreen() {
       <ImageBackground source={SKIN.bg} style={styles.bg} resizeMode="cover">
         <View style={styles.veil} />
         <View style={styles.loading}>
-          <ActivityIndicator color={TBV.orange} size="large" />
+          <ActivityIndicator color={TINT} size="large" />
         </View>
       </ImageBackground>
     );
@@ -190,26 +191,24 @@ export default function ForgotPasswordScreen() {
     <ImageBackground source={SKIN.bg} style={styles.bg} resizeMode="cover">
       <View style={styles.veil} />
       <SafeAreaView style={{ flex: 1 }} edges={["top", "bottom"]}>
-        <KeyboardAvoidingView
-          behavior={Platform.OS === "ios" ? "padding" : undefined}
+        <View
           style={{ flex: 1 }}
+          onLayout={(e) => {
+            const { width, height } = e.nativeEvent.layout;
+            if (Math.abs(width - box.w) > 1 || Math.abs(height - box.h) > 1)
+              setBox({ w: width, h: height });
+          }}
         >
-          <View
-            style={{ flex: 1 }}
-            onLayout={(e) => {
-              const { width, height } = e.nativeEvent.layout;
-              if (Math.abs(width - box.w) > 1 || Math.abs(height - box.h) > 1)
-                setBox({ w: width, h: height });
-            }}
+          <ScrollView
+            contentContainerStyle={[
+              styles.scroll,
+              { minHeight: ch, gap: headerGap, paddingTop: topPad, paddingBottom: headerGap },
+            ]}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+            bounces={false}
+            automaticallyAdjustKeyboardInsets={true}
           >
-            <ScrollView
-              contentContainerStyle={[
-                styles.scroll,
-                { minHeight: ch, gap: headerGap, paddingTop: topPad, paddingBottom: headerGap },
-              ]}
-              keyboardShouldPersistTaps="handled"
-              showsVerticalScrollIndicator={false}
-            >
               {/* logo */}
               <Image source={SKIN.masterLogo} style={{ width: logoW, height: logoH }} resizeMode="contain" />
 
@@ -255,7 +254,7 @@ export default function ForgotPasswordScreen() {
                             resizeMode="stretch"
                           >
                             <View style={styles.inputInner}>
-                              <Ionicons name="mail" size={18} color={TBV.orange} />
+                              <Ionicons name="mail" size={18} color={TINT} />
                               <TextInput
                                 testID="fp-email"
                                 style={styles.input}
@@ -319,7 +318,7 @@ export default function ForgotPasswordScreen() {
                             resizeMode="stretch"
                           >
                             <View style={styles.inputInner}>
-                              <Ionicons name="lock-closed" size={18} color={TBV.orange} />
+                              <Ionicons name="lock-closed" size={18} color={TINT} />
                               <TextInput
                                 testID="fp-new-password"
                                 style={styles.input}
@@ -352,7 +351,7 @@ export default function ForgotPasswordScreen() {
                             resizeMode="stretch"
                           >
                             <View style={styles.inputInner}>
-                              <Ionicons name="lock-closed" size={18} color={TBV.orange} />
+                              <Ionicons name="lock-closed" size={18} color={TINT} />
                               <TextInput
                                 testID="fp-confirm-password"
                                 style={styles.input}
@@ -398,7 +397,6 @@ export default function ForgotPasswordScreen() {
               </View>
             </ScrollView>
           </View>
-        </KeyboardAvoidingView>
       </SafeAreaView>
     </ImageBackground>
   );

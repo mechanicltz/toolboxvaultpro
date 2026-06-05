@@ -40,22 +40,11 @@ import {
 } from "../src/biometric";
 import { useTbvSkinsReady } from "../src/tbv/useTbvSkins";
 import { APP_VERSION_LABEL } from "../src/version";
-
-// =====================================================================
-// Cropped skin sources (opaque-bounds only — fill their containers)
-// =====================================================================
-const SKIN = {
-  bg:           require("../assets/tbv-v2/trimmed/Backgrounds/tbv_background_industrial_dark.png"),
-  panel:        require("../assets/tbv-v2/trimmed/Panels/tbv_login_panel_dark.png"),
-  card:         require("../assets/tbv-v2/trimmed/Cards/tbv_card_dark.png"),
-  tabActive:    require("../assets/tbv-v2/trimmed/Tabs/tbv_tab_active_orange.png"),
-  tabInactive:  require("../assets/tbv-v2/trimmed/Tabs/tbv_tab_inactive_dark.png"),
-  input:        require("../assets/tbv-v2/trimmed/Inputs/tbv_input_dark_slim.png"),
-  btnPrimary:   require("../assets/tbv-v2/trimmed/Buttons/tbv_btn_primary_orange.png"),
-  btnSecondary: require("../assets/tbv-v2/trimmed/Buttons/tbv_btn_secondary_dark.png"),
-  masterLogo:   require("../assets/tbv-v2/trimmed/Branding/tbv_master_logo_dark_v2.png"),
-  nameplate:    require("../assets/tbv-v2/trimmed/Branding/tbv_master_nameplate.png"),
-};
+// Shared, colour-variant-aware skin map (orange ↔ pink). The login screen is
+// LOCKED to the industrial look but MUST honour the Industrial-Pink variant,
+// so it pulls the same Proxy every other screen uses instead of a hardcoded
+// orange require() map.
+import { SKIN, getIndustrialVariant } from "../src/tbv/skins";
 
 const AR = { logo: 0.968, card: 2.407, nameplate: 3.746 };
 const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
@@ -64,6 +53,11 @@ export default function LoginScreen() {
   const router = useRouter();
   const { login, register } = useAuth();
   const win = useWindowDimensions();
+
+  // Industrial colour variant → drives the accent tint (orange vs pink) for
+  // icons/labels so this LOCKED login screen visually matches the user's
+  // chosen Industrial / Industrial-Pink variant.
+  const TINT = getIndustrialVariant() === "pink" ? "#FF1A6B" : "#FF8533";
 
   const [fontsLoaded, fontError] = useGoogleFonts({
     BebasNeue_400Regular,
@@ -311,7 +305,7 @@ export default function LoginScreen() {
                       alignSelf: "flex-end",
                       marginRight: nameplateW * 0.16,
                       marginTop: -nameplateH * 0.245,
-                      color: "#F97316",
+                      color: TINT,
                       fontSize: 11,
                       fontWeight: "800",
                       letterSpacing: 1,
@@ -451,7 +445,7 @@ export default function LoginScreen() {
                           <Ionicons
                             name={showPassword ? "eye-off" : "eye"}
                             size={20}
-                            color="#FF8533"
+                            color={TINT}
                           />
                         </TouchableOpacity>
                       </View>
@@ -509,7 +503,7 @@ export default function LoginScreen() {
                       hitSlop={10}
                       testID="forgot-password-link"
                     >
-                      <Text style={styles.forgotText}>FORGOT PASSWORD?</Text>
+                      <Text style={[styles.forgotText, { color: TINT }]}>FORGOT PASSWORD?</Text>
                     </TouchableOpacity>
                   ) : (
                     <View style={styles.forgotWrap} pointerEvents="none">
@@ -524,8 +518,8 @@ export default function LoginScreen() {
                     else shifts. */}
                 <View pointerEvents="none" style={[styles.stampAnchor, { top: padTop * 0.22 }]}>
                   <View style={styles.stampInline}>
-                    <Text numberOfLines={1} style={styles.stampHighlight}>#023</Text>
-                    <Text numberOfLines={1} style={styles.stampGroove}>#023</Text>
+                    <Text numberOfLines={1} style={styles.stampHighlight}>#024</Text>
+                    <Text numberOfLines={1} style={styles.stampGroove}>#024</Text>
                   </View>
                 </View>
               </View>
@@ -557,9 +551,9 @@ export default function LoginScreen() {
                           : "lock-closed"
                         }
                         size={18}
-                        color="#FF8533"
+                        color={TINT}
                       />
-                      <Text style={styles.bioText}>
+                      <Text style={[styles.bioText, { color: TINT }]}>
                         {`SIGN IN WITH ${bio.label.toUpperCase()}`}
                       </Text>
                     </View>

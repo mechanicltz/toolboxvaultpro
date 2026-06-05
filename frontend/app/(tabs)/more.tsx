@@ -22,8 +22,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter, useFocusEffect } from "expo-router";
 import { useAppResume } from "../../src/appLifecycle";
 import { theme } from "../../src/theme";
-import { useThemeMode, useSkin } from "../../src/themeContext";
-import {
+import { useSkin } from "../../src/themeContext";import {
   getBiometricStatus,
   enableBiometric,
   disableBiometric,
@@ -200,8 +199,7 @@ export default function MoreScreen() {
   // the user is typing inside the modal.
   const [customDaysInput, setCustomDaysInput] = useState("");
   const [homeRowsModal, setHomeRowsModal] = useState(false);
-  const { mode: themeMode, setMode: setThemeMode } = useThemeMode();
-  const { skin, setSkin } = useSkin();
+  const { appearance, setAppearance } = useSkin();
 
   // Subscription + admin gates.
   const [sub, setSub] = useState<any>(null);
@@ -581,97 +579,63 @@ export default function MoreScreen() {
             <Text style={styles.appearanceTitle}>APPEARANCE</Text>
           </View>
 
-          {/* Option 1 — Industrial Skin */}
-          <TouchableOpacity
-            testID="appearance-industrial"
-            activeOpacity={0.7}
-            style={[styles.optRow, skin === "industrial" && styles.optRowActive]}
-            onPress={() => setSkin("industrial")}
-          >
-            <View style={styles.iconBox}>
-              <Ionicons name="construct" size={18} color={theme.colors.accent} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.rowTitle}>Industrial Skin</Text>
-              <Text style={styles.rowSub}>Textured metal panels · always dark</Text>
-            </View>
-            <Ionicons
-              name={skin === "industrial" ? "radio-button-on" : "radio-button-off"}
-              size={20}
-              color={skin === "industrial" ? theme.colors.accent : theme.colors.textMuted}
-            />
-          </TouchableOpacity>
-
-          {/* Option 2 — Plain · Light */}
-          <TouchableOpacity
-            testID="appearance-plain-light"
-            activeOpacity={0.7}
-            style={[
-              styles.optRow,
-              skin === "plain" && themeMode === "light" && styles.optRowActive,
-            ]}
-            onPress={async () => {
-              await setSkin("plain");
-              await setThemeMode("light");
-            }}
-          >
-            <View style={styles.iconBox}>
-              <Ionicons name="sunny" size={18} color={theme.colors.accent} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.rowTitle}>Plain · Light</Text>
-              <Text style={styles.rowSub}>No skins · soft grey-blue, dark text</Text>
-            </View>
-            <Ionicons
-              name={
-                skin === "plain" && themeMode === "light"
-                  ? "radio-button-on"
-                  : "radio-button-off"
-              }
-              size={20}
-              color={
-                skin === "plain" && themeMode === "light"
-                  ? theme.colors.accent
-                  : theme.colors.textMuted
-              }
-            />
-          </TouchableOpacity>
-
-          {/* Option 3 — Plain · Dark */}
-          <TouchableOpacity
-            testID="appearance-plain-dark"
-            activeOpacity={0.7}
-            style={[
-              styles.optRow,
-              styles.optRowLast,
-              skin === "plain" && themeMode === "dark" && styles.optRowActive,
-            ]}
-            onPress={async () => {
-              await setSkin("plain");
-              await setThemeMode("dark");
-            }}
-          >
-            <View style={styles.iconBox}>
-              <Ionicons name="moon" size={18} color={theme.colors.accent} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.rowTitle}>Plain · Dark</Text>
-              <Text style={styles.rowSub}>No skins · flat dark cards</Text>
-            </View>
-            <Ionicons
-              name={
-                skin === "plain" && themeMode === "dark"
-                  ? "radio-button-on"
-                  : "radio-button-off"
-              }
-              size={20}
-              color={
-                skin === "plain" && themeMode === "dark"
-                  ? theme.colors.accent
-                  : theme.colors.textMuted
-              }
-            />
-          </TouchableOpacity>
+          {/* 4 appearance options. `appearance` + `setAppearance` resolve the
+              skin + light/dark + industrial colour-variant atomically so the
+              palette and PNG skin art always switch together in one pass. */}
+          {([
+            {
+              id: "industrial",
+              icon: "construct",
+              title: "Industrial · Orange",
+              sub: "Textured metal panels · orange glow",
+            },
+            {
+              id: "industrial-pink",
+              icon: "color-wand",
+              title: "Industrial · Pink",
+              sub: "Same metal panels · pink glow",
+            },
+            {
+              id: "light",
+              icon: "sunny",
+              title: "Plain · Light",
+              sub: "No skins · soft grey-blue, dark text",
+            },
+            {
+              id: "dark",
+              icon: "moon",
+              title: "Plain · Dark",
+              sub: "No skins · flat dark cards",
+            },
+          ] as const).map((opt, idx, arr) => {
+            const active = appearance === opt.id;
+            return (
+              <TouchableOpacity
+                key={opt.id}
+                testID={`appearance-${opt.id}`}
+                activeOpacity={0.7}
+                style={[
+                  styles.optRow,
+                  idx === arr.length - 1 && styles.optRowLast,
+                  active && styles.optRowActive,
+                ]}
+                onPress={() => setAppearance(opt.id)}
+              >
+                <View style={styles.iconBox}>
+                  <Ionicons name={opt.icon} size={18} color={theme.colors.accent} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.rowTitle}>{opt.title}</Text>
+                  <Text style={styles.rowSub}>{opt.sub}</Text>
+                </View>
+                <Ionicons
+                  name={active ? "radio-button-on" : "radio-button-off"}
+                  size={20}
+                  color={active ? theme.colors.accent : theme.colors.textMuted}
+                />
+              </TouchableOpacity>
+            );
+          })}
         </View>
 
         <Row
