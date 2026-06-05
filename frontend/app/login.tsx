@@ -310,7 +310,7 @@ export default function LoginScreen() {
                     style={{
                       alignSelf: "flex-end",
                       marginRight: nameplateW * 0.16,
-                      marginTop: -nameplateH * 0.27,
+                      marginTop: -nameplateH * 0.245,
                       color: "#F97316",
                       fontSize: 11,
                       fontWeight: "800",

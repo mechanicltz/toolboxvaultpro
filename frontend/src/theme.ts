@@ -203,7 +203,7 @@ export const theme = {
   // separately per-theme via the palette. Change the values HERE to update the
   // size/style everywhere at once.
   text: {
-    default: { fontSize: 14, fontWeight: "600" as const, letterSpacing: 0.2 },
+    default: { fontSize: 11, fontWeight: "800" as const, letterSpacing: 0.3 },
   },
   // 3D elevation system — theme-reactive. Each elevation level is a getter
   // on a Proxy so every access reads `currentPalette.shadowColor` / opacities
