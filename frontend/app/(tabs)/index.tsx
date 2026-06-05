@@ -25,7 +25,7 @@ import { getCached, setCached } from "../../src/cache";
 import { usePrefs } from "../../src/prefs";
 import { APP_VERSION_LABEL } from "../../src/version";
 
-import { themedStyles } from "../../src/themeContext";
+import { themedStyles, useSkin } from "../../src/themeContext";
 import { BevelCard } from "../../src/components/BevelCard";
 import { IndustrialBanner } from "../../src/components/IndustrialBanner";
 import { useSubscriptionChange } from "../../src/subscriptionEvents";
@@ -53,11 +53,12 @@ import { Anton_400Regular } from "@expo-google-fonts/anton";
 
 // Manual verification beacon — bump this on every change so we can confirm
 // the device is actually showing the latest bundle. Rendered top-right of Home.
-const HOME_BUILD = "BUILD 130";
+const HOME_BUILD = "BUILD 131";
 
 export default function HomeScreen() {
   const router = useRouter();
   const { prefs } = usePrefs();
+  const { skin } = useSkin();
   const [fontsLoaded, fontError] = useGoogleFonts({
     BebasNeue_400Regular,
     Rajdhani_500Medium, Rajdhani_600SemiBold, Rajdhani_700Bold,
@@ -457,6 +458,134 @@ export default function HomeScreen() {
       return row ? { kind: "stat", key: k, row } : null;
     })
     .filter((x): x is RenderItem => x !== null);
+
+  // ── PLAIN MODE ──────────────────────────────────────────────────────────
+  // When the user picks a Plain appearance (light or dark), Home renders as
+  // flat, palette-driven cards instead of the textured metal frames. It reuses
+  // the exact same data + the palette-aware SummaryRow / DealerBalanceRow, so
+  // the row ORDER and visibility prefs are respected identically. Login and
+  // Forgot-Password remain skinned regardless; only post-login screens follow
+  // this choice.
+  if (skin === "plain") {
+    return (
+      <SafeAreaView style={styles.plainSafe} edges={["top"]}>
+        <Text style={styles.plainBuildStamp} allowFontScaling={false} testID="home-build-stamp">
+          {HOME_BUILD}
+        </Text>
+        <IndustrialBanner
+          title="TOOLBOX VAULT"
+          subtitle={`SUMMARY · ${APP_VERSION_LABEL}${
+            userStats ? `  ·  FREE ${userStats.free} / SUB ${userStats.subscribed}` : ""
+          }`}
+        />
+        <ScrollView
+          contentContainerStyle={styles.plainContent}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor={theme.colors.accent}
+            />
+          }
+        >
+          {prefs.home_logo_mode === "custom" && prefs.home_logo_data && (
+            <View style={styles.logoWrap}>
+              <Image
+                testID="home-logo"
+                source={{ uri: prefs.home_logo_data }}
+                style={styles.logoImage}
+                resizeMode="contain"
+              />
+            </View>
+          )}
+
+          {nextRouteBanner && prefs.show_dealer_route_reminder && (
+            <BevelCard style={styles.plainBanner} onPress={() => router.push("/dealers")}>
+              <Ionicons name="map" size={22} color={theme.colors.accent} />
+              <View style={{ flex: 1, marginLeft: 12 }}>
+                <Text style={styles.plainBannerLabel}>NEXT DEALER ROUTE</Text>
+                <Text style={styles.plainBannerText}>
+                  {nextRouteBanner.dealers.join(" & ")} · {nextRouteBanner.dateStr}
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color={theme.colors.textMuted} />
+            </BevelCard>
+          )}
+
+          {renderSequence.map((item, idx) => {
+            if (item.kind === "dealers") {
+              return (
+                <BevelCard
+                  key={`dealers-${idx}`}
+                  style={styles.owedCluster}
+                  testID="home-dealers-widget"
+                >
+                  <TouchableOpacity
+                    style={styles.dealerRow}
+                    onPress={() => router.push("/dealers")}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={[styles.dealerName, { fontWeight: "900", flex: 1 }]}>
+                      DEALER ACCOUNTS
+                    </Text>
+                    <Ionicons name="chevron-forward" size={16} color={theme.colors.textMuted} />
+                  </TouchableOpacity>
+                  {dealersAll.length === 0 ? (
+                    <Text style={styles.emptyInline}>No dealers yet.</Text>
+                  ) : (
+                    <>
+                      {dealersAll.map((d) => (
+                        <View key={d.id} style={styles.owedDivider}>
+                          <DealerBalanceRow
+                            dealer={d}
+                            onAdjust={() => openAdjustForDealer(d)}
+                            onOpenDealer={() => router.push(`/dealer/${d.id}`)}
+                          />
+                        </View>
+                      ))}
+                      <View style={styles.owedTotalRow} testID="home-dealers-total">
+                        <Text style={styles.owedTotalLabel}>TOTAL OWED</Text>
+                        <Text style={styles.owedTotalValue}>${totalOwed.toFixed(2)}</Text>
+                      </View>
+                    </>
+                  )}
+                </BevelCard>
+              );
+            }
+            return <View key={item.key}>{ROW_RENDERERS[item.key]?.()}</View>;
+          })}
+
+          <BevelCard
+            style={styles.plainBanner}
+            onPress={() => router.push("/feedback")}
+            testID="feedback-banner"
+          >
+            <Ionicons name="chatbubble-ellipses" size={20} color={theme.colors.accent} />
+            <View style={{ flex: 1, marginLeft: 12 }}>
+              <Text style={styles.plainBannerLabel}>REPORT A BUG · REQUEST A FEATURE</Text>
+              <Text style={styles.plainBannerText}>Have an idea or hit a snag? Let us know.</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={theme.colors.textMuted} />
+          </BevelCard>
+
+          <Text style={styles.tip}>Pull to refresh · Customize under MORE → CUSTOMIZE</Text>
+        </ScrollView>
+
+        {paymentTarget && (
+          <PaymentModal
+            visible={!!paymentTarget}
+            dealer={paymentTarget.dealer}
+            account={paymentTarget.account}
+            onClose={() => setPaymentTarget(null)}
+            onSaved={() => {
+              setPaymentTarget(null);
+              load();
+            }}
+          />
+        )}
+      </SafeAreaView>
+    );
+  }
 
   // Gate on the industrial fonts + skins so the page never paints with the
   // system font / un-decoded textures (matches login / forgot-password).
@@ -1374,5 +1503,36 @@ const styles = themedStyles((c) => ({
     fontSize: 10,
     textAlign: "center",
     marginTop: 14,
+  },
+  // ---- PLAIN MODE (non-skinned) Home layout ----
+  plainSafe: { flex: 1, backgroundColor: c.bg },
+  plainContent: { padding: 16, paddingBottom: 110, gap: 10 },
+  plainBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+  },
+  plainBannerLabel: {
+    color: c.accent,
+    fontSize: 11,
+    fontWeight: "800",
+    letterSpacing: 0.8,
+  },
+  plainBannerText: {
+    color: c.textPrimary,
+    fontSize: 13,
+    fontWeight: "600",
+    marginTop: 3,
+  },
+  plainBuildStamp: {
+    position: "absolute",
+    top: 6,
+    right: 10,
+    zIndex: 50,
+    color: c.textMuted,
+    fontSize: 9,
+    fontWeight: "700",
+    opacity: 0.7,
   },
 }));
