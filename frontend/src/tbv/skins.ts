@@ -8,17 +8,26 @@
  */
 import { ImageSourcePropType } from "react-native";
 
-export const SKIN: Record<string, ImageSourcePropType> = {
+/**
+ * The industrial skin now ships in TWO colour variants that share IDENTICAL
+ * geometry — only the glow/accent hue differs:
+ *  - ORANGE (original) → assets under `tbv-v2/trimmed/`
+ *  - PINK   (recolored) → assets under `tbv-v2/trimmed-pink/` (Pillow hue-shift)
+ *
+ * `SKIN` is a Proxy that returns whichever variant is active. The active
+ * variant is set by the ThemeProvider via `setIndustrialVariant()` whenever the
+ * user switches between "Industrial" and "Industrial Pink". Because every
+ * component reads `SKIN.<key>` inline during render, flipping the variant +
+ * re-rendering swaps all the frame/nameplate/button art automatically — no
+ * per-screen changes needed.
+ */
+export const SKIN_ORANGE: Record<string, ImageSourcePropType> = {
   bg:           require("../../assets/tbv-v2/trimmed/Backgrounds/tbv_background_industrial_dark.png"),
   panel:        require("../../assets/tbv-v2/trimmed/Panels/tbv_login_panel_dark.png"),
   modalPanel:   require("../../assets/tbv-v2/trimmed/Panels/tbv_modal_panel_dark.png"),
-  // ---- Dedicated content-card frames (designer-built, already trimmed) ----
-  // Phone-density 9-slice frames (@1x/@2x/@3x at 400pt logical width) so the
-  // capInsets corner bolts render proportionally + crisp on device.
   card:         require("../../assets/tbv-v2/trimmed/Frames/tbv_card_frame.png"),
   panelFrame:   require("../../assets/tbv-v2/trimmed/Frames/tbv_panel_frame.png"),
   statFrame:    require("../../assets/tbv-v2/trimmed/Frames/tbv_stat_frame.png"),
-  // ---- NEW thinner-border frames (better containment, clean 9-slice) ----
   window:       require("../../assets/tbv-v2/trimmed/Frames/tbv_window_frame.png"),
   plate:        require("../../assets/tbv-v2/trimmed/Frames/tbv_plate_frame.png"),
   cardRaw:      require("../../assets/tbv-v2/trimmed/Cards/tbv_card_dark.png"),
@@ -31,7 +40,6 @@ export const SKIN: Record<string, ImageSourcePropType> = {
   divider:      require("../../assets/tbv-v2/trimmed/Accents/tbv_section_divider_dark.png"),
   accentBar:    require("../../assets/tbv-v2/trimmed/Accents/tbv_accent_bar_orange.png"),
   fab:          require("../../assets/tbv-v2/trimmed/Buttons/tbv_floating_action_button_orange.png"),
-  // ---- Controls / branding (locked login set) ----
   tabActive:    require("../../assets/tbv-v2/trimmed/Tabs/tbv_tab_active_orange.png"),
   tabInactive:  require("../../assets/tbv-v2/trimmed/Tabs/tbv_tab_inactive_dark.png"),
   input:        require("../../assets/tbv-v2/trimmed/Inputs/tbv_input_dark_slim.png"),
@@ -41,8 +49,72 @@ export const SKIN: Record<string, ImageSourcePropType> = {
   nameplate:    require("../../assets/tbv-v2/trimmed/Branding/tbv_master_nameplate.png"),
 };
 
-/** Flat list of every skin module — used to preload/decode them up front. */
-export const SKIN_LIST = Object.values(SKIN);
+export const SKIN_PINK: Record<string, ImageSourcePropType> = {
+  bg:           require("../../assets/tbv-v2/trimmed-pink/Backgrounds/tbv_background_industrial_dark.png"),
+  panel:        require("../../assets/tbv-v2/trimmed-pink/Panels/tbv_login_panel_dark.png"),
+  modalPanel:   require("../../assets/tbv-v2/trimmed-pink/Panels/tbv_modal_panel_dark.png"),
+  card:         require("../../assets/tbv-v2/trimmed-pink/Frames/tbv_card_frame.png"),
+  panelFrame:   require("../../assets/tbv-v2/trimmed-pink/Frames/tbv_panel_frame.png"),
+  statFrame:    require("../../assets/tbv-v2/trimmed-pink/Frames/tbv_stat_frame.png"),
+  window:       require("../../assets/tbv-v2/trimmed-pink/Frames/tbv_window_frame.png"),
+  plate:        require("../../assets/tbv-v2/trimmed-pink/Frames/tbv_plate_frame.png"),
+  cardRaw:      require("../../assets/tbv-v2/trimmed-pink/Cards/tbv_card_dark.png"),
+  cardStat:     require("../../assets/tbv-v2/trimmed-pink/Cards/tbv_card_stat_dark.png"),
+  cardDealer:   require("../../assets/tbv-v2/trimmed-pink/Cards/tbv_card_dealer_dark.png"),
+  cardWarranty: require("../../assets/tbv-v2/trimmed-pink/Cards/tbv_card_warranty_dark.png"),
+  cardInventory:require("../../assets/tbv-v2/trimmed-pink/Cards/tbv_card_inventory_dark.png"),
+  headerPanel:  require("../../assets/tbv-v2/trimmed-pink/Headers/tbv_header_panel_dark.png"),
+  searchBar:    require("../../assets/tbv-v2/trimmed-pink/Search/tbv_search_bar_dark.png"),
+  divider:      require("../../assets/tbv-v2/trimmed-pink/Accents/tbv_section_divider_dark.png"),
+  accentBar:    require("../../assets/tbv-v2/trimmed-pink/Accents/tbv_accent_bar_orange.png"),
+  fab:          require("../../assets/tbv-v2/trimmed-pink/Buttons/tbv_floating_action_button_orange.png"),
+  tabActive:    require("../../assets/tbv-v2/trimmed-pink/Tabs/tbv_tab_active_orange.png"),
+  tabInactive:  require("../../assets/tbv-v2/trimmed-pink/Tabs/tbv_tab_inactive_dark.png"),
+  input:        require("../../assets/tbv-v2/trimmed-pink/Inputs/tbv_input_dark_slim.png"),
+  btnPrimary:   require("../../assets/tbv-v2/trimmed-pink/Buttons/tbv_btn_primary_orange.png"),
+  btnSecondary: require("../../assets/tbv-v2/trimmed-pink/Buttons/tbv_btn_secondary_dark.png"),
+  masterLogo:   require("../../assets/tbv-v2/trimmed-pink/Branding/tbv_master_logo_dark_v2.png"),
+  nameplate:    require("../../assets/tbv-v2/trimmed-pink/Branding/tbv_master_nameplate.png"),
+};
+
+export type IndustrialVariant = "orange" | "pink";
+let _variant: IndustrialVariant = "orange";
+/** Set by the ThemeProvider when the user picks Industrial vs Industrial Pink. */
+export function setIndustrialVariant(v: IndustrialVariant) {
+  _variant = v;
+}
+export function getIndustrialVariant(): IndustrialVariant {
+  return _variant;
+}
+
+/** Live, variant-aware skin map. `SKIN.window` returns orange or pink art. */
+export const SKIN: Record<string, ImageSourcePropType> = new Proxy(
+  {} as Record<string, ImageSourcePropType>,
+  {
+    get(_, key: string) {
+      return (_variant === "pink" ? SKIN_PINK : SKIN_ORANGE)[key];
+    },
+    has(_, key: string) {
+      return key in SKIN_ORANGE;
+    },
+    ownKeys() {
+      return Reflect.ownKeys(SKIN_ORANGE);
+    },
+    getOwnPropertyDescriptor(_, key: string) {
+      return {
+        enumerable: true,
+        configurable: true,
+        value: (_variant === "pink" ? SKIN_PINK : SKIN_ORANGE)[key],
+      };
+    },
+  },
+);
+
+/** Flat list of every skin module (BOTH variants) — used to preload/decode. */
+export const SKIN_LIST = [
+  ...Object.values(SKIN_ORANGE),
+  ...Object.values(SKIN_PINK),
+];
 
 /** Aspect ratios (width / height) of key skins. */
 export const AR = { logo: 0.968, card: 2.407, nameplate: 3.746, panel: 0.778 };

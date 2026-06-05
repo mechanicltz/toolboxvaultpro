@@ -109,6 +109,18 @@ export const darkPalette: ColorPalette = {
   tabBarBorder: "#1F1F1F",
 };
 
+// Industrial PINK — identical to the dark workshop palette but with the
+// magenta-pink accent (used by the "Industrial Pink" theme). Only the accent
+// family changes; all the metal/dark surfaces stay the same so it pairs with
+// the pink-recolored frame art.
+export const darkPalettePink: ColorPalette = {
+  ...darkPalette,
+  glass: "rgba(255, 26, 107, 0.08)",
+  glassBorder: "rgba(255, 26, 107, 0.22)",
+  accent: "#FF1A6B",
+  accentSecondary: "#E11860",
+};
+
 // Light palette — soft cool grey-blue (NOT pure white per user request).
 // Cards are pure white so they "raise" out of the grey-blue background.
 // Yellow accent kept as the industrial brand colour. Text is near-black for

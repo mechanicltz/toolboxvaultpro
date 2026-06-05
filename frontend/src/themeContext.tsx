@@ -41,8 +41,10 @@ import {
   applyPalette,
   currentPalette,
   darkPalette,
+  darkPalettePink,
   lightPalette,
 } from "./theme";
+import { setIndustrialVariant as applyIndustrialVariant } from "./tbv/skins";
 
 export type ThemeMode = "dark" | "light";
 /**
@@ -53,25 +55,39 @@ export type ThemeMode = "dark" | "light";
  */
 export type SkinMode = "industrial" | "plain";
 
+/** Colour variant of the industrial skin: original orange vs recolored pink. */
+export type IndustrialVariant = "orange" | "pink";
+
+/** The 4 user-facing appearance choices shown in the picker. */
+export type AppearanceOption = "light" | "dark" | "industrial" | "industrial-pink";
+
 type Ctx = {
   mode: ThemeMode;
   skin: SkinMode;
+  industrialVariant: IndustrialVariant;
+  appearance: AppearanceOption;
   colors: ColorPalette;
   setMode: (m: ThemeMode) => Promise<void>;
   setSkin: (s: SkinMode) => Promise<void>;
+  setAppearance: (o: AppearanceOption) => Promise<void>;
   toggle: () => Promise<void>;
 };
 
 const STORAGE_KEY = "toolbox.themeMode";
 const STORAGE_KEY_SKIN = "toolbox.skinMode";
+const STORAGE_KEY_VARIANT = "toolbox.industrialVariant";
 
 /**
- * The palette that should actually be applied for a given skin + mode combo.
- * Industrial always renders on the dark workshop palette so any palette-driven
- * sub-components inside a skinned screen stay consistent with the metal art.
+ * The palette that should actually be applied for a given skin + mode + variant
+ * combo. Industrial always renders on the dark workshop palette; the pink
+ * variant swaps only the accent family (darkPalettePink).
  */
-function effectivePalette(skin: SkinMode, mode: ThemeMode): ColorPalette {
-  if (skin === "industrial") return darkPalette;
+function effectivePalette(
+  skin: SkinMode,
+  mode: ThemeMode,
+  variant: IndustrialVariant,
+): ColorPalette {
+  if (skin === "industrial") return variant === "pink" ? darkPalettePink : darkPalette;
   return mode === "light" ? lightPalette : darkPalette;
 }
 
@@ -80,6 +96,7 @@ const ThemeContext = createContext<Ctx | null>(null);
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [mode, setModeState] = useState<ThemeMode>("dark");
   const [skin, setSkinState] = useState<SkinMode>("industrial");
+  const [industrialVariant, setVariantState] = useState<IndustrialVariant>("orange");
   const [hydrated, setHydrated] = useState(false);
 
   // Refs mirror the latest mode/skin so the setters always compute the
@@ -95,18 +112,23 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     (async () => {
       try {
-        const [storedMode, storedSkin] = await Promise.all([
+        const [storedMode, storedSkin, storedVariant] = await Promise.all([
           AsyncStorage.getItem(STORAGE_KEY),
           AsyncStorage.getItem(STORAGE_KEY_SKIN),
+          AsyncStorage.getItem(STORAGE_KEY_VARIANT),
         ]);
         const m: ThemeMode = storedMode === "light" ? "light" : "dark";
         const s: SkinMode = storedSkin === "plain" ? "plain" : "industrial";
+        const v: IndustrialVariant = storedVariant === "pink" ? "pink" : "orange";
         modeRef.current = m;
         skinRef.current = s;
-        applyPalette(effectivePalette(s, m));
+        variantRef.current = v;
+        applyIndustrialVariant(v);
+        applyPalette(effectivePalette(s, m, v));
         bumpStyleCacheVersion();
         setModeState(m);
         setSkinState(s);
+        setVariantState(v);
       } catch {
         /* ignore */
       } finally {
@@ -118,7 +140,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const setMode = useCallback(async (m: ThemeMode) => {
     modeRef.current = m;
     // Use the latest skin (ref) so chained skin+mode changes resolve correctly.
-    applyPalette(effectivePalette(skinRef.current, m));
+    applyPalette(effectivePalette(skinRef.current, m, variantRef.current));
     bumpStyleCacheVersion();
     setModeState(m);
     try {
@@ -130,11 +152,48 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   const setSkin = useCallback(async (s: SkinMode) => {
     skinRef.current = s;
-    applyPalette(effectivePalette(s, modeRef.current));
+    applyPalette(effectivePalette(s, modeRef.current, variantRef.current));
     bumpStyleCacheVersion();
     setSkinState(s);
     try {
       await AsyncStorage.setItem(STORAGE_KEY_SKIN, s);
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
+  // Atomic setter for the 4 appearance options — sets skin + mode + industrial
+  // variant together so the palette + skin art always resolve in one pass.
+  // Light/Dark/Industrial force the orange variant; only "industrial-pink"
+  // turns on pink (which also tints the locked login/forgot screens).
+  const setAppearance = useCallback(async (opt: AppearanceOption) => {
+    let s: SkinMode;
+    let m: ThemeMode;
+    let v: IndustrialVariant;
+    if (opt === "light") {
+      s = "plain"; m = "light"; v = "orange";
+    } else if (opt === "dark") {
+      s = "plain"; m = "dark"; v = "orange";
+    } else if (opt === "industrial") {
+      s = "industrial"; m = modeRef.current; v = "orange";
+    } else {
+      s = "industrial"; m = modeRef.current; v = "pink";
+    }
+    skinRef.current = s;
+    modeRef.current = m;
+    variantRef.current = v;
+    applyIndustrialVariant(v);
+    applyPalette(effectivePalette(s, m, v));
+    bumpStyleCacheVersion();
+    setSkinState(s);
+    setModeState(m);
+    setVariantState(v);
+    try {
+      await Promise.all([
+        AsyncStorage.setItem(STORAGE_KEY_SKIN, s),
+        AsyncStorage.setItem(STORAGE_KEY, m),
+        AsyncStorage.setItem(STORAGE_KEY_VARIANT, v),
+      ]);
     } catch {
       /* ignore */
     }
@@ -147,9 +206,29 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   // The `colors` exposed here is a snapshot of currentPalette at this render,
   // which forces consumers to re-render when mode/skin changes. The Proxy in
   // theme.ts also reads from currentPalette, so inline usages stay in sync.
+  // Derived: which of the 4 picker options is currently active.
+  const appearance: AppearanceOption =
+    skin === "plain"
+      ? mode === "light"
+        ? "light"
+        : "dark"
+      : industrialVariant === "pink"
+        ? "industrial-pink"
+        : "industrial";
+
   const value = useMemo<Ctx>(
-    () => ({ mode, skin, colors: { ...currentPalette }, setMode, setSkin, toggle }),
-    [mode, skin, setMode, setSkin, toggle],
+    () => ({
+      mode,
+      skin,
+      industrialVariant,
+      appearance,
+      colors: { ...currentPalette },
+      setMode,
+      setSkin,
+      setAppearance,
+      toggle,
+    }),
+    [mode, skin, industrialVariant, appearance, setMode, setSkin, setAppearance, toggle],
   );
 
   // Render the tree only AFTER hydration so the first paint already has the
@@ -181,9 +260,21 @@ export function useThemeMode() {
 export function useSkin() {
   const ctx = useContext(ThemeContext);
   if (!ctx) {
-    return { skin: "industrial" as SkinMode, setSkin: async (_s: SkinMode) => {} };
+    return {
+      skin: "industrial" as SkinMode,
+      setSkin: async (_s: SkinMode) => {},
+      industrialVariant: "orange" as IndustrialVariant,
+      appearance: "industrial" as AppearanceOption,
+      setAppearance: async (_o: AppearanceOption) => {},
+    };
   }
-  return { skin: ctx.skin, setSkin: ctx.setSkin };
+  return {
+    skin: ctx.skin,
+    setSkin: ctx.setSkin,
+    industrialVariant: ctx.industrialVariant,
+    appearance: ctx.appearance,
+    setAppearance: ctx.setAppearance,
+  };
 }
 
 /**
