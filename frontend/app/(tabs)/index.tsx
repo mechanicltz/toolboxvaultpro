@@ -53,7 +53,7 @@ import { Anton_400Regular } from "@expo-google-fonts/anton";
 
 // Manual verification beacon — bump this on every change so we can confirm
 // the device is actually showing the latest bundle. Rendered top-right of Home.
-const HOME_BUILD = "BUILD 139";
+const HOME_BUILD = "BUILD 140";
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -315,7 +315,7 @@ export default function HomeScreen() {
           icon="settings"
           label="MAINTENANCE DUE"
           value={String(mnTotal)}
-          sub={mnt.overdue > 0 ? `${mnt.overdue} OVERDUE` : "DUE 30D"}
+          sub={mnt.overdue > 0 ? `${mnt.overdue} OVERDUE` : "DUE 30 DAYS"}
           valueColor={mnTotal > 0 ? theme.colors.danger : undefined}
           onPress={() => router.push("/maintenance")}
         />
@@ -427,7 +427,7 @@ export default function HomeScreen() {
       return {
         label: "MAINTENANCE DUE",
         value: String(mnTotal),
-        sub: mnt.overdue > 0 ? `${mnt.overdue} OVERDUE` : "DUE 30D",
+        sub: mnt.overdue > 0 ? `${mnt.overdue} OVERDUE` : "DUE 30 DAYS",
         valueColor: mnTotal > 0 ? theme.colors.danger : undefined,
         onPress: () => router.push("/maintenance"),
       };
