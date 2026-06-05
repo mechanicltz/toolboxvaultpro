@@ -569,14 +569,12 @@ export default function MoreScreen() {
         </Text>
       </View>
       <ScrollView contentContainerStyle={{ paddingBottom: 100 }}>
-        {/* APPEARANCE — choose the app's presentation:
-            • Industrial Skin (textured metal look, no light/dark)
-            • Plain · Light / Plain · Dark (flat cards, pick a mode)
-            Placed at the top of More so it's easy to find. */}
-        <View style={styles.appearanceCard}>
-          <View style={styles.appearanceHeader}>
-            <Ionicons name="color-palette" size={18} color={theme.colors.accent} />
-            <Text style={styles.appearanceTitle}>APPEARANCE</Text>
+        {/* CUSTOMIZE — appearance now lives in its own named section so it
+            sits alongside future personalization controls. */}
+        <SectionCard title="CUSTOMIZE" testID="more-section-customize">
+          <View style={styles.customizeSubHeader}>
+            <Ionicons name="color-palette" size={16} color={theme.colors.accent} />
+            <Text style={styles.customizeSubLabel}>Appearance</Text>
           </View>
 
           {/* 4 appearance options. `appearance` + `setAppearance` resolve the
@@ -636,7 +634,7 @@ export default function MoreScreen() {
               </TouchableOpacity>
             );
           })}
-        </View>
+        </SectionCard>
 
         <Row
           icon="chatbubble-ellipses"
@@ -1736,6 +1734,20 @@ const styles = themedStyles((c) => ({
     fontWeight: "800",
     letterSpacing: 1.2,
   },
+  customizeSubHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingTop: 14,
+    paddingBottom: 6,
+  },
+  customizeSubLabel: {
+    color: c.textSecondary,
+    fontSize: 12,
+    fontWeight: "800",
+    letterSpacing: 0.6,
+  },
   optRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -1758,6 +1770,7 @@ const styles = themedStyles((c) => ({
   timeModalBackdrop: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "flex-end",
   },
   timeModalSheet: {
     backgroundColor: c.bg,

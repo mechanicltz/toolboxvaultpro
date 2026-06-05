@@ -255,7 +255,7 @@ export async function sendTestNotification(): Promise<boolean> {
     await Notifications.scheduleNotificationAsync({
       content: {
         title: "🔧 Test — Toolbox Vault",
-        body: "Notifications are working! You'll get reminders on dealer-route days.",
+        body: "Notifications are working! You'll get reminders for dealer visits and overdue borrowed tools.",
         sound: "default",
         data: { tag: SCHEDULED_TAG, kind: "test" },
       },
