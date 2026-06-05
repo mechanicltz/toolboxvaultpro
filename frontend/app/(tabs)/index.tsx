@@ -53,7 +53,7 @@ import { Anton_400Regular } from "@expo-google-fonts/anton";
 
 // Manual verification beacon — bump this on every change so we can confirm
 // the device is actually showing the latest bundle. Rendered top-right of Home.
-const HOME_BUILD = "BUILD 131";
+const HOME_BUILD = "BUILD 132";
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -472,12 +472,25 @@ export default function HomeScreen() {
         <Text style={styles.plainBuildStamp} allowFontScaling={false} testID="home-build-stamp">
           {HOME_BUILD}
         </Text>
-        <IndustrialBanner
-          title="TOOLBOX VAULT"
-          subtitle={`SUMMARY · ${APP_VERSION_LABEL}${
-            userStats ? `  ·  FREE ${userStats.free} / SUB ${userStats.subscribed}` : ""
-          }`}
-        />
+        <View style={styles.plainHeader}>
+          <View style={{ flex: 1, paddingRight: 12 }}>
+            <Text style={styles.plainTitle}>TOOLBOX VAULT</Text>
+            <Text style={styles.plainSummary}>SUMMARY</Text>
+            <Text style={styles.plainVersion} testID="home-admin-userstats">
+              {APP_VERSION_LABEL}
+              {userStats ? `   ·   FREE ${userStats.free} / SUB ${userStats.subscribed}` : ""}
+            </Text>
+          </View>
+          <TouchableOpacity
+            testID="home-add-item"
+            style={styles.addItemBtn}
+            onPress={() => router.push("/tool/edit")}
+            activeOpacity={0.85}
+          >
+            <Ionicons name="add" size={18} color={theme.colors.accent} />
+            <Text style={styles.addItemText}>ADD ITEM</Text>
+          </TouchableOpacity>
+        </View>
         <ScrollView
           contentContainerStyle={styles.plainContent}
           refreshControl={
@@ -568,7 +581,7 @@ export default function HomeScreen() {
             <Ionicons name="chevron-forward" size={18} color={theme.colors.textMuted} />
           </BevelCard>
 
-          <Text style={styles.tip}>Pull to refresh · Customize under MORE → CUSTOMIZE</Text>
+          <Text style={styles.plainTip}>Pull to refresh · Customize under MORE → CUSTOMIZE</Text>
         </ScrollView>
 
         {paymentTarget && (
@@ -1534,5 +1547,63 @@ const styles = themedStyles((c) => ({
     fontSize: 9,
     fontWeight: "700",
     opacity: 0.7,
+  },
+  // Old-style plain Home text header (TOOLBOX VAULT / SUMMARY / version + ADD ITEM)
+  plainHeader: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    paddingTop: 6,
+    paddingBottom: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: c.borderSubtle,
+  },
+  plainTitle: {
+    color: c.textPrimary,
+    fontSize: 26,
+    fontWeight: "900",
+    letterSpacing: 2,
+  },
+  plainSummary: {
+    color: c.accent,
+    fontSize: 13,
+    fontWeight: "800",
+    letterSpacing: 3,
+    marginTop: 2,
+  },
+  plainVersion: {
+    color: c.textSecondary,
+    fontSize: 12,
+    fontWeight: "700",
+    letterSpacing: 1,
+    marginTop: 2,
+  },
+  addItemBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: "#161616",
+    borderWidth: 1,
+    borderColor: c.accent,
+    borderRadius: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    marginTop: 4,
+  },
+  addItemText: {
+    color: c.accent,
+    fontSize: 13,
+    fontWeight: "800",
+    letterSpacing: 1,
+  },
+  // Readable bottom hint for plain mode (the global `tip` uses a hardcoded
+  // muted grey that is too light to read on the light palette).
+  plainTip: {
+    color: c.textSecondary,
+    fontSize: 12,
+    fontStyle: "italic",
+    textAlign: "center",
+    marginTop: 16,
   },
 }));
