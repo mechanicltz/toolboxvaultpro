@@ -56,7 +56,7 @@ export function IndustrialBanner({ title, subtitle, rightSlot, leftSlot }: Props
           aligned over the "VAULT" word (right side of the plate). */}
       <View style={{ width: nameplateW, alignSelf: "center", marginBottom: 6 }}>
         <Text
-          style={[styles.version, { marginRight: nameplateW * 0.16, marginBottom: 2 }]}
+          style={[styles.version, { marginRight: nameplateW * 0.16, marginBottom: -7 }]}
           allowFontScaling={false}
         >
           {APP_VERSION_LABEL}
