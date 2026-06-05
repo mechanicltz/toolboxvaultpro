@@ -52,6 +52,11 @@ export type Prefs = {
   // Master switch for dealer-payment reminders (day-before / day-of are set
   // per payment account). Uses the same notification time as dealer routes.
   payment_notifications_enabled: boolean;
+  // Master gate for ALL notifications. When OFF, the entire notifications
+  // accordion is collapsed and nothing is scheduled. When toggled ON the app
+  // requests native notification permission. Individual type toggles
+  // (dealer / borrow / payment) only take effect while this is ON.
+  notifications_master_enabled: boolean;
 };
 
 const KEY = "toolbox_prefs_v2";
@@ -101,6 +106,7 @@ const DEFAULTS: Prefs = {
   show_dealer_route_reminder: true,
   show_payments_banner: true,
   payment_notifications_enabled: true,
+  notifications_master_enabled: false,
 };
 
 export const loadPrefs = async (): Promise<Prefs> => {
@@ -152,6 +158,17 @@ export const loadPrefs = async (): Promise<Prefs> => {
       ...parsed,
       home_rows: { ...DEFAULT_HOME_ROWS, ...(parsed.home_rows || {}) },
       home_row_order: normalizeOrder(parsed.home_row_order),
+      // Migration: existing users (saved before the master notification gate
+      // existed) should keep their notifications visible. If the key is absent
+      // but any individual type was on, default the master switch to ON.
+      notifications_master_enabled:
+        parsed.notifications_master_enabled !== undefined
+          ? parsed.notifications_master_enabled
+          : !!(
+              parsed.dealer_notifications_enabled ||
+              parsed.borrow_reminders_enabled ||
+              parsed.payment_notifications_enabled
+            ),
     };
   } catch {
     return DEFAULTS;

@@ -16,7 +16,6 @@ import {
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import * as ImageManipulator from "expo-image-manipulator";
-import DateTimePicker from "@react-native-community/datetimepicker";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter, useFocusEffect } from "expo-router";
@@ -36,17 +35,46 @@ import { themedStyles } from "../../src/themeContext";
 import { BevelCard } from "../../src/components/BevelCard";
 import { IndustrialBanner } from "../../src/components/IndustrialBanner";
 
-import {
-  requestPermissions as requestNotificationPermissions,
-  rescheduleDealerNotifications,
-  reschedulePaymentRemindersNow,
-  cancelDealerNotifications,
-  sendTestNotification,
-} from "../../src/notifications";
-import {
-  rescheduleAllBorrowReminders,
-  cancelAllBorrowReminders,
-} from "../../src/borrowReminders";
+import NotificationsSettingsSection from "../../src/sections/NotificationsSettingsSection";
+
+// Fixed brand hues for the two industrial themes. Per the user spec these
+// labels MUST always render in their signature colour regardless of the active
+// theme: "Iron Forge" in orange, "Crimson Steel" in pink.
+const IRON_ORANGE = "#FF6A00";
+const CRIMSON_PINK = "#FF1A6B";
+
+// The 4 appearance choices shown in the Theme accordion. `color` (when set)
+// forces the label + icon + active radio to that fixed hue across all themes.
+const APPEARANCE_OPTIONS = [
+  {
+    id: "industrial",
+    icon: "construct",
+    title: "Iron Forge",
+    sub: "Textured metal panels · orange glow",
+    color: IRON_ORANGE,
+  },
+  {
+    id: "industrial-pink",
+    icon: "color-wand",
+    title: "Crimson Steel",
+    sub: "Same metal panels · pink glow",
+    color: CRIMSON_PINK,
+  },
+  {
+    id: "light",
+    icon: "sunny",
+    title: "Plain · Light",
+    sub: "No skins · soft grey-blue, dark text",
+    color: undefined as string | undefined,
+  },
+  {
+    id: "dark",
+    icon: "moon",
+    title: "Plain · Dark",
+    sub: "No skins · flat dark cards",
+    color: undefined as string | undefined,
+  },
+] as const;
 
 type RowProps = {
   icon: any;
@@ -194,12 +222,8 @@ export default function MoreScreen() {
   const [pwBusy, setPwBusy] = useState(false);
   const [pwErr, setPwErr] = useState("");
   const [pwOk, setPwOk] = useState("");
-  const [timePickerOpen, setTimePickerOpen] = useState(false);
-  const [borrowPeriodPickerOpen, setBorrowPeriodPickerOpen] = useState(false);
-  // Local edit state for the "Custom" picker (number of days). Only used while
-  // the user is typing inside the modal.
-  const [customDaysInput, setCustomDaysInput] = useState("");
   const [homeRowsModal, setHomeRowsModal] = useState(false);
+  const [themeOpen, setThemeOpen] = useState(false);
   const { appearance, setAppearance } = useSkin();
 
   // Subscription + admin gates.
@@ -344,60 +368,6 @@ export default function MoreScreen() {
     return "FREE TIER";
   })();
 
-  // Format hour:minute as "7:00 AM" / "1:30 PM" for the row.
-  const formatHourMinute = (h: number, m: number): string => {
-    const period = h >= 12 ? "PM" : "AM";
-    const h12 = h % 12 === 0 ? 12 : h % 12;
-    const mm = String(m).padStart(2, "0");
-    return `${h12}:${mm} ${period}`;
-  };
-
-  // ---------- Borrow reminder period helpers ----------
-  // Preset choices the user can pick from in the period modal. Each entry's
-  // `hours` is what gets persisted into prefs.borrow_reminder_hours.
-  const BORROW_PRESETS: Array<{ hours: number; label: string }> = [
-    { hours: 12, label: "12 hours" },
-    { hours: 24, label: "1 day" },
-    { hours: 48, label: "2 days" },
-    { hours: 72, label: "3 days" },
-    { hours: 96, label: "4 days" },
-    { hours: 120, label: "5 days" },
-    { hours: 144, label: "6 days" },
-    { hours: 168, label: "1 week" },
-    { hours: 336, label: "2 weeks" },
-    { hours: 504, label: "3 weeks" },
-    { hours: 720, label: "1 month" },
-  ];
-
-  // Pretty-format hours back to the closest preset label, or "X days" for
-  // custom values that don't match a preset exactly.
-  const formatBorrowPeriod = (hours: number): string => {
-    const preset = BORROW_PRESETS.find((p) => p.hours === hours);
-    if (preset) return preset.label;
-    if (hours < 24) return `${hours} hours`;
-    const days = hours / 24;
-    if (Number.isInteger(days)) return `${days} days`;
-    return `${days.toFixed(1)} days`;
-  };
-
-  // Apply a new reminder period — saves to prefs AND re-schedules every
-  // currently-checked-out tool so existing checkouts use the new cadence.
-  const applyBorrowPeriod = async (hours: number) => {
-    if (!Number.isFinite(hours) || hours < 1) return;
-    await update({ borrow_reminder_hours: hours });
-    setBorrowPeriodPickerOpen(false);
-    setCustomDaysInput("");
-    if (prefs.borrow_reminders_enabled) {
-      try {
-        const tools = await api.listTools();
-        await rescheduleAllBorrowReminders(tools, {
-          enabled: true,
-          reminderHours: hours,
-        });
-      } catch { /* offline ok */ }
-    }
-  };
-
   // ---------- Home Screen Logo customization helpers ----------
   // Resizes the picked image to fit within 512x512 max, JPEG @ 80%, and
   // stores the resulting base64 data URI in prefs. Keeping the saved blob
@@ -538,6 +508,11 @@ export default function MoreScreen() {
 
   const totalDue = mntDue.overdue + mntDue.due_soon;
 
+  // Metadata (label + signature colour) for the currently-active theme, shown
+  // in the collapsed Theme accordion row.
+  const currentAppearanceMeta =
+    APPEARANCE_OPTIONS.find((o) => o.id === appearance) || APPEARANCE_OPTIONS[0];
+
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <IndustrialBanner
@@ -570,76 +545,117 @@ export default function MoreScreen() {
         </Text>
       </View>
       <ScrollView contentContainerStyle={{ paddingBottom: 100 }}>
-        {/* CUSTOMIZE — appearance now lives in its own named section so it
-            sits alongside future personalization controls. */}
+        {/* CUSTOMIZE — single consolidated personalization card: theme, home
+            layout, and home banners all live here. */}
         <SectionCard title="CUSTOMIZE" testID="more-section-customize">
-          <View style={styles.customizeSubHeader}>
-            <Ionicons name="color-palette" size={16} color={theme.colors.accent} />
-            <Text style={styles.customizeSubLabel}>Appearance</Text>
-          </View>
-
-          {/* 4 appearance options. `appearance` + `setAppearance` resolve the
-              skin + light/dark + industrial colour-variant atomically so the
-              palette and PNG skin art always switch together in one pass. */}
-          {([
-            {
-              id: "industrial",
-              icon: "construct",
-              title: "Industrial · Orange",
-              sub: "Textured metal panels · orange glow",
-            },
-            {
-              id: "industrial-pink",
-              icon: "color-wand",
-              title: "Industrial · Pink",
-              sub: "Same metal panels · pink glow",
-            },
-            {
-              id: "light",
-              icon: "sunny",
-              title: "Plain · Light",
-              sub: "No skins · soft grey-blue, dark text",
-            },
-            {
-              id: "dark",
-              icon: "moon",
-              title: "Plain · Dark",
-              sub: "No skins · flat dark cards",
-            },
-          ] as const).map((opt, idx, arr) => {
-            const active = appearance === opt.id;
-            return (
-              <TouchableOpacity
-                key={opt.id}
-                testID={`appearance-${opt.id}`}
-                activeOpacity={0.7}
-                style={[
-                  styles.optRow,
-                  idx === arr.length - 1 && styles.optRowLast,
-                  active && styles.optRowActive,
-                ]}
-                onPress={() => setAppearance(opt.id)}
-              >
-                <View style={styles.iconBox}>
-                  <Ionicons name={opt.icon} size={18} color={theme.colors.accent} />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.rowTitle}>{opt.title}</Text>
-                  <Text style={styles.rowSub}>{opt.sub}</Text>
-                </View>
+          {/* Theme — collapsed to a single accordion row showing the current
+              selection; tap to reveal the 4 options. */}
+          <SectionRow
+            icon="color-palette"
+            title="Theme"
+            subtitle="Choose the app's look & feel"
+            testID="theme-accordion-row"
+            onPress={() => setThemeOpen((o) => !o)}
+            rightSlot={
+              <View style={styles.themeValueWrap}>
+                <Text
+                  style={[
+                    styles.themeValueText,
+                    currentAppearanceMeta.color
+                      ? { color: currentAppearanceMeta.color }
+                      : null,
+                  ]}
+                  numberOfLines={1}
+                >
+                  {currentAppearanceMeta.title}
+                </Text>
                 <Ionicons
-                  name={active ? "radio-button-on" : "radio-button-off"}
-                  size={20}
-                  color={active ? theme.colors.accent : theme.colors.textMuted}
+                  name={themeOpen ? "chevron-up" : "chevron-down"}
+                  size={16}
+                  color={theme.colors.textMuted}
                 />
-              </TouchableOpacity>
-            );
-          })}
+              </View>
+            }
+          />
+          {themeOpen &&
+            APPEARANCE_OPTIONS.map((opt) => {
+              const active = appearance === opt.id;
+              const tint = opt.color || theme.colors.accent;
+              return (
+                <TouchableOpacity
+                  key={opt.id}
+                  testID={`appearance-${opt.id}`}
+                  activeOpacity={0.7}
+                  style={[styles.optRow, active && styles.optRowActive]}
+                  onPress={() => setAppearance(opt.id)}
+                >
+                  <View style={styles.iconBox}>
+                    <Ionicons name={opt.icon} size={18} color={tint} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text
+                      style={[
+                        styles.rowTitle,
+                        opt.color ? { color: opt.color } : null,
+                      ]}
+                    >
+                      {opt.title}
+                    </Text>
+                    <Text style={styles.rowSub}>{opt.sub}</Text>
+                  </View>
+                  <Ionicons
+                    name={active ? "radio-button-on" : "radio-button-off"}
+                    size={20}
+                    color={active ? tint : theme.colors.textMuted}
+                  />
+                </TouchableOpacity>
+              );
+            })}
 
-          <View style={styles.customizeSubHeader}>
-            <Ionicons name="card" size={16} color={theme.colors.accent} />
-            <Text style={styles.customizeSubLabel}>Payments</Text>
-          </View>
+          {/* Home layout */}
+          <SectionRow
+            icon="image"
+            title="Home Screen Logo"
+            subtitle={logoSubtitle}
+            testID="more-home-logo"
+            onPress={openHomeLogoMenu}
+          />
+          <SectionRow
+            icon="grid"
+            title="Home Screen Rows"
+            subtitle="Choose which rows show on Home & reorder them"
+            testID="more-home-rows"
+            onPress={() => setHomeRowsModal(true)}
+          />
+          <SectionRow
+            icon="cash"
+            title="Show prices in lists"
+            subtitle="Hide $ amounts everywhere"
+            rightSlot={
+              <Switch
+                testID="toggle-prices"
+                value={prefs.show_prices}
+                onValueChange={(v) => update({ show_prices: v })}
+                trackColor={{ true: theme.colors.accent, false: theme.colors.border }}
+                thumbColor="#fff"
+              />
+            }
+          />
+          <SectionRow
+            icon="stats-chart"
+            title="Detail summary headers"
+            subtitle="Show counts/breakdowns on lists"
+            rightSlot={
+              <Switch
+                testID="toggle-summary"
+                value={prefs.show_details_summary}
+                onValueChange={(v) => update({ show_details_summary: v })}
+                trackColor={{ true: theme.colors.accent, false: theme.colors.border }}
+                thumbColor="#fff"
+              />
+            }
+          />
+          {/* Home banners — all the "show X at the top of home" toggles. */}
           <SectionRow
             icon="card"
             title="Payments due banner"
@@ -655,18 +671,29 @@ export default function MoreScreen() {
             }
           />
           <SectionRow
+            icon="map"
+            title="Next dealer-route banner"
+            subtitle="Show the highlighted reminder at the top of the home screen"
+            rightSlot={
+              <Switch
+                testID="toggle-dealer-route-banner"
+                value={prefs.show_dealer_route_reminder}
+                onValueChange={(v) => update({ show_dealer_route_reminder: v })}
+                trackColor={{ true: theme.colors.accent, false: theme.colors.border }}
+                thumbColor="#fff"
+              />
+            }
+          />
+          <SectionRow
             icon="notifications"
-            title="Payment reminders"
-            subtitle="Day-before / day-of alerts (choose per account)"
+            title="Warranty Expiring Alerts"
+            subtitle="Banner on inventory tab"
             isLast
             rightSlot={
               <Switch
-                testID="toggle-payment-notifications"
-                value={prefs.payment_notifications_enabled}
-                onValueChange={(v) => {
-                  update({ payment_notifications_enabled: v });
-                  reschedulePaymentRemindersNow().catch(() => {});
-                }}
+                testID="toggle-warranty-alerts"
+                value={prefs.warranty_alerts}
+                onValueChange={(v) => update({ warranty_alerts: v })}
                 trackColor={{ true: theme.colors.accent, false: theme.colors.border }}
                 thumbColor="#fff"
               />
@@ -763,246 +790,7 @@ export default function MoreScreen() {
           />
         </SectionCard>
 
-        <SectionCard title="CUSTOMIZE" testID="more-section-customize">
-          <SectionRow
-            icon="image"
-            title="Home Screen Logo"
-            subtitle={logoSubtitle}
-            testID="more-home-logo"
-            onPress={openHomeLogoMenu}
-          />
-          <SectionRow
-            icon="grid"
-            title="Home Screen Rows"
-            subtitle="Choose which rows show on Home & reorder them"
-            testID="more-home-rows"
-            onPress={() => setHomeRowsModal(true)}
-          />
-          <SectionRow
-            icon="cash"
-            title="Show prices in lists"
-            subtitle="Hide $ amounts everywhere"
-            rightSlot={
-              <Switch
-                testID="toggle-prices"
-                value={prefs.show_prices}
-                onValueChange={(v) => update({ show_prices: v })}
-                trackColor={{ true: theme.colors.accent, false: theme.colors.border }}
-                thumbColor="#fff"
-              />
-            }
-          />
-          <SectionRow
-            icon="stats-chart"
-            title="Detail summary headers"
-            subtitle="Show counts/breakdowns on lists"
-            rightSlot={
-              <Switch
-                testID="toggle-summary"
-                value={prefs.show_details_summary}
-                onValueChange={(v) => update({ show_details_summary: v })}
-                trackColor={{ true: theme.colors.accent, false: theme.colors.border }}
-                thumbColor="#fff"
-              />
-            }
-          />
-          <SectionRow
-            icon="map"
-            title="Next dealer-route banner"
-            subtitle="Show the highlighted reminder at the top of the home screen"
-            rightSlot={
-              <Switch
-                testID="toggle-dealer-route-banner"
-                value={prefs.show_dealer_route_reminder}
-                onValueChange={(v) => update({ show_dealer_route_reminder: v })}
-                trackColor={{ true: theme.colors.accent, false: theme.colors.border }}
-                thumbColor="#fff"
-              />
-            }
-          />
-          <SectionRow
-            icon="notifications"
-            title="Warranty Expiring Alerts"
-            subtitle="Banner on inventory tab"
-            rightSlot={
-              <Switch
-                testID="toggle-warranty-alerts"
-                value={prefs.warranty_alerts}
-                onValueChange={(v) => update({ warranty_alerts: v })}
-                trackColor={{ true: theme.colors.accent, false: theme.colors.border }}
-                thumbColor="#fff"
-              />
-            }
-            isLast
-          />
-        </SectionCard>
-
-        <SectionCard title="NOTIFICATIONS" testID="more-section-notifications">
-          <SectionRow
-            icon="notifications"
-            title="Dealer route reminders"
-            subtitle="Local notification when a tool dealer is scheduled to visit"
-            testID="notif-toggle-row"
-            isLast={!prefs.dealer_notifications_enabled}
-            rightSlot={
-              <Switch
-                value={prefs.dealer_notifications_enabled}
-                onValueChange={async (v) => {
-                  if (v) {
-                    const granted = await requestNotificationPermissions();
-                    if (!granted) {
-                      Alert.alert(
-                        "Permission needed",
-                        "To remind you about dealer visits, please allow notifications for this app in your device settings.",
-                      );
-                      return;
-                    }
-                    await update({ dealer_notifications_enabled: true });
-                    try {
-                      const dealers = await api.listDealers();
-                      await rescheduleDealerNotifications(dealers, {
-                        enabled: true,
-                        hour: prefs.dealer_notification_hour,
-                        minute: prefs.dealer_notification_minute,
-                        notifyDayBefore: prefs.dealer_notify_day_before,
-                      });
-                    } catch {
-                      /* dealers fetch may fail offline; user can re-toggle later */
-                    }
-                  } else {
-                    await update({ dealer_notifications_enabled: false });
-                    await cancelDealerNotifications();
-                  }
-                }}
-                trackColor={{ true: theme.colors.accent, false: theme.colors.border }}
-                thumbColor="#fff"
-              />
-            }
-          />
-          {prefs.dealer_notifications_enabled && (
-            <>
-              <SectionRow
-                icon="time"
-                title="Reminder time"
-                subtitle="When to send the reminder on dealer-visit days"
-                testID="notif-time-row"
-                onPress={() => setTimePickerOpen(true)}
-                rightSlot={
-                  <Text style={styles.timeValue}>
-                    {formatHourMinute(
-                      prefs.dealer_notification_hour,
-                      prefs.dealer_notification_minute,
-                    )}
-                  </Text>
-                }
-              />
-              <SectionRow
-                icon="calendar"
-                title="Also remind day before"
-                subtitle="Get a heads-up reminder the day before too"
-                rightSlot={
-                  <Switch
-                    value={prefs.dealer_notify_day_before}
-                    onValueChange={async (v) => {
-                      await update({ dealer_notify_day_before: v });
-                      try {
-                        const dealers = await api.listDealers();
-                        await rescheduleDealerNotifications(dealers, {
-                          enabled: true,
-                          hour: prefs.dealer_notification_hour,
-                          minute: prefs.dealer_notification_minute,
-                          notifyDayBefore: v,
-                        });
-                      } catch {
-                        /* no-op */
-                      }
-                    }}
-                    trackColor={{ true: theme.colors.accent, false: theme.colors.border }}
-                    thumbColor="#fff"
-                  />
-                }
-              />
-            </>
-          )}
-          {/* ------- Borrowed-tool overdue reminders (new 2026-05-26) ------ */}
-          <SectionRow
-            icon="time"
-            title="Borrowed-tool overdue reminders"
-            subtitle="Notify me when a tool I checked out is still out"
-            testID="notif-borrow-toggle-row"
-            isLast={!prefs.borrow_reminders_enabled}
-            rightSlot={
-              <Switch
-                value={prefs.borrow_reminders_enabled}
-                onValueChange={async (v) => {
-                  if (v) {
-                    const granted = await requestNotificationPermissions();
-                    if (!granted) {
-                      Alert.alert(
-                        "Permission needed",
-                        "To remind you about checked-out tools, please allow notifications for this app in your device settings.",
-                      );
-                      return;
-                    }
-                    await update({ borrow_reminders_enabled: true });
-                    try {
-                      const tools = await api.listTools();
-                      await rescheduleAllBorrowReminders(tools, {
-                        enabled: true,
-                        reminderHours: prefs.borrow_reminder_hours || 24,
-                      });
-                    } catch { /* offline ok */ }
-                  } else {
-                    await update({ borrow_reminders_enabled: false });
-                    await cancelAllBorrowReminders();
-                  }
-                }}
-                trackColor={{ true: theme.colors.accent, false: theme.colors.border }}
-                thumbColor="#fff"
-              />
-            }
-          />
-          {prefs.borrow_reminders_enabled && (
-            <SectionRow
-              icon="hourglass"
-              title="Reminder period"
-              subtitle="How often to remind you while a tool is checked out"
-              testID="notif-borrow-period-row"
-              isLast
-              onPress={() => setBorrowPeriodPickerOpen(true)}
-              rightSlot={
-                <Text style={styles.timeValue}>
-                  {formatBorrowPeriod(prefs.borrow_reminder_hours)}
-                </Text>
-              }
-            />
-          )}
-          {/* ------- TEST notification — moved OUT of the dealer-only block so
-              it shows whenever ANY notification toggle is on, per user spec. */}
-          {(prefs.dealer_notifications_enabled || prefs.borrow_reminders_enabled) && (
-            <SectionRow
-              icon="paper-plane"
-              title="Send a test notification"
-              subtitle="Fires in 5 seconds — confirms permissions are working"
-              testID="notif-test-row"
-              isLast
-              onPress={async () => {
-                const ok = await sendTestNotification();
-                if (ok) {
-                  Alert.alert(
-                    "Test scheduled",
-                    "A test notification will appear in about 5 seconds. If your phone is on silent or Do Not Disturb is on, you\'ll see it in Notification Center.",
-                  );
-                } else {
-                  Alert.alert(
-                    "Permission needed",
-                    "Please enable notifications for this app in your device settings.",
-                  );
-                }
-              }}
-            />
-          )}
-        </SectionCard>
+        <NotificationsSettingsSection prefs={prefs} update={update} />
 
         <SectionCard title="ACCOUNT" testID="more-section-account">
           <SectionRow
@@ -1285,189 +1073,6 @@ export default function MoreScreen() {
         </KeyboardAvoidingView>
       </Modal>
 
-      {/* Time picker — schedules when on dealer-route days the reminder fires.
-          On iOS, the picker is rendered INSIDE a bottom-sheet modal so taps
-          reach the picker (not the dismiss overlay). On Android, the system
-          shows its native dialog. */}
-      {Platform.OS === "android" && timePickerOpen && (
-        <DateTimePicker
-          value={(() => {
-            const d = new Date();
-            d.setHours(prefs.dealer_notification_hour, prefs.dealer_notification_minute, 0, 0);
-            return d;
-          })()}
-          mode="time"
-          is24Hour={false}
-          display="default"
-          onChange={async (event, selected) => {
-            // Android auto-dismisses; respect dismiss vs. set events.
-            setTimePickerOpen(false);
-            if (event.type === "set" && selected) {
-              const h = selected.getHours();
-              const m = selected.getMinutes();
-              await update({ dealer_notification_hour: h, dealer_notification_minute: m });
-              try {
-                const dealers = await api.listDealers();
-                await rescheduleDealerNotifications(dealers, {
-                  enabled: prefs.dealer_notifications_enabled,
-                  hour: h,
-                  minute: m,
-                  notifyDayBefore: prefs.dealer_notify_day_before,
-                });
-              } catch {
-                /* no-op */
-              }
-            }
-          }}
-        />
-      )}
-      {Platform.OS === "ios" && (
-        <Modal
-          visible={timePickerOpen}
-          transparent
-          animationType="slide"
-          onRequestClose={() => setTimePickerOpen(false)}
-        >
-          <TouchableOpacity
-            style={styles.timeModalBackdrop}
-            activeOpacity={1}
-            onPress={() => setTimePickerOpen(false)}
-          />
-          <View style={styles.timeModalSheet}>
-            <View style={styles.timeModalHeader}>
-              <TouchableOpacity onPress={() => setTimePickerOpen(false)}>
-                <Text style={styles.timeModalCancel}>Cancel</Text>
-              </TouchableOpacity>
-              <Text style={styles.timeModalTitle}>Reminder Time</Text>
-              <TouchableOpacity onPress={() => setTimePickerOpen(false)}>
-                <Text style={styles.timeModalDone}>Done</Text>
-              </TouchableOpacity>
-            </View>
-            <DateTimePicker
-              value={(() => {
-                const d = new Date();
-                d.setHours(prefs.dealer_notification_hour, prefs.dealer_notification_minute, 0, 0);
-                return d;
-              })()}
-              mode="time"
-              is24Hour={false}
-              display="spinner"
-              themeVariant="dark"
-              textColor="#FFFFFF"
-              onChange={async (_event, selected) => {
-                if (selected) {
-                  const h = selected.getHours();
-                  const m = selected.getMinutes();
-                  await update({ dealer_notification_hour: h, dealer_notification_minute: m });
-                  try {
-                    const dealers = await api.listDealers();
-                    await rescheduleDealerNotifications(dealers, {
-                      enabled: prefs.dealer_notifications_enabled,
-                      hour: h,
-                      minute: m,
-                      notifyDayBefore: prefs.dealer_notify_day_before,
-                    });
-                  } catch {
-                    /* no-op */
-                  }
-                }
-              }}
-            />
-          </View>
-        </Modal>
-      )}
-
-      {/* ===== Borrow reminder period picker ============================ */}
-      <Modal
-        visible={borrowPeriodPickerOpen}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setBorrowPeriodPickerOpen(false)}
-      >
-        <TouchableOpacity
-          style={styles.timeModalBackdrop}
-          activeOpacity={1}
-          onPress={() => setBorrowPeriodPickerOpen(false)}
-        >
-          <TouchableOpacity
-            activeOpacity={1}
-            style={[styles.timeModalSheet, { maxHeight: "85%" }]}
-            onPress={(e) => e.stopPropagation()}
-          >
-            <View style={styles.timeModalHeader}>
-              <Text style={styles.timeModalTitle}>REMINDER PERIOD</Text>
-              <TouchableOpacity onPress={() => setBorrowPeriodPickerOpen(false)}>
-                <Ionicons name="close" size={24} color={theme.colors.textPrimary} />
-              </TouchableOpacity>
-            </View>
-            <ScrollView style={{ maxHeight: 460 }}>
-              {BORROW_PRESETS.map((p) => {
-                const active = prefs.borrow_reminder_hours === p.hours;
-                return (
-                  <TouchableOpacity
-                    key={p.hours}
-                    style={[
-                      styles.periodOptionRow,
-                      active && styles.periodOptionRowActive,
-                    ]}
-                    onPress={() => applyBorrowPeriod(p.hours)}
-                  >
-                    <Text
-                      style={[
-                        styles.periodOptionLabel,
-                        active && { color: theme.colors.accent, fontWeight: "900" },
-                      ]}
-                    >
-                      {p.label}
-                    </Text>
-                    {active && (
-                      <Ionicons name="checkmark" size={18} color={theme.colors.accent} />
-                    )}
-                  </TouchableOpacity>
-                );
-              })}
-              {/* Custom days input — accepts any positive number */}
-              <View style={[styles.periodOptionRow, { flexDirection: "column", alignItems: "stretch", gap: 8 }]}>
-                <Text style={styles.periodOptionLabel}>Custom (number of days)</Text>
-                <View style={{ flexDirection: "row", gap: 8 }}>
-                  <TextInput
-                    testID="borrow-custom-days"
-                    placeholder="e.g. 10"
-                    placeholderTextColor={theme.colors.textMuted}
-                    value={customDaysInput}
-                    onChangeText={(v) => setCustomDaysInput(v.replace(/[^0-9]/g, ""))}
-                    keyboardType="number-pad"
-                    style={{
-                      flex: 1,
-                      backgroundColor: theme.colors.surface,
-                      color: theme.colors.textPrimary,
-                      borderRadius: 8,
-                      paddingHorizontal: 12,
-                      paddingVertical: 10,
-                      borderWidth: 1,
-                      borderColor: theme.colors.border,
-                    }}
-                  />
-                  <TouchableOpacity
-                    style={{
-                      backgroundColor: theme.colors.accent,
-                      borderRadius: 8,
-                      paddingHorizontal: 16,
-                      justifyContent: "center",
-                    }}
-                    onPress={() => {
-                      const days = parseInt(customDaysInput || "0", 10);
-                      if (days > 0) applyBorrowPeriod(days * 24);
-                    }}
-                  >
-                    <Text style={{ color: "#000", fontWeight: "900" }}>SET</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            </ScrollView>
-          </TouchableOpacity>
-        </TouchableOpacity>
-      </Modal>
 
     </SafeAreaView>
   );
@@ -1798,6 +1403,18 @@ const styles = themedStyles((c) => ({
   optRowLast: {},
   optRowActive: {
     backgroundColor: c.glass,
+  },
+  themeValueWrap: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    maxWidth: 160,
+  },
+  themeValueText: {
+    color: c.textSecondary,
+    fontSize: 12,
+    fontWeight: "800",
+    letterSpacing: 0.3,
   },
   timeValue: {
     color: c.accent,

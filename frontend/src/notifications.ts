@@ -332,6 +332,11 @@ export async function reschedulePaymentRemindersNow(): Promise<void> {
   }
 }
 
+/** Cancels only the payment-reminder notifications (used by the master gate). */
+export async function cancelPaymentReminders(): Promise<void> {
+  await cancelTaggedNotifications(PAYMENT_TAG);
+}
+
 /** For a debug/diagnostic UI — returns count of currently-scheduled dealer notifs. */
 export async function pendingDealerNotificationCount(): Promise<number> {
   try {

@@ -112,10 +112,53 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Dealer Payments — scheduled recurring payment accounts (CRUD, confirm, autopay, upcoming, Home banner, notifications)"
+    - "More screen reorganization: merged CUSTOMIZE, Theme accordion, theme renames, Notifications master gate + accordion + permission flow"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
+
+more_screen_reorg:
+  - task: "More screen reorg — merged CUSTOMIZE, Theme accordion (Iron Forge/Crimson Steel), Notifications master gate + accordion + native permission"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/app/(tabs)/more.tsx, /app/frontend/src/sections/NotificationsSettingsSection.tsx, /app/frontend/src/prefs.ts, /app/frontend/src/notifications.ts"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: >
+          Reorganized the More (Settings) screen per user spec:
+          (1) Merged the two CUSTOMIZE sections into ONE card containing: a Theme
+          1-row accordion dropdown (testID theme-accordion-row) that expands to 4
+          options, Home Screen Logo, Home Screen Rows, Show prices, Detail summary
+          headers, and ALL home banners (Payments due banner, Next dealer-route
+          banner, Warranty Expiring Alerts).
+          (2) Renamed themes: "Industrial · Orange" -> "Iron Forge" (label/icon/radio
+          forced orange #FF6A00 across all themes) and "Industrial · Pink" ->
+          "Crimson Steel" (forced pink #FF1A6B across all themes). testIDs unchanged:
+          appearance-industrial, appearance-industrial-pink, appearance-light,
+          appearance-dark.
+          (3) Notifications fully rebuilt into src/sections/NotificationsSettingsSection.tsx:
+          a MASTER toggle (testID toggle-notifications-master) that requests native OS
+          notification permission on turn-ON; if denied/blocked it shows an
+          "Open Settings" alert (Linking.openSettings) and leaves master OFF. While
+          master is ON an accordion reveals per-type toggles: Dealer route reminders
+          (+ time + day-before), Borrowed-tool overdue reminders (+ period), and
+          "Payment Notifications" (moved here from CUSTOMIZE, renamed from "Payment
+          reminders", testID toggle-payment-notifications). "Send a test notification"
+          (testID notif-test-row) is GRAYED OUT (disabled, opacity 0.4) unless master
+          is ON. Turning master OFF cancels all dealer/borrow/payment notifications.
+          (4) Added pref notifications_master_enabled with migration: existing users
+          with any individual type enabled default master to ON.
+          NOTE: actual notification DELIVERY cannot be validated on Expo Go web —
+          needs a device build. Test the UI/accordion/toggle/gray-out behaviour and
+          that the screen renders without crashing. Web preview cannot show the native
+          permission dialog; verify the toggle wiring + Open Settings alert path via
+          code/state only.
+        agent: "main"
+
 
 dealer_payments:
   - task: "Dealer Payment Accounts backend (per dealer, per account)"
