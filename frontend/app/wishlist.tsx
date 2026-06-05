@@ -472,7 +472,7 @@ export default function WishlistScreen() {
         subtitle={selectMode ? "Tap items to include · email below" : "Tools you want · saved links"}
         leftSlot={
           <TouchableOpacity testID="wishlist-back" onPress={() => (selectMode ? cancelSelectMode() : router.back())} hitSlop={10}>
-            <Ionicons name={selectMode ? "close" : "arrow-back"} size={22} color="#FFFFFF" />
+            <Ionicons name={selectMode ? "close" : "arrow-back"} size={22} color="#F97316" />
           </TouchableOpacity>
         }
       />

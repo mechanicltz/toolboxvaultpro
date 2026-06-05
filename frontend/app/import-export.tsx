@@ -409,7 +409,7 @@ export default function ImportExportScreen() {
         subtitle="Backup & Restore"
         leftSlot={
           <TouchableOpacity onPress={() => router.back()} hitSlop={10}>
-            <Ionicons name="chevron-back" size={22} color="#FFFFFF" />
+            <Ionicons name="chevron-back" size={22} color="#F97316" />
           </TouchableOpacity>
         }
       />

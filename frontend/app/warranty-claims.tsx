@@ -365,7 +365,7 @@ export default function WarrantyClaimsScreen() {
         subtitle="By Dealer · Status Pipeline"
         leftSlot={
           <TouchableOpacity testID="claims-back" onPress={() => router.back()} hitSlop={10}>
-            <Ionicons name="arrow-back" size={22} color="#FFFFFF" />
+            <Ionicons name="arrow-back" size={22} color="#F97316" />
           </TouchableOpacity>
         }
       />

@@ -290,7 +290,7 @@ export default function DealerClaimsScreen() {
         subtitle="Claims / Repairs"
         leftSlot={
           <TouchableOpacity onPress={() => router.back()} hitSlop={10}>
-            <Ionicons name="chevron-back" size={22} color="#FFFFFF" />
+            <Ionicons name="chevron-back" size={22} color="#F97316" />
           </TouchableOpacity>
         }
       />

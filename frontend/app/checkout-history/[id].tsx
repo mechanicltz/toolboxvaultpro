@@ -59,7 +59,7 @@ export default function CheckoutHistoryPage() {
         subtitle={tool?.name || "Borrowing record"}
         leftSlot={
           <TouchableOpacity onPress={() => router.back()} hitSlop={10} testID="back-btn">
-            <Ionicons name="arrow-back" size={22} color="#FFFFFF" />
+            <Ionicons name="arrow-back" size={22} color="#F97316" />
           </TouchableOpacity>
         }
       />

@@ -71,7 +71,7 @@ export default function DealerToolsScreen() {
         subtitle="Tools Purchased From"
         leftSlot={
           <TouchableOpacity onPress={() => router.back()} hitSlop={10} testID="back-btn">
-            <Ionicons name="chevron-back" size={22} color="#FFFFFF" />
+            <Ionicons name="chevron-back" size={22} color="#F97316" />
           </TouchableOpacity>
         }
       />

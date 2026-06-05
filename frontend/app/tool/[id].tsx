@@ -1453,7 +1453,7 @@ export default function ToolDetail() {
         subtitle={tool.brand ? String(tool.brand) : "Item Details"}
         leftSlot={
           <TouchableOpacity testID="back-btn" onPress={() => router.back()} hitSlop={10}>
-            <Ionicons name="arrow-back" size={22} color="#FFFFFF" />
+            <Ionicons name="arrow-back" size={22} color="#F97316" />
           </TouchableOpacity>
         }
       />

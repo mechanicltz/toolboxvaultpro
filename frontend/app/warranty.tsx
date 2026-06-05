@@ -63,7 +63,7 @@ export default function WarrantyScreen() {
         subtitle="Expiring & Expired"
         leftSlot={
           <TouchableOpacity onPress={() => router.back()} hitSlop={10}>
-            <Ionicons name="arrow-back" size={22} color="#FFFFFF" />
+            <Ionicons name="arrow-back" size={22} color="#F97316" />
           </TouchableOpacity>
         }
       />

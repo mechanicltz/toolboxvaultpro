@@ -517,7 +517,7 @@ export default function ToolEdit() {
               }}
               hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
             >
-              <Ionicons name="close" size={22} color="#FFFFFF" />
+              <Ionicons name="close" size={22} color="#F97316" />
             </TouchableOpacity>
           }
           rightSlot={

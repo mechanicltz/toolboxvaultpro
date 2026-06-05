@@ -76,7 +76,7 @@ export default function BorrowerHistory() {
         subtitle="Contact Details"
         leftSlot={
           <TouchableOpacity onPress={() => router.back()} hitSlop={10}>
-            <Ionicons name="arrow-back" size={22} color="#FFFFFF" />
+            <Ionicons name="arrow-back" size={22} color="#F97316" />
           </TouchableOpacity>
         }
       />
