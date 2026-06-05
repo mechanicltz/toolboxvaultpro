@@ -52,21 +52,21 @@ export function IndustrialBanner({ title, subtitle, rightSlot, leftSlot }: Props
   return (
     <View style={styles.wrap}>
       {/* The constant brand nameplate — same size + look as the login page.
-          The app version is stamped just under the "VAULT" word (right side of
-          the plate), so it appears on every screen as part of the header. */}
+          The app version sits ABOVE the plate, just outside the top border,
+          aligned over the "VAULT" word (right side of the plate). */}
       <View style={{ width: nameplateW, alignSelf: "center", marginBottom: 6 }}>
+        <Text
+          style={[styles.version, { marginRight: nameplateW * 0.16, marginBottom: 2 }]}
+          allowFontScaling={false}
+        >
+          {APP_VERSION_LABEL}
+        </Text>
         <Image
           source={SKIN.nameplate}
           style={{ width: nameplateW, height: nameplateH }}
           resizeMode="contain"
           fadeDuration={0}
         />
-        <Text
-          style={[styles.version, { marginRight: nameplateW * 0.16, marginTop: -nameplateH * 0.245 }]}
-          allowFontScaling={false}
-        >
-          {APP_VERSION_LABEL}
-        </Text>
       </View>
 
       {/* Label row: back (left) · PAGE NAME (center) · action (right). */}
