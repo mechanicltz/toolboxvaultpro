@@ -53,7 +53,7 @@ import { Anton_400Regular } from "@expo-google-fonts/anton";
 
 // Manual verification beacon — bump this on every change so we can confirm
 // the device is actually showing the latest bundle. Rendered top-right of Home.
-const HOME_BUILD = "BUILD 145";
+const HOME_BUILD = "BUILD 146";
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -386,6 +386,40 @@ export default function HomeScreen() {
     );
   };
 
+  // Plain-mode Description-Card row (restored from the 05-30 backup) — a flat
+  // line with the label on the left and value (+ optional chevron) on the
+  // right. Palette-aware via the pd* styles so Plain Light & Dark both work.
+  const renderPlainDescRow = (r: HomeDetailRow, isLast: boolean, key: string) => {
+    const Wrapper: any = r.onPress ? TouchableOpacity : View;
+    const wp = r.onPress ? { onPress: r.onPress, activeOpacity: 0.6 } : {};
+    return (
+      <Wrapper
+        key={key}
+        testID={`home-row-${key}`}
+        style={[styles.pdRow, isLast && styles.pdRowLast]}
+        {...wp}
+      >
+        <View style={{ flex: 1, minWidth: 0, marginRight: 8 }}>
+          <Text style={styles.pdLabel} numberOfLines={1}>{r.label}</Text>
+          {!!r.sub && <Text style={styles.pdSub} numberOfLines={1}>{r.sub}</Text>}
+        </View>
+        <View style={styles.pdValueWrap}>
+          {!!r.value && (
+            <Text
+              style={[styles.pdValue, r.valueColor ? { color: r.valueColor } : null]}
+              numberOfLines={1}
+            >
+              {r.value}
+            </Text>
+          )}
+          {r.onPress && (
+            <Ionicons name="chevron-forward" size={14} color={theme.colors.textMuted} />
+          )}
+        </View>
+      </Wrapper>
+    );
+  };
+
   // Build the list of stat rows the user has opted in to, in their preferred
   // order. The dealer-accounts row lives in its own separate card below.
   const STAT_ROW_DATA: Record<string, HomeDetailRow | null> = {
@@ -512,52 +546,106 @@ export default function HomeScreen() {
             </BevelCard>
           )}
 
-          {/* PRE-SKIN LAYOUT (restored from the user's original backup) —
-              each stat row is its OWN icon card, and DEALER ACCOUNTS is a
-              grouped card with a wallet-icon header + dealer sub-rows. Rendered
-              in the user's chosen order. Palette-aware, so Plain Light & Plain
-              Dark both work. Skinned mode is untouched. */}
-          <View style={styles.list}>
-            {renderSequence.map((item, idx) => {
-              if (item.kind === "dealers") {
+          {/* UNIFIED DESCRIPTION CARD (restored from the 05-30 backup) — a
+              single box containing every enabled row in the user's chosen
+              order as flat label/value lines, with DEALER ACCOUNTS rendered as
+              a nested sub-card (dealer rows + ADJUST chips + TOTAL footer).
+              Palette-aware so Plain Light & Plain Dark both work. Skinned mode
+              is untouched. */}
+          {renderSequence.length > 0 && (
+            <View style={styles.pdBox} testID="home-details-box">
+              {renderSequence.map((item, idx) => {
+                const isLastItem = idx === renderSequence.length - 1;
+                if (item.kind === "stat") {
+                  return renderPlainDescRow(item.row, isLastItem, item.key);
+                }
                 return (
-                  <BevelCard
-                    key={`dealers-${idx}`}
-                    style={styles.owedCluster}
+                  <View
+                    key="owed_to_dealers"
+                    style={[styles.pdNestedCard, isLastItem && { marginBottom: 0 }]}
                     testID="home-dealers-widget"
                   >
-                    <SummaryRow
-                      icon="wallet"
-                      label="DEALER ACCOUNTS"
-                      value={`$${totalOwed.toFixed(2)}`}
+                    <TouchableOpacity
+                      style={[styles.pdRow, styles.pdNestedHeaderRow]}
+                      activeOpacity={0.6}
+                      testID="home-dealers-header"
                       onPress={() => router.push("/dealers")}
-                      nested
-                    />
+                    >
+                      <Text style={styles.pdLabel}>DEALER ACCOUNTS</Text>
+                      <View style={styles.pdValueWrap}>
+                        <Ionicons name="chevron-forward" size={14} color={theme.colors.textMuted} />
+                      </View>
+                    </TouchableOpacity>
                     {dealersAll.length === 0 ? (
-                      <Text style={styles.emptyInline}>No dealers yet.</Text>
-                    ) : (
-                      dealersAll.map((d, i) => (
-                        <View
-                          key={d.id}
+                      <View style={[styles.pdRow, styles.pdRowLast]}>
+                        <Text
                           style={[
-                            styles.owedDivider,
-                            i === dealersAll.length - 1 && { borderBottomWidth: 0 },
+                            styles.pdValue,
+                            { color: theme.colors.textMuted, textAlign: "left", flex: 1, fontWeight: "500" },
                           ]}
                         >
-                          <DealerBalanceRow
-                            dealer={d}
-                            onAdjust={() => openAdjustForDealer(d)}
-                            onOpenDealer={() => router.push(`/dealer/${d.id}`)}
-                          />
+                          No dealers yet.
+                        </Text>
+                      </View>
+                    ) : (
+                      <>
+                        {dealersAll.map((d) => {
+                          const dTotal =
+                            (Number(d.credit_balance) || 0) + (Number(d.personal_balance) || 0);
+                          return (
+                            <View key={d.id} style={styles.pdRow}>
+                              <TouchableOpacity
+                                onPress={() => router.push(`/dealer/${d.id}`)}
+                                activeOpacity={0.6}
+                                style={{ flex: 1, minWidth: 0, marginRight: 8 }}
+                                testID={`home-dealer-${d.id}`}
+                              >
+                                <Text style={styles.pdDealerName} numberOfLines={1}>
+                                  {d.name}
+                                </Text>
+                              </TouchableOpacity>
+                              <View style={styles.pdValueWrap}>
+                                <Text
+                                  style={[
+                                    styles.pdValue,
+                                    dTotal === 0 && { color: theme.colors.textMuted },
+                                  ]}
+                                >
+                                  ${dTotal.toFixed(2)}
+                                </Text>
+                                <TouchableOpacity
+                                  testID={`adjust-${d.id}`}
+                                  style={styles.pdAdjustChip}
+                                  onPress={() => openAdjustForDealer(d)}
+                                  activeOpacity={0.7}
+                                >
+                                  <Text style={styles.pdAdjustChipText}>ADJUST</Text>
+                                </TouchableOpacity>
+                              </View>
+                            </View>
+                          );
+                        })}
+                        <View
+                          style={[styles.pdRow, styles.pdRowLast, styles.pdNestedTotalRow]}
+                          testID="home-dealers-total"
+                        >
+                          <Text style={styles.pdNestedTotalLabel}>TOTAL</Text>
+                          <Text
+                            style={[
+                              styles.pdNestedTotalValue,
+                              totalOwed === 0 && { color: theme.colors.textMuted },
+                            ]}
+                          >
+                            ${totalOwed.toFixed(2)}
+                          </Text>
                         </View>
-                      ))
+                      </>
                     )}
-                  </BevelCard>
+                  </View>
                 );
-              }
-              return <View key={item.key}>{ROW_RENDERERS[item.key]?.()}</View>;
-            })}
-          </View>
+              })}
+            </View>
+          )}
 
           <BevelCard
             style={styles.plainBanner}
@@ -1435,6 +1523,100 @@ const styles = themedStyles((c) => ({
     gap: 8,
     paddingHorizontal: 14,
     paddingVertical: 12,
+  },
+  // ── Plain Description-Card styles (restored from the 05-30 backup) ──
+  // A single box of flat label/value rows, with the dealer cluster as a
+  // nested card-within-a-card. All palette-aware so Plain Light + Dark work.
+  pdBox: {
+    backgroundColor: c.bgSecondary,
+    borderWidth: 1,
+    borderColor: c.border,
+    borderRadius: 6,
+    padding: 12,
+    marginBottom: 12,
+    ...(theme.elevation.md as object),
+  },
+  pdRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: c.borderSubtle,
+    gap: 8,
+  },
+  pdRowLast: { borderBottomWidth: 0 },
+  pdLabel: {
+    color: c.textMuted,
+    fontSize: 9,
+    fontWeight: "800",
+    letterSpacing: 1.5,
+  },
+  pdSub: {
+    color: c.textMuted,
+    fontSize: 8,
+    fontWeight: "600",
+    letterSpacing: 1.2,
+    marginTop: 2,
+  },
+  pdValueWrap: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    flexShrink: 0,
+    justifyContent: "flex-end",
+  },
+  pdValue: {
+    color: c.textPrimary,
+    fontSize: 12,
+    fontWeight: "700",
+    textAlign: "right",
+    flexShrink: 1,
+  },
+  pdDealerName: {
+    color: c.textPrimary,
+    fontSize: 12,
+    fontWeight: "700",
+  },
+  pdAdjustChip: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderWidth: 1.5,
+    borderColor: c.accent,
+    borderRadius: 6,
+  },
+  pdAdjustChipText: {
+    color: c.accent,
+    fontSize: 8,
+    fontWeight: "900",
+    letterSpacing: 1,
+  },
+  pdNestedCard: {
+    backgroundColor: c.bg,
+    borderWidth: 1,
+    borderColor: c.borderSubtle,
+    borderRadius: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    marginVertical: 6,
+  },
+  pdNestedHeaderRow: { borderBottomColor: c.border },
+  pdNestedTotalRow: {
+    borderTopWidth: 1,
+    borderTopColor: c.border,
+    paddingTop: 10,
+    marginTop: 2,
+  },
+  pdNestedTotalLabel: {
+    color: c.textMuted,
+    fontSize: 9,
+    fontWeight: "800",
+    letterSpacing: 1.5,
+  },
+  pdNestedTotalValue: {
+    color: c.accent,
+    fontSize: 12,
+    fontWeight: "700",
   },
   dealerName: {
     flex: 1,
