@@ -1,4 +1,5 @@
 import { Stack, useRouter, useSegments } from "expo-router";
+import { ThemeProvider as NavThemeProvider, DefaultTheme as NavDefaultTheme } from "@react-navigation/native";
 import { StatusBar } from "expo-status-bar";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
@@ -29,6 +30,16 @@ import { ThemeProvider, useColors, useThemeMode } from "../src/themeContext";
 import { IndustrialThemeProvider } from "../src/components/industrial";
 import { notifyAppResume } from "../src/appLifecycle";
 import { preloadTbvSkins } from "../src/tbv/useTbvSkins";
+
+// Transparent navigator theme so the global AppBackground photo shows through
+// the screen scenes on dark themes. (React Navigation defaults its scene
+// background to solid white, which otherwise covers the photo in the centre
+// content column.) Light-theme screens paint their own solid background on top,
+// so they're unaffected.
+const navTheme = {
+  ...NavDefaultTheme,
+  colors: { ...NavDefaultTheme.colors, background: "transparent", card: "transparent" },
+};
 
 /**
  * Make native (iOS Expo Go / TestFlight) layouts visually match the web
@@ -243,22 +254,22 @@ function ShellNav() {
 
   return (
     <View style={{ flex: 1 }}>
+      {/* Global FULL-BLEED industrial backdrop — uses the exact same
+          ImageBackground + resizeMode="cover" + veil as the skinned Home
+          screen, at the OUTERMOST level, so the photo is scaled/contained
+          identically on every page. Non-light themes only; nothing in light. */}
+      <AppBackground />
       <OfflineBanner />
       <View style={{ flex: 1 }}>
         <ResponsiveContainer variant="wide">
-          {/* Global industrial photo backdrop — placed INSIDE the same
-              constrained content column as the login screen, so the photo is
-              scaled/cropped identically on every page. Shows for all non-light
-              themes (Industrial Orange/Pink, Plain Dark); nothing in light. */}
-          <View style={{ flex: 1 }}>
-            <AppBackground />
-            <Stack
-              screenOptions={{
-                headerShown: false,
-                contentStyle: { backgroundColor: c.canvas },
-                animation: "slide_from_right",
-              }}
-            >
+          <NavThemeProvider value={navTheme}>
+          <Stack
+            screenOptions={{
+              headerShown: false,
+              contentStyle: { backgroundColor: c.canvas },
+              animation: "slide_from_right",
+            }}
+          >
             <Stack.Screen name="login" options={{ animation: "fade" }} />
             <Stack.Screen name="intro" options={{ animation: "fade", headerShown: false, gestureEnabled: false }} />
             <Stack.Screen name="(tabs)" />
@@ -276,7 +287,7 @@ function ShellNav() {
               }}
             />
           </Stack>
-          </View>
+          </NavThemeProvider>
         </ResponsiveContainer>
         {showShell && <ReportsFab />}
       </View>
