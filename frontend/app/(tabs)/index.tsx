@@ -53,7 +53,7 @@ import { Anton_400Regular } from "@expo-google-fonts/anton";
 
 // Manual verification beacon — bump this on every change so we can confirm
 // the device is actually showing the latest bundle. Rendered top-right of Home.
-const HOME_BUILD = "BUILD 141";
+const HOME_BUILD = "BUILD 142";
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -386,6 +386,42 @@ export default function HomeScreen() {
     );
   };
 
+  // Plain-mode stat row — a flat list line (label left, value right, optional
+  // chevron) matching the pre-skin home layout. It deliberately uses the SAME
+  // `theme.text.default` size/weight as the dealer rows so the dealer section
+  // and the rows below it read as one uniform list (no icon chips / raised
+  // per-row cards that made them look larger).
+  const renderPlainStatRow = (r: HomeDetailRow, isLast: boolean, key: string) => {
+    const Wrapper: any = r.onPress ? TouchableOpacity : View;
+    const wp = r.onPress ? { onPress: r.onPress, activeOpacity: 0.6 } : {};
+    return (
+      <Wrapper
+        key={key}
+        testID={`home-row-${key}`}
+        style={[styles.plainStatRow, isLast && styles.plainStatRowLast]}
+        {...wp}
+      >
+        <View style={{ flex: 1, minWidth: 0 }}>
+          <Text style={styles.plainStatLabel} numberOfLines={1}>{r.label}</Text>
+          {!!r.sub && <Text style={styles.plainStatSub} numberOfLines={1}>{r.sub}</Text>}
+        </View>
+        <View style={styles.plainStatValueWrap}>
+          {!!r.value && (
+            <Text
+              style={[styles.plainStatValue, r.valueColor ? { color: r.valueColor } : null]}
+              numberOfLines={1}
+            >
+              {r.value}
+            </Text>
+          )}
+          {r.onPress && (
+            <Ionicons name="chevron-forward" size={16} color={theme.colors.textMuted} />
+          )}
+        </View>
+      </Wrapper>
+    );
+  };
+
   // Build the list of stat rows the user has opted in to, in their preferred
   // order. The dealer-accounts row lives in its own separate card below.
   const STAT_ROW_DATA: Record<string, HomeDetailRow | null> = {
@@ -512,48 +548,72 @@ export default function HomeScreen() {
             </BevelCard>
           )}
 
-          {renderSequence.map((item, idx) => {
-            if (item.kind === "dealers") {
-              return (
-                <BevelCard
-                  key={`dealers-${idx}`}
-                  style={styles.owedCluster}
-                  testID="home-dealers-widget"
-                >
-                  <TouchableOpacity
-                    style={styles.dealerRow}
-                    onPress={() => router.push("/dealers")}
-                    activeOpacity={0.7}
-                  >
-                    <Text style={[styles.dealerName, { fontWeight: "900", flex: 1 }]}>
-                      DEALER ACCOUNTS
-                    </Text>
-                    <Ionicons name="chevron-forward" size={16} color={theme.colors.textMuted} />
-                  </TouchableOpacity>
-                  {dealersAll.length === 0 ? (
-                    <Text style={styles.emptyInline}>No dealers yet.</Text>
-                  ) : (
-                    <>
-                      {dealersAll.map((d) => (
-                        <View key={d.id} style={styles.owedDivider}>
-                          <DealerBalanceRow
-                            dealer={d}
-                            onAdjust={() => openAdjustForDealer(d)}
-                            onOpenDealer={() => router.push(`/dealer/${d.id}`)}
-                          />
-                        </View>
-                      ))}
-                      <View style={styles.owedTotalRow} testID="home-dealers-total">
-                        <Text style={styles.owedTotalLabel}>TOTAL OWED</Text>
-                        <Text style={styles.owedTotalValue}>${totalOwed.toFixed(2)}</Text>
-                      </View>
-                    </>
+          {(() => {
+            // Render the user's ordered sequence, but COLLAPSE consecutive
+            // stat rows into one flat hairline-divided list so they sit tight
+            // together (mimics the pre-skin layout). The dealer card keeps its
+            // own raised treatment and flushes any buffered stats before it.
+            const out: ReactNode[] = [];
+            let statBuf: { key: string; row: HomeDetailRow }[] = [];
+            const flushStats = (fid: number) => {
+              if (!statBuf.length) return;
+              const buf = statBuf;
+              statBuf = [];
+              out.push(
+                <View key={`stats-${fid}`} style={styles.plainStatList}>
+                  {buf.map((s, i) =>
+                    renderPlainStatRow(s.row, i === buf.length - 1, s.key),
                   )}
-                </BevelCard>
+                </View>,
               );
-            }
-            return <View key={item.key}>{ROW_RENDERERS[item.key]?.()}</View>;
-          })}
+            };
+            renderSequence.forEach((item, idx) => {
+              if (item.kind === "dealers") {
+                flushStats(idx);
+                out.push(
+                  <BevelCard
+                    key={`dealers-${idx}`}
+                    style={styles.owedCluster}
+                    testID="home-dealers-widget"
+                  >
+                    <TouchableOpacity
+                      style={styles.dealerRow}
+                      onPress={() => router.push("/dealers")}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={[styles.dealerName, { fontWeight: "900", flex: 1 }]}>
+                        DEALER ACCOUNTS
+                      </Text>
+                      <Ionicons name="chevron-forward" size={16} color={theme.colors.textMuted} />
+                    </TouchableOpacity>
+                    {dealersAll.length === 0 ? (
+                      <Text style={styles.emptyInline}>No dealers yet.</Text>
+                    ) : (
+                      <>
+                        {dealersAll.map((d) => (
+                          <View key={d.id} style={styles.owedDivider}>
+                            <DealerBalanceRow
+                              dealer={d}
+                              onAdjust={() => openAdjustForDealer(d)}
+                              onOpenDealer={() => router.push(`/dealer/${d.id}`)}
+                            />
+                          </View>
+                        ))}
+                        <View style={styles.owedTotalRow} testID="home-dealers-total">
+                          <Text style={styles.owedTotalLabel}>TOTAL OWED</Text>
+                          <Text style={styles.owedTotalValue}>${totalOwed.toFixed(2)}</Text>
+                        </View>
+                      </>
+                    )}
+                  </BevelCard>,
+                );
+              } else {
+                statBuf.push({ key: item.key, row: item.row });
+              }
+            });
+            flushStats(renderSequence.length);
+            return out;
+          })()}
 
           <BevelCard
             style={styles.plainBanner}
@@ -1517,6 +1577,46 @@ const styles = themedStyles((c) => ({
     color: c.textPrimary,
     ...theme.text.default,
     marginTop: 3,
+  },
+  // Plain-mode flat stat list (mimics the pre-skin home layout). Rows are
+  // hairline-divided lines with NO icon chips / per-row cards, and they use the
+  // exact same `theme.text.default` size + weight as the dealer rows so the
+  // dealer section and the rows below it read as one uniform list.
+  plainStatList: {
+    paddingHorizontal: 2,
+  },
+  plainStatRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: 14,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: c.border,
+    gap: 10,
+  },
+  plainStatRowLast: { borderBottomWidth: 0 },
+  plainStatLabel: {
+    color: c.textPrimary,
+    ...theme.text.default,
+    letterSpacing: 1,
+  },
+  plainStatSub: {
+    color: c.textMuted,
+    fontSize: 8,
+    fontWeight: "700",
+    letterSpacing: 0.6,
+    marginTop: 2,
+  },
+  plainStatValueWrap: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    flexShrink: 0,
+  },
+  plainStatValue: {
+    color: c.textPrimary,
+    ...theme.text.default,
+    textAlign: "right",
   },
   plainBuildStamp: {
     position: "absolute",
