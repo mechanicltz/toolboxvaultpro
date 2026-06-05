@@ -243,21 +243,22 @@ function ShellNav() {
 
   return (
     <View style={{ flex: 1 }}>
-      {/* Global industrial photo backdrop — shows on every page for all
-          non-light themes (Industrial Orange/Pink, Plain Dark). Renders
-          nothing in light theme. Sits behind all content; the bottom bar and
-          screens paint on top. */}
-      <AppBackground />
       <OfflineBanner />
       <View style={{ flex: 1 }}>
         <ResponsiveContainer variant="wide">
-          <Stack
-            screenOptions={{
-              headerShown: false,
-              contentStyle: { backgroundColor: c.canvas },
-              animation: "slide_from_right",
-            }}
-          >
+          {/* Global industrial photo backdrop — placed INSIDE the same
+              constrained content column as the login screen, so the photo is
+              scaled/cropped identically on every page. Shows for all non-light
+              themes (Industrial Orange/Pink, Plain Dark); nothing in light. */}
+          <View style={{ flex: 1 }}>
+            <AppBackground />
+            <Stack
+              screenOptions={{
+                headerShown: false,
+                contentStyle: { backgroundColor: c.canvas },
+                animation: "slide_from_right",
+              }}
+            >
             <Stack.Screen name="login" options={{ animation: "fade" }} />
             <Stack.Screen name="intro" options={{ animation: "fade", headerShown: false, gestureEnabled: false }} />
             <Stack.Screen name="(tabs)" />
@@ -275,6 +276,7 @@ function ShellNav() {
               }}
             />
           </Stack>
+          </View>
         </ResponsiveContainer>
         {showShell && <ReportsFab />}
       </View>
