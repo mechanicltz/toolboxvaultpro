@@ -31,6 +31,7 @@ import { useAuth } from "../../src/AuthContext";
 import { themedStyles } from "../../src/themeContext";
 import { BevelCard } from "../../src/components/BevelCard";
 import { ShadowBox, ShadowBoxSubCard } from "../../src/components/ShadowBox";
+import { EmailLink } from "../../src/components/EmailLink";
 import { IndustrialBanner } from "../../src/components/IndustrialBanner";
 import { PillButton } from "../../src/components/PillButton";
 
@@ -482,44 +483,71 @@ export default function DealerDetail() {
                     </View>
                   </TouchableOpacity>
                   {isOpen && (
-                    <ShadowBoxSubCard style={{ paddingTop: 8, paddingBottom: 8 }}>
+                    <ShadowBoxSubCard style={styles.agentCard}>
+                      {/* Business-card header — agent name */}
+                      <Text style={styles.bizName} numberOfLines={1}>{a.name}</Text>
+                      {isCurrent && <Text style={styles.bizBadge}>CURRENT AGENT</Text>}
+
+                      {/* Phone — number shown as plain text with small call/text icon buttons */}
                       {!!a.phone && (
-                        <View style={styles.agentContactRow}>
-                          <TouchableOpacity
-                            testID={`agent-call-${a.id}`}
-                            style={styles.agentContactBtn}
-                            onPress={() => openPhone(a.phone)}
-                            activeOpacity={0.7}
-                          >
-                            <Ionicons name="call" size={13} color={theme.colors.accent} />
-                            <Text style={styles.agentContactText} numberOfLines={1}>{formatPhone(a.phone)}</Text>
-                          </TouchableOpacity>
-                          <TouchableOpacity
-                            testID={`agent-text-${a.id}`}
-                            style={[styles.agentContactBtn, styles.agentContactBtnSmall]}
-                            onPress={() => openSms(a.phone)}
-                            activeOpacity={0.7}
-                          >
-                            <Ionicons name="chatbubble-ellipses" size={13} color={theme.colors.accent} />
-                            <Text style={styles.agentContactText}>TEXT</Text>
-                          </TouchableOpacity>
+                        <View style={styles.bizRow}>
+                          <Ionicons name="call" size={14} color={theme.colors.textMuted} style={styles.bizRowIcon} />
+                          <Text style={styles.bizValue} numberOfLines={1}>{formatPhone(a.phone)}</Text>
+                          <View style={styles.bizPhoneActions}>
+                            <TouchableOpacity
+                              testID={`agent-call-${a.id}`}
+                              style={styles.bizIconBtn}
+                              onPress={() => openPhone(a.phone)}
+                              activeOpacity={0.7}
+                              hitSlop={8}
+                            >
+                              <Ionicons name="call" size={14} color={theme.colors.accent} />
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                              testID={`agent-text-${a.id}`}
+                              style={styles.bizIconBtn}
+                              onPress={() => openSms(a.phone)}
+                              activeOpacity={0.7}
+                              hitSlop={8}
+                            >
+                              <Ionicons name="chatbubble-ellipses" size={14} color={theme.colors.accent} />
+                            </TouchableOpacity>
+                          </View>
                         </View>
                       )}
+
+                      {/* Email — blue mailto link */}
                       {!!a.email && (
-                        <TouchableOpacity
-                          testID={`agent-email-${a.id}`}
-                          style={styles.agentContactBtn}
-                          onPress={() => openEmail(a.email)}
-                          activeOpacity={0.7}
-                        >
-                          <Ionicons name="mail" size={13} color={theme.colors.accent} />
-                          <Text style={styles.agentContactText} numberOfLines={1}>{a.email}</Text>
-                        </TouchableOpacity>
+                        <View style={styles.bizRow}>
+                          <Ionicons name="mail" size={14} color={theme.colors.textMuted} style={styles.bizRowIcon} />
+                          <EmailLink
+                            email={a.email}
+                            style={styles.bizValue}
+                            numberOfLines={1}
+                            testID={`agent-email-${a.id}`}
+                          />
+                        </View>
                       )}
-                      {!!a.notes && <Text style={styles.agentMeta}>{a.notes}</Text>}
+
+                      {/* Address / location */}
+                      {!!a.location && (
+                        <View style={styles.bizRow}>
+                          <Ionicons name="location" size={14} color={theme.colors.textMuted} style={styles.bizRowIcon} />
+                          <Text style={styles.bizValue} numberOfLines={2}>{a.location}</Text>
+                        </View>
+                      )}
+
+                      {/* Notes */}
+                      {!!a.notes && (
+                        <View style={styles.bizRow}>
+                          <Ionicons name="document-text-outline" size={14} color={theme.colors.textMuted} style={styles.bizRowIcon} />
+                          <Text style={[styles.bizValue, { color: theme.colors.textMuted, fontWeight: "500" }]}>{a.notes}</Text>
+                        </View>
+                      )}
                       {a.ended_at && !isCurrent && (
                         <Text style={styles.agentMeta}>Ended: {formatDateUS(a.ended_at)}</Text>
                       )}
+
                       <View style={styles.agentActions}>
                         {/* Per user (2026-05-26): EDIT button removed — the
                             agent row can be edited via the dealer-level edit
@@ -1230,6 +1258,49 @@ const styles = themedStyles((c) => ({
   currentBadgeText: { color: c.accent, fontSize: 7, fontWeight: "900", letterSpacing: 1 },
   agentName: { color: c.textPrimary, fontWeight: "700", fontSize: 12, marginTop: 6 },
   agentMeta: { color: c.textSecondary, fontSize: 9, marginTop: 2 },
+  // ---- Business-card layout (agent ShadowBoxSubCard) ----
+  agentCard: { paddingTop: 10, paddingBottom: 10, paddingHorizontal: 12 },
+  bizName: {
+    color: c.textPrimary,
+    fontSize: 15,
+    fontWeight: "800",
+    letterSpacing: 0.3,
+  },
+  bizBadge: {
+    color: c.accent,
+    fontSize: 9,
+    fontWeight: "900",
+    letterSpacing: 1.2,
+    marginTop: 2,
+    marginBottom: 4,
+  },
+  bizRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingVertical: 5,
+  },
+  bizRowIcon: { width: 16, textAlign: "center" },
+  bizValue: {
+    flex: 1,
+    color: c.textPrimary,
+    fontSize: 12,
+    fontWeight: "600",
+  },
+  bizPhoneActions: {
+    flexDirection: "row",
+    gap: 6,
+  },
+  bizIconBtn: {
+    width: 28,
+    height: 28,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: c.border,
+    backgroundColor: c.bg,
+  },
   agentRow: {
     flexDirection: "row",
     alignItems: "center",
