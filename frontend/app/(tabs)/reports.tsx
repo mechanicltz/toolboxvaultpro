@@ -27,6 +27,7 @@ import { runReport, ReportAction, ReportFormat } from "../../src/reportRunner";
 
 import { themedStyles } from "../../src/themeContext";
 import { IndustrialBanner } from "../../src/components/IndustrialBanner";
+import { ShadowBox } from "../../src/components/ShadowBox";
 
 // ---- Types --------------------------------------------------------------
 
@@ -267,7 +268,7 @@ export default function ReportsHubScreen() {
             export options.
           </Text>
           {specs.map((s) => (
-            <TouchableOpacity
+            <ShadowBox
               key={s.id}
               style={styles.typeCard}
               onPress={() => pickType(s)}
@@ -282,7 +283,7 @@ export default function ReportsHubScreen() {
                 <Text style={styles.typeDesc}>{s.description}</Text>
               </View>
               <Ionicons name="chevron-forward" size={20} color={theme.colors.textSecondary} />
-            </TouchableOpacity>
+            </ShadowBox>
           ))}
         </ScrollView>
       </SafeAreaView>
@@ -339,7 +340,7 @@ export default function ReportsHubScreen() {
         <ScrollView contentContainerStyle={styles.body}>
           <Text style={styles.sectionLabel}>Export format</Text>
           <View style={styles.formatRow}>
-            <TouchableOpacity
+            <ShadowBox
               style={[styles.formatCard, format === "pdf" && styles.formatCardOn]}
               onPress={() => setFormat("pdf")}
             >
@@ -348,8 +349,8 @@ export default function ReportsHubScreen() {
               <Text style={[styles.formatSub, format === "pdf" && { color: theme.colors.accent }]}>
                 Formatted report{"\n"}max {MAX_PDF_COLUMNS} columns
               </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
+            </ShadowBox>
+            <ShadowBox
               style={[styles.formatCard, format === "csv" && styles.formatCardOn]}
               onPress={() => setFormat("csv")}
             >
@@ -358,7 +359,7 @@ export default function ReportsHubScreen() {
               <Text style={[styles.formatSub, format === "csv" && { color: theme.colors.accent }]}>
                 Spreadsheet file{"\n"}all columns supported
               </Text>
-            </TouchableOpacity>
+            </ShadowBox>
           </View>
         </ScrollView>
         <FooterButtons

@@ -22,6 +22,7 @@ import { confirm } from "../src/confirm";
 import { buildLocationTree, LocationNode } from "../src/locationTree";
 import { IndustrialBanner } from "../src/components/IndustrialBanner";
 import { PillButton } from "../src/components/PillButton";
+import { ShadowBox } from "../src/components/ShadowBox";
 
 import { themedStyles } from "../src/themeContext";
 
@@ -274,7 +275,9 @@ export default function LocationsTreeScreen() {
             </TouchableOpacity>
           </View>
         ) : (
-          nodes.map(renderNode)
+          <ShadowBox style={styles.treeCard}>
+            {nodes.map(renderNode)}
+          </ShadowBox>
         )}
         <Text style={styles.tip}>
           Tap a row's <Text style={{ color: theme.colors.accent }}>+</Text> to add a sub-location.
@@ -439,6 +442,12 @@ export default function LocationsTreeScreen() {
 
 const styles = themedStyles((c) => ({
   container: { flex: 1, backgroundColor: c.canvas },
+  treeCard: {
+    marginHorizontal: 16,
+    marginTop: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+  },
   actionsRow: {
     flexDirection: "row",
     justifyContent: "flex-end",
