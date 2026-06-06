@@ -4197,11 +4197,12 @@ const newStyles = themedStyles((c) => ({
   photoFrame: {
     width: 110,
     height: 110,
-    borderRadius: 12,
+    borderRadius: 8,
     backgroundColor: c.bgSecondary,
     borderColor: c.border,
     borderWidth: 1,
     overflow: "hidden",
+    ...(theme.elevation.md as object),
   },
   photoImg: { width: "100%", height: "100%" },
   photoEmpty: {
