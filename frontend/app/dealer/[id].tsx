@@ -486,58 +486,14 @@ export default function DealerDetail() {
                   {isOpen && (
                     <ShadowBoxSubCard style={styles.agentCard}>
                       {/* Business-card header — agent name */}
-                      <View style={styles.bizHeader}>
-                        <View style={{ flex: 1, minWidth: 0 }}>
-                          <Text style={styles.bizName} numberOfLines={1}>{a.name}</Text>
-                          {isCurrent && <Text style={styles.bizBadge}>CURRENT AGENT</Text>}
-                        </View>
-                        <TouchableOpacity
-                          testID={`agent-share-${a.id}`}
-                          style={styles.bizShareBtn}
-                          onPress={() =>
-                            shareOrSaveAgent(
-                              {
-                                name: a.name,
-                                phone: a.phone,
-                                email: a.email,
-                                location: a.location,
-                                notes: a.notes,
-                              },
-                              dealer?.name,
-                            )
-                          }
-                          hitSlop={8}
-                          activeOpacity={0.7}
-                        >
-                          <Ionicons name="share-outline" size={18} color={theme.colors.accent} />
-                        </TouchableOpacity>
-                      </View>
+                      <Text style={styles.bizName} numberOfLines={1}>{a.name}</Text>
+                      {isCurrent && <Text style={styles.bizBadge}>CURRENT AGENT</Text>}
 
-                      {/* Phone — number shown as plain text with small call/text icon buttons */}
+                      {/* Phone — plain text (call/text actions live in the footer) */}
                       {!!a.phone && (
                         <View style={styles.bizRow}>
                           <Ionicons name="call" size={14} color={theme.colors.textMuted} style={styles.bizRowIcon} />
                           <Text style={styles.bizValue} numberOfLines={1}>{formatPhone(a.phone)}</Text>
-                          <View style={styles.bizPhoneActions}>
-                            <TouchableOpacity
-                              testID={`agent-call-${a.id}`}
-                              style={styles.bizIconBtn}
-                              onPress={() => openPhone(a.phone)}
-                              activeOpacity={0.7}
-                              hitSlop={8}
-                            >
-                              <Ionicons name="call" size={14} color={theme.colors.accent} />
-                            </TouchableOpacity>
-                            <TouchableOpacity
-                              testID={`agent-text-${a.id}`}
-                              style={styles.bizIconBtn}
-                              onPress={() => openSms(a.phone)}
-                              activeOpacity={0.7}
-                              hitSlop={8}
-                            >
-                              <Ionicons name="chatbubble-ellipses" size={14} color={theme.colors.accent} />
-                            </TouchableOpacity>
-                          </View>
                         </View>
                       )}
 
@@ -573,29 +529,70 @@ export default function DealerDetail() {
                         <Text style={styles.agentMeta}>Ended: {formatDateUS(a.ended_at)}</Text>
                       )}
 
-                      <View style={styles.agentActions}>
-                        {/* Per user (2026-05-26): EDIT button removed — the
-                            agent row can be edited via the dealer-level edit
-                            modal pencil in the header. Keeping SET CURRENT
-                            and REMOVE here since they're agent-specific. */}
-                        {!isCurrent && (
+                      <View style={styles.agentFooter}>
+                        <View style={styles.agentActionsLeft}>
+                          {!isCurrent && (
+                            <TouchableOpacity
+                              testID={`set-current-${a.id}`}
+                              style={styles.agentActionBtn}
+                              onPress={() => setCurrent(a.id)}
+                            >
+                              <Ionicons name="star-outline" size={16} color={theme.colors.accent} />
+                              <Text style={styles.agentActionText}>SET CURRENT</Text>
+                            </TouchableOpacity>
+                          )}
                           <TouchableOpacity
-                            testID={`set-current-${a.id}`}
-                            style={styles.agentActionBtn}
-                            onPress={() => setCurrent(a.id)}
+                            testID={`remove-agent-${a.id}`}
+                            style={[styles.agentActionBtn, { borderColor: theme.colors.danger }]}
+                            onPress={() => removeAgent(a.id, a.name)}
                           >
-                            <Ionicons name="star-outline" size={16} color={theme.colors.accent} />
-                            <Text style={styles.agentActionText}>SET CURRENT</Text>
+                            <Ionicons name="trash-outline" size={16} color={theme.colors.danger} />
+                            <Text style={[styles.agentActionText, { color: theme.colors.danger }]}>REMOVE</Text>
                           </TouchableOpacity>
-                        )}
-                        <TouchableOpacity
-                          testID={`remove-agent-${a.id}`}
-                          style={[styles.agentActionBtn, { borderColor: theme.colors.danger }]}
-                          onPress={() => removeAgent(a.id, a.name)}
-                        >
-                          <Ionicons name="trash-outline" size={16} color={theme.colors.danger} />
-                          <Text style={[styles.agentActionText, { color: theme.colors.danger }]}>REMOVE</Text>
-                        </TouchableOpacity>
+                        </View>
+
+                        {/* 3D contact action buttons — lined up bottom-right */}
+                        <View style={styles.bizFabRow}>
+                          {!!a.phone && (
+                            <BevelCard
+                              testID={`agent-call-${a.id}`}
+                              style={styles.bizFab}
+                              onPress={() => openPhone(a.phone)}
+                              activeOpacity={0.85}
+                            >
+                              <Ionicons name="call" size={18} color={theme.colors.accent} />
+                            </BevelCard>
+                          )}
+                          {!!a.phone && (
+                            <BevelCard
+                              testID={`agent-text-${a.id}`}
+                              style={styles.bizFab}
+                              onPress={() => openSms(a.phone)}
+                              activeOpacity={0.85}
+                            >
+                              <Ionicons name="chatbubble-ellipses" size={18} color={theme.colors.accent} />
+                            </BevelCard>
+                          )}
+                          <BevelCard
+                            testID={`agent-share-${a.id}`}
+                            style={styles.bizFab}
+                            onPress={() =>
+                              shareOrSaveAgent(
+                                {
+                                  name: a.name,
+                                  phone: a.phone,
+                                  email: a.email,
+                                  location: a.location,
+                                  notes: a.notes,
+                                },
+                                dealer?.name,
+                              )
+                            }
+                            activeOpacity={0.85}
+                          >
+                            <Ionicons name="share-social" size={18} color={theme.colors.accent} />
+                          </BevelCard>
+                        </View>
                       </View>
                     </ShadowBoxSubCard>
                   )}
@@ -1313,6 +1310,34 @@ const styles = themedStyles((c) => ({
     borderWidth: 1,
     borderColor: c.border,
     backgroundColor: c.bg,
+  },
+  agentFooter: {
+    flexDirection: "row",
+    alignItems: "flex-end",
+    justifyContent: "space-between",
+    flexWrap: "wrap",
+    gap: 10,
+    marginTop: 14,
+  },
+  agentActionsLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    flexWrap: "wrap",
+    gap: 8,
+    flexShrink: 1,
+  },
+  bizFabRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    marginLeft: "auto",
+  },
+  bizFab: {
+    width: 42,
+    height: 42,
+    borderRadius: 11,
+    alignItems: "center",
+    justifyContent: "center",
   },
   bizRow: {
     flexDirection: "row",
