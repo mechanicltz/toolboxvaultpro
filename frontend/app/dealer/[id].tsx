@@ -275,26 +275,21 @@ export default function DealerDetail() {
         <ShadowBox style={styles.companyCard}>
           {!!dealer.phone && (
             <View style={styles.dealerContactPhoneRow}>
-              <BevelCard
+              <Text style={styles.dealerContactPhoneText} numberOfLines={1}>
+                {formatPhone(dealer.phone)}
+              </Text>
+              <ContactIconButton
+                type="call"
+                size={36}
                 testID="dealer-call-btn"
-                style={styles.dealerContactBtn}
                 onPress={() => openPhone(dealer.phone)}
-                activeOpacity={0.7}
-              >
-                <Ionicons name="call" size={16} color={theme.colors.accent} />
-                <Text style={styles.dealerContactBtnText} numberOfLines={1}>
-                  {formatPhone(dealer.phone)}
-                </Text>
-              </BevelCard>
-              <BevelCard
+              />
+              <ContactIconButton
+                type="text"
+                size={36}
                 testID="dealer-text-btn"
-                style={[styles.dealerContactBtn, styles.dealerContactBtnSmall]}
                 onPress={() => openSms(dealer.phone)}
-                activeOpacity={0.7}
-              >
-                <Ionicons name="chatbubble-ellipses" size={16} color={theme.colors.accent} />
-                <Text style={styles.dealerContactBtnText}>TEXT</Text>
-              </BevelCard>
+              />
             </View>
           )}
           <ContactRow icon="globe" label={dealer.website} onPress={() => callOrEmail(dealer.website)} />
@@ -1157,10 +1152,18 @@ const styles = themedStyles((c) => ({
   contactText: { color: c.textPrimary, fontSize: 10 },
   dealerContactPhoneRow: {
     flexDirection: "row",
-    gap: 8,
+    alignItems: "center",
+    gap: 10,
     paddingHorizontal: 16,
     paddingVertical: 8,
     flexWrap: "wrap",
+  },
+  dealerContactPhoneText: {
+    color: c.textPrimary,
+    fontSize: 15,
+    fontWeight: "800",
+    letterSpacing: 0.5,
+    marginRight: 2,
   },
   dealerContactBtn: {
     flexDirection: "row",

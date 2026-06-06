@@ -7,7 +7,9 @@ import { useAppResume } from "../../src/appLifecycle";
 import { theme } from "../../src/theme";
 import { api } from "../../src/api";
 import { formatDateTime } from "../../src/dt";
-import { parseContacts, openEmail, openPhone, openSms } from "../../src/contactLinks";
+import { parseContacts, openPhone, openSms } from "../../src/contactLinks";
+import { ContactIconButton } from "../../src/components/ContactIcons";
+import { EmailLink } from "../../src/components/EmailLink";
 
 import { themedStyles } from "../../src/themeContext";
 import { IndustrialBanner } from "../../src/components/IndustrialBanner";
@@ -271,37 +273,29 @@ function ContactActions({ raw }: { raw?: string | null }) {
     <View style={styles.actionsWrap}>
       {phones.map((p) => (
         <View key={`pgrp-${p}`} style={styles.actionGroup}>
-          <TouchableOpacity
+          <Text style={styles.actionPhone} numberOfLines={1}>{p}</Text>
+          <ContactIconButton
+            type="call"
+            size={32}
             testID={`contact-call-${p}`}
-            style={styles.actionBtn}
             onPress={() => openPhone(p)}
-            activeOpacity={0.7}
-          >
-            <Ionicons name="call" size={16} color={theme.colors.accent} />
-            <Text style={styles.actionText} numberOfLines={1}>{p}</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
+          />
+          <ContactIconButton
+            type="text"
+            size={32}
             testID={`contact-text-${p}`}
-            style={[styles.actionBtn, styles.actionBtnSmall]}
             onPress={() => openSms(p)}
-            activeOpacity={0.7}
-          >
-            <Ionicons name="chatbubble-ellipses" size={15} color={theme.colors.accent} />
-            <Text style={styles.actionText}>Text</Text>
-          </TouchableOpacity>
+          />
         </View>
       ))}
       {emails.map((e) => (
-        <TouchableOpacity
+        <EmailLink
           key={`e-${e}`}
+          email={e}
+          style={styles.actionEmailLink}
+          numberOfLines={1}
           testID={`contact-email-${e}`}
-          style={styles.actionBtn}
-          onPress={() => openEmail(e)}
-          activeOpacity={0.7}
-        >
-          <Ionicons name="mail" size={16} color={theme.colors.accent} />
-          <Text style={styles.actionText} numberOfLines={1}>{e}</Text>
-        </TouchableOpacity>
+        />
       ))}
     </View>
   );
@@ -339,8 +333,21 @@ const styles = themedStyles((c) => ({
   },
   actionGroup: {
     flexDirection: "row",
-    gap: 4,
+    alignItems: "center",
+    gap: 6,
     flexWrap: "wrap",
+  },
+  actionPhone: {
+    color: c.textPrimary,
+    fontSize: 14,
+    fontWeight: "800",
+    letterSpacing: 0.3,
+    marginRight: 2,
+  },
+  actionEmailLink: {
+    fontSize: 13,
+    marginTop: 6,
+    textAlign: "center",
   },
   actionBtn: {
     flexDirection: "row",

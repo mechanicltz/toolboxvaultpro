@@ -24,6 +24,8 @@ import { themedStyles } from "../../src/themeContext";
 import { BevelCard } from "../../src/components/BevelCard";
 import { IndustrialBanner } from "../../src/components/IndustrialBanner";
 import { PillButton } from "../../src/components/PillButton";
+import { ContactIconButton } from "../../src/components/ContactIcons";
+import { EmailLink } from "../../src/components/EmailLink";
 
 import {
   isDeviceContactsAvailable,
@@ -464,49 +466,30 @@ function RowContactChips({ raw }: { raw?: string | null }) {
   return (
     <View style={styles.rowChipsWrap}>
       {phones.map((p) => (
-        <View key={`pgrp-${p}`} style={styles.rowChipPair}>
-          <BevelCard
+        <View key={`pgrp-${p}`} style={styles.rowPhoneLine}>
+          <Text style={styles.rowPhoneText} numberOfLines={1}>{p}</Text>
+          <ContactIconButton
+            type="call"
+            size={26}
             testID={`row-call-${p}`}
-            style={styles.rowChip}
-            onPress={(e: any) => {
-              e?.stopPropagation?.();
-              openPhone(p);
-            }}
-            activeOpacity={0.7}
-            hitSlop={6}
-          >
-            <Ionicons name="call" size={12} color={theme.colors.accent} />
-            <Text style={styles.rowChipText} numberOfLines={1}>{p}</Text>
-          </BevelCard>
-          <BevelCard
+            onPress={() => openPhone(p)}
+          />
+          <ContactIconButton
+            type="text"
+            size={26}
             testID={`row-text-${p}`}
-            style={[styles.rowChip, styles.rowChipIcon]}
-            onPress={(e: any) => {
-              e?.stopPropagation?.();
-              openSms(p);
-            }}
-            activeOpacity={0.7}
-            hitSlop={6}
-          >
-            <Ionicons name="chatbubble-ellipses" size={12} color={theme.colors.accent} />
-          </BevelCard>
+            onPress={() => openSms(p)}
+          />
         </View>
       ))}
       {emails.map((em) => (
-        <BevelCard
+        <EmailLink
           key={`e-${em}`}
+          email={em}
+          style={styles.rowEmailLink}
+          numberOfLines={1}
           testID={`row-email-${em}`}
-          style={styles.rowChip}
-          onPress={(e: any) => {
-            e?.stopPropagation?.();
-            openEmail(em);
-          }}
-          activeOpacity={0.7}
-          hitSlop={6}
-        >
-          <Ionicons name="mail" size={12} color={theme.colors.accent} />
-          <Text style={styles.rowChipText} numberOfLines={1}>{em}</Text>
-        </BevelCard>
+        />
       ))}
     </View>
   );
@@ -604,6 +587,23 @@ const styles = themedStyles((c) => ({
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 6,
+    marginTop: 4,
+  },
+  rowPhoneLine: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    width: "100%",
+    marginTop: 2,
+  },
+  rowPhoneText: {
+    color: c.textPrimary,
+    fontSize: 11,
+    fontWeight: "700",
+    letterSpacing: 0.3,
+  },
+  rowEmailLink: {
+    fontSize: 11,
     marginTop: 4,
   },
   rowChipPair: {

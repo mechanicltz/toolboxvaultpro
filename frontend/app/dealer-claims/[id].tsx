@@ -27,6 +27,7 @@ import * as FileSystem from "expo-file-system/legacy";
 
 import { themedStyles } from "../../src/themeContext";
 import { BevelCard } from "../../src/components/BevelCard";
+import { ContactIconImage } from "../../src/components/ContactIcons";
 import { IndustrialBanner } from "../../src/components/IndustrialBanner";
 import { PillButton } from "../../src/components/PillButton";
 
@@ -432,7 +433,7 @@ export default function DealerClaimsScreen() {
                       style={styles.actionBtn}
                       onPress={() => notify(t, "sms")}
                     >
-                      <Ionicons name="chatbubble" size={14} color="#fff" />
+                      <ContactIconImage type="text" size={16} />
                       <Text style={styles.actionText}>TEXT</Text>
                     </TouchableOpacity>
                     <TouchableOpacity

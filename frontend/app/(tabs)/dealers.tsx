@@ -26,6 +26,7 @@ import { useAuth } from "../../src/AuthContext";
 import { useResponsive } from "../../src/responsive";
 import { rescheduleDealerNotifications } from "../../src/notifications";
 import { formatPhone, openPhone, openSms } from "../../src/contactLinks";
+import { ContactIconButton } from "../../src/components/ContactIcons";
 import { useAppResume } from "../../src/appLifecycle";
 
 import { themedStyles } from "../../src/themeContext";
@@ -172,32 +173,21 @@ export default function DealersScreen() {
                   if (!agentPhone) return null;
                   return (
                     <View style={styles.rowContactBtns}>
-                      <TouchableOpacity
+                      <Text style={styles.rowContactPhone} numberOfLines={1}>
+                        {formatPhone(agentPhone)}
+                      </Text>
+                      <ContactIconButton
+                        type="call"
+                        size={26}
                         testID={`dealer-row-call-${item.id}`}
-                        style={styles.rowContactBtn}
-                        onPress={(e) => {
-                          (e as any)?.stopPropagation?.();
-                          openPhone(agentPhone);
-                        }}
-                        activeOpacity={0.7}
-                      >
-                        <Ionicons name="call" size={12} color={theme.colors.accent} />
-                        <Text style={styles.rowContactBtnText} numberOfLines={1}>
-                          {formatPhone(agentPhone)}
-                        </Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity
+                        onPress={() => openPhone(agentPhone)}
+                      />
+                      <ContactIconButton
+                        type="text"
+                        size={26}
                         testID={`dealer-row-text-${item.id}`}
-                        style={[styles.rowContactBtn, styles.rowContactBtnSmall]}
-                        onPress={(e) => {
-                          (e as any)?.stopPropagation?.();
-                          openSms(agentPhone);
-                        }}
-                        activeOpacity={0.7}
-                      >
-                        <Ionicons name="chatbubble-ellipses" size={12} color={theme.colors.accent} />
-                        <Text style={styles.rowContactBtnText}>TEXT</Text>
-                      </TouchableOpacity>
+                        onPress={() => openSms(agentPhone)}
+                      />
                     </View>
                   );
                 })()}
@@ -452,9 +442,17 @@ const styles = themedStyles((c) => ({
   },
   rowContactBtns: {
     flexDirection: "row",
-    gap: 6,
+    alignItems: "center",
+    gap: 8,
     marginTop: 6,
     flexWrap: "wrap",
+  },
+  rowContactPhone: {
+    color: c.textPrimary,
+    fontSize: 12,
+    fontWeight: "700",
+    letterSpacing: 0.3,
+    marginRight: 2,
   },
   rowContactBtn: {
     flexDirection: "row",

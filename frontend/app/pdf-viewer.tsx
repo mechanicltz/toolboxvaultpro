@@ -30,6 +30,7 @@ import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { WebView } from "react-native-webview";
 import * as Sharing from "expo-sharing";
+import { ContactIconImage } from "../src/components/ContactIcons";
 import { theme } from "../src/theme";
 
 export default function PdfViewerScreen(): React.ReactElement {
@@ -130,7 +131,7 @@ export default function PdfViewerScreen(): React.ReactElement {
               style={{ paddingHorizontal: 12, paddingVertical: 6 }}
               accessibilityLabel="Share"
             >
-              <Ionicons name="share-outline" size={24} color={theme.colors.accent} />
+              <ContactIconImage type="share" size={30} />
             </TouchableOpacity>
           ),
         }}
@@ -191,7 +192,7 @@ export default function PdfViewerScreen(): React.ReactElement {
           onPress={onShare}
           activeOpacity={0.85}
         >
-          <Ionicons name="share-outline" size={20} color="#000" />
+          <ContactIconImage type="share" size={24} />
           <Text style={styles.shareBtnText}>SHARE / SAVE</Text>
         </TouchableOpacity>
       </View>

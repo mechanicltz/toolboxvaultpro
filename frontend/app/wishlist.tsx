@@ -29,6 +29,7 @@ import { useAuth } from "../src/AuthContext";
 
 import { themedStyles } from "../src/themeContext";
 import { BevelCard } from "../src/components/BevelCard";
+import { ContactIconImage } from "../src/components/ContactIcons";
 import { IndustrialBanner } from "../src/components/IndustrialBanner";
 import { PillButton } from "../src/components/PillButton";
 
@@ -616,7 +617,7 @@ export default function WishlistScreen() {
                   onPress={() => shareSheet(item)}
                   disabled={selectMode}
                 >
-                  <Ionicons name="share-outline" size={18} color={theme.colors.accent} />
+                  <ContactIconImage type="share" size={26} />
                 </TouchableOpacity>
                 <TouchableOpacity
                   testID={`wish-edit-${item.id}`}

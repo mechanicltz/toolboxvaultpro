@@ -12,7 +12,13 @@
  * Use this everywhere a call, text, or share button is needed.
  */
 import React from "react";
-import { Image, TouchableOpacity, StyleProp, ViewStyle } from "react-native";
+import {
+  Image,
+  TouchableOpacity,
+  StyleProp,
+  ViewStyle,
+  ImageStyle,
+} from "react-native";
 
 const ICONS = {
   call: require("../../assets/contact-icons/phone.png"),
@@ -21,6 +27,32 @@ const ICONS = {
 } as const;
 
 export type ContactIconType = keyof typeof ICONS;
+
+/**
+ * ContactIconImage
+ * ----------------
+ * Just the glossy 3D icon image with NO touchable wrapper. Use this when the
+ * icon needs to live INSIDE an existing button/pill that already has its own
+ * press handler + text label (e.g. an "EMAIL / TEXT" action pill row). For a
+ * standalone tappable icon, use <ContactIconButton /> below instead.
+ */
+export function ContactIconImage({
+  type,
+  size = 24,
+  style,
+}: {
+  type: ContactIconType;
+  size?: number;
+  style?: StyleProp<ImageStyle>;
+}) {
+  return (
+    <Image
+      source={ICONS[type]}
+      style={[{ width: size, height: size }, style]}
+      resizeMode="contain"
+    />
+  );
+}
 
 export function ContactIconButton({
   type,

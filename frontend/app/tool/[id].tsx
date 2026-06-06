@@ -46,6 +46,7 @@ import PinchZoomImageViewer from "../../src/components/PinchZoomImageViewer";
 import { themedStyles } from "../../src/themeContext";
 import { BevelCard } from "../../src/components/BevelCard";
 import { ShadowBox } from "../../src/components/ShadowBox";
+import { ContactIconImage } from "../../src/components/ContactIcons";
 import { IndustrialBanner } from "../../src/components/IndustrialBanner";
 import { PillButton } from "../../src/components/PillButton";
 
@@ -1608,7 +1609,7 @@ export default function ToolDetail() {
                     testID="claim-text-dealer"
                     activeOpacity={0.85}
                   >
-                    <Ionicons name="chatbubble" size={11} color="#000" />
+                    <ContactIconImage type="text" size={16} />
                     <Text style={[newStyles.claimActionText, { color: "#000" }]}>TEXT</Text>
                   </TouchableOpacity>
                 </View>
@@ -1703,7 +1704,7 @@ export default function ToolDetail() {
                           }}
                           activeOpacity={0.7}
                         >
-                          <Ionicons name="call" size={14} color={theme.colors.accent} />
+                          <ContactIconImage type="call" size={18} />
                           <Text style={newStyles.qaBtnText}>CALL</Text>
                         </TouchableOpacity>
                         <TouchableOpacity
@@ -1717,7 +1718,7 @@ export default function ToolDetail() {
                           }}
                           activeOpacity={0.7}
                         >
-                          <Ionicons name="chatbubble-ellipses" size={14} color={theme.colors.accent} />
+                          <ContactIconImage type="text" size={18} />
                           <Text style={newStyles.qaBtnText}>TEXT REMINDER</Text>
                         </TouchableOpacity>
                       </View>
@@ -5107,4 +5108,3 @@ const pickerStyles = themedStyles((c) => ({
     textAlign: "center",
   },
 }));
-
