@@ -30,6 +30,7 @@ import { DateField } from "../../src/DateField";
 import { useAuth } from "../../src/AuthContext";
 import { themedStyles } from "../../src/themeContext";
 import { BevelCard } from "../../src/components/BevelCard";
+import { ShadowBox, ShadowBoxSubCard } from "../../src/components/ShadowBox";
 import { IndustrialBanner } from "../../src/components/IndustrialBanner";
 import { PillButton } from "../../src/components/PillButton";
 
@@ -250,7 +251,7 @@ export default function DealerDetail() {
         </View>
 
         {/* Route info banner */}
-        <BevelCard style={styles.routeRow}>
+        <ShadowBox style={styles.routeRow}>
           <Ionicons name="map" size={18} color={theme.colors.accent} />
           <View style={{ flex: 1 }}>
             <Text style={styles.routeRowLabel}>ROUTE  ·  {routeLabel(dealer)}</Text>
@@ -261,14 +262,14 @@ export default function DealerDetail() {
               <Text style={styles.routeRowEmpty}>No route configured — tap edit to add</Text>
             )}
           </View>
-        </BevelCard>
+        </ShadowBox>
 
 
         {/* TOOLS PURCHASED + COMPANY DETAILS — grouped together so contact info reads first, tools follow */}
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionLabelStrong}>COMPANY DETAILS</Text>
         </View>
-        <BevelCard style={styles.companyCard}>
+        <ShadowBox style={styles.companyCard}>
           {!!dealer.phone && (
             <View style={styles.dealerContactPhoneRow}>
               <BevelCard
@@ -330,13 +331,13 @@ export default function DealerDetail() {
               <Text style={[styles.contactText, { flex: 1 }]}>{dealer.notes}</Text>
             </View>
           )}
-        </BevelCard>
+        </ShadowBox>
 
         {/* DETAILS / ACCOUNTS / AGENTS — warranty-card-style consolidated
             box (matches the tool-detail screen's design). Tools-purchased
             and accounts rows tap to navigate / expand inline; each agent
             is its own expandable row that reveals their contact card. */}
-        <View style={styles.detailsBox} testID="dealer-details-box">
+        <ShadowBox style={styles.detailsBox} testID="dealer-details-box">
             {/* TOOLS PURCHASED row */}
             <TouchableOpacity
               style={styles.detailsRow}
@@ -481,7 +482,7 @@ export default function DealerDetail() {
                     </View>
                   </TouchableOpacity>
                   {isOpen && (
-                    <View style={[styles.detailsExpanded, isLast && styles.detailsRowLast]}>
+                    <ShadowBoxSubCard style={{ paddingTop: 8, paddingBottom: 8 }}>
                       {!!a.phone && (
                         <View style={styles.agentContactRow}>
                           <TouchableOpacity
@@ -543,12 +544,12 @@ export default function DealerDetail() {
                           <Text style={[styles.agentActionText, { color: theme.colors.danger }]}>REMOVE</Text>
                         </TouchableOpacity>
                       </View>
-                    </View>
+                    </ShadowBoxSubCard>
                   )}
                 </View>
               );
             })}
-          </View>
+          </ShadowBox>
         </ScrollView>
 
       {/* Edit dealer modal */}
