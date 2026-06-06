@@ -31,6 +31,7 @@ import { SummaryRow } from "../../src/screens/home/SummaryRow";
 import { DealerBalanceRow } from "../../src/screens/home/DealerBalanceRow";
 import { useDealerPaymentsDue } from "../../src/screens/home/useDealerPaymentsDue";
 import { BevelCard } from "../../src/components/BevelCard";
+import { ShadowBox, ShadowBoxSubCard } from "../../src/components/ShadowBox";
 import { IndustrialBanner } from "../../src/components/IndustrialBanner";
 import { useSubscriptionChange } from "../../src/subscriptionEvents";
 import { useAppResume } from "../../src/appLifecycle";
@@ -57,7 +58,7 @@ import { Anton_400Regular } from "@expo-google-fonts/anton";
 
 // Manual verification beacon — bump this on every change so we can confirm
 // the device is actually showing the latest bundle. Rendered top-right of Home.
-const HOME_BUILD = "BUILD 168";
+const HOME_BUILD = "BUILD 169";
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -355,6 +356,7 @@ export default function HomeScreen() {
     sub?: string;
     valueColor?: string;
     onPress?: () => void;
+    icon?: keyof typeof Ionicons.glyphMap;
   };
   const renderHomeRow = (r: HomeDetailRow, isLast: boolean, key: string) => {
     const Wrapper: any = r.onPress ? TouchableOpacity : View;
@@ -563,16 +565,16 @@ export default function HomeScreen() {
               Palette-aware so Plain Light & Plain Dark both work. Skinned mode
               is untouched. */}
           {renderSequence.length > 0 && (
-            <View style={styles.pdBox} testID="home-details-box">
+            <ShadowBox style={styles.pdBoxWrap} testID="home-details-box">
               {renderSequence.map((item, idx) => {
                 const isLastItem = idx === renderSequence.length - 1;
                 if (item.kind === "stat") {
                   return renderPlainDescRow(item.row, isLastItem, item.key);
                 }
                 return (
-                  <View
+                  <ShadowBoxSubCard
                     key="owed_to_dealers"
-                    style={[styles.pdNestedCard, isLastItem && { marginBottom: 0 }]}
+                    style={isLastItem ? { marginBottom: 0 } : undefined}
                     testID="home-dealers-widget"
                   >
                     <TouchableOpacity
@@ -656,10 +658,10 @@ export default function HomeScreen() {
                         </View>
                       </>
                     )}
-                  </View>
+                  </ShadowBoxSubCard>
                 );
               })}
-            </View>
+            </ShadowBox>
           )}
 
           <BevelCard
@@ -940,6 +942,28 @@ export default function HomeScreen() {
           dealer={paymentTarget.dealer}
           account={paymentTarget.account}
           onClose={() => setPaymentTarget(null)}
+          onSaved={() => {
+            setPaymentTarget(null);
+            load();
+          }}
+        />
+      )}
+      </SafeAreaView>
+    </ImageBackground>
+  );
+}
+          onClose={() => setPaymentTarget(null)}
+          onSaved={() => {
+            setPaymentTarget(null);
+            load();
+          }}
+        />
+      )}
+      </SafeAreaView>
+    </ImageBackground>
+  );
+}
+tPaymentTarget(null)}
           onSaved={() => {
             setPaymentTarget(null);
             load();

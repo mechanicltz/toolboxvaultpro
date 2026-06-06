@@ -473,6 +473,16 @@ export const styles = themedStyles((c) => ({
     marginBottom: 12,
     ...(theme.elevation.md as object),
   },
+  // Outer ShadowBox layout wrapper (chrome owned by <ShadowBox/>).
+  pdBoxWrap: { marginBottom: 12 },
+  pdRowLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+    minWidth: 0,
+    marginRight: 8,
+  },
+  pdRowIcon: { marginRight: 10 },
   pdRow: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -505,14 +515,14 @@ export const styles = themedStyles((c) => ({
   },
   pdValue: {
     color: c.textPrimary,
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: "700",
     textAlign: "right",
     flexShrink: 1,
   },
   pdDealerName: {
     color: c.textPrimary,
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: "700",
   },
   pdDealerPaySub: {
@@ -565,7 +575,7 @@ export const styles = themedStyles((c) => ({
   },
   pdNestedTotalValue: {
     color: c.accent,
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: "700",
   },
   dealerName: {
