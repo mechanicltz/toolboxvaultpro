@@ -291,17 +291,17 @@ export default function ClaimsScreen() {
             )}
           </>
         ) : mode === "dealers" ? (
-          <>
-            {filteredDealers.length === 0 ? (
-              <Text style={styles.empty}>No dealers yet.</Text>
-            ) : (
-              filteredDealers.map((d) => {
+          filteredDealers.length === 0 && (openByDealer["_unassigned"] || []).length === 0 ? (
+            <Text style={styles.empty}>No dealers yet.</Text>
+          ) : (
+            <ShadowBox style={{ marginBottom: 16 }}>
+              {filteredDealers.map((d) => {
                 const liveOpened = (openByDealer[d.id] || []).length;
                 const summaryEntry = (summary?.dealers || []).find((x: any) => x.dealer_id === d.id);
                 const opened = Math.max(liveOpened, summaryEntry?.open || 0);
                 const done = summaryEntry?.completed || 0;
                 return (
-                  <ShadowBox
+                  <ShadowBoxSubCard
                     key={d.id}
                     testID={`claim-dealer-${d.id}`}
                     style={styles.dealerRow}
@@ -336,24 +336,24 @@ export default function ClaimsScreen() {
                       </View>
                     </View>
                     <Ionicons name="chevron-forward" size={18} color={theme.colors.textMuted} />
-                  </ShadowBox>
+                  </ShadowBoxSubCard>
                 );
-              })
-            )}
-            {(openByDealer["_unassigned"] || []).length > 0 && (
-              <ShadowBox style={[styles.dealerRow, { borderColor: theme.colors.danger, borderWidth: 1 }]}>
-                <View style={styles.dealerThumb}>
-                  <Ionicons name="alert-circle" size={20} color={theme.colors.danger} />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.dealerName}>NO DEALER ASSIGNED</Text>
-                  <Text style={styles.dealerSub}>
-                    {(openByDealer["_unassigned"] || []).length} broken item{(openByDealer["_unassigned"] || []).length === 1 ? "" : "s"} need a dealer
-                  </Text>
-                </View>
-              </ShadowBox>
-            )}
-          </>
+              })}
+              {(openByDealer["_unassigned"] || []).length > 0 && (
+                <ShadowBoxSubCard style={[styles.dealerRow, { borderColor: theme.colors.danger, borderWidth: 1 }]}>
+                  <View style={styles.dealerThumb}>
+                    <Ionicons name="alert-circle" size={20} color={theme.colors.danger} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.dealerName}>NO DEALER ASSIGNED</Text>
+                    <Text style={styles.dealerSub}>
+                      {(openByDealer["_unassigned"] || []).length} broken item{(openByDealer["_unassigned"] || []).length === 1 ? "" : "s"} need a dealer
+                    </Text>
+                  </View>
+                </ShadowBoxSubCard>
+              )}
+            </ShadowBox>
+          )
         ) : (
           // All open repairs grouped by dealer
           <>
