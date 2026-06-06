@@ -6,6 +6,7 @@ import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { useAppResume } from "../../src/appLifecycle";
 import { theme } from "../../src/theme";
 import { api } from "../../src/api";
+import { confirm } from "../../src/confirm";
 import { formatDateTime } from "../../src/dt";
 import { parseContacts, openPhone, openSms } from "../../src/contactLinks";
 import { ContactIconButton, ContactIconImage } from "../../src/components/ContactIcons";
@@ -62,6 +63,19 @@ export default function BorrowerHistory() {
     }
   };
 
+  const handleDelete = async () => {
+    if (!id) return;
+    const ok = await confirm(
+      "Delete contact?",
+      `Remove ${data?.borrower?.name || "this contact"} from your list?`,
+      "Delete",
+      true
+    );
+    if (!ok) return;
+    await api.deleteBorrower(id);
+    router.back();
+  };
+
   if (!data) {
     return (
       <SafeAreaView style={styles.container}>
@@ -89,6 +103,13 @@ export default function BorrowerHistory() {
           icon="create-outline"
           variant="active"
           onPress={openEditModal}
+        />
+        <PillButton
+          testID="delete-borrower-btn"
+          label="DELETE"
+          icon="trash-outline"
+          variant="danger"
+          onPress={handleDelete}
         />
       </View>
 

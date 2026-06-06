@@ -6,7 +6,6 @@ import {
   FlatList,
   TouchableOpacity,
   TextInput,
-  Alert,
   Modal,
   KeyboardAvoidingView,
   Platform,
@@ -18,10 +17,10 @@ import { useFocusEffect, useRouter } from "expo-router";
 import { useAppResume } from "../../src/appLifecycle";
 import { theme } from "../../src/theme";
 import { api } from "../../src/api";
-import { confirm } from "../../src/confirm";
-import { parseContacts, openEmail, openPhone, openSms } from "../../src/contactLinks";
+import { parseContacts, openPhone, openSms } from "../../src/contactLinks";
 import { themedStyles } from "../../src/themeContext";
 import { BevelCard } from "../../src/components/BevelCard";
+import { ShadowBox } from "../../src/components/ShadowBox";
 import { IndustrialBanner } from "../../src/components/IndustrialBanner";
 import { PillButton } from "../../src/components/PillButton";
 import { ContactIconButton, ContactIconImage } from "../../src/components/ContactIcons";
@@ -43,9 +42,6 @@ export default function BorrowersScreen() {
   const [showAdd, setShowAdd] = useState(false);
   const [name, setName] = useState("");
   const [contact, setContact] = useState("");
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editName, setEditName] = useState("");
-  const [editContact, setEditContact] = useState("");
 
   // Device contacts picker state
   const [showPicker, setShowPicker] = useState(false);
@@ -95,32 +91,6 @@ export default function BorrowersScreen() {
     setPickerFilter("");
   };
 
-  const beginEdit = (b: any) => {
-    setEditingId(b.id);
-    setEditName(b.name);
-    setEditContact(b.contact || "");
-  };
-
-  const cancelEdit = () => {
-    setEditingId(null);
-    setEditName("");
-    setEditContact("");
-  };
-
-  const saveEdit = async () => {
-    if (!editingId || !editName.trim()) return;
-    try {
-      await api.updateBorrower(editingId, {
-        name: editName.trim(),
-        contact: editContact.trim(),
-      });
-      cancelEdit();
-      load();
-    } catch (e: any) {
-      Alert.alert("Error", e.message);
-    }
-  };
-
   const load = useCallback(async () => {
     const [b, t] = await Promise.all([
       api.listBorrowers(),
@@ -149,12 +119,6 @@ export default function BorrowersScreen() {
     load();
   };
 
-  const remove = async (id: string, n: string) => {
-    if (!(await confirm("Delete person?", `Remove ${n} from your list?`, "Delete", true))) return;
-    await api.deleteBorrower(id);
-    load();
-  };
-
   const toolsByBorrower = (borrowerName: string) =>
     tools.filter(
       (t) =>
@@ -175,44 +139,6 @@ export default function BorrowersScreen() {
         />
       </View>
 
-      {tools.length > 0 && (
-        <View style={styles.section}>
-          <Text style={styles.sectionLabel}>CURRENTLY CHECKED OUT</Text>
-          {tools.map((t) => {
-            const dateStr = (() => {
-              const iso = t.current_checkout?.checked_out_at || t.checked_out_at;
-              if (!iso) return "";
-              try {
-                const d = new Date(iso);
-                return d.toLocaleDateString(undefined, {
-                  month: "short",
-                  day: "numeric",
-                  year: "2-digit",
-                });
-              } catch {
-                return "";
-              }
-            })();
-            return (
-              <View key={t.id} style={styles.checkedOutRow}>
-                <Ionicons name="alert-circle" size={16} color={theme.colors.accentSecondary} />
-                <View style={{ flex: 1, marginLeft: 8 }}>
-                  <Text style={styles.checkedOutTool}>{t.name}</Text>
-                  <Text style={styles.checkedOutBy}>
-                    with {t.current_checkout?.borrower_name}
-                  </Text>
-                </View>
-                {!!dateStr && (
-                  <View style={styles.checkedOutDatePill} testID={`checkout-date-${t.id}`}>
-                    <Text style={styles.checkedOutDateText}>{dateStr}</Text>
-                  </View>
-                )}
-              </View>
-            );
-          })}
-        </View>
-      )}
-
       <FlatList
         data={borrowers}
         keyExtractor={(i) => i.id}
@@ -225,59 +151,13 @@ export default function BorrowersScreen() {
         }
         renderItem={({ item }) => {
           const active = toolsByBorrower(item.name);
-          const isEditing = editingId === item.id;
-          if (isEditing) {
-            return (
-              <View style={[styles.row, styles.editRow]}>
-                <View style={styles.avatar}>
-                  <Text style={styles.avatarText}>
-                    {(editName || item.name).charAt(0).toUpperCase()}
-                  </Text>
-                </View>
-                <View style={{ flex: 1, gap: 6 }}>
-                  <TextInput
-                    testID={`edit-borrower-name-${item.id}`}
-                    value={editName}
-                    onChangeText={setEditName}
-                    placeholder="Full name"
-                    placeholderTextColor={theme.colors.textMuted}
-                    style={styles.editInput}
-                    autoFocus
-                  />
-                  <TextInput
-                    testID={`edit-borrower-contact-${item.id}`}
-                    value={editContact}
-                    onChangeText={setEditContact}
-                    placeholder="Phone / email (optional)"
-                    placeholderTextColor={theme.colors.textMuted}
-                    style={styles.editInput}
-                  />
-                </View>
-                <TouchableOpacity
-                  testID={`save-edit-borrower-${item.id}`}
-                  onPress={saveEdit}
-                  hitSlop={10}
-                  style={styles.iconBtn}
-                >
-                  <Ionicons name="checkmark" size={22} color={theme.colors.success} />
-                </TouchableOpacity>
-                <TouchableOpacity
-                  testID={`cancel-edit-borrower-${item.id}`}
-                  onPress={cancelEdit}
-                  hitSlop={10}
-                  style={styles.iconBtn}
-                >
-                  <Ionicons name="close" size={22} color={theme.colors.danger} />
-                </TouchableOpacity>
-              </View>
-            );
-          }
+          const { emails, phones } = parseContacts(item.contact || "");
+          const firstPhone = phones[0];
           return (
-            <BevelCard
+            <ShadowBox
               testID={`borrower-row-${item.id}`}
               style={styles.row}
               onPress={() => router.push(`/borrower/${item.id}`)}
-              activeOpacity={0.7}
             >
               <View style={styles.avatar}>
                 <Text style={styles.avatarText}>
@@ -286,38 +166,38 @@ export default function BorrowersScreen() {
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={styles.rowTitle}>{item.name}</Text>
-                <RowContactChips raw={item.contact} />
                 <Text style={styles.rowMeta}>
-                  {active.length > 0
-                    ? `Has ${active.length} tool${active.length > 1 ? "s" : ""}  ·  Tap for full history`
-                    : "Tap for full checkout history"}
+                  Tools Checked out: {active.length}
                 </Text>
+                {emails.map((em) => (
+                  <View key={`e-${em}`} style={styles.rowEmailRow}>
+                    <ContactIconImage type="mail" size={16} />
+                    <EmailLink
+                      email={em}
+                      style={styles.rowEmailLink}
+                      numberOfLines={1}
+                      testID={`row-email-${em}`}
+                    />
+                  </View>
+                ))}
               </View>
-              <TouchableOpacity
-                testID={`edit-borrower-${item.id}`}
-                onPress={(e) => {
-                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                  (e as any)?.stopPropagation?.();
-                  beginEdit(item);
-                }}
-                hitSlop={10}
-                style={styles.iconBtn}
-              >
-                <Ionicons name="pencil" size={18} color={theme.colors.accent} />
-              </TouchableOpacity>
-              <TouchableOpacity
-                testID={`delete-borrower-${item.id}`}
-                onPress={(e) => {
-                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                  (e as any)?.stopPropagation?.();
-                  remove(item.id, item.name);
-                }}
-                hitSlop={10}
-                style={styles.iconBtn}
-              >
-                <Ionicons name="trash-outline" size={20} color={theme.colors.danger} />
-              </TouchableOpacity>
-            </BevelCard>
+              {firstPhone ? (
+                <View style={styles.rowActions}>
+                  <ContactIconButton
+                    type="call"
+                    size={30}
+                    testID={`row-call-${item.id}`}
+                    onPress={() => openPhone(firstPhone)}
+                  />
+                  <ContactIconButton
+                    type="text"
+                    size={30}
+                    testID={`row-text-${item.id}`}
+                    onPress={() => openSms(firstPhone)}
+                  />
+                </View>
+              ) : null}
+            </ShadowBox>
           );
         }}
       />
@@ -457,46 +337,6 @@ export default function BorrowersScreen() {
   );
 }
 
-function RowContactChips({ raw }: { raw?: string | null }) {
-  if (!raw) return null;
-  const { emails, phones } = parseContacts(raw);
-  if (emails.length === 0 && phones.length === 0) {
-    return <Text style={styles.rowSub}>{raw}</Text>;
-  }
-  return (
-    <View style={styles.rowChipsWrap}>
-      {phones.map((p) => (
-        <View key={`pgrp-${p}`} style={styles.rowPhoneLine}>
-          <Text style={styles.rowPhoneText} numberOfLines={1}>{p}</Text>
-          <ContactIconButton
-            type="call"
-            size={26}
-            testID={`row-call-${p}`}
-            onPress={() => openPhone(p)}
-          />
-          <ContactIconButton
-            type="text"
-            size={26}
-            testID={`row-text-${p}`}
-            onPress={() => openSms(p)}
-          />
-        </View>
-      ))}
-      {emails.map((em) => (
-        <View key={`e-${em}`} style={styles.rowEmailRow}>
-          <ContactIconImage type="mail" size={18} />
-          <EmailLink
-            email={em}
-            style={styles.rowEmailLink}
-            numberOfLines={1}
-            testID={`row-email-${em}`}
-          />
-        </View>
-      ))}
-    </View>
-  );
-}
-
 const styles = themedStyles((c) => ({
   container: { flex: 1, backgroundColor: c.canvas },
   actionsRow: {
@@ -610,6 +450,12 @@ const styles = themedStyles((c) => ({
     gap: 6,
     width: "100%",
     marginTop: 4,
+  },
+  rowActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginLeft: 8,
   },
   rowEmailLink: {
     fontSize: 11,
