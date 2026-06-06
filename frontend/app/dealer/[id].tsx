@@ -33,6 +33,7 @@ import { BevelCard } from "../../src/components/BevelCard";
 import { ShadowBox, ShadowBoxSubCard } from "../../src/components/ShadowBox";
 import { EmailLink } from "../../src/components/EmailLink";
 import { shareOrSaveAgent } from "../../src/utils/agentShare";
+import { ContactIconButton } from "../../src/components/ContactIcons";
 import { IndustrialBanner } from "../../src/components/IndustrialBanner";
 import { PillButton } from "../../src/components/PillButton";
 
@@ -551,31 +552,28 @@ export default function DealerDetail() {
                           </TouchableOpacity>
                         </View>
 
-                        {/* 3D contact action buttons — lined up bottom-right */}
+                        {/* Custom 3D contact icons — lined up bottom-right (no pillow) */}
                         <View style={styles.bizFabRow}>
                           {!!a.phone && (
-                            <BevelCard
+                            <ContactIconButton
+                              type="call"
+                              size={44}
                               testID={`agent-call-${a.id}`}
-                              style={styles.bizFab}
                               onPress={() => openPhone(a.phone)}
-                              activeOpacity={0.85}
-                            >
-                              <Ionicons name="call" size={18} color={theme.colors.accent} />
-                            </BevelCard>
+                            />
                           )}
                           {!!a.phone && (
-                            <BevelCard
+                            <ContactIconButton
+                              type="text"
+                              size={44}
                               testID={`agent-text-${a.id}`}
-                              style={styles.bizFab}
                               onPress={() => openSms(a.phone)}
-                              activeOpacity={0.85}
-                            >
-                              <Ionicons name="chatbubble-ellipses" size={18} color={theme.colors.accent} />
-                            </BevelCard>
+                            />
                           )}
-                          <BevelCard
+                          <ContactIconButton
+                            type="share"
+                            size={44}
                             testID={`agent-share-${a.id}`}
-                            style={styles.bizFab}
                             onPress={() =>
                               shareOrSaveAgent(
                                 {
@@ -588,10 +586,7 @@ export default function DealerDetail() {
                                 dealer?.name,
                               )
                             }
-                            activeOpacity={0.85}
-                          >
-                            <Ionicons name="share-social" size={18} color={theme.colors.accent} />
-                          </BevelCard>
+                          />
                         </View>
                       </View>
                     </ShadowBoxSubCard>
