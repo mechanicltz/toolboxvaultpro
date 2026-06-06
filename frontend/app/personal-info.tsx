@@ -6,12 +6,12 @@ import {
   ScrollView,
   TouchableOpacity,
   TextInput,
-  Switch,
   Alert,
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
 } from "react-native";
+import { AppSwitch } from "../src/components/AppSwitch";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter, useFocusEffect } from "expo-router";
@@ -143,7 +143,7 @@ export default function PersonalInfoScreen() {
                 person.
               </Text>
             </View>
-            <Switch
+            <AppSwitch
               testID="pi-is-company"
               value={form.is_company}
               onValueChange={(v) => update("is_company", v)}

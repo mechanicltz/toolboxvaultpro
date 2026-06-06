@@ -5,7 +5,6 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Switch,
   Modal,
   TextInput,
   ActivityIndicator,
@@ -14,6 +13,7 @@ import {
   Alert,
   Linking,
 } from "react-native";
+import { AppSwitch } from "../../src/components/AppSwitch";
 import * as ImagePicker from "expo-image-picker";
 import * as ImageManipulator from "expo-image-manipulator";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -684,7 +684,7 @@ export default function MoreScreen() {
             title="Show prices in lists"
             subtitle="Hide $ amounts everywhere"
             rightSlot={
-              <Switch
+              <AppSwitch
                 testID="toggle-prices"
                 value={prefs.show_prices}
                 onValueChange={(v) => update({ show_prices: v })}
@@ -698,7 +698,7 @@ export default function MoreScreen() {
             title="Detail summary headers"
             subtitle="Show counts/breakdowns on lists"
             rightSlot={
-              <Switch
+              <AppSwitch
                 testID="toggle-summary"
                 value={prefs.show_details_summary}
                 onValueChange={(v) => update({ show_details_summary: v })}
@@ -712,7 +712,7 @@ export default function MoreScreen() {
             title="Next dealer-route banner"
             subtitle="Show the highlighted reminder at the top of the home screen"
             rightSlot={
-              <Switch
+              <AppSwitch
                 testID="toggle-dealer-route-banner"
                 value={prefs.show_dealer_route_reminder}
                 onValueChange={(v) => update({ show_dealer_route_reminder: v })}
@@ -727,7 +727,7 @@ export default function MoreScreen() {
             subtitle="Banner on inventory tab"
             isLast
             rightSlot={
-              <Switch
+              <AppSwitch
                 testID="toggle-warranty-alerts"
                 value={prefs.warranty_alerts}
                 onValueChange={(v) => update({ warranty_alerts: v })}
@@ -799,7 +799,7 @@ export default function MoreScreen() {
               }
               testID="more-biometric-toggle"
               rightSlot={
-                <Switch
+                <AppSwitch
                   testID="toggle-biometric"
                   value={bioStatus.enabled}
                   disabled={!bioStatus.isEnrolled}
@@ -939,7 +939,7 @@ export default function MoreScreen() {
                       </TouchableOpacity>
                     </View>
                     <Text style={styles.homeRowToggleLabel}>{HOME_ROW_LABELS[k]}</Text>
-                    <Switch
+                    <AppSwitch
                       testID={`home-row-${k}`}
                       value={prefs.home_rows[k]}
                       onValueChange={(v) =>
@@ -1370,7 +1370,7 @@ const styles = themedStyles((c) => ({
     borderColor: c.border,
     borderRadius: 10,
     backgroundColor: c.surface,
-    overflow: "hidden",
+    ...(theme.elevation.md as object),
   },
   optRowGrouped: {
     flexDirection: "row",

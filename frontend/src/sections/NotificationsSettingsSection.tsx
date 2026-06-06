@@ -23,7 +23,6 @@ import {
   View,
   Text,
   TouchableOpacity,
-  Switch,
   Modal,
   TextInput,
   ScrollView,
@@ -31,6 +30,7 @@ import {
   Alert,
   Linking,
 } from "react-native";
+import { AppSwitch } from "../components/AppSwitch";
 import * as Notifications from "expo-notifications";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { Ionicons } from "@expo/vector-icons";
@@ -357,7 +357,7 @@ export default function NotificationsSettingsSection({ prefs, update }: Props) {
           testID="notif-master-toggle-row"
           isLast={!masterOn}
           rightSlot={
-            <Switch
+            <AppSwitch
               testID="toggle-notifications-master"
               value={masterOn}
               onValueChange={handleMasterToggle}
@@ -379,7 +379,7 @@ export default function NotificationsSettingsSection({ prefs, update }: Props) {
                 testID="notif-toggle-row"
                 isLast={!prefs.dealer_notifications_enabled}
                 rightSlot={
-                  <Switch
+                  <AppSwitch
                     value={prefs.dealer_notifications_enabled}
                     onValueChange={handleDealerToggle}
                     trackColor={{ true: theme.colors.accent, false: theme.colors.border }}
@@ -413,7 +413,7 @@ export default function NotificationsSettingsSection({ prefs, update }: Props) {
                     indent
                     isLast
                     rightSlot={
-                      <Switch
+                      <AppSwitch
                         value={prefs.dealer_notify_day_before}
                         onValueChange={handleDayBeforeToggle}
                         trackColor={{ true: theme.colors.accent, false: theme.colors.border }}
@@ -435,7 +435,7 @@ export default function NotificationsSettingsSection({ prefs, update }: Props) {
                 testID="notif-borrow-toggle-row"
                 isLast={!prefs.borrow_reminders_enabled}
                 rightSlot={
-                  <Switch
+                  <AppSwitch
                     value={prefs.borrow_reminders_enabled}
                     onValueChange={handleBorrowToggle}
                     trackColor={{ true: theme.colors.accent, false: theme.colors.border }}
@@ -471,7 +471,7 @@ export default function NotificationsSettingsSection({ prefs, update }: Props) {
                 testID="notif-payment-toggle-row"
                 isLast={!prefs.payment_notifications_enabled}
                 rightSlot={
-                  <Switch
+                  <AppSwitch
                     testID="toggle-payment-notifications"
                     value={prefs.payment_notifications_enabled}
                     onValueChange={handlePaymentToggle}
@@ -506,7 +506,7 @@ export default function NotificationsSettingsSection({ prefs, update }: Props) {
                     indent
                     isLast
                     rightSlot={
-                      <Switch
+                      <AppSwitch
                         value={prefs.payment_notify_day_before}
                         onValueChange={handlePaymentDayBeforeToggle}
                         trackColor={{ true: theme.colors.accent, false: theme.colors.border }}
@@ -802,7 +802,7 @@ const styles = themedStyles((c) => ({
     borderRadius: 10,
     backgroundColor: c.surface,
     paddingHorizontal: 12,
-    overflow: "hidden",
+    ...(theme.elevation.md as object),
   },
   sectionCard: {
     backgroundColor: c.bgSecondary,

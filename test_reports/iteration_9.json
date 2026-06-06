@@ -1,0 +1,56 @@
+{
+  "summary": "Frontend-only verification of the 3 UI-consistency changes (notification sub-cards, theme sub-card, uniform switch size). All 3 changes are programmatically VERIFIED via DOM/computed-style inspection in the Expo web preview at localhost:3000. CHANGE 1: master 'Allow notifications' row stays flat at top of the outer NOTIFICATIONS card; once master is ON each of the 3 notification types (Dealer route reminders, Borrowed-tool overdue reminders, Payment Notifications) renders inside its OWN notifGroup wrapper with boxShadow (4px+6px black drop shadow), borderRadius 10px, borderWidth 2px and surface background — i.e. they read as distinct floating sub-cards (test row at the bottom is correctly flat). CHANGE 2: tapping the Theme accordion row opens an optGroup wrapper that contains ALL 4 appearance options (industrial, industrial-pink, light, dark) as children of one container with boxShadow + borderRadius 10px + borderWidth 2px — single floating sub-card. CHANGE 3: every AppSwitch on every screen measures exactly 31.2 × 15.6 px and reports transform matrix(0.78, 0, 0, 0.78, 0, 0). 10 switches on /more, 14 in the Home Screen Rows modal (master+notifications+settings switches PLUS the 9 home-row toggles), 1 on /personal-info — and in EVERY scope, total document role=switch count equals the count of scale(0.78) AppSwitches, i.e. no rogue raw <Switch> component is left. /tool/edit sections were collapsed so its warranty/consumable switches were not in the DOM at the time, but source verifies AppSwitch is the only switch used there (edit.tsx:985, edit.tsx:1199, [id].tsx:2908). Known RN-Web limitation: Playwright cannot programmatically flip the Switch via click() — verification was done by writing prefs into AsyncStorage (toolbox_prefs_v2) and re-rendering, as suggested in the agent-to-agent note. One unrelated pre-existing issue surfaced: navigating directly to /tool/edit threw a dev-overlay 'Uncaught Error: Not authenticated' from src/api.ts:382 (status 402 'Free tier'), which is unrelated to these 3 UI changes but worth flagging.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "verification_evidence": {
+    "change_1_notification_sub_cards": {
+      "outer_notifications_card_testid": "more-section-notifications",
+      "master_row": {"testid": "notif-master-toggle-row", "boxShadow": "none", "borderRadius": "0px", "borderWidth": "0px 0px 1px", "verdict": "flat at top — correct"},
+      "sub_card_dealer": {"text_preview": "Dealer route reminders", "boxShadow": "rgba(0,0,0,0.65) 4px 4px 0, rgba(0,0,0,0.65) 6px 6px 12px", "borderRadius": "10px", "borderWidth": "2px", "marginTop": "8px", "verdict": "floating sub-card ✓"},
+      "sub_card_borrow": {"text_preview": "Borrowed-tool overdue reminders", "boxShadow": "rgba(0,0,0,0.65) 4px 4px 0, rgba(0,0,0,0.65) 6px 6px 12px", "borderRadius": "10px", "borderWidth": "2px", "verdict": "floating sub-card ✓"},
+      "sub_card_payment": {"text_preview": "Payment Notifications", "boxShadow": "rgba(0,0,0,0.65) 4px 4px 0, rgba(0,0,0,0.65) 6px 6px 12px", "borderRadius": "10px", "borderWidth": "2px", "verdict": "floating sub-card ✓"},
+      "test_row": {"testid": "notif-test-row", "boxShadow": "none", "borderRadius": "0px", "verdict": "flat at bottom — correct"}
+    },
+    "change_2_theme_sub_card": {
+      "accordion_row_testid": "theme-accordion-row",
+      "opt_group_after_open": {
+        "boxShadow": "rgba(0,0,0,0.65) 4px 4px 0, rgba(0,0,0,0.65) 6px 6px 12px",
+        "borderRadius": "10px",
+        "borderWidth": "2px",
+        "backgroundColor": "rgb(42,42,42)",
+        "overflow": "visible (no clip, drop shadow visible)",
+        "option_count": 4,
+        "option_testIDs": ["appearance-industrial", "appearance-industrial-pink", "appearance-light", "appearance-dark"],
+        "all_options_share_one_parent": true,
+        "verdict": "single floating sub-card containing all 4 appearance options ✓"
+      }
+    },
+    "change_3_uniform_switch_size": {
+      "expected_size_px": "31.2 × 15.6 (40 × 20 base × 0.78 scale)",
+      "expected_transform": "matrix(0.78, 0, 0, 0.78, 0, 0)",
+      "more_screen": {"switches_with_scale_0_78": 10, "total_role_switch": 10, "ids": ["toggle-notifications-master", "(dealer)", "(borrow)", "(day-before)", "toggle-payment-notifications", "(payment-day-before)", "toggle-prices", "toggle-summary", "toggle-dealer-route-banner", "toggle-warranty-alerts"], "all_same_size": true},
+      "home_screen_rows_modal": {"switches_with_scale_0_78": 14, "total_role_switch": 14, "all_same_size": true, "row_testIDs_present": ["home-row-owed_to_dealers", "home-row-total_items", "home-row-invested", "home-row-checked_out", "home-row-open_claims", "home-row-maintenance", "home-row-selling", "home-row-wishlist", "home-row-lost"]},
+      "personal_info_screen": {"switches_with_scale_0_78": 1, "total_role_switch": 1, "testID": "pi-is-company", "size": "31.2x15.6"},
+      "tool_edit_screen": {"note": "sections were collapsed so warranty/consumable toggles not mounted at inspection time; source confirms AppSwitch is used (edit.tsx:985, edit.tsx:1199) — no raw <Switch> in tool screens (grep across /app/frontend/app and /app/frontend/src returned only AppSwitch usages plus the single raw Switch inside AppSwitch.tsx itself)"},
+      "code_audit": "grep -rn '<Switch\\b' returned zero matches outside /app/frontend/src/components/AppSwitch.tsx — every consumer uses <AppSwitch>"
+    }
+  },
+  "test_report_links": [],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "Pre-existing (not part of this review): direct navigation to /tool/edit can throw a dev-overlay 'Uncaught Error: Not authenticated' from src/api.ts:382 (status 402 'Free tier'). Unrelated to these 3 UI changes but worth a look on a future pass — the route should surface paywall UI instead of raising in api.ts.",
+    "NotificationsSettingsSection.tsx still declares a local styles.miniSwitch with transform scale(0.78) (line 827-829) and applies it on top of every AppSwitch (style={styles.miniSwitch}). Because AppSwitch enforces its own scale 0.78 LAST (component appends transform after caller style), the duplicate has no visible effect, but it is dead code and slightly misleading — caller-side scale should be removed now that the wrapper enforces it. Verified visually: all 10 switches on /more still measure exactly 31.2×15.6 so nothing is broken."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "skipped", "frontend": "100% for the 3 requested changes"},
+  "seed_data_creation": "Set notifications_master_enabled, dealer_notifications_enabled, borrow_reminders_enabled, payment_notifications_enabled to true in localStorage key 'toolbox_prefs_v2' to force the 3 notification sub-cards to render (Playwright cannot flip RN-Web Switch via UI — same limitation documented in the agent-to-agent note).",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "All 3 changes confirmed via computed-style inspection. To reproduce: log in with MechanicLTZ@gmail.com / Blue321!, then in DevTools set localStorage['toolbox_prefs_v2'] = JSON.stringify({...current, notifications_master_enabled:true, dealer_notifications_enabled:true, borrow_reminders_enabled:true, payment_notifications_enabled:true}) and refresh /more to see the 3 floating notification sub-cards. The Theme accordion auto-expands on click. AppSwitch enforces transform scale 0.78 — verify with: document.querySelectorAll('[role=\"switch\"]').forEach(s => console.log(s.getBoundingClientRect().width)) — every value should be 31.2.",
+  "rca_of_issue": "N/A — no functional bugs found in the 3 requested changes."
+}

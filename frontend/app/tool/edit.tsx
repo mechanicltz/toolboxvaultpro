@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback } from "react";
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Image, Alert,
-  KeyboardAvoidingView, Platform, ActivityIndicator, Switch, Modal,
+  KeyboardAvoidingView, Platform, ActivityIndicator, Modal,
 } from "react-native";
+import { AppSwitch } from "../../src/components/AppSwitch";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -981,7 +982,7 @@ export default function ToolEdit() {
           <View style={styles.toggleRowCompact}>
             <Ionicons name="shield-checkmark" size={14} color={theme.colors.accent} />
             <Text style={styles.toggleTextCompact}>HAS WARRANTY</Text>
-            <Switch testID="toggle-warranty" value={hasWarranty} onValueChange={setHasWarranty}
+            <AppSwitch testID="toggle-warranty" value={hasWarranty} onValueChange={setHasWarranty}
               trackColor={{ true: theme.colors.accent, false: theme.colors.border }} thumbColor="#fff" />
           </View>
           {hasWarranty && (
@@ -1195,7 +1196,7 @@ export default function ToolEdit() {
           <View style={styles.toggleRow}>
             <Ionicons name="repeat" size={20} color={theme.colors.accent} />
             <Text style={styles.toggleText}>CONSUMABLE ITEM</Text>
-            <Switch testID="toggle-consumable" value={isConsumable} onValueChange={setIsConsumable}
+            <AppSwitch testID="toggle-consumable" value={isConsumable} onValueChange={setIsConsumable}
               trackColor={{ true: theme.colors.accent, false: theme.colors.border }} thumbColor="#fff" />
           </View>
           {isConsumable && (

@@ -13,8 +13,8 @@ import {
   Linking,
   KeyboardAvoidingView,
   ActivityIndicator,
-  Switch,
 } from "react-native";
+import { AppSwitch } from "../../src/components/AppSwitch";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter, useFocusEffect } from "expo-router";
@@ -2905,7 +2905,7 @@ export default function ToolDetail() {
               ] as { k: PosterFieldKey; label: string }[]).map((f) => (
                 <View key={f.k} style={styles.posterRow}>
                   <Text style={styles.posterRowLabel}>{f.label}</Text>
-                  <Switch
+                  <AppSwitch
                     testID={`poster-toggle-${f.k}`}
                     value={!!posterFields[f.k]}
                     onValueChange={(v) =>
