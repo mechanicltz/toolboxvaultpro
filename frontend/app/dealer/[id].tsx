@@ -33,7 +33,7 @@ import { BevelCard } from "../../src/components/BevelCard";
 import { ShadowBox, ShadowBoxSubCard } from "../../src/components/ShadowBox";
 import { EmailLink } from "../../src/components/EmailLink";
 import { shareOrSaveAgent } from "../../src/utils/agentShare";
-import { ContactIconButton } from "../../src/components/ContactIcons";
+import { ContactIconButton, ContactIconImage } from "../../src/components/ContactIcons";
 import { IndustrialBanner } from "../../src/components/IndustrialBanner";
 import { PillButton } from "../../src/components/PillButton";
 
@@ -493,10 +493,10 @@ export default function DealerDetail() {
                         </View>
                       )}
 
-                      {/* Email — blue mailto link */}
+                      {/* Email — 3D mail icon + blue mailto link */}
                       {!!a.email && (
                         <View style={styles.bizRow}>
-                          <Ionicons name="mail" size={14} color={theme.colors.textMuted} style={styles.bizRowIcon} />
+                          <ContactIconImage type="mail" size={18} style={styles.bizRowIcon} />
                           <EmailLink
                             email={a.email}
                             style={styles.bizValue}

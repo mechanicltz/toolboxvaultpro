@@ -8,7 +8,7 @@ import { theme } from "../../src/theme";
 import { api } from "../../src/api";
 import { formatDateTime } from "../../src/dt";
 import { parseContacts, openPhone, openSms } from "../../src/contactLinks";
-import { ContactIconButton } from "../../src/components/ContactIcons";
+import { ContactIconButton, ContactIconImage } from "../../src/components/ContactIcons";
 import { EmailLink } from "../../src/components/EmailLink";
 
 import { themedStyles } from "../../src/themeContext";
@@ -289,13 +289,15 @@ function ContactActions({ raw }: { raw?: string | null }) {
         </View>
       ))}
       {emails.map((e) => (
-        <EmailLink
-          key={`e-${e}`}
-          email={e}
-          style={styles.actionEmailLink}
-          numberOfLines={1}
-          testID={`contact-email-${e}`}
-        />
+        <View key={`e-${e}`} style={styles.emailRow}>
+          <ContactIconImage type="mail" size={22} />
+          <EmailLink
+            email={e}
+            style={styles.actionEmailLink}
+            numberOfLines={1}
+            testID={`contact-email-${e}`}
+          />
+        </View>
       ))}
     </View>
   );
@@ -343,6 +345,13 @@ const styles = themedStyles((c) => ({
     fontWeight: "800",
     letterSpacing: 0.3,
     marginRight: 2,
+  },
+  emailRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    marginTop: 6,
   },
   actionEmailLink: {
     fontSize: 13,

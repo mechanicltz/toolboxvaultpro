@@ -24,7 +24,7 @@ import { themedStyles } from "../../src/themeContext";
 import { BevelCard } from "../../src/components/BevelCard";
 import { IndustrialBanner } from "../../src/components/IndustrialBanner";
 import { PillButton } from "../../src/components/PillButton";
-import { ContactIconButton } from "../../src/components/ContactIcons";
+import { ContactIconButton, ContactIconImage } from "../../src/components/ContactIcons";
 import { EmailLink } from "../../src/components/EmailLink";
 
 import {
@@ -483,13 +483,15 @@ function RowContactChips({ raw }: { raw?: string | null }) {
         </View>
       ))}
       {emails.map((em) => (
-        <EmailLink
-          key={`e-${em}`}
-          email={em}
-          style={styles.rowEmailLink}
-          numberOfLines={1}
-          testID={`row-email-${em}`}
-        />
+        <View key={`e-${em}`} style={styles.rowEmailRow}>
+          <ContactIconImage type="mail" size={18} />
+          <EmailLink
+            email={em}
+            style={styles.rowEmailLink}
+            numberOfLines={1}
+            testID={`row-email-${em}`}
+          />
+        </View>
       ))}
     </View>
   );
@@ -601,6 +603,13 @@ const styles = themedStyles((c) => ({
     fontSize: 11,
     fontWeight: "700",
     letterSpacing: 0.3,
+  },
+  rowEmailRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    width: "100%",
+    marginTop: 4,
   },
   rowEmailLink: {
     fontSize: 11,
