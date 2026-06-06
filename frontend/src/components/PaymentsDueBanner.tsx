@@ -62,7 +62,6 @@ const styles = themedStyles((c) => ({
     backgroundColor: c.bgSecondary,
     paddingVertical: 16,
     paddingHorizontal: 16,
-    marginHorizontal: 16,
     marginBottom: 12,
     borderRadius: theme.radii.md,
     borderLeftWidth: 3,

@@ -60,6 +60,8 @@ export interface TbvFrameProps {
   style?: StyleProp<ViewStyle>;
   children?: React.ReactNode;
   testID?: string;
+  /** Optional accent stripe painted down the left edge (over the frame rail). */
+  leftStripe?: string;
 }
 
 /** Safe asset-size resolver — uses the platform API when present, else null. */
@@ -133,6 +135,7 @@ export function TbvFrame({
   style,
   children,
   testID,
+  leftStripe,
 }: TbvFrameProps) {
   // Measured inner-content height (incl. padding) and the wrap's pixel width.
   const [h, setH] = useState(0);
@@ -212,6 +215,21 @@ export function TbvFrame({
       >
         {children}
       </View>
+
+      {leftStripe ? (
+        <View
+          pointerEvents="none"
+          style={{
+            position: "absolute",
+            left: 0,
+            top: 0,
+            bottom: 0,
+            width: 3,
+            backgroundColor: leftStripe,
+            zIndex: 5,
+          }}
+        />
+      ) : null}
     </View>
   );
 }
