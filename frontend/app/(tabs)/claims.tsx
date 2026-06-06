@@ -21,6 +21,7 @@ import { formatPhone } from "../../src/contactLinks";
 
 import { themedStyles } from "../../src/themeContext";
 import { BevelCard } from "../../src/components/BevelCard";
+import { ShadowBox, ShadowBoxSubCard } from "../../src/components/ShadowBox";
 import { IndustrialBanner } from "../../src/components/IndustrialBanner";
 
 type Mode = "dealers" | "all-open";
@@ -300,7 +301,7 @@ export default function ClaimsScreen() {
                 const opened = Math.max(liveOpened, summaryEntry?.open || 0);
                 const done = summaryEntry?.completed || 0;
                 return (
-                  <BevelCard
+                  <ShadowBox
                     key={d.id}
                     testID={`claim-dealer-${d.id}`}
                     style={styles.dealerRow}
@@ -335,12 +336,12 @@ export default function ClaimsScreen() {
                       </View>
                     </View>
                     <Ionicons name="chevron-forward" size={18} color={theme.colors.textMuted} />
-                  </BevelCard>
+                  </ShadowBox>
                 );
               })
             )}
             {(openByDealer["_unassigned"] || []).length > 0 && (
-              <View style={[styles.dealerRow, { borderColor: theme.colors.danger, borderWidth: 1 }]}>
+              <ShadowBox style={[styles.dealerRow, { borderColor: theme.colors.danger, borderWidth: 1 }]}>
                 <View style={styles.dealerThumb}>
                   <Ionicons name="alert-circle" size={20} color={theme.colors.danger} />
                 </View>
@@ -350,7 +351,7 @@ export default function ClaimsScreen() {
                     {(openByDealer["_unassigned"] || []).length} broken item{(openByDealer["_unassigned"] || []).length === 1 ? "" : "s"} need a dealer
                   </Text>
                 </View>
-              </View>
+              </ShadowBox>
             )}
           </>
         ) : (
@@ -373,7 +374,7 @@ export default function ClaimsScreen() {
                 )
                 .filter((g) => g.items.length > 0)
                 .map((group) => (
-                  <View key={group.d.id} style={{ marginBottom: 16 }}>
+                  <ShadowBox key={group.d.id} style={{ marginBottom: 16 }}>
                     <View style={styles.groupHeader}>
                       <Ionicons name="briefcase" size={14} color={theme.colors.accent} />
                       <Text style={styles.groupTitle}>{group.d.name}</Text>
@@ -392,7 +393,7 @@ export default function ClaimsScreen() {
                           ? theme.colors.success
                           : theme.colors.accentSecondary;
                       return (
-                        <BevelCard
+                        <ShadowBoxSubCard
                           key={t.id}
                           testID={`open-tool-${t.id}`}
                           style={styles.itemRow}
@@ -421,10 +422,10 @@ export default function ClaimsScreen() {
                             </View>
                           </View>
                           <Ionicons name="chevron-forward" size={16} color={theme.colors.textMuted} />
-                        </BevelCard>
+                        </ShadowBoxSubCard>
                       );
                     })}
-                  </View>
+                  </ShadowBox>
                 ))
             )}
           </>
