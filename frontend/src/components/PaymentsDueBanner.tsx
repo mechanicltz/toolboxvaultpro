@@ -32,8 +32,6 @@ export function PaymentsDueBanner() {
   const total = items.reduce((s, i) => s + Number(i.amount || 0), 0);
   const overdue = items.some((i) => i.overdue);
   const first = items[0];
-  const extra = items.length > 1 ? ` +${items.length - 1} more` : "";
-  const firstLabel = first ? `${first.dealer_name} ${first.account_label}` : "";
 
   return (
     <BevelCard
@@ -41,13 +39,15 @@ export function PaymentsDueBanner() {
       style={[styles.banner, overdue && { borderLeftColor: theme.colors.danger }]}
       onPress={() => router.push((first ? `/dealer/${first.dealer_id}` : "/dealers") as any)}
     >
-      <Ionicons name="card" size={22} color={overdue ? theme.colors.danger : theme.colors.accent} />
-      <View style={{ flex: 1, marginLeft: 12 }}>
+      <View style={styles.iconWrap}>
+        <Ionicons name="card" size={20} color={overdue ? theme.colors.danger : theme.colors.accent} />
+      </View>
+      <View style={{ flex: 1 }}>
         <Text style={styles.label}>
           {overdue ? "PAYMENTS DUE / OVERDUE" : "PAYMENTS DUE THIS WEEK"}
         </Text>
         <Text style={styles.text} numberOfLines={1}>
-          {items.length} due · ${total.toFixed(2)} — {firstLabel}{extra}
+          {items.length} due · total ${total.toFixed(2)}
         </Text>
       </View>
       <Ionicons name="chevron-forward" size={18} color={theme.colors.textMuted} />
@@ -60,13 +60,25 @@ const styles = themedStyles((c) => ({
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: c.bgSecondary,
-    padding: 14,
+    paddingVertical: 16,
+    paddingHorizontal: 16,
     marginHorizontal: 16,
-    marginBottom: 10,
+    marginBottom: 12,
     borderRadius: theme.radii.md,
     borderLeftWidth: 3,
     borderLeftColor: c.accent,
   },
-  label: { color: c.textSecondary, fontSize: 9, fontWeight: "900", letterSpacing: 1.5 },
-  text: { color: c.textPrimary, fontSize: 13, fontWeight: "700", marginTop: 3 },
+  iconWrap: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: "rgba(0,0,0,0.55)",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: c.accent,
+    marginRight: 12,
+  },
+  label: { color: c.accent, fontSize: 11, fontWeight: "900", letterSpacing: 1.2 },
+  text: { color: c.textPrimary, fontSize: 14, fontWeight: "700", marginTop: 3 },
 }));

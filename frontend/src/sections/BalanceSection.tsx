@@ -96,6 +96,10 @@ export function BalanceSection({
   return (
     <>
       <Text style={styles.sectionLabel}>BALANCES</Text>
+      <Text style={styles.disclaimer}>
+        For reference only — these balances are estimates and do not factor in
+        interest rates or fees.
+      </Text>
 
       <BalanceCard
         label="CREDIT ACCOUNT"
@@ -426,6 +430,15 @@ const styles = themedStyles((c) => ({
     fontWeight: "900",
     letterSpacing: 2,
     marginTop: 18,
+    marginBottom: 10,
+    paddingHorizontal: 16,
+  },
+  disclaimer: {
+    color: c.textMuted,
+    fontSize: 10,
+    fontStyle: "italic",
+    lineHeight: 14,
+    marginTop: -4,
     marginBottom: 10,
     paddingHorizontal: 16,
   },

@@ -82,7 +82,9 @@ export function useDealerPaymentsDue(
       }
     }
     if (soonest) {
-      paymentSubByDealer[d.id] = `${soonest.label} • $${soonest.amount.toFixed(2)} ${dueLabel(soonest.days)}`;
+      // Account label intentionally omitted (no "Truck"/"Credit" prefix) so the
+      // dealer sub-line stays clean: just the amount + when it's due.
+      paymentSubByDealer[d.id] = `$${soonest.amount.toFixed(2)} ${dueLabel(soonest.days)}`;
     }
   }
 

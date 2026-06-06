@@ -58,7 +58,7 @@ import { Anton_400Regular } from "@expo-google-fonts/anton";
 
 // Manual verification beacon — bump this on every change so we can confirm
 // the device is actually showing the latest bundle. Rendered top-right of Home.
-const HOME_BUILD = "BUILD 162";
+const HOME_BUILD = "BUILD 163";
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -757,34 +757,24 @@ export default function HomeScreen() {
         {/* Payments-due banner (gated internally by show_payments_banner). */}
         <PaymentsDueBanner />
 
-        {/* Next dealer route — kept prominent and highlighted */}
+        {/* Next dealer route — unified flat banner w/ orange left stripe */}
         {nextRouteBanner && prefs.show_dealer_route_reminder && (
-          <TbvFrame
-            source={SKIN.plate}
-            capInsets={CAP.plate}
-            style={styles.bannerLayout}
-            padX={30}
-            padTop={22}
-            padBottom={24}
+          <BevelCard
+            testID="next-route-banner"
+            style={styles.infoBanner}
+            onPress={() => router.push("/dealers")}
           >
-            <TouchableOpacity
-              testID="next-route-banner"
-              style={styles.routeBanner}
-              onPress={() => router.push("/dealers")}
-              activeOpacity={0.85}
-            >
-              <View style={styles.routeIconWrap}>
-                <Ionicons name="map" size={22} color={theme.colors.accent} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.routeBannerLabel}>NEXT DEALER ROUTE</Text>
-                <Text style={styles.routeBannerText}>
-                  {nextRouteBanner.dealers.join(" & ")} · {nextRouteBanner.dateStr}
-                </Text>
-              </View>
-              <Ionicons name="chevron-forward" size={18} color={theme.colors.accent} />
-            </TouchableOpacity>
-          </TbvFrame>
+            <View style={styles.infoBannerIcon}>
+              <Ionicons name="map" size={20} color={theme.colors.accent} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.infoBannerLabel}>NEXT DEALER ROUTE</Text>
+              <Text style={styles.infoBannerText} numberOfLines={1}>
+                {nextRouteBanner.dealers.join(" & ")} · {nextRouteBanner.dateStr}
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={theme.colors.textMuted} />
+          </BevelCard>
         )}
 
         {/* UNIFIED HOME DESCRIPTION CARD — single warranty-card-style box
@@ -912,41 +902,23 @@ export default function HomeScreen() {
           )}
         </View>
 
-        {/* Feedback link at the bottom of the first page */}
-        <TbvFrame
-          source={SKIN.plate}
-          capInsets={CAP.plate}
-          style={styles.feedbackLayout}
-          padX={30}
-          padTop={22}
-          padBottom={24}
+        {/* Report-a-bug — unified flat banner w/ orange left stripe */}
+        <BevelCard
+          testID="feedback-banner"
+          style={styles.infoBanner}
+          onPress={() => router.push("/feedback")}
         >
-          <TouchableOpacity
-            testID="feedback-banner"
-            style={styles.feedbackRow}
-            onPress={() => router.push("/feedback")}
-            activeOpacity={0.85}
-          >
-            <Ionicons
-              name="chatbubble-ellipses"
-              size={18}
-              color={theme.colors.accent}
-            />
-            <View style={{ flex: 1 }}>
-              <Text style={styles.feedbackTitle}>
-                REPORT A BUG · REQUEST A FEATURE
-              </Text>
-              <Text style={styles.feedbackSub}>
-                Have an idea or hit a snag? Let us know.
-              </Text>
-            </View>
-            <Ionicons
-              name="chevron-forward"
-              size={18}
-              color={TBV.textMuted}
-            />
-          </TouchableOpacity>
-        </TbvFrame>
+          <View style={styles.infoBannerIcon}>
+            <Ionicons name="chatbubble-ellipses" size={18} color={theme.colors.accent} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.infoBannerLabel}>REPORT A BUG · REQUEST A FEATURE</Text>
+            <Text style={styles.infoBannerText} numberOfLines={1}>
+              Have an idea or hit a snag? Let us know.
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color={theme.colors.textMuted} />
+        </BevelCard>
 
         <Text style={styles.tip}>
           Pull to refresh · Customize this list under MORE → CUSTOMIZE
