@@ -41,19 +41,6 @@ import { SKIN, AR, TBV, clamp, getIndustrialVariant } from "../src/tbv/skins";
 import { TbvHeader } from "../src/tbv/TbvHeader";
 import { useTbvSkinsReady } from "../src/tbv/useTbvSkins";
 
-/**
- * NEW v3 "Hardened Riveted Steel — Light" theme (prototype on this page only).
- * All assets are freshly AI-generated (Gemini Nano Banana) weathered light steel —
- * NONE of the existing app skins are reused here.
- */
-const STEEL = {
-  bg: require("../assets/tbv-v3/light-steel/bg.png"),
-  panel: require("../assets/tbv-v3/light-steel/panel.png"),
-  input: require("../assets/tbv-v3/light-steel/input.png"),
-  btnPrimary: require("../assets/tbv-v3/light-steel/btn_primary.png"),
-  header: require("../assets/tbv-v3/light-steel/header.png"),
-};
-
 type Step = "request" | "verify";
 
 export default function ForgotPasswordScreen() {
@@ -189,7 +176,7 @@ export default function ForgotPasswordScreen() {
   // ---------- font + skin gate ----------
   if ((!fontsLoaded && !fontError) || !skinsReady) {
     return (
-      <ImageBackground source={STEEL.bg} style={styles.bg} resizeMode="cover">
+      <ImageBackground source={SKIN.bg} style={styles.bg} resizeMode="cover">
         <View style={styles.veil} />
         <View style={styles.loading}>
           <ActivityIndicator color={TINT} size="large" />
@@ -201,7 +188,7 @@ export default function ForgotPasswordScreen() {
   const goBack = () => (step === "verify" ? (setStep("request"), setMeasuredInnerH(0)) : router.back());
 
   return (
-    <ImageBackground source={STEEL.bg} style={styles.bg} resizeMode="cover">
+    <ImageBackground source={SKIN.bg} style={styles.bg} resizeMode="cover">
       <View style={styles.veil} />
       <SafeAreaView style={{ flex: 1 }} edges={["top", "bottom"]}>
         <View
@@ -222,36 +209,21 @@ export default function ForgotPasswordScreen() {
             bounces={false}
             automaticallyAdjustKeyboardInsets={true}
           >
-              {/* steel nameplate header (new v3 art, engraved title) */}
-              <ImageBackground
-                source={STEEL.header}
-                style={{
-                  width: WORK_W,
-                  height: WORK_W * 0.36,
-                  justifyContent: "center",
-                  alignItems: "center",
-                  marginBottom: 2,
-                }}
-                imageStyle={{ width: "100%", height: "100%" }}
-                resizeMode="stretch"
-              >
-                <TouchableOpacity
-                  onPress={goBack}
-                  hitSlop={12}
-                  testID="fp-header-back"
-                  style={{ position: "absolute", left: "9%", top: 0, bottom: 0, justifyContent: "center" }}
-                >
-                  <Ionicons name="chevron-back" size={26} color={TINT} />
-                </TouchableOpacity>
-                <Text style={styles.plateTitle}>
-                  {step === "request" ? "FORGOT PASSWORD" : "RESET PASSWORD"}
-                </Text>
-              </ImageBackground>
+              {/* logo */}
+              <Image source={SKIN.masterLogo} style={{ width: logoW, height: logoH }} resizeMode="contain" />
+
+              {/* industrial header (native steel wordmark styling) */}
+              <TbvHeader
+                title={step === "request" ? "FORGOT PASSWORD" : "RESET PASSWORD"}
+                size={headerSize}
+                onBack={goBack}
+                style={{ width: WORK_W }}
+              />
 
               {/* ===================== PANEL ===================== */}
               <View style={{ width: panelW, height: panelH, overflow: "hidden" }}>
                 <Image
-                  source={STEEL.panel}
+                  source={SKIN.panel}
                   style={{ position: "absolute", top: 0, left: 0, width: panelW, height: panelH }}
                   resizeMode="stretch"
                 />
@@ -276,7 +248,7 @@ export default function ForgotPasswordScreen() {
                         <View style={[styles.fieldGroup, { marginTop: innerGap, paddingHorizontal: fieldInset }]}>
                           <Text style={styles.label}>EMAIL ADDRESS</Text>
                           <ImageBackground
-                            source={STEEL.input}
+                            source={SKIN.input}
                             style={{ width: fieldW, height: inputH, justifyContent: "center" }}
                             imageStyle={styles.fillImage}
                             resizeMode="stretch"
@@ -318,7 +290,7 @@ export default function ForgotPasswordScreen() {
                         <View style={[styles.fieldGroup, { marginTop: innerGap, paddingHorizontal: fieldInset }]}>
                           <Text style={styles.label}>6-DIGIT CODE</Text>
                           <ImageBackground
-                            source={STEEL.input}
+                            source={SKIN.input}
                             style={{ width: fieldW, height: inputH, justifyContent: "center" }}
                             imageStyle={styles.fillImage}
                             resizeMode="stretch"
@@ -340,7 +312,7 @@ export default function ForgotPasswordScreen() {
                         <View style={[styles.fieldGroup, { marginTop: innerGap, paddingHorizontal: fieldInset }]}>
                           <Text style={styles.label}>NEW PASSWORD</Text>
                           <ImageBackground
-                            source={STEEL.input}
+                            source={SKIN.input}
                             style={{ width: fieldW, height: inputH, justifyContent: "center" }}
                             imageStyle={styles.fillImage}
                             resizeMode="stretch"
@@ -373,7 +345,7 @@ export default function ForgotPasswordScreen() {
                         <View style={[styles.fieldGroup, { marginTop: innerGap, paddingHorizontal: fieldInset }]}>
                           <Text style={styles.label}>CONFIRM NEW PASSWORD</Text>
                           <ImageBackground
-                            source={STEEL.input}
+                            source={SKIN.input}
                             style={{ width: fieldW, height: inputH, justifyContent: "center" }}
                             imageStyle={styles.fillImage}
                             resizeMode="stretch"
@@ -458,7 +430,7 @@ function PrimaryButton({
   return (
     <Pressable onPress={onPress} disabled={busy} style={{ marginTop }}>
       <ImageBackground
-        source={STEEL.btnPrimary}
+        source={SKIN.btnPrimary}
         style={{ width, height, justifyContent: "center", alignItems: "center" }}
         imageStyle={styles.fillImage}
         resizeMode="stretch"
@@ -478,7 +450,7 @@ function PrimaryButton({
 
 const styles = StyleSheet.create({
   bg: { flex: 1, backgroundColor: "#0A0A0A" },
-  veil: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(0,0,0,0)" },
+  veil: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(0,0,0,0.38)" },
   loading: { flex: 1, alignItems: "center", justifyContent: "center" },
 
   scroll: { flexGrow: 1, alignItems: "center", justifyContent: "flex-start", paddingHorizontal: 8 },
@@ -494,7 +466,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   intro: {
-    color: "#3c3f44",
+    color: TBV.textMuted,
     fontFamily: "Exo2_400Regular",
     fontSize: 12.5,
     lineHeight: 17,
@@ -507,7 +479,7 @@ const styles = StyleSheet.create({
     fontFamily: "Rajdhani_700Bold",
     fontSize: 11,
     letterSpacing: 2,
-    color: "#54585e",
+    color: TBV.steelDim,
     paddingLeft: 8,
     marginBottom: 2,
   },
@@ -520,7 +492,7 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
-    color: "#1c1e21",
+    color: TBV.text,
     fontFamily: "Exo2_500Medium",
     fontSize: 15,
     paddingVertical: 0,
@@ -546,7 +518,7 @@ const styles = StyleSheet.create({
     fontFamily: "Rajdhani_600SemiBold",
     fontSize: 12,
     letterSpacing: 1,
-    color: "#5a5f66",
+    color: TBV.textMuted,
   },
 
   backLink: { alignSelf: "center", marginTop: 16, paddingVertical: 2 },
@@ -555,16 +527,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     letterSpacing: 2,
     color: TBV.orange,
-  },
-
-  plateTitle: {
-    fontFamily: "BebasNeue_400Regular",
-    fontSize: 30,
-    letterSpacing: 3,
-    color: "#2b2e33",
-    textShadowColor: "rgba(255,255,255,0.45)",
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 0,
   },
 
   fillImage: { width: "100%", height: "100%" },
