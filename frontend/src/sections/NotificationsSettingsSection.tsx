@@ -94,9 +94,11 @@ const SectionRow = ({
       ]}
       {...wrapperProps}
     >
-      <View style={styles.sectionRowIcon}>
-        <Ionicons name={icon} size={18} color={theme.colors.accent} />
-      </View>
+      {!indent && (
+        <View style={styles.sectionRowIcon}>
+          <Ionicons name={icon} size={18} color={theme.colors.accent} />
+        </View>
+      )}
       <View style={{ flex: 1, minWidth: 0 }}>
         <Text style={styles.sectionRowTitle} numberOfLines={1}>
           {title}
@@ -133,6 +135,7 @@ const BORROW_PRESETS: Array<{ hours: number; label: string }> = [
 
 export default function NotificationsSettingsSection({ prefs, update }: Props) {
   const [timePickerOpen, setTimePickerOpen] = useState(false);
+  const [paymentTimePickerOpen, setPaymentTimePickerOpen] = useState(false);
   const [borrowPeriodPickerOpen, setBorrowPeriodPickerOpen] = useState(false);
   const [customDaysInput, setCustomDaysInput] = useState("");
 
@@ -321,6 +324,23 @@ export default function NotificationsSettingsSection({ prefs, update }: Props) {
     }
   };
 
+  const applyPaymentTime = async (h: number, m: number) => {
+    await update({
+      payment_notification_hour: h,
+      payment_notification_minute: m,
+    });
+    if (prefs.payment_notifications_enabled) {
+      reschedulePaymentRemindersNow().catch(() => {});
+    }
+  };
+
+  const handlePaymentDayBeforeToggle = async (v: boolean) => {
+    await update({ payment_notify_day_before: v });
+    if (prefs.payment_notifications_enabled) {
+      reschedulePaymentRemindersNow().catch(() => {});
+    }
+  };
+
   return (
     <View style={styles.sectionCardWrap}>
       <Text style={styles.sectionLabel}>NOTIFICATIONS</Text>
@@ -343,6 +363,7 @@ export default function NotificationsSettingsSection({ prefs, update }: Props) {
               onValueChange={handleMasterToggle}
               trackColor={{ true: theme.colors.accent, false: theme.colors.border }}
               thumbColor="#fff"
+              style={styles.miniSwitch}
             />
           }
         />
@@ -363,6 +384,7 @@ export default function NotificationsSettingsSection({ prefs, update }: Props) {
                     onValueChange={handleDealerToggle}
                     trackColor={{ true: theme.colors.accent, false: theme.colors.border }}
                     thumbColor="#fff"
+                    style={styles.miniSwitch}
                   />
                 }
               />
@@ -396,6 +418,7 @@ export default function NotificationsSettingsSection({ prefs, update }: Props) {
                         onValueChange={handleDayBeforeToggle}
                         trackColor={{ true: theme.colors.accent, false: theme.colors.border }}
                         thumbColor="#fff"
+                        style={styles.miniSwitch}
                       />
                     }
                   />
@@ -417,6 +440,7 @@ export default function NotificationsSettingsSection({ prefs, update }: Props) {
                     onValueChange={handleBorrowToggle}
                     trackColor={{ true: theme.colors.accent, false: theme.colors.border }}
                     thumbColor="#fff"
+                    style={styles.miniSwitch}
                   />
                 }
               />
@@ -443,9 +467,9 @@ export default function NotificationsSettingsSection({ prefs, update }: Props) {
               <SectionRow
                 icon="card"
                 title="Payment Notifications"
-                subtitle="Day-before / day-of alerts (choose per account)"
+                subtitle="Reminders for scheduled dealer account payments"
                 testID="notif-payment-toggle-row"
-                isLast
+                isLast={!prefs.payment_notifications_enabled}
                 rightSlot={
                   <Switch
                     testID="toggle-payment-notifications"
@@ -453,9 +477,46 @@ export default function NotificationsSettingsSection({ prefs, update }: Props) {
                     onValueChange={handlePaymentToggle}
                     trackColor={{ true: theme.colors.accent, false: theme.colors.border }}
                     thumbColor="#fff"
+                    style={styles.miniSwitch}
                   />
                 }
               />
+              {prefs.payment_notifications_enabled && (
+                <>
+                  <SectionRow
+                    icon="time"
+                    title="Reminder time"
+                    subtitle="When to send payment reminders"
+                    testID="notif-payment-time-row"
+                    indent
+                    onPress={() => setPaymentTimePickerOpen(true)}
+                    rightSlot={
+                      <Text style={styles.timeValue}>
+                        {formatHourMinute(
+                          prefs.payment_notification_hour,
+                          prefs.payment_notification_minute,
+                        )}
+                      </Text>
+                    }
+                  />
+                  <SectionRow
+                    icon="calendar"
+                    title="Also remind day before"
+                    subtitle="Heads-up the day before a payment is due"
+                    indent
+                    isLast
+                    rightSlot={
+                      <Switch
+                        value={prefs.payment_notify_day_before}
+                        onValueChange={handlePaymentDayBeforeToggle}
+                        trackColor={{ true: theme.colors.accent, false: theme.colors.border }}
+                        thumbColor="#fff"
+                        style={styles.miniSwitch}
+                      />
+                    }
+                  />
+                </>
+              )}
             </View>
           </>
         )}
@@ -555,6 +616,78 @@ export default function NotificationsSettingsSection({ prefs, update }: Props) {
               onChange={async (_event, selected) => {
                 if (selected) {
                   await applyDealerTime(selected.getHours(), selected.getMinutes());
+                }
+              }}
+            />
+          </View>
+        </Modal>
+      )}
+
+      {/* ===== Payment reminder time picker ===== */}
+      {Platform.OS === "android" && paymentTimePickerOpen && (
+        <DateTimePicker
+          value={(() => {
+            const d = new Date();
+            d.setHours(
+              prefs.payment_notification_hour,
+              prefs.payment_notification_minute,
+              0,
+              0,
+            );
+            return d;
+          })()}
+          mode="time"
+          is24Hour={false}
+          display="default"
+          onChange={async (event, selected) => {
+            setPaymentTimePickerOpen(false);
+            if (event.type === "set" && selected) {
+              await applyPaymentTime(selected.getHours(), selected.getMinutes());
+            }
+          }}
+        />
+      )}
+      {Platform.OS === "ios" && (
+        <Modal
+          visible={paymentTimePickerOpen}
+          transparent
+          animationType="slide"
+          onRequestClose={() => setPaymentTimePickerOpen(false)}
+        >
+          <TouchableOpacity
+            style={styles.timeModalBackdrop}
+            activeOpacity={1}
+            onPress={() => setPaymentTimePickerOpen(false)}
+          />
+          <View style={styles.timeModalSheet}>
+            <View style={styles.timeModalHeader}>
+              <TouchableOpacity onPress={() => setPaymentTimePickerOpen(false)}>
+                <Text style={styles.timeModalCancel}>Cancel</Text>
+              </TouchableOpacity>
+              <Text style={styles.timeModalTitle}>Payment Reminder Time</Text>
+              <TouchableOpacity onPress={() => setPaymentTimePickerOpen(false)}>
+                <Text style={styles.timeModalDone}>Done</Text>
+              </TouchableOpacity>
+            </View>
+            <DateTimePicker
+              value={(() => {
+                const d = new Date();
+                d.setHours(
+                  prefs.payment_notification_hour,
+                  prefs.payment_notification_minute,
+                  0,
+                  0,
+                );
+                return d;
+              })()}
+              mode="time"
+              is24Hour={false}
+              display="spinner"
+              themeVariant="dark"
+              textColor="#FFFFFF"
+              onChange={async (_event, selected) => {
+                if (selected) {
+                  await applyPaymentTime(selected.getHours(), selected.getMinutes());
                 }
               }}
             />
@@ -668,6 +801,7 @@ const styles = themedStyles((c) => ({
     borderColor: c.border,
     borderRadius: 10,
     backgroundColor: c.surface,
+    paddingHorizontal: 12,
     overflow: "hidden",
   },
   sectionCard: {
@@ -689,7 +823,9 @@ const styles = themedStyles((c) => ({
   },
   sectionRowIndent: {
     paddingLeft: 12,
-    backgroundColor: c.glass,
+  },
+  miniSwitch: {
+    transform: [{ scale: 0.78 }],
   },
   sectionRowLast: {
     borderBottomWidth: 0,

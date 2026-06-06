@@ -378,7 +378,7 @@ export default function PaywallScreen() {
 }
 
 const styles = themedStyles((c) => ({
-  container: { flex: 1, backgroundColor: c.canvas },
+  container: { flex: 1, backgroundColor: c.bg },
   headerBar: {
     flexDirection: "row",
     alignItems: "center",

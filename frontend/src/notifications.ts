@@ -272,8 +272,9 @@ export async function reschedulePaymentRemindersNow(): Promise<void> {
     return;
   }
   if (!prefs.payment_notifications_enabled) return;
-  const hour = prefs.dealer_notification_hour ?? 7;
-  const minute = prefs.dealer_notification_minute ?? 0;
+  const hour = prefs.payment_notification_hour ?? prefs.dealer_notification_hour ?? 7;
+  const minute = prefs.payment_notification_minute ?? prefs.dealer_notification_minute ?? 0;
+  const remindDayBefore = prefs.payment_notify_day_before ?? true;
 
   let items: DealerPaymentDue[] = [];
   try {
@@ -292,7 +293,8 @@ export async function reschedulePaymentRemindersNow(): Promise<void> {
     const acct = it.account_label || "";
     const money = `${who}${acct} payment ($${Number(it.amount).toFixed(2)})`;
 
-    if (it.remind_day_of) {
+    // Day-of reminder always fires when payment notifications are on.
+    {
       const dayOf = new Date(y, m - 1, d, hour, minute, 0, 0);
       if (dayOf.getTime() > now) {
         await Notifications.scheduleNotificationAsync({
@@ -316,7 +318,7 @@ export async function reschedulePaymentRemindersNow(): Promise<void> {
       }
     }
 
-    if (it.remind_day_before) {
+    if (remindDayBefore) {
       const dayBefore = new Date(y, m - 1, d, hour, minute, 0, 0);
       dayBefore.setDate(dayBefore.getDate() - 1);
       if (dayBefore.getTime() > now) {

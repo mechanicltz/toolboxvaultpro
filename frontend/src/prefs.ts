@@ -49,9 +49,13 @@ export type Prefs = {
   show_dealer_route_reminder: boolean;
   // Show the "Payments due this week" banner on the home screen (CUSTOMIZE).
   show_payments_banner: boolean;
-  // Master switch for dealer-payment reminders (day-before / day-of are set
-  // per payment account). Uses the same notification time as dealer routes.
+  // Master switch for dealer-payment reminders. Day-of reminders fire whenever
+  // a payment account schedule is active; the time-of-day and an optional
+  // day-before heads-up are configured globally under NOTIFICATIONS.
   payment_notifications_enabled: boolean;
+  payment_notification_hour: number; // 0-23
+  payment_notification_minute: number; // 0-59
+  payment_notify_day_before: boolean;
   // Master gate for ALL notifications. When OFF, the entire notifications
   // accordion is collapsed and nothing is scheduled. When toggled ON the app
   // requests native notification permission. Individual type toggles
@@ -106,6 +110,9 @@ const DEFAULTS: Prefs = {
   show_dealer_route_reminder: true,
   show_payments_banner: true,
   payment_notifications_enabled: true,
+  payment_notification_hour: 7,
+  payment_notification_minute: 0,
+  payment_notify_day_before: true,
   notifications_master_enabled: false,
 };
 

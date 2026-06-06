@@ -6,7 +6,6 @@ import {
   Alert,
   ScrollView,
   Modal,
-  Switch,
   TextInput,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
@@ -272,8 +271,6 @@ function ScheduleModal({
   const [amount, setAmount] = useState(existing ? String(existing.amount) : "");
   const [frequency, setFrequency] = useState<"weekly" | "biweekly" | "monthly">(existing?.frequency || "monthly");
   const [nextDue, setNextDue] = useState(existing?.next_due_date || todayISO());
-  const [remindBefore, setRemindBefore] = useState(existing?.remind_day_before ?? true);
-  const [remindDayOf, setRemindDayOf] = useState(existing?.remind_day_of ?? true);
   const [saving, setSaving] = useState(false);
 
   const save = async () => {
@@ -291,8 +288,10 @@ function ScheduleModal({
       amount: amt,
       frequency,
       next_due_date: nextDue,
-      remind_day_before: remindBefore,
-      remind_day_of: remindDayOf,
+      // Reminder timing is controlled globally under NOTIFICATIONS in the Vault.
+      // Keep both flags on so this account is always considered for reminders.
+      remind_day_before: true,
+      remind_day_of: true,
     };
     setSaving(true);
     try {
@@ -366,25 +365,12 @@ function ScheduleModal({
             <Text style={styles.fieldLabel}>Next due date</Text>
             <DateField value={nextDue} onChange={setNextDue} testID="sched-due-date" />
 
-            <View style={styles.toggleRow}>
-              <Text style={styles.toggleLabel}>Remind day before</Text>
-              <Switch
-                testID="sched-remind-before"
-                value={remindBefore}
-                onValueChange={setRemindBefore}
-                trackColor={{ true: theme.colors.accent, false: theme.colors.border }}
-                thumbColor="#fff"
-              />
-            </View>
-            <View style={styles.toggleRow}>
-              <Text style={styles.toggleLabel}>Remind on due day</Text>
-              <Switch
-                testID="sched-remind-dayof"
-                value={remindDayOf}
-                onValueChange={setRemindDayOf}
-                trackColor={{ true: theme.colors.accent, false: theme.colors.border }}
-                thumbColor="#fff"
-              />
+            <View style={styles.notifNote}>
+              <Ionicons name="notifications-outline" size={16} color={theme.colors.accent} />
+              <Text style={styles.notifNoteText}>
+                Turn on notifications for upcoming payments in the Vault →
+                Notifications to get day-before and due-day reminders.
+              </Text>
             </View>
 
             <View style={{ flexDirection: "row", gap: 8, marginTop: 18 }}>
@@ -539,6 +525,24 @@ const styles = themedStyles((c) => ({
     gap: 12,
   },
   toggleLabel: { color: c.textPrimary, fontSize: 13, fontWeight: "700" },
+  notifNote: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 8,
+    marginTop: 14,
+    padding: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: c.border,
+    backgroundColor: c.surface,
+  },
+  notifNoteText: {
+    flex: 1,
+    color: c.textSecondary,
+    fontSize: 11,
+    lineHeight: 16,
+    fontWeight: "600",
+  },
   btnGhost: {
     flex: 1,
     height: 44,

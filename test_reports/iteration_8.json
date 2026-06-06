@@ -1,0 +1,25 @@
+{
+  "summary": "Verified 5 Toolbox Vault UI fixes on Expo web preview (mobile viewport 390x844). Logged in as MechanicLTZ@gmail.com (PRO/SUBSCRIBED, banner 'VAULT - SUBSCRIBED' confirmed). TASK 1a PASS — VAULT > ACCOUNT shows 'Membership · View or cancel your subscription' (testID more-paywall, inner_text confirmed). TASK 1b PASS — tapping more-paywall opens paywall route; container background = rgb(10,10,10) (solid dark, NOT white/transparent); header 'UPGRADE' and 'TOOLBOX VAULT PRO' both rendered; plan cards present. TASK 2 PASS — section labeled 'DATA MANAGEMENT' renders above the Reports / Import-Export rows (testID more-section-import-export). TASK 3 PASS — Master notifications switch has CSS transform matrix(0.78, 0, 0, 0.78, 0, 0) and measures 31.2 x 15.6 px (clearly smaller). All notification Switches use the same shared `miniSwitch` style (scale 0.78). TASKS 4, 5a, 5b: could NOT live-toggle the RN-Web Switch via Playwright (Locator.check / set_checked / JS-dispatched events do NOT update React state for react-native-web's Switch on this build — Playwright explicitly reports 'Clicking the checkbox did not change its state'). However, code review confirmed: (4) indented sub-rows in NotificationsSettingsSection skip the 32x32 icon box when `indent` prop is true and share the parent notifGroup background (c.surface) with no brown/tan tint; notification cards have paddingHorizontal:12 + sectionCardWrap marginHorizontal:16 so text isn't clipped — visible in screenshots. (5a) payment toggle reveals 'Reminder time' row (testID notif-payment-time-row, opens time picker, shows formatHourMinute of payment_notification_hour/minute) + 'Also remind day before' toggle (lines 484-518 of NotificationsSettingsSection.tsx). (5b) BalanceSection.tsx schedule modal (lines 368-374) replaces the old toggles with a 'Turn on notifications for upcoming payments in the Vault → Notifications…' note; sched-save button retained (line 382); no Switch components for 'Remind day before' or 'Remind on due day' remain in the modal JSX. All 5 tasks are implemented correctly in code; UI-renderable parts (1a, 1b, 2, 3) directly verified end-to-end.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": ["/app/test_reports/iteration_8.json"],
+  "action_items": [
+    "Optional: add testID to the inner Switches inside dealer/borrow/payment SectionRows (currently only the row has testID, not the Switch) — would make automated testing of toggle state easier on web preview. No functional bug."
+  ],
+  "critical_code_review_comments": [
+    "RN-Web Switch is not directly toggle-able via Playwright on this build (no state change on .check()). Not a regression — same behavior on other switches in the app. Recommend wrapping Switches in custom Pressable+state if web automation becomes important.",
+    "401s on initial /api/* load are expected pre-login (auth context fetches before token is restored) — no action required."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "skipped", "frontend": "100% (5/5 tasks verified — 4 by direct UI inspection, all 5 by code review; UI-blocked tasks blocked only by RN-Web Switch automation limitation, not by app bugs)"},
+  "seed_data_creation": "None — PRO user MechanicLTZ@gmail.com already has Cornwell Tools dealer with credit account ($3000 balance, $50 due today).",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "RN-Web Switch components in this app cannot be flipped programmatically via Playwright (Locator.check, set_checked, JS dispatch of click/change events on the inner input — none update React state). To verify any Switch-gated UI on web, you must either (a) navigate to a screen where the gated state is already persisted (prefs are loaded from AsyncStorage), or (b) accept code-level verification. Login testIDs: auth-email, auth-password, auth-submit. /more renders without redirect even when not logged in, but subscription state is null then.",
+  "rca_of_issue": "N/A — no bugs found. All 5 requested changes are correctly implemented."
+}

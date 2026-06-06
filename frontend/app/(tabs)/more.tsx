@@ -582,7 +582,7 @@ export default function MoreScreen() {
           />
         </SectionCard>
 
-        <SectionCard title="IMPORT / EXPORT" testID="more-section-import-export">
+        <SectionCard title="DATA MANAGEMENT" testID="more-section-import-export">
           <SectionRow
             icon="document-text"
             title="Reports"
@@ -748,7 +748,7 @@ export default function MoreScreen() {
           />
           <SectionRow
             icon="star-outline"
-            title={isPro ? "Manage Subscription" : "Upgrade to PRO"}
+            title={isPro ? "Membership" : "Upgrade to PRO"}
             subtitle={
               isPro
                 ? "View or cancel your subscription"
