@@ -30,7 +30,6 @@ import { useSkin } from "../../src/themeContext";import {
 import { usePrefs, HOME_ROW_LABELS, HomeRowKey } from "../../src/prefs";
 import { api } from "../../src/api";
 import { useAuth } from "../../src/AuthContext";
-import { APP_VERSION_LABEL } from "../../src/version";
 import { themedStyles } from "../../src/themeContext";
 import { BevelCard } from "../../src/components/BevelCard";
 import { IndustrialBanner } from "../../src/components/IndustrialBanner";
@@ -516,7 +515,7 @@ export default function MoreScreen() {
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <IndustrialBanner
-        title="TOOLBOX VAULT"
+        title="VAULT"
         subtitle={user?.email || "Manage everything"}
       />
       <View style={styles.infoRow}>
@@ -540,30 +539,107 @@ export default function MoreScreen() {
             {proLabel}
           </Text>
         </View>
-        <Text style={styles.versionLine} testID="more-version">
-          {APP_VERSION_LABEL}
-        </Text>
       </View>
       <ScrollView contentContainerStyle={{ paddingBottom: 100 }}>
-        {/* CUSTOMIZE — single consolidated personalization card: theme, home
-            layout, and home banners all live here. */}
-        <SectionCard title="CUSTOMIZE" testID="more-section-customize">
-          {/* Theme — collapsed to a single accordion row showing the current
-              selection; tap to reveal the 4 options. */}
+        <SectionCard title="RESOURCES" testID="more-section-system">
+          <SectionRow
+            icon="heart"
+            title="Wish List"
+            subtitle="Saved links to tools you want"
+            testID="more-wishlist"
+            onPress={() => router.push("/wishlist")}
+          />
+          <SectionRow
+            icon="pricetag"
+            title="Inventory for Sale"
+            subtitle="List items, mark as sold, sale & sold reports"
+            testID="more-for-sale"
+            onPress={() => router.push("/for-sale")}
+          />
+          <SectionRow
+            icon="shield-checkmark"
+            title="Warranty Alerts"
+            subtitle="Expiring & expired warranties"
+            testID="more-warranty"
+            onPress={() => router.push("/warranty")}
+          />
+          <SectionRow
+            icon="settings"
+            title="Maintenance"
+            subtitle={
+              totalDue > 0
+                ? `${mntDue.overdue} overdue, ${mntDue.due_soon} due soon`
+                : "Calibration & service schedules"
+            }
+            testID="more-maintenance"
+            badge={totalDue}
+            badgeColor={mntDue.overdue > 0 ? theme.colors.danger : theme.colors.accent}
+            onPress={() => router.push("/maintenance")}
+            isLast
+          />
+        </SectionCard>
+
+        <SectionCard title="ORGANIZATION" testID="more-section-organization">
+          <SectionRow
+            icon="folder"
+            title="Categories"
+            subtitle="Manage tool categories"
+            testID="more-categories"
+            onPress={() => router.push("/manage/categories")}
+          />
+          <SectionRow
+            icon="pricetag"
+            title="Tags"
+            subtitle="Manage tags"
+            testID="more-tags"
+            onPress={() => router.push("/manage/tags")}
+          />
+          <SectionRow
+            icon="location"
+            title="Locations"
+            subtitle="Nested storage hierarchy"
+            testID="more-locations"
+            onPress={() => router.push("/locations")}
+            isLast
+          />
+        </SectionCard>
+
+        <SectionCard title="IMPORT / EXPORT" testID="more-section-import-export">
+          <SectionRow
+            icon="document-text"
+            title="Reports"
+            subtitle="PDF / CSV exports & saved presets"
+            testID="more-reports"
+            onPress={() => router.push("/reports")}
+          />
+          <SectionRow
+            icon="swap-horizontal"
+            title="Import / Export Database"
+            subtitle="Bulk-upload tools or back up to a spreadsheet"
+            testID="more-import-export"
+            onPress={() => router.push("/import-export" as any)}
+            isLast
+          />
+        </SectionCard>
+
+        <NotificationsSettingsSection prefs={prefs} update={update} />
+
+        {/* SETTINGS — theme, home layout & home banners. */}
+        <SectionCard title="SETTINGS" testID="more-section-customize">
+          {/* Theme — accordion row; expands to a grouped card of choices. */}
           <SectionRow
             icon="color-palette"
             title="Theme"
             subtitle="Choose the app's look & feel"
             testID="theme-accordion-row"
             onPress={() => setThemeOpen((o) => !o)}
+            isLast={!themeOpen}
             rightSlot={
               <View style={styles.themeValueWrap}>
                 <Text
                   style={[
                     styles.themeValueText,
-                    currentAppearanceMeta.color
-                      ? { color: currentAppearanceMeta.color }
-                      : null,
+                    currentAppearanceMeta.color ? { color: currentAppearanceMeta.color } : null,
                   ]}
                   numberOfLines={1}
                 >
@@ -577,40 +653,38 @@ export default function MoreScreen() {
               </View>
             }
           />
-          {themeOpen &&
-            APPEARANCE_OPTIONS.map((opt) => {
-              const active = appearance === opt.id;
-              const tint = opt.color || theme.colors.accent;
-              return (
-                <TouchableOpacity
-                  key={opt.id}
-                  testID={`appearance-${opt.id}`}
-                  activeOpacity={0.7}
-                  style={[styles.optRow, active && styles.optRowActive]}
-                  onPress={() => setAppearance(opt.id)}
-                >
-                  <View style={styles.iconBox}>
-                    <Ionicons name={opt.icon} size={18} color={tint} />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text
-                      style={[
-                        styles.rowTitle,
-                        opt.color ? { color: opt.color } : null,
-                      ]}
-                    >
-                      {opt.title}
-                    </Text>
-                    <Text style={styles.rowSub}>{opt.sub}</Text>
-                  </View>
-                  <Ionicons
-                    name={active ? "radio-button-on" : "radio-button-off"}
-                    size={20}
-                    color={active ? tint : theme.colors.textMuted}
-                  />
-                </TouchableOpacity>
-              );
-            })}
+          {themeOpen && (
+            <View style={styles.optGroup}>
+              {APPEARANCE_OPTIONS.map((opt) => {
+                const active = appearance === opt.id;
+                const tint = opt.color || theme.colors.accent;
+                return (
+                  <TouchableOpacity
+                    key={opt.id}
+                    testID={`appearance-${opt.id}`}
+                    activeOpacity={0.7}
+                    style={[styles.optRowGrouped, active && styles.optRowGroupedActive]}
+                    onPress={() => setAppearance(opt.id)}
+                  >
+                    <View style={styles.iconBox}>
+                      <Ionicons name={opt.icon} size={18} color={tint} />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={[styles.rowTitle, opt.color ? { color: opt.color } : null]}>
+                        {opt.title}
+                      </Text>
+                      <Text style={styles.rowSub}>{opt.sub}</Text>
+                    </View>
+                    <Ionicons
+                      name={active ? "radio-button-on" : "radio-button-off"}
+                      size={20}
+                      color={active ? tint : theme.colors.textMuted}
+                    />
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          )}
 
           {/* Home layout */}
           <SectionRow
@@ -655,21 +729,6 @@ export default function MoreScreen() {
               />
             }
           />
-          {/* Home banners — all the "show X at the top of home" toggles. */}
-          <SectionRow
-            icon="card"
-            title="Payments due banner"
-            subtitle="Show 'payments due this week' at the top of home"
-            rightSlot={
-              <Switch
-                testID="toggle-payments-banner"
-                value={prefs.show_payments_banner}
-                onValueChange={(v) => update({ show_payments_banner: v })}
-                trackColor={{ true: theme.colors.accent, false: theme.colors.border }}
-                thumbColor="#fff"
-              />
-            }
-          />
           <SectionRow
             icon="map"
             title="Next dealer-route banner"
@@ -700,97 +759,6 @@ export default function MoreScreen() {
             }
           />
         </SectionCard>
-
-        <Row
-          icon="chatbubble-ellipses"
-          title="Report a Bug · Request a Feature"
-          subtitle="Send feedback directly to the developers"
-          testID="more-feedback"
-          onPress={() => router.push("/feedback")}
-        />
-
-        <SectionCard title="SYSTEM" testID="more-section-system">
-          <SectionRow
-            icon="heart"
-            title="Wish List"
-            subtitle="Saved links to tools you want"
-            testID="more-wishlist"
-            onPress={() => router.push("/wishlist")}
-          />
-          <SectionRow
-            icon="pricetag"
-            title="Inventory for Sale"
-            subtitle="List items, mark as sold, sale & sold reports"
-            testID="more-for-sale"
-            onPress={() => router.push("/for-sale")}
-          />
-          <SectionRow
-            icon="shield-checkmark"
-            title="Warranty Alerts"
-            subtitle="Expiring & expired warranties"
-            testID="more-warranty"
-            onPress={() => router.push("/warranty")}
-          />
-          <SectionRow
-            icon="settings"
-            title="Maintenance"
-            subtitle={
-              totalDue > 0
-                ? `${mntDue.overdue} overdue, ${mntDue.due_soon} due soon`
-                : "Calibration & service schedules"
-            }
-            testID="more-maintenance"
-            badge={totalDue}
-            badgeColor={mntDue.overdue > 0 ? theme.colors.danger : theme.colors.accent}
-            onPress={() => router.push("/maintenance")}
-            isLast
-          />
-        </SectionCard>
-
-        <SectionCard title="IMPORT / EXPORT" testID="more-section-import-export">
-          <SectionRow
-            icon="document-text"
-            title="Reports"
-            subtitle="PDF / CSV exports & saved presets"
-            testID="more-reports"
-            onPress={() => router.push("/reports")}
-          />
-          <SectionRow
-            icon="swap-horizontal"
-            title="Import / Export Database"
-            subtitle="Bulk-upload tools or back up to a spreadsheet"
-            testID="more-import-export"
-            onPress={() => router.push("/import-export" as any)}
-            isLast
-          />
-        </SectionCard>
-
-        <SectionCard title="ORGANIZATION" testID="more-section-organization">
-          <SectionRow
-            icon="folder"
-            title="Categories"
-            subtitle="Manage tool categories"
-            testID="more-categories"
-            onPress={() => router.push("/manage/categories")}
-          />
-          <SectionRow
-            icon="pricetag"
-            title="Tags"
-            subtitle="Manage tags"
-            testID="more-tags"
-            onPress={() => router.push("/manage/tags")}
-          />
-          <SectionRow
-            icon="location"
-            title="Locations"
-            subtitle="Nested storage hierarchy"
-            testID="more-locations"
-            onPress={() => router.push("/locations")}
-            isLast
-          />
-        </SectionCard>
-
-        <NotificationsSettingsSection prefs={prefs} update={update} />
 
         <SectionCard title="ACCOUNT" testID="more-section-account">
           <SectionRow
@@ -920,6 +888,15 @@ export default function MoreScreen() {
             }}
           />
         </SectionCard>
+
+        {/* Report a bug — pinned to the very bottom */}
+        <Row
+          icon="chatbubble-ellipses"
+          title="Report a Bug · Request a Feature"
+          subtitle="Send feedback directly to the developers"
+          testID="more-feedback"
+          onPress={() => router.push("/feedback")}
+        />
       </ScrollView>
 
       {/* Home Screen Rows modal — pick which rows show on Home and reorder them */}
@@ -1253,13 +1230,13 @@ const styles = themedStyles((c) => ({
     letterSpacing: 1.2,
   },
   sectionLabel: {
-    color: c.textMuted,
-    fontSize: 8,
-    fontWeight: "800",
+    color: c.textPrimary,
+    fontSize: 16,
+    fontWeight: "900",
     letterSpacing: 2,
     paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 8,
+    paddingTop: 22,
+    paddingBottom: 10,
   },
 
   /* ---------- Description-card grouping wrappers for each MORE section ---------- */
@@ -1404,6 +1381,28 @@ const styles = themedStyles((c) => ({
   optRowActive: {
     backgroundColor: c.glass,
   },
+  /* Grouped theme picker — all choices inside one bordered sub-card with no
+     dividers and tighter spacing so they read as a single group. */
+  optGroup: {
+    marginHorizontal: 8,
+    marginTop: 6,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: c.border,
+    borderRadius: 10,
+    backgroundColor: c.surface,
+    overflow: "hidden",
+  },
+  optRowGrouped: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+  },
+  optRowGroupedActive: {
+    backgroundColor: c.glass,
+  },
   themeValueWrap: {
     flexDirection: "row",
     alignItems: "center",
@@ -1532,8 +1531,8 @@ const styles = themedStyles((c) => ({
     gap: 2,
   },
   homeRowMoveBtn: {
-    width: 26,
-    height: 22,
+    width: 22,
+    height: 18,
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,

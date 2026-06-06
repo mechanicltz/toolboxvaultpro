@@ -350,105 +350,113 @@ export default function NotificationsSettingsSection({ prefs, update }: Props) {
         {masterOn && (
           <>
             {/* ===== Dealer route reminders ===== */}
-            <SectionRow
-              icon="navigate"
-              title="Dealer route reminders"
-              subtitle="Alert when a tool dealer is scheduled to visit"
-              testID="notif-toggle-row"
-              indent
-              rightSlot={
-                <Switch
-                  value={prefs.dealer_notifications_enabled}
-                  onValueChange={handleDealerToggle}
-                  trackColor={{ true: theme.colors.accent, false: theme.colors.border }}
-                  thumbColor="#fff"
-                />
-              }
-            />
-            {prefs.dealer_notifications_enabled && (
-              <>
+            <View style={styles.notifGroup}>
+              <SectionRow
+                icon="navigate"
+                title="Dealer route reminders"
+                subtitle="Alert when a tool dealer is scheduled to visit"
+                testID="notif-toggle-row"
+                isLast={!prefs.dealer_notifications_enabled}
+                rightSlot={
+                  <Switch
+                    value={prefs.dealer_notifications_enabled}
+                    onValueChange={handleDealerToggle}
+                    trackColor={{ true: theme.colors.accent, false: theme.colors.border }}
+                    thumbColor="#fff"
+                  />
+                }
+              />
+              {prefs.dealer_notifications_enabled && (
+                <>
+                  <SectionRow
+                    icon="time"
+                    title="Reminder time"
+                    subtitle="When to send the reminder on visit days"
+                    testID="notif-time-row"
+                    indent
+                    onPress={() => setTimePickerOpen(true)}
+                    rightSlot={
+                      <Text style={styles.timeValue}>
+                        {formatHourMinute(
+                          prefs.dealer_notification_hour,
+                          prefs.dealer_notification_minute,
+                        )}
+                      </Text>
+                    }
+                  />
+                  <SectionRow
+                    icon="calendar"
+                    title="Also remind day before"
+                    subtitle="Get a heads-up the day before too"
+                    indent
+                    isLast
+                    rightSlot={
+                      <Switch
+                        value={prefs.dealer_notify_day_before}
+                        onValueChange={handleDayBeforeToggle}
+                        trackColor={{ true: theme.colors.accent, false: theme.colors.border }}
+                        thumbColor="#fff"
+                      />
+                    }
+                  />
+                </>
+              )}
+            </View>
+
+            {/* ===== Borrowed-tool overdue reminders ===== */}
+            <View style={styles.notifGroup}>
+              <SectionRow
+                icon="time"
+                title="Borrowed-tool overdue reminders"
+                subtitle="Notify me when a checked-out tool is still out"
+                testID="notif-borrow-toggle-row"
+                isLast={!prefs.borrow_reminders_enabled}
+                rightSlot={
+                  <Switch
+                    value={prefs.borrow_reminders_enabled}
+                    onValueChange={handleBorrowToggle}
+                    trackColor={{ true: theme.colors.accent, false: theme.colors.border }}
+                    thumbColor="#fff"
+                  />
+                }
+              />
+              {prefs.borrow_reminders_enabled && (
                 <SectionRow
-                  icon="time"
-                  title="Reminder time"
-                  subtitle="When to send the reminder on dealer-visit days"
-                  testID="notif-time-row"
+                  icon="hourglass"
+                  title="Reminder period"
+                  subtitle="How often to remind you while a tool is out"
+                  testID="notif-borrow-period-row"
                   indent
-                  onPress={() => setTimePickerOpen(true)}
+                  isLast
+                  onPress={() => setBorrowPeriodPickerOpen(true)}
                   rightSlot={
                     <Text style={styles.timeValue}>
-                      {formatHourMinute(
-                        prefs.dealer_notification_hour,
-                        prefs.dealer_notification_minute,
-                      )}
+                      {formatBorrowPeriod(prefs.borrow_reminder_hours)}
                     </Text>
                   }
                 />
-                <SectionRow
-                  icon="calendar"
-                  title="Also remind day before"
-                  subtitle="Get a heads-up the day before too"
-                  indent
-                  rightSlot={
-                    <Switch
-                      value={prefs.dealer_notify_day_before}
-                      onValueChange={handleDayBeforeToggle}
-                      trackColor={{ true: theme.colors.accent, false: theme.colors.border }}
-                      thumbColor="#fff"
-                    />
-                  }
-                />
-              </>
-            )}
-
-            {/* ===== Borrowed-tool overdue reminders ===== */}
-            <SectionRow
-              icon="time"
-              title="Borrowed-tool overdue reminders"
-              subtitle="Notify me when a checked-out tool is still out"
-              testID="notif-borrow-toggle-row"
-              indent
-              rightSlot={
-                <Switch
-                  value={prefs.borrow_reminders_enabled}
-                  onValueChange={handleBorrowToggle}
-                  trackColor={{ true: theme.colors.accent, false: theme.colors.border }}
-                  thumbColor="#fff"
-                />
-              }
-            />
-            {prefs.borrow_reminders_enabled && (
-              <SectionRow
-                icon="hourglass"
-                title="Reminder period"
-                subtitle="How often to remind you while a tool is out"
-                testID="notif-borrow-period-row"
-                indent
-                onPress={() => setBorrowPeriodPickerOpen(true)}
-                rightSlot={
-                  <Text style={styles.timeValue}>
-                    {formatBorrowPeriod(prefs.borrow_reminder_hours)}
-                  </Text>
-                }
-              />
-            )}
+              )}
+            </View>
 
             {/* ===== Payment notifications ===== */}
-            <SectionRow
-              icon="card"
-              title="Payment Notifications"
-              subtitle="Day-before / day-of alerts (choose per account)"
-              testID="notif-payment-toggle-row"
-              indent
-              rightSlot={
-                <Switch
-                  testID="toggle-payment-notifications"
-                  value={prefs.payment_notifications_enabled}
-                  onValueChange={handlePaymentToggle}
-                  trackColor={{ true: theme.colors.accent, false: theme.colors.border }}
-                  thumbColor="#fff"
-                />
-              }
-            />
+            <View style={styles.notifGroup}>
+              <SectionRow
+                icon="card"
+                title="Payment Notifications"
+                subtitle="Day-before / day-of alerts (choose per account)"
+                testID="notif-payment-toggle-row"
+                isLast
+                rightSlot={
+                  <Switch
+                    testID="toggle-payment-notifications"
+                    value={prefs.payment_notifications_enabled}
+                    onValueChange={handlePaymentToggle}
+                    trackColor={{ true: theme.colors.accent, false: theme.colors.border }}
+                    thumbColor="#fff"
+                  />
+                }
+              />
+            </View>
           </>
         )}
 
@@ -645,13 +653,22 @@ const styles = themedStyles((c) => ({
     marginTop: 12,
   },
   sectionLabel: {
-    color: c.textMuted,
-    fontSize: 8,
-    fontWeight: "800",
+    color: c.textPrimary,
+    fontSize: 16,
+    fontWeight: "900",
     letterSpacing: 2,
     paddingHorizontal: 4,
-    paddingTop: 8,
-    paddingBottom: 8,
+    paddingTop: 10,
+    paddingBottom: 10,
+  },
+  notifGroup: {
+    marginTop: 8,
+    marginBottom: 6,
+    borderWidth: 1,
+    borderColor: c.border,
+    borderRadius: 10,
+    backgroundColor: c.surface,
+    overflow: "hidden",
   },
   sectionCard: {
     backgroundColor: c.bgSecondary,

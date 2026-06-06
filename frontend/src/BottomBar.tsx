@@ -90,7 +90,7 @@ const TABS: {
     },
   },
   { name: "claims", label: "CLAIMS", icon: "build", route: "/claims" },
-  { name: "more", label: "MORE", icon: "apps", route: "/more" },
+  { name: "more", label: "VAULT", icon: "apps", route: "/more" },
 ];
 
 export function BottomBar() {
