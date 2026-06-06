@@ -58,7 +58,7 @@ import { Anton_400Regular } from "@expo-google-fonts/anton";
 
 // Manual verification beacon — bump this on every change so we can confirm
 // the device is actually showing the latest bundle. Rendered top-right of Home.
-const HOME_BUILD = "BUILD 170";
+const HOME_BUILD = "BUILD 171";
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -546,7 +546,7 @@ export default function HomeScreen() {
           )}
 
           {nextRouteBanner && prefs.show_dealer_route_reminder && (
-            <BevelCard style={styles.plainBanner} onPress={() => router.push("/dealers")}>
+            <ShadowBox style={[styles.plainBanner, { marginBottom: 12 }]} onPress={() => router.push("/dealers")}>
               <Ionicons name="map" size={22} color={theme.colors.accent} />
               <View style={{ flex: 1, marginLeft: 12 }}>
                 <Text style={styles.plainBannerLabel}>NEXT DEALER ROUTE</Text>
@@ -555,7 +555,7 @@ export default function HomeScreen() {
                 </Text>
               </View>
               <Ionicons name="chevron-forward" size={18} color={theme.colors.textMuted} />
-            </BevelCard>
+            </ShadowBox>
           )}
 
           {/* UNIFIED DESCRIPTION CARD (restored from the 05-30 backup) — a
@@ -664,8 +664,8 @@ export default function HomeScreen() {
             </ShadowBox>
           )}
 
-          <BevelCard
-            style={styles.plainBanner}
+          <ShadowBox
+            style={[styles.plainBanner, { marginTop: 4 }]}
             onPress={() => router.push("/feedback")}
             testID="feedback-banner"
           >
@@ -675,7 +675,7 @@ export default function HomeScreen() {
               <Text style={styles.plainBannerText}>Have an idea or hit a snag? Let us know.</Text>
             </View>
             <Ionicons name="chevron-forward" size={18} color={theme.colors.textMuted} />
-          </BevelCard>
+          </ShadowBox>
 
           <Text style={styles.plainTip}>Pull to refresh · Customize under MORE → CUSTOMIZE</Text>
         </ScrollView>

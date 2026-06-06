@@ -45,6 +45,7 @@ import { WarrantySection } from "../../src/sections/WarrantySection";
 import PinchZoomImageViewer from "../../src/components/PinchZoomImageViewer";
 import { themedStyles } from "../../src/themeContext";
 import { BevelCard } from "../../src/components/BevelCard";
+import { ShadowBox } from "../../src/components/ShadowBox";
 import { IndustrialBanner } from "../../src/components/IndustrialBanner";
 import { PillButton } from "../../src/components/PillButton";
 
@@ -1497,8 +1498,9 @@ export default function ToolDetail() {
                 </View>
               )}
             </TouchableOpacity>
-            <View style={newStyles.photoRightCol}>
+            <ShadowBox style={newStyles.statShadowBox}>
               <PillRow
+                first
                 label="STATUS"
                 value={statusInfo.label}
                 valueColor={statusInfo.color}
@@ -1509,7 +1511,7 @@ export default function ToolDetail() {
                 onPress={() => setShowQtyModal(true)}
               />
               <PillRow label="PRICE" value={fmtMoney(tool.cost)} />
-            </View>
+            </ShadowBox>
           </View>
 
           {/* CLAIM INFORMATION — converted to the "card within a card" style
@@ -3360,47 +3362,43 @@ function PillRow({
   sub,
   onPress,
   valueColor,
+  first,
 }: {
   label: string;
   value: string;
   sub?: string;
   onPress?: () => void;
   valueColor?: string;
+  first?: boolean;
 }) {
+  const Wrapper: any = onPress ? TouchableOpacity : View;
   return (
-    <BevelCard
-      style={newStyles.pillRow}
-      {...(onPress ? { onPress, activeOpacity: 0.85 } : {})}
+    <Wrapper
+      style={[newStyles.pillRowFlat, !first && newStyles.pillRowDivider]}
+      {...(onPress ? { onPress, activeOpacity: 0.7 } : {})}
     >
       <View style={{ flex: 1 }}>
         <Text style={newStyles.pillRowLabel}>{label}</Text>
         {!!sub && <Text style={newStyles.pillRowSub}>{sub}</Text>}
       </View>
-      <View
+      <Text
         style={[
-          newStyles.pillRowValue,
-          valueColor ? { borderColor: valueColor } : null,
+          newStyles.pillRowValueText,
+          valueColor ? { color: valueColor } : null,
         ]}
+        numberOfLines={1}
       >
-        <Text
-          style={[
-            newStyles.pillRowValueText,
-            valueColor ? { color: valueColor } : null,
-          ]}
-          numberOfLines={1}
-        >
-          {value || "—"}
-        </Text>
-      </View>
+        {value || "—"}
+      </Text>
       {!!onPress && (
         <Ionicons
           name="chevron-forward"
           size={14}
           color={theme.colors.textMuted}
-          style={{ marginLeft: 4 }}
+          style={{ marginLeft: 6 }}
         />
       )}
-    </BevelCard>
+    </Wrapper>
   );
 }
 
@@ -4264,6 +4262,20 @@ const newStyles = themedStyles((c) => ({
     fontWeight: "800",
     fontSize: 10,
     letterSpacing: 0.3,
+  },
+  pillRowFlat: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 9,
+    gap: 10,
+  },
+  pillRowDivider: {
+    borderTopWidth: 1,
+    borderTopColor: c.borderSubtle,
+  },
+  statShadowBox: {
+    flex: 1,
+    justifyContent: "center",
   },
 
   // ---------- DESCRIPTION ----------
