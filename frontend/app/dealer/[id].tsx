@@ -32,6 +32,7 @@ import { themedStyles } from "../../src/themeContext";
 import { BevelCard } from "../../src/components/BevelCard";
 import { ShadowBox, ShadowBoxSubCard } from "../../src/components/ShadowBox";
 import { EmailLink } from "../../src/components/EmailLink";
+import { shareOrSaveAgent } from "../../src/utils/agentShare";
 import { IndustrialBanner } from "../../src/components/IndustrialBanner";
 import { PillButton } from "../../src/components/PillButton";
 
@@ -485,8 +486,32 @@ export default function DealerDetail() {
                   {isOpen && (
                     <ShadowBoxSubCard style={styles.agentCard}>
                       {/* Business-card header — agent name */}
-                      <Text style={styles.bizName} numberOfLines={1}>{a.name}</Text>
-                      {isCurrent && <Text style={styles.bizBadge}>CURRENT AGENT</Text>}
+                      <View style={styles.bizHeader}>
+                        <View style={{ flex: 1, minWidth: 0 }}>
+                          <Text style={styles.bizName} numberOfLines={1}>{a.name}</Text>
+                          {isCurrent && <Text style={styles.bizBadge}>CURRENT AGENT</Text>}
+                        </View>
+                        <TouchableOpacity
+                          testID={`agent-share-${a.id}`}
+                          style={styles.bizShareBtn}
+                          onPress={() =>
+                            shareOrSaveAgent(
+                              {
+                                name: a.name,
+                                phone: a.phone,
+                                email: a.email,
+                                location: a.location,
+                                notes: a.notes,
+                              },
+                              dealer?.name,
+                            )
+                          }
+                          hitSlop={8}
+                          activeOpacity={0.7}
+                        >
+                          <Ionicons name="share-outline" size={18} color={theme.colors.accent} />
+                        </TouchableOpacity>
+                      </View>
 
                       {/* Phone — number shown as plain text with small call/text icon buttons */}
                       {!!a.phone && (
@@ -1273,6 +1298,21 @@ const styles = themedStyles((c) => ({
     letterSpacing: 1.2,
     marginTop: 2,
     marginBottom: 4,
+  },
+  bizHeader: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 8,
+  },
+  bizShareBtn: {
+    width: 34,
+    height: 34,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: c.border,
+    backgroundColor: c.bg,
   },
   bizRow: {
     flexDirection: "row",

@@ -15,7 +15,7 @@
         "NSCameraUsageDescription": "Take photos of your tools",
         "NSPhotoLibraryUsageDescription": "Add photos of tools from your gallery",
         "NSPhotoLibraryAddUsageDescription": "Save tool photos to your library",
-        "NSContactsUsageDescription": "Import names and phone numbers from your contacts",
+        "NSContactsUsageDescription": "Save and import agent contacts",
         "NSFaceIDUsageDescription": "Sign in to your account with Face ID"
       }
     },
@@ -31,7 +31,8 @@
         "android.permission.CAMERA",
         "android.permission.READ_EXTERNAL_STORAGE",
         "android.permission.WRITE_EXTERNAL_STORAGE",
-        "android.permission.READ_CONTACTS"
+        "android.permission.READ_CONTACTS",
+        "android.permission.WRITE_CONTACTS"
       ]
     },
     "web": {
