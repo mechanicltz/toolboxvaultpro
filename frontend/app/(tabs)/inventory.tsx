@@ -31,7 +31,7 @@ import { useAppResume } from "../../src/appLifecycle";
 import { useResponsive } from "../../src/responsive";
 
 import { themedStyles } from "../../src/themeContext";
-import { BevelCard } from "../../src/components/BevelCard";
+import { ShadowBox } from "../../src/components/ShadowBox";
 import { IndustrialBanner } from "../../src/components/IndustrialBanner";
 
 type Filter = "all" | "available" | "out" | "consumables" | "lost" | "maintenance" | "for_sale";
@@ -905,7 +905,7 @@ export default function InventoryScreen() {
           const isLost = item?.lost_status?.is_lost;
           const isStolen = isLost && item?.lost_status?.type === "stolen";
           return (
-            <BevelCard
+            <ShadowBox
               testID={`tool-card-${item.id}`}
               style={[
                 styles.row,
@@ -1075,7 +1075,7 @@ export default function InventoryScreen() {
                   )}
                 </View>
               )}
-            </BevelCard>
+            </ShadowBox>
           );
         }}
       />

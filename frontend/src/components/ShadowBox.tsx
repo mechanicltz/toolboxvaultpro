@@ -35,6 +35,8 @@ type BoxProps = {
   style?: StyleProp<ViewStyle>;
   /** When provided the box becomes a TouchableOpacity. */
   onPress?: () => void;
+  /** Optional long-press handler (e.g. enter multi-select mode). */
+  onLongPress?: () => void;
   activeOpacity?: number;
   testID?: string;
 };
@@ -44,14 +46,16 @@ function Box({
   children,
   style,
   onPress,
+  onLongPress,
   activeOpacity = 0.85,
   testID,
 }: BoxProps & { baseStyle: StyleProp<ViewStyle> }) {
-  if (onPress) {
+  if (onPress || onLongPress) {
     return (
       <TouchableOpacity
         style={[baseStyle, style]}
         onPress={onPress}
+        onLongPress={onLongPress}
         activeOpacity={activeOpacity}
         testID={testID}
       >
