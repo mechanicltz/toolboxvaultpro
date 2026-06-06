@@ -30,6 +30,7 @@ import { useAppResume } from "../../src/appLifecycle";
 
 import { themedStyles } from "../../src/themeContext";
 import { BevelCard } from "../../src/components/BevelCard";
+import { ShadowBox } from "../../src/components/ShadowBox";
 import { IndustrialBanner } from "../../src/components/IndustrialBanner";
 import { PillButton } from "../../src/components/PillButton";
 
@@ -141,7 +142,7 @@ export default function DealersScreen() {
             (item.agents || []).find((a: any) => a.id === item.current_agent_id) || null;
           const isLocked = lockedDealerIds.has(item.id);
           return (
-            <BevelCard
+            <ShadowBox
               testID={`dealer-card-${item.id}`}
               style={[
                 styles.row,
@@ -215,7 +216,7 @@ export default function DealersScreen() {
                 <Ionicons name="trash-outline" size={18} color={theme.colors.danger} />
               </TouchableOpacity>
               <Ionicons name="chevron-forward" size={20} color={theme.colors.textMuted} />
-            </BevelCard>
+            </ShadowBox>
           );
         }}
       />
