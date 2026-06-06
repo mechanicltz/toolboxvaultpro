@@ -295,19 +295,22 @@ export default function ClaimsScreen() {
             <Text style={styles.empty}>No dealers yet.</Text>
           ) : (
             <ShadowBox style={{ marginBottom: 16 }}>
-              {filteredDealers.map((d) => {
+              <ShadowBoxSubCard>
+              {filteredDealers.map((d, idx) => {
                 const liveOpened = (openByDealer[d.id] || []).length;
                 const summaryEntry = (summary?.dealers || []).find((x: any) => x.dealer_id === d.id);
                 const opened = Math.max(liveOpened, summaryEntry?.open || 0);
                 const done = summaryEntry?.completed || 0;
+                const isLast =
+                  idx === filteredDealers.length - 1 &&
+                  (openByDealer["_unassigned"] || []).length === 0;
                 return (
-                  <ShadowBoxSubCard
+                  <TouchableOpacity
                     key={d.id}
                     testID={`claim-dealer-${d.id}`}
-                    style={styles.dealerRow}
-                    onPress={() =>
-                      router.push(`/dealer-claims/${d.id}`)
-                    }
+                    style={[styles.dealerListRow, isLast && { borderBottomWidth: 0 }]}
+                    onPress={() => router.push(`/dealer-claims/${d.id}`)}
+                    activeOpacity={0.7}
                   >
                     <View style={styles.dealerThumb}>
                       <Ionicons name="briefcase" size={20} color={theme.colors.accent} />
@@ -336,11 +339,11 @@ export default function ClaimsScreen() {
                       </View>
                     </View>
                     <Ionicons name="chevron-forward" size={18} color={theme.colors.textMuted} />
-                  </ShadowBoxSubCard>
+                  </TouchableOpacity>
                 );
               })}
               {(openByDealer["_unassigned"] || []).length > 0 && (
-                <ShadowBoxSubCard style={[styles.dealerRow, { borderColor: theme.colors.danger, borderWidth: 1 }]}>
+                <View style={[styles.dealerListRow, { borderBottomWidth: 0 }]}>
                   <View style={styles.dealerThumb}>
                     <Ionicons name="alert-circle" size={20} color={theme.colors.danger} />
                   </View>
@@ -350,8 +353,9 @@ export default function ClaimsScreen() {
                       {(openByDealer["_unassigned"] || []).length} broken item{(openByDealer["_unassigned"] || []).length === 1 ? "" : "s"} need a dealer
                     </Text>
                   </View>
-                </ShadowBoxSubCard>
+                </View>
               )}
+              </ShadowBoxSubCard>
             </ShadowBox>
           )
         ) : (
@@ -537,6 +541,14 @@ const styles = themedStyles((c) => ({
     borderColor: c.borderSubtle,
     marginBottom: 10,
     ...(theme.elevation.md as object),
+  },
+  dealerListRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: c.borderSubtle,
   },
   dealerThumb: {
     width: 40,
