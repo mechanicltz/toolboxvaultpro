@@ -45,7 +45,7 @@ import { WarrantySection } from "../../src/sections/WarrantySection";
 import PinchZoomImageViewer from "../../src/components/PinchZoomImageViewer";
 import { themedStyles } from "../../src/themeContext";
 import { BevelCard } from "../../src/components/BevelCard";
-import { ShadowBox } from "../../src/components/ShadowBox";
+import { ShadowBox, ShadowBoxSubCard } from "../../src/components/ShadowBox";
 import { ContactIconImage } from "../../src/components/ContactIcons";
 import { IndustrialBanner } from "../../src/components/IndustrialBanner";
 import { PillButton } from "../../src/components/PillButton";
@@ -1938,7 +1938,7 @@ export default function ToolDetail() {
             });
 
             const renderGroup = (rows: Row[], boxKey: string) => (
-              <View key={boxKey} style={newStyles.detailsBox} testID={`details-box-${boxKey}`}>
+              <ShadowBox key={boxKey} style={newStyles.detailsBox} testID={`details-box-${boxKey}`}>
                 {rows.map((r, i) => {
                   const isLast = i === rows.length - 1;
                   if (r.kind === "description") {
@@ -2012,7 +2012,7 @@ export default function ToolDetail() {
                         {isOpen && (
                           <View style={[newStyles.detailsExpanded, isLast && newStyles.detailsRowLast]}>
                             {r.key === "gallery" && (
-                              <View style={newStyles.nestedCard}>
+                              <ShadowBoxSubCard style={newStyles.nestedCard}>
                                 <View style={newStyles.attachHeader}>
                                   <Text style={newStyles.attachSectionLabel}>
                                     PHOTOS{photos.length > 0 ? ` (${photos.length})` : ""}
@@ -2052,31 +2052,31 @@ export default function ToolDetail() {
                                     ))}
                                   </ScrollView>
                                 )}
-                              </View>
+                              </ShadowBoxSubCard>
                             )}
                             {r.key === "documents" && (
-                              <View style={newStyles.nestedCard}>
+                              <ShadowBoxSubCard style={newStyles.nestedCard}>
                                 <DocumentsSection tool={tool} onChange={load} />
-                              </View>
+                              </ShadowBoxSubCard>
                             )}
                             {r.key === "receipts" && (
-                              <View style={newStyles.nestedCard}>
+                              <ShadowBoxSubCard style={newStyles.nestedCard}>
                                 <ReceiptsSection
                                   receipts={tool.receipts}
                                   onAdd={promptAddReceipt}
                                 />
-                              </View>
+                              </ShadowBoxSubCard>
                             )}
                             {r.key === "maintenance" && (
-                              <View style={newStyles.nestedCard}>
+                              <ShadowBoxSubCard style={newStyles.nestedCard}>
                                 <MaintenanceSection tool={tool} onChange={load} />
-                              </View>
+                              </ShadowBoxSubCard>
                             )}
                             {r.key === "warranty" && (
                               <WarrantySection tool={tool} />
                             )}
                             {r.key === "consumable" && (
-                              <View style={newStyles.nestedCard}>
+                              <ShadowBoxSubCard style={newStyles.nestedCard}>
                                 <View style={newStyles.attachHeader}>
                                   <Text style={newStyles.attachSectionLabel}>CONSUMABLE</Text>
                                   <View style={[newStyles.consumableBadge, tool.is_consumable ? newStyles.consumableBadgeYes : newStyles.consumableBadgeNo]}>
@@ -2117,7 +2117,7 @@ export default function ToolDetail() {
                                     to track re-orderable items.
                                   </Text>
                                 )}
-                              </View>
+                              </ShadowBoxSubCard>
                             )}
                           </View>
                         )}
@@ -2151,7 +2151,7 @@ export default function ToolDetail() {
                     </RowWrapper>
                   );
                 })}
-              </View>
+              </ShadowBox>
             );
 
             return (

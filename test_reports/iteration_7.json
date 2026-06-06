@@ -1,0 +1,25 @@
+{
+  "summary": "Frontend-only validation of Phase 9 ShadowBox / ShadowBoxSubCard migration on the Inventory Item Detail screen (/app/frontend/app/tool/[id].tsx). All 5 ShadowBox outer cards (primary, attachments, services, classify, history) and all 5 ShadowBoxSubCard nested accordion bodies (gallery, documents, receipts, maintenance, consumable) render correctly. Accordion expand/collapse works. Tappable rows (LOCATION opens picker modal; CHECKOUT HISTORY navigates to /checkout-history/[id]) work. EDIT and DELETE pill buttons render. No crash, no blank screen, no red-screen errors. Tested on Iron Forge theme (current active theme). Note: ShadowBox.tsx header doc says Iron Forge/Crimson Steel themes 'do NOT use these wrappers' but tool/[id].tsx now wraps unconditionally — visual result on Iron Forge still looks clean, but main agent may want to confirm intent.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [],
+  "action_items": [
+    "Confirm intent: ShadowBox.tsx file-header docstring states 'The textured industrial themes (Iron Forge / Crimson Steel) keep their own metal-frame skinning and do NOT use these wrappers,' yet on tool/[id].tsx ShadowBox/ShadowBoxSubCard are used unconditionally. Rendering looks fine on Iron Forge, but either (a) update the docstring to reflect the new universal usage, or (b) gate the wrappers behind a non-metal-theme check if metal themes are supposed to keep their old chrome."
+  ],
+  "critical_code_review_comments": [
+    "tool/[id].tsx is 5110 lines — well over the 700-line guideline. Splitting into smaller modules (header/actions, claim block, accordion sections, listings, etc.) is overdue. Not blocking this phase, but flagging again.",
+    "WARRANTY accordion body (line 2075-2077) is intentionally NOT wrapped in ShadowBoxSubCard because WarrantySection owns its own card chrome (the North Star reference). Verified visually — renders correctly with TIME-LIMITED / PROVIDER / STARTED / EXPIRES / LENGTH rows."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "n/a (skipped)", "frontend": "100%"},
+  "seed_data_creation": "Used existing tool id 7c72e80a-8b78-4023-85c6-1269294f5594 ('Test Drill') already in DB under admin account. No new seed data created.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Login via UI on web preview is finicky (TouchableOpacity submit needs page.mouse.click on bounding-box center, not page.click). Reliable shortcut: POST /api/auth/login to get token, then inject into localStorage keys 'tt.auth.token' (raw JWT string) and 'tt.auth.user' (JSON.stringified user object), then page.reload(). Detail screen testIDs: details-box-{primary|attachments|services|classify|history}; details-row-{location|model|serial|dealer|brand|gallery|documents|receipts|warranty|maintenance|consumable|category|tags|purchased|checkout-history|claims-history}; edit-tool-btn, delete-tool-btn. For navigation rows, clicking the visible text label (page.get_by_text('CHECKOUT HISTORY').click(force=True)) is more reliable than clicking the row testID bbox (chevron may swallow the click on certain coords).",
+  "rca_of_issue": "n/a — no bug to RCA. Migration is a pure JSX wrapper swap (View -> ShadowBox / ShadowBoxSubCard) with the original detailsBox / nestedCard styles passed through as the style prop. Verified rendering, expand/collapse, navigation, and modal taps all still work end-to-end on Iron Forge theme."
+}
