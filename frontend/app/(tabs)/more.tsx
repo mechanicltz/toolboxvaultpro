@@ -515,32 +515,10 @@ export default function MoreScreen() {
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <IndustrialBanner
-        title="VAULT"
+        title={isPro ? "VAULT - SUBSCRIBED" : "VAULT"}
         subtitle={user?.email || "Manage everything"}
       />
-      <View style={styles.infoRow}>
-        <View
-          style={[
-            styles.proBadge,
-            { borderColor: isPro ? theme.colors.accent : theme.colors.border },
-          ]}
-        >
-          <Ionicons
-            name={isPro ? "star" : "star-outline"}
-            size={11}
-            color={isPro ? theme.colors.accent : theme.colors.textMuted}
-          />
-          <Text
-            style={[
-              styles.proBadgeText,
-              { color: isPro ? theme.colors.accent : theme.colors.textMuted },
-            ]}
-          >
-            {proLabel}
-          </Text>
-        </View>
-      </View>
-      <ScrollView contentContainerStyle={{ paddingBottom: 100 }}>
+      <ScrollView contentContainerStyle={{ paddingBottom: 100, paddingTop: 8 }}>
         <SectionCard title="RESOURCES" testID="more-section-system">
           <SectionRow
             icon="heart"
@@ -967,6 +945,7 @@ export default function MoreScreen() {
                       onValueChange={(v) =>
                         update({ home_rows: { ...prefs.home_rows, [k]: v } })
                       }
+                      style={{ transform: [{ scale: 0.78 }] }}
                       trackColor={{ true: theme.colors.accent, false: theme.colors.border }}
                       thumbColor="#fff"
                     />
@@ -1521,8 +1500,8 @@ const styles = themedStyles((c) => ({
   homeRowToggle: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
-    paddingVertical: 8,
+    gap: 8,
+    paddingVertical: 5,
     borderTopWidth: 1,
     borderTopColor: c.borderSubtle,
   },
@@ -1531,8 +1510,8 @@ const styles = themedStyles((c) => ({
     gap: 2,
   },
   homeRowMoveBtn: {
-    width: 22,
-    height: 18,
+    width: 20,
+    height: 15,
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
