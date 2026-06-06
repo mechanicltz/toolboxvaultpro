@@ -425,7 +425,7 @@ export default function DealerClaimsScreen() {
                       style={styles.actionBtn}
                       onPress={() => notify(t, "email")}
                     >
-                      <Ionicons name="mail" size={14} color="#fff" />
+                      <ContactIconImage type="mail" size={16} />
                       <Text style={styles.actionText}>EMAIL</Text>
                     </TouchableOpacity>
                     <TouchableOpacity

@@ -24,6 +24,7 @@ const ICONS = {
   call: require("../../assets/contact-icons/phone.png"),
   text: require("../../assets/contact-icons/text.png"),
   share: require("../../assets/contact-icons/share.png"),
+  mail: require("../../assets/contact-icons/mail.png"),
 } as const;
 
 export type ContactIconType = keyof typeof ICONS;

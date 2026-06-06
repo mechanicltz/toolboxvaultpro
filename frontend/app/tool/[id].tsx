@@ -1600,7 +1600,7 @@ export default function ToolDetail() {
                     testID="claim-email-dealer"
                     activeOpacity={0.85}
                   >
-                    <Ionicons name="mail" size={11} color="#000" />
+                    <ContactIconImage type="mail" size={16} />
                     <Text style={[newStyles.claimActionText, { color: "#000" }]}>EMAIL</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
