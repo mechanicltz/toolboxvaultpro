@@ -7,7 +7,7 @@ import { useAppResume } from "../src/appLifecycle";
 import { theme } from "../src/theme";
 import { api } from "../src/api";
 import { formatDateUS } from "../src/dateUtil";
-import { BevelCard } from "../src/components/BevelCard";
+import { ShadowBox } from "../src/components/ShadowBox";
 import { IndustrialBanner } from "../src/components/IndustrialBanner";
 
 import { themedStyles } from "../src/themeContext";
@@ -31,7 +31,7 @@ export default function WarrantyScreen() {
     const ex = t.warranty?.expiry_date || "";
     const accent = kind === "expired" ? theme.colors.danger : theme.colors.warning;
     return (
-      <BevelCard
+      <ShadowBox
         key={t.id}
         testID={`warranty-${t.id}`}
         style={styles.row}
@@ -52,7 +52,7 @@ export default function WarrantyScreen() {
           </Text>
         </View>
         <Ionicons name="chevron-forward" size={18} color={theme.colors.textMuted} />
-      </BevelCard>
+      </ShadowBox>
     );
   };
 
@@ -115,6 +115,7 @@ const styles = themedStyles((c) => ({
     flexDirection: "row",
     alignItems: "center",
     paddingVertical: 12,
+    paddingLeft: 0,
     paddingRight: 16,
     marginHorizontal: 16,
     marginBottom: 8,
