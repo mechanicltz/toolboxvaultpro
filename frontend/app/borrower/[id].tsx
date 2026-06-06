@@ -15,6 +15,7 @@ import { EmailLink } from "../../src/components/EmailLink";
 import { themedStyles } from "../../src/themeContext";
 import { IndustrialBanner } from "../../src/components/IndustrialBanner";
 import { PillButton } from "../../src/components/PillButton";
+import { ShadowBox, ShadowBoxMini } from "../../src/components/ShadowBox";
 
 export default function BorrowerHistory() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -115,35 +116,21 @@ export default function BorrowerHistory() {
 
       <ScrollView contentContainerStyle={{ paddingBottom: 60 }}>
         <View style={styles.heroBox}>
-          <View style={styles.bigAvatar}>
-            <Text style={styles.bigAvatarText}>
-              {b.name.substring(0, 2).toUpperCase()}
-            </Text>
-          </View>
           <Text style={styles.bigName}>{b.name}</Text>
           <ContactActions raw={b.contact} />
-          <TouchableOpacity
-            testID="edit-borrower-pill-btn"
-            style={styles.editPill}
-            onPress={openEditModal}
-            activeOpacity={0.7}
-          >
-            <Ionicons name="create-outline" size={14} color={theme.colors.accent} />
-            <Text style={styles.editPillText}>EDIT CONTACT</Text>
-          </TouchableOpacity>
         </View>
 
         <View style={styles.statGrid}>
           <Cell label="Total checkouts" value={String(data.total_checkouts || 0)} />
           <Cell label="Unique tools" value={String(data.unique_tools || 0)} />
-          <Cell label="Currently held" value={String(data.currently_held?.length || 0)} highlight={data.currently_held?.length > 0} />
+          <Cell label="Check Out" value={String(data.currently_held?.length || 0)} highlight={data.currently_held?.length > 0} />
         </View>
 
         {data.currently_held?.length > 0 && (
           <>
             <Text style={styles.sectionLabel}>CURRENTLY CHECKED OUT</Text>
             {data.currently_held.map((c: any) => (
-              <TouchableOpacity
+              <ShadowBox
                 key={c.tool_id}
                 testID={`held-${c.tool_id}`}
                 style={[styles.row, { borderLeftColor: theme.colors.accentSecondary, borderLeftWidth: 3 }]}
@@ -157,7 +144,7 @@ export default function BorrowerHistory() {
                   {!!c.notes && <Text style={styles.rowNotes}>{c.notes}</Text>}
                 </View>
                 <Ionicons name="chevron-forward" size={18} color={theme.colors.textMuted} />
-              </TouchableOpacity>
+              </ShadowBox>
             ))}
           </>
         )}
@@ -169,7 +156,7 @@ export default function BorrowerHistory() {
           <Text style={styles.empty}>No checkout history yet.</Text>
         ) : (
           data.per_tool.map((t: any, idx: number) => (
-            <TouchableOpacity
+            <ShadowBox
               key={t.tool_id}
               testID={`per-tool-${t.tool_id}`}
               style={styles.row}
@@ -195,28 +182,7 @@ export default function BorrowerHistory() {
                 <Text style={styles.countNum}>{t.checkout_count}</Text>
                 <Text style={styles.countLbl}>×</Text>
               </View>
-            </TouchableOpacity>
-          ))
-        )}
-
-        <Text style={styles.sectionLabel}>RECENT TIMELINE</Text>
-        {data.history.length === 0 ? (
-          <Text style={styles.empty}>No checkouts yet.</Text>
-        ) : (
-          data.history.map((h: any, i: number) => (
-            <View key={i} style={styles.histRow}>
-              <View style={styles.dot} />
-              <View style={{ flex: 1 }}>
-                <Text style={styles.histTool}>{h.tool_name}</Text>
-                <Text style={styles.histTime}>
-                  Out: {formatDateTime(h.checked_out_at)}
-                </Text>
-                <Text style={styles.histTime}>
-                  In:{"  "}{h.checked_in_at ? formatDateTime(h.checked_in_at) : "still out"}
-                </Text>
-                {!!h.notes && <Text style={styles.rowNotes}>{h.notes}</Text>}
-              </View>
-            </View>
+            </ShadowBox>
           ))
         )}
       </ScrollView>
@@ -276,10 +242,10 @@ export default function BorrowerHistory() {
 
 function Cell({ label, value, highlight }: { label: string; value: string; highlight?: boolean }) {
   return (
-    <View style={[styles.cell, highlight && { borderColor: theme.colors.accentSecondary }]}>
+    <ShadowBoxMini style={[styles.cell, highlight && { borderColor: theme.colors.accentSecondary }]}>
       <Text style={[styles.cellValue, highlight && { color: theme.colors.accentSecondary }]}>{value}</Text>
       <Text style={styles.cellLabel}>{label}</Text>
-    </View>
+    </ShadowBoxMini>
   );
 }
 
