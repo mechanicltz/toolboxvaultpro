@@ -135,43 +135,6 @@ export const styles = themedStyles((c) => ({
     marginTop: 2,
   },
 
-  /* Unified info banner (route / payments / report-a-bug) — flat BevelCard
-     with an orange left stripe, identical size across all three. */
-  infoBanner: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: c.bgSecondary,
-    paddingVertical: 16,
-    paddingHorizontal: 16,
-    marginBottom: 12,
-    borderRadius: theme.radii.md,
-    borderLeftWidth: 3,
-    borderLeftColor: c.accent,
-  },
-  infoBannerIcon: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    backgroundColor: "rgba(0,0,0,0.55)",
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1,
-    borderColor: c.accent,
-    marginRight: 12,
-  },
-  infoBannerLabel: {
-    color: c.accent,
-    fontFamily: "BebasNeue_400Regular",
-    fontSize: 13,
-    letterSpacing: 1.4,
-  },
-  infoBannerText: {
-    color: c.textPrimary,
-    fontFamily: "Rajdhani_700Bold",
-    fontSize: 14,
-    marginTop: 2,
-  },
-
   /* Main list — claim-screen style: separate cards w/ rounded corners + small gap */
   list: {
     gap: 8,
@@ -677,10 +640,8 @@ export const styles = themedStyles((c) => ({
   plainBanner: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-    borderLeftWidth: 3,
-    borderLeftColor: c.accent,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
   },
   plainBannerLabel: {
     color: c.accent,
