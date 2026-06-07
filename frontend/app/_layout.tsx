@@ -137,7 +137,7 @@ function AuthGate({ children }: { children: React.ReactNode }) {
         // 3) 5-minute idle intro replay (existing behaviour).
         (async () => {
           const show = await shouldShowIntro();
-          if (show) setShowIntro(true);
+          if (INTRO_ENABLED && show) setShowIntro(true);
         })();
       }
     };
