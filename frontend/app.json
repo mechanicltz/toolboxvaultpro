@@ -15,7 +15,7 @@
         "NSCameraUsageDescription": "Take photos of your tools",
         "NSPhotoLibraryUsageDescription": "Add photos of tools from your gallery",
         "NSPhotoLibraryAddUsageDescription": "Save tool photos to your library",
-        "NSContactsUsageDescription": "Save and import agent contacts",
+        "NSContactsUsageDescription": "Save contacts to your phone's address book",
         "NSFaceIDUsageDescription": "Sign in to your account with Face ID"
       }
     },
