@@ -38,7 +38,7 @@ import {
   ReportLostButton,
 } from "../../src/sections/LostStatusSection";
 import { DocumentsSection } from "../../src/sections/DocumentsSection";
-import { LocationPicker } from "../../src/Pickers";
+import { buildLocationTree, flattenLocationTree } from "../../src/locationTree";
 import { ReceiptsSection } from "../../src/sections/ReceiptsSection";
 import { MaintenanceSection } from "../../src/sections/MaintenanceSection";
 import { WarrantySection } from "../../src/sections/WarrantySection";
@@ -126,6 +126,14 @@ export default function ToolDetail() {
   // previously the pill navigated to /locations which let the user re-parent
   // the location ITSELF, not the tool. Confusing & destructive.)
   const [showLocationPicker, setShowLocationPicker] = useState(false);
+  // All locations (flattened) for the inline picker inside the Move modal —
+  // loaded when the modal opens so the user picks in-place (no 2nd popup).
+  const [allLocations, setAllLocations] = useState<any[]>([]);
+  useEffect(() => {
+    if (showLocationPicker) {
+      api.listLocations().then(setAllLocations).catch(() => {});
+    }
+  }, [showLocationPicker]);
   type PosterFieldKey =
     | "photo"
     | "price"
@@ -2980,24 +2988,68 @@ export default function ToolDetail() {
               Pick a different location for this item. Your location tree is
               not changed.
             </Text>
-            <LocationPicker
-              locationId={tool.location_id || null}
-              locationName={tool.location_name || ""}
-              onChange={async (newId, _newPath) => {
-                try {
-                  await api.updateTool(tool.id, {
-                    location_id: newId || null,
-                  });
-                  setShowLocationPicker(false);
-                  load();
-                } catch (e: any) {
-                  Alert.alert(
-                    "Could not move item",
-                    String(e?.message || e),
-                  );
-                }
-              }}
-            />
+            {/* Inline location list — pick right here, no second popup. */}
+            <ScrollView style={{ maxHeight: 380 }} keyboardShouldPersistTaps="handled">
+              <TouchableOpacity
+                testID="loc-inline-none"
+                style={[styles.locInlineRow, !tool.location_id && styles.locInlineRowActive]}
+                onPress={async () => {
+                  try {
+                    await api.updateTool(tool.id, { location_id: null });
+                    setShowLocationPicker(false);
+                    load();
+                  } catch (e: any) {
+                    Alert.alert("Could not move item", String(e?.message || e));
+                  }
+                }}
+              >
+                <Ionicons name="ban" size={16} color={!tool.location_id ? theme.colors.accent : theme.colors.textMuted} />
+                <Text style={[styles.locInlineText, !tool.location_id && styles.locInlineTextActive]}>
+                  No location (unassigned)
+                </Text>
+                {!tool.location_id && <Ionicons name="checkmark" size={18} color={theme.colors.accent} />}
+              </TouchableOpacity>
+
+              {flattenLocationTree(buildLocationTree(allLocations)).map((n) => {
+                const active = n.id === tool.location_id;
+                return (
+                  <TouchableOpacity
+                    key={n.id}
+                    testID={`loc-inline-${n.id}`}
+                    style={[
+                      styles.locInlineRow,
+                      active && styles.locInlineRowActive,
+                      { paddingLeft: 12 + (n.depth || 0) * 18 },
+                    ]}
+                    onPress={async () => {
+                      if (active) {
+                        setShowLocationPicker(false);
+                        return;
+                      }
+                      try {
+                        await api.updateTool(tool.id, { location_id: n.id });
+                        setShowLocationPicker(false);
+                        load();
+                      } catch (e: any) {
+                        Alert.alert("Could not move item", String(e?.message || e));
+                      }
+                    }}
+                  >
+                    <Ionicons name="location" size={15} color={active ? theme.colors.accent : theme.colors.textMuted} />
+                    <Text style={[styles.locInlineText, active && styles.locInlineTextActive]} numberOfLines={1}>
+                      {n.name}
+                    </Text>
+                    {active && <Ionicons name="checkmark" size={18} color={theme.colors.accent} />}
+                  </TouchableOpacity>
+                );
+              })}
+
+              {allLocations.length === 0 && (
+                <Text style={[styles.helper, { marginTop: 8 }]}>
+                  No locations yet. Add locations from Vault → Locations.
+                </Text>
+              )}
+            </ScrollView>
             <TouchableOpacity
               testID="location-picker-cancel"
               style={[styles.btnGhost, { marginTop: 14 }]}
@@ -4051,6 +4103,32 @@ const styles = themedStyles((c) => ({
     color: c.textMuted,
     fontSize: 11,
     lineHeight: 16,
+  },
+  locInlineRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "transparent",
+    marginBottom: 6,
+    backgroundColor: c.bgSecondary,
+  },
+  locInlineRowActive: {
+    borderColor: c.accent,
+    backgroundColor: "transparent",
+  },
+  locInlineText: {
+    flex: 1,
+    color: c.textPrimary,
+    fontSize: 14,
+    fontWeight: "700",
+  },
+  locInlineTextActive: {
+    color: c.accent,
+    fontWeight: "900",
   },
   btnGhost: {
     borderWidth: 1,

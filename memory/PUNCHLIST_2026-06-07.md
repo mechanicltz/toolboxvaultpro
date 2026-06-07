@@ -62,7 +62,7 @@ Backend change-email tested by testing_agent (16/16 backend pass). All additive 
 ### B. FUNCTIONAL FIXES
 - [x] **Inventory FAB** — DONE (BUILD 203). Removed full-width `addItemBtn`; added circular bottom-right FAB (`testID add-item-fab`, reused existing `fab` style made circular borderRadius:32) → `router.push("/tool/edit")`. Wishlist parity.
 - [x] **LOST/STOLEN status** — DONE. Tool model has NO explicit `status` field (it's derived). Inventory row badge now shows **LOST/STOLEN (red, top priority)** when `lost_status.is_lost`; reverts to IN automatically on recover (backend `recover` already clears is_lost). No backend change needed.
-- [ ] **LOCATION change UX** (inventory item detail `app/tool/[id].tsx`): Today: tap Location → popup → "change" → a SECOND ugly multicolor popup. NEW behavior: in the FIRST location popup, tapping the location opens an **inline accordion** listing ALL locations (current one highlighted) to pick from — **right there, same screen, no 2nd popup, no search**. <<< NEXT
+- [x] **LOCATION change UX** (`app/tool/[id].tsx`): DONE (BUILD 204). Removed `<LocationPicker>` (which spawned the 2nd colorful PickerModal). The "MOVE TO LOCATION" modal now renders an **inline scrollable location list** (current highlighted orange w/ ✓, indented by depth, "No location" option to clear) — pick in place, no second popup. Uses `buildLocationTree`/`flattenLocationTree` from `src/locationTree`; locations loaded on modal open.
 
 ### C. FEATURE + COMPLIANCE (answered)
 - [ ] **"UPCOMING FEATURES" list** (parked unless user says build now):
