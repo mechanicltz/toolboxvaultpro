@@ -140,6 +140,15 @@ export default function BorrowerHistory() {
     setShowShareSheet(true);
   };
 
+  // Close the bottom sheet FIRST, then run the native action after the modal
+  // has finished dismissing. On iOS you cannot present another native view
+  // controller (Share sheet / Contacts permission dialog) while a Modal is
+  // still animating out — doing so makes it silently do nothing.
+  const closeSheetThen = (fn: () => void) => {
+    setShowShareSheet(false);
+    setTimeout(fn, Platform.OS === "ios" ? 450 : 250);
+  };
+
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <IndustrialBanner
@@ -330,7 +339,7 @@ export default function BorrowerHistory() {
             <TouchableOpacity
               testID="share-option-share"
               style={styles.shareOption}
-              onPress={() => { setShowShareSheet(false); doShareContact(); }}
+              onPress={() => closeSheetThen(doShareContact)}
               activeOpacity={0.85}
             >
               <Ionicons name="share-social-outline" size={20} color={theme.colors.accent} />
@@ -340,7 +349,7 @@ export default function BorrowerHistory() {
             <TouchableOpacity
               testID="share-option-save"
               style={styles.shareOption}
-              onPress={() => { setShowShareSheet(false); doSaveToDevice(); }}
+              onPress={() => closeSheetThen(doSaveToDevice)}
               activeOpacity={0.85}
             >
               <Ionicons name="person-add-outline" size={20} color={theme.colors.accent} />

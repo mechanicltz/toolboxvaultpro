@@ -513,42 +513,54 @@ export default function ClaimsScreen() {
               onChangeText={setClaimSearch}
               autoFocus
             />
+
+            {/* Divider + label separating the search bar from the results */}
+            <View style={styles.ncDivider} />
+            <View style={styles.ncResultsHeader}>
+              <Text style={styles.ncResultsLabel}>{claimQ ? "RESULTS" : "ALL ITEMS"}</Text>
+              {!loadingAllTools && (
+                <Text style={styles.ncResultsCount}>{claimResults.length}</Text>
+              )}
+            </View>
+
             {loadingAllTools ? (
               <ActivityIndicator color={theme.colors.accent} style={{ marginTop: 24 }} />
+            ) : claimResults.length === 0 ? (
+              <Text style={styles.ncEmpty}>
+                {claimQ ? "No items match your search." : "No items found."}
+              </Text>
             ) : (
-              <ScrollView keyboardShouldPersistTaps="handled" style={{ maxHeight: 380 }}>
-                {claimResults.length === 0 ? (
-                  <Text style={styles.ncEmpty}>
-                    {claimQ ? "No items match your search." : "No items found."}
-                  </Text>
-                ) : (
-                  claimResults.map((t: any) => (
-                    <TouchableOpacity
-                      key={t.id}
-                      testID={`claim-pick-${t.id}`}
-                      style={styles.ncRow}
-                      onPress={() => pickClaimTool(t)}
-                      activeOpacity={0.8}
-                    >
-                      <View style={styles.ncThumb}>
-                        {t.photos?.[0] ? (
-                          <Image source={{ uri: t.photos[0] }} style={styles.ncThumbImg} />
-                        ) : (
-                          <Ionicons name="construct" size={18} color={theme.colors.accent} />
-                        )}
-                      </View>
-                      <View style={{ flex: 1 }}>
-                        <Text style={styles.ncRowName} numberOfLines={1}>{t.name}</Text>
-                        {!!(t.model || t.serial_number) && (
-                          <Text style={styles.ncRowMeta} numberOfLines={1}>
-                            {[t.model, t.serial_number].filter(Boolean).join("  -  ")}
-                          </Text>
-                        )}
-                      </View>
-                      <Ionicons name="chevron-forward" size={18} color={theme.colors.textMuted} />
-                    </TouchableOpacity>
-                  ))
-                )}
+              <ScrollView
+                keyboardShouldPersistTaps="handled"
+                style={{ maxHeight: 360 }}
+                contentContainerStyle={{ paddingTop: 6, paddingBottom: 8 }}
+                showsVerticalScrollIndicator={false}
+              >
+                {claimResults.map((t: any) => (
+                  <ShadowBox
+                    key={t.id}
+                    testID={`claim-pick-${t.id}`}
+                    style={styles.ncResultCard}
+                    onPress={() => pickClaimTool(t)}
+                  >
+                    <View style={styles.ncThumb}>
+                      {t.photos?.[0] ? (
+                        <Image source={{ uri: t.photos[0] }} style={styles.ncThumbImg} />
+                      ) : (
+                        <Ionicons name="construct" size={18} color={theme.colors.accent} />
+                      )}
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.ncRowName} numberOfLines={1}>{t.name}</Text>
+                      {!!(t.model || t.serial_number) && (
+                        <Text style={styles.ncRowMeta} numberOfLines={1}>
+                          {[t.model, t.serial_number].filter(Boolean).join("  -  ")}
+                        </Text>
+                      )}
+                    </View>
+                    <Ionicons name="chevron-forward" size={18} color={theme.colors.textMuted} />
+                  </ShadowBox>
+                ))}
               </ScrollView>
             )}
           </View>
@@ -670,6 +682,39 @@ const styles = themedStyles((c) => ({
   ncThumbImg: { width: "100%", height: "100%" },
   ncRowName: { color: c.textPrimary, fontSize: 14, fontWeight: "700" },
   ncRowMeta: { color: c.textMuted, fontSize: 12, marginTop: 2 },
+  ncDivider: {
+    height: 1,
+    backgroundColor: c.border,
+    marginTop: 14,
+    marginBottom: 0,
+  },
+  ncResultsHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingTop: 12,
+    paddingBottom: 2,
+  },
+  ncResultsLabel: {
+    color: c.textMuted,
+    fontSize: 9,
+    fontWeight: "800",
+    letterSpacing: 1.5,
+  },
+  ncResultsCount: {
+    color: c.accent,
+    fontSize: 11,
+    fontWeight: "900",
+  },
+  ncResultCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    marginHorizontal: 2,
+    marginBottom: 8,
+  },
   modeChip: {
     flexDirection: "row",
     alignItems: "center",
