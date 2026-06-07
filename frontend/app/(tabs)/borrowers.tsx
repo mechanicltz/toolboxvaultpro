@@ -42,6 +42,7 @@ export default function BorrowersScreen() {
   const [showAdd, setShowAdd] = useState(false);
   const [name, setName] = useState("");
   const [contact, setContact] = useState("");
+  const [notes, setNotes] = useState("");
 
   // Device contacts picker state
   const [showPicker, setShowPicker] = useState(false);
@@ -112,9 +113,10 @@ export default function BorrowersScreen() {
 
   const add = async () => {
     if (!name.trim()) return;
-    await api.createBorrower({ name: name.trim(), contact: contact.trim() });
+    await api.createBorrower({ name: name.trim(), contact: contact.trim(), notes: notes.trim() });
     setName("");
     setContact("");
+    setNotes("");
     setShowAdd(false);
     load();
   };
@@ -244,6 +246,15 @@ export default function BorrowersScreen() {
                 value={contact}
                 onChangeText={setContact}
               />
+              <TextInput
+                testID="borrower-notes-input"
+                placeholder="Notes (optional)"
+                placeholderTextColor={theme.colors.textMuted}
+                style={[styles.input, { minHeight: 70, textAlignVertical: "top" }]}
+                value={notes}
+                onChangeText={setNotes}
+                multiline
+              />
               <View style={styles.modalActions}>
                 <TouchableOpacity
                   style={styles.btnGhost}
@@ -251,6 +262,7 @@ export default function BorrowersScreen() {
                     setShowAdd(false);
                     setName("");
                     setContact("");
+                    setNotes("");
                   }}
                 >
                   <Text style={styles.btnGhostText}>CANCEL</Text>

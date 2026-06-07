@@ -394,12 +394,14 @@ class Borrower(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     name: str
     contact: Optional[str] = ""
+    notes: Optional[str] = ""
     created_at: str = Field(default_factory=now_iso)
 
 
 class BorrowerCreate(BaseModel):
     name: str
     contact: Optional[str] = ""
+    notes: Optional[str] = ""
 
 
 # Dealer & Agents
@@ -1201,8 +1203,9 @@ async def update_borrower(borrower_id: str, payload: BorrowerCreate):
         raise HTTPException(404, "Borrower not found")
     new_name = payload.name.strip()
     new_contact = (payload.contact or "").strip()
+    new_notes = (payload.notes or "").strip()
     old_name = existing.get("name", "")
-    update_doc = {"name": new_name, "contact": new_contact}
+    update_doc = {"name": new_name, "contact": new_contact, "notes": new_notes}
     await db.borrowers.update_one({"id": borrower_id}, {"$set": update_doc})
 
     # Propagate name change across tools' checkout history & current_checkout

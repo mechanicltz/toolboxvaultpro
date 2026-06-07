@@ -63,7 +63,7 @@ const TABS: {
   // If set, tapping the tab opens an inline chooser instead of navigating.
   chooser?: { title: string; options: { label: string; sub: string; icon: IconName; route: string }[] };
 }[] = [
-  { name: "home", label: "HOME", icon: "home", route: "/" },
+  { name: "home", label: "DASHBOARD", icon: "home", route: "/" },
   { name: "inventory", label: "INVENTORY", icon: "construct", route: "/inventory" },
   {
     name: "contacts",

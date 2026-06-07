@@ -28,7 +28,7 @@ type Mode = "dealers" | "all-open";
 
 export default function ClaimsScreen() {
   const router = useRouter();
-  const [mode, setMode] = useState<Mode>("dealers");
+  const [mode, setMode] = useState<Mode>("all-open");
   const [dealers, setDealers] = useState<any[]>(() => getCached("dealers", []));
   const [tools, setTools] = useState<any[]>(() => getCached("claims_tools", []));
   const [summary, setSummary] = useState<any>(() => getCached("claims_summary", { totals: {}, dealers: [] }));

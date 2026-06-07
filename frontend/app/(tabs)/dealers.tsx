@@ -192,19 +192,6 @@ export default function DealersScreen() {
                   );
                 })()}
               </View>
-              <TouchableOpacity
-                testID={`delete-dealer-row-${item.id}`}
-                onPress={(e) => {
-                  // prevent row navigation
-                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                  (e as any)?.stopPropagation?.();
-                  remove(item.id, item.name);
-                }}
-                hitSlop={10}
-                style={styles.rowDeleteBtn}
-              >
-                <Ionicons name="trash-outline" size={18} color={theme.colors.danger} />
-              </TouchableOpacity>
               <Ionicons name="chevron-forward" size={20} color={theme.colors.textMuted} />
             </ShadowBox>
           );

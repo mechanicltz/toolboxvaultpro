@@ -22,7 +22,7 @@ export default function BorrowerHistory() {
   const router = useRouter();
   const [data, setData] = useState<any>(null);
   const [editing, setEditing] = useState(false);
-  const [editForm, setEditForm] = useState<{ name: string; contact: string }>({ name: "", contact: "" });
+  const [editForm, setEditForm] = useState<{ name: string; contact: string; notes: string }>({ name: "", contact: "", notes: "" });
   const [saving, setSaving] = useState(false);
 
   const load = useCallback(async () => {
@@ -46,6 +46,7 @@ export default function BorrowerHistory() {
     setEditForm({
       name: data.borrower.name || "",
       contact: data.borrower.contact || "",
+      notes: data.borrower.notes || "",
     });
     setEditing(true);
   };
@@ -56,7 +57,7 @@ export default function BorrowerHistory() {
     if (!name) return;
     setSaving(true);
     try {
-      await api.updateBorrower(id, { name, contact: (editForm.contact || "").trim() });
+      await api.updateBorrower(id, { name, contact: (editForm.contact || "").trim(), notes: (editForm.notes || "").trim() });
       setEditing(false);
       await load();
     } finally {
@@ -118,6 +119,11 @@ export default function BorrowerHistory() {
         <View style={styles.heroBox}>
           <Text style={styles.bigName}>{b.name}</Text>
           <ContactActions raw={b.contact} />
+          {!!b.notes && (
+            <Text style={{ color: theme.colors.textSecondary, fontSize: 13, marginTop: 8, textAlign: "center", lineHeight: 18 }}>
+              {b.notes}
+            </Text>
+          )}
         </View>
 
         <View style={styles.statGrid}>
@@ -213,6 +219,16 @@ export default function BorrowerHistory() {
               value={editForm.contact}
               onChangeText={(v) => setEditForm({ ...editForm, contact: v })}
               style={styles.modalInput}
+              multiline
+            />
+            <Text style={styles.modalLabel}>NOTES</Text>
+            <TextInput
+              testID="edit-borrower-notes-input"
+              placeholder="Notes (optional)"
+              placeholderTextColor={theme.colors.textMuted}
+              value={editForm.notes}
+              onChangeText={(v) => setEditForm({ ...editForm, notes: v })}
+              style={[styles.modalInput, { minHeight: 70 }]}
               multiline
             />
             <View style={{ flexDirection: "row", gap: 10, marginTop: 16 }}>

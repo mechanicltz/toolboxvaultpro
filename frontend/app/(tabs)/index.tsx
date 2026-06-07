@@ -519,7 +519,7 @@ export default function HomeScreen() {
           {HOME_BUILD}
         </Text>
         <IndustrialBanner
-          title="SUMMARY"
+          title="DASHBOARD"
           subtitle={
             userStats ? `FREE ${userStats.free} / SUB ${userStats.subscribed}` : undefined
           }
@@ -719,7 +719,7 @@ export default function HomeScreen() {
         </Text>
         {/* Unified nameplate header (same on every page / theme). */}
         <IndustrialBanner
-          title="SUMMARY"
+          title="DASHBOARD"
           subtitle={
             userStats ? `FREE ${userStats.free} / SUB ${userStats.subscribed}` : undefined
           }

@@ -1,0 +1,37 @@
+{
+  "summary": "Verified 4 changes. TASK 13 (DASHBOARD rename), TASK 11 (no per-row delete in dealers list + DELETE button on detail), and TASK 8 backend (Borrower notes create/update/history) all PASS. TASK 8 frontend Add-modal and Edit-modal expose the notes input and the note renders on contact detail. TASK 10 has TWO regressions vs the requested spec: the chip order is reversed (BY DEALER at x=16 LEFT, OPEN at x=131 RIGHT — should be flipped), and the OPEN chip still reads 'ALL OPEN (n)' instead of 'OPEN CLAIMS (n)'. Default selected mode is correctly 'all-open'. One frontend persistence check (edit-borrower-notes) failed on the in-app re-render assertion but the backend PUT persistence test passed — likely UI race, retest recommended.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "(tabs)/claims.tsx mode chips", "issue": "Chip ORDER is reversed: mode-dealers (BY DEALER) is rendered first/left at x=16, mode-all-open is rendered second/right at x=131. Spec requires OPEN CLAIMS on LEFT and BY DEALER on RIGHT. Swap the two TouchableOpacity blocks at lines 145-173.", "testID": "mode-all-open, mode-dealers", "priority": "HIGH"},
+      {"component": "(tabs)/claims.tsx OPEN chip label", "issue": "Label reads 'ALL OPEN ({openTools.length})' at line 170. Spec requires 'OPEN CLAIMS ({n})'.", "testID": "mode-all-open", "priority": "HIGH"}
+    ],
+    "integration_issues": [
+      {"flow": "Edit borrower notes -> save -> see updated notes on detail", "issue": "UI assertion did not see updated string 'UPDATED XYZ' in detail body after saveEdit completed. Backend PUT persistence test PASSED, so the data is being saved correctly; may be a refresh race in borrower/[id].tsx (load() called after setEditing(false)). Recommend manual retest or wrapping the body assertion in a wait_for/retry.", "affected_testIDs": ["edit-borrower-notes-input","edit-borrower-save-btn"]}
+    ],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_borrower_notes.py",
+    "/app/test_reports/pytest/iter10_results.xml"
+  ],
+  "action_items": [
+    "In /app/frontend/app/(tabs)/claims.tsx, swap the order of the two TouchableOpacity chips so testID='mode-all-open' (OPEN CLAIMS) is rendered FIRST (left), then testID='mode-dealers' (BY DEALER) SECOND (right).",
+    "In /app/frontend/app/(tabs)/claims.tsx line 170, change the chip label text from 'ALL OPEN ({openTools.length})' to 'OPEN CLAIMS ({openTools.length})'.",
+    "Verify manually (or with a wait/retry) that editing a borrower's notes via the EDIT modal causes the new notes string to render under the name on the contact detail screen — backend PUT already persists correctly."
+  ],
+  "critical_code_review_comments": [
+    "claims.tsx: chip block order doesn't match the spec described in TASK 10; default mode useState<Mode>('all-open') and testIDs are correct, only the JSX block ordering + label string need to change.",
+    "BottomBar.tsx + (tabs)/index.tsx + borrower/[id].tsx + borrowers.tsx + dealers.tsx: all other intended changes are present and consistent."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_borrower_notes.py (new)"
+  ],
+  "success_rate": {"backend": "100% (3/3)", "frontend": "TASK 13 PASS, TASK 11 PASS, TASK 8 PASS (modulo edit-refresh race), TASK 10 FAIL on chip order + chip label"},
+  "seed_data_creation": "Created and cleaned up TEST_NotesBorrower / TEST_CreateNotes via backend tests. Created TEST_UI_NotesX via UI; attempted cleanup via delete-borrower-btn (may require manual verify).",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Login: MechanicLTZ@gmail.com / Blue321! via testIDs auth-email / auth-password / auth-submit. Tabs: tab-home (DASHBOARD), tab-claims, tab-contacts (opens chooser sheet: tab-contacts-dealers, tab-contacts-contacts). Borrower notes testIDs: borrower-notes-input (add), edit-borrower-notes-input (edit). Backend tests live at /app/backend/tests/test_borrower_notes.py.",
+  "rca_of_issue": "TASK 10 chips: the JSX in (tabs)/claims.tsx renders mode-dealers (BY DEALER) before mode-all-open in a horizontal flexbox row, so 'BY DEALER' appears on the LEFT. Spec required OPEN CLAIMS on the LEFT. Additionally, the visible label is still 'ALL OPEN' — needs to be changed to 'OPEN CLAIMS'. Both fixes are local to claims.tsx lines 144-173. Reproduce: login -> tap CLAIMS tab -> observe chips."
+}
