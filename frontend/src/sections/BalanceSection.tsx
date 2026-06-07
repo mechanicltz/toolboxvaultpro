@@ -19,7 +19,7 @@ import { DateField } from "../DateField";
 import { todayISO, formatDateUS } from "../dateUtil";
 import { reschedulePaymentRemindersNow } from "../notifications";
 import { themedStyles } from "../themeContext";
-import { BevelCard } from "../components/BevelCard";
+import { ShadowBoxSubCard } from "../components/ShadowBox";
 
 const FREQUENCIES: { id: "weekly" | "biweekly" | "monthly"; label: string }[] = [
   { id: "weekly", label: "Weekly" },
@@ -94,7 +94,6 @@ export function BalanceSection({
 
   return (
     <>
-      <Text style={styles.sectionLabel}>BALANCES</Text>
       <Text style={styles.disclaimer}>
         For reference only — these balances are estimates and do not factor in
         interest rates or fees.
@@ -180,7 +179,7 @@ function BalanceCard({
   const st = hasSched ? dueStatus(schedule?.next_due_date) : null;
   const idBase = label.replace(/\s/g, "-");
   return (
-    <BevelCard style={[styles.balCard, owed && { borderLeftColor: theme.colors.danger }]}>
+    <ShadowBoxSubCard style={[styles.balCard, owed && { borderLeftColor: theme.colors.danger }]}>
       <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
         <Text style={styles.balLabel}>{label}</Text>
         <TouchableOpacity onPress={onHistory} testID={`open-report-${idBase}`}>
@@ -250,7 +249,7 @@ function BalanceCard({
           </TouchableOpacity>
         )}
       </View>
-    </BevelCard>
+    </ShadowBoxSubCard>
   );
 }
 

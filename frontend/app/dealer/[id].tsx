@@ -319,10 +319,32 @@ export default function DealerDetail() {
         </ShadowBox>
 
 
-        {/* TOOLS PURCHASED + COMPANY DETAILS — grouped together so contact info reads first, tools follow */}
+        {/* COMPANY DETAILS */}
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionLabelStrong}>COMPANY DETAILS</Text>
         </View>
+
+        {/* TOTAL PURCHASED — its own ShadowBox, directly under the heading and
+            above the company-details card. */}
+        <ShadowBox style={styles.detailsBox} testID="dealer-total-purchased">
+          <TouchableOpacity
+            style={[styles.detailsRow, styles.detailsRowLast]}
+            activeOpacity={0.6}
+            testID="details-row-tools"
+            onPress={() =>
+              router.push(`/dealer/${id}/tools?name=${encodeURIComponent(dealer.name)}`)
+            }
+          >
+            <Text style={styles.detailsLabel}>TOTAL PURCHASED</Text>
+            <View style={styles.detailsValueWrap}>
+              <Text style={styles.detailsValue} numberOfLines={1}>
+                ${total.toFixed(2)} · {tools.length} item{tools.length === 1 ? "" : "s"}
+              </Text>
+              <Ionicons name="chevron-forward" size={14} color={theme.colors.textMuted} />
+            </View>
+          </TouchableOpacity>
+        </ShadowBox>
+
         <ShadowBox style={styles.companyCard}>
           {!!dealer.phone && (
             <View style={styles.dealerContactPhoneRow}>
@@ -382,84 +404,22 @@ export default function DealerDetail() {
           )}
         </ShadowBox>
 
-        {/* DETAILS / ACCOUNTS / AGENTS — warranty-card-style consolidated
-            box (matches the tool-detail screen's design). Tools-purchased
-            and accounts rows tap to navigate / expand inline; each agent
-            is its own expandable row that reveals their contact card. */}
-        <ShadowBox style={styles.detailsBox} testID="dealer-details-box">
-            {/* TOOLS PURCHASED row */}
-            <TouchableOpacity
-              style={styles.detailsRow}
-              activeOpacity={0.6}
-              testID="details-row-tools"
-              onPress={() =>
-                router.push(`/dealer/${id}/tools?name=${encodeURIComponent(dealer.name)}`)
-              }
-            >
-              <Text style={styles.detailsLabel}>TOOLS PURCHASED</Text>
-              <View style={styles.detailsValueWrap}>
-                <Text style={styles.detailsValue} numberOfLines={1}>
-                  ${total.toFixed(2)} · {tools.length} item{tools.length === 1 ? "" : "s"}
-                </Text>
-                <Ionicons
-                  name="chevron-forward"
-                  size={14}
-                  color={theme.colors.textMuted}
-                />
-              </View>
-            </TouchableOpacity>
-
-            {/* ACCOUNTS row — expandable */}
-            {(() => {
-              const credit = Number(dealer?.credit_balance || 0);
-              const personal = Number(dealer?.personal_balance || 0);
-              const sum = credit + personal;
-              const isOpen = expandedRow === "accounts";
-              return (
-                <View>
-                  <TouchableOpacity
-                    style={styles.detailsRow}
-                    activeOpacity={0.6}
-                    testID="details-row-accounts"
-                    onPress={() => setExpandedRow(isOpen ? null : "accounts")}
-                  >
-                    <Text style={styles.detailsLabel}>ACCOUNTS</Text>
-                    <View style={styles.detailsValueWrap}>
-                      <Text style={styles.detailsValue} numberOfLines={1}>
-                        ${sum.toFixed(2)}
-                      </Text>
-                      <Ionicons
-                        name={isOpen ? "chevron-down" : "chevron-forward"}
-                        size={14}
-                        color={theme.colors.textMuted}
-                      />
-                    </View>
-                  </TouchableOpacity>
-                  {isOpen && (
-                    <View style={styles.detailsExpanded}>
-                      <BalanceSection dealer={dealer} onChange={load} />
-                    </View>
-                  )}
-                </View>
-              );
-            })()}
-
-            {/* AGENTS header — non-interactive divider row */}
-            <View style={styles.detailsHeaderRow}>
-              <Text style={styles.detailsHeaderLabel}>
-                AGENTS ({allAgents.length})
-              </Text>
-              <PillButton
-                testID="add-agent-btn"
-                label="ADD"
-                icon="add"
-                variant="active"
-                onPress={() => {
-                  setAgentForm({ name: "", phone: "", email: "", location: "", notes: "" });
-                }}
-              />
-            </View>
-
+        {/* AGENTS — its own titled ShadowBox. Current agent pinned to the top
+            (★ + orange); everyone else alphabetical by first name. Each agent
+            is an expandable row that opens a ShadowBox sub-card business card. */}
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionLabelStrong}>AGENTS ({allAgents.length})</Text>
+          <PillButton
+            testID="add-agent-btn"
+            label="ADD"
+            icon="add"
+            variant="active"
+            onPress={() => {
+              setAgentForm({ name: "", phone: "", email: "", location: "", notes: "" });
+            }}
+          />
+        </View>
+        <ShadowBox style={styles.detailsBox} testID="dealer-agents-box">
             {allAgents.length === 0 && (
               <View style={[styles.detailsRow, styles.detailsRowLast]}>
                 <Text style={[styles.detailsValue, { color: theme.colors.textMuted, textAlign: "left", flex: 1, fontWeight: "500" }]}>
@@ -657,7 +617,14 @@ export default function DealerDetail() {
                 </View>
               );
             })}
-          </ShadowBox>
+        </ShadowBox>
+
+        {/* ACCOUNTS — its own titled section. Truck & credit accounts each
+            render as a floating ShadowBox sub-card (see BalanceSection). */}
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionLabelStrong}>ACCOUNTS</Text>
+        </View>
+        <BalanceSection dealer={dealer} onChange={load} />
         </ScrollView>
 
       {/* Edit dealer modal */}
