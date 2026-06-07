@@ -242,9 +242,9 @@ export default function AdminBackupsPage() {
   // ---- Disaster recovery handlers ----
   const runFullSnapshot = useCallback(async () => {
     Alert.alert(
-      "Create full encrypted snapshot?",
-      "Bundles ALL code + database + secrets into one AES-256 password-protected " +
-        "ZIP, uploads it to Google Drive, and saves its passphrase next to it.\n\n" +
+      "Create full snapshot?",
+      "Bundles ALL code + database + secrets into one plain ZIP (no password) " +
+        "and uploads it to Google Drive.\n\n" +
         "This is large (~500 MB) and can take a few minutes. Keep the screen open.",
       [
         { text: "Cancel", style: "cancel" },
@@ -266,8 +266,7 @@ export default function AdminBackupsPage() {
                       : r.gdrive_error === "upload_failed"
                       ? "⛔ FAILED (upload error)"
                       : "skipped (not connected)"
-                  } · ` +
-                  `Passphrase: ${r.passphrase_uploaded ? "saved" : "not saved"}`,
+                  }`,
               );
               await load();
             } catch (e: any) {
@@ -661,12 +660,11 @@ export default function AdminBackupsPage() {
         <BevelCard style={styles.banner}>
           <View style={styles.bannerHeader}>
             <Ionicons name="shield-checkmark" size={18} color={theme.colors.accent} />
-            <Text style={styles.bannerTitle}>Full encrypted snapshot</Text>
+            <Text style={styles.bannerTitle}>Full snapshot</Text>
           </View>
           <Text style={styles.bannerLine}>
-            One AES-256 password-protected ZIP with ALL code + database +
-            secrets, pushed to Drive with its passphrase saved alongside.
-            Runs automatically every day at 03:00 UTC.
+            One plain ZIP (no password) with ALL code + database + secrets,
+            pushed to Drive. Runs automatically every day at 03:00 UTC.
           </Text>
           <View style={{ marginTop: 12 }}>
             <PillButton
@@ -728,7 +726,7 @@ export default function AdminBackupsPage() {
             </View>
             <Text style={styles.bannerLine}>
               Replaces ALL current data with the chosen backup. A safety snapshot
-              is taken first. Encrypted backups auto-use their Drive passphrase.
+              is taken first. Plain ZIP backups need no password.
             </Text>
             {(gdriveFiles || [])
               .filter((f) => f.name.toLowerCase().endsWith(".zip"))

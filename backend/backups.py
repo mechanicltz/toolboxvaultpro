@@ -212,10 +212,10 @@ async def _seconds_until_next_run() -> float:
 
 
 async def _run_full_snapshot_to_drive(db, *, trigger: str = "scheduled") -> Dict[str, Any]:
-    """Build the FULL ENCRYPTED snapshot (code+data+env), self-check it, then
-    upload it + its passphrase to Google Drive and apply retention. Skips
-    silently if Drive isn't connected. Raises if the self-check fails (so a
-    corrupt archive is never trusted/uploaded)."""
+    """Build the FULL snapshot (code+data+env) as a PLAIN ZIP, self-check it,
+    then upload it to Google Drive and apply retention. Skips silently if Drive
+    isn't connected. Raises if the self-check fails (so a corrupt archive is
+    never trusted/uploaded)."""
     import gdrive  # local import — avoids circular at module load
     import recovery
 
@@ -224,9 +224,9 @@ async def _run_full_snapshot_to_drive(db, *, trigger: str = "scheduled") -> Dict
         logger.info("Drive not connected — skipping scheduled full snapshot.")
         return {"uploaded": False, "reason": "drive_not_connected"}
 
-    snap = await recovery._build_full_snapshot(db, trigger=trigger, encrypt=True)
+    snap = await recovery._build_full_snapshot(db, trigger=trigger, encrypt=False)
     check = await asyncio.to_thread(
-        recovery.selfcheck_snapshot, snap["zip_bytes"], snap["passphrase"]
+        recovery.selfcheck_snapshot, snap["zip_bytes"], None
     )
     if not check.get("ok"):
         logger.error("Full snapshot self-check FAILED — NOT uploading: %s",
@@ -237,12 +237,6 @@ async def _run_full_snapshot_to_drive(db, *, trigger: str = "scheduled") -> Dict
         db, file_bytes=snap["zip_bytes"], filename=snap["filename"],
         mime_type="application/zip",
     )
-    try:
-        await gdrive.upload_passphrase(
-            db, passphrase=snap["passphrase"], backup_filename=snap["filename"],
-        )
-    except Exception as pexc:
-        logger.warning("Scheduled passphrase upload failed: %s", pexc)
     retention = await gdrive.apply_retention_policy(db)
     logger.info(
         "Scheduled FULL snapshot mirrored to Drive: %s (id=%s, selfcheck OK, "

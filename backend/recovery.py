@@ -297,6 +297,22 @@ async def _build_full_snapshot(
             "frontend_src_bytes": len(fe),
             "backend_src_bytes": len(be),
         }
+        restore_steps = (
+            (
+                "- PASSPHRASE: the matching '… PASSPHRASE.txt' file on Google Drive "
+                "holds the password for this archive.\n"
+                "- Open with 7-Zip / WinZip / Keka using that passphrase, OR\n"
+                "- DATA: open the app → if DB is empty you'll see 'Fresh Install "
+                "Detected' → Restore from Backup → pick this ZIP + paste the passphrase.\n"
+            )
+            if encrypt
+            else (
+                "- This is a plain ZIP — no password needed. Open it with any "
+                "unzip tool.\n"
+                "- DATA: open the app → if DB is empty you'll see 'Fresh Install "
+                "Detected' → Restore from Backup → pick this ZIP.\n"
+            )
+        )
         restore_md = (
             "# Toolbox Vault — FULL SNAPSHOT (code + data + env)\n\n"
             f"Created: {now.isoformat()}\nDocuments: {total:,}\n"
@@ -308,12 +324,8 @@ async def _build_full_snapshot(
             "- `code/backend_src.tar.gz` — full FastAPI source (no caches)\n"
             "- `manifest.json` — metadata\n\n"
             "## Restore\n"
-            "- PASSPHRASE: the matching '… PASSPHRASE.txt' file on Google Drive "
-            "holds the password for this archive.\n"
-            "- Open with 7-Zip / WinZip / Keka using that passphrase, OR\n"
-            "- DATA: open the app → if DB is empty you'll see 'Fresh Install "
-            "Detected' → Restore from Backup → pick this ZIP + paste the passphrase.\n"
-            "- CODE: extract the tarballs, then rebuild.\n"
+            + restore_steps
+            + "- CODE: extract the tarballs, then rebuild.\n"
             "- ENV: copy values from backend.env/frontend.env into the new project.\n"
         )
         members = {
@@ -408,20 +420,19 @@ def make_recovery_router(get_real_db, get_current_user, require_admin) -> APIRou
     # ---------------- Full snapshot ----------------
     @router.post("/admin/backups/full-snapshot")
     async def full_snapshot(user=Depends(get_current_user)):
-        """Build the complete ENCRYPTED code+data+env snapshot, push it to Google
-        Drive, mirror the passphrase next to it, run an integrity self-check, and
-        apply 15-day retention."""
+        """Build the complete code+data+env snapshot as a PLAIN (unencrypted)
+        ZIP, push it to Google Drive, run an integrity self-check, and apply
+        15-day retention. No passphrase is generated or stored."""
         require_admin(user)
         real_db = get_real_db()
-        snap = await _build_full_snapshot(real_db, trigger="manual", encrypt=True)
-        # Integrity self-check BEFORE we rely on it (decrypt + validate).
+        snap = await _build_full_snapshot(real_db, trigger="manual", encrypt=False)
+        # Integrity self-check BEFORE we rely on it (validate readable ZIP).
         check = await asyncio.to_thread(
-            selfcheck_snapshot, snap["zip_bytes"], snap["passphrase"]
+            selfcheck_snapshot, snap["zip_bytes"], None
         )
         gdrive_uploaded = False
         gdrive_id = None
         gdrive_error = None
-        passphrase_uploaded = False
         try:
             import gdrive
             status = await gdrive.get_status(real_db)
@@ -432,17 +443,7 @@ def make_recovery_router(get_real_db, get_current_user, require_admin) -> APIRou
                 )
                 gdrive_uploaded = True
                 gdrive_id = up.get("id")
-                # Mirror the passphrase alongside the backup.
-                try:
-                    await gdrive.upload_passphrase(
-                        real_db,
-                        passphrase=snap["passphrase"],
-                        backup_filename=snap["filename"],
-                    )
-                    passphrase_uploaded = True
-                except Exception as pexc:
-                    logger.warning("Passphrase upload failed: %s", pexc)
-                # Enforce 15-day retention on Drive (backups + passphrases).
+                # Enforce 15-day retention on Drive.
                 try:
                     await gdrive.apply_retention_policy(real_db)
                 except Exception as rexc:
@@ -456,10 +457,9 @@ def make_recovery_router(get_real_db, get_current_user, require_admin) -> APIRou
             logger.warning("Full snapshot Drive upload failed (%s): %s", gdrive_error, exc)
         await _audit(real_db, "full_snapshot", {
             "filename": snap["filename"], "size": snap["size_human"],
-            "encrypted": True, "selfcheck": check,
+            "encrypted": False, "selfcheck": check,
             "gdrive_uploaded": gdrive_uploaded,
             "gdrive_error": gdrive_error,
-            "passphrase_uploaded": passphrase_uploaded,
         })
         return {
             "ok": True,
@@ -467,13 +467,13 @@ def make_recovery_router(get_real_db, get_current_user, require_admin) -> APIRou
             "size_human": snap["size_human"],
             "size_bytes": snap["size_bytes"],
             "document_count": snap["document_count"],
-            "encrypted": True,
+            "encrypted": False,
             "selfcheck_ok": check.get("ok", False),
             "selfcheck": check,
             "gdrive_uploaded": gdrive_uploaded,
             "gdrive_id": gdrive_id,
             "gdrive_error": gdrive_error,
-            "passphrase_uploaded": passphrase_uploaded,
+            "passphrase_uploaded": False,
         }
 
     # ---------------- Verify (no writes) ----------------
