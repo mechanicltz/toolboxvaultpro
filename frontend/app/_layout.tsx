@@ -300,7 +300,7 @@ function ShellNav() {
               animation: "slide_from_right",
             }}
           >
-            <Stack.Screen name="login" options={{ animation: "fade" }} />
+            <Stack.Screen name="login" options={{ animation: "none" }} />
             <Stack.Screen name="bootstrap" options={{ animation: "fade", gestureEnabled: false }} />
             <Stack.Screen name="intro" options={{ animation: "fade", headerShown: false, gestureEnabled: false }} />
             <Stack.Screen name="(tabs)" />

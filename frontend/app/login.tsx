@@ -253,7 +253,7 @@ export default function LoginScreen() {
   // never "pops in" after the layout has already painted.
   if ((!fontsLoaded && !fontError) || !skinsReady) {
     return (
-      <ImageBackground source={SKIN.bg} style={styles.bg} resizeMode="cover">
+      <ImageBackground source={SKIN.bg} style={styles.bg} resizeMode="cover" fadeDuration={0}>
         <View style={styles.veil} />
         <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
           <ActivityIndicator color="#FF8533" size="large" />
@@ -263,7 +263,7 @@ export default function LoginScreen() {
   }
 
   return (
-    <ImageBackground source={SKIN.bg} style={styles.bg} resizeMode="cover">
+    <ImageBackground source={SKIN.bg} style={styles.bg} resizeMode="cover" fadeDuration={0}>
       <View style={styles.veil} />
 
       <SafeAreaView style={{ flex: 1 }} edges={["top", "bottom"]}>
