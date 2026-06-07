@@ -14,7 +14,7 @@
 ## 🔑 CREDENTIALS / ENV RULES
 - Preview/login test account: **MechanicLTZ@gmail.com / Blue321!**
 - Build indicator: `const HOME_BUILD = "BUILD NNN";` in `/app/frontend/app/(tabs)/index.tsx`.
-  **BUMP IT +1 on EVERY frontend change** (Expo Go caches aggressively). Currently **BUILD 209**.
+  **BUMP IT +1 on EVERY frontend change** (Expo Go caches aggressively). Currently **BUILD 210**.
 - After ANY frontend change run `sudo supervisorctl restart expo` (Metro watch is flaky).
 - Intro video is **INTENTIONALLY DISABLED**: `INTRO_ENABLED = false` in `app/_layout.tsx`. LEAVE OFF until the user says otherwise (confirmed 2026-06-07).
 - Do NOT touch `.env` proxy vars (EXPO_PACKAGER_*), metro.config.js.
