@@ -190,16 +190,24 @@ export default function BorrowerHistory() {
   };
 
   const handleShare = () => {
-    setShowShareSheet(true);
+    // Native: use the OS action sheet — rock-solid, no modal-dismiss timing
+    // issues when presenting the Share sheet / Contacts dialog afterwards.
+    // Web: Alert.alert buttons don't render, so use the in-app Modal instead.
+    if (Platform.OS === "web") {
+      setShowShareSheet(true);
+      return;
+    }
+    Alert.alert(b.name, "Share this contact or save it to your phone.", [
+      { text: "Share (text / email)", onPress: doShareContact },
+      { text: "Save to Phone Contacts", onPress: doSaveToDevice },
+      { text: "Cancel", style: "cancel" },
+    ]);
   };
 
-  // Close the bottom sheet FIRST, then run the native action after the modal
-  // has finished dismissing. On iOS you cannot present another native view
-  // controller (Share sheet / Contacts permission dialog) while a Modal is
-  // still animating out — doing so makes it silently do nothing.
+  // Web-only: close the in-app sheet, then run the action on the next tick.
   const closeSheetThen = (fn: () => void) => {
     setShowShareSheet(false);
-    setTimeout(fn, Platform.OS === "ios" ? 450 : 250);
+    setTimeout(fn, 150);
   };
 
   return (
