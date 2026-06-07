@@ -59,7 +59,7 @@ import {
 } from "../../src/deviceContacts";
 
 export default function ToolDetail() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, startClaim } = useLocalSearchParams<{ id: string; startClaim?: string }>();
   const router = useRouter();
   const [tool, setTool] = useState<any>(null);
   const [borrowers, setBorrowers] = useState<any[]>([]);
@@ -87,6 +87,21 @@ export default function ToolDetail() {
   // Repair modal
   const todayStr = () => new Date().toISOString().substring(0, 10);
   const [showRepair, setShowRepair] = useState(false);
+  // Auto-open the repair/claim sheet when arriving from the Claims "New Claim"
+  // flow (/tool/[id]?startClaim=1) so it's the SAME process as marking broken.
+  const claimAutoOpened = React.useRef(false);
+  useEffect(() => {
+    if (
+      startClaim === "1" &&
+      tool &&
+      !claimAutoOpened.current &&
+      (!tool.dealer_id || dealers.length > 0)
+    ) {
+      claimAutoOpened.current = true;
+      openRepair();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [startClaim, tool, dealers]);
   const [showMarkSold, setShowMarkSold] = useState(false);
   const [showSoldDelete, setShowSoldDelete] = useState(false);
   const [showSaleListing, setShowSaleListing] = useState(false);
@@ -613,6 +628,10 @@ export default function ToolDetail() {
         repair_info: { ...repairForm, repair_cost: _rcNum },
       });
       setShowRepair(false);
+      if (startClaim === "1") {
+        router.replace("/claims");
+        return;
+      }
       load();
     } catch (e: any) {
       Alert.alert("Error", e.message || "Could not save repair info");
@@ -2641,7 +2660,7 @@ export default function ToolDetail() {
 
               <Text style={styles.repairLabel}>PHOTO OF BROKEN PART</Text>
               <Text style={{ color: theme.colors.textMuted, fontSize: 8, marginBottom: 6 }}>
-                Only shown in this claim — not added to the item's main photos.
+                {"Only shown in this claim — not added to the item's main photos."}
               </Text>
               {repairForm.broken_photo ? (
                 <View style={{ position: "relative", marginBottom: 8 }}>
@@ -2883,8 +2902,7 @@ export default function ToolDetail() {
               </TouchableOpacity>
             </View>
             <Text style={[styles.helper, { marginBottom: 12 }]}>
-              Pick which fields appear on the poster. The flyer is letter-size with a
-              big "FOR SALE" banner, your asking price, and the photo & specs you choose.
+              {"Pick which fields appear on the poster. The flyer is letter-size with a big \"FOR SALE\" banner, your asking price, and the photo & specs you choose."}
             </Text>
             <ScrollView style={{ maxHeight: 460 }} showsVerticalScrollIndicator={false}>
               {([
@@ -4825,17 +4843,6 @@ const newStyles = themedStyles((c) => ({
   // ---------- ATTACHMENTS (collapsible pillboxes) ----------
   attachWrap: {
     marginTop: 8,
-  },
-  attachHeader: {
-    /* Surface (gradient + bevel borders + drop shadow) comes from
-       <BevelCard>. Strip the flat bgSecondary fill so the gradient
-       actually shows through. */
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    minHeight: 28,
   },
   attachHeaderLabel: {
     flex: 1,

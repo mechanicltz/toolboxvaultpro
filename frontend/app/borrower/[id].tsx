@@ -1,8 +1,9 @@
 import { useCallback, useState } from "react";
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Modal, TextInput, KeyboardAvoidingView, Platform } from "react-native";
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Modal, TextInput, KeyboardAvoidingView, Platform, Share, Alert, Linking } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
+import * as Contacts from "expo-contacts";
 import { useAppResume } from "../../src/appLifecycle";
 import { theme } from "../../src/theme";
 import { api } from "../../src/api";
@@ -87,6 +88,61 @@ export default function BorrowerHistory() {
   }
 
   const b = data.borrower;
+
+  const { emails: cEmails, phones: cPhones } = parseContacts(b.contact);
+  const cPhone = cPhones[0] || "";
+  const cEmail = cEmails[0] || "";
+
+  const doShareContact = async () => {
+    const lines = [b.name];
+    if (cPhone) lines.push(`Phone: ${cPhone}`);
+    if (cEmail) lines.push(`Email: ${cEmail}`);
+    try {
+      await Share.share({ message: lines.join("\n") });
+    } catch {
+      /* user cancelled */
+    }
+  };
+
+  const doSaveToDevice = async () => {
+    try {
+      const perm = await Contacts.requestPermissionsAsync();
+      if (perm.status !== "granted") {
+        if (!perm.canAskAgain) {
+          Alert.alert(
+            "Contacts access needed",
+            "Enable Contacts access in Settings to save this contact to your phone.",
+            [
+              { text: "Cancel", style: "cancel" },
+              { text: "Open Settings", onPress: () => Linking.openSettings() },
+            ]
+          );
+        } else {
+          Alert.alert("Contacts access needed", "Allow Contacts access to save this contact to your phone.");
+        }
+        return;
+      }
+      const contact: any = {
+        [Contacts.Fields.FirstName]: b.name,
+        [Contacts.Fields.ContactType]: Contacts.ContactTypes.Person,
+      };
+      if (cPhone) contact[Contacts.Fields.PhoneNumbers] = [{ label: "mobile", number: cPhone }];
+      if (cEmail) contact[Contacts.Fields.Emails] = [{ label: "work", email: cEmail }];
+      await Contacts.addContactAsync(contact);
+      Alert.alert("Saved", `${b.name} was added to your phone contacts.`);
+    } catch {
+      Alert.alert("Error", "Could not save this contact to your phone.");
+    }
+  };
+
+  const handleShare = () => {
+    Alert.alert(b.name, "Share this contact or save it to your phone.", [
+      { text: "Share (text / email)", onPress: doShareContact },
+      { text: "Save to Phone Contacts", onPress: doSaveToDevice },
+      { text: "Cancel", style: "cancel" },
+    ]);
+  };
+
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <IndustrialBanner
@@ -107,6 +163,13 @@ export default function BorrowerHistory() {
           onPress={openEditModal}
         />
         <PillButton
+          testID="share-borrower-btn"
+          label="SHARE"
+          icon="share-social-outline"
+          variant="active"
+          onPress={handleShare}
+        />
+        <PillButton
           testID="delete-borrower-btn"
           label="DELETE"
           icon="trash-outline"
@@ -119,11 +182,6 @@ export default function BorrowerHistory() {
         <View style={styles.heroBox}>
           <Text style={styles.bigName}>{b.name}</Text>
           <ContactActions raw={b.contact} />
-          {!!b.notes && (
-            <Text style={{ color: theme.colors.textSecondary, fontSize: 13, marginTop: 8, textAlign: "center", lineHeight: 18 }}>
-              {b.notes}
-            </Text>
-          )}
         </View>
 
         <View style={styles.statGrid}>
@@ -131,6 +189,15 @@ export default function BorrowerHistory() {
           <Cell label="Unique tools" value={String(data.unique_tools || 0)} />
           <Cell label="Check Out" value={String(data.currently_held?.length || 0)} highlight={data.currently_held?.length > 0} />
         </View>
+
+        {!!b.notes && (
+          <ShadowBox testID="contact-notes-card" style={{ marginHorizontal: 16, marginTop: 4, paddingHorizontal: 14, paddingVertical: 12 }}>
+            <View style={{ alignSelf: "flex-start", backgroundColor: theme.colors.accent, paddingHorizontal: 10, paddingVertical: 3, borderRadius: 6, marginBottom: 8 }}>
+              <Text style={{ color: "#000", fontSize: 11, fontWeight: "800", letterSpacing: 1 }}>NOTES</Text>
+            </View>
+            <Text style={{ color: theme.colors.textPrimary, fontSize: 14, lineHeight: 20 }}>{b.notes}</Text>
+          </ShadowBox>
+        )}
 
         {data.currently_held?.length > 0 && (
           <>

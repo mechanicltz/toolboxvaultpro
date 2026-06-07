@@ -8,6 +8,8 @@ import {
   RefreshControl,
   Image,
   TextInput,
+  Modal,
+  ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -130,6 +132,42 @@ export default function ClaimsScreen() {
       )
     : [];
 
+  // ===== New Claim flow: search an item, then reuse the SAME mark-broken
+  // flow on the tool detail page (/tool/[id]?startClaim=1). =====
+  const [newClaimOpen, setNewClaimOpen] = useState(false);
+  const [claimSearch, setClaimSearch] = useState("");
+  const [allTools, setAllTools] = useState<any[]>([]);
+  const [loadingAllTools, setLoadingAllTools] = useState(false);
+  const openNewClaim = async () => {
+    setClaimSearch("");
+    setNewClaimOpen(true);
+    setLoadingAllTools(true);
+    try {
+      const all = await api.listTools();
+      setAllTools(Array.isArray(all) ? all : []);
+    } catch {
+      setAllTools([]);
+    } finally {
+      setLoadingAllTools(false);
+    }
+  };
+  const pickClaimTool = (t: any) => {
+    setNewClaimOpen(false);
+    router.push(`/tool/${t.id}?startClaim=1`);
+  };
+  const claimQ = claimSearch.trim().toLowerCase();
+  const claimResults = claimQ
+    ? allTools
+        .filter(
+          (t) =>
+            (t.name || "").toLowerCase().includes(claimQ) ||
+            (t.brand || "").toLowerCase().includes(claimQ) ||
+            (t.model || "").toLowerCase().includes(claimQ) ||
+            (t.serial_number || "").toLowerCase().includes(claimQ)
+        )
+        .slice(0, 40)
+    : allTools.slice(0, 20);
+
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <IndustrialBanner title="CLAIMS" subtitle="Broken Items by Dealer" />
@@ -140,6 +178,16 @@ export default function ClaimsScreen() {
         <Stat label="Replacement" value={summary?.totals?.waiting_replacement ?? 0} color={theme.colors.accentSecondary} />
         <Stat label="Done" value={summary?.totals?.completed ?? 0} color={theme.colors.success} />
       </View>
+
+      <TouchableOpacity
+        testID="new-claim-btn"
+        style={styles.newClaimBtn}
+        onPress={openNewClaim}
+        activeOpacity={0.85}
+      >
+        <Ionicons name="add-circle" size={18} color="#000" />
+        <Text style={styles.newClaimBtnText}>NEW CLAIM</Text>
+      </TouchableOpacity>
 
       <View style={styles.modeRow}>
         <TouchableOpacity
@@ -435,6 +483,72 @@ export default function ClaimsScreen() {
           </>
         )}
       </ScrollView>
+
+      <Modal
+        visible={newClaimOpen}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setNewClaimOpen(false)}
+      >
+        <View style={styles.ncBackdrop}>
+          <View style={styles.ncSheet}>
+            <View style={styles.ncHeader}>
+              <Text style={styles.ncTitle}>START A CLAIM</Text>
+              <TouchableOpacity testID="claim-modal-close" onPress={() => setNewClaimOpen(false)} hitSlop={10}>
+                <Ionicons name="close" size={22} color={theme.colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
+            <Text style={styles.ncSub}>Search an item to start a claim for it.</Text>
+            <TextInput
+              testID="claim-search-input"
+              placeholder="Search by name, model, serial..."
+              placeholderTextColor={theme.colors.textMuted}
+              style={styles.ncInput}
+              value={claimSearch}
+              onChangeText={setClaimSearch}
+              autoFocus
+            />
+            {loadingAllTools ? (
+              <ActivityIndicator color={theme.colors.accent} style={{ marginTop: 24 }} />
+            ) : (
+              <ScrollView keyboardShouldPersistTaps="handled" style={{ maxHeight: 380 }}>
+                {claimResults.length === 0 ? (
+                  <Text style={styles.ncEmpty}>
+                    {claimQ ? "No items match your search." : "No items found."}
+                  </Text>
+                ) : (
+                  claimResults.map((t: any) => (
+                    <TouchableOpacity
+                      key={t.id}
+                      testID={`claim-pick-${t.id}`}
+                      style={styles.ncRow}
+                      onPress={() => pickClaimTool(t)}
+                      activeOpacity={0.8}
+                    >
+                      <View style={styles.ncThumb}>
+                        {t.photos?.[0] ? (
+                          <Image source={{ uri: t.photos[0] }} style={styles.ncThumbImg} />
+                        ) : (
+                          <Ionicons name="construct" size={18} color={theme.colors.accent} />
+                        )}
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.ncRowName} numberOfLines={1}>{t.name}</Text>
+                        {!!(t.model || t.serial_number) && (
+                          <Text style={styles.ncRowMeta} numberOfLines={1}>
+                            {[t.model, t.serial_number].filter(Boolean).join("  -  ")}
+                          </Text>
+                        )}
+                      </View>
+                      <Ionicons name="chevron-forward" size={18} color={theme.colors.textMuted} />
+                    </TouchableOpacity>
+                  ))
+                )}
+              </ScrollView>
+            )}
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -495,6 +609,62 @@ const styles = themedStyles((c) => ({
   title: { color: c.textPrimary, fontSize: 16, fontWeight: "900", letterSpacing: 4 },
   subtitle: { color: c.accent, fontSize: 7, fontWeight: "700", letterSpacing: 2, marginTop: 4 },
   modeRow: { flexDirection: "row", gap: 8, paddingHorizontal: 16, paddingVertical: 12 },
+  newClaimBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    backgroundColor: c.accent,
+    marginHorizontal: 16,
+    marginTop: 12,
+    paddingVertical: 12,
+    borderRadius: 10,
+  },
+  newClaimBtnText: { color: "#000", fontSize: 14, fontWeight: "800", letterSpacing: 1 },
+  ncBackdrop: { flex: 1, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "flex-end" },
+  ncSheet: {
+    backgroundColor: c.bgSecondary,
+    borderTopLeftRadius: 18,
+    borderTopRightRadius: 18,
+    paddingHorizontal: 16,
+    paddingTop: 14,
+    paddingBottom: 28,
+    maxHeight: "82%",
+  },
+  ncHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  ncTitle: { color: c.textPrimary, fontSize: 16, fontWeight: "800", letterSpacing: 1 },
+  ncSub: { color: c.textMuted, fontSize: 12, marginTop: 4, marginBottom: 10 },
+  ncInput: {
+    backgroundColor: c.surface,
+    borderWidth: 1,
+    borderColor: c.border,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    color: c.textPrimary,
+    fontSize: 14,
+  },
+  ncEmpty: { color: c.textMuted, fontSize: 13, textAlign: "center", marginTop: 24 },
+  ncRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: c.border,
+  },
+  ncThumb: {
+    width: 40,
+    height: 40,
+    borderRadius: 8,
+    backgroundColor: c.surface,
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "hidden",
+  },
+  ncThumbImg: { width: "100%", height: "100%" },
+  ncRowName: { color: c.textPrimary, fontSize: 14, fontWeight: "700" },
+  ncRowMeta: { color: c.textMuted, fontSize: 12, marginTop: 2 },
   modeChip: {
     flexDirection: "row",
     alignItems: "center",
