@@ -133,19 +133,7 @@ export default function PersonalInfoScreen() {
             <Ionicons name="arrow-back" size={22} color="#F97316" />
           </TouchableOpacity>
         }
-        rightSlot={
-          !editing ? (
-            <TouchableOpacity
-              testID="pi-edit-top"
-              onPress={() => setEditing(true)}
-              hitSlop={10}
-              style={styles.bannerEdit}
-            >
-              <Ionicons name="create-outline" size={16} color="#F97316" />
-              <Text style={styles.bannerEditText}>EDIT</Text>
-            </TouchableOpacity>
-          ) : undefined
-        }
+        rightSlot={undefined}
       />
 
       <KeyboardAvoidingView
