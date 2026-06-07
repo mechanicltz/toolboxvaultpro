@@ -117,7 +117,7 @@ export const styles = themedStyles((c) => ({
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
-    paddingVertical: 16,
+    paddingVertical: 10,
   },
   quickBtnText: {
     color: c.textPrimary,
@@ -127,7 +127,7 @@ export const styles = themedStyles((c) => ({
   },
   quickBtnSkin: {
     flex: 1,
-    height: 52,
+    height: 40,
     overflow: "hidden",
     borderRadius: 6,
   },

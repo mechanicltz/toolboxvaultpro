@@ -62,7 +62,7 @@ import { Anton_400Regular } from "@expo-google-fonts/anton";
 
 // Manual verification beacon — bump this on every change so we can confirm
 // the device is actually showing the latest bundle. Rendered top-right of Home.
-const HOME_BUILD = "BUILD 194";
+const HOME_BUILD = "BUILD 195";
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -764,7 +764,6 @@ export default function HomeScreen() {
               imageStyle={styles.quickBtnSkinImg}
               resizeMode="stretch"
             >
-              <Ionicons name="add-circle" size={18} color="#0A0A0A" />
               <Text style={styles.quickBtnSkinText}>ADD ITEM</Text>
             </ImageBackground>
           </TouchableOpacity>
@@ -780,7 +779,6 @@ export default function HomeScreen() {
               imageStyle={styles.quickBtnSkinImg}
               resizeMode="stretch"
             >
-              <Ionicons name="construct" size={18} color="#0A0A0A" />
               <Text style={styles.quickBtnSkinText}>NEW CLAIM</Text>
             </ImageBackground>
           </TouchableOpacity>

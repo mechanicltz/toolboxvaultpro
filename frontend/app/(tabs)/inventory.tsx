@@ -1829,7 +1829,7 @@ const styles = themedStyles((c) => ({
   filterWrap: { maxHeight: 56, paddingVertical: 4 },
   filterRow: { paddingHorizontal: 20, paddingVertical: 8, gap: 8, alignItems: "center" },
   filterDropdownGrid: {
-    paddingHorizontal: 16,
+    paddingHorizontal: 8,
     paddingTop: 6,
     paddingBottom: 8,
     rowGap: 8,

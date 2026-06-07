@@ -48,25 +48,24 @@ export function IndustrialBanner({ title, subtitle, rightSlot, leftSlot }: Props
   // screen width, 400), height derived from the master nameplate ratio.
   const { width } = useWindowDimensions();
   const nameplateW = Math.min(width * 0.94, 400);
-  const nameplateH = nameplateW / 3.94;
+  const nameplateH = nameplateW / 4.0;
   return (
     <View style={styles.wrap}>
-      {/* The constant brand nameplate — same size + look as the login page.
-          The app version sits ABOVE the plate, just outside the top border,
-          aligned over the "VAULT" word (right side of the plate). */}
-      <View style={{ width: nameplateW, alignSelf: "center", marginBottom: 6 }}>
-        <Text
-          style={[styles.version, { marginRight: nameplateW * 0.16, marginBottom: -7, color: c.accent }]}
-          allowFontScaling={false}
-        >
-          {APP_VERSION_LABEL}
-        </Text>
+      {/* The constant brand nameplate. The app version is centered over the
+          small plate on the bottom border of the artwork. */}
+      <View style={{ width: nameplateW, height: nameplateH, alignSelf: "center", marginBottom: 6 }}>
         <Image
           source={SKIN.nameplate}
           style={{ width: nameplateW, height: nameplateH }}
           resizeMode="contain"
           fadeDuration={0}
         />
+        <Text
+          style={[styles.version, { bottom: nameplateH * 0.015, color: c.accent }]}
+          allowFontScaling={false}
+        >
+          {APP_VERSION_LABEL}
+        </Text>
       </View>
 
       {/* Label row: back (left) · PAGE NAME (center) · action (right). */}
@@ -104,11 +103,17 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   version: {
-    alignSelf: "flex-end",
+    position: "absolute",
+    left: 0,
+    right: 0,
+    textAlign: "center",
     color: ACCENT,
-    fontSize: 11,
+    fontSize: 9,
     fontWeight: "800",
     letterSpacing: 1,
+    textShadowColor: "rgba(0,0,0,0.85)",
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
   },
   labelRow: {
     flexDirection: "row",
