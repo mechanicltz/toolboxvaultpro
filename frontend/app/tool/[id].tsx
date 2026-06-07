@@ -45,7 +45,7 @@ import { WarrantySection } from "../../src/sections/WarrantySection";
 import PinchZoomImageViewer from "../../src/components/PinchZoomImageViewer";
 import { themedStyles } from "../../src/themeContext";
 import { BevelCard } from "../../src/components/BevelCard";
-import { ShadowBox, ShadowBoxSubCard } from "../../src/components/ShadowBox";
+import { ShadowBox, ShadowBoxSubCard, ShadowBoxMini } from "../../src/components/ShadowBox";
 import { ContactIconImage } from "../../src/components/ContactIcons";
 import { IndustrialBanner } from "../../src/components/IndustrialBanner";
 import { PillButton } from "../../src/components/PillButton";
@@ -2304,89 +2304,89 @@ export default function ToolDetail() {
             {/* CHECK OUT / CHECK IN (contextual) */}
             {!tool.is_sold && !tool.is_lost && (
               tool.is_checked_out ? (
-                <BevelCard
+                <ShadowBoxMini
                   testID="action-checkin"
                   style={newStyles.actionTile}
                   onPress={doCheckin}
                 >
                   <Ionicons name="log-in-outline" size={20} color={theme.colors.accent} />
                   <Text style={newStyles.actionTileText}>CHECK IN</Text>
-                </BevelCard>
+                </ShadowBoxMini>
               ) : (
-                <BevelCard
+                <ShadowBoxMini
                   testID="action-checkout"
                   style={newStyles.actionTile}
                   onPress={() => setShowCheckout(true)}
                 >
                   <Ionicons name="log-out-outline" size={20} color={theme.colors.accent} />
                   <Text style={newStyles.actionTileText}>CHECK OUT</Text>
-                </BevelCard>
+                </ShadowBoxMini>
               )
             )}
 
             {/* MARK BROKEN / MARK FIXED (contextual) */}
             {!tool.is_sold && !tool.is_lost && (
               tool.needs_repair ? (
-                <BevelCard
+                <ShadowBoxMini
                   testID="action-fixed"
                   style={newStyles.actionTile}
                   onPress={markRepaired}
                 >
                   <Ionicons name="checkmark-done" size={20} color={theme.colors.success} />
                   <Text style={newStyles.actionTileText}>MARK FIXED</Text>
-                </BevelCard>
+                </ShadowBoxMini>
               ) : (
-                <BevelCard
+                <ShadowBoxMini
                   testID="action-broken"
                   style={newStyles.actionTile}
                   onPress={openRepair}
                 >
                   <Ionicons name="build-outline" size={20} color={theme.colors.danger} />
                   <Text style={newStyles.actionTileText}>MARK BROKEN</Text>
-                </BevelCard>
+                </ShadowBoxMini>
               )
             )}
 
             {/* EXPORT PDF */}
-            <BevelCard
+            <ShadowBoxMini
               testID="action-export"
               style={newStyles.actionTile}
               onPress={() => setShowExportPicker(true)}
             >
               <Ionicons name="document-text-outline" size={20} color={theme.colors.accent} />
               <Text style={newStyles.actionTileText}>EXPORT</Text>
-            </BevelCard>
+            </ShadowBoxMini>
 
             {/* LIST FOR SALE / EDIT LISTING + MARK SOLD (contextual) */}
             {!tool.is_sold && !tool.is_lost && (
               tool.for_sale ? (
                 <>
-                  <BevelCard
+                  <ShadowBoxMini
                     testID="action-edit-listing"
                     style={newStyles.actionTile}
                     onPress={() => openSaleModal()}
                   >
                     <Ionicons name="pricetag" size={20} color={theme.colors.accent} />
                     <Text style={newStyles.actionTileText}>EDIT LISTING</Text>
-                  </BevelCard>
-                  <BevelCard
+                  </ShadowBoxMini>
+                  <ShadowBoxMini
                     testID="action-mark-sold"
                     style={newStyles.actionTile}
                     onPress={() => setShowMarkSold(true)}
                   >
                     <Ionicons name="checkmark-circle" size={20} color={theme.colors.success} />
                     <Text style={newStyles.actionTileText}>MARK SOLD</Text>
-                  </BevelCard>
+                  </ShadowBoxMini>
                 </>
               ) : (
-                <BevelCard
+                <ShadowBoxMini
                   testID="action-list-sale"
                   style={newStyles.actionTile}
                   onPress={() => openSaleModal()}
                 >
                   <Ionicons name="pricetag-outline" size={20} color={theme.colors.accent} />
                   <Text style={newStyles.actionTileText}>LIST FOR SALE</Text>
-                </BevelCard>
+                </ShadowBoxMini>
               )
             )}
 

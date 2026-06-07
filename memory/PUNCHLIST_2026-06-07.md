@@ -48,6 +48,7 @@ Backend change-email tested by testing_agent (16/16 backend pass). All additive 
 > patterns; later we'll build a centralized button/UI kit (user chose to defer = "B").
 
 ### A. SHADOWBOX RESTYLE PASS
+- [ ] **ITEM DESCRIPTION page bottom buttons** (`app/tool/[id].tsx`): the action buttons at the BOTTOM of an item's detail page should be **ShadowBox-style buttons** (raised/bordered card look, matching `ShadowBox`), not flat. (Added 2026-06-07.)
 - [ ] **MAINTENANCE screen** (`app/maintenance.tsx`): restyle the list rows to ShadowBox layout; the little info cards at the top → ShadowBox **mini-card** design.
 - [ ] **FOR SALE page** (`app/for-sale.tsx`): update to ShadowBox layout design.
 - [ ] **WISHLIST page** (`app/wishlist.tsx`): update to ShadowBox layout; the **top 4 info cards** → ShadowBox mini-card layout.
