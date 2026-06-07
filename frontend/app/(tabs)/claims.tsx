@@ -10,6 +10,8 @@ import {
   TextInput,
   Modal,
   ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -490,7 +492,10 @@ export default function ClaimsScreen() {
         animationType="slide"
         onRequestClose={() => setNewClaimOpen(false)}
       >
-        <View style={styles.ncBackdrop}>
+        <KeyboardAvoidingView
+          style={styles.ncBackdrop}
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+        >
           <View style={styles.ncSheet}>
             <View style={styles.ncHeader}>
               <Text style={styles.ncTitle}>START A CLAIM</Text>
@@ -547,7 +552,7 @@ export default function ClaimsScreen() {
               </ScrollView>
             )}
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
     </SafeAreaView>
   );
