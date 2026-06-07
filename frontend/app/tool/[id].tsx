@@ -1080,9 +1080,13 @@ export default function ToolDetail() {
             .join("")
         : "";
 
-    const statusLabel = tool.is_checked_out ? "CHECKED OUT" : "AVAILABLE";
-    const statusColor = tool.is_checked_out ? "#dc2626" : "#16a34a";
-    const statusBg = tool.is_checked_out ? "#fee2e2" : "#dcfce7";
+    const _isLost = !!tool.lost_status?.is_lost;
+    const statusLabel = _isLost
+      ? (tool.lost_status?.type === "stolen" ? "STOLEN" : "LOST")
+      : tool.is_sold ? "SOLD"
+      : tool.is_checked_out ? "CHECKED OUT" : "AVAILABLE";
+    const statusColor = (_isLost || tool.is_checked_out) ? "#dc2626" : "#16a34a";
+    const statusBg = (_isLost || tool.is_checked_out) ? "#fee2e2" : "#dcfce7";
 
     // Build spec rows (only show populated fields)
     const specPairs: { label: string; value: string }[] = [];
@@ -1417,7 +1421,11 @@ export default function ToolDetail() {
   // ---- Helpers for the new layout ----------------------------------------
   const fmtMoney = (n: any) => `$${(Number(n) || 0).toFixed(2)}`;
   const statusInfo = (() => {
-    if (tool.is_lost) return { label: "LOST", color: theme.colors.danger };
+    if (tool.lost_status?.is_lost)
+      return {
+        label: tool.lost_status?.type === "stolen" ? "STOLEN" : "LOST",
+        color: theme.colors.danger,
+      };
     if (tool.is_sold) return { label: "SOLD", color: theme.colors.success };
     if (tool.for_sale) return { label: `FOR SALE  ${fmtMoney(tool.sale_price)}`, color: theme.colors.accent };
     if (tool.needs_repair) return { label: "BROKEN", color: theme.colors.danger };
