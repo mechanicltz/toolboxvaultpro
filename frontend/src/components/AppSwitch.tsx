@@ -15,7 +15,7 @@ const SWITCH_SCALE = 0.78;
 export function AppSwitch({ style, trackColor, thumbColor, ...rest }: SwitchProps) {
   return (
     <Switch
-      trackColor={trackColor ?? { true: theme.colors.accent, false: theme.colors.border }}
+      trackColor={trackColor ?? { true: theme.colors.accent, false: theme.colors.switchTrackOff }}
       thumbColor={thumbColor ?? "#fff"}
       {...rest}
       style={[style, { transform: [{ scale: SWITCH_SCALE }] }]}

@@ -40,6 +40,8 @@ export type ColorPalette = {
   textMuted: string;
   textOnAccent: string;
   border: string;
+  /** Off-state track colour for toggle switches (kept visible in light mode). */
+  switchTrackOff: string;
   borderSubtle: string;
   success: string;
   danger: string;
@@ -91,6 +93,7 @@ export const darkPalette: ColorPalette = {
   textMuted: "#737373",
   textOnAccent: "#000000",
   border: "#2D2D2D",
+  switchTrackOff: "#2D2D2D",
   borderSubtle: "#1F1F1F",
   success: "#10B981",
   danger: "#EF4444",
@@ -146,6 +149,7 @@ export const lightPalette: ColorPalette = {
   textMuted: "#64748B",
   textOnAccent: "#FFFFFF",
   border: "#D8DEE6",
+  switchTrackOff: "#94A3B8",
   borderSubtle: "#E5EAF1",
   success: "#059669",
   danger: "#DC2626",
