@@ -156,7 +156,7 @@ export default function DealersScreen() {
               }}
               activeOpacity={isLocked ? 1 : 0.7}
             >
-              <DealerLogo logo={item.logo} size={56} />
+              <DealerLogo logo={item.logo} size={76} style={{ marginRight: 4 }} />
               <View style={{ flex: 1 }}>
                 <Text style={styles.rowTitle}>{item.name}</Text>
                 <Text style={styles.rowSub}>

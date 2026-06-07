@@ -19,8 +19,8 @@ export const STOCK_DEALER_LOGOS: Record<string, ImageSourcePropType> = {
   amazon: require("../assets/dealer-logos/amazon.png"),
 };
 
-/** Fallback logo (the app icon) used when a dealer has no logo set. */
-export const DEFAULT_DEALER_LOGO: ImageSourcePropType = require("../assets/images/icon-transparent.png");
+/** Fallback logo — the current app icon — used when a dealer has no logo set. */
+export const DEFAULT_DEALER_LOGO: ImageSourcePropType = require("../assets/dealer-logos/_default.png");
 
 export type StockLogoOption = {
   key: string;

@@ -294,7 +294,7 @@ export default function DealerDetail() {
 
       <ScrollView contentContainerStyle={{ paddingBottom: 100 }}>
         <View style={styles.heroBox}>
-          <DealerLogo logo={dealer.logo} size={92} style={{ marginBottom: 10 }} />
+          <DealerLogo logo={dealer.logo} size={132} style={{ marginBottom: 12 }} />
           <Text style={styles.dealerName}>{dealer.name}</Text>
         </View>
 

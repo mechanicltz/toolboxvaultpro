@@ -61,7 +61,7 @@ import { Anton_400Regular } from "@expo-google-fonts/anton";
 
 // Manual verification beacon — bump this on every change so we can confirm
 // the device is actually showing the latest bundle. Rendered top-right of Home.
-const HOME_BUILD = "BUILD 183";
+const HOME_BUILD = "BUILD 184";
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -610,7 +610,7 @@ export default function HomeScreen() {
                             (Number(d.credit_balance) || 0) + (Number(d.personal_balance) || 0);
                           return (
                             <View key={d.id} style={styles.pdRow}>
-                              <DealerLogo logo={d.logo} size={36} style={{ marginRight: 10 }} />
+                              <DealerLogo logo={d.logo} size={50} style={{ marginRight: 10 }} />
                               <TouchableOpacity
                                 onPress={() => router.push(`/dealer/${d.id}`)}
                                 activeOpacity={0.6}
@@ -829,7 +829,7 @@ export default function HomeScreen() {
                         testID={`home-dealer-${d.id}`}
                       >
                         <View style={styles.rowTick} />
-                        <DealerLogo logo={d.logo} size={36} style={{ marginRight: 8 }} />
+                        <DealerLogo logo={d.logo} size={50} style={{ marginRight: 10 }} />
                         <View style={{ flex: 1, minWidth: 0 }}>
                           <Text style={styles.detailsLabel} numberOfLines={1}>{d.name}</Text>
                           {paymentSubByDealer[d.id] && (
