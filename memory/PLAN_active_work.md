@@ -1,5 +1,12 @@
 # 🚧 ACTIVE WORK PLAN — Mr. Foreman App (post-launch polish batch)
 
+> ⛳ **THIS FILE IS THE OLDER (mostly-DONE) BATCH.** For the CURRENT work,
+> read **`/app/memory/PUNCHLIST_2026-06-07.md`** FIRST — that is the live
+> source of truth (Toolbox Vault punch list, ShadowBox restyle + functional
+> fixes + change-login-email + header fixes). This file is kept for its
+> still-valid reference sections (prod creds, removed features, parked OAuth).
+
+
 **LAST UPDATED:** 2026-05-26
 
 This file is the SOURCE OF TRUTH for the current multi-session feature batch.

@@ -621,18 +621,6 @@ export default function InventoryScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* #29 — ADD ITEM: full-width button directly under the search bar and
-          above the Filter accordion (replaces the old floating top-right FAB). */}
-      <TouchableOpacity
-        testID="add-item-btn"
-        style={styles.addItemBtn}
-        onPress={() => router.push("/tool/edit")}
-        activeOpacity={0.85}
-      >
-        <Ionicons name="add-circle" size={18} color="#FFFFFF" />
-        <Text style={styles.addItemBtnText}>ADD ITEM</Text>
-      </TouchableOpacity>
-
       {/* #24 — All filters live inside a "Filter" ShadowBox accordion, closed by default. */}
       <ShadowBox style={styles.filterAccordion}>
         <TouchableOpacity
@@ -1095,7 +1083,18 @@ export default function InventoryScreen() {
               </View>
               {!selectMode && (
                 <View style={styles.rowRight}>
-                  {item.needs_repair ? (
+                  {item.lost_status?.is_lost ? (
+                    <>
+                      <Ionicons
+                        name={item.lost_status?.type === "stolen" ? "warning" : "help-circle"}
+                        size={16}
+                        color={theme.colors.danger}
+                      />
+                      <Text style={[styles.statusText, { color: theme.colors.danger }]}>
+                        {item.lost_status?.type === "stolen" ? "STOLEN" : "LOST"}
+                      </Text>
+                    </>
+                  ) : item.needs_repair ? (
                     <>
                       <Ionicons name="build" size={16} color={theme.colors.danger} />
                       <Text style={[styles.statusText, { color: theme.colors.danger }]}>REPAIR</Text>
@@ -1205,10 +1204,15 @@ export default function InventoryScreen() {
           </ScrollView>
         </View>
       ) : (
-        // Bottom-right "+" FAB removed — ADD ITEM lives in the top-right
-        // header (ReportsFab). Keeping the conditional so the lock state
-        // logic above doesn't break, but no FAB is rendered now.
-        null
+        // Floating round "+" FAB, bottom-right — matches the Wishlist page.
+        <TouchableOpacity
+          testID="add-item-fab"
+          style={styles.fab}
+          onPress={() => router.push("/tool/edit")}
+          activeOpacity={0.85}
+        >
+          <Ionicons name="add" size={32} color="#000" />
+        </TouchableOpacity>
       )}
 
       {/* Filter: Location picker modal */}
@@ -1846,27 +1850,6 @@ const styles = themedStyles((c) => ({
     paddingBottom: 8,
     rowGap: 8,
   },
-  addItemBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    marginHorizontal: 16,
-    marginBottom: 8,
-    paddingVertical: 13,
-    borderRadius: 8,
-    backgroundColor: theme.colors.accent,
-    ...(theme.elevation?.md as object),
-  },
-  addItemBtnText: {
-    color: "#FFFFFF",
-    fontSize: 12,
-    fontWeight: "900",
-    letterSpacing: 1.5,
-    textShadowColor: "rgba(0,0,0,0.55)",
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 2,
-  },
   filterAccordion: {
     marginHorizontal: 16,
     marginBottom: 8,
@@ -2251,7 +2234,7 @@ const styles = themedStyles((c) => ({
     backgroundColor: c.accent,
     alignItems: "center",
     justifyContent: "center",
-    borderRadius: theme.radii.lg,
+    borderRadius: 32,
     ...(theme.elevation.accent as object),
   },
   fabLocked: {
