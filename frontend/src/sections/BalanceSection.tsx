@@ -479,14 +479,11 @@ const styles = themedStyles((c) => ({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 8,
-    paddingVertical: 11,
-    borderWidth: 1.5,
-    borderColor: c.accent,
-    borderStyle: "dashed",
-    borderRadius: theme.radii.sm,
+    gap: 6,
+    paddingVertical: 10,
+    marginTop: 2,
   },
-  setSchedText: { color: c.accent, fontWeight: "900", fontSize: 10, letterSpacing: 1 },
+  setSchedText: { color: c.accent, fontWeight: "800", fontSize: 11, letterSpacing: 0.5 },
   // modal
   modalBg: { flex: 1, backgroundColor: "rgba(0,0,0,0.7)", justifyContent: "flex-end" },
   modalSheet: {

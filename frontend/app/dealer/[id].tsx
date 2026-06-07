@@ -492,6 +492,69 @@ export default function DealerDetail() {
                   </TouchableOpacity>
                   {isOpen && (
                     <ShadowBoxSubCard style={styles.agentCard}>
+                      {/* Top action toolbar — contact + manage icons on their
+                          own row, right-aligned, above the agent name. */}
+                      <View style={styles.agentTopActions}>
+                        {!!a.phone && (
+                          <ContactIconButton
+                            type="call"
+                            size={34}
+                            testID={`agent-call-${a.id}`}
+                            onPress={() => openPhone(a.phone)}
+                          />
+                        )}
+                        {!!a.phone && (
+                          <ContactIconButton
+                            type="text"
+                            size={34}
+                            testID={`agent-text-${a.id}`}
+                            onPress={() => openSms(a.phone)}
+                          />
+                        )}
+                        <ContactIconButton
+                          type="share"
+                          size={34}
+                          testID={`agent-share-${a.id}`}
+                          onPress={() =>
+                            shareOrSaveAgent(
+                              {
+                                name: a.name,
+                                phone: a.phone,
+                                email: a.email,
+                                location: a.location,
+                                notes: a.notes,
+                              },
+                              dealer?.name,
+                            )
+                          }
+                        />
+                        <TouchableOpacity
+                          testID={`edit-agent-${a.id}`}
+                          style={styles.agentIconBtn}
+                          hitSlop={6}
+                          onPress={() =>
+                            setAgentForm({
+                              id: a.id,
+                              name: a.name || "",
+                              phone: a.phone || "",
+                              email: a.email || "",
+                              location: a.location || "",
+                              notes: a.notes || "",
+                            })
+                          }
+                        >
+                          <Ionicons name="create-outline" size={18} color={theme.colors.accent} />
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          testID={`remove-agent-${a.id}`}
+                          style={[styles.agentIconBtn, { borderColor: theme.colors.danger }]}
+                          hitSlop={6}
+                          onPress={() => removeAgent(a.id, a.name)}
+                        >
+                          <Ionicons name="trash-outline" size={18} color={theme.colors.danger} />
+                        </TouchableOpacity>
+                      </View>
+
                       {/* Business-card header — agent name */}
                       <Text style={styles.bizName} numberOfLines={1}>{a.name}</Text>
                       {isCurrent && <Text style={styles.bizBadge}>CURRENT AGENT</Text>}
@@ -536,82 +599,18 @@ export default function DealerDetail() {
                         <Text style={styles.agentMeta}>Ended: {formatDateUS(a.ended_at)}</Text>
                       )}
 
-                      <View style={styles.agentFooter}>
-                        <View style={styles.agentActionsLeft}>
-                          {!isCurrent && (
-                            <TouchableOpacity
-                              testID={`set-current-${a.id}`}
-                              style={styles.agentActionBtn}
-                              onPress={() => setCurrent(a.id)}
-                            >
-                              <Ionicons name="star-outline" size={16} color={theme.colors.accent} />
-                              <Text style={styles.agentActionText}>SET CURRENT</Text>
-                            </TouchableOpacity>
-                          )}
+                      {!isCurrent && (
+                        <View style={styles.agentFooter}>
                           <TouchableOpacity
-                            testID={`edit-agent-${a.id}`}
+                            testID={`set-current-${a.id}`}
                             style={styles.agentActionBtn}
-                            onPress={() =>
-                              setAgentForm({
-                                id: a.id,
-                                name: a.name || "",
-                                phone: a.phone || "",
-                                email: a.email || "",
-                                location: a.location || "",
-                                notes: a.notes || "",
-                              })
-                            }
+                            onPress={() => setCurrent(a.id)}
                           >
-                            <Ionicons name="create-outline" size={16} color={theme.colors.accent} />
-                            <Text style={styles.agentActionText}>EDIT</Text>
-                          </TouchableOpacity>
-                          <TouchableOpacity
-                            testID={`remove-agent-${a.id}`}
-                            style={[styles.agentActionBtn, { borderColor: theme.colors.danger }]}
-                            onPress={() => removeAgent(a.id, a.name)}
-                          >
-                            <Ionicons name="trash-outline" size={16} color={theme.colors.danger} />
-                            <Text style={[styles.agentActionText, { color: theme.colors.danger }]}>DELETE</Text>
+                            <Ionicons name="star-outline" size={16} color={theme.colors.accent} />
+                            <Text style={styles.agentActionText}>SET CURRENT</Text>
                           </TouchableOpacity>
                         </View>
-
-                        {/* Custom 3D contact icons — lined up bottom-right (no pillow) */}
-                        <View style={styles.bizFabRow}>
-                          {!!a.phone && (
-                            <ContactIconButton
-                              type="call"
-                              size={44}
-                              testID={`agent-call-${a.id}`}
-                              onPress={() => openPhone(a.phone)}
-                            />
-                          )}
-                          {!!a.phone && (
-                            <ContactIconButton
-                              type="text"
-                              size={44}
-                              testID={`agent-text-${a.id}`}
-                              onPress={() => openSms(a.phone)}
-                            />
-                          )}
-                          <ContactIconButton
-                            type="share"
-                            size={44}
-                            testID={`agent-share-${a.id}`}
-                            onPress={() =>
-                              shareOrSaveAgent(
-                                {
-                                  name: a.name,
-                                  phone: a.phone,
-                                  email: a.email,
-                                  location: a.location,
-                                  notes: a.notes,
-                                },
-                                dealer?.name,
-                              )
-                            }
-                          />
-                        </View>
-                      </View>
+                      )}
                     </ShadowBoxSubCard>
                   )}
                 </View>
@@ -1355,6 +1354,23 @@ const styles = themedStyles((c) => ({
     letterSpacing: 0.3,
   },
   agentCard: { paddingTop: 10, paddingBottom: 10, paddingHorizontal: 12 },
+  agentTopActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "flex-end",
+    gap: 8,
+    marginBottom: 8,
+  },
+  agentIconBtn: {
+    width: 34,
+    height: 34,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: c.accent,
+    backgroundColor: c.bg,
+  },
   agentCardActive: {
     borderColor: c.accent,
     borderLeftWidth: 4,
