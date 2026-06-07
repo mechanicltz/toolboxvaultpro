@@ -143,6 +143,20 @@ export default function ClaimsScreen() {
 
       <View style={styles.modeRow}>
         <TouchableOpacity
+          testID="mode-all-open"
+          style={[styles.modeChip, mode === "all-open" && styles.modeChipOn]}
+          onPress={() => setMode("all-open")}
+        >
+          <Ionicons
+            name="list"
+            size={14}
+            color={mode === "all-open" ? "#000" : theme.colors.textSecondary}
+          />
+          <Text style={[styles.modeText, mode === "all-open" && styles.modeTextOn]}>
+            OPEN CLAIMS ({openTools.length})
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
           testID="mode-dealers"
           style={[styles.modeChip, mode === "dealers" && styles.modeChipOn]}
           onPress={() => setMode("dealers")}
@@ -154,20 +168,6 @@ export default function ClaimsScreen() {
           />
           <Text style={[styles.modeText, mode === "dealers" && styles.modeTextOn]}>
             BY DEALER
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          testID="mode-all-open"
-          style={[styles.modeChip, mode === "all-open" && styles.modeChipOn]}
-          onPress={() => setMode("all-open")}
-        >
-          <Ionicons
-            name="list"
-            size={14}
-            color={mode === "all-open" ? "#000" : theme.colors.textSecondary}
-          />
-          <Text style={[styles.modeText, mode === "all-open" && styles.modeTextOn]}>
-            ALL OPEN ({openTools.length})
           </Text>
         </TouchableOpacity>
       </View>
