@@ -35,6 +35,9 @@ export const STOCK_DEALER_LOGOS: Record<string, ImageSourcePropType> = {
   amazon: require("../assets/dealer-logos/amazon.png"),
 };
 
+/** The app's master brand logo — also used as the default dealer logo. */
+export const DEFAULT_DEALER_LOGO: ImageSourcePropType = require("../assets/tbv-v2/trimmed/Branding/tbv_master_logo_dark_v2.png");
+
 export type StockLogoOption = {
   key: string;
   label: string;
@@ -58,18 +61,17 @@ export function isDefaultLogo(logo?: string | null): boolean {
 }
 
 /**
- * Resolve a dealer.logo string to an Image source, or `null` when there is no
- * real logo (default / empty / unknown). When `null`, <DealerLogo> renders a
- * neutral placeholder instead of any image.
+ * Resolve a dealer.logo string to an Image source. Defaults (empty / "default"
+ * / unknown) fall back to the app's master brand logo.
  */
 export function resolveDealerLogo(logo?: string | null): ImageSourcePropType | null {
   const v = String(logo || "").trim();
-  if (isDefaultLogo(v)) return null;
+  if (isDefaultLogo(v)) return DEFAULT_DEALER_LOGO;
   if (v.startsWith("stock:")) {
-    return STOCK_DEALER_LOGOS[v.slice(6)] || null;
+    return STOCK_DEALER_LOGOS[v.slice(6)] || DEFAULT_DEALER_LOGO;
   }
   if (v.startsWith("data:")) return { uri: v };
   // Raw base64 (no data-uri prefix) — assume PNG.
   if (v.length > 100) return { uri: `data:image/png;base64,${v}` };
-  return null;
+  return DEFAULT_DEALER_LOGO;
 }
