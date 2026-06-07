@@ -869,7 +869,7 @@ export default function MoreScreen() {
         </SectionCard>
 
         {/* Report a bug — industrial badge image, pinned to the very bottom */}
-        <ReportBugBadge style={{ marginHorizontal: 16, marginTop: 14 }} testID="more-feedback" />
+        <ReportBugBadge style={{ marginTop: 14 }} testID="more-feedback" />
       </ScrollView>
 
       {/* Home Screen Rows modal — pick which rows show on Home and reorder them */}
