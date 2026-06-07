@@ -40,7 +40,7 @@ import { ContactIconButton, ContactIconImage } from "../../src/components/Contac
 import { IndustrialBanner } from "../../src/components/IndustrialBanner";
 import { PillButton } from "../../src/components/PillButton";
 import { DealerLogo } from "../../src/components/DealerLogo";
-import { STOCK_LOGO_OPTIONS, isDefaultLogo } from "../../src/dealerLogos";
+import { STOCK_LOGO_OPTIONS, isDefaultLogo, DEALER_LOGO_SLOT } from "../../src/dealerLogos";
 
 import {
   isDeviceContactsAvailable,
@@ -297,7 +297,7 @@ export default function DealerDetail() {
         contentContainerStyle={{ paddingBottom: 100 }}
       >
         <View style={styles.heroBox}>
-          <DealerLogo logo={dealer.logo} size={220} height={150} style={{ marginBottom: 6 }} />
+          <DealerLogo logo={dealer.logo} size={DEALER_LOGO_SLOT.hero} style={{ marginBottom: 6 }} />
           <Text style={styles.dealerName}>{dealer.name}</Text>
         </View>
 
@@ -666,7 +666,7 @@ export default function DealerDetail() {
             {/* Dealer logo picker (#17) */}
             <Text style={styles.editFieldLabel}>DEALER LOGO</Text>
             <View style={styles.logoPickerRow}>
-              <DealerLogo logo={editForm.logo} size={64} />
+              <DealerLogo logo={editForm.logo} size={DEALER_LOGO_SLOT.picker} />
               <View style={{ flex: 1, gap: 8 }}>
                 <TouchableOpacity
                   testID="logo-upload-btn"

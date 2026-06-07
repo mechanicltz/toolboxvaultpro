@@ -1,20 +1,24 @@
-import React, { useEffect, useMemo, useState } from "react";
-import { Image, StyleProp, ImageStyle } from "react-native";
+import React from "react";
+import { View, Image, StyleProp, ViewStyle } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { theme } from "../theme";
 import { resolveDealerLogo } from "../dealerLogos";
 
 /**
- * Renders a dealer's logo.
+ * Dealer logo — renders inside a FIXED, uniform square slot so every row lines
+ * up: all icons occupy the exact same box and every dealer name therefore
+ * starts at the same x. The artwork is centered and `contain`-fit (never
+ * stretched, never cropped). No backing chip, no border.
  *
- * The logo ALWAYS keeps its true aspect ratio (never stretched) and the
- * rendered element hugs the artwork tightly — there is NO backing chip and NO
- * dead/letterbox space around it. The brand logos are transparent PNGs that
- * read well directly on the dark theme.
+ * Because the slot is a constant size (not derived from each image's aspect
+ * ratio) the layout is identical for stock logos, custom uploads, and freshly
+ * added dealers — nothing reflows when the list changes.
  *
- * `size`   = the bounding box WIDTH  (max width the logo may occupy)
- * `height` = the bounding box HEIGHT (max height, defaults to `size`)
+ * `size`   = slot WIDTH  (and default height)
+ * `height` = slot HEIGHT (optional; defaults to `size` → a square slot)
  *
- * The logo is scaled to be as large as possible inside that box while keeping
- * its real proportions, so it never grows a list row taller than `height`.
+ * When the dealer has no real logo, a neutral placeholder icon is drawn — never
+ * the app icon.
  */
 export function DealerLogo({
   logo,
@@ -25,71 +29,31 @@ export function DealerLogo({
   logo?: string | null;
   size?: number;
   height?: number;
-  style?: StyleProp<ImageStyle>;
+  style?: StyleProp<ViewStyle>;
 }) {
-  const maxW = size;
-  const maxH = height ?? size;
-
-  // Memoize on the logo STRING — resolveDealerLogo() returns a fresh { uri }
-  // object for base64/custom logos, so we must key on the string (not the
-  // object) to avoid an infinite re-render loop.
-  const source = useMemo(() => resolveDealerLogo(logo), [logo]);
-
-  // Intrinsic aspect ratio (width / height). Defaults to 1 until measured.
-  const [aspect, setAspect] = useState(1);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    // Bundled require() assets resolve synchronously with real dimensions
-    // on native. `Image.resolveAssetSource` is NOT available on
-    // react-native-web (the web preview); guard so this doesn't throw and
-    // crash the entire screen.
-    const resolveFn = (Image as any)?.resolveAssetSource;
-    if (typeof resolveFn === "function") {
-      const resolved = resolveFn(source as any);
-      if (resolved?.width && resolved?.height) {
-        setAspect(resolved.width / resolved.height);
-        return;
-      }
-    }
-
-    // Remote / data-uri (custom uploads) — ask the platform for the size.
-    const uri = (source as any)?.uri;
-    if (uri) {
-      Image.getSize(
-        uri,
-        (w, h) => {
-          if (!cancelled && w && h) setAspect(w / h);
-        },
-        () => {
-          if (!cancelled) setAspect(1);
-        },
-      );
-    } else {
-      setAspect(1);
-    }
-
-    return () => {
-      cancelled = true;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [logo]);
-
-  // Fit the logo inside the [maxW x maxH] box at its true aspect ratio.
-  let w = maxW;
-  let h = w / aspect;
-  if (h > maxH) {
-    h = maxH;
-    w = h * aspect;
-  }
+  const w = size;
+  const h = height ?? size;
+  const source = resolveDealerLogo(logo);
 
   return (
-    <Image
-      source={source}
-      style={[{ width: w, height: h }, style]}
-      resizeMode="contain"
-    />
+    <View
+      style={[{ width: w, height: h, alignItems: "center", justifyContent: "center" }, style]}
+      pointerEvents="none"
+    >
+      {source ? (
+        <Image
+          source={source}
+          style={{ width: "100%", height: "100%" }}
+          resizeMode="contain"
+        />
+      ) : (
+        <Ionicons
+          name="business"
+          size={Math.round(Math.min(w, h) * 0.62)}
+          color={theme.colors.textMuted}
+        />
+      )}
+    </View>
   );
 }
 

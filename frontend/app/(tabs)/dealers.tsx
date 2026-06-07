@@ -37,7 +37,7 @@ import { ShadowBox } from "../../src/components/ShadowBox";
 import { IndustrialBanner } from "../../src/components/IndustrialBanner";
 import { PillButton } from "../../src/components/PillButton";
 import { DealerLogo } from "../../src/components/DealerLogo";
-import { STOCK_LOGO_OPTIONS, isDefaultLogo } from "../../src/dealerLogos";
+import { STOCK_LOGO_OPTIONS, isDefaultLogo, DEALER_LOGO_SLOT } from "../../src/dealerLogos";
 import * as ImagePicker from "expo-image-picker";
 import * as ImageManipulator from "expo-image-manipulator";
 
@@ -199,7 +199,7 @@ export default function DealersScreen() {
               }}
               activeOpacity={isLocked ? 1 : 0.7}
             >
-              <DealerLogo logo={item.logo} size={68} height={56} style={{ marginRight: 0 }} />
+              <DealerLogo logo={item.logo} size={DEALER_LOGO_SLOT.list} style={{ marginRight: 0 }} />
               <View style={{ flex: 1 }}>
                 <Text style={styles.rowTitle}>{item.name}</Text>
                 <Text style={styles.rowSub}>
@@ -256,7 +256,7 @@ export default function DealersScreen() {
             {/* Dealer logo — chosen at creation time (defaults to the app octagon) */}
             <Text style={styles.logoFieldLabel}>DEALER LOGO</Text>
             <View style={styles.logoPickerRow}>
-              <DealerLogo logo={form.logo} size={60} height={48} />
+              <DealerLogo logo={form.logo} size={DEALER_LOGO_SLOT.picker} />
               <View style={{ flex: 1, gap: 8 }}>
                 <TouchableOpacity
                   testID="add-logo-upload-btn"

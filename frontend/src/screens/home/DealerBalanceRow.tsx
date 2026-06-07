@@ -5,6 +5,7 @@ import { View, Text, TouchableOpacity } from "react-native";
 import { theme } from "../../theme";
 import { styles } from "./homeStyles";
 import { DealerLogo } from "../../components/DealerLogo";
+import { DEALER_LOGO_SLOT } from "../../dealerLogos";
 
 export function DealerBalanceRow({
   dealer,
@@ -20,7 +21,7 @@ export function DealerBalanceRow({
   const total = credit + truck;
   return (
     <View style={styles.dealerRow}>
-      <DealerLogo logo={dealer.logo} size={64} height={42} style={{ marginRight: 8 }} />
+      <DealerLogo logo={dealer.logo} size={DEALER_LOGO_SLOT.compact} style={{ marginRight: 10 }} />
       <Text style={styles.dealerName} numberOfLines={1}>
         {dealer.name}
       </Text>

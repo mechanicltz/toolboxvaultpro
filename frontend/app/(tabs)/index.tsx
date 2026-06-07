@@ -30,6 +30,7 @@ import { styles } from "../../src/screens/home/homeStyles";
 import { SummaryRow } from "../../src/screens/home/SummaryRow";
 import { DealerBalanceRow } from "../../src/screens/home/DealerBalanceRow";
 import { DealerLogo } from "../../src/components/DealerLogo";
+import { DEALER_LOGO_SLOT } from "../../src/dealerLogos";
 import { useDealerPaymentsDue } from "../../src/screens/home/useDealerPaymentsDue";
 import { BevelCard } from "../../src/components/BevelCard";
 import { ShadowBox, ShadowBoxSubCard } from "../../src/components/ShadowBox";
@@ -61,7 +62,7 @@ import { Anton_400Regular } from "@expo-google-fonts/anton";
 
 // Manual verification beacon — bump this on every change so we can confirm
 // the device is actually showing the latest bundle. Rendered top-right of Home.
-const HOME_BUILD = "BUILD 189";
+const HOME_BUILD = "BUILD 190";
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -610,7 +611,7 @@ export default function HomeScreen() {
                             (Number(d.credit_balance) || 0) + (Number(d.personal_balance) || 0);
                           return (
                             <View key={d.id} style={styles.pdRow}>
-                              <DealerLogo logo={d.logo} size={77} height={42} style={{ marginRight: 4 }} />
+                              <DealerLogo logo={d.logo} size={DEALER_LOGO_SLOT.compact} style={{ marginRight: 10 }} />
                               <TouchableOpacity
                                 onPress={() => router.push(`/dealer/${d.id}`)}
                                 activeOpacity={0.6}
@@ -829,7 +830,7 @@ export default function HomeScreen() {
                         testID={`home-dealer-${d.id}`}
                       >
                         <View style={styles.rowTick} />
-                        <DealerLogo logo={d.logo} size={77} height={42} style={{ marginRight: 4 }} />
+                        <DealerLogo logo={d.logo} size={DEALER_LOGO_SLOT.compact} style={{ marginRight: 10 }} />
                         <View style={{ flex: 1, minWidth: 0 }}>
                           <Text style={styles.detailsLabel} numberOfLines={1}>{d.name}</Text>
                           {paymentSubByDealer[d.id] && (
