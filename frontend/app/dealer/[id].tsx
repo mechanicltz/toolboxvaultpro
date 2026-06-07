@@ -292,9 +292,12 @@ export default function DealerDetail() {
         />
       </View>
 
-      <ScrollView contentContainerStyle={{ paddingBottom: 100 }}>
+      <ScrollView
+        style={{ backgroundColor: theme.colors.canvas }}
+        contentContainerStyle={{ paddingBottom: 100 }}
+      >
         <View style={styles.heroBox}>
-          <DealerLogo logo={dealer.logo} size={132} style={{ marginBottom: 12 }} />
+          <DealerLogo logo={dealer.logo} size={250} style={{ marginBottom: 14 }} />
           <Text style={styles.dealerName}>{dealer.name}</Text>
         </View>
 
@@ -1031,7 +1034,7 @@ function CopyableRow({
 }
 
 const styles = themedStyles((c) => ({
-  container: { flex: 1, backgroundColor: c.canvas },
+  container: { flex: 1, backgroundColor: c.bg },
   detailActionsRowDealer: { flexDirection: "row", justifyContent: "flex-end", gap: 8, paddingHorizontal: 16, paddingTop: 10, paddingBottom: 4 },
   topBar: {
     flexDirection: "row",
