@@ -521,7 +521,15 @@ export const api = {
 
   // ---- Google Drive backup integration ----
   adminGdriveStatus: () =>
-    request<{ connected: boolean; email?: string; connected_at?: string }>(
+    request<{
+      connected: boolean;
+      email?: string;
+      connected_at?: string;
+      needs_reauth?: boolean;
+      reason?: string;
+      detail?: string;
+      degraded?: boolean;
+    }>(
       `/admin/gdrive/status`,
     ),
   adminGdriveAuthUrl: () =>

@@ -33,6 +33,7 @@ import { useDealerPaymentsDue } from "../../src/screens/home/useDealerPaymentsDu
 import { BevelCard } from "../../src/components/BevelCard";
 import { ShadowBox, ShadowBoxSubCard } from "../../src/components/ShadowBox";
 import ReportBugBadge from "../../src/components/ReportBugBadge";
+import DriveAlertBanner from "../../src/components/DriveAlertBanner";
 import { IndustrialBanner } from "../../src/components/IndustrialBanner";
 import { useSubscriptionChange } from "../../src/subscriptionEvents";
 import { useAppResume } from "../../src/appLifecycle";
@@ -59,7 +60,7 @@ import { Anton_400Regular } from "@expo-google-fonts/anton";
 
 // Manual verification beacon — bump this on every change so we can confirm
 // the device is actually showing the latest bundle. Rendered top-right of Home.
-const HOME_BUILD = "BUILD 176";
+const HOME_BUILD = "BUILD 177";
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -535,6 +536,7 @@ export default function HomeScreen() {
             />
           }
         >
+          <DriveAlertBanner />
           {prefs.home_logo_mode === "custom" && prefs.home_logo_data && (
             <View style={styles.logoWrap}>
               <Image
