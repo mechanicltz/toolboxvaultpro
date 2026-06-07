@@ -561,6 +561,27 @@ export const api = {
       keep_min: number;
     }>(`/admin/gdrive/retention`, { method: "POST" }),
 
+  // ---- Offsite-backup health alerts (email admin if backups stop working) ----
+  adminBackupHealth: () =>
+    request<{
+      health: { healthy: boolean; reason: string; detail: string };
+      alert_state: {
+        healthy?: boolean;
+        reason?: string;
+        unhealthy_since?: string;
+        last_email_at?: string;
+        last_checked_at?: string;
+      };
+      recipients: string[];
+      reminder_days: number;
+    }>(`/admin/backup-health`),
+  // test=true → sends a sample alert email now (verifies deliverability).
+  adminBackupHealthSendTest: () =>
+    request<{ test: boolean; recipients: string[]; sent_to: string[]; ok: boolean }>(
+      `/admin/backup-health/run-now?test=true`,
+      { method: "POST" },
+    ),
+
   // Unified one-click backup: snapshots DB + uploads to Drive in one call
   adminBackupFullNow: () =>
     request<{

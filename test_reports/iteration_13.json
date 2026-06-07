@@ -1,0 +1,35 @@
+{
+  "summary": "Backend-only testing of the new offsite-backup HEALTH alert system in /app/backend/backups.py. All 10 pytest tests PASS (100%). Verified: GET /api/admin/backup-health returns the documented JSON shape with health/alert_state/recipients/reminder_days; health.healthy is currently False with reason 'expired' (Drive token expired), confirming the live state. POST /api/admin/backup-health/run-now?test=true successfully sent a sample alert email via Gmail SMTP to MechanicLTZ@gmail.com (ok=true, sent_to includes admin). POST /api/admin/backup-health/run-now (no test param) returns {test:false, alert_sent, health, recipients} with health.healthy=false as expected. Auth gating is correct: 401 with no token, 403 with non-admin token. Regression: /api/admin/gdrive/status returns 200, and /api/admin/gdrive/oauth-callback (no code) returns 400 (NOT 404), proving the fixed GDRIVE_OAUTH_REDIRECT_URI route is live on the current domain.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_backup_health.py",
+    "/app/test_reports/pytest/iter13_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "backups.py is 891 lines — close to the 700-line guideline soft limit; consider splitting Drive-OAuth endpoints, scheduler, and health-alert logic into separate modules if it grows further.",
+    "In _maybe_send_backup_alert (line ~393), the 'due' calculation when state has no last_email_at sets due=False first (via bool(last) and ...) and only flips to True on the next line — minor readability issue but logically correct.",
+    "Health-alert reminder window logic relies on system_config doc with _id='backup_alert_state'; ensure system_config collection is included in BACKUP_COLLECTIONS if needed (currently it is NOT — alert state is not backed up, which is acceptable but worth noting)."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_backup_health.py (new)"
+  ],
+  "success_rate": {
+    "backend": "100%",
+    "frontend": "not tested (per request: backend only)"
+  },
+  "seed_data_creation": "Created one transient non-admin user (testuser_<uuid>@example.com / Test12345!) per test run for 403 gating verification. No persistent seed data added.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "test_backup_health.py is reusable. It uses EXPO_PUBLIC_BACKEND_URL (not EXPO_BACKEND_URL) and admin creds from /app/memory/test_credentials.md. Note: every run of the test=true case sends a REAL email to MechanicLTZ@gmail.com (intentional, per E1's spec). The 'no test param' case may also dispatch a real alert email when Drive is down (currently it is) — also intentional and throttled by ALERT_REMINDER_DAYS=7 in DB doc system_config._id=backup_alert_state.",
+  "rca_of_issue": "N/A — this iteration validates a newly built feature; no bugs found. Original 404 on OAuth reconnect was caused by stale GDRIVE_OAUTH_REDIRECT_URI in backend/.env pointing at an old fork domain; fix is confirmed live: GET /api/admin/gdrive/oauth-callback now returns 400 (route present) instead of 404, on the current domain login-stretch-layout.preview.emergentagent.com."
+}

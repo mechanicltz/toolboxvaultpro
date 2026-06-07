@@ -192,6 +192,32 @@ export default function AdminBackupsPage() {
     );
   }, [load]);
 
+  // Send a sample "backup is down" alert email to the admin so deliverability
+  // can be verified now (real alerts fire automatically from the daily check).
+  const sendTestAlertEmail = useCallback(async () => {
+    setBusyAction("test-alert");
+    try {
+      const r = await api.adminBackupHealthSendTest();
+      if (r.ok && r.sent_to.length > 0) {
+        Alert.alert(
+          "Test alert sent ✓",
+          `A sample alert email was sent to:\n${r.sent_to.join("\n")}\n\nCheck your inbox (and spam). Real alerts fire automatically if offsite backup ever goes down.`,
+        );
+      } else {
+        Alert.alert(
+          "Could not send test alert",
+          r.recipients.length === 0
+            ? "No admin email is configured on the server (ADMIN_EMAILS)."
+            : "The email failed to send. Check the server email settings.",
+        );
+      }
+    } catch (e: any) {
+      Alert.alert("Test alert failed", String(e?.message || e));
+    } finally {
+      setBusyAction(null);
+    }
+  }, []);
+
   // Unified one-click backup — creates a full ZIP snapshot (db + envs) and,
   // if Google Drive is connected, immediately mirrors it offsite in one shot.
   const triggerFullBackup = useCallback(async () => {
@@ -558,6 +584,30 @@ export default function AdminBackupsPage() {
               </View>
             </>
           )}
+        </BevelCard>
+
+        {/* Email alerts if offsite backup goes down */}
+        <BevelCard style={styles.banner}>
+          <View style={styles.bannerHeader}>
+            <Ionicons name="mail-unread" size={18} color={theme.colors.accent} />
+            <Text style={styles.bannerTitle}>Backup-down email alerts</Text>
+          </View>
+          <Text style={styles.bannerLine}>
+            A daily server check (03:00 UTC) emails the admin if offsite backups
+            stop working — even if you never open the app. You will get one alert
+            when it breaks, a weekly reminder while it is down, and a confirmation
+            once it is fixed.
+          </Text>
+          <View style={{ marginTop: 12 }}>
+            <PillButton
+              testID="backup-alert-test"
+              label={busyAction === "test-alert" ? "SENDING…" : "SEND TEST ALERT EMAIL"}
+              icon="paper-plane-outline"
+              variant="active"
+              onPress={sendTestAlertEmail}
+              disabled={!!busyAction}
+            />
+          </View>
         </BevelCard>
 
         {/* Schedule banner */}

@@ -23,6 +23,7 @@ import gzip
 import io
 import json
 import logging
+import os
 from datetime import datetime, timezone, timedelta
 from typing import Any, Dict, List, Optional
 
@@ -251,6 +252,204 @@ async def _run_full_snapshot_to_drive(db, *, trigger: str = "scheduled") -> Dict
             "selfcheck": check, "retention": retention}
 
 
+# ---------------------------------------------------------------------------
+# Offsite-backup HEALTH ALERTS (email the admin if backups stop working).
+# ---------------------------------------------------------------------------
+# The daily scheduler verifies whether the offsite (Google Drive) backup is
+# actually working. If it is NOT — Drive disconnected, OAuth token expired, or
+# the upload failed — we EMAIL the admin so a dead backup can never be silently
+# missed (even if the app hasn't been opened in months). Emails are throttled:
+# one on first detection, then a reminder at most every ALERT_REMINDER_DAYS
+# while still broken, plus a one-time "recovered" email when it's fixed.
+ALERT_DOC_ID = "backup_alert_state"
+ALERT_REMINDER_DAYS = 7
+
+
+def _admin_emails() -> List[str]:
+    raw = os.getenv("ADMIN_EMAILS", "") or ""
+    return [e.strip() for e in raw.split(",") if e.strip()]
+
+
+async def _evaluate_backup_health(db, snapshot_result: Dict[str, Any]) -> Dict[str, Any]:
+    """Decide whether offsite backup is currently working and why not."""
+    import gdrive  # local import — avoids circular import at module load
+
+    if snapshot_result.get("uploaded"):
+        return {
+            "healthy": True,
+            "reason": "ok",
+            "detail": "Offsite backup uploaded to Google Drive successfully.",
+        }
+    # Snapshot didn't upload — inspect Drive status for the precise reason.
+    try:
+        status = await gdrive.get_status(db)
+    except Exception as exc:  # pragma: no cover - defensive
+        return {
+            "healthy": False,
+            "reason": "status_error",
+            "detail": f"Could not verify Google Drive status: {exc}",
+        }
+    if status.get("needs_reauth"):
+        return {
+            "healthy": False,
+            "reason": "expired",
+            "detail": (
+                "Google Drive authorization has EXPIRED or was revoked. "
+                "Your encrypted backups are NOT being saved offsite. "
+                "Open the app → More → Database Backups → Reconnect Google Drive."
+            ),
+        }
+    if not status.get("connected"):
+        return {
+            "healthy": False,
+            "reason": "disconnected",
+            "detail": (
+                "Google Drive is NOT connected, so backups are NOT being saved "
+                "offsite. Open the app → More → Database Backups → Connect Google Drive."
+            ),
+        }
+    # Connected but the upload/self-check failed this cycle.
+    return {
+        "healthy": False,
+        "reason": snapshot_result.get("reason") or "upload_failed",
+        "detail": (
+            "Google Drive is connected but the latest offsite backup did not "
+            "complete. Check the app → Database Backups and tap Backup Now."
+        ),
+    }
+
+
+def _alert_email_content(health: Dict[str, Any], when: datetime, *, first: bool):
+    stamp = when.strftime("%b %d, %Y %H:%M UTC")
+    head = "ACTION NEEDED" if first else "REMINDER"
+    subject = f"⚠️ [{head}] Toolbox Vault offsite backup is DOWN"
+    plain = (
+        f"{head}: Your Toolbox Vault offsite backup is not working.\n\n"
+        f"Detected: {stamp}\n"
+        f"Problem: {health['detail']}\n\n"
+        "Until this is fixed, your nightly encrypted backups are NOT being "
+        "copied to Google Drive. Your existing backup files in Drive are still "
+        "safe — the app just can't add new ones.\n\n"
+        "How to fix: open Toolbox Vault → More → Database Backups, and tap "
+        "Reconnect / Connect Google Drive.\n\n"
+        "You'll get a follow-up email if it's still down in "
+        f"{ALERT_REMINDER_DAYS} days, and a confirmation once it's working again.\n"
+    )
+    html = (
+        '<div style="font-family:-apple-system,system-ui,sans-serif;max-width:520px;'
+        'margin:0 auto;color:#222">'
+        f'<div style="background:#B3261E;color:#fff;padding:16px 20px;border-radius:12px 12px 0 0">'
+        f'<div style="font-size:13px;font-weight:800;letter-spacing:1px">{head}</div>'
+        '<div style="font-size:19px;font-weight:800;margin-top:4px">Offsite backup is DOWN</div></div>'
+        '<div style="border:1px solid #eee;border-top:none;border-radius:0 0 12px 12px;padding:20px">'
+        f'<p style="margin:0 0 12px"><b>Detected:</b> {stamp}</p>'
+        f'<p style="margin:0 0 12px;color:#B3261E"><b>Problem:</b> {health["detail"]}</p>'
+        '<p style="margin:0 0 12px">Until this is fixed, nightly encrypted backups are '
+        '<b>not</b> being copied to Google Drive. Your existing Drive backups are still safe.</p>'
+        '<p style="margin:16px 0 6px;font-weight:700">How to fix</p>'
+        '<p style="margin:0 0 12px">Open <b>Toolbox Vault → More → Database Backups</b> and tap '
+        '<b>Reconnect / Connect Google Drive</b>.</p>'
+        f'<p style="margin:14px 0 0;font-size:12px;color:#888">A reminder follows in '
+        f'{ALERT_REMINDER_DAYS} days if still down, plus a confirmation once fixed.</p>'
+        '</div></div>'
+    )
+    return subject, plain, html
+
+
+def _recovery_email_content(when: datetime):
+    stamp = when.strftime("%b %d, %Y %H:%M UTC")
+    subject = "✅ Toolbox Vault offsite backup is working again"
+    plain = (
+        "Good news — your Toolbox Vault offsite backup is working again.\n\n"
+        f"Confirmed: {stamp}\n\n"
+        "Nightly encrypted backups are once again being copied to Google Drive.\n"
+    )
+    html = (
+        '<div style="font-family:-apple-system,system-ui,sans-serif;max-width:520px;'
+        'margin:0 auto;color:#222">'
+        '<div style="background:#1B873F;color:#fff;padding:16px 20px;border-radius:12px 12px 0 0">'
+        '<div style="font-size:19px;font-weight:800">✅ Offsite backup restored</div></div>'
+        '<div style="border:1px solid #eee;border-top:none;border-radius:0 0 12px 12px;padding:20px">'
+        f'<p style="margin:0 0 12px"><b>Confirmed:</b> {stamp}</p>'
+        '<p style="margin:0">Nightly encrypted backups are once again being copied to '
+        'Google Drive. No action needed.</p></div></div>'
+    )
+    return subject, plain, html
+
+
+async def _maybe_send_backup_alert(db, health: Dict[str, Any]) -> Dict[str, Any]:
+    """Throttled email alerting based on the evaluated backup health."""
+    now = datetime.now(timezone.utc)
+    state = await db.system_config.find_one({"_id": ALERT_DOC_ID}) or {}
+    was_healthy = bool(state.get("healthy", True))
+    recipients = _admin_emails()
+    email_sent = False
+
+    if not health["healthy"]:
+        # Decide whether an email is due (first detection OR reminder window).
+        due = True
+        if not was_healthy:
+            last = state.get("last_email_at")
+            try:
+                due = bool(last) and (
+                    now - datetime.fromisoformat(last) >= timedelta(days=ALERT_REMINDER_DAYS)
+                )
+                if not last:
+                    due = True
+            except Exception:
+                due = True
+
+        if due and recipients:
+            from email_sender import send_email  # local import
+            subj, plain, html = _alert_email_content(health, now, first=was_healthy)
+            for to in recipients:
+                ok = await asyncio.to_thread(send_email, to, subj, plain, html)
+                email_sent = email_sent or bool(ok)
+
+        await db.system_config.replace_one(
+            {"_id": ALERT_DOC_ID},
+            {
+                "_id": ALERT_DOC_ID,
+                "healthy": False,
+                "reason": health["reason"],
+                "unhealthy_since": (
+                    state.get("unhealthy_since") if not was_healthy else now.isoformat()
+                ),
+                "last_email_at": now.isoformat() if (due and recipients) else state.get("last_email_at"),
+                "last_checked_at": now.isoformat(),
+            },
+            upsert=True,
+        )
+    else:
+        # Healthy now — send a one-time "recovered" email if we were broken.
+        if not was_healthy and recipients:
+            from email_sender import send_email  # local import
+            subj, plain, html = _recovery_email_content(now)
+            for to in recipients:
+                ok = await asyncio.to_thread(send_email, to, subj, plain, html)
+                email_sent = email_sent or bool(ok)
+        await db.system_config.replace_one(
+            {"_id": ALERT_DOC_ID},
+            {
+                "_id": ALERT_DOC_ID,
+                "healthy": True,
+                "reason": "ok",
+                "last_checked_at": now.isoformat(),
+                "last_email_at": state.get("last_email_at"),
+            },
+            upsert=True,
+        )
+
+    return {"alert_sent": email_sent, "health": health, "recipients": recipients}
+
+
+async def run_backup_health_check(db, snapshot_result: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    """Evaluate offsite-backup health and send a throttled alert if needed.
+    Reused by both the daily scheduler and the on-demand admin endpoint."""
+    health = await _evaluate_backup_health(db, snapshot_result or {"uploaded": False})
+    return await _maybe_send_backup_alert(db, health)
+
+
 async def _scheduler_loop(get_db):
     """Background task — runs forever, fires a backup once per day at 03:00 UTC.
 
@@ -277,10 +476,24 @@ async def _scheduler_loop(get_db):
             except Exception as e:
                 logger.exception("Scheduled in-DB backup failed: %s", e)
             # Push the FULL encrypted snapshot to Drive (best-effort).
+            snapshot_result: Dict[str, Any] = {"uploaded": False, "reason": "unknown"}
             try:
-                await _run_full_snapshot_to_drive(db, trigger="scheduled")
+                snapshot_result = await _run_full_snapshot_to_drive(db, trigger="scheduled")
             except Exception as drive_exc:
                 logger.warning("Scheduled full snapshot to Drive failed: %s", drive_exc)
+                snapshot_result = {"uploaded": False, "reason": "snapshot_error",
+                                   "error": str(drive_exc)}
+            # Daily HEALTH CHECK: email the admin if offsite backup is down so a
+            # dead backup is never silently missed (throttled inside).
+            try:
+                result = await run_backup_health_check(db, snapshot_result)
+                if not result["health"]["healthy"]:
+                    logger.warning(
+                        "Backup health UNHEALTHY (%s) — alert_sent=%s",
+                        result["health"]["reason"], result["alert_sent"],
+                    )
+            except Exception as alert_exc:
+                logger.exception("Backup health alert check failed: %s", alert_exc)
         except asyncio.CancelledError:
             logger.info("Backup scheduler cancelled")
             raise
@@ -622,5 +835,56 @@ def make_backup_router(
         import gdrive
         summary = await gdrive.apply_retention_policy(get_db())
         return summary
+
+    @router.get("/admin/backup-health")
+    async def backup_health(user=Depends(get_current_user)):
+        """Return the current offsite-backup health + last alert state (no email)."""
+        require_admin(user)
+        db = get_db()
+        health = await _evaluate_backup_health(db, {"uploaded": False})
+        state = await db.system_config.find_one({"_id": ALERT_DOC_ID}) or {}
+        state.pop("_id", None)
+        return {
+            "health": health,
+            "alert_state": state,
+            "recipients": _admin_emails(),
+            "reminder_days": ALERT_REMINDER_DAYS,
+        }
+
+    @router.post("/admin/backup-health/run-now")
+    async def backup_health_run_now(test: bool = False, user=Depends(get_current_user)):
+        """Run the health check on-demand.
+
+        - test=false (default): real check. If offsite backup is actually down,
+          this sends the throttled admin alert email immediately.
+        - test=true: sends a SAMPLE alert email to the admin(s) right now so
+          deliverability can be verified even when backups are healthy. Does
+          NOT change the stored alert state.
+        """
+        require_admin(user)
+        db = get_db()
+        if test:
+            from email_sender import send_email  # local import
+            recipients = _admin_emails()
+            sample = {
+                "healthy": False,
+                "reason": "test",
+                "detail": (
+                    "This is a TEST of the backup-down email alert. If you receive "
+                    "this, alerting is working — you'll get a real email like this "
+                    "only if your offsite backup ever stops working."
+                ),
+            }
+            subj, plain, html = _alert_email_content(sample, datetime.now(timezone.utc), first=True)
+            subj = "[TEST] " + subj
+            sent_to = []
+            for to in recipients:
+                ok = await asyncio.to_thread(send_email, to, subj, plain, html)
+                if ok:
+                    sent_to.append(to)
+            return {"test": True, "recipients": recipients, "sent_to": sent_to,
+                    "ok": len(sent_to) > 0}
+        result = await run_backup_health_check(db, {"uploaded": False})
+        return {"test": False, **result}
 
     return router
