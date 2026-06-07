@@ -95,11 +95,13 @@ export default function FeedbackScreen() {
     }
   };
 
-  // Prefill from logged-in user
+  // Prefill from logged-in user. The email is LOCKED to the account login
+  // email (centralized), so we always sync it — even if the account email
+  // was changed via Change Login Email.
   useEffect(() => {
     if (user) {
       if (user.name && !name) setName(user.name);
-      if (user.email && !email) setEmail(user.email);
+      if (user.email) setEmail(user.email);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
@@ -222,19 +224,20 @@ export default function FeedbackScreen() {
             testID="feedback-name"
           />
 
-          {/* Email */}
+          {/* Email — LOCKED to the account login email (centralized). The
+              user cannot edit it here; it always mirrors their account email
+              so replies go to the right place. To change it, they use
+              Account → Change Login Email. */}
           <Text style={styles.label}>EMAIL</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="you@example.com"
-            placeholderTextColor={theme.colors.textMuted}
-            value={email}
-            onChangeText={setEmail}
-            keyboardType="email-address"
-            autoCapitalize="none"
-            autoCorrect={false}
-            testID="feedback-email"
-          />
+          <View style={styles.lockedField}>
+            <Text style={styles.lockedValue} numberOfLines={1} testID="feedback-email">
+              {user?.email || email || "—"}
+            </Text>
+            <Ionicons name="lock-closed" size={14} color={theme.colors.textMuted} />
+          </View>
+          <Text style={styles.lockedHint}>
+            Linked to your account login email.
+          </Text>
 
           {/* Platform is auto-detected from the device and sent silently with
               the report (support sees which device it came from). We no longer
@@ -433,6 +436,30 @@ const styles = themedStyles((c) => ({
     ...(theme.elevation.input as object),
   },
   textarea: { minHeight: 120, paddingTop: 10 },
+  lockedField: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 8,
+    backgroundColor: c.surfaceAlt || c.bgSecondary,
+    borderWidth: 1,
+    borderColor: c.border,
+    borderRadius: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+  },
+  lockedValue: {
+    color: c.textSecondary,
+    fontSize: 11,
+    fontWeight: "700",
+    flex: 1,
+  },
+  lockedHint: {
+    color: c.textMuted,
+    fontSize: 9,
+    marginTop: 5,
+    fontStyle: "italic",
+  },
   segmented: {
     flexDirection: "row",
     gap: 8,

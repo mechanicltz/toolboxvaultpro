@@ -744,6 +744,17 @@ export const api = {
       method: "POST",
       body: JSON.stringify(data),
     }),
+  // Change login email — step 1 (re-auth + send code to new email), step 2 (confirm code).
+  requestEmailChange: (data: { current_password: string; new_email: string }) =>
+    request<{ ok: boolean; message: string }>(`/auth/change-email/request`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+  confirmEmailChange: (data: { code: string }) =>
+    request<{ token: string; user: any }>(`/auth/change-email/confirm`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
   submitFeedback: (data: {
     name: string;
     email: string;

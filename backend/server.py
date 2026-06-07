@@ -27,7 +27,7 @@ from auth import (
     create_token,
     decode_token,
 )
-from email_sender import send_password_reset_code, send_feedback_email
+from email_sender import send_password_reset_code, send_feedback_email, send_email_change_code
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -4170,6 +4170,143 @@ async def reset_password(payload: ResetPasswordRequest, request: Request):
     user = User(**user_doc)
     token = create_token(user.id)
     return AuthResponse(token=token, user=to_public(user))
+
+
+# ---------------------------------------------------------------------------
+# Change Login Email — re-auth with current password, then 6-digit code sent
+# to the NEW address. Mirrors the forgot/reset-password flow exactly.
+# ---------------------------------------------------------------------------
+EMAIL_CHANGE_TTL_MINUTES = 15
+EMAIL_CHANGE_MAX_ATTEMPTS = 5
+
+
+class ChangeEmailRequest(BaseModel):
+    current_password: str
+    new_email: str
+
+
+class ConfirmEmailChangeRequest(BaseModel):
+    code: str
+
+
+@auth_router.post("/change-email/request")
+async def request_change_email(
+    payload: ChangeEmailRequest,
+    request: Request,
+    user: User = Depends(get_current_user),
+):
+    """Step 1: verify current password, then email a 6-digit code to new_email."""
+    _enforce_rate_limit(
+        "auth.change_email_req",
+        _client_ip(request),
+        max_count=5,
+        window_seconds=3600,
+        message="Too many email-change requests. Please try again later.",
+    )
+    udoc = await real_db.users.find_one({"id": user.id}, {"_id": 0})
+    if not udoc or not verify_password(payload.current_password, udoc.get("password_hash", "")):
+        raise HTTPException(401, "Current password is incorrect.")
+
+    new_email = (payload.new_email or "").strip().lower()
+    if not new_email or "@" not in new_email or "." not in new_email:
+        raise HTTPException(400, "Please enter a valid email address.")
+    if new_email == (udoc.get("email") or "").strip().lower():
+        raise HTTPException(400, "That is already your login email.")
+
+    existing = await real_db.users.find_one({"email": new_email}, {"_id": 0, "id": 1})
+    if existing:
+        # Generic message — don't reveal that the email belongs to another account.
+        raise HTTPException(400, "This email address is not available.")
+
+    code = _generate_reset_code()
+    code_hash = hash_password(code)
+    expires_at = (
+        datetime.now(timezone.utc) + timedelta(minutes=EMAIL_CHANGE_TTL_MINUTES)
+    ).isoformat()
+
+    await real_db.email_changes.update_one(
+        {"user_id": user.id},
+        {
+            "$set": {
+                "user_id": user.id,
+                "new_email": new_email,
+                "code_hash": code_hash,
+                "expires_at": expires_at,
+                "attempts": 0,
+                "created_at": now_iso(),
+            }
+        },
+        upsert=True,
+    )
+
+    try:
+        send_email_change_code(new_email, code, display_name=udoc.get("name") or "")
+    except Exception as e:
+        logging.error("Failed to send change-email code to %s: %s", new_email, e)
+
+    return {"ok": True, "message": "A 6-digit code has been sent to your new email."}
+
+
+@auth_router.post("/change-email/confirm", response_model=AuthResponse)
+async def confirm_change_email(
+    payload: ConfirmEmailChangeRequest,
+    request: Request,
+    user: User = Depends(get_current_user),
+):
+    """Step 2: verify the 6-digit code and apply the email change. Returns a
+    fresh auth token reflecting the new email."""
+    _enforce_rate_limit(
+        "auth.change_email_confirm",
+        _client_ip(request),
+        max_count=10,
+        window_seconds=60,
+        message="Too many attempts. Please wait a minute and try again.",
+    )
+    code = (payload.code or "").strip()
+    if not code:
+        raise HTTPException(400, "Please enter the 6-digit code.")
+
+    rec = await real_db.email_changes.find_one({"user_id": user.id}, {"_id": 0})
+    if not rec:
+        raise HTTPException(400, "No pending email change. Please start again.")
+
+    try:
+        expires_at = datetime.fromisoformat(rec["expires_at"])
+        if expires_at.tzinfo is None:
+            expires_at = expires_at.replace(tzinfo=timezone.utc)
+    except Exception:
+        expires_at = None
+    if not expires_at or datetime.now(timezone.utc) > expires_at:
+        await real_db.email_changes.delete_one({"user_id": user.id})
+        raise HTTPException(400, "Code expired. Please request a new one.")
+
+    if (rec.get("attempts", 0) or 0) >= EMAIL_CHANGE_MAX_ATTEMPTS:
+        await real_db.email_changes.delete_one({"user_id": user.id})
+        raise HTTPException(429, "Too many incorrect attempts. Please request a new code.")
+
+    if not verify_password(code, rec.get("code_hash", "")):
+        await real_db.email_changes.update_one(
+            {"user_id": user.id}, {"$inc": {"attempts": 1}}
+        )
+        raise HTTPException(400, "Invalid code.")
+
+    new_email = (rec.get("new_email") or "").strip().lower()
+    # Race-guard: make sure the email is still free.
+    existing = await real_db.users.find_one({"email": new_email}, {"_id": 0, "id": 1})
+    if existing and existing.get("id") != user.id:
+        await real_db.email_changes.delete_one({"user_id": user.id})
+        raise HTTPException(400, "This email address is not available.")
+
+    await real_db.users.update_one(
+        {"id": user.id},
+        {"$set": {"email": new_email, "updated_at": now_iso()}},
+    )
+    await real_db.email_changes.delete_one({"user_id": user.id})
+
+    user_doc = await real_db.users.find_one({"id": user.id}, {"_id": 0})
+    u = User(**user_doc)
+    token = create_token(u.id)
+    return AuthResponse(token=token, user=to_public(u))
 
 
 # ---------- DELETE ACCOUNT (irreversible) ----------

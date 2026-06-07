@@ -730,6 +730,7 @@ export default function DealerDetail() {
                 value={editForm[f.k] || ""}
                 onChangeText={(v) => setEditForm({ ...editForm, [f.k]: v })}
                 multiline={f.multiline}
+                keyboardType={f.k === "phone" ? "phone-pad" : "default"}
               />
             ))}
 

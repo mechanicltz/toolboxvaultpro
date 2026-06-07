@@ -578,7 +578,7 @@ export default function InventoryScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
-      <IndustrialBanner title="TOOLBOX" subtitle="Inventory Tracker" />
+      <IndustrialBanner title="INVENTORY" />
 
       {prefs.warranty_alerts && warningCount > 0 && (
         <TouchableOpacity
@@ -620,6 +620,18 @@ export default function InventoryScreen() {
           <Ionicons name="checkmark-done" size={20} color={theme.colors.accent} />
         </TouchableOpacity>
       </View>
+
+      {/* #29 — ADD ITEM: full-width button directly under the search bar and
+          above the Filter accordion (replaces the old floating top-right FAB). */}
+      <TouchableOpacity
+        testID="add-item-btn"
+        style={styles.addItemBtn}
+        onPress={() => router.push("/tool/edit")}
+        activeOpacity={0.85}
+      >
+        <Ionicons name="add-circle" size={18} color="#000" />
+        <Text style={styles.addItemBtnText}>ADD ITEM</Text>
+      </TouchableOpacity>
 
       {/* #24 — All filters live inside a "Filter" ShadowBox accordion, closed by default. */}
       <ShadowBox style={styles.filterAccordion}>
@@ -778,7 +790,7 @@ export default function InventoryScreen() {
               numberOfLines={1}
             >
               {sortBy === "date_desc"
-                ? "NEWEST FIRST"
+                ? "Date"
                 : sortBy === "date_asc"
                   ? "OLDEST FIRST"
                   : sortBy === "alpha"
@@ -1833,6 +1845,24 @@ const styles = themedStyles((c) => ({
     paddingTop: 6,
     paddingBottom: 8,
     rowGap: 8,
+  },
+  addItemBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    marginHorizontal: 16,
+    marginBottom: 8,
+    paddingVertical: 13,
+    borderRadius: 8,
+    backgroundColor: theme.colors.accent,
+    ...(theme.elevation?.md as object),
+  },
+  addItemBtnText: {
+    color: "#000",
+    fontSize: 12,
+    fontWeight: "900",
+    letterSpacing: 1.5,
   },
   filterAccordion: {
     marginHorizontal: 16,

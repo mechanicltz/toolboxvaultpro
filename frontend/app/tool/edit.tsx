@@ -427,7 +427,22 @@ export default function ToolEdit() {
   };
 
   const save = useCallback(async () => {
-    if (!name.trim()) { Alert.alert("Required", "Please enter a tool name."); return; }
+    if (!name.trim()) {
+      setOpenKey("name");
+      Alert.alert("Name required", "Please enter a name for this item.");
+      return;
+    }
+    // #28 — Price and Purchase Date are required; everything else is optional.
+    if (!cost.trim() || isNaN(parseFloat(cost))) {
+      setOpenKey("pricing");
+      Alert.alert("Price required", "Please enter a price for this item.");
+      return;
+    }
+    if (!purchaseDate) {
+      setOpenKey("purchase");
+      Alert.alert("Purchase date required", "Please enter the purchase date.");
+      return;
+    }
     setSaving(true);
     const cleanedSerials = setSerials.map((s) => s.trim()).filter((s) => s.length > 0);
     const cleanedModelNums = modelNumbers.map((s) => s.trim()).filter((s) => s.length > 0);
@@ -558,6 +573,7 @@ export default function ToolEdit() {
             label="PRICING & QTY"
             icon="cash"
             summary={((cost ? `$${cost}` : "—") + (msrpPrice ? ` · MSRP $${msrpPrice}` : "") + (quantity && quantity !== "1" ? ` · Qty ${quantity}` : "")) as any}
+            required
             open={openKey === "pricing"}
             onToggle={() => toggle("pricing")}
             testID="acc-pricing"
@@ -614,7 +630,6 @@ export default function ToolEdit() {
             label="MODEL NUMBER(S)"
             icon="barcode"
             summary={(modelNumbers.filter(Boolean).join(", ") || "Tap to add model #") as any}
-            required
             open={openKey === "modelNumbers"}
             onToggle={() => toggle("modelNumbers")}
             testID="acc-modelNumbers"
@@ -1247,6 +1262,7 @@ export default function ToolEdit() {
             label="PURCHASE DATE"
             icon="calendar"
             summary={(purchaseDate ? formatDateUS(purchaseDate) : "—") as any}
+            required
             open={openKey === "purchase"}
             onToggle={() => toggle("purchase")}
             lastRow

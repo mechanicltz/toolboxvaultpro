@@ -146,6 +146,9 @@ export const styles = themedStyles((c) => ({
     fontWeight: "900",
     fontSize: 12,
     letterSpacing: 1,
+    // Raised slightly so the label sits centered on the skinned button plate
+    // (the plate art has a thicker bottom bevel that pushed text low).
+    marginBottom: 4,
   },
 
   /* Highlighted next-route banner */

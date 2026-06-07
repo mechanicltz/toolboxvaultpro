@@ -138,6 +138,40 @@ def send_password_reset_code(to_address: str, code: str, display_name: str = "")
     return send_email(to_address, subject, body_plain, body_html)
 
 
+def send_email_change_code(to_address: str, code: str, display_name: str = "") -> bool:
+    """Send a 6-digit code to a user's NEW email to confirm a login-email change."""
+    greeting = f"Hi {display_name.strip()}," if display_name.strip() else "Hi,"
+    subject = "Confirm your new Toolbox Vault login email"
+    body_plain = (
+        f"{greeting}\n\n"
+        f"You requested to change the email you use to sign in to Toolbox Vault "
+        f"to this address. Your confirmation code is:\n\n"
+        f"    {code}\n\n"
+        f"Enter this code in the app to finish updating your login email. "
+        f"The code expires in 15 minutes.\n\n"
+        f"If you didn't request this change, you can safely ignore this email — "
+        f"your login email has not been changed.\n\n"
+        f"— Toolbox Vault"
+    )
+    body_html = f"""
+<!DOCTYPE html>
+<html>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; background:#f4f4f4; margin:0; padding:20px;">
+  <div style="max-width:480px; margin:0 auto; background:#ffffff; border-radius:8px; padding:32px; border:1px solid #e5e5e5;">
+    <h1 style="color:#0A0A0A; font-size:20px; margin:0 0 12px 0;">Toolbox Vault</h1>
+    <p style="color:#333; font-size:15px; line-height:1.5; margin:0 0 16px 0;">{greeting}</p>
+    <p style="color:#333; font-size:15px; line-height:1.5; margin:0 0 16px 0;">Confirm your new login email with this code:</p>
+    <div style="background:#0A0A0A; color:#F59E0B; font-size:32px; font-weight:900; letter-spacing:8px; text-align:center; padding:18px; border-radius:6px; margin:16px 0; font-family:ui-monospace, SFMono-Regular, monospace;">{code}</div>
+    <p style="color:#555; font-size:14px; line-height:1.5; margin:0 0 16px 0;">Enter this code in the app to finish updating your login email. <strong>The code expires in 15 minutes.</strong></p>
+    <p style="color:#888; font-size:13px; line-height:1.5; margin:24px 0 0 0; border-top:1px solid #eee; padding-top:16px;">If you didn't request this change, you can safely ignore this email — your login email has not been changed.</p>
+    <p style="color:#888; font-size:12px; margin:12px 0 0 0;">— Toolbox Vault</p>
+  </div>
+</body>
+</html>
+""".strip()
+    return send_email(to_address, subject, body_plain, body_html)
+
+
 def send_feedback_email(
     to_address: str,
     from_name: str,

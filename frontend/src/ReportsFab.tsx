@@ -24,8 +24,11 @@ export function ReportsFab() {
   // Show on Inventory only — Home and More no longer surface a global
   // "ADD ITEM" shortcut (user requested removal so the new industrial
   // banner reads cleanly without overlap).
+  // ADD ITEM now lives as a full-width button directly under the Inventory
+  // search bar (per user request), so the floating top-right shortcut is
+  // retired everywhere to avoid two competing "Add Item" controls.
   const p = (path || "").replace("/(tabs)", "") || "/";
-  const TAB_PATHS = new Set(["/inventory"]);
+  const TAB_PATHS = new Set<string>([]);
   if (!TAB_PATHS.has(p)) return null;
 
   return (

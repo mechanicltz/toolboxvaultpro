@@ -18,6 +18,7 @@ import { useRouter, useFocusEffect } from "expo-router";
 import { useAppResume } from "../src/appLifecycle";
 import { theme } from "../src/theme";
 import { api } from "../src/api";
+import { useAuth } from "../src/AuthContext";
 import { formatPhone } from "../src/contactLinks";
 
 import { themedStyles } from "../src/themeContext";
@@ -58,6 +59,7 @@ const EMPTY: Profile = {
 
 export default function PersonalInfoScreen() {
   const router = useRouter();
+  const { user } = useAuth();
   const [form, setForm] = useState<Profile>(EMPTY);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -100,7 +102,9 @@ export default function PersonalInfoScreen() {
     }
     setSaving(true);
     try {
-      await api.updatePersonalProfile(form);
+      // #32 — Email is centralized: always store the account login email so
+      // Personal Info, Insurance Reports and Bug Reports stay in sync.
+      await api.updatePersonalProfile({ ...form, email: user?.email || form.email });
       setEditing(false);
     } catch (e: any) {
       Alert.alert("Error", e.message || "Could not save profile.");
@@ -172,8 +176,21 @@ export default function PersonalInfoScreen() {
                   label="Phone"
                   value={form.phone ? formatPhone(form.phone) : ""}
                 />
-                <InfoRow label="Email" value={form.email} last />
+                <InfoRow label="Email" value={user?.email || form.email} last />
               </ShadowBox>
+
+              {/* #32/#33 — Email is the account login (centralized). Users
+                  change it here via the secure verification flow. */}
+              <TouchableOpacity
+                testID="pi-change-email"
+                style={styles.changeEmailRow}
+                onPress={() => router.push("/change-email")}
+                activeOpacity={0.85}
+              >
+                <Ionicons name="mail-outline" size={16} color={theme.colors.accent} />
+                <Text style={styles.changeEmailText}>Change Login Email</Text>
+                <Ionicons name="chevron-forward" size={16} color={theme.colors.textMuted} />
+              </TouchableOpacity>
 
               <Text style={styles.viewSection}>ADDRESS</Text>
               <ShadowBox style={styles.viewCard}>
@@ -298,15 +315,24 @@ export default function PersonalInfoScreen() {
             placeholder="555-555-5555"
           />
 
-          <Field
-            label="Email"
-            value={form.email}
-            onChange={(v) => update("email", v)}
-            testID="pi-email"
-            keyboardType="email-address"
-            autoCapitalize="none"
-            placeholder="you@example.com"
-          />
+          {/* #32 — Email is locked to the account login. It can only be
+              changed through the secure Change Login Email flow. */}
+          <Text style={styles.lockedLabel}>EMAIL (LOGIN)</Text>
+          <View style={styles.lockedRow}>
+            <Text style={styles.lockedEmail} numberOfLines={1}>
+              {user?.email || form.email || "—"}
+            </Text>
+            <Ionicons name="lock-closed" size={14} color={theme.colors.textMuted} />
+          </View>
+          <TouchableOpacity
+            testID="pi-edit-change-email"
+            onPress={() => router.push("/change-email")}
+            style={styles.changeEmailInline}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.changeEmailInlineText}>Change Login Email</Text>
+            <Ionicons name="chevron-forward" size={14} color={theme.colors.accent} />
+          </TouchableOpacity>
 
           <View style={styles.divider} />
           <Text style={styles.sectionTitle}>INSURANCE (OPTIONAL)</Text>
@@ -574,6 +600,63 @@ const styles = themedStyles((c) => ({
     backgroundColor: c.border,
     marginTop: 24,
     marginBottom: 6,
+  },
+  changeEmailRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    backgroundColor: c.bgSecondary,
+    borderWidth: 1,
+    borderColor: c.border,
+    borderRadius: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+    marginTop: 8,
+  },
+  changeEmailText: {
+    flex: 1,
+    color: c.textPrimary,
+    fontSize: 13,
+    fontWeight: "800",
+  },
+  lockedLabel: {
+    color: c.accent,
+    fontSize: 8,
+    fontWeight: "900",
+    letterSpacing: 1.5,
+    marginTop: 14,
+    marginBottom: 6,
+  },
+  lockedRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 8,
+    backgroundColor: c.bgSecondary,
+    borderWidth: 1,
+    borderColor: c.border,
+    borderRadius: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+  },
+  lockedEmail: {
+    flex: 1,
+    color: c.textSecondary,
+    fontSize: 13,
+    fontWeight: "700",
+  },
+  changeEmailInline: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    alignSelf: "flex-start",
+    paddingVertical: 8,
+    marginTop: 2,
+  },
+  changeEmailInlineText: {
+    color: c.accent,
+    fontSize: 12,
+    fontWeight: "800",
   },
   sectionTitle: {
     color: c.accent,
