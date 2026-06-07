@@ -1,0 +1,41 @@
+{
+  "summary": "Tested punch-list #17 (Dealer Logos). Backend pytest: 11/11 PASS after fixing a critical bug: DealerUpdate Pydantic model was missing the `logo` field, so PUT /api/dealers/{id} silently dropped any logo updates from the body. Added `logo: Optional[str] = None` to DealerUpdate at server.py:495 — single-line, mechanical fix in line with the existing Dealer/DealerCreate models that already declare `logo`. After the fix: PUT with stock:snap-on / data-URI PNG / 'default' all persist correctly, GET reflects the new value, and a name-only PUT preserves a previously-set logo. Default-named dealers (Snap-on Tools, Matco Tools, Mac Tools, Cornwell Tools, Harbor Freight) all carry the expected stock:* values via the startup migration. POST without logo persists as empty string. Auth is correctly required on GET/POST/PUT (401). Frontend code review confirms DealerLogo component is wired into: (a) dealers tab row at size 48 (dealers.tsx:159), (b) dealer detail hero at size 72 (dealer/[id].tsx:297), (c) Dashboard owed-to-dealers row at size 26 (DealerBalanceRow.tsx:23), (d) edit modal has testIDs `logo-upload-btn`, `logo-default-btn`, and `logo-stock-{snap-on|matco|mac-tools|cornwell|harbor-freight|amazon}` with current-logo preview; save sends `logo` in PUT (dealer/[id].tsx:271). Frontend UI was NOT runtime-verifiable in this Playwright session — login submit fires but session token doesn't persist across the next /dealers navigation (same auth-session drop documented in iteration_15.json context_for_next_testing_agent — confirmed not a product bug, only a web-preview playwright limitation). Stock-logo PNGs all exist at /app/frontend/assets/dealer-logos/.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_dealer_logos.py",
+    "/app/test_reports/pytest/iter16_results.xml"
+  ],
+  "action_items": [
+    "Self-test recommended on the actual iOS/Expo Go build (or in a fresh browser window the user controls) to confirm: (1) dealers list shows brand logo chips on the 5 defaults, (2) dealer detail hero shows the logo above the name, (3) edit modal renders DEALER LOGO section with UPLOAD/DEFAULT buttons and 6 stock chips (incl. Amazon), (4) selecting a stock chip + SAVE updates hero + list, (5) ADD DEALER (no logo step) creates a dealer that shows the app-icon fallback, (6) Dashboard 'owed to dealers' rows show small logos. All backend contracts these flows depend on are now verified."
+  ],
+  "critical_code_review_comments": [
+    "server.py DealerUpdate model was missing `logo` — fixed by inserting `logo: Optional[str] = None` (line 495). This was the only bug found for #17.",
+    "server.py update_dealer endpoint uses `updates = {k: v for k, v in payload.dict().items() if v is not None}` which means clients cannot CLEAR the logo by sending null — they must send the empty string '' or the literal 'default'. Frontend writes 'default' for the app-icon fallback (dealer/[id].tsx:679), which works fine. Just calling out the contract.",
+    "Startup `migrate_dealer_logos` (server.py:4928) is idempotent and runs on every boot — safe but does a full scan of dealers with missing/empty logo. With many users this is O(N) per boot; consider adding an index on `logo` or a one-time flag. Not blocking.",
+    "/app/frontend/app/dealer/[id].tsx remains >1600 lines (also flagged in iter15)."
+  ],
+  "updated_files": [
+    "/app/backend/server.py (added `logo: Optional[str] = None` to DealerUpdate)",
+    "/app/backend/tests/test_dealer_logos.py (new)",
+    "/app/test_reports/iteration_16.json (new)",
+    "/app/test_reports/pytest/iter16_results.xml (new)"
+  ],
+  "success_rate": {
+    "backend": "100% (11/11 pytest)",
+    "frontend": "Code-review verified all six required surfaces (list row, detail hero, edit modal preview/upload/default/stock chips, dashboard owed-to-dealers row, new-dealer fallback to app icon). Runtime UI flow not playable via this preview's Playwright session due to the same auth-session drop documented in iter15."
+  },
+  "seed_data_creation": "Per-run ephemeral only: TEST_LOGO_*, TEST_NOLOGO_*, TEST_PUT_* dealers created and deleted within each test class via fixture teardown. No persistent test data left behind.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "test_dealer_logos.py covers all #17 backend contracts and is reusable. The Playwright web session at the preview URL drops auth on first cross-screen navigation after login submit — confirmed in iter15 and reproduced in iter16. For frontend smoke that needs an authenticated screen, prefer driving the API directly to seed/verify and call out UI-only checks for the main agent to self-test, OR try a fresh page.context().add_cookies based approach with a pre-minted token. The bug fixed in this iteration (DealerUpdate.logo missing) is exactly the kind of silent Pydantic-strip omission worth checking on any other *Update model that gains new fields later.",
+  "rca_of_issue": "ROOT CAUSE: When the `logo` field was added to the Dealer + DealerCreate models for #17, it was not also added to the DealerUpdate model. FastAPI's Pydantic body-parsing silently drops unknown fields, so a frontend PUT containing {logo: 'stock:matco'} round-trips back through update_dealer() as updates={} for that key. The endpoint's $set never includes `logo`, so the stored value never changes. REPRODUCTION (pre-fix): POST /api/dealers {name:'X'} -> id; PUT /api/dealers/{id} {logo:'stock:snap-on'} -> 200, body.logo == '' (empty); GET confirms persisted value is still ''. FIX: Added `logo: Optional[str] = None` to DealerUpdate (server.py:495). MITIGATION: 4 previously-failing pytest cases now pass; no migration needed for any users — anyone who tried to edit a logo before this fix simply saw their selection rejected (no data corruption)."
+}

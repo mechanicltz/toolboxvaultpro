@@ -60,7 +60,7 @@ import { Anton_400Regular } from "@expo-google-fonts/anton";
 
 // Manual verification beacon — bump this on every change so we can confirm
 // the device is actually showing the latest bundle. Rendered top-right of Home.
-const HOME_BUILD = "BUILD 180";
+const HOME_BUILD = "BUILD 181";
 
 export default function HomeScreen() {
   const router = useRouter();

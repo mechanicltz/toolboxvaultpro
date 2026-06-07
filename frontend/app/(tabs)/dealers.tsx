@@ -34,6 +34,7 @@ import { BevelCard } from "../../src/components/BevelCard";
 import { ShadowBox } from "../../src/components/ShadowBox";
 import { IndustrialBanner } from "../../src/components/IndustrialBanner";
 import { PillButton } from "../../src/components/PillButton";
+import { DealerLogo } from "../../src/components/DealerLogo";
 
 export default function DealersScreen() {
   const router = useRouter();
@@ -155,6 +156,7 @@ export default function DealersScreen() {
               }}
               activeOpacity={isLocked ? 1 : 0.7}
             >
+              <DealerLogo logo={item.logo} size={48} />
               <View style={{ flex: 1 }}>
                 <Text style={styles.rowTitle}>{item.name}</Text>
                 <Text style={styles.rowSub}>

@@ -431,6 +431,9 @@ class Dealer(BaseModel):
     website: Optional[str] = ""
     address: Optional[str] = ""
     notes: Optional[str] = ""
+    # Dealer logo. Either a stock key ("stock:snap-on"), a data-URI / base64
+    # custom upload, or "" / "default" to fall back to the app icon.
+    logo: Optional[str] = ""
     # Additional company contact channels (free-form: phone, email, URL, or note)
     warranty_contact: Optional[str] = ""
     tech_support_contact: Optional[str] = ""
@@ -474,6 +477,7 @@ class DealerCreate(BaseModel):
     website: Optional[str] = ""
     address: Optional[str] = ""
     notes: Optional[str] = ""
+    logo: Optional[str] = ""
     warranty_contact: Optional[str] = ""
     tech_support_contact: Optional[str] = ""
     customer_support_contact: Optional[str] = ""
@@ -488,6 +492,7 @@ class DealerUpdate(BaseModel):
     website: Optional[str] = None
     address: Optional[str] = None
     notes: Optional[str] = None
+    logo: Optional[str] = None
     warranty_contact: Optional[str] = None
     tech_support_contact: Optional[str] = None
     customer_support_contact: Optional[str] = None
@@ -3630,9 +3635,26 @@ async def _claim_orphan_data(user_id: str):
 # seed against existing accounts (e.g. for the original owner) without
 # creating doubles.
 
+# Maps a (case-insensitive) dealer name to its bundled stock-logo key. Used to
+# auto-assign logos to the default dealers (seed + one-time migration for
+# existing accounts). Frontend resolves "stock:<key>" to a bundled image.
+DEALER_STOCK_LOGO_BY_NAME: Dict[str, str] = {
+    "snap-on tools": "stock:snap-on",
+    "snap-on": "stock:snap-on",
+    "matco tools": "stock:matco",
+    "matco": "stock:matco",
+    "mac tools": "stock:mac-tools",
+    "cornwell tools": "stock:cornwell",
+    "cornwell": "stock:cornwell",
+    "harbor freight": "stock:harbor-freight",
+    "harbor freight tools": "stock:harbor-freight",
+    "amazon": "stock:amazon",
+}
+
 DEFAULT_DEALERS_SEED: List[Dict[str, Any]] = [
     {
         "name": "Snap-on Tools",
+        "logo": "stock:snap-on",
         "phone": "1-877-762-7664",
         "website": "www.snapon.com",
         "address": "Snap-on Incorporated, 2801 80th Street, Kenosha, WI 53143",
@@ -3643,6 +3665,7 @@ DEFAULT_DEALERS_SEED: List[Dict[str, Any]] = [
     },
     {
         "name": "Matco Tools",
+        "logo": "stock:matco",
         "phone": "866-289-8665",
         "website": "www.matcotools.com",
         "address": "Matco Tools Corporation, 4403 Allen Rd, Stow, OH 44224",
@@ -3653,6 +3676,7 @@ DEFAULT_DEALERS_SEED: List[Dict[str, Any]] = [
     },
     {
         "name": "Mac Tools",
+        "logo": "stock:mac-tools",
         "phone": "1-800-622-8665",
         "website": "www.mactools.com",
         "address": "Mac Tools, 5195 Blazer Parkway, Dublin, OH 43017",
@@ -3663,6 +3687,7 @@ DEFAULT_DEALERS_SEED: List[Dict[str, Any]] = [
     },
     {
         "name": "Cornwell Tools",
+        "logo": "stock:cornwell",
         "phone": "1-800-321-8356",
         "website": "www.cornwelltools.com",
         "address": "Cornwell Quality Tools, 667 Seville Road, Wadsworth, OH 44281",
@@ -3673,6 +3698,7 @@ DEFAULT_DEALERS_SEED: List[Dict[str, Any]] = [
     },
     {
         "name": "Harbor Freight",
+        "logo": "stock:harbor-freight",
         "phone": "1-800-444-3353",
         "website": "www.harborfreight.com",
         "address": "Harbor Freight Tools, 26677 Agoura Road, Calabasas, CA 91302",
@@ -3721,6 +3747,7 @@ async def seed_default_content_for_user(user_id: str) -> Dict[str, int]:
         record = dealer.dict()
         record.update({
             "owner_id": user_id,
+            "logo": d.get("logo", ""),
             "phone": d.get("phone", ""),
             "website": d.get("website", ""),
             "address": d.get("address", ""),
@@ -4896,3 +4923,29 @@ async def ensure_mongo_indexes():
     else:
         logger.info("Mongo index init: %d created/verified, %d skipped (already existed)",
                     created, skipped)
+
+
+
+@app.on_event("startup")
+async def migrate_dealer_logos():
+    """One-time, idempotent: assign bundled stock logos to existing default
+    dealers that don't have a logo yet. Covers accounts that were seeded
+    before the dealer-logo feature existed (e.g. the current admin account).
+    """
+    try:
+        updated = 0
+        cursor = real_db.dealers.find(
+            {"$or": [{"logo": {"$exists": False}}, {"logo": ""}, {"logo": None}]},
+            {"_id": 0, "id": 1, "name": 1},
+        )
+        async for d in cursor:
+            key = DEALER_STOCK_LOGO_BY_NAME.get(str(d.get("name", "")).strip().lower())
+            if key:
+                await real_db.dealers.update_one(
+                    {"id": d["id"]}, {"$set": {"logo": key}}
+                )
+                updated += 1
+        if updated:
+            logger.info("Dealer logo migration: assigned %d stock logos", updated)
+    except Exception as e:  # pragma: no cover - defensive, never crash boot
+        logger.warning("Dealer logo migration failed: %s", e)
