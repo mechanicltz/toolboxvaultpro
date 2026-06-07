@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import {
   View,
   Text,
@@ -15,7 +15,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter, useFocusEffect } from "expo-router";
+import { useRouter, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { useAppResume } from "../../src/appLifecycle";
 import { theme } from "../../src/theme";
 import { api } from "../../src/api";
@@ -157,6 +157,17 @@ export default function ClaimsScreen() {
     setNewClaimOpen(false);
     router.push(`/tool/${t.id}?startClaim=1`);
   };
+
+  // #23 — Dashboard "New Claim" quick button deep-links here with ?newClaim=1;
+  // open the picker once, then clear the param so it doesn't re-trigger.
+  const navParams = useLocalSearchParams<{ newClaim?: string }>();
+  useEffect(() => {
+    if (navParams.newClaim === "1") {
+      openNewClaim();
+      router.setParams({ newClaim: undefined } as any);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [navParams.newClaim]);
   const claimQ = claimSearch.trim().toLowerCase();
   const claimResults = claimQ
     ? allTools

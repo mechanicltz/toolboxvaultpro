@@ -1,0 +1,42 @@
+{
+  "summary": "Tested the iteration batch (#19 banner, #22 dealers-owing filter, #23 dashboard quick actions, #24 inventory Filter accordion, #25 PaymentModal segmented colors, #27 skip-payment endpoint). Backend: created /app/backend/tests/test_skip_payment.py with 5 tests — ALL PASS (skip personal monthly advances ~30d w/ unchanged balance & zero new tx; skip credit weekly advances 7d; invalid account => 400; missing schedule => 400; confirm-payment regression decreases balance & advances next_due_date). Frontend (Expo web preview @ 390x844): login via auth-email/auth-password/auth-submit -> Dashboard renders cleanly with no red-screen errors (just deprecated-prop warnings). #19 nameplate PNG (tbv_master_nameplate.png) loads successfully (naturalWidth=1100, no broken images on dashboard). #22 verified end-to-end: GET /api/dealers returns 7 dealers (3 with sum(personal+credit)>0); Dashboard widget renders EXACTLY those 3 dealer testIDs (home-dealer-<3 ids>) and zero-balance dealers (Mac Tools, Matco Tools, QA Logo Dealer, Snap-on Tools) are correctly hidden. #23 testIDs quick-add-item and quick-new-claim both present and tappable at top of dashboard; ADD ITEM navigates to /tool/edit (NEW TOOL form rendered); NEW CLAIM navigates to /claims and auto-opens the START A CLAIM picker (claim-modal-close + claim-search-input + claim-pick-* visible). #24 filter-accordion-toggle present in Inventory; status-filter-btn NOT in DOM by default (accordion closed), appears with visible height=39 after tap, disappears after second tap (collapse). #25 PaymentModal could not be opened from UI on web preview because openAdjustForDealer uses Alert.alert (an action-sheet) and react-native-web's Alert is not playwright-clickable; verified via CODE REVIEW of /app/frontend/src/sections/PaymentModal.tsx — selected state uses backgroundColor: bgSecondary (#1A1A1A dark) with text/icon color = accent (#FF6A00 orange) + accent border, so PAYMENT/CHARGE labels remain readable (no more orange-on-orange). #27 useDealerPaymentsDue.ts confirmed: the Alert renders formatDateUS(nextDue) (DUE DATE shown) and the 'No' button calls api.skipAccountPayment, which hits the new POST /dealers/{id}/accounts/{account}/skip-payment endpoint validated in pytest. No deprecated Expo packages or SafeAreaView issues seen in the touched files.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {
+        "screen": "Dashboard (skinned theme)",
+        "issues": [
+          "Quick action buttons ADD ITEM / NEW CLAIM use the skinned button plate (tbv_btn_primary_orange.png) with #0A0A0A text — on the dark skin background the labels are barely readable in the top screenshot (the text blends with the orange wash). Functionality is fine and the testIDs work, but contrast on these two specific buttons is lower than the surrounding 'NEW CLAIM' button on the Claims tab. Consider increasing the text shadow or using a higher-contrast white fill for ADD ITEM/NEW CLAIM labels. (/app/frontend/app/(tabs)/index.tsx:766-768, 783-784)"
+        ]
+      }
+    ],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_skip_payment.py",
+    "/app/test_reports/pytest/iter18_results.xml"
+  ],
+  "action_items": [
+    "OPTIONAL: improve contrast of the ADD ITEM / NEW CLAIM labels on the skinned Dashboard quick-action buttons (see design_issues). Pure cosmetic — feature works.",
+    "OPTIONAL: For full end-to-end UI verification of PaymentModal's #25 segmented colors on the web preview, the Adjust flow currently uses Alert.alert which doesn't render reliably under react-native-web/Playwright; consider a custom in-app ActionSheet so testers/users on web can hit Truck/Credit. Code-review confirms #25 is correct (bgSecondary fill + accent text)."
+  ],
+  "critical_code_review_comments": [
+    "PaymentModal segmented buttons (#25): selected style uses backgroundColor: theme.colors.bgSecondary with text + icon set to theme.colors.accent — verified at /app/frontend/src/sections/PaymentModal.tsx:247-249 + 122/136. Resolves the orange-on-orange unreadable state.",
+    "Backend skip endpoint (#27): correctly skips logging a payment tx, leaves balance untouched, advances next_due_date via _advance_payment_date, sets last_skipped_date — see /app/backend/server.py:1606-1634. Mirrors confirm_account_payment minus the tx + balance mutation.",
+    "Dashboard dealersOwing filter (#22) is a strict > 0 check (truck+credit), which means a dealer with a balance of 0 but an upcoming scheduled payment will not appear in the Dealer Accounts widget — matches the requested behaviour (they still appear under the Dealers tab)."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_skip_payment.py (new — 5 tests covering #27 skip + confirm regression)"
+  ],
+  "success_rate": {"backend": "100% (5/5)", "frontend": "100% on items testable via Expo web"},
+  "seed_data_creation": "Test fixtures created/cleaned per-test in test_skip_payment.py (each dealer prefixed TEST_ and deleted in teardown). No persistent seed data left behind. Pre-existing 'QA Logo Dealer' (id 1de2e878...) from iter17 was left untouched.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Login testIDs on Expo web: auth-email / auth-password / auth-submit (NOT email-input/password-input/login-submit). On Dashboard, openAdjustForDealer ($ chip) uses Alert.alert which does NOT render as a clickable dialog on react-native-web, so opening PaymentModal from UI on the web preview is currently impossible — you'd need to either trigger it programmatically (window.alert override) or run on a native build. The 'NEW CLAIM' picker auto-open works via /claims?newClaim=1.",
+  "rca_of_issue": "Not applicable — this iteration was feature verification, not bug RCA. All requested items pass at the API and component-code level; only an optional cosmetic contrast suggestion was flagged."
+}

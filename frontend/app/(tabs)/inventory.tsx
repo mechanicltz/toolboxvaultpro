@@ -119,6 +119,14 @@ export default function InventoryScreen() {
   // Status picker (replaces the horizontal chip scroller)
   const [showStatusPicker, setShowStatusPicker] = useState(false);
 
+  // #24 — All filter controls live inside a "Filter" accordion, closed by default.
+  const [showFilters, setShowFilters] = useState(false);
+  const activeFilterCount =
+    (filter !== "all" ? 1 : 0) +
+    (locationFilter ? 1 : 0) +
+    (tagFilter.length > 0 ? 1 : 0) +
+    (categoryFilter ? 1 : 0);
+
   // ---------------------------------------------------------------------------
   // Filter COUNTS — how many tools would match each picker option if it were
   // the only filter applied. Surfaced in the picker labels as e.g.
@@ -613,8 +621,30 @@ export default function InventoryScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* Filter / sort dropdowns — Status · Location · Tag · Sort (2 rows × 2) */}
-      <View style={styles.filterDropdownGrid}>
+      {/* #24 — All filters live inside a "Filter" ShadowBox accordion, closed by default. */}
+      <ShadowBox style={styles.filterAccordion}>
+        <TouchableOpacity
+          testID="filter-accordion-toggle"
+          style={styles.filterAccordionHeader}
+          onPress={() => setShowFilters((s) => !s)}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="filter" size={16} color={theme.colors.accent} />
+          <Text style={styles.filterAccordionTitle}>Filter</Text>
+          {activeFilterCount > 0 && (
+            <View style={styles.filterCountBadge}>
+              <Text style={styles.filterCountBadgeText}>{activeFilterCount}</Text>
+            </View>
+          )}
+          <View style={{ flex: 1 }} />
+          <Ionicons
+            name={showFilters ? "chevron-up" : "chevron-down"}
+            size={18}
+            color={theme.colors.textMuted}
+          />
+        </TouchableOpacity>
+        {showFilters && (
+          <View style={styles.filterDropdownGrid}>
         <View style={styles.filterDropdownRow}>
           <TouchableOpacity
             testID="status-filter-btn"
@@ -803,7 +833,9 @@ export default function InventoryScreen() {
             )}
           </TouchableOpacity>
         </View>
-      </View>
+          </View>
+        )}
+      </ShadowBox>
 
       {prefs.show_details_summary && agg && (
         <SummaryHeader agg={agg} showPrices={prefs.show_prices} openClaims={openClaims} />
@@ -1244,7 +1276,7 @@ export default function InventoryScreen() {
               })}
               {allLocations.length === 0 && (
                 <Text style={{ color: theme.colors.textMuted, padding: 16, textAlign: "center" }}>
-                  No locations yet. Create some from a tool's edit screen.
+                  No locations yet. Create some from a tool&apos;s edit screen.
                 </Text>
               )}
             </ScrollView>
@@ -1597,7 +1629,7 @@ export default function InventoryScreen() {
             <ScrollView style={{ maxHeight: 400 }} contentContainerStyle={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
               {allTags.length === 0 ? (
                 <Text style={{ color: theme.colors.textMuted, padding: 12 }}>
-                  No tags exist. Create some first from a tool's edit screen.
+                  No tags exist. Create some first from a tool&apos;s edit screen.
                 </Text>
               ) : (
                 allTags.map((t) => (
@@ -1801,6 +1833,38 @@ const styles = themedStyles((c) => ({
     paddingTop: 6,
     paddingBottom: 8,
     rowGap: 8,
+  },
+  filterAccordion: {
+    marginHorizontal: 16,
+    marginBottom: 8,
+    padding: 0,
+  },
+  filterAccordionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  filterAccordionTitle: {
+    color: theme.colors.textPrimary,
+    fontSize: 13,
+    fontWeight: "800",
+    letterSpacing: 1,
+  },
+  filterCountBadge: {
+    backgroundColor: theme.colors.accent,
+    borderRadius: 9,
+    minWidth: 18,
+    height: 18,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 5,
+  },
+  filterCountBadgeText: {
+    color: "#0A0A0A",
+    fontSize: 10,
+    fontWeight: "900",
   },
   filterDropdownRow: {
     flexDirection: "row",

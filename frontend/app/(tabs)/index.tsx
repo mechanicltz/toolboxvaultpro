@@ -62,7 +62,7 @@ import { Anton_400Regular } from "@expo-google-fonts/anton";
 
 // Manual verification beacon — bump this on every change so we can confirm
 // the device is actually showing the latest bundle. Rendered top-right of Home.
-const HOME_BUILD = "BUILD 193";
+const HOME_BUILD = "BUILD 194";
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -240,6 +240,11 @@ export default function HomeScreen() {
       sum + (Number(d.credit_balance) || 0) + (Number(d.personal_balance) || 0),
     0,
   );
+
+  // #22 — The dashboard "Dealer Accounts" widget only lists dealers that have
+  // an active outstanding balance. Zero-balance dealers are hidden here (they
+  // remain on the Dealers tab). Sorting/derivation reuses dealersAll.
+  const dealersOwing = dealersAll.filter((d) => d.truck + d.credit > 0);
 
   // Scheduled-payment sub-lines + the in-app "was it processed?" prompt, all
   // derived from the dealers we already have (see the hook for details).
@@ -538,6 +543,19 @@ export default function HomeScreen() {
             />
           }
         >
+          {/* #23 — Quick actions row: Add Item + New Claim. ShadowBox style
+              for the plain (light/dark) themes. */}
+          <View style={styles.quickRow}>
+            <ShadowBox style={styles.quickBtn} onPress={() => router.push("/tool/edit")} testID="quick-add-item">
+              <Ionicons name="add-circle-outline" size={20} color={theme.colors.accent} />
+              <Text style={styles.quickBtnText}>ADD ITEM</Text>
+            </ShadowBox>
+            <ShadowBox style={styles.quickBtn} onPress={() => router.push("/claims?newClaim=1")} testID="quick-new-claim">
+              <Ionicons name="construct-outline" size={20} color={theme.colors.accent} />
+              <Text style={styles.quickBtnText}>NEW CLAIM</Text>
+            </ShadowBox>
+          </View>
+
           <DriveAlertBanner />
           {prefs.home_logo_mode === "custom" && prefs.home_logo_data && (
             <View style={styles.logoWrap}>
@@ -593,7 +611,7 @@ export default function HomeScreen() {
                         <Ionicons name="chevron-forward" size={14} color={theme.colors.textMuted} />
                       </View>
                     </TouchableOpacity>
-                    {dealersAll.length === 0 ? (
+                    {dealersOwing.length === 0 ? (
                       <View style={[styles.pdRow, styles.pdRowLast]}>
                         <Text
                           style={[
@@ -601,12 +619,12 @@ export default function HomeScreen() {
                             { color: theme.colors.textMuted, textAlign: "left", flex: 1, fontWeight: "500" },
                           ]}
                         >
-                          No dealers yet.
+                          No outstanding balances.
                         </Text>
                       </View>
                     ) : (
                       <>
-                        {dealersAll.map((d) => {
+                        {dealersOwing.map((d) => {
                           const dTotal =
                             (Number(d.credit_balance) || 0) + (Number(d.personal_balance) || 0);
                           return (
@@ -731,6 +749,43 @@ export default function HomeScreen() {
           />
         }
       >
+        {/* #23 — Quick actions row: Add Item + New Claim. Skinned themes use
+            the skin's button plate art. */}
+        <View style={styles.quickRow}>
+          <TouchableOpacity
+            style={styles.quickBtnSkin}
+            activeOpacity={0.85}
+            onPress={() => router.push("/tool/edit")}
+            testID="quick-add-item"
+          >
+            <ImageBackground
+              source={SKIN.btnPrimary}
+              style={styles.quickBtnSkinFill}
+              imageStyle={styles.quickBtnSkinImg}
+              resizeMode="stretch"
+            >
+              <Ionicons name="add-circle" size={18} color="#0A0A0A" />
+              <Text style={styles.quickBtnSkinText}>ADD ITEM</Text>
+            </ImageBackground>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.quickBtnSkin}
+            activeOpacity={0.85}
+            onPress={() => router.push("/claims?newClaim=1")}
+            testID="quick-new-claim"
+          >
+            <ImageBackground
+              source={SKIN.btnPrimary}
+              style={styles.quickBtnSkinFill}
+              imageStyle={styles.quickBtnSkinImg}
+              resizeMode="stretch"
+            >
+              <Ionicons name="construct" size={18} color="#0A0A0A" />
+              <Text style={styles.quickBtnSkinText}>NEW CLAIM</Text>
+            </ImageBackground>
+          </TouchableOpacity>
+        </View>
+
         {/* HOME LOGO — purely decorative, sits at the very top of the
             content scroll. Hidden by default; only renders when the user
             has picked their own image from More → Customize → Home
@@ -809,15 +864,15 @@ export default function HomeScreen() {
               <Ionicons name="chevron-forward" size={14} color={theme.colors.textMuted} />
             </TouchableOpacity>
 
-            {dealersAll.length === 0 ? (
+            {dealersOwing.length === 0 ? (
               <View style={[styles.detailsRow, styles.detailsRowLast]}>
                 <Text style={[styles.detailsValue, styles.noChip, { color: theme.colors.textMuted, textAlign: "left", flex: 1 }]}>
-                  No dealers yet.
+                  No outstanding balances.
                 </Text>
               </View>
             ) : (
               <>
-                {dealersAll.map((d) => {
+                {dealersOwing.map((d) => {
                   const credit = Number(d.credit_balance) || 0;
                   const truck = Number(d.personal_balance) || 0;
                   const dTotal = credit + truck;

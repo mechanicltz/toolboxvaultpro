@@ -119,7 +119,7 @@ export function PaymentModal({
                 <Ionicons
                   name="trending-down"
                   size={14}
-                  color={type === "payment" ? "#000" : theme.colors.textSecondary}
+                  color={type === "payment" ? theme.colors.accent : theme.colors.textSecondary}
                 />
                 <Text style={[styles.segText, type === "payment" && styles.segTextActive]}>
                   PAYMENT
@@ -133,7 +133,7 @@ export function PaymentModal({
                 <Ionicons
                   name="trending-up"
                   size={14}
-                  color={type === "charge" ? "#000" : theme.colors.textSecondary}
+                  color={type === "charge" ? theme.colors.accent : theme.colors.textSecondary}
                 />
                 <Text style={[styles.segText, type === "charge" && styles.segTextActive]}>
                   CHARGE
@@ -244,7 +244,7 @@ const styles = themedStyles((c) => ({
     paddingVertical: 10,
     borderRadius: 4,
   },
-  segBtnActive: { backgroundColor: c.accent },
+  segBtnActive: { backgroundColor: c.bgSecondary, borderWidth: 1, borderColor: c.accent },
   segText: { color: c.textSecondary, fontWeight: "800", letterSpacing: 1.5, fontSize: 9 },
   segTextActive: { color: c.accent, fontWeight: "900" },
   label: {

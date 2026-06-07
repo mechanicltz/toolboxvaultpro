@@ -1603,6 +1603,37 @@ async def confirm_account_payment(
     return Dealer(**new)
 
 
+@api_router.post("/dealers/{dealer_id}/accounts/{account}/skip-payment", response_model=Dealer)
+async def skip_account_payment(
+    dealer_id: str, account: str, user: User = Depends(get_current_user),
+):
+    """Mark the current scheduled payment as SKIPPED (#27): no transaction is
+    logged and the balance is unchanged. next_due_date simply advances to the
+    next cycle so the app stops re-prompting for this date and moves on to the
+    next scheduled payment."""
+    if account not in ("credit", "personal"):
+        raise HTTPException(400, "account must be 'credit' or 'personal'")
+    d = await db.dealers.find_one({"id": dealer_id}, {"_id": 0})
+    if not d:
+        raise HTTPException(404, "Dealer not found")
+    sched = d.get(_schedule_field(account)) or {}
+    if not sched or not sched.get("enabled"):
+        raise HTTPException(400, "No active payment schedule for this account")
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    due = sched.get("next_due_date") or today
+    try:
+        sched["next_due_date"] = _advance_payment_date(due, sched.get("frequency", "monthly"))
+    except Exception:
+        sched["next_due_date"] = _advance_payment_date(today, sched.get("frequency", "monthly"))
+    sched["last_skipped_date"] = today
+    await db.dealers.update_one(
+        {"id": dealer_id},
+        {"$set": {_schedule_field(account): sched}},
+    )
+    new = await db.dealers.find_one({"id": dealer_id}, {"_id": 0})
+    return Dealer(**new)
+
+
 @api_router.get("/dealers/payments/upcoming")
 async def dealer_payments_upcoming(days: int = 7, user: User = Depends(get_current_user)):
     """Account schedules due within `days` days (negative days_until = overdue).

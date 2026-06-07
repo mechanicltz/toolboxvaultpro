@@ -16,6 +16,7 @@
 import { useEffect, useRef } from "react";
 import { Alert } from "react-native";
 import { api } from "../../api";
+import { formatDateUS } from "../../dateUtil";
 
 type DealerLike = {
   id: string;
@@ -111,9 +112,24 @@ export function useDealerPaymentsDue(
       promptedRef.current.add(`${p.dealerId}:${p.account}:${p.nextDue}`);
       Alert.alert(
         "Payment due",
-        `You have a ${p.dealerName} ${p.accountLabel} payment of $${p.amount.toFixed(2)} due. Was it processed?`,
+        `You have a ${p.dealerName} ${p.accountLabel} payment of $${p.amount.toFixed(2)} due ${formatDateUS(p.nextDue)}. Was it processed?`,
         [
-          { text: "No", style: "cancel", onPress: () => runNext(idx + 1) },
+          {
+            text: "No",
+            style: "cancel",
+            onPress: async () => {
+              // #27 — "No" means this scheduled payment was SKIPPED. Advance the
+              // schedule to the next due date (persisted) so we never re-ask
+              // about this date and simply move on to the next payment.
+              try {
+                await api.skipAccountPayment(p.dealerId, p.account);
+                reload();
+              } catch {
+                /* user can retry from the dealer screen */
+              }
+              runNext(idx + 1);
+            },
+          },
           {
             text: "Yes",
             onPress: async () => {

@@ -105,6 +105,49 @@ export const styles = themedStyles((c) => ({
     height: 140,
   },
 
+  /* #23 — Quick actions (Add Item / New Claim) */
+  quickRow: {
+    flexDirection: "row",
+    gap: 12,
+    marginBottom: 14,
+  },
+  quickBtn: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingVertical: 16,
+  },
+  quickBtnText: {
+    color: c.textPrimary,
+    fontWeight: "800",
+    fontSize: 12,
+    letterSpacing: 1,
+  },
+  quickBtnSkin: {
+    flex: 1,
+    height: 52,
+    overflow: "hidden",
+    borderRadius: 6,
+  },
+  quickBtnSkinFill: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+  },
+  quickBtnSkinImg: {
+    borderRadius: 6,
+  },
+  quickBtnSkinText: {
+    color: "#0A0A0A",
+    fontWeight: "900",
+    fontSize: 12,
+    letterSpacing: 1,
+  },
+
   /* Highlighted next-route banner */
   bannerLayout: { marginBottom: 14 },
   routeBanner: {

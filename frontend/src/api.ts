@@ -725,6 +725,10 @@ export const api = {
     request<any>(`/dealers/${dealerId}/accounts/${account}/confirm-payment`, {
       method: "POST",
     }),
+  skipAccountPayment: (dealerId: string, account: "credit" | "personal") =>
+    request<any>(`/dealers/${dealerId}/accounts/${account}/skip-payment`, {
+      method: "POST",
+    }),
   dealerPaymentsUpcoming: (days = 7) =>
     request<{ days: number; count: number; items: DealerPaymentDue[] }>(
       `/dealers/payments/upcoming?days=${days}`,

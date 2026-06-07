@@ -48,7 +48,7 @@ export function IndustrialBanner({ title, subtitle, rightSlot, leftSlot }: Props
   // screen width, 400), height derived from the master nameplate ratio.
   const { width } = useWindowDimensions();
   const nameplateW = Math.min(width * 0.94, 400);
-  const nameplateH = nameplateW / 3.746;
+  const nameplateH = nameplateW / 3.94;
   return (
     <View style={styles.wrap}>
       {/* The constant brand nameplate — same size + look as the login page.
