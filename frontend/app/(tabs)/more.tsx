@@ -33,6 +33,7 @@ import { useAuth } from "../../src/AuthContext";
 import { themedStyles } from "../../src/themeContext";
 import { BevelCard } from "../../src/components/BevelCard";
 import { IndustrialBanner } from "../../src/components/IndustrialBanner";
+import ReportBugBadge from "../../src/components/ReportBugBadge";
 
 import NotificationsSettingsSection from "../../src/sections/NotificationsSettingsSection";
 
@@ -867,14 +868,8 @@ export default function MoreScreen() {
           />
         </SectionCard>
 
-        {/* Report a bug — pinned to the very bottom */}
-        <Row
-          icon="chatbubble-ellipses"
-          title="Report a Bug · Request a Feature"
-          subtitle="Send feedback directly to the developers"
-          testID="more-feedback"
-          onPress={() => router.push("/feedback")}
-        />
+        {/* Report a bug — industrial badge image, pinned to the very bottom */}
+        <ReportBugBadge style={{ marginHorizontal: 16, marginTop: 14 }} testID="more-feedback" />
       </ScrollView>
 
       {/* Home Screen Rows modal — pick which rows show on Home and reorder them */}

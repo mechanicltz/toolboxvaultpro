@@ -32,6 +32,7 @@ import { DealerBalanceRow } from "../../src/screens/home/DealerBalanceRow";
 import { useDealerPaymentsDue } from "../../src/screens/home/useDealerPaymentsDue";
 import { BevelCard } from "../../src/components/BevelCard";
 import { ShadowBox, ShadowBoxSubCard } from "../../src/components/ShadowBox";
+import ReportBugBadge from "../../src/components/ReportBugBadge";
 import { IndustrialBanner } from "../../src/components/IndustrialBanner";
 import { useSubscriptionChange } from "../../src/subscriptionEvents";
 import { useAppResume } from "../../src/appLifecycle";
@@ -58,7 +59,7 @@ import { Anton_400Regular } from "@expo-google-fonts/anton";
 
 // Manual verification beacon — bump this on every change so we can confirm
 // the device is actually showing the latest bundle. Rendered top-right of Home.
-const HOME_BUILD = "BUILD 173";
+const HOME_BUILD = "BUILD 174";
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -664,18 +665,7 @@ export default function HomeScreen() {
             </ShadowBox>
           )}
 
-          <ShadowBox
-            style={[styles.plainBanner, { marginTop: 4 }]}
-            onPress={() => router.push("/feedback")}
-            testID="feedback-banner"
-          >
-            <Ionicons name="chatbubble-ellipses" size={20} color={theme.colors.accent} />
-            <View style={{ flex: 1, marginLeft: 12 }}>
-              <Text style={styles.plainBannerLabel}>REPORT A BUG · REQUEST A FEATURE</Text>
-              <Text style={styles.plainBannerText}>Have an idea or hit a snag? Let us know.</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={18} color={theme.colors.textMuted} />
-          </ShadowBox>
+          <ReportBugBadge style={{ marginTop: 8 }} testID="feedback-banner" />
 
           <Text style={styles.plainTip}>Pull to refresh · Customize under MORE → CUSTOMIZE</Text>
         </ScrollView>
@@ -907,29 +897,8 @@ export default function HomeScreen() {
           )}
         </View>
 
-        {/* Report-a-bug — skinned panel to match the theme */}
-        <TbvFrame
-          source={SKIN.plate}
-          capInsets={CAP.plate}
-          style={styles.feedbackLayout}
-          padX={30}
-          padTop={22}
-          padBottom={24}
-        >
-          <TouchableOpacity
-            testID="feedback-banner"
-            style={styles.feedbackRow}
-            onPress={() => router.push("/feedback")}
-            activeOpacity={0.85}
-          >
-            <Ionicons name="chatbubble-ellipses" size={18} color={theme.colors.accent} />
-            <View style={{ flex: 1 }}>
-              <Text style={styles.feedbackTitle}>REPORT A BUG · REQUEST A FEATURE</Text>
-              <Text style={styles.feedbackSub}>Have an idea or hit a snag? Let us know.</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={18} color={TBV.textMuted} />
-          </TouchableOpacity>
-        </TbvFrame>
+        {/* Report-a-bug — industrial badge image */}
+        <ReportBugBadge style={{ marginTop: 8 }} testID="feedback-banner" />
 
         <Text style={styles.tip}>
           Pull to refresh · Customize this list under MORE → CUSTOMIZE
