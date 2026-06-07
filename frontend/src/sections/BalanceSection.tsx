@@ -19,7 +19,7 @@ import { DateField } from "../DateField";
 import { todayISO, formatDateUS } from "../dateUtil";
 import { reschedulePaymentRemindersNow } from "../notifications";
 import { themedStyles } from "../themeContext";
-import { ShadowBoxSubCard } from "../components/ShadowBox";
+import { ShadowBox, ShadowBoxSubCard } from "../components/ShadowBox";
 
 const FREQUENCIES: { id: "weekly" | "biweekly" | "monthly"; label: string }[] = [
   { id: "weekly", label: "Weekly" },
@@ -99,28 +99,30 @@ export function BalanceSection({
         interest rates or fees.
       </Text>
 
-      <BalanceCard
-        label="CREDIT ACCOUNT"
-        balance={credit}
-        schedule={creditSched}
-        busy={busy}
-        onPay={() => setTarget({ account: "credit", type: "payment" })}
-        onCharge={() => setTarget({ account: "credit", type: "charge" })}
-        onHistory={openDealerReport}
-        onEditSchedule={() => setScheduleTarget("credit")}
-        onMarkPaid={() => creditSched && markPaid("credit", creditSched)}
-      />
-      <BalanceCard
-        label="TRUCK ACCOUNT"
-        balance={personal}
-        schedule={personalSched}
-        busy={busy}
-        onPay={() => setTarget({ account: "personal", type: "payment" })}
-        onCharge={() => setTarget({ account: "personal", type: "charge" })}
-        onHistory={openDealerReport}
-        onEditSchedule={() => setScheduleTarget("personal")}
-        onMarkPaid={() => personalSched && markPaid("personal", personalSched)}
-      />
+      <ShadowBox style={styles.accountsBox}>
+        <BalanceCard
+          label="CREDIT ACCOUNT"
+          balance={credit}
+          schedule={creditSched}
+          busy={busy}
+          onPay={() => setTarget({ account: "credit", type: "payment" })}
+          onCharge={() => setTarget({ account: "credit", type: "charge" })}
+          onHistory={openDealerReport}
+          onEditSchedule={() => setScheduleTarget("credit")}
+          onMarkPaid={() => creditSched && markPaid("credit", creditSched)}
+        />
+        <BalanceCard
+          label="TRUCK ACCOUNT"
+          balance={personal}
+          schedule={personalSched}
+          busy={busy}
+          onPay={() => setTarget({ account: "personal", type: "payment" })}
+          onCharge={() => setTarget({ account: "personal", type: "charge" })}
+          onHistory={openDealerReport}
+          onEditSchedule={() => setScheduleTarget("personal")}
+          onMarkPaid={() => personalSched && markPaid("personal", personalSched)}
+        />
+      </ShadowBox>
 
       {target && (
         <PaymentModal
@@ -179,7 +181,7 @@ function BalanceCard({
   const st = hasSched ? dueStatus(schedule?.next_due_date) : null;
   const idBase = label.replace(/\s/g, "-");
   return (
-    <ShadowBoxSubCard style={[styles.balCard, owed && { borderLeftColor: theme.colors.danger }]}>
+    <ShadowBoxSubCard style={styles.balCard}>
       <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
         <Text style={styles.balLabel}>{label}</Text>
         <TouchableOpacity onPress={onHistory} testID={`open-report-${idBase}`}>
@@ -427,14 +429,18 @@ const styles = themedStyles((c) => ({
     marginBottom: 10,
     paddingHorizontal: 16,
   },
+  accountsBox: {
+    marginHorizontal: 16,
+    marginTop: 4,
+    marginBottom: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+  },
   balCard: {
     backgroundColor: c.bgSecondary,
-    padding: 16,
-    marginHorizontal: 16,
-    marginBottom: 10,
+    padding: 14,
+    marginBottom: 8,
     borderRadius: theme.radii.md,
-    borderLeftWidth: 3,
-    borderLeftColor: c.success,
   },
   balLabel: { color: c.textPrimary, fontSize: 8, fontWeight: "900", letterSpacing: 2 },
   histLink: { color: c.accent, fontSize: 7, fontWeight: "900", letterSpacing: 1 },
