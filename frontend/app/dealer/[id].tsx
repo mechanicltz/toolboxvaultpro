@@ -297,7 +297,7 @@ export default function DealerDetail() {
         contentContainerStyle={{ paddingBottom: 100 }}
       >
         <View style={styles.heroBox}>
-          <DealerLogo logo={dealer.logo} size={250} style={{ marginBottom: 14 }} />
+          <DealerLogo logo={dealer.logo} size={220} height={150} style={{ marginBottom: 6 }} />
           <Text style={styles.dealerName}>{dealer.name}</Text>
         </View>
 
@@ -1043,7 +1043,7 @@ const styles = themedStyles((c) => ({
     paddingHorizontal: 20,
     paddingVertical: 12,
   },
-  heroBox: { alignItems: "center", paddingVertical: 16 },
+  heroBox: { alignItems: "center", paddingTop: 6, paddingBottom: 4 },
   routeRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -1182,7 +1182,7 @@ const styles = themedStyles((c) => ({
     fontSize: 19,
     letterSpacing: 2,
   },
-  dealerName: { color: c.textPrimary, fontSize: 18, fontWeight: "900", letterSpacing: 1, marginTop: 12 },
+  dealerName: { color: c.textPrimary, fontSize: 18, fontWeight: "900", letterSpacing: 1, marginTop: 4 },
   summaryGrid: {
     flexDirection: "row",
     flexWrap: "wrap",

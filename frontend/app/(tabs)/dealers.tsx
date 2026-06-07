@@ -156,7 +156,7 @@ export default function DealersScreen() {
               }}
               activeOpacity={isLocked ? 1 : 0.7}
             >
-              <DealerLogo logo={item.logo} size={92} height={56} style={{ marginRight: 0 }} />
+              <DealerLogo logo={item.logo} size={68} height={56} style={{ marginRight: 0 }} />
               <View style={{ flex: 1 }}>
                 <Text style={styles.rowTitle}>{item.name}</Text>
                 <Text style={styles.rowSub}>
@@ -383,7 +383,7 @@ const styles = themedStyles((c) => ({
     alignItems: "center",
     paddingHorizontal: 16,
     paddingVertical: 14,
-    gap: 12,
+    gap: 8,
     backgroundColor: c.bgSecondary,
     marginHorizontal: 16,
     marginTop: 12,
