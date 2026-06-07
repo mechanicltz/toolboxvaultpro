@@ -49,6 +49,10 @@ type GdriveStatus = {
   connected: boolean;
   email?: string;
   connected_at?: string;
+  needs_reauth?: boolean;
+  reason?: string;
+  detail?: string;
+  degraded?: boolean;
 };
 
 type GdriveFile = {
@@ -228,7 +232,15 @@ export default function AdminBackupsPage() {
               setRecoveryResult(
                 `✅ ${r.filename}\n${r.size_human} · ${r.document_count.toLocaleString()} docs\n` +
                   `Self-check: ${r.selfcheck_ok ? "PASSED" : "FAILED"} · ` +
-                  `Drive: ${r.gdrive_uploaded ? "uploaded" : "skipped"} · ` +
+                  `Drive: ${
+                    r.gdrive_uploaded
+                      ? "uploaded"
+                      : r.gdrive_error === "auth_expired"
+                      ? "⛔ FAILED — RECONNECT DRIVE"
+                      : r.gdrive_error === "upload_failed"
+                      ? "⛔ FAILED (upload error)"
+                      : "skipped (not connected)"
+                  } · ` +
                   `Passphrase: ${r.passphrase_uploaded ? "saved" : "not saved"}`,
               );
               await load();
@@ -475,9 +487,9 @@ export default function AdminBackupsPage() {
         <BevelCard style={styles.banner}>
           <View style={styles.bannerHeader}>
             <Ionicons
-              name={gdrive?.connected ? "cloud-done" : "cloud-offline"}
+              name={gdrive?.connected ? "cloud-done" : gdrive?.needs_reauth ? "warning" : "cloud-offline"}
               size={18}
-              color={gdrive?.connected ? theme.colors.success : theme.colors.textMuted}
+              color={gdrive?.connected ? theme.colors.success : gdrive?.needs_reauth ? "#E8A23C" : theme.colors.textMuted}
             />
             <Text style={styles.bannerTitle}>Google Drive (offsite backup)</Text>
           </View>
@@ -502,6 +514,30 @@ export default function AdminBackupsPage() {
                   variant="danger"
                   onPress={disconnectGdrive}
                   disabled={busyAction === "gdrive-disconnect"}
+                />
+              </View>
+            </>
+          ) : gdrive?.needs_reauth ? (
+            <>
+              <Text style={[styles.bannerLine, { color: "#E8A23C", fontWeight: "900" }]}>
+                ⚠️ Drive authorization EXPIRED{gdrive?.email ? ` (${gdrive.email})` : ""}
+              </Text>
+              <Text style={styles.bannerLine}>
+                Your backup ZIPs are still SAFE in Drive — the app just lost
+                permission to read/write them. Reconnect to resume backups and
+                see your files again.
+              </Text>
+              <Text style={[styles.bannerLine, { fontSize: 11, opacity: 0.85 }]}>
+                {"Why it expired: Google revokes access every 7 days unless your OAuth app's publishing status is set to \"In production\". Reconnecting now restores access immediately."}
+              </Text>
+              <View style={{ marginTop: 12 }}>
+                <PillButton
+                  testID="gdrive-reconnect"
+                  label={busyAction === "gdrive-connect" ? "..." : "RECONNECT GOOGLE DRIVE"}
+                  icon="refresh"
+                  variant="active"
+                  onPress={connectGdrive}
+                  disabled={busyAction === "gdrive-connect"}
                 />
               </View>
             </>
@@ -679,8 +715,7 @@ export default function AdminBackupsPage() {
         {rows.length === 0 && (
           <BevelCard style={styles.empty}>
             <Text style={styles.emptyText}>
-              No backups yet. Tap "Backup Now" to create the first one — or wait
-              for the scheduled run.
+              {"No backups yet. Tap \"Backup Now\" to create the first one — or wait for the scheduled run."}
             </Text>
           </BevelCard>
         )}

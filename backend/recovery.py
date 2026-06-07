@@ -420,6 +420,7 @@ def make_recovery_router(get_real_db, get_current_user, require_admin) -> APIRou
         )
         gdrive_uploaded = False
         gdrive_id = None
+        gdrive_error = None
         passphrase_uploaded = False
         try:
             import gdrive
@@ -446,12 +447,18 @@ def make_recovery_router(get_real_db, get_current_user, require_admin) -> APIRou
                     await gdrive.apply_retention_policy(real_db)
                 except Exception as rexc:
                     logger.warning("Drive retention after full snapshot failed: %s", rexc)
+            else:
+                # Drive is NOT usable — surface WHY instead of a silent "skipped".
+                gdrive_error = "auth_expired" if status.get("needs_reauth") else "not_connected"
         except Exception as exc:
-            logger.warning("Full snapshot Drive upload failed: %s", exc)
+            from google.auth.exceptions import RefreshError
+            gdrive_error = "auth_expired" if isinstance(exc, RefreshError) else "upload_failed"
+            logger.warning("Full snapshot Drive upload failed (%s): %s", gdrive_error, exc)
         await _audit(real_db, "full_snapshot", {
             "filename": snap["filename"], "size": snap["size_human"],
             "encrypted": True, "selfcheck": check,
             "gdrive_uploaded": gdrive_uploaded,
+            "gdrive_error": gdrive_error,
             "passphrase_uploaded": passphrase_uploaded,
         })
         return {
@@ -465,6 +472,7 @@ def make_recovery_router(get_real_db, get_current_user, require_admin) -> APIRou
             "selfcheck": check,
             "gdrive_uploaded": gdrive_uploaded,
             "gdrive_id": gdrive_id,
+            "gdrive_error": gdrive_error,
             "passphrase_uploaded": passphrase_uploaded,
         }
 

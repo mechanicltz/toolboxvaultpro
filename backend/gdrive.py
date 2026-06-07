@@ -31,6 +31,7 @@ from typing import Any, Dict, List, Optional
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import Flow
 from google.auth.transport.requests import Request as GoogleAuthRequest
+from google.auth.exceptions import RefreshError
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseUpload
 
@@ -188,21 +189,51 @@ def _credentials_from_doc(doc: Dict[str, Any]) -> Credentials:
 
 
 async def get_status(db) -> Dict[str, Any]:
-    """Return whether Drive is connected and what email.
+    """Return whether Drive is *actually* usable right now.
 
-    If the stored email is missing/"unknown" (legacy connections that were
-    made before we wired up the Drive about() lookup), lazily backfill it
-    by hitting Drive's about().get() with the cached refresh token. Cheap
-    and one-shot — the result is written back so we don't repeat the call.
+    CRITICAL: a stored refresh-token string is NOT proof the connection works.
+    Under Google's "Testing" OAuth publishing status, refresh tokens silently
+    die after 7 days. So we VERIFY by minting a fresh access token from the
+    refresh token. If that fails with invalid_grant we report disconnected +
+    needs_reauth instead of falsely claiming "connected".
     """
     doc = await db.system_config.find_one({"_id": OAUTH_DOC_ID})
     if not doc:
         return {"connected": False}
 
     email = doc.get("connected_email") or "unknown"
+
+    # Honest liveness check — actually refresh the token.
+    try:
+        creds = _credentials_from_doc(doc)  # calls creds.refresh()
+    except RefreshError as exc:
+        logger.warning("[gdrive] Refresh token invalid/expired/revoked: %s", exc)
+        return {
+            "connected": False,
+            "needs_reauth": True,
+            "reason": "expired",
+            "email": None if email == "unknown" else email,
+            "connected_at": doc.get("connected_at"),
+            "detail": (
+                "Google Drive authorization has expired or was revoked. "
+                "Please reconnect Google Drive to resume backups."
+            ),
+        }
+    except Exception as exc:
+        # Network / transient Google outage — do NOT claim disconnected (that
+        # would wrongly nag the user); flag degraded so the UI can soft-warn.
+        logger.warning("[gdrive] Status check transient error: %s", exc)
+        return {
+            "connected": True,
+            "degraded": True,
+            "email": None if email == "unknown" else email,
+            "connected_at": doc.get("connected_at"),
+            "detail": "Could not verify Google Drive right now (temporary).",
+        }
+
+    # Token works. Backfill email if we never captured it.
     if email == "unknown":
         try:
-            creds = _credentials_from_doc(doc)
             about = build("drive", "v3", credentials=creds, cache_discovery=False) \
                 .about().get(fields="user(emailAddress,displayName)").execute()
             fetched = (about.get("user") or {}).get("emailAddress") or ""
@@ -221,6 +252,7 @@ async def get_status(db) -> Dict[str, Any]:
         "email": email,
         "connected_at": doc.get("connected_at"),
     }
+
 
 
 async def disconnect(db) -> None:

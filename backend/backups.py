@@ -537,11 +537,41 @@ def make_backup_router(
 
     @router.get("/admin/gdrive/files")
     async def gdrive_list_files(user=Depends(get_current_user)):
-        """List backups currently sitting in the user's Drive folder."""
+        """List backups currently sitting in the user's Drive folder.
+
+        IMPORTANT: distinguish an AUTH failure (expired/revoked token) from a
+        genuinely empty folder so the UI can show "Reconnect Google Drive"
+        instead of the misleading "No backup ZIPs in Drive yet".
+        """
         require_admin(user)
         import gdrive
-        files = await gdrive.list_backups(get_db())
-        return {"files": files, "count": len(files)}
+        from google.auth.exceptions import RefreshError
+        try:
+            files = await gdrive.list_backups(get_db())
+        except RefreshError as exc:
+            logger.warning("Drive list — refresh token expired/revoked: %s", exc)
+            return {
+                "files": [],
+                "count": 0,
+                "drive_status": "disconnected",
+                "needs_reauth": True,
+                "error": "auth_expired",
+                "message": (
+                    "Google Drive authorization expired or was revoked. "
+                    "Reconnect Google Drive to see your backups — your existing "
+                    "ZIPs are still safe in Drive."
+                ),
+            }
+        except Exception as exc:
+            logger.warning("Drive list failed (non-auth): %s", exc)
+            return {
+                "files": [],
+                "count": 0,
+                "drive_status": "error",
+                "error": "list_failed",
+                "message": f"Couldn't reach Google Drive: {exc}",
+            }
+        return {"files": files, "count": len(files), "drive_status": "connected"}
 
     @router.post("/admin/gdrive/upload-latest")
     async def gdrive_upload_latest(user=Depends(get_current_user)):
