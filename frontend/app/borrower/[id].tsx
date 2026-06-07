@@ -25,6 +25,7 @@ export default function BorrowerHistory() {
   const [editing, setEditing] = useState(false);
   const [editForm, setEditForm] = useState<{ name: string; contact: string; notes: string }>({ name: "", contact: "", notes: "" });
   const [saving, setSaving] = useState(false);
+  const [showShareSheet, setShowShareSheet] = useState(false);
 
   const load = useCallback(async () => {
     if (!id) return;
@@ -136,11 +137,7 @@ export default function BorrowerHistory() {
   };
 
   const handleShare = () => {
-    Alert.alert(b.name, "Share this contact or save it to your phone.", [
-      { text: "Share (text / email)", onPress: doShareContact },
-      { text: "Save to Phone Contacts", onPress: doSaveToDevice },
-      { text: "Cancel", style: "cancel" },
-    ]);
+    setShowShareSheet(true);
   };
 
   return (
@@ -318,6 +315,51 @@ export default function BorrowerHistory() {
             </View>
           </View>
         </KeyboardAvoidingView>
+      </Modal>
+
+      {/* Share / Save contact action sheet — in-app Modal (works on RN-Web
+          too, unlike Alert.alert whose buttons array is ignored on web). */}
+      <Modal visible={showShareSheet} transparent animationType="slide" onRequestClose={() => setShowShareSheet(false)}>
+        <TouchableOpacity
+          activeOpacity={1}
+          style={styles.shareBackdrop}
+          onPress={() => setShowShareSheet(false)}
+        >
+          <View style={styles.shareSheet}>
+            <View style={styles.shareGrabber} />
+            <Text style={styles.shareTitle} numberOfLines={1}>{b.name}</Text>
+            <Text style={styles.shareSub}>Share this contact or save it to your phone.</Text>
+
+            <TouchableOpacity
+              testID="share-option-share"
+              style={styles.shareOption}
+              onPress={() => { setShowShareSheet(false); doShareContact(); }}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="share-social-outline" size={20} color={theme.colors.accent} />
+              <Text style={styles.shareOptionText}>Share (text / email)</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              testID="share-option-save"
+              style={styles.shareOption}
+              onPress={() => { setShowShareSheet(false); doSaveToDevice(); }}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="person-add-outline" size={20} color={theme.colors.accent} />
+              <Text style={styles.shareOptionText}>Save to Phone Contacts</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              testID="share-option-cancel"
+              style={[styles.shareOption, styles.shareCancel]}
+              onPress={() => setShowShareSheet(false)}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.shareCancelText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
       </Modal>
     </SafeAreaView>
   );
@@ -582,4 +624,70 @@ const styles = themedStyles((c) => ({
     borderRadius: 4,
   },
   modalBtnGhostText: { color: c.textPrimary, fontWeight: "800", letterSpacing: 2, fontSize: 11 },
+  shareBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.7)",
+    justifyContent: "flex-end",
+  },
+  shareSheet: {
+    backgroundColor: c.bgSecondary,
+    paddingHorizontal: 20,
+    paddingTop: 10,
+    paddingBottom: 28,
+    borderTopWidth: 2,
+    borderTopColor: c.accent,
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+  },
+  shareGrabber: {
+    alignSelf: "center",
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: c.border,
+    marginBottom: 14,
+  },
+  shareTitle: {
+    color: c.textPrimary,
+    fontSize: 15,
+    fontWeight: "900",
+    letterSpacing: 1,
+  },
+  shareSub: {
+    color: c.textMuted,
+    fontSize: 11,
+    marginTop: 4,
+    marginBottom: 14,
+  },
+  shareOption: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingVertical: 16,
+    paddingHorizontal: 14,
+    backgroundColor: c.bg,
+    borderWidth: 1,
+    borderColor: c.border,
+    borderRadius: 10,
+    marginBottom: 10,
+    minHeight: 52,
+  },
+  shareOptionText: {
+    color: c.textPrimary,
+    fontSize: 14,
+    fontWeight: "700",
+  },
+  shareCancel: {
+    justifyContent: "center",
+    backgroundColor: "transparent",
+    borderColor: c.border,
+    marginBottom: 0,
+    marginTop: 2,
+  },
+  shareCancelText: {
+    color: c.textSecondary,
+    fontSize: 13,
+    fontWeight: "800",
+    letterSpacing: 1,
+  },
 }));
