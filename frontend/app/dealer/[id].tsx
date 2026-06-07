@@ -148,9 +148,12 @@ export default function DealerDetail() {
 
   const cur = (dealer.agents || []).find((a: any) => a.id === dealer.current_agent_id);
   const allAgents = (dealer.agents || []).slice().sort((a: any, b: any) => {
+    // Current agent always pinned to the top; everyone else alphabetical by first name.
     if (a.id === dealer.current_agent_id) return -1;
     if (b.id === dealer.current_agent_id) return 1;
-    return 0;
+    const fa = String(a.name || "").trim().split(/\s+/)[0].toLowerCase();
+    const fb = String(b.name || "").trim().split(/\s+/)[0].toLowerCase();
+    return fa.localeCompare(fb);
   });
   const total = tools.reduce((s, t) => {
     const cost = Number(t.cost) || 0;
