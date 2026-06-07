@@ -58,7 +58,9 @@ export default function ToolEdit() {
   // Model #(s) auto-expanded on a fresh tool (since model # is the first
   // thing they fill in, and the upcoming AI model lookup will autofill
   // the rest of the form from it).
-  const [openKey, setOpenKey] = useState<string | null>(null);
+  // #form — for a NEW item, start with the NAME line open & ready to type;
+  // when editing an existing item, start with everything collapsed.
+  const [openKey, setOpenKey] = useState<string | null>(isEdit ? null : "name");
   const toggle = (k: string) =>
     setOpenKey((cur) => (cur === k ? null : k));
   const [isSet, setIsSet] = useState(false);
@@ -536,25 +538,13 @@ export default function ToolEdit() {
               <Ionicons name="close" size={22} color="#F97316" />
             </TouchableOpacity>
           }
-          rightSlot={
-            <TouchableOpacity
-              testID="save-tool-btn"
-              onPress={save}
-              disabled={saving}
-              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-              style={styles.saveHeaderBtn}
-            >
-              {saving ? (
-                <ActivityIndicator color="#000" />
-              ) : (
-                <Text style={styles.saveHeaderText}>SAVE</Text>
-              )}
-            </TouchableOpacity>
-          }
+          rightSlot={undefined}
         />
 
         <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 120 }} keyboardShouldPersistTaps="handled">
           {/* AI Receipt Scanner banner removed per user 2026-05-27. */}
+
+          <Text style={styles.formTip}>Tap each line to fill in details</Text>
 
           <View style={styles.detailsBox}>
           <AccordionRow
@@ -1604,6 +1594,14 @@ const styles = themedStyles((c) => ({
   // tool/[id].tsx. Multiple detailsBox cards stack with a top margin to
   // create visible section breaks between groups (NAME/PRICE/LOCATION,
   // PHOTOS/DOCUMENTS/RECEIPTS, WARRANTY/MAINTENANCE/CONSUMABLE, etc.).
+  formTip: {
+    color: c.textMuted,
+    fontSize: 12,
+    fontWeight: "700",
+    textAlign: "center",
+    marginBottom: 12,
+    letterSpacing: 0.3,
+  },
   detailsBox: {
     backgroundColor: c.bgSecondary,
     borderWidth: 1,

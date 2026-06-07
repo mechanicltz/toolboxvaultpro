@@ -629,7 +629,7 @@ export default function InventoryScreen() {
         onPress={() => router.push("/tool/edit")}
         activeOpacity={0.85}
       >
-        <Ionicons name="add-circle" size={18} color="#000" />
+        <Ionicons name="add-circle" size={18} color="#FFFFFF" />
         <Text style={styles.addItemBtnText}>ADD ITEM</Text>
       </TouchableOpacity>
 
@@ -1859,10 +1859,13 @@ const styles = themedStyles((c) => ({
     ...(theme.elevation?.md as object),
   },
   addItemBtnText: {
-    color: "#000",
+    color: "#FFFFFF",
     fontSize: 12,
     fontWeight: "900",
     letterSpacing: 1.5,
+    textShadowColor: "rgba(0,0,0,0.55)",
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
   },
   filterAccordion: {
     marginHorizontal: 16,
