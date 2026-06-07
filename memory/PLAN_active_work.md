@@ -149,3 +149,18 @@ When Session 1 is done, prompt user: "Ready to move to Session 2 (notifications)
 - Previously listed as a P1 upcoming feature ("AI lookup from dealer websites to autofill tool info from model number").
 - **Cancelled** by user direction on 2026-06 due to the same LLM-cost concerns above.
 - Do not re-add to plans, PRDs, or feature roadmaps.
+
+
+---
+
+## 📌 SAVED FOR LATER (user-parked to-dos)
+
+### Google OAuth → "In production" publishing status (parked 2026-06-07)
+- **Why:** The user's Google Cloud OAuth consent screen is in **"Testing"** mode, so Google revokes the Drive refresh token every **7 days** → backups silently break weekly until reconnected. Setting the OAuth app to **"In production"** gives permanent (non-expiring) refresh tokens.
+- **Status:** PARKED by user — do later, not now. User asked to save this as a future task.
+- **Walkthrough to give the user when they're ready:**
+  1. Google Cloud Console → **APIs & Services → OAuth consent screen**.
+  2. Under **Publishing status**, click **PUBLISH APP** → confirm "Push to production".
+  3. (If the app uses only the `drive.file` scope — which it does — Google does NOT require full verification/branding review for this narrow scope, so publishing is instant. If Google prompts for verification, it's optional for `drive.file`.)
+  4. After publishing, the existing refresh token stops expiring. No code change needed. The user can reconnect once more to mint a fresh permanent token.
+- **Related permanence note:** OAuth redirect URI breaks on every fork because the preview subdomain changes (`GDRIVE_OAUTH_REDIRECT_URI` in backend/.env). The durable fix is to connect Drive from the **deployed/production** domain (stable) and register THAT redirect URI in Google Console. Combine with "In production" status for a connection that never breaks.
