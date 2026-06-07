@@ -22,6 +22,7 @@ import { formatPhone } from "../src/contactLinks";
 
 import { themedStyles } from "../src/themeContext";
 import { IndustrialBanner } from "../src/components/IndustrialBanner";
+import { ShadowBox } from "../src/components/ShadowBox";
 
 type Profile = {
   name: string;
@@ -60,11 +61,16 @@ export default function PersonalInfoScreen() {
   const [form, setForm] = useState<Profile>(EMPTY);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  // #16: default to a READ-ONLY view. Tapping EDIT switches to the form.
+  const [editing, setEditing] = useState(false);
 
   const load = useCallback(async () => {
     try {
       const p = await api.getPersonalProfile();
-      setForm({ ...EMPTY, ...(p || {}) });
+      const merged = { ...EMPTY, ...(p || {}) };
+      setForm(merged);
+      // First-time users (no name saved yet) go straight into edit mode.
+      setEditing(!String(merged.name || "").trim());
     } catch {
       /* ignore */
     } finally {
@@ -95,7 +101,7 @@ export default function PersonalInfoScreen() {
     setSaving(true);
     try {
       await api.updatePersonalProfile(form);
-      router.back();
+      setEditing(false);
     } catch (e: any) {
       Alert.alert("Error", e.message || "Could not save profile.");
     } finally {
@@ -123,6 +129,19 @@ export default function PersonalInfoScreen() {
             <Ionicons name="arrow-back" size={22} color="#F97316" />
           </TouchableOpacity>
         }
+        rightSlot={
+          !editing ? (
+            <TouchableOpacity
+              testID="pi-edit-top"
+              onPress={() => setEditing(true)}
+              hitSlop={10}
+              style={styles.bannerEdit}
+            >
+              <Ionicons name="create-outline" size={16} color="#F97316" />
+              <Text style={styles.bannerEditText}>EDIT</Text>
+            </TouchableOpacity>
+          ) : undefined
+        }
       />
 
       <KeyboardAvoidingView
@@ -133,6 +152,52 @@ export default function PersonalInfoScreen() {
           contentContainerStyle={{ padding: 18, paddingBottom: 140 }}
           keyboardShouldPersistTaps="handled"
         >
+          {!editing && (
+            <>
+              <ShadowBox style={styles.viewCard}>
+                <InfoRow
+                  label="Type"
+                  value={form.is_company ? "Company Entity" : "Individual"}
+                />
+                <InfoRow
+                  label={form.is_company ? "Company Name" : "Full Name"}
+                  value={form.name}
+                  last
+                />
+              </ShadowBox>
+
+              <Text style={styles.viewSection}>CONTACT</Text>
+              <ShadowBox style={styles.viewCard}>
+                <InfoRow
+                  label="Phone"
+                  value={form.phone ? formatPhone(form.phone) : ""}
+                />
+                <InfoRow label="Email" value={form.email} last />
+              </ShadowBox>
+
+              <Text style={styles.viewSection}>ADDRESS</Text>
+              <ShadowBox style={styles.viewCard}>
+                <InfoRow label="Street" value={form.address} />
+                {!!form.address2 && (
+                  <InfoRow label="Apt / Suite" value={form.address2} />
+                )}
+                <InfoRow label="City" value={form.city} />
+                <InfoRow label="State" value={form.state} />
+                <InfoRow label="Zip / Postal" value={form.zip_code} />
+                <InfoRow label="Country" value={form.country} last />
+              </ShadowBox>
+
+              <Text style={styles.viewSection}>INSURANCE</Text>
+              <ShadowBox style={styles.viewCard}>
+                <InfoRow label="Insurance Co." value={form.insurance_company} />
+                <InfoRow label="Policy #" value={form.policy_number} />
+                <InfoRow label="Notes" value={form.notes} last />
+              </ShadowBox>
+            </>
+          )}
+
+          {editing && (
+          <>
           <View style={styles.toggleRow}>
             <View style={{ flex: 1 }}>
               <Text style={styles.toggleLabel}>
@@ -270,29 +335,49 @@ export default function PersonalInfoScreen() {
             multiline
             placeholder="Anything extra to include on reports..."
           />
+          </>
+          )}
         </ScrollView>
       </KeyboardAvoidingView>
 
       <View style={styles.actionBar}>
-        <TouchableOpacity
-          testID="pi-cancel"
-          style={styles.btnGhost}
-          onPress={() => router.back()}
-        >
-          <Text style={styles.btnGhostText}>CANCEL</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          testID="pi-save"
-          style={[styles.btnPrimary, saving && { opacity: 0.6 }]}
-          onPress={save}
-          disabled={saving}
-        >
-          {saving ? (
-            <ActivityIndicator color="#000" />
-          ) : (
-            <Text style={styles.btnPrimaryText}>SAVE</Text>
-          )}
-        </TouchableOpacity>
+        {editing ? (
+          <>
+            <TouchableOpacity
+              testID="pi-cancel"
+              style={styles.btnGhost}
+              onPress={() => {
+                // Discard unsaved edits and return to the read-only view.
+                load();
+              }}
+            >
+              <Text style={styles.btnGhostText}>CANCEL</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              testID="pi-save"
+              style={[styles.btnPrimary, saving && { opacity: 0.6 }]}
+              onPress={save}
+              disabled={saving}
+            >
+              {saving ? (
+                <ActivityIndicator color="#000" />
+              ) : (
+                <Text style={styles.btnPrimaryText}>SAVE</Text>
+              )}
+            </TouchableOpacity>
+          </>
+        ) : (
+          <TouchableOpacity
+            testID="pi-edit"
+            style={styles.btnPrimary}
+            onPress={() => setEditing(true)}
+          >
+            <Ionicons name="create-outline" size={16} color="#000" />
+            <Text style={[styles.btnPrimaryText, { marginLeft: 8 }]}>
+              EDIT INFORMATION
+            </Text>
+          </TouchableOpacity>
+        )}
       </View>
     </SafeAreaView>
   );
@@ -343,8 +428,80 @@ function Field({
   );
 }
 
+function InfoRow({
+  label,
+  value,
+  last,
+}: {
+  label: string;
+  value?: string;
+  last?: boolean;
+}) {
+  const shown = String(value || "").trim();
+  return (
+    <View style={[styles.infoRow, last && styles.infoRowLast]}>
+      <Text style={styles.infoLabel}>{label.toUpperCase()}</Text>
+      <Text
+        style={[styles.infoValue, !shown && styles.infoValueEmpty]}
+        numberOfLines={3}
+      >
+        {shown || "—"}
+      </Text>
+    </View>
+  );
+}
+
 const styles = themedStyles((c) => ({
   container: { flex: 1, backgroundColor: c.canvas },
+  bannerEdit: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  bannerEditText: {
+    color: "#F97316",
+    fontSize: 11,
+    fontWeight: "900",
+    letterSpacing: 1.5,
+  },
+  viewCard: {
+    marginTop: 6,
+    marginBottom: 2,
+    paddingVertical: 4,
+  },
+  viewSection: {
+    color: c.accent,
+    fontSize: 8,
+    fontWeight: "900",
+    letterSpacing: 2,
+    marginTop: 18,
+    marginBottom: 2,
+    marginLeft: 2,
+  },
+  infoRow: {
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: c.border,
+  },
+  infoRowLast: {
+    borderBottomWidth: 0,
+  },
+  infoLabel: {
+    color: c.textMuted,
+    fontSize: 7,
+    fontWeight: "800",
+    letterSpacing: 1.5,
+    marginBottom: 4,
+  },
+  infoValue: {
+    color: c.textPrimary,
+    fontSize: 13,
+    fontWeight: "700",
+  },
+  infoValueEmpty: {
+    color: c.textMuted,
+    fontWeight: "500",
+  },
   loading: { flex: 1, alignItems: "center", justifyContent: "center" },
   header: {
     flexDirection: "row",
@@ -457,6 +614,7 @@ const styles = themedStyles((c) => ({
   btnPrimary: {
     flex: 2,
     height: 50,
+    flexDirection: "row",
     backgroundColor: c.accent,
     alignItems: "center",
     justifyContent: "center",

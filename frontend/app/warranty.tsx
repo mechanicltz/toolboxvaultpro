@@ -68,17 +68,17 @@ export default function WarrantyScreen() {
         }
       />
       <ScrollView contentContainerStyle={{ paddingBottom: 60 }}>
-        <Text style={styles.sectionLabel}>EXPIRED ({data.expired.length})</Text>
-        {data.expired.length === 0 ? (
-          <Text style={styles.empty}>No expired warranties.</Text>
-        ) : (
-          data.expired.map((t) => renderItem(t, "expired"))
-        )}
         <Text style={styles.sectionLabel}>EXPIRING SOON ({data.expiring.length})</Text>
         {data.expiring.length === 0 ? (
           <Text style={styles.empty}>None expiring in the next 60 days.</Text>
         ) : (
           data.expiring.map((t) => renderItem(t, "expiring"))
+        )}
+        <Text style={styles.sectionLabel}>EXPIRED ({data.expired.length})</Text>
+        {data.expired.length === 0 ? (
+          <Text style={styles.empty}>No expired warranties.</Text>
+        ) : (
+          data.expired.map((t) => renderItem(t, "expired"))
         )}
       </ScrollView>
     </SafeAreaView>

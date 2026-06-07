@@ -538,12 +538,29 @@ export default function DealerDetail() {
                             </TouchableOpacity>
                           )}
                           <TouchableOpacity
+                            testID={`edit-agent-${a.id}`}
+                            style={styles.agentActionBtn}
+                            onPress={() =>
+                              setAgentForm({
+                                id: a.id,
+                                name: a.name || "",
+                                phone: a.phone || "",
+                                email: a.email || "",
+                                location: a.location || "",
+                                notes: a.notes || "",
+                              })
+                            }
+                          >
+                            <Ionicons name="create-outline" size={16} color={theme.colors.accent} />
+                            <Text style={styles.agentActionText}>EDIT</Text>
+                          </TouchableOpacity>
+                          <TouchableOpacity
                             testID={`remove-agent-${a.id}`}
                             style={[styles.agentActionBtn, { borderColor: theme.colors.danger }]}
                             onPress={() => removeAgent(a.id, a.name)}
                           >
                             <Ionicons name="trash-outline" size={16} color={theme.colors.danger} />
-                            <Text style={[styles.agentActionText, { color: theme.colors.danger }]}>REMOVE</Text>
+                            <Text style={[styles.agentActionText, { color: theme.colors.danger }]}>DELETE</Text>
                           </TouchableOpacity>
                         </View>
 
@@ -1216,17 +1233,7 @@ const styles = themedStyles((c) => ({
     fontWeight: "700",
     letterSpacing: 0.3,
   },
-  agentCard: {
-    marginHorizontal: 20,
-    marginBottom: 10,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: c.border,
-    backgroundColor: c.bgSecondary,
-    borderRadius: 4,
-  
-    ...(theme.elevation.md as object),
-  },
+  agentCard: { paddingTop: 10, paddingBottom: 10, paddingHorizontal: 12 },
   agentCardActive: {
     borderColor: c.accent,
     borderLeftWidth: 4,
@@ -1279,7 +1286,6 @@ const styles = themedStyles((c) => ({
   agentName: { color: c.textPrimary, fontWeight: "700", fontSize: 12, marginTop: 6 },
   agentMeta: { color: c.textSecondary, fontSize: 9, marginTop: 2 },
   // ---- Business-card layout (agent ShadowBoxSubCard) ----
-  agentCard: { paddingTop: 10, paddingBottom: 10, paddingHorizontal: 12 },
   bizName: {
     color: c.textPrimary,
     fontSize: 15,

@@ -236,26 +236,11 @@ export default function FeedbackScreen() {
             testID="feedback-email"
           />
 
-          {/* Platform — the platform field is auto-detected from the device
-              the user is currently running on. We don't show the cross-
-              platform picker any longer because Apple's review (Guideline
-              2.3.10) flagged any mention of other mobile platforms inside
-              the iOS binary. The detected value still flows through to
-              the backend so support can see which device a report came
-              from. */}
-          <Text style={styles.label}>PLATFORM</Text>
-          <View style={[styles.segmented, { opacity: 0.85 }]}>
-            <View style={[styles.segBtn, styles.segBtnOn]}>
-              <Ionicons
-                name={Platform.OS === "ios" ? "logo-apple" : "phone-portrait"}
-                size={16}
-                color="#000"
-              />
-              <Text style={[styles.segText, { color: "#000" }]}>
-                {platform}
-              </Text>
-            </View>
-          </View>
+          {/* Platform is auto-detected from the device and sent silently with
+              the report (support sees which device it came from). We no longer
+              show a platform picker/button on screen — Apple's review
+              (Guideline 2.3.10) flagged mentioning other mobile platforms in
+              the iOS binary, and it was a non-interactive control anyway. */}
 
           {/* Subject */}
           <Text style={styles.label}>SUBJECT</Text>

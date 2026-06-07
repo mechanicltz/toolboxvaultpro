@@ -33,6 +33,7 @@ def send_email(
     body_plain: str,
     body_html: Optional[str] = None,
     reply_to: Optional[str] = None,
+    cc: Optional[str] = None,
     attachment_base64: Optional[str] = None,
     attachment_filename: str = "screenshot.png",
     attachment_mime: str = "image/png",
@@ -61,6 +62,11 @@ def send_email(
     msg["To"] = to_address
     if reply_to:
         msg["Reply-To"] = reply_to
+    # Optional CC — e.g. the feedback submitter, so support can reply-all and
+    # the user keeps a copy of what they sent.
+    cc_clean = (cc or "").strip()
+    if cc_clean and cc_clean.lower() != (to_address or "").strip().lower():
+        msg["Cc"] = cc_clean
     msg.set_content(body_plain)
     if body_html:
         msg.add_alternative(body_html, subtype="html")
@@ -203,6 +209,7 @@ def send_feedback_email(
         body_plain,
         body_html,
         reply_to=from_email.strip() or None,
+        cc=from_email.strip() or None,
         attachment_base64=screenshot_base64,
         attachment_filename="screenshot.png",
         attachment_mime="image/png",
