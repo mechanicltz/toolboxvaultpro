@@ -321,7 +321,7 @@ def _alert_email_content(health: Dict[str, Any], when: datetime, *, first: bool)
         f"{head}: Your Toolbox Vault offsite backup is not working.\n\n"
         f"Detected: {stamp}\n"
         f"Problem: {health['detail']}\n\n"
-        "Until this is fixed, your nightly encrypted backups are NOT being "
+        "Until this is fixed, your nightly backups are NOT being "
         "copied to Google Drive. Your existing backup files in Drive are still "
         "safe — the app just can't add new ones.\n\n"
         "How to fix: open Toolbox Vault → More → Database Backups, and tap "
@@ -338,7 +338,7 @@ def _alert_email_content(health: Dict[str, Any], when: datetime, *, first: bool)
         '<div style="border:1px solid #eee;border-top:none;border-radius:0 0 12px 12px;padding:20px">'
         f'<p style="margin:0 0 12px"><b>Detected:</b> {stamp}</p>'
         f'<p style="margin:0 0 12px;color:#B3261E"><b>Problem:</b> {health["detail"]}</p>'
-        '<p style="margin:0 0 12px">Until this is fixed, nightly encrypted backups are '
+        '<p style="margin:0 0 12px">Until this is fixed, nightly backups are '
         '<b>not</b> being copied to Google Drive. Your existing Drive backups are still safe.</p>'
         '<p style="margin:16px 0 6px;font-weight:700">How to fix</p>'
         '<p style="margin:0 0 12px">Open <b>Toolbox Vault → More → Database Backups</b> and tap '
@@ -450,7 +450,7 @@ async def _scheduler_loop(get_db):
     Each cycle:
       1) Creates a small in-DB data backup (for the in-app restore list +
          pre-restore safety snapshots, prunes to MAX_BACKUPS_RETAINED).
-      2) Builds the FULL ENCRYPTED snapshot (code+data+env), self-checks it,
+      2) Builds the FULL snapshot (code+data+env) as a plain ZIP, self-checks it,
          and uploads it + its passphrase to Google Drive (if connected).
       3) Applies the Drive retention policy (keep min N + delete >15 days old).
     """
@@ -469,7 +469,7 @@ async def _scheduler_loop(get_db):
                 )
             except Exception as e:
                 logger.exception("Scheduled in-DB backup failed: %s", e)
-            # Push the FULL encrypted snapshot to Drive (best-effort).
+            # Push the FULL snapshot to Drive (best-effort).
             snapshot_result: Dict[str, Any] = {"uploaded": False, "reason": "unknown"}
             try:
                 snapshot_result = await _run_full_snapshot_to_drive(db, trigger="scheduled")
