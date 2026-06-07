@@ -20,7 +20,7 @@ export function DealerBalanceRow({
   const total = credit + truck;
   return (
     <View style={styles.dealerRow}>
-      <DealerLogo logo={dealer.logo} size={26} style={{ marginRight: 8 }} />
+      <DealerLogo logo={dealer.logo} size={36} style={{ marginRight: 10 }} />
       <Text style={styles.dealerName} numberOfLines={1}>
         {dealer.name}
       </Text>

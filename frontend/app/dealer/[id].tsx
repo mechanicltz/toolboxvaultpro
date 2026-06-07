@@ -294,7 +294,7 @@ export default function DealerDetail() {
 
       <ScrollView contentContainerStyle={{ paddingBottom: 100 }}>
         <View style={styles.heroBox}>
-          <DealerLogo logo={dealer.logo} size={72} style={{ marginBottom: 10 }} />
+          <DealerLogo logo={dealer.logo} size={92} style={{ marginBottom: 10 }} />
           <Text style={styles.dealerName}>{dealer.name}</Text>
         </View>
 
@@ -1149,15 +1149,16 @@ const styles = themedStyles((c) => ({
     borderWidth: 1,
     borderColor: c.border,
     borderRadius: 8,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: c.surface,
     gap: 4,
   },
   stockLogoChipOn: {
     borderColor: c.accent,
     borderWidth: 2,
+    backgroundColor: c.bg,
   },
   stockLogoLabel: {
-    color: "#333",
+    color: c.textSecondary,
     fontSize: 7,
     fontWeight: "700",
     textAlign: "center",

@@ -3,13 +3,15 @@ import { View, Image, StyleSheet, StyleProp, ViewStyle } from "react-native";
 import { resolveDealerLogo } from "../dealerLogos";
 
 /**
- * Renders a dealer's logo inside a consistent, neatly-aligned chip so a column
- * of dealers all line up. Brand logos sit on a light chip for visibility on the
- * app's dark theme. Falls back to the app icon when no logo is set.
+ * Renders a dealer's logo at a fixed slot size so a column of dealers stays
+ * aligned. No backing chip / border — the brand logos are transparent PNGs that
+ * read well directly on the app's dark theme, and the logo fills the slot
+ * (resizeMode "contain") so it looks as large as possible. Falls back to the
+ * app icon when no logo is set.
  */
 export function DealerLogo({
   logo,
-  size = 44,
+  size = 48,
   style,
 }: {
   logo?: string | null;
@@ -18,15 +20,12 @@ export function DealerLogo({
 }) {
   return (
     <View
-      style={[
-        styles.box,
-        { width: size, height: size, borderRadius: Math.round(size * 0.22) },
-        style,
-      ]}
+      style={[styles.box, { width: size, height: size }, style]}
+      pointerEvents="none"
     >
       <Image
         source={resolveDealerLogo(logo)}
-        style={{ width: size * 0.8, height: size * 0.8 }}
+        style={{ width: size, height: size }}
         resizeMode="contain"
       />
     </View>
@@ -35,12 +34,8 @@ export function DealerLogo({
 
 const styles = StyleSheet.create({
   box: {
-    backgroundColor: "#FFFFFF",
     alignItems: "center",
     justifyContent: "center",
-    borderWidth: 1,
-    borderColor: "rgba(0,0,0,0.12)",
-    overflow: "hidden",
   },
 });
 
