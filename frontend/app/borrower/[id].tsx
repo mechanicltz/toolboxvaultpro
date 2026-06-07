@@ -94,18 +94,71 @@ export default function BorrowerHistory() {
   const cPhone = cPhones[0] || "";
   const cEmail = cEmails[0] || "";
 
+  const buildVCard = () => {
+    const out = ["BEGIN:VCARD", "VERSION:3.0", `FN:${b.name}`, `N:${b.name};;;;`];
+    if (cPhone) out.push(`TEL;TYPE=CELL:${cPhone}`);
+    if (cEmail) out.push(`EMAIL;TYPE=INTERNET:${cEmail}`);
+    out.push("END:VCARD");
+    return out.join("\r\n");
+  };
+
   const doShareContact = async () => {
-    const lines = [b.name];
-    if (cPhone) lines.push(`Phone: ${cPhone}`);
-    if (cEmail) lines.push(`Email: ${cEmail}`);
+    const text = [b.name, cPhone ? `Phone: ${cPhone}` : "", cEmail ? `Email: ${cEmail}` : ""]
+      .filter(Boolean)
+      .join("\n");
+
+    // Web preview: Share API / expo-contacts aren't available, so fall back to
+    // the browser Web Share API, then the clipboard, then just show the text.
+    if (Platform.OS === "web") {
+      const w: any = globalThis;
+      try {
+        if (w.navigator?.share) {
+          await w.navigator.share({ title: b.name, text });
+          return;
+        }
+      } catch {
+        return; /* user cancelled the web share sheet */
+      }
+      try {
+        await w.navigator?.clipboard?.writeText(text);
+        Alert.alert("Copied", "Contact details copied to your clipboard.");
+        return;
+      } catch {
+        /* clipboard blocked */
+      }
+      Alert.alert(b.name, text);
+      return;
+    }
+
     try {
-      await Share.share({ message: lines.join("\n") });
+      await Share.share({ message: text });
     } catch {
       /* user cancelled */
     }
   };
 
   const doSaveToDevice = async () => {
+    // Web preview can't write to device contacts — download a .vcf vCard the
+    // user can open to import the contact instead.
+    if (Platform.OS === "web") {
+      try {
+        const w: any = globalThis;
+        const blob = new w.Blob([buildVCard()], { type: "text/vcard;charset=utf-8" });
+        const url = w.URL.createObjectURL(blob);
+        const a = w.document.createElement("a");
+        a.href = url;
+        a.download = `${b.name || "contact"}.vcf`;
+        w.document.body.appendChild(a);
+        a.click();
+        a.remove();
+        w.URL.revokeObjectURL(url);
+        Alert.alert("Contact card downloaded", "Open the .vcf file to add this contact to your address book.");
+      } catch {
+        Alert.alert("Error", "Could not generate the contact card.");
+      }
+      return;
+    }
+
     try {
       const perm = await Contacts.requestPermissionsAsync();
       if (perm.status !== "granted") {
