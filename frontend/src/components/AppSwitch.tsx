@@ -5,19 +5,25 @@ import { theme } from "../theme";
 /**
  * AppSwitch — the single, app-wide toggle switch.
  *
- * Enforces ONE uniform size for every toggle in the app (the size locked in on
- * the "Home Screen Rows" sheet: scale 0.78) and the standard accent / border
- * track colors. Callers can still override value / onValueChange / testID etc.
- * The size is enforced last so all switches stay visually identical.
+ * Enforces ONE uniform size (scale 0.78 — the size locked in on the "Home
+ * Screen Rows" sheet) AND uniform track/thumb colors for every toggle in the
+ * app. Per-caller trackColor / thumbColor are intentionally ignored so every
+ * switch looks identical (and the OFF state stays visible in light mode).
  */
 const SWITCH_SCALE = 0.78;
 
-export function AppSwitch({ style, trackColor, thumbColor, ...rest }: SwitchProps) {
+export function AppSwitch({
+  style,
+  trackColor: _ignoredTrack,
+  thumbColor: _ignoredThumb,
+  ...rest
+}: SwitchProps) {
   return (
     <Switch
-      trackColor={trackColor ?? { true: theme.colors.accent, false: theme.colors.switchTrackOff }}
-      thumbColor={thumbColor ?? "#fff"}
       {...rest}
+      trackColor={{ true: theme.colors.accent, false: theme.colors.switchTrackOff }}
+      ios_backgroundColor={theme.colors.switchTrackOff}
+      thumbColor="#fff"
       style={[style, { transform: [{ scale: SWITCH_SCALE }] }]}
     />
   );
