@@ -72,6 +72,12 @@ TextInputAny.defaultProps = TextInputAny.defaultProps || {};
 TextInputAny.defaultProps.allowFontScaling = false;
 TextInputAny.defaultProps.maxFontSizeMultiplier = 1;
 
+// ── INTRO VIDEO TOGGLE ───────────────────────────────────────────────
+// Temporarily disabled so the brand splash video doesn't gate the screen
+// during development/screenshots. Flip back to `true` to re-enable the
+// cold-boot + 5-min-idle intro exactly as before. (Nothing else changed.)
+const INTRO_ENABLED = false;
+
 function AuthGate({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
   const router = useRouter();
@@ -84,7 +90,7 @@ function AuthGate({ children }: { children: React.ReactNode }) {
   // video finishes we set this to false and the app reveals itself.
   // Foreground/background cycles don't trigger it unless the JS VM was
   // actually torn down.
-  const [showIntro, setShowIntro] = useState(true);
+  const [showIntro, setShowIntro] = useState(INTRO_ENABLED);
   const [bootDecided] = useState(true);
   // When logged-out, learn whether the DB is empty so we can route to the
   // "Fresh Install Detected" bootstrap screen instead of login.

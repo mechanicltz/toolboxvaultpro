@@ -41,11 +41,17 @@ export function DealerLogo({
   useEffect(() => {
     let cancelled = false;
 
-    // Bundled require() assets resolve synchronously with real dimensions.
-    const resolved = Image.resolveAssetSource(source as any);
-    if (resolved?.width && resolved?.height) {
-      setAspect(resolved.width / resolved.height);
-      return;
+    // Bundled require() assets resolve synchronously with real dimensions
+    // on native. `Image.resolveAssetSource` is NOT available on
+    // react-native-web (the web preview); guard so this doesn't throw and
+    // crash the entire screen.
+    const resolveFn = (Image as any)?.resolveAssetSource;
+    if (typeof resolveFn === "function") {
+      const resolved = resolveFn(source as any);
+      if (resolved?.width && resolved?.height) {
+        setAspect(resolved.width / resolved.height);
+        return;
+      }
     }
 
     // Remote / data-uri (custom uploads) — ask the platform for the size.

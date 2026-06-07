@@ -11,6 +11,8 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
+  Image,
+  Linking,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -35,6 +37,9 @@ import { ShadowBox } from "../../src/components/ShadowBox";
 import { IndustrialBanner } from "../../src/components/IndustrialBanner";
 import { PillButton } from "../../src/components/PillButton";
 import { DealerLogo } from "../../src/components/DealerLogo";
+import { STOCK_LOGO_OPTIONS, isDefaultLogo } from "../../src/dealerLogos";
+import * as ImagePicker from "expo-image-picker";
+import * as ImageManipulator from "expo-image-manipulator";
 
 export default function DealersScreen() {
   const router = useRouter();
@@ -44,7 +49,7 @@ export default function DealersScreen() {
   const [dealers, setDealers] = useState<any[]>(() => getCached("dealers", []));
   const [tools, setTools] = useState<any[]>(() => getCached("tools", []));
   const [showAdd, setShowAdd] = useState(false);
-  const [form, setForm] = useState<any>({ name: "", phone: "", website: "", address: "", notes: "", warranty_contact: "", tech_support_contact: "", customer_support_contact: "", route_frequency: "N/A", route_day_of_week: "", route_anchor_date: "" });
+  const [form, setForm] = useState<any>({ name: "", logo: "default", phone: "", website: "", address: "", notes: "", warranty_contact: "", tech_support_contact: "", customer_support_contact: "", route_frequency: "N/A", route_day_of_week: "", route_anchor_date: "" });
 
   const lockedDealerIds = useMemo(() => new Set<string>(), []);
 
@@ -89,9 +94,47 @@ export default function DealersScreen() {
     if (!form.name?.trim()) return;
     const payload = { ...form, name: form.name.trim() };
     const d = await api.createDealer(payload);
-    setForm({ name: "", phone: "", website: "", address: "", notes: "", warranty_contact: "", tech_support_contact: "", customer_support_contact: "", route_frequency: "N/A", route_day_of_week: "", route_anchor_date: "" });
+    setForm({ name: "", logo: "default", phone: "", website: "", address: "", notes: "", warranty_contact: "", tech_support_contact: "", customer_support_contact: "", route_frequency: "N/A", route_day_of_week: "", route_anchor_date: "" });
     setShowAdd(false);
     router.push(`/dealer/${d.id}`);
+  };
+
+  const pickDealerLogo = async () => {
+    try {
+      const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!perm.granted) {
+        if (!perm.canAskAgain) {
+          Alert.alert(
+            "Photo access needed",
+            "Allow photo access in Settings to upload a dealer logo.",
+            [
+              { text: "Cancel", style: "cancel" },
+              { text: "Open Settings", onPress: () => Linking.openSettings() },
+            ],
+          );
+        } else {
+          Alert.alert("Photo access needed", "Photo access is required to upload a logo.");
+        }
+        return;
+      }
+      const res = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 1,
+      });
+      if (res.canceled || !res.assets?.[0]?.uri) return;
+      const out = await ImageManipulator.manipulateAsync(
+        res.assets[0].uri,
+        [{ resize: { width: 256, height: 256 } }],
+        { compress: 0.8, format: ImageManipulator.SaveFormat.PNG, base64: true },
+      );
+      if (out.base64) {
+        setForm((f: any) => ({ ...f, logo: `data:image/png;base64,${out.base64}` }));
+      }
+    } catch (e: any) {
+      Alert.alert("Could not load image", String(e?.message || e));
+    }
   };
 
   const summaryFor = (id: string) => {
@@ -209,6 +252,55 @@ export default function DealersScreen() {
         >
           <ScrollView style={styles.modalCard} keyboardShouldPersistTaps="handled">
             <Text style={styles.modalTitle}>NEW DEALER</Text>
+
+            {/* Dealer logo — chosen at creation time (defaults to the app octagon) */}
+            <Text style={styles.logoFieldLabel}>DEALER LOGO</Text>
+            <View style={styles.logoPickerRow}>
+              <DealerLogo logo={form.logo} size={60} height={48} />
+              <View style={{ flex: 1, gap: 8 }}>
+                <TouchableOpacity
+                  testID="add-logo-upload-btn"
+                  style={styles.logoActionBtn}
+                  onPress={pickDealerLogo}
+                >
+                  <Ionicons name="cloud-upload-outline" size={15} color={theme.colors.accent} />
+                  <Text style={styles.logoActionText}>UPLOAD LOGO</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  testID="add-logo-default-btn"
+                  style={styles.logoActionBtn}
+                  onPress={() => setForm((f: any) => ({ ...f, logo: "default" }))}
+                  disabled={isDefaultLogo(form.logo)}
+                >
+                  <Ionicons name="refresh-outline" size={15} color={theme.colors.textSecondary} />
+                  <Text style={[styles.logoActionText, { color: theme.colors.textSecondary }]}>
+                    USE DEFAULT (APP ICON)
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+            <Text style={styles.logoStockHint}>OR PICK A STOCK LOGO</Text>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{ gap: 10, paddingVertical: 6, paddingBottom: 12 }}
+            >
+              {STOCK_LOGO_OPTIONS.map((opt) => {
+                const sel = form.logo === opt.value;
+                return (
+                  <TouchableOpacity
+                    key={opt.key}
+                    testID={`add-logo-stock-${opt.key}`}
+                    onPress={() => setForm((f: any) => ({ ...f, logo: opt.value }))}
+                    style={[styles.stockLogoChip, sel && styles.stockLogoChipOn]}
+                  >
+                    <Image source={opt.source} style={{ width: 48, height: 30 }} resizeMode="contain" />
+                    <Text style={styles.stockLogoLabel} numberOfLines={1}>{opt.label}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+
             {([
               { k: "name", placeholder: "Dealer name (e.g. Matco)*", focus: true, multiline: false },
               { k: "phone", placeholder: "Main phone", focus: false, multiline: false },
@@ -314,7 +406,7 @@ export default function DealersScreen() {
                 style={styles.btnGhost}
                 onPress={() => {
                   setShowAdd(false);
-                  setForm({ name: "", phone: "", website: "", address: "", notes: "", warranty_contact: "", tech_support_contact: "", customer_support_contact: "", route_frequency: "N/A", route_day_of_week: "", route_anchor_date: "" });
+                  setForm({ name: "", logo: "default", phone: "", website: "", address: "", notes: "", warranty_contact: "", tech_support_contact: "", customer_support_contact: "", route_frequency: "N/A", route_day_of_week: "", route_anchor_date: "" });
                 }}
               >
                 <Text style={styles.btnGhostText}>CANCEL</Text>
@@ -577,4 +669,65 @@ const styles = themedStyles((c) => ({
     letterSpacing: 1,
   },
   chipTextOn: { color: c.accent },
+  logoFieldLabel: {
+    color: c.textMuted,
+    fontSize: 7,
+    fontWeight: "800",
+    letterSpacing: 1.5,
+    marginBottom: 8,
+    marginTop: 2,
+  },
+  logoPickerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 14,
+    marginBottom: 10,
+  },
+  logoActionBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingVertical: 9,
+    paddingHorizontal: 12,
+    borderWidth: 1,
+    borderColor: c.border,
+    borderRadius: 6,
+    backgroundColor: c.bg,
+  },
+  logoActionText: {
+    color: c.accent,
+    fontSize: 8,
+    fontWeight: "900",
+    letterSpacing: 1,
+  },
+  logoStockHint: {
+    color: c.textMuted,
+    fontSize: 7,
+    fontWeight: "800",
+    letterSpacing: 1.5,
+    marginBottom: 2,
+  },
+  stockLogoChip: {
+    alignItems: "center",
+    justifyContent: "center",
+    width: 64,
+    paddingVertical: 8,
+    paddingHorizontal: 4,
+    borderWidth: 1,
+    borderColor: c.border,
+    borderRadius: 8,
+    backgroundColor: c.surface,
+    gap: 4,
+  },
+  stockLogoChipOn: {
+    borderColor: c.accent,
+    borderWidth: 2,
+    backgroundColor: c.bg,
+  },
+  stockLogoLabel: {
+    color: c.textSecondary,
+    fontSize: 7,
+    fontWeight: "700",
+    textAlign: "center",
+  },
 }));
