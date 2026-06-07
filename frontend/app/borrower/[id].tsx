@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react";
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Modal, TextInput, KeyboardAvoidingView, Platform, Share, Alert, Linking } from "react-native";
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Modal, TextInput, KeyboardAvoidingView, Platform, Pressable, Share, Alert, Linking } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
@@ -320,11 +320,8 @@ export default function BorrowerHistory() {
       {/* Share / Save contact action sheet — in-app Modal (works on RN-Web
           too, unlike Alert.alert whose buttons array is ignored on web). */}
       <Modal visible={showShareSheet} transparent animationType="slide" onRequestClose={() => setShowShareSheet(false)}>
-        <TouchableOpacity
-          activeOpacity={1}
-          style={styles.shareBackdrop}
-          onPress={() => setShowShareSheet(false)}
-        >
+        <View style={styles.shareBackdrop}>
+          <Pressable style={StyleSheet.absoluteFill} onPress={() => setShowShareSheet(false)} />
           <View style={styles.shareSheet}>
             <View style={styles.shareGrabber} />
             <Text style={styles.shareTitle} numberOfLines={1}>{b.name}</Text>
@@ -359,7 +356,7 @@ export default function BorrowerHistory() {
               <Text style={styles.shareCancelText}>Cancel</Text>
             </TouchableOpacity>
           </View>
-        </TouchableOpacity>
+        </View>
       </Modal>
     </SafeAreaView>
   );
