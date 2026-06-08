@@ -194,63 +194,48 @@ function BalanceCard({
       <Text style={styles.balSub}>{owed ? "Outstanding balance" : "Paid up"}</Text>
       <View style={{ flexDirection: "row", gap: 8, marginTop: 12 }}>
         <PillButton
-          testID={`pay-${idBase}`}
-          label="LOG PAYMENT"
-          icon="trending-down"
+          testID={`adjust-${idBase}`}
+          label="Adjust"
+          icon="swap-vertical"
           variant="active"
           onPress={onPay}
           style={{ flex: 1, justifyContent: "center" }}
         />
         <PillButton
-          testID={`charge-${idBase}`}
-          label="ADD CHARGE"
-          icon="trending-up"
-          variant="danger"
-          onPress={onCharge}
+          testID={`schedule-${idBase}`}
+          label="Schedule"
+          icon="alarm-outline"
+          variant="default"
+          onPress={onEditSchedule}
           style={{ flex: 1, justifyContent: "center" }}
         />
       </View>
 
-      {/* ---- Recurring payment schedule strip ---- */}
-      <View style={styles.schedWrap}>
-        {hasSched ? (
-          <>
-            <View style={styles.schedHeaderRow}>
-              <View style={styles.schedBadge}>
-                <Ionicons name="repeat" size={11} color={theme.colors.accent} />
-                <Text style={styles.schedBadgeText}>AUTO SCHEDULE</Text>
-              </View>
-              <TouchableOpacity onPress={onEditSchedule} testID={`edit-schedule-${idBase}`} hitSlop={8}>
-                <Ionicons name="create-outline" size={18} color={theme.colors.accent} />
-              </TouchableOpacity>
+      {/* ---- Recurring payment schedule summary (only when one exists) ---- */}
+      {hasSched && (
+        <View style={styles.schedWrap}>
+          <View style={styles.schedHeaderRow}>
+            <View style={styles.schedBadge}>
+              <Ionicons name="repeat" size={11} color={theme.colors.accent} />
+              <Text style={styles.schedBadgeText}>AUTO SCHEDULE</Text>
             </View>
-            <Text style={styles.schedAmount}>
-              ${Number(schedule?.amount || 0).toFixed(2)}{" "}
-              <Text style={styles.schedFreq}>· {freqLabel(schedule?.frequency)}</Text>
-            </Text>
-            <Text style={[styles.schedDue, { color: st?.color }]}>{st?.text}</Text>
-            <PillButton
-              testID={`mark-paid-${idBase}`}
-              label={busy ? "…" : "MARK PAYMENT PAID"}
-              icon="checkmark-circle"
-              variant={st?.due ? "active" : "default"}
-              onPress={onMarkPaid}
-              disabled={busy}
-              style={{ justifyContent: "center", marginTop: 10 }}
-            />
-          </>
-        ) : (
-          <TouchableOpacity
-            style={styles.setSchedBtn}
-            onPress={onEditSchedule}
-            testID={`set-schedule-${idBase}`}
-            activeOpacity={0.8}
-          >
-            <Ionicons name="alarm-outline" size={16} color={theme.colors.accent} />
-            <Text style={styles.setSchedText}>SET PAYMENT SCHEDULE</Text>
-          </TouchableOpacity>
-        )}
-      </View>
+          </View>
+          <Text style={styles.schedAmount}>
+            ${Number(schedule?.amount || 0).toFixed(2)}{" "}
+            <Text style={styles.schedFreq}>· {freqLabel(schedule?.frequency)}</Text>
+          </Text>
+          <Text style={[styles.schedDue, { color: st?.color }]}>{st?.text}</Text>
+          <PillButton
+            testID={`mark-paid-${idBase}`}
+            label={busy ? "…" : "MARK PAYMENT PAID"}
+            icon="checkmark-circle"
+            variant={st?.due ? "active" : "default"}
+            onPress={onMarkPaid}
+            disabled={busy}
+            style={{ justifyContent: "center", marginTop: 10 }}
+          />
+        </View>
+      )}
     </ShadowBoxSubCard>
   );
 }
