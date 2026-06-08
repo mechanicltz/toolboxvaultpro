@@ -664,14 +664,35 @@ export default function InventoryScreen() {
         ) : (
           <View style={[styles.searchBox, { flex: 1 }]}>{searchInner}</View>
         )}
-        <TouchableOpacity
-          testID="select-mode-btn"
-          style={[styles.selectHeaderBtn, isIndustrial && styles.selectHeaderBtnSkin]}
-          onPress={() => setSelectMode(true)}
-          hitSlop={6}
-        >
-          <Ionicons name="checkmark-done" size={20} color={theme.colors.accent} />
-        </TouchableOpacity>
+        {isIndustrial ? (
+          <TouchableOpacity
+            testID="select-mode-btn"
+            onPress={() => setSelectMode(true)}
+            hitSlop={6}
+            activeOpacity={0.8}
+          >
+            <TbvFrame
+              source={SKIN.plate}
+              capInsets={CAP.plate}
+              padX={12}
+              padTop={6}
+              padBottom={6}
+            >
+              <View style={styles.selectFrameInner}>
+                <Ionicons name="checkmark-done" size={20} color={theme.colors.accent} />
+              </View>
+            </TbvFrame>
+          </TouchableOpacity>
+        ) : (
+          <TouchableOpacity
+            testID="select-mode-btn"
+            style={styles.selectHeaderBtn}
+            onPress={() => setSelectMode(true)}
+            hitSlop={6}
+          >
+            <Ionicons name="checkmark-done" size={20} color={theme.colors.accent} />
+          </TouchableOpacity>
+        )}
       </View>
 
       {/* #24 — All filters live inside a "Filter" ShadowBox accordion, closed by default. */}
@@ -1773,9 +1794,11 @@ const styles = themedStyles((c) => ({
     height: 40,
     gap: 8,
   },
-  selectHeaderBtnSkin: {
-    backgroundColor: "rgba(20,20,20,0.85)",
-    borderColor: c.accent,
+  selectFrameInner: {
+    width: 76,
+    height: 40,
+    alignItems: "center",
+    justifyContent: "center",
   },
   fabSkin: {
     position: "absolute",
