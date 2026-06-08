@@ -17,7 +17,7 @@ import { api } from "../src/api";
 import { formatDateUS } from "../src/dateUtil";
 
 import { themedStyles } from "../src/themeContext";
-import { BevelCard } from "../src/components/BevelCard";
+import { ShadowBox, ShadowBoxMini } from "../src/components/ShadowBox";
 import { IndustrialBanner } from "../src/components/IndustrialBanner";
 
 function daysUntil(iso: string): number {
@@ -76,24 +76,24 @@ export default function MaintenanceScreen() {
       />
 
       <View style={styles.statRow}>
-        <View style={[styles.statCard, { borderLeftColor: theme.colors.danger }]}>
+        <ShadowBoxMini style={styles.statCard}>
           <Text style={[styles.statValue, { color: theme.colors.danger }]}>
             {data.overdue}
           </Text>
           <Text style={styles.statLabel}>OVERDUE</Text>
-        </View>
-        <View style={[styles.statCard, { borderLeftColor: theme.colors.accent }]}>
+        </ShadowBoxMini>
+        <ShadowBoxMini style={styles.statCard}>
           <Text style={[styles.statValue, { color: theme.colors.accent }]}>
             {data.due_soon}
           </Text>
           <Text style={styles.statLabel}>DUE SOON</Text>
-        </View>
-        <View style={[styles.statCard, { borderLeftColor: theme.colors.success }]}>
+        </ShadowBoxMini>
+        <ShadowBoxMini style={styles.statCard}>
           <Text style={[styles.statValue, { color: theme.colors.textPrimary }]}>
             {data.total}
           </Text>
           <Text style={styles.statLabel}>TOTAL TRACKED</Text>
-        </View>
+        </ShadowBoxMini>
       </View>
 
       <View style={styles.horizonRow}>
@@ -127,7 +127,7 @@ export default function MaintenanceScreen() {
             <Text style={styles.emptyTitle}>NO MAINTENANCE DUE</Text>
             <Text style={styles.emptyText}>
               Schedules due within {horizon} days will appear here.
-              {"\n"}Add one from any tool's detail screen.
+              {"\n"}Add one from any tool&apos;s detail screen.
             </Text>
           </View>
         ) : (
@@ -136,7 +136,7 @@ export default function MaintenanceScreen() {
             const isOverdue = it.is_overdue;
             const isUrgent = !isOverdue && days <= 30;
             return (
-              <BevelCard
+              <ShadowBox
                 key={`${it.tool_id}-${it.schedule_id}`}
                 testID={`mnt-${it.schedule_id}`}
                 style={[
@@ -182,7 +182,7 @@ export default function MaintenanceScreen() {
                     {isOverdue ? `${Math.abs(days)}D OVERDUE` : `${days}D`}
                   </Text>
                 </View>
-              </BevelCard>
+              </ShadowBox>
             );
           })
         )}
@@ -205,13 +205,7 @@ const styles = themedStyles((c) => ({
   title: { color: c.textPrimary, fontSize: 14, fontWeight: "900", letterSpacing: 2 },
   subtitle: { color: c.accent, fontSize: 7, fontWeight: "700", letterSpacing: 1.5, marginTop: 2 },
   statRow: { flexDirection: "row", padding: 12, gap: 8 },
-  statCard: {
-    flex: 1,
-    backgroundColor: c.bgSecondary,
-    padding: 12,
-    borderLeftWidth: 3,
-    borderRadius: 4,
-  },
+  statCard: { flex: 1 },
   statValue: { fontSize: 18, fontWeight: "900" },
   statLabel: { color: c.textMuted, fontSize: 7, fontWeight: "800", letterSpacing: 1.2, marginTop: 2 },
   horizonRow: {
@@ -240,13 +234,9 @@ const styles = themedStyles((c) => ({
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
-    padding: 12,
-    backgroundColor: c.bgSecondary,
-    borderRadius: theme.radii.md,
+    paddingVertical: 12,
+    paddingHorizontal: 12,
     marginBottom: 10,
-    borderWidth: 1,
-    borderColor: c.borderSubtle,
-    ...(theme.elevation.md as object),
   },
   thumb: {
     width: 50,

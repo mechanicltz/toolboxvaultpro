@@ -28,7 +28,7 @@ import { confirm } from "../src/confirm";
 import { useAuth } from "../src/AuthContext";
 
 import { themedStyles } from "../src/themeContext";
-import { BevelCard } from "../src/components/BevelCard";
+import { ShadowBox, ShadowBoxMini } from "../src/components/ShadowBox";
 import { ContactIconImage } from "../src/components/ContactIcons";
 import { IndustrialBanner } from "../src/components/IndustrialBanner";
 import { PillButton } from "../src/components/PillButton";
@@ -556,7 +556,7 @@ export default function WishlistScreen() {
           const meta = PRIORITIES.find((p) => p.key === (item.priority || "normal")) || PRIORITIES[1];
           const isSelected = selected.has(item.id);
           return (
-            <BevelCard
+            <ShadowBox
               style={[styles.card, selectMode && isSelected && styles.cardSelected]}
               testID={`wish-card-${item.id}`}
               onPress={selectMode ? () => toggleSelected(item.id) : undefined}
@@ -671,7 +671,7 @@ export default function WishlistScreen() {
                   <Text style={styles.toolLinkText}>VIEW TOOL ›</Text>
                 </TouchableOpacity>
               )}
-            </BevelCard>
+            </ShadowBox>
           );
         }}
       />
@@ -883,10 +883,10 @@ export default function WishlistScreen() {
 
 function Stat({ label, value, color }: { label: string; value: string; color?: string }) {
   return (
-    <BevelCard style={styles.statBox}>
+    <ShadowBoxMini style={styles.statBox}>
       <Text style={[styles.statValue, color ? { color } : null]}>{value}</Text>
       <Text style={styles.statLabel}>{label}</Text>
-    </BevelCard>
+    </ShadowBoxMini>
   );
 }
 
@@ -899,13 +899,8 @@ const styles = themedStyles((c) => ({
   statRow: { flexDirection: "row", padding: 16, gap: 8 },
   statBox: {
     flex: 1,
-    backgroundColor: c.bgSecondary,
-    borderWidth: 1,
-    borderColor: c.border,
     paddingVertical: 12,
     alignItems: "center",
-    borderRadius: theme.radii.md,
-    ...(theme.elevation.md as object),
   },
   statValue: { color: c.textPrimary, fontSize: 14, fontWeight: "900" },
   statLabel: { color: c.textMuted, fontSize: 7, fontWeight: "800", letterSpacing: 1, marginTop: 4 },
@@ -923,14 +918,10 @@ const styles = themedStyles((c) => ({
   emptyTitle: { color: c.textPrimary, fontSize: 12, fontWeight: "900", letterSpacing: 2, marginTop: 16 },
   emptyText: { color: c.textSecondary, fontSize: 10, textAlign: "center", marginTop: 8 },
   card: {
-    backgroundColor: c.bgSecondary,
     marginHorizontal: 16,
     marginBottom: 12,
-    padding: 14,
-    borderRadius: theme.radii.md,
-    borderWidth: 1,
-    borderColor: c.borderSubtle,
-    ...(theme.elevation.md as object),
+    paddingHorizontal: 14,
+    paddingVertical: 14,
   },
   cardHead: { flexDirection: "row", alignItems: "flex-start", gap: 10 },
   cardThumb: {

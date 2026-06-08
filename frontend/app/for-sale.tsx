@@ -24,7 +24,7 @@ import { ResponsiveContainer } from "../src/ResponsiveContainer";
 import { useResponsive } from "../src/responsive";
 
 import { themedStyles } from "../src/themeContext";
-import { BevelCard } from "../src/components/BevelCard";
+import { ShadowBox, ShadowBoxMini } from "../src/components/ShadowBox";
 import { IndustrialBanner } from "../src/components/IndustrialBanner";
 import { PillButton } from "../src/components/PillButton";
 
@@ -140,7 +140,7 @@ export default function ForSaleScreen() {
     const isSold = tab === "sold";
     const price = isSold ? (item.sold_price || 0) : (item.sale_price || 0);
     return (
-      <TouchableOpacity
+      <ShadowBox
         testID={`fs-card-${item.id}`}
         style={[styles.card, { flex: numColumns > 1 ? 1 : undefined }]}
         onPress={() => router.push(`/tool/${item.id}`)}
@@ -183,7 +183,7 @@ export default function ForSaleScreen() {
               : (item.sale_listed_at ? `Listed ${formatDateUS(item.sale_listed_at)}` : "")}
           </Text>
         </View>
-      </TouchableOpacity>
+      </ShadowBox>
     );
   };
 
@@ -214,26 +214,26 @@ export default function ForSaleScreen() {
       <ResponsiveContainer>
         {/* Tabs */}
         <View style={styles.tabRow}>
-          <BevelCard
+          <ShadowBox
             testID="tab-listed"
             style={[styles.tabBtn, tab === "listed" && styles.tabBtnActive]}
             onPress={() => setTab("listed")}
           >
             <Ionicons name="pricetag" size={14} color={tab === "listed" ? theme.colors.accent : theme.colors.textSecondary} />
             <Text style={[styles.tabText, tab === "listed" && styles.tabTextActive]}>LISTED</Text>
-          </BevelCard>
-          <BevelCard
+          </ShadowBox>
+          <ShadowBox
             testID="tab-sold"
             style={[styles.tabBtn, tab === "sold" && styles.tabBtnActiveSold]}
             onPress={() => setTab("sold")}
           >
             <Ionicons name="checkmark-circle" size={14} color={tab === "sold" ? theme.colors.accent : theme.colors.textSecondary} />
             <Text style={[styles.tabText, tab === "sold" && { color: theme.colors.accent }]}>SOLD</Text>
-          </BevelCard>
+          </ShadowBox>
         </View>
 
         {/* Search */}
-        <BevelCard style={styles.searchWrap}>
+        <ShadowBox style={styles.searchWrap}>
           <Ionicons name="search" size={16} color={theme.colors.textMuted} />
           <TextInput
             testID="fs-search"
@@ -249,20 +249,20 @@ export default function ForSaleScreen() {
               {filterCount > 0 ? `FILTERS · ${filterCount}` : "FILTERS"}
             </Text>
           </TouchableOpacity>
-        </BevelCard>
+        </ShadowBox>
 
         {/* Summary */}
         <View style={styles.statsRow}>
-          <BevelCard style={styles.statBox}>
+          <ShadowBoxMini style={styles.statBox}>
             <Text style={styles.statLabel}>{tab === "listed" ? "LISTED" : "SOLD"}</Text>
             <Text style={styles.statValue}>{totals.count}</Text>
-          </BevelCard>
-          <BevelCard style={[styles.statBox, { backgroundColor: tab === "sold" ? "rgba(39,174,96,0.10)" : "rgba(249, 115, 22,0.10)" }]}>
+          </ShadowBoxMini>
+          <ShadowBoxMini style={[styles.statBox, { backgroundColor: tab === "sold" ? "rgba(39,174,96,0.10)" : "rgba(249, 115, 22,0.10)" }]}>
             <Text style={styles.statLabel}>{tab === "listed" ? "ASKING TOTAL" : "SOLD TOTAL"}</Text>
             <Text style={[styles.statValue, { color: tab === "sold" ? "#27AE60" : theme.colors.accent }]}>
               ${totals.value.toFixed(2)}
             </Text>
-          </BevelCard>
+          </ShadowBoxMini>
         </View>
       </ResponsiveContainer>
 
@@ -417,13 +417,7 @@ const styles = themedStyles((c) => ({
     gap: 6,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: c.bgSecondary,
-    borderWidth: 1,
-    borderColor: c.border,
     paddingVertical: 10,
-    borderRadius: 8,
-  
-    ...(theme.elevation.md as object),
   },
   tabBtnActive: { backgroundColor: "transparent", borderColor: c.accent, borderWidth: 2 },
   tabBtnActiveSold: { backgroundColor: "transparent", borderColor: c.accent, borderWidth: 2 },
@@ -433,16 +427,10 @@ const styles = themedStyles((c) => ({
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    backgroundColor: c.bgSecondary,
-    borderWidth: 1,
-    borderColor: c.border,
-    borderRadius: 8,
     paddingHorizontal: 12,
+    paddingVertical: 4,
     marginHorizontal: 16,
     marginTop: 12,
-    paddingVertical: 4,
-  
-    ...(theme.elevation.md as object),
   },
   searchInput: {
     flex: 1,
@@ -463,23 +451,15 @@ const styles = themedStyles((c) => ({
   statsRow: { flexDirection: "row", gap: 10, paddingHorizontal: 16, marginTop: 12, marginBottom: 4 },
   statBox: {
     flex: 1,
-    backgroundColor: c.bgSecondary,
-    borderWidth: 1,
-    borderColor: c.border,
-    borderRadius: 8,
-    padding: 10,
-  
-    ...(theme.elevation.md as object),
   },
   statLabel: { color: c.textMuted, fontSize: 7, fontWeight: "800", letterSpacing: 1.5 },
   statValue: { color: c.textPrimary, fontSize: 14, fontWeight: "900", marginTop: 2 },
   card: {
-    backgroundColor: c.bgSecondary,
-    borderWidth: 1,
-    borderColor: c.border,
     borderRadius: 10,
     overflow: "hidden",
     flexDirection: "row",
+    paddingHorizontal: 0,
+    paddingVertical: 0,
   },
   cardImg: { width: 120, height: 120, backgroundColor: c.bg },
   cardBody: { flex: 1, padding: 10 },
