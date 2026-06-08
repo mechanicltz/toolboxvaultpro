@@ -1726,7 +1726,7 @@ const styles = themedStyles((c) => ({
     justifyContent: "center",
   },
   fabSkinImg: { resizeMode: "contain" },
-  fabIconSkin: { transform: [{ translateY: -8 }] },
+  fabIconSkin: { transform: [{ translateY: -16 }] },
   searchInputSkin: { color: "#F2F2F2", fontWeight: "600" },
   header: {
     flexDirection: "row",
