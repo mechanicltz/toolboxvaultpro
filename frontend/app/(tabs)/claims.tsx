@@ -28,7 +28,7 @@ import { BevelCard } from "../../src/components/BevelCard";
 import { ShadowBox, ShadowBoxSubCard } from "../../src/components/ShadowBox";
 import { IndustrialBanner } from "../../src/components/IndustrialBanner";
 
-type Mode = "dealers" | "all-open";
+type Mode = "dealers" | "all-open" | "history";
 
 export default function ClaimsScreen() {
   const router = useRouter();
@@ -208,11 +208,6 @@ export default function ClaimsScreen() {
           style={[styles.modeChip, mode === "all-open" && styles.modeChipOn]}
           onPress={() => setMode("all-open")}
         >
-          <Ionicons
-            name="list"
-            size={14}
-            color={mode === "all-open" ? "#000" : theme.colors.textSecondary}
-          />
           <Text style={[styles.modeText, mode === "all-open" && styles.modeTextOn]}>
             OPEN CLAIMS ({openTools.length})
           </Text>
@@ -222,13 +217,17 @@ export default function ClaimsScreen() {
           style={[styles.modeChip, mode === "dealers" && styles.modeChipOn]}
           onPress={() => setMode("dealers")}
         >
-          <Ionicons
-            name="briefcase"
-            size={14}
-            color={mode === "dealers" ? "#000" : theme.colors.textSecondary}
-          />
           <Text style={[styles.modeText, mode === "dealers" && styles.modeTextOn]}>
-            BY DEALER
+            DEALERS
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          testID="mode-history"
+          style={[styles.modeChip, mode === "history" && styles.modeChipOn]}
+          onPress={() => setMode("history")}
+        >
+          <Text style={[styles.modeText, mode === "history" && styles.modeTextOn]}>
+            HISTORY CLAIMS ({archivedClaims.length})
           </Text>
         </TouchableOpacity>
       </View>
@@ -417,6 +416,56 @@ export default function ClaimsScreen() {
                 </View>
               )}
               </ShadowBoxSubCard>
+            </ShadowBox>
+          )
+        ) : mode === "history" ? (
+          archivedClaims.length === 0 ? (
+            <View style={{ alignItems: "center", padding: 40 }}>
+              <Ionicons name="archive" size={48} color={theme.colors.textMuted} />
+              <Text style={[styles.empty, { textAlign: "center", marginTop: 12 }]}>
+                No history claims yet.
+              </Text>
+            </View>
+          ) : (
+            <ShadowBox style={{ marginBottom: 16 }}>
+              <View style={styles.groupHeader}>
+                <Ionicons name="archive" size={14} color={theme.colors.success} />
+                <Text style={styles.groupTitle}>HISTORY</Text>
+                <View style={styles.groupCount}>
+                  <Text style={styles.groupCountText}>{archivedClaims.length}</Text>
+                </View>
+              </View>
+              {archivedClaims.map((c: any) => (
+                <ShadowBoxSubCard
+                  key={`hist-${c.id}`}
+                  testID={`history-claim-${c.id}`}
+                  style={styles.itemRow}
+                  onPress={() => router.push(`/claim/${c.id}`)}
+                >
+                  <View style={styles.itemThumb}>
+                    {c.broken_photo ? (
+                      <Image source={{ uri: c.broken_photo }} style={styles.itemImg} />
+                    ) : (
+                      <Ionicons name="checkmark-done" size={18} color={theme.colors.success} />
+                    )}
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.itemName} numberOfLines={1}>
+                      {c.tool_name || "Tool"}
+                    </Text>
+                    <Text style={styles.notifiedLine} numberOfLines={1}>
+                      {c.dealer_name || dealerName(c.dealer_id) || "No dealer"}
+                      {c.completed_at ? ` · ${fmtDate(c.completed_at)}` : ""}
+                    </Text>
+                    <View style={[styles.statusPill, { borderColor: theme.colors.success }]}>
+                      <Text style={[styles.statusText, { color: theme.colors.success }]}>
+                        {(c.status || "REPAIRED").toUpperCase()}
+                      </Text>
+                    </View>
+                  </View>
+                  <Ionicons name="chevron-forward" size={16} color={theme.colors.textMuted} />
+                </ShadowBoxSubCard>
+              ))}
             </ShadowBox>
           )
         ) : (
