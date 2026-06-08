@@ -27,7 +27,7 @@ import React from "react";
 import { View, Text, StyleSheet, Image, useWindowDimensions } from "react-native";
 import { SKIN } from "../tbv/skins";
 import { useColors } from "../themeContext";
-import { APP_VERSION_LABEL } from "../version";
+import { APP_VERSION } from "../version";
 
 type Props = {
   /** Page name shown under the nameplate (uppercased automatically). */
@@ -78,7 +78,7 @@ export function IndustrialBanner({ title, subtitle, rightSlot, leftSlot }: Props
             style={[styles.version, { color: c.accent, fontSize: Math.round(nameplateH * 0.13) }]}
             allowFontScaling={false}
           >
-            {APP_VERSION_LABEL}
+            {APP_VERSION}
           </Text>
         </View>
       </View>
