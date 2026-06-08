@@ -35,7 +35,7 @@ import { themedStyles } from "../../src/themeContext";
 import { BevelCard } from "../../src/components/BevelCard";
 import { ShadowBox } from "../../src/components/ShadowBox";
 import { IndustrialBanner } from "../../src/components/IndustrialBanner";
-import { PillButton } from "../../src/components/PillButton";
+import { AddFab } from "../../src/components/AddFab";
 import { DealerLogo } from "../../src/components/DealerLogo";
 import { STOCK_LOGO_OPTIONS, isDefaultLogo, DEALER_LOGO_SLOT } from "../../src/dealerLogos";
 import * as ImagePicker from "expo-image-picker";
@@ -155,15 +155,6 @@ export default function DealersScreen() {
         title="DEALERS"
         subtitle="Companies & Sales Agents"
       />
-      <View style={styles.actionsRow}>
-        <PillButton
-          testID="add-dealer-header-btn"
-          label="ADD DEALER"
-          icon="add"
-          variant="active"
-          onPress={() => setShowAdd(true)}
-        />
-      </View>
 
       <FlatList
         data={dealers}
@@ -418,6 +409,7 @@ export default function DealersScreen() {
           </ScrollView>
         </KeyboardAvoidingView>
       </Modal>
+      <AddFab testID="add-dealer-fab" onPress={() => setShowAdd(true)} />
     </SafeAreaView>
   );
 }

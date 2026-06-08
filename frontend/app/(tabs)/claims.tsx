@@ -27,6 +27,7 @@ import { themedStyles } from "../../src/themeContext";
 import { BevelCard } from "../../src/components/BevelCard";
 import { ShadowBox, ShadowBoxSubCard } from "../../src/components/ShadowBox";
 import { IndustrialBanner } from "../../src/components/IndustrialBanner";
+import { AddFab } from "../../src/components/AddFab";
 
 type Mode = "dealers" | "all-open" | "history";
 
@@ -191,16 +192,6 @@ export default function ClaimsScreen() {
         <Stat label="Replacement" value={summary?.totals?.waiting_replacement ?? 0} color={theme.colors.accentSecondary} />
         <Stat label="Done" value={summary?.totals?.completed ?? 0} color={theme.colors.success} />
       </View>
-
-      <TouchableOpacity
-        testID="new-claim-btn"
-        style={styles.newClaimBtn}
-        onPress={openNewClaim}
-        activeOpacity={0.85}
-      >
-        <Ionicons name="add-circle" size={18} color="#000" />
-        <Text style={styles.newClaimBtnText}>NEW CLAIM</Text>
-      </TouchableOpacity>
 
       <View style={styles.modeRow}>
         <TouchableOpacity
@@ -632,6 +623,7 @@ export default function ClaimsScreen() {
           </View>
         </KeyboardAvoidingView>
       </Modal>
+      <AddFab testID="new-claim-fab" onPress={openNewClaim} />
     </SafeAreaView>
   );
 }

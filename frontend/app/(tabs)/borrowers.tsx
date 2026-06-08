@@ -22,7 +22,7 @@ import { themedStyles } from "../../src/themeContext";
 import { BevelCard } from "../../src/components/BevelCard";
 import { ShadowBox } from "../../src/components/ShadowBox";
 import { IndustrialBanner } from "../../src/components/IndustrialBanner";
-import { PillButton } from "../../src/components/PillButton";
+import { AddFab } from "../../src/components/AddFab";
 import { ContactIconButton, ContactIconImage } from "../../src/components/ContactIcons";
 import { EmailLink } from "../../src/components/EmailLink";
 
@@ -131,15 +131,6 @@ export default function BorrowersScreen() {
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <IndustrialBanner title="CONTACTS" subtitle="Borrowers & Checkouts" />
-      <View style={styles.actionsRow}>
-        <PillButton
-          testID="add-contact-header-btn"
-          label="ADD CONTACT"
-          icon="add"
-          variant="active"
-          onPress={() => setShowAdd(true)}
-        />
-      </View>
 
       <FlatList
         data={borrowers}
@@ -345,6 +336,7 @@ export default function BorrowersScreen() {
           </SafeAreaView>
         </View>
       </Modal>
+      <AddFab testID="add-contact-fab" onPress={() => setShowAdd(true)} />
     </SafeAreaView>
   );
 }

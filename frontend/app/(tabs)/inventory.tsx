@@ -2396,7 +2396,11 @@ const styles = themedStyles((c) => ({
     alignItems: "center",
     justifyContent: "center",
     borderRadius: 32,
-    ...(theme.elevation.accent as object),
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.5,
+    shadowRadius: 10,
+    elevation: 14,
   },
   fabLocked: {
     backgroundColor: c.warning,

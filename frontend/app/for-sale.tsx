@@ -26,7 +26,7 @@ import { useResponsive } from "../src/responsive";
 import { themedStyles } from "../src/themeContext";
 import { ShadowBox, ShadowBoxMini } from "../src/components/ShadowBox";
 import { IndustrialBanner } from "../src/components/IndustrialBanner";
-import { PillButton } from "../src/components/PillButton";
+import { AddFab } from "../src/components/AddFab";
 
 type Tool = any;
 
@@ -201,15 +201,6 @@ export default function ForSaleScreen() {
           </TouchableOpacity>
         }
       />
-      <View style={styles.actionsRow}>
-        <PillButton
-          testID="add-item-btn"
-          label="ADD ITEM"
-          icon="add"
-          variant="active"
-          onPress={() => router.push("/tool/edit")}
-        />
-      </View>
 
       <ResponsiveContainer>
         {/* Tabs */}
@@ -340,6 +331,7 @@ export default function ForSaleScreen() {
           </View>
         </View>
       </Modal>
+      <AddFab testID="add-item-fab" onPress={() => router.push("/tool/edit")} />
     </SafeAreaView>
   );
 }

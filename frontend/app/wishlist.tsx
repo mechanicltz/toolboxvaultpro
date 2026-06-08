@@ -992,7 +992,11 @@ const styles = themedStyles((c) => ({
     width: 60, height: 60, borderRadius: 30,
     backgroundColor: c.accent,
     alignItems: "center", justifyContent: "center",
-    ...(theme.elevation.accent as object),
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.5,
+    shadowRadius: 10,
+    elevation: 14,
   },
   // Select mode UI ---------------------------------------------------
   cardSelected: {
