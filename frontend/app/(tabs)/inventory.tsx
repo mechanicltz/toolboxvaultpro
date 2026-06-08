@@ -51,16 +51,17 @@ const FilterAccordionWrap = ({
   children: React.ReactNode;
 }) =>
   isIndustrial ? (
-    <TbvFrame
-      source={SKIN.plate}
-      capInsets={CAP.plate}
-      style={styles.filterAccordionSkin}
-      padX={14}
-      padTop={8}
-      padBottom={10}
-    >
-      {children}
-    </TbvFrame>
+    <View style={styles.filterAccordionSkinWrap}>
+      <TbvFrame
+        source={SKIN.plate}
+        capInsets={CAP.plate}
+        padX={14}
+        padTop={8}
+        padBottom={10}
+      >
+        {children}
+      </TbvFrame>
+    </View>
   ) : (
     <ShadowBox style={styles.filterAccordion}>{children}</ShadowBox>
   );
@@ -1964,7 +1965,9 @@ const styles = themedStyles((c) => ({
     padding: 0,
   },
   // Iron Forge: framed Filter accordion (metal plate, matches search bar).
-  filterAccordionSkin: {
+  // Margin lives on an OUTER wrapper (not the TbvFrame, whose wrap is width:100%
+  // — putting margin there overflows the parent by marginX*2).
+  filterAccordionSkinWrap: {
     marginHorizontal: 16,
     marginBottom: 8,
   },
