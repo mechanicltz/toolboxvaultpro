@@ -213,7 +213,7 @@ export default function ReportsHubScreen() {
                   paddingHorizontal: 24,
                 }}
               >
-                Can't reach the server right now.
+                Can&apos;t reach the server right now.
               </Text>
               <Text
                 style={{
@@ -1249,14 +1249,9 @@ const styles = themedStyles((c) => ({
     flexDirection: "row",
     alignItems: "center",
     gap: 14,
-    backgroundColor: c.bgSecondary,
-    borderRadius: 10,
-    padding: 14,
+    paddingVertical: 14,
+    paddingHorizontal: 14,
     marginBottom: 10,
-    borderWidth: 1,
-    borderColor: c.border,
-  
-    ...(theme.elevation.md as object),
   },
   typeIcon: {
     width: 44,
@@ -1582,15 +1577,9 @@ const styles = themedStyles((c) => ({
     flex: 1,
     paddingVertical: 22,
     paddingHorizontal: 16,
-    borderRadius: 8,
     alignItems: "center",
-    borderWidth: 2,
-    borderColor: c.border,
-    backgroundColor: c.bgSecondary,
-  
-    ...(theme.elevation.md as object),
   },
-  formatCardOn: { backgroundColor: "transparent", borderColor: c.accent, borderWidth: 2 },
+  formatCardOn: { borderColor: c.accent, borderWidth: 2 },
   formatTitle: {
     color: c.textPrimary,
     fontSize: 12,

@@ -32,6 +32,7 @@ import { WebView } from "react-native-webview";
 import * as Sharing from "expo-sharing";
 import { ContactIconImage } from "../src/components/ContactIcons";
 import { theme } from "../src/theme";
+import { themedStyles } from "../src/themeContext";
 
 export default function PdfViewerScreen(): React.ReactElement {
   const router = useRouter();
@@ -200,10 +201,10 @@ export default function PdfViewerScreen(): React.ReactElement {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themedStyles((c) => ({
   container: {
     flex: 1,
-    backgroundColor: theme.colors.bg,
+    backgroundColor: c.bg,
   },
   empty: {
     flex: 1,
@@ -213,7 +214,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   emptyText: {
-    color: theme.colors.textMuted,
+    color: c.textMuted,
     fontSize: 14,
   },
   backBtn: {
@@ -221,12 +222,12 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: 8,
     borderWidth: 2,
-    borderColor: theme.colors.accent,
+    borderColor: c.accent,
     backgroundColor: "transparent",
     marginTop: 8,
   },
   backBtnText: {
-    color: theme.colors.accent,
+    color: c.accent,
     fontWeight: "900",
     letterSpacing: 1,
   },
@@ -237,21 +238,21 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   loaderText: {
-    color: theme.colors.textMuted,
+    color: c.textMuted,
     fontSize: 13,
   },
   footer: {
     padding: 14,
     borderTopWidth: 1,
-    borderTopColor: theme.colors.border,
-    backgroundColor: theme.colors.bg,
+    borderTopColor: c.border,
+    backgroundColor: c.bg,
   },
   shareBtn: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
-    backgroundColor: theme.colors.accent,
+    backgroundColor: c.accent,
     paddingVertical: 14,
     borderRadius: 10,
   },
@@ -261,4 +262,4 @@ const styles = StyleSheet.create({
     fontSize: 14,
     letterSpacing: 1,
   },
-});
+}));

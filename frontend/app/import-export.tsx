@@ -21,6 +21,7 @@ import { parseCsv, parseXlsx, saveBase64 } from "../src/csvIO";
 
 import { themedStyles } from "../src/themeContext";
 import { IndustrialBanner } from "../src/components/IndustrialBanner";
+import { ShadowBox } from "../src/components/ShadowBox";
 
 type ImportField = { id: string; label: string; required?: boolean };
 type ExportField = { id: string; label: string };
@@ -429,7 +430,7 @@ export default function ImportExportScreen() {
           {/* Format toggle */}
           <Text style={styles.sectionLabel}>FILE FORMAT</Text>
           <View style={styles.formatToggle}>
-            <TouchableOpacity
+            <ShadowBox
               testID="fmt-csv"
               style={[
                 styles.formatBtn,
@@ -441,7 +442,7 @@ export default function ImportExportScreen() {
               <Ionicons
                 name="document-text"
                 size={16}
-                color={exportFormat === "csv" ? "#000" : theme.colors.textSecondary}
+                color={exportFormat === "csv" ? theme.colors.accent : theme.colors.textSecondary}
               />
               <Text
                 style={[
@@ -451,8 +452,8 @@ export default function ImportExportScreen() {
               >
                 CSV
               </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
+            </ShadowBox>
+            <ShadowBox
               testID="fmt-xlsx"
               style={[
                 styles.formatBtn,
@@ -464,7 +465,7 @@ export default function ImportExportScreen() {
               <Ionicons
                 name="grid"
                 size={16}
-                color={exportFormat === "xlsx" ? "#000" : theme.colors.textSecondary}
+                color={exportFormat === "xlsx" ? theme.colors.accent : theme.colors.textSecondary}
               />
               <Text
                 style={[
@@ -474,7 +475,7 @@ export default function ImportExportScreen() {
               >
                 EXCEL (XLSX)
               </Text>
-            </TouchableOpacity>
+            </ShadowBox>
           </View>
 
           {/* Field selector */}
@@ -614,7 +615,7 @@ export default function ImportExportScreen() {
               </View>
               <Text style={styles.helper}>
                 Map each column from your file to a Toolbox Vault field. Leave any
-                column you don't need set to "Skip".
+                column you don&apos;t need set to &quot;Skip&quot;.
               </Text>
 
               {/* MAPPING STATUS BANNER */}
@@ -1277,15 +1278,10 @@ const styles = themedStyles((c) => ({
     alignItems: "center",
     justifyContent: "center",
     gap: 6,
-    paddingVertical: 10,
+    paddingVertical: 12,
     paddingHorizontal: 8,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: c.border,
-    backgroundColor: c.bg,
   },
   formatBtnActive: {
-    backgroundColor: "transparent",
     borderColor: c.accent,
     borderWidth: 2,
   },
