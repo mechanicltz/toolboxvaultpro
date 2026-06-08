@@ -257,7 +257,7 @@ export default function ForSaleScreen() {
             <Text style={styles.statLabel}>{tab === "listed" ? "LISTED" : "SOLD"}</Text>
             <Text style={styles.statValue}>{totals.count}</Text>
           </ShadowBoxMini>
-          <ShadowBoxMini style={[styles.statBox, { backgroundColor: tab === "sold" ? "rgba(39,174,96,0.10)" : "rgba(249, 115, 22,0.10)" }]}>
+          <ShadowBoxMini style={styles.statBox}>
             <Text style={styles.statLabel}>{tab === "listed" ? "ASKING TOTAL" : "SOLD TOTAL"}</Text>
             <Text style={[styles.statValue, { color: tab === "sold" ? "#27AE60" : theme.colors.accent }]}>
               ${totals.value.toFixed(2)}
@@ -419,8 +419,8 @@ const styles = themedStyles((c) => ({
     justifyContent: "center",
     paddingVertical: 10,
   },
-  tabBtnActive: { backgroundColor: "transparent", borderColor: c.accent, borderWidth: 2 },
-  tabBtnActiveSold: { backgroundColor: "transparent", borderColor: c.accent, borderWidth: 2 },
+  tabBtnActive: { borderColor: c.accent, borderWidth: 2 },
+  tabBtnActiveSold: { borderColor: c.accent, borderWidth: 2 },
   tabText: { color: c.textSecondary, fontWeight: "900", fontSize: 9, letterSpacing: 1.5 },
   tabTextActive: { color: c.accent },
   searchWrap: {

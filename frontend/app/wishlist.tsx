@@ -526,7 +526,7 @@ export default function WishlistScreen() {
           { k: false, label: "OPEN" },
           { k: true, label: "PURCHASED" },
         ].map((t) => (
-          <TouchableOpacity
+          <ShadowBox
             key={String(t.k)}
             testID={`wish-tab-${t.k ? "done" : "open"}`}
             style={[styles.tabBtn, showPurchased === t.k && styles.tabBtnActive]}
@@ -534,7 +534,7 @@ export default function WishlistScreen() {
             activeOpacity={0.8}
           >
             <Text style={[styles.tabText, showPurchased === t.k && styles.tabTextActive]}>{t.label}</Text>
-          </TouchableOpacity>
+          </ShadowBox>
         ))}
       </View>
 
@@ -562,6 +562,35 @@ export default function WishlistScreen() {
               onPress={selectMode ? () => toggleSelected(item.id) : undefined}
               activeOpacity={selectMode ? 0.7 : 1}
             >
+              {/* Top-right manage toolbar: share / edit / delete */}
+              <View style={styles.cardTopActions}>
+                <TouchableOpacity
+                  testID={`wish-share-${item.id}`}
+                  style={styles.cardIconBtn}
+                  onPress={() => shareSheet(item)}
+                  disabled={selectMode}
+                  hitSlop={6}
+                >
+                  <ContactIconImage type="share" size={20} />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  testID={`wish-edit-${item.id}`}
+                  style={styles.cardIconBtn}
+                  onPress={() => setEditing({ ...item, price: item.price ? String(item.price) : "" })}
+                  disabled={selectMode}
+                  hitSlop={6}
+                >
+                  <Ionicons name="create-outline" size={18} color={theme.colors.textPrimary} />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  testID={`wish-delete-${item.id}`}
+                  style={[styles.cardIconBtn, { borderColor: theme.colors.danger }]}
+                  onPress={() => remove(item)}
+                  hitSlop={6}
+                >
+                  <Ionicons name="trash-outline" size={18} color={theme.colors.danger} />
+                </TouchableOpacity>
+              </View>
               <View style={styles.cardHead}>
                 {selectMode && (
                   <View style={[styles.checkbox, isSelected && styles.checkboxOn]}>
@@ -610,56 +639,36 @@ export default function WishlistScreen() {
                 )}
               </View>
               {!!item.notes && <Text style={styles.notesText}>{item.notes}</Text>}
-              <View style={styles.actions}>
-                <TouchableOpacity
-                  testID={`wish-share-${item.id}`}
-                  style={[styles.iconBtn, { borderColor: theme.colors.accent }]}
-                  onPress={() => shareSheet(item)}
-                  disabled={selectMode}
-                >
-                  <ContactIconImage type="share" size={26} />
-                </TouchableOpacity>
-                <TouchableOpacity
-                  testID={`wish-edit-${item.id}`}
-                  style={styles.iconBtn}
-                  onPress={() => setEditing({ ...item, price: item.price ? String(item.price) : "" })}
-                  disabled={selectMode}
-                >
-                  <Ionicons name="create-outline" size={18} color={theme.colors.textPrimary} />
-                </TouchableOpacity>
+              <View style={styles.cardBottomActions}>
                 {!item.purchased ? (
                   <>
-                    <TouchableOpacity
+                    <PillButton
                       testID={`wish-convert-${item.id}`}
-                      style={[styles.iconBtn, { borderColor: theme.colors.accent }]}
+                      label="Convert"
+                      icon="add-circle-outline"
+                      variant="default"
                       onPress={() => convert(item)}
-                    >
-                      <Ionicons name="add-circle-outline" size={18} color={theme.colors.accent} />
-                    </TouchableOpacity>
-                    <TouchableOpacity
+                      style={{ flex: 1, justifyContent: "center" }}
+                    />
+                    <PillButton
                       testID={`wish-bought-${item.id}`}
-                      style={[styles.iconBtn, { borderColor: theme.colors.success }]}
+                      label="Purchased"
+                      icon="checkmark-circle"
+                      variant="active"
                       onPress={() => togglePurchased(item)}
-                    >
-                      <Ionicons name="checkmark" size={18} color={theme.colors.success} />
-                    </TouchableOpacity>
+                      style={{ flex: 1, justifyContent: "center" }}
+                    />
                   </>
                 ) : (
-                  <TouchableOpacity
+                  <PillButton
                     testID={`wish-restore-${item.id}`}
-                    style={[styles.iconBtn, { borderColor: theme.colors.warning }]}
+                    label="Restore to Wishlist"
+                    icon="arrow-undo"
+                    variant="default"
                     onPress={() => togglePurchased(item)}
-                  >
-                    <Ionicons name="arrow-undo" size={18} color={theme.colors.warning} />
-                  </TouchableOpacity>
+                    style={{ flex: 1, justifyContent: "center" }}
+                  />
                 )}
-                <TouchableOpacity
-                  testID={`wish-delete-${item.id}`}
-                  style={[styles.iconBtn, { borderColor: theme.colors.danger }]}
-                  onPress={() => remove(item)}
-                >
-                  <Ionicons name="trash-outline" size={18} color={theme.colors.danger} />
-                </TouchableOpacity>
               </View>
               {item.purchased && item.converted_tool_id && (
                 <TouchableOpacity
@@ -906,12 +915,9 @@ const styles = themedStyles((c) => ({
   statLabel: { color: c.textMuted, fontSize: 7, fontWeight: "800", letterSpacing: 1, marginTop: 4 },
   toggleRow: { flexDirection: "row", paddingHorizontal: 16, marginBottom: 8, gap: 8 },
   tabBtn: {
-    flex: 1, paddingVertical: 8, borderWidth: 1, borderColor: c.border,
-    borderRadius: theme.radii.md, alignItems: "center", backgroundColor: c.bgSecondary,
-  
-    ...(theme.elevation.md as object),
+    flex: 1, paddingVertical: 8, alignItems: "center",
   },
-  tabBtnActive: { backgroundColor: "transparent", borderColor: c.accent, borderWidth: 2 },
+  tabBtnActive: { borderColor: c.accent, borderWidth: 2 },
   tabText: { color: c.textSecondary, fontSize: 9, fontWeight: "800", letterSpacing: 1.5 },
   tabTextActive: { color: c.accent },
   empty: { alignItems: "center", marginTop: 60, paddingHorizontal: 40 },
@@ -962,6 +968,12 @@ const styles = themedStyles((c) => ({
   dealerText: { color: c.textMuted, fontSize: 8, fontWeight: "700", letterSpacing: 0.5 },
   notesText: { color: c.textMuted, fontSize: 8, fontStyle: "italic", marginTop: 6 },
   actions: { flexDirection: "row", gap: 8, alignItems: "center", marginTop: 10 },
+  cardTopActions: { flexDirection: "row", justifyContent: "flex-end", alignItems: "center", gap: 8, marginBottom: 4 },
+  cardIconBtn: {
+    width: 34, height: 34, alignItems: "center", justifyContent: "center",
+    borderWidth: 1, borderColor: c.border, borderRadius: 8, backgroundColor: c.bg,
+  },
+  cardBottomActions: { flexDirection: "row", gap: 8, marginTop: 12 },
   linkBtn: {
     flex: 1, flexDirection: "row", alignItems: "center", gap: 6,
     paddingHorizontal: 10, paddingVertical: 8, borderWidth: 1,

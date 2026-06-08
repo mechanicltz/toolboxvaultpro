@@ -139,11 +139,7 @@ export default function MaintenanceScreen() {
               <ShadowBox
                 key={`${it.tool_id}-${it.schedule_id}`}
                 testID={`mnt-${it.schedule_id}`}
-                style={[
-                  styles.itemCard,
-                  isOverdue && { borderLeftColor: theme.colors.danger, borderLeftWidth: 3 },
-                  isUrgent && { borderLeftColor: theme.colors.accent, borderLeftWidth: 3 },
-                ]}
+                style={styles.itemCard}
                 onPress={() => router.push(`/tool/${it.tool_id}`)}
                 activeOpacity={0.8}
               >
