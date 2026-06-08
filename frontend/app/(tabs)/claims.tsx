@@ -209,7 +209,7 @@ export default function ClaimsScreen() {
           onPress={() => setMode("all-open")}
         >
           <Text style={[styles.modeText, mode === "all-open" && styles.modeTextOn]}>
-            OPEN CLAIMS ({openTools.length})
+            OPEN ({openTools.length})
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -227,7 +227,7 @@ export default function ClaimsScreen() {
           onPress={() => setMode("history")}
         >
           <Text style={[styles.modeText, mode === "history" && styles.modeTextOn]}>
-            HISTORY CLAIMS ({archivedClaims.length})
+            HISTORY ({archivedClaims.length})
           </Text>
         </TouchableOpacity>
       </View>
