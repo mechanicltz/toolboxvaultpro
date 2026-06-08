@@ -46,7 +46,9 @@ Backend change-email tested by testing_agent (16/16 backend pass). All additive 
 ### IRON FORGE INVENTORY SKIN — IN PROGRESS (staged; user approved staging + keep current card layout on metal frame)
 - [x] **Stage 1** (BUILD 224): `app/(tabs)/inventory.tsx` now dual-renders like the dashboard. When `skin==="industrial"` it wraps in `<ImageBackground source={SKIN.bg}>` + dark veil, makes the SafeAreaView transparent, frames the search bar with `SKIN.plate`/`CAP.plate` (TbvFrame), skins the FAB with `SKIN.fab` (octagonal orb + dark "+"), and accents the select-mode button. Plain light/dark themes UNCHANGED (flat canvas fallback). No functional changes. ✅ verified by screenshot — pending USER OK.
 - [x] **Stage 2** (BUILD 233): item cards now dual-render. Industrial wraps the existing row content (thumb, title/sub, tags, qty badge, lost badge, IN/OUT/REPAIR status, select-mode checkbox) in a `TbvFrame source={SKIN.plate} capInsets={CAP.plate}` (same thin wide frame as the search bar) inside a TouchableOpacity (preserves onPress/onLongPress/select). Plain themes keep the ShadowBox + LinearGradient card. NOTE: tried `SKIN.card` first — its 60px corner brackets overlapped content & looked like a thin pipe; `SKIN.plate` is the correct wide-short proportion. ✅ verified by screenshot — pending USER OK.
-- [ ] **Stage 3**: filter accordion + status/location pickers framed to match.
+- [x] **Stage 3** (BUILD 235): Filter accordion + pickers framed. Added a module-level `FilterAccordionWrap` that renders `TbvFrame source={SKIN.plate}` in industrial mode (matches search bar/cards) and the plain `ShadowBox` otherwise. The 5 picker buttons (status/location/tag/sort/category) get `locationFilterBtnSkin` (dark metal bg + orange-tinted border) in industrial. Plain themes unchanged. ✅ verified by screenshot (collapsed + expanded) — pending USER OK.
+
+**IRON FORGE INVENTORY SKIN — ALL 3 STAGES COMPLETE (BUILD 235). Plain Light/Dark fully preserved; no functional changes.**
 
 
 > Design system: reuse `src/components/ShadowBox.tsx` (the bordered "Description Card"

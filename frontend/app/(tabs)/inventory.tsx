@@ -41,6 +41,30 @@ import { TbvFrame } from "../../src/tbv/components/TbvFrame";
 
 type Filter = "all" | "available" | "out" | "consumables" | "lost" | "maintenance" | "for_sale";
 
+// Iron Forge (industrial) wrapper for the Filter accordion: metal plate frame
+// (matches the search bar / item cards). Plain themes keep the ShadowBox.
+const FilterAccordionWrap = ({
+  isIndustrial,
+  children,
+}: {
+  isIndustrial: boolean;
+  children: React.ReactNode;
+}) =>
+  isIndustrial ? (
+    <TbvFrame
+      source={SKIN.plate}
+      capInsets={CAP.plate}
+      style={styles.filterAccordionSkin}
+      padX={14}
+      padTop={8}
+      padBottom={10}
+    >
+      {children}
+    </TbvFrame>
+  ) : (
+    <ShadowBox style={styles.filterAccordion}>{children}</ShadowBox>
+  );
+
 export default function InventoryScreen() {
   const router = useRouter();
   const { prefs } = usePrefs();
@@ -650,7 +674,7 @@ export default function InventoryScreen() {
       </View>
 
       {/* #24 — All filters live inside a "Filter" ShadowBox accordion, closed by default. */}
-      <ShadowBox style={styles.filterAccordion}>
+      <FilterAccordionWrap isIndustrial={isIndustrial}>
         <TouchableOpacity
           testID="filter-accordion-toggle"
           style={styles.filterAccordionHeader}
@@ -678,6 +702,7 @@ export default function InventoryScreen() {
             testID="status-filter-btn"
             style={[
               styles.locationFilterBtn,
+              isIndustrial && styles.locationFilterBtnSkin,
               styles.filterHalf,
               filter !== "all" && styles.locationFilterBtnActive,
             ]}
@@ -705,6 +730,7 @@ export default function InventoryScreen() {
             testID="location-filter-btn"
             style={[
               styles.locationFilterBtn,
+              isIndustrial && styles.locationFilterBtnSkin,
               styles.filterHalf,
               locationFilter && styles.locationFilterBtnActive,
             ]}
@@ -747,6 +773,7 @@ export default function InventoryScreen() {
             testID="tag-filter-btn"
             style={[
               styles.locationFilterBtn,
+              isIndustrial && styles.locationFilterBtnSkin,
               styles.filterHalf,
               tagFilter.length > 0 && styles.locationFilterBtnActive,
             ]}
@@ -787,6 +814,7 @@ export default function InventoryScreen() {
             testID="sort-filter-btn"
             style={[
               styles.locationFilterBtn,
+              isIndustrial && styles.locationFilterBtnSkin,
               styles.filterHalf,
               sortBy !== "date_desc" && styles.locationFilterBtnActive,
             ]}
@@ -825,6 +853,7 @@ export default function InventoryScreen() {
             testID="category-filter-btn"
             style={[
               styles.locationFilterBtn,
+              isIndustrial && styles.locationFilterBtnSkin,
               { flex: 1 },
               !!categoryFilter && styles.locationFilterBtnActive,
             ]}
@@ -863,7 +892,7 @@ export default function InventoryScreen() {
         </View>
           </View>
         )}
-      </ShadowBox>
+      </FilterAccordionWrap>
 
       {prefs.show_details_summary && agg && (
         <SummaryHeader agg={agg} showPrices={prefs.show_prices} openClaims={openClaims} />
@@ -1934,6 +1963,11 @@ const styles = themedStyles((c) => ({
     marginBottom: 8,
     padding: 0,
   },
+  // Iron Forge: framed Filter accordion (metal plate, matches search bar).
+  filterAccordionSkin: {
+    marginHorizontal: 16,
+    marginBottom: 8,
+  },
   filterAccordionHeader: {
     flexDirection: "row",
     alignItems: "center",
@@ -1990,6 +2024,10 @@ const styles = themedStyles((c) => ({
   locationFilterBtnActive: {
     borderColor: c.accent,
     backgroundColor: "rgba(249, 115, 22,0.08)",
+  },
+  locationFilterBtnSkin: {
+    backgroundColor: "rgba(12,12,12,0.88)",
+    borderColor: "rgba(249,115,22,0.45)",
   },
   locationFilterText: {
     flex: 1,
