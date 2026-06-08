@@ -17,7 +17,7 @@ import { formatDateTime } from "../../src/dt";
 
 import { themedStyles } from "../../src/themeContext";
 import { IndustrialBanner } from "../../src/components/IndustrialBanner";
-import { BevelCard } from "../../src/components/BevelCard";
+import { ShadowBox } from "../../src/components/ShadowBox";
 
 export default function CheckoutHistoryPage() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -84,12 +84,11 @@ export default function CheckoutHistoryPage() {
       ) : (
         <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
           {history.map((h: any, i: number) => (
-            <BevelCard
+            <ShadowBox
               key={i}
               testID={`hist-${i}`}
               style={styles.row}
-              onPress={() => h.borrower_id && router.push(`/borrower/${h.borrower_id}`)}
-              disabled={!h.borrower_id}
+              onPress={h.borrower_id ? () => router.push(`/borrower/${h.borrower_id}`) : undefined}
               activeOpacity={0.7}
             >
               <View style={styles.rowHead}>
@@ -113,7 +112,7 @@ export default function CheckoutHistoryPage() {
                 {h.checked_in_at ? formatDateTime(h.checked_in_at) : "— currently out"}
               </Text>
               {!!h.notes && <Text style={styles.notes}>{h.notes}</Text>}
-            </BevelCard>
+            </ShadowBox>
           ))}
         </ScrollView>
       )}
@@ -180,14 +179,9 @@ const styles = themedStyles((c) => ({
     paddingHorizontal: 24,
   },
   row: {
-    backgroundColor: c.bgSecondary,
-    borderColor: c.border,
-    borderWidth: 1,
-    borderRadius: 10,
-    padding: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 12,
     marginBottom: 10,
-  
-    ...(theme.elevation.md as object),
   },
   rowHead: {
     flexDirection: "row",

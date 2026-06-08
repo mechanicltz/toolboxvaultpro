@@ -60,12 +60,27 @@ export function IndustrialBanner({ title, subtitle, rightSlot, leftSlot }: Props
           resizeMode="contain"
           fadeDuration={0}
         />
-        <Text
-          style={[styles.version, { bottom: nameplateH * 0.12, color: c.accent }]}
-          allowFontScaling={false}
+        {/* Version label — centered (H & V) inside the small plate that sits
+            near the bottom of the nameplate artwork (plate center ≈ 76% down). */}
+        <View
+          pointerEvents="none"
+          style={{
+            position: "absolute",
+            left: 0,
+            right: 0,
+            top: nameplateH * 0.70,
+            height: nameplateH * 0.125,
+            alignItems: "center",
+            justifyContent: "center",
+          }}
         >
-          {APP_VERSION_LABEL}
-        </Text>
+          <Text
+            style={[styles.version, { color: c.accent, fontSize: Math.round(nameplateH * 0.118) }]}
+            allowFontScaling={false}
+          >
+            {APP_VERSION_LABEL}
+          </Text>
+        </View>
       </View>
 
       {/* Label row: back (left) · PAGE NAME (center) · action (right). */}
@@ -103,14 +118,11 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   version: {
-    position: "absolute",
-    left: 0,
-    right: 0,
     textAlign: "center",
     color: ACCENT,
-    fontSize: 9,
     fontWeight: "800",
     letterSpacing: 1,
+    includeFontPadding: false,
     textShadowColor: "rgba(0,0,0,0.85)",
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 2,
