@@ -43,6 +43,12 @@ Backend change-email tested by testing_agent (16/16 backend pass). All additive 
 
 ## 📋 CONFIRMED CURRENT BATCH (user list 2026-06-07) — user said "I confirm, ready to start"
 
+### IRON FORGE INVENTORY SKIN — IN PROGRESS (staged; user approved staging + keep current card layout on metal frame)
+- [x] **Stage 1** (BUILD 224): `app/(tabs)/inventory.tsx` now dual-renders like the dashboard. When `skin==="industrial"` it wraps in `<ImageBackground source={SKIN.bg}>` + dark veil, makes the SafeAreaView transparent, frames the search bar with `SKIN.plate`/`CAP.plate` (TbvFrame), skins the FAB with `SKIN.fab` (octagonal orb + dark "+"), and accents the select-mode button. Plain light/dark themes UNCHANGED (flat canvas fallback). No functional changes. ✅ verified by screenshot — pending USER OK.
+- [ ] **Stage 2**: item cards → keep current ShadowBox card layout but drop onto the metal card frame (preserve all badges/qty/lost-status/select-mode).
+- [ ] **Stage 3**: filter accordion + status/location pickers framed to match.
+
+
 > Design system: reuse `src/components/ShadowBox.tsx` (the bordered "Description Card"
 > look used on the home dashboard). "Mini cards" = the small stat tiles. Match existing
 > patterns; later we'll build a centralized button/UI kit (user chose to defer = "B").

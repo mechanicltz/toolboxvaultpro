@@ -11,6 +11,7 @@ import {
   Alert,
   Modal,
   ActivityIndicator,
+  ImageBackground,
 } from "react-native";
 import { Image as ExpoImage } from "expo-image";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -30,9 +31,13 @@ import { useSubscriptionChange } from "../../src/subscriptionEvents";
 import { useAppResume } from "../../src/appLifecycle";
 import { useResponsive } from "../../src/responsive";
 
-import { themedStyles } from "../../src/themeContext";
+import { themedStyles, useSkin } from "../../src/themeContext";
 import { ShadowBox } from "../../src/components/ShadowBox";
 import { IndustrialBanner } from "../../src/components/IndustrialBanner";
+// Iron Forge (industrial) skin — metal background + framed chrome, mirrors the
+// dashboard's dual-render pattern. Plain themes keep the flat canvas look.
+import { SKIN, CAP } from "../../src/tbv/skins";
+import { TbvFrame } from "../../src/tbv/components/TbvFrame";
 
 type Filter = "all" | "available" | "out" | "consumables" | "lost" | "maintenance" | "for_sale";
 
@@ -41,6 +46,8 @@ export default function InventoryScreen() {
   const { prefs } = usePrefs();
   const { user } = useAuth();
   const { gridCols, isPhone } = useResponsive();
+  const { skin } = useSkin();
+  const isIndustrial = skin === "industrial";
   // Allow other screens to deep-link into a specific inventory filter,
   // e.g. the Home dashboard's "CHECKED OUT" card sends ?filter=out.
   const params = useLocalSearchParams<{ filter?: string }>();
@@ -576,8 +583,30 @@ export default function InventoryScreen() {
     setRefreshing(false);
   };
 
-  return (
-    <SafeAreaView style={styles.container} edges={["top"]}>
+  const searchInner = (
+    <>
+      <Ionicons name="search" size={18} color={theme.colors.textMuted} />
+      <TextInput
+        testID="search-input"
+        placeholder="Search name, brand, dealer, agent, tag..."
+        placeholderTextColor={theme.colors.textMuted}
+        style={styles.searchInput}
+        value={search}
+        onChangeText={setSearch}
+      />
+      {search.length > 0 && (
+        <TouchableOpacity testID="clear-search-btn" onPress={() => setSearch("")}>
+          <Ionicons name="close-circle" size={18} color={theme.colors.textMuted} />
+        </TouchableOpacity>
+      )}
+    </>
+  );
+
+  const body = (
+    <SafeAreaView
+      style={[styles.container, isIndustrial && styles.containerSkinned]}
+      edges={["top"]}
+    >
       <IndustrialBanner title="INVENTORY" />
 
       {prefs.warranty_alerts && warningCount > 0 && (
@@ -595,25 +624,24 @@ export default function InventoryScreen() {
       )}
 
       <View style={styles.searchRow}>
-        <View style={[styles.searchBox, { flex: 1 }]}>
-          <Ionicons name="search" size={18} color={theme.colors.textMuted} />
-          <TextInput
-            testID="search-input"
-            placeholder="Search name, brand, dealer, agent, tag..."
-            placeholderTextColor={theme.colors.textMuted}
-            style={styles.searchInput}
-            value={search}
-            onChangeText={setSearch}
-          />
-          {search.length > 0 && (
-            <TouchableOpacity testID="clear-search-btn" onPress={() => setSearch("")}>
-              <Ionicons name="close-circle" size={18} color={theme.colors.textMuted} />
-            </TouchableOpacity>
-          )}
-        </View>
+        {isIndustrial ? (
+          // Iron Forge: framed metal search bar (mirrors dashboard chrome).
+          <TbvFrame
+            source={SKIN.plate}
+            capInsets={CAP.plate}
+            style={[styles.searchFrameSkin, { flex: 1 }]}
+            padX={16}
+            padTop={4}
+            padBottom={6}
+          >
+            <View style={styles.searchBoxInner}>{searchInner}</View>
+          </TbvFrame>
+        ) : (
+          <View style={[styles.searchBox, { flex: 1 }]}>{searchInner}</View>
+        )}
         <TouchableOpacity
           testID="select-mode-btn"
-          style={styles.selectHeaderBtn}
+          style={[styles.selectHeaderBtn, isIndustrial && styles.selectHeaderBtnSkin]}
           onPress={() => setSelectMode(true)}
           hitSlop={6}
         >
@@ -1161,6 +1189,23 @@ export default function InventoryScreen() {
             </TouchableOpacity>
           </ScrollView>
         </View>
+      ) : isIndustrial ? (
+        // Iron Forge: skinned metal FAB (octagonal frame + glowing core art).
+        <TouchableOpacity
+          testID="add-item-fab"
+          style={styles.fabSkin}
+          onPress={() => router.push("/tool/edit")}
+          activeOpacity={0.85}
+        >
+          <ImageBackground
+            source={SKIN.fab}
+            style={styles.fabSkinFill}
+            imageStyle={styles.fabSkinImg}
+            resizeMode="contain"
+          >
+            <Ionicons name="add" size={30} color="#2A1400" />
+          </ImageBackground>
+        </TouchableOpacity>
       ) : (
         // Floating round "+" FAB, bottom-right — matches the Wishlist page.
         <TouchableOpacity
@@ -1638,10 +1683,49 @@ export default function InventoryScreen() {
       />
     </SafeAreaView>
   );
+
+  if (isIndustrial) {
+    return (
+      <ImageBackground source={SKIN.bg} style={styles.skinBg} resizeMode="cover">
+        <View style={styles.skinVeil} pointerEvents="none" />
+        {body}
+      </ImageBackground>
+    );
+  }
+  return body;
 }
 
 const styles = themedStyles((c) => ({
   container: { flex: 1, backgroundColor: c.canvas },
+  // Iron Forge (industrial) skin overrides — metal background + framed chrome.
+  containerSkinned: { backgroundColor: "transparent" },
+  skinBg: { flex: 1, backgroundColor: "#0A0A0A" },
+  skinVeil: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(10,10,10,0.55)" },
+  searchFrameSkin: { minHeight: 52, justifyContent: "center" },
+  searchBoxInner: {
+    flexDirection: "row",
+    alignItems: "center",
+    height: 40,
+    gap: 8,
+  },
+  selectHeaderBtnSkin: {
+    backgroundColor: "rgba(20,20,20,0.85)",
+    borderColor: c.accent,
+  },
+  fabSkin: {
+    position: "absolute",
+    bottom: 24,
+    right: 18,
+    width: 76,
+    height: 76,
+  },
+  fabSkinFill: {
+    width: "100%",
+    height: "100%",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  fabSkinImg: { resizeMode: "contain" },
   header: {
     flexDirection: "row",
     alignItems: "center",
