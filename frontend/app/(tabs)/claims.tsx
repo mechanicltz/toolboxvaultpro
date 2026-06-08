@@ -435,7 +435,13 @@ export default function ClaimsScreen() {
                   <Text style={styles.groupCountText}>{archivedClaims.length}</Text>
                 </View>
               </View>
-              {archivedClaims.map((c: any) => (
+              {[...archivedClaims]
+                .sort((a: any, b: any) => {
+                  const da = new Date(a.completed_at || a.archived_at || a.updated_at || a.created_at || 0).getTime();
+                  const db = new Date(b.completed_at || b.archived_at || b.updated_at || b.created_at || 0).getTime();
+                  return db - da;
+                })
+                .map((c: any) => (
                 <ShadowBoxSubCard
                   key={`hist-${c.id}`}
                   testID={`history-claim-${c.id}`}
