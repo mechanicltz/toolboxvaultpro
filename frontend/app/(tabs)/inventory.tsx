@@ -964,32 +964,18 @@ export default function InventoryScreen() {
           const isSelected = selectedIds.includes(item.id);
           const isLost = item?.lost_status?.is_lost;
           const isStolen = isLost && item?.lost_status?.type === "stolen";
-          return (
-            <ShadowBox
-              testID={`tool-card-${item.id}`}
-              style={[
-                styles.row,
-                gridCols > 1 && { flex: 1, marginHorizontal: 0 },
-                isSelected && styles.rowSelected,
-              ]}
-              onPress={() => {
-                if (selectMode) {
-                  toggleSelect(item.id);
-                } else {
-                  router.push(`/tool/${item.id}`);
-                }
-              }}
-              onLongPress={() => {
-                if (!selectMode) enterSelect(item.id);
-              }}
-              activeOpacity={0.7}
-            >
-              <LinearGradient
-                colors={[theme.colors.rowGradTop, theme.colors.rowGradBottom]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 0, y: 1 }}
-                style={StyleSheet.absoluteFillObject}
-              />
+          const onCardPress = () => {
+            if (selectMode) {
+              toggleSelect(item.id);
+            } else {
+              router.push(`/tool/${item.id}`);
+            }
+          };
+          const onCardLongPress = () => {
+            if (!selectMode) enterSelect(item.id);
+          };
+          const cardContent = (
+            <>
               {selectMode && (
                 <View style={styles.checkbox}>
                   <Ionicons
@@ -1104,6 +1090,55 @@ export default function InventoryScreen() {
                   )}
                 </View>
               )}
+            </>
+          );
+
+          if (isIndustrial) {
+            return (
+              <TouchableOpacity
+                testID={`tool-card-${item.id}`}
+                style={[
+                  styles.rowSkinWrap,
+                  gridCols > 1 && { flex: 1, marginHorizontal: 0 },
+                  isSelected && styles.rowSkinSelected,
+                ]}
+                onPress={onCardPress}
+                onLongPress={onCardLongPress}
+                activeOpacity={0.7}
+              >
+                <TbvFrame
+                  source={SKIN.plate}
+                  capInsets={CAP.plate}
+                  style={styles.rowSkinFrame}
+                  padX={20}
+                  padTop={14}
+                  padBottom={14}
+                >
+                  <View style={styles.rowSkinInner}>{cardContent}</View>
+                </TbvFrame>
+              </TouchableOpacity>
+            );
+          }
+
+          return (
+            <ShadowBox
+              testID={`tool-card-${item.id}`}
+              style={[
+                styles.row,
+                gridCols > 1 && { flex: 1, marginHorizontal: 0 },
+                isSelected && styles.rowSelected,
+              ]}
+              onPress={onCardPress}
+              onLongPress={onCardLongPress}
+              activeOpacity={0.7}
+            >
+              <LinearGradient
+                colors={[theme.colors.rowGradTop, theme.colors.rowGradBottom]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 0, y: 1 }}
+                style={StyleSheet.absoluteFillObject}
+              />
+              {cardContent}
             </ShadowBox>
           );
         }}
@@ -1969,6 +2004,23 @@ const styles = themedStyles((c) => ({
   rowSelected: {
     borderWidth: 2,
     borderColor: c.accent,
+  },
+  // Iron Forge skinned card (Stage 2): metal frame wrapper + row content.
+  rowSkinWrap: {
+    marginHorizontal: 16,
+    marginBottom: 14,
+    borderRadius: 10,
+  },
+  rowSkinSelected: {
+    borderWidth: 2,
+    borderColor: c.accent,
+    borderRadius: 12,
+  },
+  rowSkinFrame: { width: "100%" },
+  rowSkinInner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
   },
   checkbox: {
     width: 28,
