@@ -1038,48 +1038,6 @@ export default function InventoryScreen() {
                     <Text style={styles.rowQtyPillText}>×{Math.max(1, Number(item.quantity) || 1)}</Text>
                   </View>
                 </View>
-                {(() => {
-                  // Compute soonest maintenance due date
-                  const schedules: any[] = item.maintenance || [];
-                  if (schedules.length === 0) return null;
-                  const todayMs = Date.now();
-                  let soonest: { days: number; type: string } | null = null;
-                  schedules.forEach((s) => {
-                    if (!s.next_due_date) return;
-                    const dt = new Date(s.next_due_date + "T00:00:00").getTime();
-                    const days = Math.round((dt - todayMs) / 86400000);
-                    if (days <= 90 && (!soonest || days < soonest.days)) {
-                      soonest = { days, type: s.type };
-                    }
-                  });
-                  if (!soonest) return null;
-                  const s0 = soonest as { days: number; type: string };
-                  const overdue = s0.days < 0;
-                  return (
-                    <View
-                      style={[
-                        styles.mntPill,
-                        { borderColor: overdue ? theme.colors.danger : theme.colors.accent },
-                      ]}
-                    >
-                      <Ionicons
-                        name="settings"
-                        size={10}
-                        color={overdue ? theme.colors.danger : theme.colors.accent}
-                      />
-                      <Text
-                        style={[
-                          styles.mntText,
-                          { color: overdue ? theme.colors.danger : theme.colors.accent },
-                        ]}
-                      >
-                        {overdue
-                          ? `${s0.type.toUpperCase()} OVERDUE ${Math.abs(s0.days)}D`
-                          : `${s0.type.toUpperCase()} DUE IN ${s0.days}D`}
-                      </Text>
-                    </View>
-                  );
-                })()}
               </View>
               {!selectMode && (
                 <View style={styles.rowRight}>
