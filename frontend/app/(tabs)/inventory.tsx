@@ -1025,7 +1025,7 @@ export default function InventoryScreen() {
                       the right of the row already conveys checked-out
                       state. Showing both was redundant. */}
                 </View>
-                <Text style={styles.rowSub} numberOfLines={1}>
+                <Text style={[styles.rowSub, isIndustrial && styles.rowSubSkin]} numberOfLines={1}>
                   {item.location_name || "No location"}
                   {prefs.show_prices && item.cost
                     ? `  ·  $${(Number(item.cost) * Math.max(1, Number(item.quantity) || 1)).toFixed(0)}`
@@ -1033,8 +1033,8 @@ export default function InventoryScreen() {
                 </Text>
                 <View style={styles.rowDealerLine}>
                   {!!item.dealer_name && (
-                    <Text style={styles.rowDealer} numberOfLines={1}>
-                      <Ionicons name="briefcase" size={11} color={theme.colors.textMuted} />{" "}
+                    <Text style={[styles.rowDealer, isIndustrial && styles.rowSubSkin]} numberOfLines={1}>
+                      <Ionicons name="briefcase" size={11} color={isIndustrial ? "#D8D8D8" : theme.colors.textMuted} />{" "}
                       {item.dealer_name}
                     </Text>
                   )}
@@ -2284,6 +2284,7 @@ const styles = themedStyles((c) => ({
   },
   rowTitle: { color: c.textPrimary, fontWeight: "700", fontSize: 12 },
   rowSub: { color: c.textSecondary, fontSize: 9, marginTop: 2 },
+  rowSubSkin: { color: "#E2E2E2" },
   tagRow: { flexDirection: "row", marginTop: 6, gap: 4, flexWrap: "wrap" },
   tag: {
     paddingHorizontal: 8,
