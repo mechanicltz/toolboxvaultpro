@@ -47,18 +47,16 @@ Backend change-email tested by testing_agent (16/16 backend pass). All additive 
 > look used on the home dashboard). "Mini cards" = the small stat tiles. Match existing
 > patterns; later we'll build a centralized button/UI kit (user chose to defer = "B").
 
-### A. SHADOWBOX RESTYLE PASS
-- [ ] **ITEM DESCRIPTION page bottom buttons** (`app/tool/[id].tsx`): the action buttons at the BOTTOM of an item's detail page should be **ShadowBox-style buttons** (raised/bordered card look, matching `ShadowBox`), not flat. (Added 2026-06-07.)
-- [ ] **MAINTENANCE screen** (`app/maintenance.tsx`): restyle the list rows to ShadowBox layout; the little info cards at the top → ShadowBox **mini-card** design.
-- [ ] **FOR SALE page** (`app/for-sale.tsx`): update to ShadowBox layout design.
-- [ ] **WISHLIST page** (`app/wishlist.tsx`): update to ShadowBox layout; the **top 4 info cards** → ShadowBox mini-card layout.
-- [ ] **DEALER DETAIL restructure** (`app/dealer/[id].tsx`):
-  - "**TOTAL PURCHASED**" row becomes its OWN ShadowBox placed **right under the "Company Details" heading but ABOVE the Company Details ShadowBox**.
-  - Then a ShadowBox titled **AGENTS**, containing one ShadowBox **sub-card per agent**.
-    - **Current agent pinned to the TOP**, shown with a **★ star + ORANGE text**.
-    - All OTHER agents listed **alphabetically by FIRST name**.
-  - Then a ShadowBox titled (truck & credit) **ACCOUNTS**, with each account as a ShadowBox **sub-card**.
-    - Q3 (account fields) was asked; default = surface whatever is already stored per account (name/number, type truck|credit, balance). Confirm against the dealer data model in code.
+### A. SHADOWBOX RESTYLE PASS — ✅ ALL DONE (BUILDS 207–218)
+- [x] **ITEM DESCRIPTION page bottom buttons** (`app/tool/[id].tsx`) → ShadowBoxMini. DONE.
+- [x] **MAINTENANCE screen** (`app/maintenance.tsx`): rows → ShadowBox; top tiles → ShadowBoxMini; left status stripes removed. DONE.
+- [x] **FOR SALE page** (`app/for-sale.tsx`): tabs/search/stats/cards → ShadowBox; active tab keeps dark bg + accent text; Asking Total tile de-tinted. DONE.
+- [x] **WISHLIST page** (`app/wishlist.tsx`): cards → ShadowBox; top 4 tiles → ShadowBoxMini; tabs → ShadowBox buttons; edit/share/delete moved to top-right icon toolbar; Convert/Purchased now bottom buttons. DONE.
+- [x] **DEALER DETAIL restructure** (`app/dealer/[id].tsx`): TOTAL PURCHASED own ShadowBox; AGENTS titled ShadowBox w/ sub-cards (current pinned ★ orange, rest alpha by first name); ACCOUNTS sub-cards inside a recessed ShadowBox (green stripe removed, padding fixed); agent toolbar (call/text/share + edit/delete) on top row. Account actions consolidated to **Adjust** + **Schedule** buttons. DONE.
+- [x] **CHECKOUT HISTORY** (`app/checkout-history/[id].tsx`) rows → ShadowBox. DONE.
+- [x] **REPORTS HUB + IMPORT/EXPORT** format buttons (PDF/CSV, CSV/XLSX) → ShadowBox on all forms; reports type/format cards de-chromed. DONE.
+- [x] **PDF VIEWER black-frame bug** (`app/pdf-viewer.tsx`): was snapshotting theme colors via StyleSheet.create → converted to themedStyles (frame now follows active theme). DONE.
+- [x] **HEADER VERSION**: centered on its plate, bigger, "v" removed (now `2.1.1`). DONE.
 
 ### B. FUNCTIONAL FIXES
 - [x] **Inventory FAB** — DONE (BUILD 203). Removed full-width `addItemBtn`; added circular bottom-right FAB (`testID add-item-fab`, reused existing `fab` style made circular borderRadius:32) → `router.push("/tool/edit")`. Wishlist parity.
