@@ -589,8 +589,8 @@ export default function InventoryScreen() {
       <TextInput
         testID="search-input"
         placeholder="Search name, brand, dealer, agent, tag..."
-        placeholderTextColor={theme.colors.textMuted}
-        style={styles.searchInput}
+        placeholderTextColor={isIndustrial ? "#C8C8C8" : theme.colors.textMuted}
+        style={[styles.searchInput, isIndustrial && styles.searchInputSkin]}
         value={search}
         onChangeText={setSearch}
       />
@@ -1203,7 +1203,7 @@ export default function InventoryScreen() {
             imageStyle={styles.fabSkinImg}
             resizeMode="contain"
           >
-            <Ionicons name="add" size={30} color="#2A1400" />
+            <Ionicons name="add" size={30} color="#2A1400" style={styles.fabIconSkin} />
           </ImageBackground>
         </TouchableOpacity>
       ) : (
@@ -1726,6 +1726,8 @@ const styles = themedStyles((c) => ({
     justifyContent: "center",
   },
   fabSkinImg: { resizeMode: "contain" },
+  fabIconSkin: { transform: [{ translateY: -4 }] },
+  searchInputSkin: { color: "#F2F2F2", fontWeight: "600" },
   header: {
     flexDirection: "row",
     alignItems: "center",
