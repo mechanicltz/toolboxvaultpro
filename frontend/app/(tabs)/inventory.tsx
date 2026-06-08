@@ -1723,10 +1723,10 @@ const styles = themedStyles((c) => ({
     width: "100%",
     height: "100%",
     alignItems: "center",
-    justifyContent: "center",
+    justifyContent: "flex-start",
+    paddingTop: 14,
   },
   fabSkinImg: { resizeMode: "contain" },
-  fabIconSkin: { transform: [{ translateY: -16 }] },
   searchInputSkin: { color: "#F2F2F2", fontWeight: "600" },
   header: {
     flexDirection: "row",
