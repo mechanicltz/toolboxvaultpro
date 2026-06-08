@@ -68,14 +68,14 @@ export function IndustrialBanner({ title, subtitle, rightSlot, leftSlot }: Props
             position: "absolute",
             left: 0,
             right: 0,
-            top: nameplateH * 0.70,
-            height: nameplateH * 0.125,
+            top: nameplateH * 0.735,
+            height: nameplateH * 0.19,
             alignItems: "center",
             justifyContent: "center",
           }}
         >
           <Text
-            style={[styles.version, { color: c.accent, fontSize: Math.round(nameplateH * 0.118) }]}
+            style={[styles.version, { color: c.accent, fontSize: Math.round(nameplateH * 0.13) }]}
             allowFontScaling={false}
           >
             {APP_VERSION_LABEL}
