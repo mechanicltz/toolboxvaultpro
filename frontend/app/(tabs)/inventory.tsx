@@ -1724,7 +1724,7 @@ const styles = themedStyles((c) => ({
     height: "100%",
     alignItems: "center",
     justifyContent: "flex-start",
-    paddingTop: 11,
+    paddingTop: 13,
   },
   fabSkinImg: { resizeMode: "contain" },
   searchInputSkin: { color: "#F2F2F2", fontWeight: "600" },
