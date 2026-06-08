@@ -56,6 +56,7 @@ Backend change-email tested by testing_agent (16/16 backend pass). All additive 
 - [x] **Stage 3** (BUILD 235): Filter accordion + pickers framed. Added a module-level `FilterAccordionWrap` that renders `TbvFrame source={SKIN.plate}` in industrial mode (matches search bar/cards) and the plain `ShadowBox` otherwise. The 5 picker buttons (status/location/tag/sort/category) get `locationFilterBtnSkin` (dark metal bg + orange-tinted border) in industrial. Plain themes unchanged. ✅ verified by screenshot (collapsed + expanded) — pending USER OK.
 
 **IRON FORGE INVENTORY SKIN — ALL 3 STAGES COMPLETE (BUILD 236). Plain Light/Dark fully preserved; no functional changes.**
+- Tweak (BUILD 240): removed the metal plate panel around the search-bar select button and swapped the `checkmark-done` icon → `create-outline` (edit/pencil) icon. In industrial it's now a bare borderless icon (`selectHeaderBtnBare`); removed the unused `selectFrameInner` style. ✅ screenshot-verified.
 - Fix (BUILD 236): filter panel was 32px too wide — `TbvFrame`'s wrap is `width:100%`, so margin placed directly on it overflows the parent by marginX*2. Moved margin to an outer `filterAccordionSkinWrap` View (matches the card pattern). Filter now aligns with search bar + cards.
 
 
