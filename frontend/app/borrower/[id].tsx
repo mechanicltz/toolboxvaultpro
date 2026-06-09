@@ -266,17 +266,18 @@ export default function BorrowerHistory() {
     plainStyle?: any;
   }) =>
     isIndustrial ? (
-      <TbvFrame
-        source={SKIN.window}
-        capInsets={CAP.window}
-        style={styles.cardSkinFrame}
-        padX={34}
-        padTop={28}
-        padBottom={28}
-        testID={testID}
-      >
-        {children}
-      </TbvFrame>
+      <View style={styles.cardSkinFrame}>
+        <TbvFrame
+          source={SKIN.window}
+          capInsets={CAP.window}
+          padX={34}
+          padTop={28}
+          padBottom={28}
+          testID={testID}
+        >
+          {children}
+        </TbvFrame>
+      </View>
     ) : (
       <ShadowBox testID={testID} style={plainStyle}>
         {children}
@@ -321,20 +322,21 @@ export default function BorrowerHistory() {
         </View>
 
         {isIndustrial ? (
-          <TbvFrame
-            source={SKIN.window}
-            capInsets={CAP.window}
-            style={styles.statSkinFrame}
-            padX={30}
-            padTop={34}
-            padBottom={34}
-          >
-            <View style={styles.statGridInner}>
-              <Cell flat label="Total checkouts" value={String(data.total_checkouts || 0)} />
-              <Cell flat label="Unique tools" value={String(data.unique_tools || 0)} />
-              <Cell flat label="Check Out" value={String(data.currently_held?.length || 0)} highlight={data.currently_held?.length > 0} />
-            </View>
-          </TbvFrame>
+          <View style={styles.statSkinFrame}>
+            <TbvFrame
+              source={SKIN.window}
+              capInsets={CAP.window}
+              padX={30}
+              padTop={34}
+              padBottom={34}
+            >
+              <View style={styles.statGridInner}>
+                <Cell flat label="Total checkouts" value={String(data.total_checkouts || 0)} />
+                <Cell flat label="Unique tools" value={String(data.unique_tools || 0)} />
+                <Cell flat label="Check Out" value={String(data.currently_held?.length || 0)} highlight={data.currently_held?.length > 0} />
+              </View>
+            </TbvFrame>
+          </View>
         ) : (
           <View style={styles.statGrid}>
             <Cell label="Total checkouts" value={String(data.total_checkouts || 0)} />

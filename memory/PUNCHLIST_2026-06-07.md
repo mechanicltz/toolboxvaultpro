@@ -231,3 +231,13 @@ Root cause: metal rails render full thickness on iOS via `capInsets` (window: to
 - **Dealer detail**: ROUTE banner + TOTAL PURCHASED switched to the slim **plate** frame (CardShell gained a `thin` prop → SKIN.plate, padX28/padTop14). Company/Agents window cards → padX40, padTop/padBottom30 (clears iOS rails; fixes "TOTAL PURCHASED" left-clip & high text).
 - **Contact detail**: stat panel padTop/padBottom 14→34, padX→30 (numbers/labels no longer overlap rails); NOTES card padX→34, padTop/padBottom→28.
 - ⚠️ Padding sized from CAP rail values; web can't render capInsets so these need a quick on-device (iOS) confirmation.
+
+---
+
+## ✅ FIXES (2026-06-09, BUILD 266) — detail-page stretching + PDF bg zoom
+Root cause (stretching): `TbvFrame`'s internal wrap is `width:100%`, so any `marginHorizontal` applied DIRECTLY to the frame overflows the parent by marginX*2 (same class of bug as the BUILD 236 filter-panel fix). Several detail-page frames still passed margins via `style=` directly on `TbvFrame`.
+- **Contact detail (`app/borrower/[id].tsx`)**: stat-panel frame + `CardShell` (NOTES) frame now wrapped in an outer `<View style={statSkinFrame/cardSkinFrame}>`; the `TbvFrame` itself carries no margin. No more right-edge clipping.
+- **Dealer detail (`app/dealer/[id].tsx`)**: ROUTE banner frame wrapped in `<View style={cardSkinFrame}>`; added the missing `cardSkinWrap` style (`marginHorizontal:16`) so `CardShell` cards (TOTAL PURCHASED / COMPANY DETAILS / AGENTS) get proper side margins instead of full-bleed/overflow.
+- **PDF viewer (`app/pdf-viewer.tsx`)**: metal `SKIN.bg` was `resizeMode="cover"` on a 1024×1536 texture → showed a zoomed central crop. Switched to `resizeMode="repeat"` → renders at native scale (crisp, not zoomed). In-app preview only; generated PDF file unchanged.
+- ⚠️ Verified by code/bundle (web login unreliable in preview). NEEDS on-device (iOS, Arctic) confirmation of rail clearance + PDF texture look.
+- ⏳ STILL PENDING (P1): hardcoded orange back/nav buttons in `wishlist.tsx`, `tool/edit.tsx`, `(tabs)/reports.tsx` (pdf-viewer back already renders variant accent).

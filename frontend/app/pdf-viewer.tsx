@@ -146,7 +146,7 @@ export default function PdfViewerScreen(): React.ReactElement {
             never paints over the PDF — RN-Web's ImageBackground does). */}
         <Image
           source={SKIN.bg}
-          resizeMode="cover"
+          resizeMode="repeat"
           fadeDuration={0}
           pointerEvents="none"
           style={StyleSheet.absoluteFill}

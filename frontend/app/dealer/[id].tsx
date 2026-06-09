@@ -340,28 +340,29 @@ export default function DealerDetail() {
 
         {/* Route info banner */}
         {isIndustrial ? (
-          <TbvFrame
-            source={SKIN.plate}
-            capInsets={CAP.plate}
-            style={styles.cardSkinFrame}
-            padX={28}
-            padTop={14}
-            padBottom={14}
-            leftStripe={theme.colors.accent}
-          >
-            <View style={styles.routeRowInner}>
-              <Ionicons name="map" size={18} color={theme.colors.accent} />
-              <View style={{ flex: 1 }}>
-                <Text style={styles.routeRowLabel}>ROUTE  ·  {routeLabel(dealer)}</Text>
-                {!!nextRouteText(dealer) && (
-                  <Text style={styles.routeRowNext}>Next: {nextRouteText(dealer)}</Text>
-                )}
-                {!nextRouteText(dealer) && (
-                  <Text style={styles.routeRowEmpty}>No route configured — tap edit to add</Text>
-                )}
+          <View style={styles.cardSkinFrame}>
+            <TbvFrame
+              source={SKIN.plate}
+              capInsets={CAP.plate}
+              padX={28}
+              padTop={14}
+              padBottom={14}
+              leftStripe={theme.colors.accent}
+            >
+              <View style={styles.routeRowInner}>
+                <Ionicons name="map" size={18} color={theme.colors.accent} />
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.routeRowLabel}>ROUTE  ·  {routeLabel(dealer)}</Text>
+                  {!!nextRouteText(dealer) && (
+                    <Text style={styles.routeRowNext}>Next: {nextRouteText(dealer)}</Text>
+                  )}
+                  {!nextRouteText(dealer) && (
+                    <Text style={styles.routeRowEmpty}>No route configured — tap edit to add</Text>
+                  )}
+                </View>
               </View>
-            </View>
-          </TbvFrame>
+            </TbvFrame>
+          </View>
         ) : (
           <ShadowBox style={styles.routeRow}>
             <Ionicons name="map" size={18} color={theme.colors.accent} />
@@ -1091,6 +1092,7 @@ const styles = themedStyles((c) => ({
     ...(theme.elevation.md as object),
   },
   cardSkinFrame: { marginHorizontal: 16, marginTop: 4, marginBottom: 12 },
+  cardSkinWrap: { marginHorizontal: 16, marginTop: 4, marginBottom: 12 },
   routeRowInner: { flexDirection: "row", alignItems: "center", gap: 12 },
   routeRowLabel: {
     color: c.textPrimary,
