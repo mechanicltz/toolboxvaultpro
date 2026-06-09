@@ -90,6 +90,45 @@ export default function ToolDetail() {
       </ShadowBox>
     );
 
+  // Bottom ACTION grid tile: skinned steel button in Iron Forge (keeps the
+  // semantic icon colour), flat ShadowBoxMini in plain Light/Dark.
+  const ActionTile = ({
+    testID,
+    onPress,
+    icon,
+    iconColor,
+    label,
+  }: {
+    testID: string;
+    onPress: () => void;
+    icon: keyof typeof Ionicons.glyphMap;
+    iconColor: string;
+    label: string;
+  }) =>
+    isIndustrial ? (
+      <TouchableOpacity
+        testID={testID}
+        activeOpacity={0.85}
+        onPress={onPress}
+        style={newStyles.actionTileSkinWrap}
+      >
+        <ImageBackground
+          source={SKIN.btnSecondary}
+          resizeMode="stretch"
+          style={newStyles.actionTileSkin}
+          imageStyle={newStyles.actionTileSkinImg}
+        >
+          <Ionicons name={icon} size={20} color={iconColor} />
+          <Text style={newStyles.actionTileText}>{label}</Text>
+        </ImageBackground>
+      </TouchableOpacity>
+    ) : (
+      <ShadowBoxMini testID={testID} style={newStyles.actionTile} onPress={onPress}>
+        <Ionicons name={icon} size={20} color={iconColor} />
+        <Text style={newStyles.actionTileText}>{label}</Text>
+      </ShadowBoxMini>
+    );
+
   const [tool, setTool] = useState<any>(null);
   const [borrowers, setBorrowers] = useState<any[]>([]);
   const [dealers, setDealers] = useState<any[]>([]);
@@ -2361,89 +2400,81 @@ export default function ToolDetail() {
             {/* CHECK OUT / CHECK IN (contextual) */}
             {!tool.is_sold && !tool.is_lost && (
               tool.is_checked_out ? (
-                <ShadowBoxMini
+                <ActionTile
                   testID="action-checkin"
-                  style={newStyles.actionTile}
                   onPress={doCheckin}
-                >
-                  <Ionicons name="log-in-outline" size={20} color={theme.colors.accent} />
-                  <Text style={newStyles.actionTileText}>CHECK IN</Text>
-                </ShadowBoxMini>
+                  icon="log-in-outline"
+                  iconColor={theme.colors.accent}
+                  label="CHECK IN"
+                />
               ) : (
-                <ShadowBoxMini
+                <ActionTile
                   testID="action-checkout"
-                  style={newStyles.actionTile}
                   onPress={() => setShowCheckout(true)}
-                >
-                  <Ionicons name="log-out-outline" size={20} color={theme.colors.accent} />
-                  <Text style={newStyles.actionTileText}>CHECK OUT</Text>
-                </ShadowBoxMini>
+                  icon="log-out-outline"
+                  iconColor={theme.colors.accent}
+                  label="CHECK OUT"
+                />
               )
             )}
 
             {/* MARK BROKEN / MARK FIXED (contextual) */}
             {!tool.is_sold && !tool.is_lost && (
               tool.needs_repair ? (
-                <ShadowBoxMini
+                <ActionTile
                   testID="action-fixed"
-                  style={newStyles.actionTile}
                   onPress={markRepaired}
-                >
-                  <Ionicons name="checkmark-done" size={20} color={theme.colors.success} />
-                  <Text style={newStyles.actionTileText}>MARK FIXED</Text>
-                </ShadowBoxMini>
+                  icon="checkmark-done"
+                  iconColor={theme.colors.success}
+                  label="MARK FIXED"
+                />
               ) : (
-                <ShadowBoxMini
+                <ActionTile
                   testID="action-broken"
-                  style={newStyles.actionTile}
                   onPress={openRepair}
-                >
-                  <Ionicons name="build-outline" size={20} color={theme.colors.danger} />
-                  <Text style={newStyles.actionTileText}>MARK BROKEN</Text>
-                </ShadowBoxMini>
+                  icon="build-outline"
+                  iconColor={theme.colors.danger}
+                  label="MARK BROKEN"
+                />
               )
             )}
 
             {/* EXPORT PDF */}
-            <ShadowBoxMini
+            <ActionTile
               testID="action-export"
-              style={newStyles.actionTile}
               onPress={() => setShowExportPicker(true)}
-            >
-              <Ionicons name="document-text-outline" size={20} color={theme.colors.accent} />
-              <Text style={newStyles.actionTileText}>EXPORT</Text>
-            </ShadowBoxMini>
+              icon="document-text-outline"
+              iconColor={theme.colors.accent}
+              label="EXPORT"
+            />
 
             {/* LIST FOR SALE / EDIT LISTING + MARK SOLD (contextual) */}
             {!tool.is_sold && !tool.is_lost && (
               tool.for_sale ? (
                 <>
-                  <ShadowBoxMini
+                  <ActionTile
                     testID="action-edit-listing"
-                    style={newStyles.actionTile}
                     onPress={() => openSaleModal()}
-                  >
-                    <Ionicons name="pricetag" size={20} color={theme.colors.accent} />
-                    <Text style={newStyles.actionTileText}>EDIT LISTING</Text>
-                  </ShadowBoxMini>
-                  <ShadowBoxMini
+                    icon="pricetag"
+                    iconColor={theme.colors.accent}
+                    label="EDIT LISTING"
+                  />
+                  <ActionTile
                     testID="action-mark-sold"
-                    style={newStyles.actionTile}
                     onPress={() => setShowMarkSold(true)}
-                  >
-                    <Ionicons name="checkmark-circle" size={20} color={theme.colors.success} />
-                    <Text style={newStyles.actionTileText}>MARK SOLD</Text>
-                  </ShadowBoxMini>
+                    icon="checkmark-circle"
+                    iconColor={theme.colors.success}
+                    label="MARK SOLD"
+                  />
                 </>
               ) : (
-                <ShadowBoxMini
+                <ActionTile
                   testID="action-list-sale"
-                  style={newStyles.actionTile}
                   onPress={() => openSaleModal()}
-                >
-                  <Ionicons name="pricetag-outline" size={20} color={theme.colors.accent} />
-                  <Text style={newStyles.actionTileText}>LIST FOR SALE</Text>
-                </ShadowBoxMini>
+                  icon="pricetag-outline"
+                  iconColor={theme.colors.accent}
+                  label="LIST FOR SALE"
+                />
               )
             )}
 
@@ -5024,6 +5055,22 @@ const newStyles = themedStyles((c) => ({
     fontSize: 11,
     letterSpacing: 0.8,
     textAlign: "center",
+  },
+  // Iron Forge skinned action tile (steel button art)
+  actionTileSkinWrap: {
+    width: "48.5%",
+    height: 64,
+  },
+  actionTileSkin: {
+    width: "100%",
+    height: "100%",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 5,
+    paddingHorizontal: 6,
+  },
+  actionTileSkinImg: {
+    borderRadius: 10,
   },
 
   // ---------- ATTACHMENTS (collapsible pillboxes) ----------

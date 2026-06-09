@@ -41,6 +41,10 @@ Backend change-email tested by testing_agent (16/16 backend pass). All additive 
 
 ---
 
+### DETAIL PAGE BOTTOM ACTION BUTTONS SKINNED (user 2026-06-09) — DONE (BUILD 250) ✅ screenshot-verified
+- [x] Bottom ACTION grid tiles (CHECK OUT/IN, MARK FIXED/BROKEN, EXPORT, LIST FOR SALE / EDIT LISTING / MARK SOLD) were flat dark ShadowBoxMini. Added `ActionTile` adapter: in industrial renders the skinned steel button art (`SKIN.btnSecondary` ImageBackground, auto-recolors per theme) at a FIXED 64px height (ImageBackground reserves intrinsic image height if height isn't fixed → must pin height); keeps the semantic icon colour (green=fixed, red=broken, pink=sale). Plain Light/Dark keep ShadowBoxMini. Verified Crimson.
+- [x] REPORT LOST/STOLEN left as its deliberate red-outline danger button (reads fine on metal).
+
 ### DETAIL PAGE FIT FIXES (user 2026-06-09, on-device Crimson) — DONE (BUILD 247) ✅ screenshot-verified
 - [x] **Rows overflowing the frame rails**: GroupCard padding was too small (padTop 8 / padBottom 10) so first/last rows (LOCATION…BRAND) sat under the window-frame top/bottom metal rails. Bumped to padX 30 / padTop 30 / padBottom 32 — rows now sit cleanly inside the window. Verified.
 - [x] **Photo + STATUS/QTY/PRICE in ONE container** (user asked about `tbv_card_dealer_dark`): tried that asset — it's a FIXED-LAYOUT decorative card (baked photo slot + 4 row slots, RGB no-alpha) that balloons on wide layouts and didn't render/scale cleanly as a live container. Pivoted to the stretchable `SKIN.window` metal frame: photo (96×96) on the left + 3 PillRows on the right, all inside ONE window frame. Same one-container result, reliable. Verified.
