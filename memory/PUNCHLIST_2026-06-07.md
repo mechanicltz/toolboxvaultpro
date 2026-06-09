@@ -41,6 +41,13 @@ Backend change-email tested by testing_agent (16/16 backend pass). All additive 
 
 ---
 
+### INVENTORY DETAIL PAGE (app/tool/[id].tsx) IRON FORGE SKIN — DONE (BUILD 245) ✅ screenshot-verified industrial + plain
+- [x] Was unskinned in industrial: stack-scene WHITE bands showed behind the banner + ACTIONS area, cards were flat. Now dual-renders like inventory/dashboard.
+- [x] Added `useSkin()` → `isIndustrial`. Wrapped the whole screen in `<ImageBackground source={SKIN.bg}>` + 60% veil (container goes transparent) so metal covers the page edge-to-edge and the white scene bg is never visible.
+- [x] Adapter components `StatCard` + `GroupCard`: in industrial they render real `TbvFrame` metal frames (`SKIN.window`/`CAP.window`) — covers the STATUS/QTY/PRICE stat card AND all 6 grouped detail boxes (primary/attachments/services/classify/description/history). In plain Light/Dark they fall back to the exact ShadowBox look (untouched, verified).
+- [x] Left semantic cards (claim/checkout/sale) and the bottom ACTION tiles (ShadowBoxMini, need onPress) as dark cards — they read cleanly on the metal. Nested attachment sub-cards (collapsed) also left as ShadowBoxSubCard.
+- NOTE for next pass (optional polish): metal-frame the bottom ACTION tiles (wrap TbvFrame in a TouchableOpacity since TbvFrame is visual-only) + the claim/checkout/sale cards if the user wants 100% framed.
+
 ### CRIMSON HUE CORRECTION (user request 2026-06-09) — DONE (BUILD 244) ✅ screenshot-verified
 - [x] **Crimson nameplate + pink report badge were too RED (~346–349°)** vs the native crimson accent `#FF1A6B` (338.8°). Re-rotated BOTH from their orange bases with `recolor_theme.recolor_file()` to land the accent at ~338°: nameplate delta 314.4° (from base 24.4°), badge delta 312.4° (from base 26.4°). Verified medians: nameplate 338.2°, badge 338.9°. Now matches the DASHBOARD/tab pink. (Earlier -37° rotation overshot toward red.)
 

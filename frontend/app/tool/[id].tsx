@@ -13,6 +13,7 @@ import {
   Linking,
   KeyboardAvoidingView,
   ActivityIndicator,
+  ImageBackground,
 } from "react-native";
 import { AppSwitch } from "../../src/components/AppSwitch";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -43,12 +44,14 @@ import { ReceiptsSection } from "../../src/sections/ReceiptsSection";
 import { MaintenanceSection } from "../../src/sections/MaintenanceSection";
 import { WarrantySection } from "../../src/sections/WarrantySection";
 import PinchZoomImageViewer from "../../src/components/PinchZoomImageViewer";
-import { themedStyles } from "../../src/themeContext";
+import { themedStyles, useSkin } from "../../src/themeContext";
 import { BevelCard } from "../../src/components/BevelCard";
 import { ShadowBox, ShadowBoxSubCard, ShadowBoxMini } from "../../src/components/ShadowBox";
 import { ContactIconImage } from "../../src/components/ContactIcons";
 import { IndustrialBanner } from "../../src/components/IndustrialBanner";
 import { PillButton } from "../../src/components/PillButton";
+import { SKIN, CAP, TBV } from "../../src/tbv/skins";
+import TbvFrame from "../../src/tbv/components/TbvFrame";
 
 import {
   pickContactNativeIOS,
@@ -61,6 +64,43 @@ import {
 export default function ToolDetail() {
   const { id, startClaim } = useLocalSearchParams<{ id: string; startClaim?: string }>();
   const router = useRouter();
+  const { skin } = useSkin();
+  const isIndustrial = skin === "industrial";
+
+  // ── Iron Forge skin adapters ──────────────────────────────────────────
+  // In the textured industrial themes these render real metal frames (the
+  // same chrome as the dashboard/inventory). In plain Light/Dark they fall
+  // back to the exact ShadowBox look the user locked in, so those themes are
+  // left untouched.
+  const StatCard = ({ children }: { children: React.ReactNode }) =>
+    isIndustrial ? (
+      <View style={{ flex: 1 }}>
+        <TbvFrame source={SKIN.window} capInsets={CAP.window} padX={14} padTop={10} padBottom={10}>
+          {children}
+        </TbvFrame>
+      </View>
+    ) : (
+      <ShadowBox style={newStyles.statShadowBox}>{children}</ShadowBox>
+    );
+
+  const GroupCard = ({ boxKey, children }: { boxKey: string; children: React.ReactNode }) =>
+    isIndustrial ? (
+      <TbvFrame
+        source={SKIN.window}
+        capInsets={CAP.window}
+        padX={18}
+        padTop={8}
+        padBottom={10}
+        testID={`details-box-${boxKey}`}
+      >
+        {children}
+      </TbvFrame>
+    ) : (
+      <ShadowBox style={newStyles.detailsBox} testID={`details-box-${boxKey}`}>
+        {children}
+      </ShadowBox>
+    );
+
   const [tool, setTool] = useState<any>(null);
   const [borrowers, setBorrowers] = useState<any[]>([]);
   const [dealers, setDealers] = useState<any[]>([]);
@@ -1483,8 +1523,8 @@ export default function ToolDetail() {
     return w.has_warranty || w.coverage_type || w.type || w.expires_at ? 1 : 0;
   })();
 
-  return (
-    <SafeAreaView style={styles.container} edges={["top"]}>
+  const __body = (
+    <SafeAreaView style={[styles.container, isIndustrial && styles.containerSkin]} edges={["top"]}>
       <IndustrialBanner
         title={tool.name || "Untitled Tool"}
         subtitle={tool.brand ? String(tool.brand) : "Item Details"}
@@ -1534,7 +1574,7 @@ export default function ToolDetail() {
                 </View>
               )}
             </TouchableOpacity>
-            <ShadowBox style={newStyles.statShadowBox}>
+            <StatCard>
               <PillRow
                 first
                 label="STATUS"
@@ -1547,7 +1587,7 @@ export default function ToolDetail() {
                 onPress={() => setShowQtyModal(true)}
               />
               <PillRow label="PRICE" value={fmtMoney(tool.cost)} />
-            </ShadowBox>
+            </StatCard>
           </View>
 
           {/* CLAIM INFORMATION — converted to the "card within a card" style
@@ -1973,7 +2013,7 @@ export default function ToolDetail() {
             });
 
             const renderGroup = (rows: Row[], boxKey: string) => (
-              <ShadowBox key={boxKey} style={newStyles.detailsBox} testID={`details-box-${boxKey}`}>
+              <GroupCard key={boxKey} boxKey={boxKey}>
                 {rows.map((r, i) => {
                   const isLast = i === rows.length - 1;
                   if (r.kind === "description") {
@@ -2186,7 +2226,7 @@ export default function ToolDetail() {
                     </RowWrapper>
                   );
                 })}
-              </ShadowBox>
+              </GroupCard>
             );
 
             return (
@@ -3377,6 +3417,16 @@ export default function ToolDetail() {
       </Modal>
     </SafeAreaView>
   );
+
+  if (isIndustrial) {
+    return (
+      <ImageBackground source={SKIN.bg} style={styles.skinBg} resizeMode="cover" fadeDuration={0}>
+        <View style={styles.skinVeil} pointerEvents="none" />
+        {__body}
+      </ImageBackground>
+    );
+  }
+  return __body;
 }
 
 function Field({ label, value }: { label: string; value?: string }) {
@@ -3656,6 +3706,12 @@ const qsStyles = themedStyles((c) => ({
 
 const styles = themedStyles((c) => ({
   container: { flex: 1, backgroundColor: c.canvas },
+  // Iron Forge: container goes see-through so the metal ImageBackground (wrapped
+  // around this screen) reads through, and the stack scene's default white is
+  // never visible behind the banner / action cluster.
+  containerSkin: { backgroundColor: "transparent" },
+  skinBg: { flex: 1, backgroundColor: TBV.ink },
+  skinVeil: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(10,10,10,0.60)" },
   bodyContainer: { paddingHorizontal: 16, paddingBottom: 12 },
   infoCard: {
     backgroundColor: c.bgSecondary,
