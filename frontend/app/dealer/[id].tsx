@@ -31,9 +31,11 @@ import { BalanceSection } from "../../src/sections/BalanceSection";
 import { ROUTE_FREQUENCIES, DAY_NAMES, routeLabel, nextRouteText } from "../../src/route";
 import { DateField } from "../../src/DateField";
 import { useAuth } from "../../src/AuthContext";
-import { themedStyles } from "../../src/themeContext";
+import { themedStyles, useSkin } from "../../src/themeContext";
 import { BevelCard } from "../../src/components/BevelCard";
 import { ShadowBox, ShadowBoxSubCard } from "../../src/components/ShadowBox";
+import { SKIN, CAP } from "../../src/tbv/skins";
+import { TbvFrame } from "../../src/tbv/components/TbvFrame";
 import { EmailLink } from "../../src/components/EmailLink";
 import { shareOrSaveAgent } from "../../src/utils/agentShare";
 import { ContactIconButton, ContactIconImage } from "../../src/components/ContactIcons";
@@ -54,6 +56,8 @@ export default function DealerDetail() {
   const router = useRouter();
   const { prefs } = usePrefs();
   const { user } = useAuth();
+  const { skin } = useSkin();
+  const isIndustrial = skin === "industrial";
   const [dealer, setDealer] = useState<any>(null);
   const [tools, setTools] = useState<any[]>([]);
   const [editing, setEditing] = useState(false);
@@ -251,6 +255,39 @@ export default function DealerDetail() {
     else Linking.openURL(`tel:${val.replace(/[^0-9+]/g, "")}`);
   };
 
+  // Industrial themes wrap the panel cards in a metal TbvFrame window; plain
+  // Light/Dark keep the flat ShadowBox.
+  const CardShell = ({
+    children,
+    testID,
+    plainStyle,
+    padTop = 12,
+    padBottom = 12,
+  }: {
+    children: React.ReactNode;
+    testID?: string;
+    plainStyle?: any;
+    padTop?: number;
+    padBottom?: number;
+  }) =>
+    isIndustrial ? (
+      <TbvFrame
+        source={SKIN.window}
+        capInsets={CAP.window}
+        style={styles.cardSkinFrame}
+        padX={32}
+        padTop={padTop}
+        padBottom={padBottom}
+        testID={testID}
+      >
+        {children}
+      </TbvFrame>
+    ) : (
+      <ShadowBox testID={testID} style={plainStyle}>
+        {children}
+      </ShadowBox>
+    );
+
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <IndustrialBanner
@@ -301,18 +338,43 @@ export default function DealerDetail() {
         </View>
 
         {/* Route info banner */}
-        <ShadowBox style={styles.routeRow}>
-          <Ionicons name="map" size={18} color={theme.colors.accent} />
-          <View style={{ flex: 1 }}>
-            <Text style={styles.routeRowLabel}>ROUTE  ·  {routeLabel(dealer)}</Text>
-            {!!nextRouteText(dealer) && (
-              <Text style={styles.routeRowNext}>Next: {nextRouteText(dealer)}</Text>
-            )}
-            {!nextRouteText(dealer) && (
-              <Text style={styles.routeRowEmpty}>No route configured — tap edit to add</Text>
-            )}
-          </View>
-        </ShadowBox>
+        {isIndustrial ? (
+          <TbvFrame
+            source={SKIN.window}
+            capInsets={CAP.window}
+            style={styles.cardSkinFrame}
+            padX={22}
+            padTop={10}
+            padBottom={10}
+            leftStripe={theme.colors.accent}
+          >
+            <View style={styles.routeRowInner}>
+              <Ionicons name="map" size={18} color={theme.colors.accent} />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.routeRowLabel}>ROUTE  ·  {routeLabel(dealer)}</Text>
+                {!!nextRouteText(dealer) && (
+                  <Text style={styles.routeRowNext}>Next: {nextRouteText(dealer)}</Text>
+                )}
+                {!nextRouteText(dealer) && (
+                  <Text style={styles.routeRowEmpty}>No route configured — tap edit to add</Text>
+                )}
+              </View>
+            </View>
+          </TbvFrame>
+        ) : (
+          <ShadowBox style={styles.routeRow}>
+            <Ionicons name="map" size={18} color={theme.colors.accent} />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.routeRowLabel}>ROUTE  ·  {routeLabel(dealer)}</Text>
+              {!!nextRouteText(dealer) && (
+                <Text style={styles.routeRowNext}>Next: {nextRouteText(dealer)}</Text>
+              )}
+              {!nextRouteText(dealer) && (
+                <Text style={styles.routeRowEmpty}>No route configured — tap edit to add</Text>
+              )}
+            </View>
+          </ShadowBox>
+        )}
 
 
         {/* COMPANY DETAILS */}
@@ -322,7 +384,7 @@ export default function DealerDetail() {
 
         {/* TOTAL PURCHASED — its own ShadowBox, directly under the heading and
             above the company-details card. */}
-        <ShadowBox style={styles.detailsBox} testID="dealer-total-purchased">
+        <CardShell plainStyle={styles.detailsBox} testID="dealer-total-purchased" padTop={4} padBottom={4}>
           <TouchableOpacity
             style={[styles.detailsRow, styles.detailsRowLast]}
             activeOpacity={0.6}
@@ -339,9 +401,9 @@ export default function DealerDetail() {
               <Ionicons name="chevron-forward" size={14} color={theme.colors.textMuted} />
             </View>
           </TouchableOpacity>
-        </ShadowBox>
+        </CardShell>
 
-        <ShadowBox style={styles.companyCard}>
+        <CardShell plainStyle={styles.companyCard} padTop={6} padBottom={6}>
           {!!dealer.phone && (
             <View style={styles.dealerContactPhoneRow}>
               <Text style={styles.dealerContactPhoneText} numberOfLines={1}>
@@ -398,7 +460,7 @@ export default function DealerDetail() {
               <Text style={[styles.contactText, { flex: 1 }]}>{dealer.notes}</Text>
             </View>
           )}
-        </ShadowBox>
+        </CardShell>
 
         {/* AGENTS — its own titled ShadowBox. Current agent pinned to the top
             (★ + orange); everyone else alphabetical by first name. Each agent
@@ -415,7 +477,7 @@ export default function DealerDetail() {
             }}
           />
         </View>
-        <ShadowBox style={styles.detailsBox} testID="dealer-agents-box">
+        <CardShell plainStyle={styles.detailsBox} testID="dealer-agents-box" padTop={4} padBottom={4}>
             {allAgents.length === 0 && (
               <View style={[styles.detailsRow, styles.detailsRowLast]}>
                 <Text style={[styles.detailsValue, { color: theme.colors.textMuted, textAlign: "left", flex: 1, fontWeight: "500" }]}>
@@ -612,7 +674,7 @@ export default function DealerDetail() {
                 </View>
               );
             })}
-        </ShadowBox>
+        </CardShell>
 
         {/* ACCOUNTS — its own titled section. Truck & credit accounts each
             render as a floating ShadowBox sub-card (see BalanceSection). */}
@@ -1027,6 +1089,8 @@ const styles = themedStyles((c) => ({
   
     ...(theme.elevation.md as object),
   },
+  cardSkinFrame: { marginHorizontal: 16, marginTop: 4, marginBottom: 12 },
+  routeRowInner: { flexDirection: "row", alignItems: "center", gap: 12 },
   routeRowLabel: {
     color: c.textPrimary,
     fontSize: 8,

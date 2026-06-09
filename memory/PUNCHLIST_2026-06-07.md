@@ -196,3 +196,11 @@ Backend change-email tested by testing_agent (16/16 backend pass). All additive 
 - Added `rowSkinWrap` / `rowSkinFrame` / `rowSkinInner` styles to both. Dealers handles grid columns (`gridCols > 1`) and locked rows.
 - Detection via `useSkin().skin === "industrial"`. Verified visually (Iron Forge) — both lists render in metal frames with logos/avatars, content within rails.
 - ⏳ NOT YET DONE: detail pages `app/borrower/[id].tsx` and `app/dealer/[id].tsx` still use flat ShadowBoxes in all themes (no metal frame). Pending user go-ahead.
+
+---
+
+## ✅ DONE (2026-06-09, BUILD 261) — Contact & Dealer DETAIL pages skinned
+- **Contact detail (`app/borrower/[id].tsx`)**: stat grid wrapped in one metal `TbvFrame` window (cells flattened), NOTES card in a window frame, "currently checked out" + "per-tool totals" rows use the `SKIN.plate` row pattern (held rows get an accentSecondary `leftStripe`). Helpers: `RowShell`, `CardShell`, `Cell` gained a `flat` prop.
+- **Dealer detail (`app/dealer/[id].tsx`)**: ROUTE banner (window frame + accent `leftStripe`), TOTAL PURCHASED, COMPANY DETAILS, and AGENTS boxes wrapped via a `CardShell` helper (SKIN.window). padX=32 to clear the ~38pt rails (fixed an earlier left-edge label clip).
+- Both gate on `useSkin().skin === "industrial"`; plain Light/Dark keep ShadowBox. Edit flows are modals (standard dark modal card) — left unchanged for app-wide consistency.
+- ⚠️ Note: Dealer ACCOUNTS section is rendered by the shared `BalanceSection` component and still shows the dark (non-metal) account cards — can be skinned later if desired.

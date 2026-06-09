@@ -13,14 +13,18 @@ import { parseContacts, openPhone, openSms } from "../../src/contactLinks";
 import { ContactIconButton, ContactIconImage } from "../../src/components/ContactIcons";
 import { EmailLink } from "../../src/components/EmailLink";
 
-import { themedStyles } from "../../src/themeContext";
+import { themedStyles, useSkin } from "../../src/themeContext";
 import { IndustrialBanner } from "../../src/components/IndustrialBanner";
 import { PillButton } from "../../src/components/PillButton";
 import { ShadowBox, ShadowBoxMini } from "../../src/components/ShadowBox";
+import { SKIN, CAP } from "../../src/tbv/skins";
+import { TbvFrame } from "../../src/tbv/components/TbvFrame";
 
 export default function BorrowerHistory() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const { skin } = useSkin();
+  const isIndustrial = skin === "industrial";
   const [data, setData] = useState<any>(null);
   const [editing, setEditing] = useState(false);
   const [editForm, setEditForm] = useState<{ name: string; contact: string; notes: string }>({ name: "", contact: "", notes: "" });
@@ -210,6 +214,75 @@ export default function BorrowerHistory() {
     setTimeout(fn, 150);
   };
 
+  // Industrial themes wrap rows/cards in metal frames; plain Light/Dark keep
+  // the ShadowBox look.
+  const RowShell = ({
+    children,
+    onPress,
+    testID,
+    leftStripe,
+  }: {
+    children: React.ReactNode;
+    onPress?: () => void;
+    testID?: string;
+    leftStripe?: string;
+  }) =>
+    isIndustrial ? (
+      <TouchableOpacity
+        testID={testID}
+        style={styles.rowSkinWrap}
+        onPress={onPress}
+        activeOpacity={0.85}
+      >
+        <TbvFrame
+          source={SKIN.plate}
+          capInsets={CAP.plate}
+          style={styles.rowSkinFrame}
+          padX={18}
+          padTop={12}
+          padBottom={12}
+          leftStripe={leftStripe}
+        >
+          <View style={styles.rowSkinInner}>{children}</View>
+        </TbvFrame>
+      </TouchableOpacity>
+    ) : (
+      <ShadowBox
+        testID={testID}
+        style={[styles.row, leftStripe ? { borderLeftColor: leftStripe, borderLeftWidth: 3 } : null]}
+        onPress={onPress}
+      >
+        {children}
+      </ShadowBox>
+    );
+
+  const CardShell = ({
+    children,
+    testID,
+    plainStyle,
+  }: {
+    children: React.ReactNode;
+    testID?: string;
+    plainStyle?: any;
+  }) =>
+    isIndustrial ? (
+      <TbvFrame
+        source={SKIN.window}
+        capInsets={CAP.window}
+        style={styles.cardSkinFrame}
+        padX={24}
+        padTop={18}
+        padBottom={18}
+        testID={testID}
+      >
+        {children}
+      </TbvFrame>
+    ) : (
+      <ShadowBox testID={testID} style={plainStyle}>
+        {children}
+      </ShadowBox>
+    );
+
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <IndustrialBanner
@@ -247,29 +320,49 @@ export default function BorrowerHistory() {
           <ContactActions raw={b.contact} />
         </View>
 
-        <View style={styles.statGrid}>
-          <Cell label="Total checkouts" value={String(data.total_checkouts || 0)} />
-          <Cell label="Unique tools" value={String(data.unique_tools || 0)} />
-          <Cell label="Check Out" value={String(data.currently_held?.length || 0)} highlight={data.currently_held?.length > 0} />
-        </View>
+        {isIndustrial ? (
+          <TbvFrame
+            source={SKIN.window}
+            capInsets={CAP.window}
+            style={styles.statSkinFrame}
+            padX={20}
+            padTop={14}
+            padBottom={14}
+          >
+            <View style={styles.statGridInner}>
+              <Cell flat label="Total checkouts" value={String(data.total_checkouts || 0)} />
+              <Cell flat label="Unique tools" value={String(data.unique_tools || 0)} />
+              <Cell flat label="Check Out" value={String(data.currently_held?.length || 0)} highlight={data.currently_held?.length > 0} />
+            </View>
+          </TbvFrame>
+        ) : (
+          <View style={styles.statGrid}>
+            <Cell label="Total checkouts" value={String(data.total_checkouts || 0)} />
+            <Cell label="Unique tools" value={String(data.unique_tools || 0)} />
+            <Cell label="Check Out" value={String(data.currently_held?.length || 0)} highlight={data.currently_held?.length > 0} />
+          </View>
+        )}
 
         {!!b.notes && (
-          <ShadowBox testID="contact-notes-card" style={{ marginHorizontal: 16, marginTop: 4, paddingHorizontal: 14, paddingVertical: 12 }}>
+          <CardShell
+            testID="contact-notes-card"
+            plainStyle={{ marginHorizontal: 16, marginTop: 4, paddingHorizontal: 14, paddingVertical: 12 }}
+          >
             <View style={{ alignSelf: "flex-start", backgroundColor: theme.colors.accent, paddingHorizontal: 10, paddingVertical: 3, borderRadius: 6, marginBottom: 8 }}>
               <Text style={{ color: "#000", fontSize: 11, fontWeight: "800", letterSpacing: 1 }}>NOTES</Text>
             </View>
             <Text style={{ color: theme.colors.textPrimary, fontSize: 14, lineHeight: 20 }}>{b.notes}</Text>
-          </ShadowBox>
+          </CardShell>
         )}
 
         {data.currently_held?.length > 0 && (
           <>
             <Text style={styles.sectionLabel}>CURRENTLY CHECKED OUT</Text>
             {data.currently_held.map((c: any) => (
-              <ShadowBox
+              <RowShell
                 key={c.tool_id}
                 testID={`held-${c.tool_id}`}
-                style={[styles.row, { borderLeftColor: theme.colors.accentSecondary, borderLeftWidth: 3 }]}
+                leftStripe={theme.colors.accentSecondary}
                 onPress={() => router.push(`/tool/${c.tool_id}`)}
               >
                 <View style={{ flex: 1 }}>
@@ -280,7 +373,7 @@ export default function BorrowerHistory() {
                   {!!c.notes && <Text style={styles.rowNotes}>{c.notes}</Text>}
                 </View>
                 <Ionicons name="chevron-forward" size={18} color={theme.colors.textMuted} />
-              </ShadowBox>
+              </RowShell>
             ))}
           </>
         )}
@@ -292,10 +385,9 @@ export default function BorrowerHistory() {
           <Text style={styles.empty}>No checkout history yet.</Text>
         ) : (
           data.per_tool.map((t: any, idx: number) => (
-            <ShadowBox
+            <RowShell
               key={t.tool_id}
               testID={`per-tool-${t.tool_id}`}
-              style={styles.row}
               onPress={() => router.push(`/tool/${t.tool_id}`)}
             >
               <View style={styles.rank}>
@@ -318,7 +410,7 @@ export default function BorrowerHistory() {
                 <Text style={styles.countNum}>{t.checkout_count}</Text>
                 <Text style={styles.countLbl}>×</Text>
               </View>
-            </ShadowBox>
+            </RowShell>
           ))
         )}
       </ScrollView>
@@ -428,11 +520,19 @@ export default function BorrowerHistory() {
   );
 }
 
-function Cell({ label, value, highlight }: { label: string; value: string; highlight?: boolean }) {
-  return (
-    <ShadowBoxMini style={[styles.cell, highlight && { borderColor: theme.colors.accentSecondary }]}>
+function Cell({ label, value, highlight, flat }: { label: string; value: string; highlight?: boolean; flat?: boolean }) {
+  const inner = (
+    <>
       <Text style={[styles.cellValue, highlight && { color: theme.colors.accentSecondary }]}>{value}</Text>
       <Text style={styles.cellLabel}>{label}</Text>
+    </>
+  );
+  if (flat) {
+    return <View style={styles.cellFlat}>{inner}</View>;
+  }
+  return (
+    <ShadowBoxMini style={[styles.cell, highlight && { borderColor: theme.colors.accentSecondary }]}>
+      {inner}
     </ShadowBoxMini>
   );
 }
@@ -564,6 +664,16 @@ const styles = themedStyles((c) => ({
     ...(theme.elevation.md as object),
   },
   cellValue: { color: c.textPrimary, fontWeight: "900", fontSize: 16 },
+  cellFlat: {
+    flex: 1, minWidth: 90, paddingVertical: 8,
+    alignItems: "center",
+  },
+  statSkinFrame: { marginHorizontal: 14, marginVertical: 12 },
+  statGridInner: { flexDirection: "row", gap: 8 },
+  cardSkinFrame: { marginHorizontal: 14, marginTop: 6 },
+  rowSkinWrap: { marginHorizontal: 14, marginBottom: 8 },
+  rowSkinFrame: { width: "100%" },
+  rowSkinInner: { flexDirection: "row", alignItems: "center", gap: 10 },
   cellLabel: {
     color: c.textMuted, fontSize: 7,
     fontWeight: "800", letterSpacing: 1, marginTop: 2, textTransform: "uppercase",
