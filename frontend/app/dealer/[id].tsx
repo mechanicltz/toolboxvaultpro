@@ -271,17 +271,18 @@ export default function DealerDetail() {
     thin?: boolean;
   }) =>
     isIndustrial ? (
-      <TbvFrame
-        source={thin ? SKIN.plate : SKIN.window}
-        capInsets={thin ? CAP.plate : CAP.window}
-        style={styles.cardSkinFrame}
-        padX={thin ? 28 : 40}
-        padTop={thin ? 14 : 30}
-        padBottom={thin ? 14 : 30}
-        testID={testID}
-      >
-        {children}
-      </TbvFrame>
+      <View style={styles.cardSkinWrap}>
+        <TbvFrame
+          source={thin ? SKIN.plate : SKIN.window}
+          capInsets={thin ? CAP.plate : CAP.window}
+          padX={thin ? 28 : 40}
+          padTop={thin ? 14 : 30}
+          padBottom={thin ? 14 : 30}
+          testID={testID}
+        >
+          {children}
+        </TbvFrame>
+      </View>
     ) : (
       <ShadowBox testID={testID} style={plainStyle}>
         {children}
