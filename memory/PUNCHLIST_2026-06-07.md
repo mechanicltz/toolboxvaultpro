@@ -270,3 +270,14 @@ Fix — CENTRAL (clean, low-risk; chosen over per-element because `DepartmentRow
 - NOTE: this lifts muted text on ALL industrial/skinned screens (dashboard, inventory, history, vault, etc.) — a legibility win everywhere, not just the 4 named screens.
 - Also added explicit `skinTextBright` (#FFFFFF) on the two list rows' meta/sub text (belt-and-suspenders; visually ~identical to the palette value).
 - Bundle verified compiling (iOS). ⚠️ On-device confirm pending.
+
+---
+
+## ✅ SKIN (2026-06-09, BUILD 270) — Claims tab (`app/(tabs)/claims.tsx`)
+Skinned all three modes with metal `TbvFrame` panels (industrial only; plain/light layout preserved & refactored to share DRY render helpers `openItemInner`/`claimItemInner`/`dealerRowInner`):
+- **OPEN mode**: each dealer's open claims now sit in ONE `SKIN.window` panel (header + flat item rows w/ hairline dividers) instead of a ShadowBox.
+- **DEALERS mode**: each dealer is its OWN `SKIN.plate` panel (was a single ShadowBox list).
+- **HISTORY mode**: each archived claim is its OWN `SKIN.plate` panel (HISTORY header sits above, unframed).
+- New styles: `rowSkinWrap`, `rowSkinInner`, `panelSkinWrap`, `openItemFlat(/Last)`. testIDs preserved (`claim-dealer-*`, `open-tool-*`, `history-claim-*`).
+- Search-results view (BevelCards) left as-is (not in scope).
+- Bundle verified compiling (iOS, 17 style refs, no transform errors). ⚠️ Web auto-login unavailable; needs on-device (iOS) confirm on a metal theme.

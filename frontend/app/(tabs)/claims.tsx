@@ -23,16 +23,20 @@ import { formatDateUS as fmtDate } from "../../src/dateUtil";
 import { getCached, setCached } from "../../src/cache";
 import { formatPhone } from "../../src/contactLinks";
 
-import { themedStyles } from "../../src/themeContext";
+import { themedStyles, useSkin } from "../../src/themeContext";
 import { BevelCard } from "../../src/components/BevelCard";
 import { ShadowBox, ShadowBoxSubCard } from "../../src/components/ShadowBox";
 import { IndustrialBanner } from "../../src/components/IndustrialBanner";
 import { AddFab } from "../../src/components/AddFab";
+import { SKIN, CAP } from "../../src/tbv/skins";
+import { TbvFrame } from "../../src/tbv/components/TbvFrame";
 
 type Mode = "dealers" | "all-open" | "history";
 
 export default function ClaimsScreen() {
   const router = useRouter();
+  const { skin } = useSkin();
+  const isIndustrial = skin === "industrial";
   const [mode, setMode] = useState<Mode>("all-open");
   const [dealers, setDealers] = useState<any[]>(() => getCached("dealers", []));
   const [tools, setTools] = useState<any[]>(() => getCached("claims_tools", []));
@@ -181,6 +185,111 @@ export default function ClaimsScreen() {
         )
         .slice(0, 40)
     : allTools.slice(0, 20);
+
+  // ===== Shared row/panel content (kept DRY across plain + skinned modes) =====
+  const statusColorFor = (status: string) =>
+    status === "NOT REPORTED"
+      ? theme.colors.textMuted
+      : status === "REPORTED"
+      ? theme.colors.accent
+      : status === "REPAIRED"
+      ? theme.colors.success
+      : theme.colors.accentSecondary;
+
+  const openItemInner = (t: any) => {
+    const status = (t.repair_info?.repair_status || "Not Reported").toUpperCase();
+    const statusColor = statusColorFor(status);
+    return (
+      <>
+        <View style={styles.itemThumb}>
+          {t.photos?.[0] ? (
+            <Image source={{ uri: t.photos[0] }} style={styles.itemImg} />
+          ) : (
+            <Ionicons name="build" size={18} color={theme.colors.danger} />
+          )}
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.itemName} numberOfLines={1}>{t.name}</Text>
+          {!!t.repair_info?.notified_at && (
+            <Text style={styles.notifiedLine}>Notified: {fmtDate(t.repair_info.notified_at)}</Text>
+          )}
+          <View style={[styles.statusPill, { borderColor: statusColor }]}>
+            <Text style={[styles.statusText, { color: statusColor }]}>{status}</Text>
+          </View>
+        </View>
+        <Ionicons name="chevron-forward" size={16} color={theme.colors.textMuted} />
+      </>
+    );
+  };
+
+  const claimItemInner = (cl: any) => (
+    <>
+      <View style={styles.itemThumb}>
+        {cl.broken_photo ? (
+          <Image source={{ uri: cl.broken_photo }} style={styles.itemImg} />
+        ) : (
+          <Ionicons name="checkmark-done" size={18} color={theme.colors.success} />
+        )}
+      </View>
+      <View style={{ flex: 1 }}>
+        <Text style={styles.itemName} numberOfLines={1}>{cl.tool_name || "Tool"}</Text>
+        <Text style={styles.notifiedLine} numberOfLines={1}>
+          {cl.dealer_name || dealerName(cl.dealer_id) || "No dealer"}
+          {cl.completed_at ? ` · ${fmtDate(cl.completed_at)}` : ""}
+        </Text>
+        <View style={[styles.statusPill, { borderColor: theme.colors.success }]}>
+          <Text style={[styles.statusText, { color: theme.colors.success }]}>
+            {(cl.status || "REPAIRED").toUpperCase()}
+          </Text>
+        </View>
+      </View>
+      <Ionicons name="chevron-forward" size={16} color={theme.colors.textMuted} />
+    </>
+  );
+
+  const dealerRowInner = (d: any, opened: number, done: number) => (
+    <>
+      <View style={styles.dealerThumb}>
+        <Ionicons name="briefcase" size={20} color={theme.colors.accent} />
+      </View>
+      <View style={{ flex: 1 }}>
+        <Text style={styles.dealerName}>{d.name}</Text>
+        <Text style={styles.dealerSub}>
+          {d.agents?.length || 0} agent{d.agents?.length === 1 ? "" : "s"}
+          {d.phone ? `  ·  ${formatPhone(d.phone)}` : ""}
+        </Text>
+      </View>
+      <View style={{ alignItems: "flex-end" }}>
+        <View style={styles.countRow}>
+          <View style={[styles.countPill, { backgroundColor: opened > 0 ? theme.colors.danger : theme.colors.bg }]}>
+            <Text style={[styles.countText, { color: opened > 0 ? "#fff" : theme.colors.textMuted }]}>{opened} OPEN</Text>
+          </View>
+        </View>
+        <View style={styles.countRow}>
+          <View style={[styles.countPill, { backgroundColor: theme.colors.bg, borderWidth: 1, borderColor: theme.colors.border }]}>
+            <Text style={[styles.countText, { color: theme.colors.success }]}>{done} DONE</Text>
+          </View>
+        </View>
+      </View>
+      <Ionicons name="chevron-forward" size={18} color={theme.colors.textMuted} />
+    </>
+  );
+
+  const dealerCounts = (d: any) => {
+    const liveOpened = (openByDealer[d.id] || []).length;
+    const summaryEntry = (summary?.dealers || []).find((x: any) => x.dealer_id === d.id);
+    return { opened: Math.max(liveOpened, summaryEntry?.open || 0), done: summaryEntry?.completed || 0 };
+  };
+
+  // OPEN mode — broken tools grouped by dealer (non-empty groups only)
+  const openGroups = dealers
+    .map((d) => ({ d, items: openByDealer[d.id] || [] }))
+    .concat(
+      (openByDealer["_unassigned"] || []).length > 0
+        ? [{ d: { id: "_unassigned", name: "NO DEALER" } as any, items: openByDealer["_unassigned"] || [] }]
+        : []
+    )
+    .filter((g) => g.items.length > 0);
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
@@ -344,14 +453,48 @@ export default function ClaimsScreen() {
         ) : mode === "dealers" ? (
           filteredDealers.length === 0 && (openByDealer["_unassigned"] || []).length === 0 ? (
             <Text style={styles.empty}>No dealers yet.</Text>
+          ) : isIndustrial ? (
+            // Skinned: EACH dealer is its own metal plate panel.
+            <>
+              {filteredDealers.map((d) => {
+                const { opened, done } = dealerCounts(d);
+                return (
+                  <TouchableOpacity
+                    key={d.id}
+                    testID={`claim-dealer-${d.id}`}
+                    style={styles.rowSkinWrap}
+                    onPress={() => router.push(`/dealer-claims/${d.id}`)}
+                    activeOpacity={0.85}
+                  >
+                    <TbvFrame source={SKIN.plate} capInsets={CAP.plate} padX={18} padTop={14} padBottom={14}>
+                      <View style={styles.rowSkinInner}>{dealerRowInner(d, opened, done)}</View>
+                    </TbvFrame>
+                  </TouchableOpacity>
+                );
+              })}
+              {(openByDealer["_unassigned"] || []).length > 0 && (
+                <View style={styles.rowSkinWrap}>
+                  <TbvFrame source={SKIN.plate} capInsets={CAP.plate} padX={18} padTop={14} padBottom={14}>
+                    <View style={styles.rowSkinInner}>
+                      <View style={styles.dealerThumb}>
+                        <Ionicons name="alert-circle" size={20} color={theme.colors.danger} />
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.dealerName}>NO DEALER ASSIGNED</Text>
+                        <Text style={styles.dealerSub}>
+                          {(openByDealer["_unassigned"] || []).length} broken item{(openByDealer["_unassigned"] || []).length === 1 ? "" : "s"} need a dealer
+                        </Text>
+                      </View>
+                    </View>
+                  </TbvFrame>
+                </View>
+              )}
+            </>
           ) : (
             <ShadowBox style={{ marginBottom: 16 }}>
               <ShadowBoxSubCard>
               {filteredDealers.map((d, idx) => {
-                const liveOpened = (openByDealer[d.id] || []).length;
-                const summaryEntry = (summary?.dealers || []).find((x: any) => x.dealer_id === d.id);
-                const opened = Math.max(liveOpened, summaryEntry?.open || 0);
-                const done = summaryEntry?.completed || 0;
+                const { opened, done } = dealerCounts(d);
                 const isLast =
                   idx === filteredDealers.length - 1 &&
                   (openByDealer["_unassigned"] || []).length === 0;
@@ -363,33 +506,7 @@ export default function ClaimsScreen() {
                     onPress={() => router.push(`/dealer-claims/${d.id}`)}
                     activeOpacity={0.7}
                   >
-                    <View style={styles.dealerThumb}>
-                      <Ionicons name="briefcase" size={20} color={theme.colors.accent} />
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.dealerName}>{d.name}</Text>
-                      <Text style={styles.dealerSub}>
-                        {d.agents?.length || 0} agent{d.agents?.length === 1 ? "" : "s"}
-                        {d.phone ? `  ·  ${formatPhone(d.phone)}` : ""}
-                      </Text>
-                    </View>
-                    <View style={{ alignItems: "flex-end" }}>
-                      <View style={styles.countRow}>
-                        <View style={[styles.countPill, { backgroundColor: opened > 0 ? theme.colors.danger : theme.colors.bg }]}>
-                          <Text style={[styles.countText, { color: opened > 0 ? "#fff" : theme.colors.textMuted }]}>
-                            {opened} OPEN
-                          </Text>
-                        </View>
-                      </View>
-                      <View style={styles.countRow}>
-                        <View style={[styles.countPill, { backgroundColor: theme.colors.bg, borderWidth: 1, borderColor: theme.colors.border }]}>
-                          <Text style={[styles.countText, { color: theme.colors.success }]}>
-                            {done} DONE
-                          </Text>
-                        </View>
-                      </View>
-                    </View>
-                    <Ionicons name="chevron-forward" size={18} color={theme.colors.textMuted} />
+                    {dealerRowInner(d, opened, done)}
                   </TouchableOpacity>
                 );
               })}
@@ -417,6 +534,36 @@ export default function ClaimsScreen() {
                 No history claims yet.
               </Text>
             </View>
+          ) : isIndustrial ? (
+            // Skinned: EACH history claim is its own metal plate panel.
+            <>
+              <View style={styles.groupHeader}>
+                <Ionicons name="archive" size={14} color={theme.colors.success} />
+                <Text style={styles.groupTitle}>HISTORY</Text>
+                <View style={styles.groupCount}>
+                  <Text style={styles.groupCountText}>{archivedClaims.length}</Text>
+                </View>
+              </View>
+              {[...archivedClaims]
+                .sort((a: any, b: any) => {
+                  const da = new Date(a.completed_at || a.archived_at || a.updated_at || a.created_at || 0).getTime();
+                  const db = new Date(b.completed_at || b.archived_at || b.updated_at || b.created_at || 0).getTime();
+                  return db - da;
+                })
+                .map((cl: any) => (
+                  <TouchableOpacity
+                    key={`hist-${cl.id}`}
+                    testID={`history-claim-${cl.id}`}
+                    style={styles.rowSkinWrap}
+                    onPress={() => router.push(`/claim/${cl.id}`)}
+                    activeOpacity={0.85}
+                  >
+                    <TbvFrame source={SKIN.plate} capInsets={CAP.plate} padX={18} padTop={12} padBottom={12}>
+                      <View style={styles.rowSkinInner}>{claimItemInner(cl)}</View>
+                    </TbvFrame>
+                  </TouchableOpacity>
+                ))}
+            </>
           ) : (
             <ShadowBox style={{ marginBottom: 16 }}>
               <View style={styles.groupHeader}>
@@ -432,41 +579,20 @@ export default function ClaimsScreen() {
                   const db = new Date(b.completed_at || b.archived_at || b.updated_at || b.created_at || 0).getTime();
                   return db - da;
                 })
-                .map((c: any) => (
+                .map((cl: any) => (
                 <ShadowBoxSubCard
-                  key={`hist-${c.id}`}
-                  testID={`history-claim-${c.id}`}
+                  key={`hist-${cl.id}`}
+                  testID={`history-claim-${cl.id}`}
                   style={styles.itemRow}
-                  onPress={() => router.push(`/claim/${c.id}`)}
+                  onPress={() => router.push(`/claim/${cl.id}`)}
                 >
-                  <View style={styles.itemThumb}>
-                    {c.broken_photo ? (
-                      <Image source={{ uri: c.broken_photo }} style={styles.itemImg} />
-                    ) : (
-                      <Ionicons name="checkmark-done" size={18} color={theme.colors.success} />
-                    )}
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.itemName} numberOfLines={1}>
-                      {c.tool_name || "Tool"}
-                    </Text>
-                    <Text style={styles.notifiedLine} numberOfLines={1}>
-                      {c.dealer_name || dealerName(c.dealer_id) || "No dealer"}
-                      {c.completed_at ? ` · ${fmtDate(c.completed_at)}` : ""}
-                    </Text>
-                    <View style={[styles.statusPill, { borderColor: theme.colors.success }]}>
-                      <Text style={[styles.statusText, { color: theme.colors.success }]}>
-                        {(c.status || "REPAIRED").toUpperCase()}
-                      </Text>
-                    </View>
-                  </View>
-                  <Ionicons name="chevron-forward" size={16} color={theme.colors.textMuted} />
+                  {claimItemInner(cl)}
                 </ShadowBoxSubCard>
               ))}
             </ShadowBox>
           )
         ) : (
-          // All open repairs grouped by dealer
+          // All open repairs grouped by dealer — each dealer = ONE panel.
           <>
             {openTools.length === 0 ? (
               <View style={{ alignItems: "center", padding: 40 }}>
@@ -476,15 +602,32 @@ export default function ClaimsScreen() {
                 </Text>
               </View>
             ) : (
-              dealers
-                .map((d) => ({ d, items: openByDealer[d.id] || [] }))
-                .concat(
-                  (openByDealer["_unassigned"] || []).length > 0
-                    ? [{ d: { id: "_unassigned", name: "NO DEALER" } as any, items: openByDealer["_unassigned"] || [] }]
-                    : []
-                )
-                .filter((g) => g.items.length > 0)
-                .map((group) => (
+              openGroups.map((group) =>
+                isIndustrial ? (
+                  // Skinned: each dealer's open claims live in ONE window panel.
+                  <View key={group.d.id} style={styles.panelSkinWrap}>
+                    <TbvFrame source={SKIN.window} capInsets={CAP.window} padX={26} padTop={24} padBottom={24}>
+                      <View style={styles.groupHeader}>
+                        <Ionicons name="briefcase" size={14} color={theme.colors.accent} />
+                        <Text style={styles.groupTitle}>{group.d.name}</Text>
+                        <View style={styles.groupCount}>
+                          <Text style={styles.groupCountText}>{group.items.length}</Text>
+                        </View>
+                      </View>
+                      {group.items.map((t: any, idx: number) => (
+                        <TouchableOpacity
+                          key={t.id}
+                          testID={`open-tool-${t.id}`}
+                          style={[styles.openItemFlat, idx === group.items.length - 1 && styles.openItemFlatLast]}
+                          onPress={() => router.push(`/tool/${t.id}`)}
+                          activeOpacity={0.7}
+                        >
+                          {openItemInner(t)}
+                        </TouchableOpacity>
+                      ))}
+                    </TbvFrame>
+                  </View>
+                ) : (
                   <ShadowBox key={group.d.id} style={{ marginBottom: 16 }}>
                     <View style={styles.groupHeader}>
                       <Ionicons name="briefcase" size={14} color={theme.colors.accent} />
@@ -493,51 +636,19 @@ export default function ClaimsScreen() {
                         <Text style={styles.groupCountText}>{group.items.length}</Text>
                       </View>
                     </View>
-                    {group.items.map((t: any) => {
-                      const status = (t.repair_info?.repair_status || "Not Reported").toUpperCase();
-                      const statusColor =
-                        status === "NOT REPORTED"
-                          ? theme.colors.textMuted
-                          : status === "REPORTED"
-                          ? theme.colors.accent
-                          : status === "REPAIRED"
-                          ? theme.colors.success
-                          : theme.colors.accentSecondary;
-                      return (
-                        <ShadowBoxSubCard
-                          key={t.id}
-                          testID={`open-tool-${t.id}`}
-                          style={styles.itemRow}
-                          onPress={() => router.push(`/tool/${t.id}`)}
-                        >
-                          <View style={styles.itemThumb}>
-                            {t.photos?.[0] ? (
-                              <Image source={{ uri: t.photos[0] }} style={styles.itemImg} />
-                            ) : (
-                              <Ionicons name="build" size={18} color={theme.colors.danger} />
-                            )}
-                          </View>
-                          <View style={{ flex: 1 }}>
-                            <Text style={styles.itemName} numberOfLines={1}>
-                              {t.name}
-                            </Text>
-                            {!!t.repair_info?.notified_at && (
-                              <Text style={styles.notifiedLine}>
-                                Notified: {fmtDate(t.repair_info.notified_at)}
-                              </Text>
-                            )}
-                            <View style={[styles.statusPill, { borderColor: statusColor }]}>
-                              <Text style={[styles.statusText, { color: statusColor }]}>
-                                {status}
-                              </Text>
-                            </View>
-                          </View>
-                          <Ionicons name="chevron-forward" size={16} color={theme.colors.textMuted} />
-                        </ShadowBoxSubCard>
-                      );
-                    })}
+                    {group.items.map((t: any) => (
+                      <ShadowBoxSubCard
+                        key={t.id}
+                        testID={`open-tool-${t.id}`}
+                        style={styles.itemRow}
+                        onPress={() => router.push(`/tool/${t.id}`)}
+                      >
+                        {openItemInner(t)}
+                      </ShadowBoxSubCard>
+                    ))}
                   </ShadowBox>
-                ))
+                )
+              )
             )}
           </>
         )}
@@ -870,6 +981,19 @@ const styles = themedStyles((c) => ({
     marginBottom: 8,
     ...(theme.elevation.md as object),
   },
+  // ===== Skinned (industrial) panels =====
+  rowSkinWrap: { marginBottom: 12 },
+  rowSkinInner: { flexDirection: "row", alignItems: "center", gap: 10 },
+  panelSkinWrap: { marginBottom: 18 },
+  openItemFlat: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(255,255,255,0.10)",
+  },
+  openItemFlatLast: { borderBottomWidth: 0, paddingBottom: 2 },
   itemThumb: {
     width: 38,
     height: 38,
