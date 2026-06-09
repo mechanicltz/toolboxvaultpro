@@ -18,13 +18,15 @@ import { useAppResume } from "../../src/appLifecycle";
 import { theme } from "../../src/theme";
 import { api } from "../../src/api";
 import { parseContacts, openPhone, openSms } from "../../src/contactLinks";
-import { themedStyles } from "../../src/themeContext";
+import { themedStyles, useSkin } from "../../src/themeContext";
 import { BevelCard } from "../../src/components/BevelCard";
 import { ShadowBox } from "../../src/components/ShadowBox";
 import { IndustrialBanner } from "../../src/components/IndustrialBanner";
 import { AddFab } from "../../src/components/AddFab";
 import { ContactIconButton, ContactIconImage } from "../../src/components/ContactIcons";
 import { EmailLink } from "../../src/components/EmailLink";
+import { SKIN, CAP } from "../../src/tbv/skins";
+import { TbvFrame } from "../../src/tbv/components/TbvFrame";
 
 import {
   isDeviceContactsAvailable,
@@ -37,6 +39,8 @@ import {
 
 export default function BorrowersScreen() {
   const router = useRouter();
+  const { skin } = useSkin();
+  const isIndustrial = skin === "industrial";
   const [borrowers, setBorrowers] = useState<any[]>([]);
   const [tools, setTools] = useState<any[]>([]);
   const [showAdd, setShowAdd] = useState(false);
@@ -146,12 +150,8 @@ export default function BorrowersScreen() {
           const active = toolsByBorrower(item.name);
           const { emails, phones } = parseContacts(item.contact || "");
           const firstPhone = phones[0];
-          return (
-            <ShadowBox
-              testID={`borrower-row-${item.id}`}
-              style={styles.row}
-              onPress={() => router.push(`/borrower/${item.id}`)}
-            >
+          const cardContent = (
+            <>
               <View style={styles.avatar}>
                 <Text style={styles.avatarText}>
                   {item.name.charAt(0).toUpperCase()}
@@ -190,6 +190,38 @@ export default function BorrowersScreen() {
                   />
                 </View>
               ) : null}
+            </>
+          );
+
+          if (isIndustrial) {
+            return (
+              <TouchableOpacity
+                testID={`borrower-row-${item.id}`}
+                style={styles.rowSkinWrap}
+                onPress={() => router.push(`/borrower/${item.id}`)}
+                activeOpacity={0.8}
+              >
+                <TbvFrame
+                  source={SKIN.plate}
+                  capInsets={CAP.plate}
+                  style={styles.rowSkinFrame}
+                  padX={20}
+                  padTop={14}
+                  padBottom={14}
+                >
+                  <View style={styles.rowSkinInner}>{cardContent}</View>
+                </TbvFrame>
+              </TouchableOpacity>
+            );
+          }
+
+          return (
+            <ShadowBox
+              testID={`borrower-row-${item.id}`}
+              style={styles.row}
+              onPress={() => router.push(`/borrower/${item.id}`)}
+            >
+              {cardContent}
             </ShadowBox>
           );
         }}
@@ -503,6 +535,17 @@ const styles = themedStyles((c) => ({
     borderWidth: 1,
     borderColor: c.borderSubtle,
     ...(theme.elevation.md as object),
+  },
+  rowSkinWrap: {
+    marginHorizontal: 16,
+    marginTop: 12,
+    borderRadius: 10,
+  },
+  rowSkinFrame: { width: "100%" },
+  rowSkinInner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
   },
   editRow: {
     backgroundColor: "rgba(249, 115, 22,0.06)",

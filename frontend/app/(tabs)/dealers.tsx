@@ -31,13 +31,15 @@ import { formatPhone, openPhone, openSms } from "../../src/contactLinks";
 import { ContactIconButton } from "../../src/components/ContactIcons";
 import { useAppResume } from "../../src/appLifecycle";
 
-import { themedStyles } from "../../src/themeContext";
+import { themedStyles, useSkin } from "../../src/themeContext";
 import { BevelCard } from "../../src/components/BevelCard";
 import { ShadowBox } from "../../src/components/ShadowBox";
 import { IndustrialBanner } from "../../src/components/IndustrialBanner";
 import { AddFab } from "../../src/components/AddFab";
 import { DealerLogo } from "../../src/components/DealerLogo";
 import { STOCK_LOGO_OPTIONS, isDefaultLogo, DEALER_LOGO_SLOT } from "../../src/dealerLogos";
+import { SKIN, CAP } from "../../src/tbv/skins";
+import { TbvFrame } from "../../src/tbv/components/TbvFrame";
 import * as ImagePicker from "expo-image-picker";
 import * as ImageManipulator from "expo-image-manipulator";
 
@@ -46,6 +48,8 @@ export default function DealersScreen() {
   const { prefs } = usePrefs();
   const { user } = useAuth();
   const { gridCols } = useResponsive();
+  const { skin } = useSkin();
+  const isIndustrial = skin === "industrial";
   const [dealers, setDealers] = useState<any[]>(() => getCached("dealers", []));
   const [tools, setTools] = useState<any[]>(() => getCached("tools", []));
   const [showAdd, setShowAdd] = useState(false);
@@ -177,19 +181,8 @@ export default function DealersScreen() {
           const cur =
             (item.agents || []).find((a: any) => a.id === item.current_agent_id) || null;
           const isLocked = lockedDealerIds.has(item.id);
-          return (
-            <ShadowBox
-              testID={`dealer-card-${item.id}`}
-              style={[
-                styles.row,
-                gridCols > 1 && styles.rowGrid,
-                isLocked && styles.rowLocked,
-              ]}
-              onPress={() => {
-                router.push(`/dealer/${item.id}`);
-              }}
-              activeOpacity={isLocked ? 1 : 0.7}
-            >
+          const cardContent = (
+            <>
               <DealerLogo logo={item.logo} size={DEALER_LOGO_SLOT.list} style={{ marginRight: 0 }} />
               <View style={{ flex: 1 }}>
                 <Text style={styles.rowTitle}>{item.name}</Text>
@@ -229,6 +222,49 @@ export default function DealersScreen() {
                 })()}
               </View>
               <Ionicons name="chevron-forward" size={20} color={theme.colors.textMuted} />
+            </>
+          );
+
+          if (isIndustrial) {
+            return (
+              <TouchableOpacity
+                testID={`dealer-card-${item.id}`}
+                style={[
+                  styles.rowSkinWrap,
+                  gridCols > 1 && { flex: 1, marginHorizontal: 0 },
+                ]}
+                onPress={() => router.push(`/dealer/${item.id}`)}
+                activeOpacity={isLocked ? 1 : 0.8}
+                disabled={isLocked}
+              >
+                <TbvFrame
+                  source={SKIN.plate}
+                  capInsets={CAP.plate}
+                  style={styles.rowSkinFrame}
+                  padX={20}
+                  padTop={14}
+                  padBottom={14}
+                >
+                  <View style={styles.rowSkinInner}>{cardContent}</View>
+                </TbvFrame>
+              </TouchableOpacity>
+            );
+          }
+
+          return (
+            <ShadowBox
+              testID={`dealer-card-${item.id}`}
+              style={[
+                styles.row,
+                gridCols > 1 && styles.rowGrid,
+                isLocked && styles.rowLocked,
+              ]}
+              onPress={() => {
+                router.push(`/dealer/${item.id}`);
+              }}
+              activeOpacity={isLocked ? 1 : 0.7}
+            >
+              {cardContent}
             </ShadowBox>
           );
         }}
@@ -477,6 +513,17 @@ const styles = themedStyles((c) => ({
     ...(theme.elevation.md as object),
   },
   rowLocked: { opacity: 0.45 },
+  rowSkinWrap: {
+    marginHorizontal: 16,
+    marginTop: 12,
+    borderRadius: 10,
+  },
+  rowSkinFrame: { width: "100%" },
+  rowSkinInner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
   rowGrid: {
     flex: 1,
     marginHorizontal: 0,

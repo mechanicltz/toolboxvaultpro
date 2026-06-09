@@ -188,3 +188,11 @@ Backend change-email tested by testing_agent (16/16 backend pass). All additive 
 - **Nested grey "box-in-box" removed in metal themes:** theme-picker group (`optGroupFlat`) and the 3 notification sub-groups (`notifGroupFlat`) are flattened (transparent bg, no border/shadow) so options sit directly on the metal frame.
 - Detection via `useSkin().skin === "industrial"` (covers all 4 colour variants).
 - Verified visually (orange/Iron Forge) — all 6 sections render in metal frames, content within rails, theme accordion options sit on the frame cleanly.
+
+---
+
+## ✅ DONE (2026-06-09, BUILD 259) — Contacts & Dealers list tabs skinned
+- **Contacts/Borrowers tab (`app/(tabs)/borrowers.tsx`)** and **Dealers tab (`app/(tabs)/dealers.tsx`)** list rows now render inside a metal `TbvFrame` (SKIN.plate / CAP.plate, padX=20 padTop/Bottom=14) in industrial themes, mirroring the Inventory list-row pattern. Plain Light/Dark keep the `ShadowBox`.
+- Added `rowSkinWrap` / `rowSkinFrame` / `rowSkinInner` styles to both. Dealers handles grid columns (`gridCols > 1`) and locked rows.
+- Detection via `useSkin().skin === "industrial"`. Verified visually (Iron Forge) — both lists render in metal frames with logos/avatars, content within rails.
+- ⏳ NOT YET DONE: detail pages `app/borrower/[id].tsx` and `app/dealer/[id].tsx` still use flat ShadowBoxes in all themes (no metal frame). Pending user go-ahead.
