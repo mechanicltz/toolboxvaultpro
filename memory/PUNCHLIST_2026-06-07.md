@@ -241,3 +241,10 @@ Root cause (stretching): `TbvFrame`'s internal wrap is `width:100%`, so any `mar
 - **PDF viewer (`app/pdf-viewer.tsx`)**: metal `SKIN.bg` was `resizeMode="cover"` on a 1024×1536 texture → showed a zoomed central crop. Switched to `resizeMode="repeat"` → renders at native scale (crisp, not zoomed). In-app preview only; generated PDF file unchanged.
 - ⚠️ Verified by code/bundle (web login unreliable in preview). NEEDS on-device (iOS, Arctic) confirmation of rail clearance + PDF texture look.
 - ⏳ STILL PENDING (P1): hardcoded orange back/nav buttons in `wishlist.tsx`, `tool/edit.tsx`, `(tabs)/reports.tsx` (pdf-viewer back already renders variant accent).
+
+---
+
+## ✅ FIXES (2026-06-09, BUILD 267) — dealer page bg + PDF top black gap
+- **Dealer detail bg "disappeared"** (`app/dealer/[id].tsx`): root container used `backgroundColor: c.bg` (OPAQUE) which blocked the global `<AppBackground>` metal backdrop — so the page was solid black. Once BUILD 266 gave the cards real side margins, that black showed around them. FIX: container → `c.canvas` (transparent in non-light themes), exactly like the Contact page, so the global metal photo now shows through behind the cards.
+- **PDF/report viewer "giant black space above"** (`app/pdf-viewer.tsx`): the screen's `SafeAreaView` used `edges={["top",...]}` ON TOP OF the native Stack header, adding a redundant top safe-area inset = a black band between header and the metal. FIX: dropped the `top` edge (`edges={["left","right"]}`) — native header already handles the inset, so the metal now stretches right up to the banner.
+- ⚠️ On-device (iOS) confirm pending for both.
