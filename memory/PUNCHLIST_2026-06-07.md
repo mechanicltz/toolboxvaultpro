@@ -179,3 +179,12 @@ Backend change-email tested by testing_agent (16/16 backend pass). All additive 
 - Centralized button/UI kit (contrast-aware PrimaryButton/SecondaryButton) — user deferred ("B"); do during the theme-skinning pass.
 - Tablet responsiveness audit.
 - Cleanup: dead `app/warranty-claims.tsx` route + unused AI assets.
+
+---
+
+## ✅ DONE (2026-06-09, BUILD 258) — Vault menu skinned
+- **VAULT (`app/(tabs)/more.tsx`) fully skinned.** `SectionCard` now renders inside a metal `TbvFrame` (SKIN.window / CAP.window, padX=30 padTop/Bottom=22) for industrial themes, flat bordered `sectionCard` View for plain Light/Dark. Covers RESOURCES, ORGANIZATION, DATA MANAGEMENT, SETTINGS, ACCOUNT.
+- **Notifications section (`src/sections/NotificationsSettingsSection.tsx`)** wrapped in the same `TbvFrame` via a `Shell` component (industrial vs plain).
+- **Nested grey "box-in-box" removed in metal themes:** theme-picker group (`optGroupFlat`) and the 3 notification sub-groups (`notifGroupFlat`) are flattened (transparent bg, no border/shadow) so options sit directly on the metal frame.
+- Detection via `useSkin().skin === "industrial"` (covers all 4 colour variants).
+- Verified visually (orange/Iron Forge) — all 6 sections render in metal frames, content within rails, theme accordion options sit on the frame cleanly.

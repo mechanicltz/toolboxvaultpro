@@ -34,6 +34,8 @@ import { themedStyles } from "../../src/themeContext";
 import { BevelCard } from "../../src/components/BevelCard";
 import { IndustrialBanner } from "../../src/components/IndustrialBanner";
 import ReportBugBadge from "../../src/components/ReportBugBadge";
+import { SKIN, CAP } from "../../src/tbv/skins";
+import TbvFrame from "../../src/tbv/components/TbvFrame";
 
 import NotificationsSettingsSection from "../../src/sections/NotificationsSettingsSection";
 
@@ -217,14 +219,31 @@ const SectionCard = ({
   title: string;
   children: ReactNode;
   testID?: string;
-}) => (
-  <View style={styles.sectionCardWrap}>
-    <Text style={styles.sectionLabel}>{title}</Text>
-    <View style={styles.sectionCard} testID={testID}>
-      {children}
+}) => {
+  const { skin } = useSkin();
+  const isIndustrial = skin === "industrial";
+  return (
+    <View style={styles.sectionCardWrap}>
+      <Text style={styles.sectionLabel}>{title}</Text>
+      {isIndustrial ? (
+        <TbvFrame
+          source={SKIN.window}
+          capInsets={CAP.window}
+          padX={30}
+          padTop={22}
+          padBottom={22}
+          testID={testID}
+        >
+          {children}
+        </TbvFrame>
+      ) : (
+        <View style={styles.sectionCard} testID={testID}>
+          {children}
+        </View>
+      )}
     </View>
-  </View>
-);
+  );
+};
 
 
 export default function MoreScreen() {
@@ -240,7 +259,8 @@ export default function MoreScreen() {
   const [pwOk, setPwOk] = useState("");
   const [homeRowsModal, setHomeRowsModal] = useState(false);
   const [themeOpen, setThemeOpen] = useState(false);
-  const { appearance, setAppearance } = useSkin();
+  const { appearance, setAppearance, skin } = useSkin();
+  const isIndustrial = skin === "industrial";
 
   // Subscription + admin gates.
   const [sub, setSub] = useState<any>(null);
@@ -649,7 +669,7 @@ export default function MoreScreen() {
             }
           />
           {themeOpen && (
-            <View style={styles.optGroup}>
+            <View style={[styles.optGroup, isIndustrial && styles.optGroupFlat]}>
               {APPEARANCE_OPTIONS.map((opt) => {
                 const active = appearance === opt.id;
                 const tint = opt.color || theme.colors.accent;
@@ -1382,6 +1402,15 @@ const styles = themedStyles((c) => ({
     borderRadius: 10,
     backgroundColor: c.surface,
     ...(theme.elevation.md as object),
+  },
+  // Inside a metal TbvFrame the nested grey/bordered look reads as an ugly
+  // "box-in-box". Flatten it so the theme options sit directly on the frame.
+  optGroupFlat: {
+    marginHorizontal: 0,
+    borderWidth: 0,
+    backgroundColor: "transparent",
+    shadowOpacity: 0,
+    elevation: 0,
   },
   optRowGrouped: {
     flexDirection: "row",

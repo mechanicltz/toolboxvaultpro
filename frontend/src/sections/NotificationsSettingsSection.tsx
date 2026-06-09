@@ -35,7 +35,9 @@ import * as Notifications from "expo-notifications";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { Ionicons } from "@expo/vector-icons";
 import { theme } from "../theme";
-import { themedStyles } from "../themeContext";
+import { themedStyles, useSkin } from "../themeContext";
+import { SKIN, CAP } from "../tbv/skins";
+import TbvFrame from "../tbv/components/TbvFrame";
 import { api } from "../api";
 import { Prefs } from "../prefs";
 import {
@@ -134,6 +136,8 @@ const BORROW_PRESETS: Array<{ hours: number; label: string }> = [
 ];
 
 export default function NotificationsSettingsSection({ prefs, update }: Props) {
+  const { skin } = useSkin();
+  const isIndustrial = skin === "industrial";
   const [timePickerOpen, setTimePickerOpen] = useState(false);
   const [paymentTimePickerOpen, setPaymentTimePickerOpen] = useState(false);
   const [borrowPeriodPickerOpen, setBorrowPeriodPickerOpen] = useState(false);
@@ -341,10 +345,30 @@ export default function NotificationsSettingsSection({ prefs, update }: Props) {
     }
   };
 
+  // In the metal (industrial) themes the whole notifications card sits inside
+  // a TbvFrame window; plain Light/Dark keep the flat bordered card.
+  const Shell = ({ children }: { children: ReactNode }) =>
+    isIndustrial ? (
+      <TbvFrame
+        source={SKIN.window}
+        capInsets={CAP.window}
+        padX={30}
+        padTop={22}
+        padBottom={22}
+        testID="more-section-notifications"
+      >
+        {children}
+      </TbvFrame>
+    ) : (
+      <View style={styles.sectionCard} testID="more-section-notifications">
+        {children}
+      </View>
+    );
+
   return (
     <View style={styles.sectionCardWrap}>
       <Text style={styles.sectionLabel}>NOTIFICATIONS</Text>
-      <View style={styles.sectionCard} testID="more-section-notifications">
+      <Shell>
         {/* ---- MASTER toggle ---- */}
         <SectionRow
           icon="notifications-circle"
@@ -371,7 +395,7 @@ export default function NotificationsSettingsSection({ prefs, update }: Props) {
         {masterOn && (
           <>
             {/* ===== Dealer route reminders ===== */}
-            <View style={styles.notifGroup}>
+            <View style={[styles.notifGroup, isIndustrial && styles.notifGroupFlat]}>
               <SectionRow
                 icon="navigate"
                 title="Dealer route reminders"
@@ -427,7 +451,7 @@ export default function NotificationsSettingsSection({ prefs, update }: Props) {
             </View>
 
             {/* ===== Borrowed-tool overdue reminders ===== */}
-            <View style={styles.notifGroup}>
+            <View style={[styles.notifGroup, isIndustrial && styles.notifGroupFlat]}>
               <SectionRow
                 icon="time"
                 title="Borrowed-tool overdue reminders"
@@ -463,7 +487,7 @@ export default function NotificationsSettingsSection({ prefs, update }: Props) {
             </View>
 
             {/* ===== Payment notifications ===== */}
-            <View style={styles.notifGroup}>
+            <View style={[styles.notifGroup, isIndustrial && styles.notifGroupFlat]}>
               <SectionRow
                 icon="card"
                 title="Payment Notifications"
@@ -549,7 +573,7 @@ export default function NotificationsSettingsSection({ prefs, update }: Props) {
               : undefined
           }
         />
-      </View>
+      </Shell>
 
       {/* ===== Dealer reminder time picker ===== */}
       {Platform.OS === "android" && timePickerOpen && (
@@ -803,6 +827,15 @@ const styles = themedStyles((c) => ({
     backgroundColor: c.surface,
     paddingHorizontal: 12,
     ...(theme.elevation.md as object),
+  },
+  // Flattened version for metal themes so the group doesn't read as a
+  // grey "box-in-box" inside the TbvFrame window.
+  notifGroupFlat: {
+    borderWidth: 0,
+    backgroundColor: "transparent",
+    paddingHorizontal: 0,
+    shadowOpacity: 0,
+    elevation: 0,
   },
   sectionCard: {
     backgroundColor: c.bgSecondary,
