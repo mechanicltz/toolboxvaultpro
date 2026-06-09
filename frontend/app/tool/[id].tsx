@@ -4384,6 +4384,7 @@ const newStyles = themedStyles((c) => ({
   topUnifiedPhoto: {
     width: 96,
     height: 96,
+    marginLeft: 16,
     borderRadius: 6,
     overflow: "hidden",
     backgroundColor: "#000",
