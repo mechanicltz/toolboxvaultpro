@@ -204,3 +204,11 @@ Backend change-email tested by testing_agent (16/16 backend pass). All additive 
 - **Dealer detail (`app/dealer/[id].tsx`)**: ROUTE banner (window frame + accent `leftStripe`), TOTAL PURCHASED, COMPANY DETAILS, and AGENTS boxes wrapped via a `CardShell` helper (SKIN.window). padX=32 to clear the ~38pt rails (fixed an earlier left-edge label clip).
 - Both gate on `useSkin().skin === "industrial"`; plain Light/Dark keep ShadowBox. Edit flows are modals (standard dark modal card) — left unchanged for app-wide consistency.
 - ⚠️ Note: Dealer ACCOUNTS section is rendered by the shared `BalanceSection` component and still shows the dark (non-metal) account cards — can be skinned later if desired.
+
+---
+
+## ✅ DONE (2026-06-09, BUILD 262) — Dealer ACCOUNTS (BalanceSection) skinned
+- **`src/sections/BalanceSection.tsx`**: in industrial themes the outer grey `accountsBox` ShadowBox is REMOVED (replaced by a transparent `accountsBoxFlat` spacer) and each `BalanceCard` renders as its own metal `TbvFrame` window (SKIN.window, padX=30) instead of `ShadowBoxSubCard` — eliminates the box-in-box. Plain Light/Dark keep the original ShadowBox + ShadowBoxSubCard look.
+- `BalanceCard` now takes an `isIndustrial` prop; content extracted to a shared `inner` fragment. Added `account-card-<label>` testIDs.
+- Verified visually (Iron Forge): CREDIT + TRUCK account cards each in their own metal frame, no grey wrapper behind them, content within rails.
+- Dealer detail page skinning now 100% complete (route/total/company/agents/accounts).

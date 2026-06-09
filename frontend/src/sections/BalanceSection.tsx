@@ -18,8 +18,10 @@ import { PaymentModal } from "./PaymentModal";
 import { DateField } from "../DateField";
 import { todayISO, formatDateUS } from "../dateUtil";
 import { reschedulePaymentRemindersNow } from "../notifications";
-import { themedStyles } from "../themeContext";
+import { themedStyles, useSkin } from "../themeContext";
 import { ShadowBox, ShadowBoxSubCard } from "../components/ShadowBox";
+import { SKIN, CAP } from "../tbv/skins";
+import { TbvFrame } from "../tbv/components/TbvFrame";
 
 const FREQUENCIES: { id: "weekly" | "biweekly" | "monthly"; label: string }[] = [
   { id: "weekly", label: "Weekly" },
@@ -56,6 +58,8 @@ export function BalanceSection({
   onChange: () => void;
 }) {
   const router = useRouter();
+  const { skin } = useSkin();
+  const isIndustrial = skin === "industrial";
   const [target, setTarget] = useState<{ account: "credit" | "personal"; type: "payment" | "charge" } | null>(null);
   const [scheduleTarget, setScheduleTarget] = useState<"credit" | "personal" | null>(null);
   const [busy, setBusy] = useState(false);
@@ -99,31 +103,59 @@ export function BalanceSection({
         interest rates or fees.
       </Text>
 
-      <ShadowBox style={styles.accountsBox}>
-        <BalanceCard
-          label="CREDIT ACCOUNT"
-          balance={credit}
-          schedule={creditSched}
-          busy={busy}
-          onPay={() => setTarget({ account: "credit", type: "payment" })}
-          onCharge={() => setTarget({ account: "credit", type: "charge" })}
-          onHistory={openDealerReport}
-          onEditSchedule={() => setScheduleTarget("credit")}
-          onMarkPaid={() => creditSched && markPaid("credit", creditSched)}
-        />
-        <BalanceCard
-          label="TRUCK ACCOUNT"
-          balance={personal}
-          schedule={personalSched}
-          busy={busy}
-          onPay={() => setTarget({ account: "personal", type: "payment" })}
-          onCharge={() => setTarget({ account: "personal", type: "charge" })}
-          onHistory={openDealerReport}
-          onEditSchedule={() => setScheduleTarget("personal")}
-          onMarkPaid={() => personalSched && markPaid("personal", personalSched)}
-        />
-      </ShadowBox>
-
+      {isIndustrial ? (
+        <View style={styles.accountsBoxFlat}>
+          <BalanceCard
+            isIndustrial
+            label="CREDIT ACCOUNT"
+            balance={credit}
+            schedule={creditSched}
+            busy={busy}
+            onPay={() => setTarget({ account: "credit", type: "payment" })}
+            onCharge={() => setTarget({ account: "credit", type: "charge" })}
+            onHistory={openDealerReport}
+            onEditSchedule={() => setScheduleTarget("credit")}
+            onMarkPaid={() => creditSched && markPaid("credit", creditSched)}
+          />
+          <BalanceCard
+            isIndustrial
+            label="TRUCK ACCOUNT"
+            balance={personal}
+            schedule={personalSched}
+            busy={busy}
+            onPay={() => setTarget({ account: "personal", type: "payment" })}
+            onCharge={() => setTarget({ account: "personal", type: "charge" })}
+            onHistory={openDealerReport}
+            onEditSchedule={() => setScheduleTarget("personal")}
+            onMarkPaid={() => personalSched && markPaid("personal", personalSched)}
+          />
+        </View>
+      ) : (
+        <ShadowBox style={styles.accountsBox}>
+          <BalanceCard
+            label="CREDIT ACCOUNT"
+            balance={credit}
+            schedule={creditSched}
+            busy={busy}
+            onPay={() => setTarget({ account: "credit", type: "payment" })}
+            onCharge={() => setTarget({ account: "credit", type: "charge" })}
+            onHistory={openDealerReport}
+            onEditSchedule={() => setScheduleTarget("credit")}
+            onMarkPaid={() => creditSched && markPaid("credit", creditSched)}
+          />
+          <BalanceCard
+            label="TRUCK ACCOUNT"
+            balance={personal}
+            schedule={personalSched}
+            busy={busy}
+            onPay={() => setTarget({ account: "personal", type: "payment" })}
+            onCharge={() => setTarget({ account: "personal", type: "charge" })}
+            onHistory={openDealerReport}
+            onEditSchedule={() => setScheduleTarget("personal")}
+            onMarkPaid={() => personalSched && markPaid("personal", personalSched)}
+          />
+        </ShadowBox>
+      )}
       {target && (
         <PaymentModal
           visible={!!target}
@@ -165,6 +197,7 @@ function BalanceCard({
   onHistory,
   onEditSchedule,
   onMarkPaid,
+  isIndustrial,
 }: {
   label: string;
   balance: number;
@@ -175,13 +208,14 @@ function BalanceCard({
   onHistory: () => void;
   onEditSchedule: () => void;
   onMarkPaid: () => void;
+  isIndustrial?: boolean;
 }) {
   const owed = balance > 0;
   const hasSched = !!schedule?.enabled;
   const st = hasSched ? dueStatus(schedule?.next_due_date) : null;
   const idBase = label.replace(/\s/g, "-");
-  return (
-    <ShadowBoxSubCard style={styles.balCard}>
+  const inner = (
+    <>
       <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
         <Text style={styles.balLabel}>{label}</Text>
         <TouchableOpacity onPress={onHistory} testID={`open-report-${idBase}`}>
@@ -236,6 +270,28 @@ function BalanceCard({
           />
         </View>
       )}
+    </>
+  );
+
+  if (isIndustrial) {
+    return (
+      <TbvFrame
+        source={SKIN.window}
+        capInsets={CAP.window}
+        style={styles.balCardSkinFrame}
+        padX={30}
+        padTop={18}
+        padBottom={18}
+        testID={`account-card-${idBase}`}
+      >
+        {inner}
+      </TbvFrame>
+    );
+  }
+
+  return (
+    <ShadowBoxSubCard style={styles.balCard} testID={`account-card-${idBase}`}>
+      {inner}
     </ShadowBoxSubCard>
   );
 }
@@ -421,6 +477,16 @@ const styles = themedStyles((c) => ({
     marginBottom: 12,
     paddingHorizontal: 12,
     paddingVertical: 12,
+  },
+  // Industrial: no grey wrapper box behind the cards — each account card is its
+  // own metal TbvFrame, so the container is just a transparent spacer.
+  accountsBoxFlat: {
+    marginTop: 4,
+    marginBottom: 4,
+  },
+  balCardSkinFrame: {
+    marginHorizontal: 16,
+    marginBottom: 12,
   },
   balCard: {
     backgroundColor: c.bgSecondary,
