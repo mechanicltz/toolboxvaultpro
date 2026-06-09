@@ -212,3 +212,13 @@ Backend change-email tested by testing_agent (16/16 backend pass). All additive 
 - `BalanceCard` now takes an `isIndustrial` prop; content extracted to a shared `inner` fragment. Added `account-card-<label>` testIDs.
 - Verified visually (Iron Forge): CREDIT + TRUCK account cards each in their own metal frame, no grey wrapper behind them, content within rails.
 - Dealer detail page skinning now 100% complete (route/total/company/agents/accounts).
+
+---
+
+## ✅ DONE (2026-06-09, BUILD 264) — PDF report viewer skinned frame
+- **`app/pdf-viewer.tsx`**: replaced the cheap solid `theme.colors.bg` around the document with a variant-aware metal texture (`SKIN.bg`) + a beveled steel bezel holding the white PDF. Frame matches the active theme's metal variant (proxy via `useSkin()`); defaults to orange on plain Light/Dark.
+- Layout is fully FLEX-based (metalBg View → pdfArea → pdfBezel → pdfCard → iframe/WebView) — earlier absolute-positioning + RN-Web `ImageBackground` attempts failed (children hidden); flex renders reliably on web & native.
+- iOS additionally overlays the ornate `SKIN.window` frame (bolts/corners) via `capInsets` 9-slice (native-only; web omits capInsets which breaks Image sizing).
+- In-app preview ONLY — the generated PDF file itself is unchanged (stays clean for share/email/print), per user request.
+- Verified on web (data-URI sample): white doc renders centered, steel bezel + metal texture surround. ⚠️ iOS ornate-overlay needs a quick on-device visual check (frame border thickness vs doc inset).
+- NOTE: expo dev server was thrashing/serving stale bundles during dev — a clean `supervisorctl restart expo` was required to see changes.

@@ -19,6 +19,7 @@
 import React, { useMemo } from "react";
 import {
   ActivityIndicator,
+  Image,
   Platform,
   StyleSheet,
   Text,
@@ -32,10 +33,12 @@ import { WebView } from "react-native-webview";
 import * as Sharing from "expo-sharing";
 import { ContactIconImage } from "../src/components/ContactIcons";
 import { theme } from "../src/theme";
-import { themedStyles } from "../src/themeContext";
+import { themedStyles, useSkin } from "../src/themeContext";
+import { SKIN, CAP, TBV } from "../src/tbv/skins";
 
 export default function PdfViewerScreen(): React.ReactElement {
   const router = useRouter();
+  useSkin(); // subscribe so the SKIN proxy re-resolves on theme/variant change
   const params = useLocalSearchParams<{
     uri?: string;
     title?: string;
@@ -138,51 +141,79 @@ export default function PdfViewerScreen(): React.ReactElement {
         }}
       />
 
-      {!uri ? (
-        <View style={styles.empty}>
-          <Ionicons name="document-text-outline" size={48} color={theme.colors.textMuted} />
-          <Text style={styles.emptyText}>No file to preview.</Text>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-            <Text style={styles.backBtnText}>GO BACK</Text>
-          </TouchableOpacity>
-        </View>
-      ) : Platform.OS === "web" ? (
-        // Web: react-native-web doesn't render PDFs in WebView reliably.
-        // <iframe> is the universally-supported viewer.
-        // @ts-ignore — iframe is fine in RN-Web context
-        <iframe
-          src={uri}
-          style={{
-            flex: 1,
-            border: 0,
-            width: "100%",
-            height: "100%",
-            backgroundColor: theme.colors.bg,
-          }}
-          title={title}
+      <View style={styles.metalBg}>
+        {/* Metal texture sits BEHIND everything (explicit first child so it
+            never paints over the PDF — RN-Web's ImageBackground does). */}
+        <Image
+          source={SKIN.bg}
+          resizeMode="cover"
+          fadeDuration={0}
+          pointerEvents="none"
+          style={StyleSheet.absoluteFill}
         />
-      ) : (
-        <WebView
-          testID="pdf-webview"
-          // Loading file:// URIs needs allowFileAccess. originWhitelist
-          // allows the file scheme on Android.
-          source={{ uri }}
-          style={{ flex: 1, backgroundColor: theme.colors.bg }}
-          originWhitelist={["*"]}
-          allowFileAccess
-          allowFileAccessFromFileURLs
-          allowUniversalAccessFromFileURLs
-          startInLoadingState
-          renderLoading={() => (
-            <View style={styles.loader}>
-              <ActivityIndicator size="large" color={theme.colors.accent} />
-              <Text style={styles.loaderText}>Loading {title}…</Text>
+        {!uri ? (
+          <View style={styles.empty}>
+            <Ionicons name="document-text-outline" size={48} color={theme.colors.textMuted} />
+            <Text style={styles.emptyText}>No file to preview.</Text>
+            <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+              <Text style={styles.backBtnText}>GO BACK</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <View style={styles.pdfArea}>
+            {/* Beveled metal bezel framing the white document. Flex layout so it
+                renders reliably on web & native (no fragile absolute sizing). */}
+            <View style={styles.pdfBezel}>
+              <View style={styles.pdfCard}>
+                {Platform.OS === "web" ? (
+                  // @ts-ignore — iframe is fine in RN-Web context
+                  <iframe
+                    src={uri}
+                    style={{
+                      border: 0,
+                      flex: 1,
+                      width: "100%",
+                      height: "100%",
+                      backgroundColor: "#ffffff",
+                    }}
+                    title={title}
+                  />
+                ) : (
+                  <WebView
+                    testID="pdf-webview"
+                    source={{ uri }}
+                    style={{ flex: 1, backgroundColor: "#ffffff" }}
+                    originWhitelist={["*"]}
+                    allowFileAccess
+                    allowFileAccessFromFileURLs
+                    allowUniversalAccessFromFileURLs
+                    startInLoadingState
+                    renderLoading={() => (
+                      <View style={styles.loader}>
+                        <ActivityIndicator size="large" color={theme.colors.accent} />
+                        <Text style={styles.loaderText}>Loading {title}…</Text>
+                      </View>
+                    )}
+                  />
+                )}
+              </View>
             </View>
-          )}
-          // iOS uses native PDFKit when the source is a PDF file — no extra
-          // setup needed. Android downloads it; modern WebView supports inline.
-        />
-      )}
+            {/* iOS: overlay the ornate window frame (bolts/corners) — capInsets
+                9-slices perfectly on native. Web omits it (capInsets unsupported)
+                and relies on the bezel above. Non-interactive. */}
+            {Platform.OS === "ios" && (
+              <Image
+                source={SKIN.window}
+                capInsets={CAP.window}
+                resizeMode="stretch"
+                fadeDuration={0}
+                pointerEvents="none"
+                style={StyleSheet.absoluteFill}
+              />
+            )}
+          </View>
+        )}
+      </View>
 
       {/* Persistent SHARE button at the bottom as a backup affordance for
           users who don't notice the header icon. */}
@@ -204,7 +235,30 @@ export default function PdfViewerScreen(): React.ReactElement {
 const styles = themedStyles((c) => ({
   container: {
     flex: 1,
-    backgroundColor: c.bg,
+    backgroundColor: TBV.ink,
+  },
+  metalBg: {
+    flex: 1,
+    backgroundColor: TBV.ink,
+  },
+  pdfArea: {
+    flex: 1,
+    position: "relative",
+    padding: 14,
+  },
+  pdfBezel: {
+    flex: 1,
+    borderRadius: 6,
+    borderWidth: 3,
+    borderColor: "#878d96",
+    backgroundColor: "#2b2e33",
+    padding: 3,
+  },
+  pdfCard: {
+    flex: 1,
+    backgroundColor: "#ffffff",
+    borderRadius: 3,
+    overflow: "hidden",
   },
   empty: {
     flex: 1,
