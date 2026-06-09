@@ -1701,10 +1701,12 @@ export default function ToolDetail() {
                   </Text>
                 </View>
               </View>
-              {/* Inset inner card — data rows + action buttons (matches
-                  WarrantySection.card style exactly). In skinned themes the
-                  inset shadow-box is dropped so content sits on the metal frame. */}
-              <View style={[newStyles.claimCard, isIndustrial && newStyles.claimCardSkin]}>
+              {/* Inset inner card — plain themes only. In skinned themes the
+                  rows + buttons render directly on the metal frame (no sub-card
+                  / shadow-box behind them). */}
+              {(() => {
+                const claimBody = (
+                  <>
                 {/*
                   Only show "Notified" date when the user has explicitly
                   notified the dealer — i.e. the repair_status is anything
@@ -1781,7 +1783,14 @@ export default function ToolDetail() {
                     <Text style={[newStyles.claimActionText, { color: "#000" }]}>MARK FIXED</Text>
                   </TouchableOpacity>
                 </View>
-              </View>
+                  </>
+                );
+                return isIndustrial ? (
+                  claimBody
+                ) : (
+                  <View style={newStyles.claimCard}>{claimBody}</View>
+                );
+              })()}
             </CardShell>
           )}
 

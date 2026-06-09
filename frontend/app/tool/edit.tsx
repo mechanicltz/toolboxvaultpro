@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Image, Alert,
-  KeyboardAvoidingView, Platform, ActivityIndicator, Modal,
+  KeyboardAvoidingView, Platform, ActivityIndicator, Modal, ImageBackground,
 } from "react-native";
 import { AppSwitch } from "../../src/components/AppSwitch";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -20,8 +20,10 @@ import { buildLocationTree, flattenLocationTree } from "../../src/locationTree";
 import { DateField } from "../../src/DateField";
 import { useAuth } from "../../src/AuthContext";
 
-import { themedStyles } from "../../src/themeContext";
+import { themedStyles, useSkin } from "../../src/themeContext";
 import { IndustrialBanner } from "../../src/components/IndustrialBanner";
+import { SKIN, CAP, TBV } from "../../src/tbv/skins";
+import TbvFrame from "../../src/tbv/components/TbvFrame";
 import { PillButton } from "../../src/components/PillButton";
 import { BevelCard } from "../../src/components/BevelCard";
 import { MaintenanceSection } from "../../src/sections/MaintenanceSection";
@@ -30,6 +32,26 @@ import { formatDateUS } from "../../src/dateUtil";
 export default function ToolEdit() {
   const { id } = useLocalSearchParams<{ id?: string }>();
   const router = useRouter();
+  const { skin } = useSkin();
+  const isIndustrial = skin === "industrial";
+
+  // Iron Forge: each form section becomes a metal window frame; plain Light/Dark
+  // keep the original flat detailsBox.
+  const FormCard = ({ children }: { children: React.ReactNode }) =>
+    isIndustrial ? (
+      <TbvFrame
+        source={SKIN.window}
+        capInsets={CAP.window}
+        style={styles.formCardSkin}
+        padX={34}
+        padTop={14}
+        padBottom={16}
+      >
+        {children}
+      </TbvFrame>
+    ) : (
+      <View style={styles.detailsBox}>{children}</View>
+    );
   const isEdit = !!id;
   const { user } = useAuth();
 
@@ -517,8 +539,8 @@ export default function ToolEdit() {
 
   const dealer = dealers.find((d) => d.id === dealerId);
 
-  return (
-    <SafeAreaView style={styles.container} edges={["top"]}>
+  const body = (
+    <SafeAreaView style={[styles.container, isIndustrial && styles.containerSkin]} edges={["top"]}>
       <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1 }}>
         <IndustrialBanner
           title={isEdit ? "EDIT TOOL" : "NEW TOOL"}
@@ -546,7 +568,7 @@ export default function ToolEdit() {
 
           <Text style={styles.formTip}>Tap each line to fill in details</Text>
 
-          <View style={styles.detailsBox}>
+          <FormCard>
           <AccordionRow
             label="NAME"
             icon="pricetag"
@@ -840,9 +862,9 @@ export default function ToolEdit() {
             })()}
           </View>
           </AccordionRow>
-          </View>
+          </FormCard>
 
-          <View style={styles.detailsBox}>
+          <FormCard>
           <AccordionRow
             label="PHOTOS"
             icon="camera"
@@ -971,9 +993,9 @@ export default function ToolEdit() {
             </Text>
           )}
           </AccordionRow>
-          </View>
+          </FormCard>
 
-          <View style={styles.detailsBox}>
+          <FormCard>
           <AccordionRow
             label="WARRANTY"
             icon="shield-checkmark"
@@ -1225,9 +1247,9 @@ export default function ToolEdit() {
             </View>
           )}
           </AccordionRow>
-          </View>
+          </FormCard>
 
-          <View style={styles.detailsBox}>
+          <FormCard>
           <AccordionRow
             label="CATEGORY"
             icon="folder"
@@ -1265,9 +1287,9 @@ export default function ToolEdit() {
             placeholder="MM/DD/YYYY"
           />
           </AccordionRow>
-          </View>
+          </FormCard>
 
-          <View style={styles.detailsBox}>
+          <FormCard>
           <AccordionRow
             label="DESCRIPTION"
             icon="document-text"
@@ -1281,7 +1303,7 @@ export default function ToolEdit() {
             value={description} onChangeText={setDescription}
             style={[styles.input, { height: 90, textAlignVertical: "top" }]} multiline />
           </AccordionRow>
-          </View>
+          </FormCard>
         </ScrollView>
       </KeyboardAvoidingView>
 
@@ -1476,10 +1498,24 @@ export default function ToolEdit() {
       </View>
     </SafeAreaView>
   );
+
+  if (isIndustrial) {
+    return (
+      <ImageBackground source={SKIN.bg} style={styles.skinBg} resizeMode="cover" fadeDuration={0}>
+        <View style={styles.skinVeil} pointerEvents="none" />
+        {body}
+      </ImageBackground>
+    );
+  }
+  return body;
 }
 
 const styles = themedStyles((c) => ({
   container: { flex: 1, backgroundColor: c.canvas },
+  containerSkin: { backgroundColor: "transparent" },
+  skinBg: { flex: 1, backgroundColor: TBV.ink },
+  skinVeil: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(10,10,10,0.60)" },
+  formCardSkin: { marginTop: 16 },
   topBar: {
     flexDirection: "row", alignItems: "center", justifyContent: "space-between",
     paddingHorizontal: 12, paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: c.border,

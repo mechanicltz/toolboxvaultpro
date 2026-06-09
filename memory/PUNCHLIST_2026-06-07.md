@@ -41,6 +41,10 @@ Backend change-email tested by testing_agent (16/16 backend pass). All additive 
 
 ---
 
+### CLAIM CARD — INSET SUB-CARD FULLY REMOVED + INVENTORY EDIT SCREEN SKIN (user 2026-06-09) — DONE (BUILD 257) ✅ verified @414px
+- [x] Claim card: the transparent-style override on `claimCard` wasn't dropping the panel (web boxShadow / opaque bg persisted). FIX: in industrial, render the claim rows+buttons inside a Fragment directly (no inset `View` at all) via IIFE — `isIndustrial ? claimBody : <View claimCard>{claimBody}</View>`. Sub-card shadow-box gone; content sits on metal frame.
+- [x] `app/tool/edit.tsx` Iron Forge skin: added useSkin→isIndustrial, ImageBackground(SKIN.bg)+veil wrap, transparent container. New `FormCard` adapter wraps the 5 form sections in `TbvFrame` SKIN.window (padX 34/14/16) in industrial; plain keeps flat `detailsBox`. Converted via replace_all on the 4 identical `</View>\n\n<View detailsBox>` transitions + block1 open + block5 close. Verified: accordion rows + NAME input inside rails, SAVE button skinned.
+
 ### OUT-OF-BOUNDS FIX — TbvFrame content under side rails (user 2026-06-09, on-device) — DONE (BUILD 255) ✅ verified @414px
 - ROOT CAUSE: window-frame side rails render ~38pt wide (CAP.window left/right=38), but padX was 16–20 → full-bleed content (claim buttons, history text rows, NOTES boxes) bled UNDER the rails on real phones. Desktop-width screenshots hid it (rails tiny vs wide column).
 - FIX (padX must be ≥ rail width): claim `CardShell` padX 20→40 (top/bot 30/32); detail `GroupCard` padX 30→36; `checkout-history` padX 18→40; `claims-history` padX 16→38 (top/bot 28/30). Verified at 414px viewport — all content inside rails.
