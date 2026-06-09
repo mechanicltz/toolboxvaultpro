@@ -41,6 +41,10 @@ Backend change-email tested by testing_agent (16/16 backend pass). All additive 
 
 ---
 
+### REPORT-A-BUG BADGE SWAP + DASHBOARD TIP (user request 2026-06-09) — DONE (BUILD 243) ✅ screenshot-verified orange + emerald
+- [x] **New "REPORT A BUG / REQUEST FEATURES" metal badge**: user-supplied art (transparent PNG). Trimmed to content (alpha>10 bbox + 6px pad), downscaled to 1200×415, saved as `assets/tbv/report-bug-badge.png` (orange base). Generated 3 hue-rotated variants with `scripts/recolor_theme.py`'s `recolor_file()` — pink (-37°), arctic (+167°), emerald (+127°) → `report-bug-badge-{pink,arctic,emerald}.png`. `ReportBugBadge.tsx` now reads `useSkin().industrialVariant` and picks the matching badge (plain Light/Dark force orange = base). ASPECT updated to 1200/415. Shows on Home (plain + industrial) AND Vault bottom — all follow the active colour theme. ✅ verified orange (Iron Forge) + green (Emerald) on device.
+- [x] **Dashboard tip text**: "Customize ... under MORE → CUSTOMIZE" → "VAULT → CUSTOMIZE" (both plain + industrial home tips). The More tab is branded VAULT.
+
 ### NEW THEMES: ARCTIC (aqua) + EMERALD (Irish green) — DONE (BUILD 242) ✅ screenshot-verified both
 - Generalized the crimson recolor into `frontend/scripts/recolor_theme.py` (walks a folder, applies any HSV hue rotation). Base orange accent ≈ 23°.
   - **Arctic** = +167° → accent hue ~190° (aqua). Accent `#1FC3E8`. Folder `assets/tbv-v2/trimmed-arctic/` (55 PNGs).

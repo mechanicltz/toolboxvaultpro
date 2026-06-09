@@ -62,7 +62,7 @@ import { Anton_400Regular } from "@expo-google-fonts/anton";
 
 // Manual verification beacon — bump this on every change so we can confirm
 // the device is actually showing the latest bundle. Rendered top-right of Home.
-const HOME_BUILD = "BUILD 242";
+const HOME_BUILD = "BUILD 243";
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -690,7 +690,7 @@ export default function HomeScreen() {
 
           <ReportBugBadge style={{ marginTop: 8 }} testID="feedback-banner" />
 
-          <Text style={styles.plainTip}>Pull to refresh · Customize under MORE → CUSTOMIZE</Text>
+          <Text style={styles.plainTip}>Pull to refresh · Customize under VAULT → CUSTOMIZE</Text>
         </ScrollView>
 
         {paymentTarget && (
@@ -960,7 +960,7 @@ export default function HomeScreen() {
         <ReportBugBadge style={{ marginTop: 8 }} testID="feedback-banner" />
 
         <Text style={styles.tip}>
-          Pull to refresh · Customize this list under MORE → CUSTOMIZE
+          Pull to refresh · Customize this list under VAULT → CUSTOMIZE
         </Text>
       </ScrollView>
 

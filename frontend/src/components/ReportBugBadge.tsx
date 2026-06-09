@@ -4,13 +4,23 @@ import {
   TouchableOpacity,
   StyleProp,
   ViewStyle,
+  ImageSourcePropType,
   useWindowDimensions,
 } from "react-native";
 import { useRouter } from "expo-router";
+import { useSkin } from "../themeContext";
+import type { IndustrialVariant } from "../tbv/skins";
 
 // Industrial "REPORT A BUG · REQUEST FEATURES" badge (transparent PNG).
-const BADGE = require("../../assets/tbv/report-bug-badge.png");
-const ASPECT = 1204 / 484; // native trimmed dimensions (W/H)
+// One asset per colour variant — plain Light/Dark force the orange base, the
+// industrial colour themes (crimson/arctic/emerald) follow their accent hue.
+const BADGES: Record<IndustrialVariant, ImageSourcePropType> = {
+  orange: require("../../assets/tbv/report-bug-badge.png"),
+  pink: require("../../assets/tbv/report-bug-badge-pink.png"),
+  arctic: require("../../assets/tbv/report-bug-badge-arctic.png"),
+  emerald: require("../../assets/tbv/report-bug-badge-emerald.png"),
+};
+const ASPECT = 1200 / 415; // native trimmed dimensions (W/H)
 
 type Props = {
   style?: StyleProp<ViewStyle>;
@@ -28,7 +38,10 @@ export default function ReportBugBadge({
   maxWidth = 520,
 }: Props) {
   const router = useRouter();
+  const { industrialVariant } = useSkin();
   const { width: screenW } = useWindowDimensions();
+
+  const source = BADGES[industrialVariant] ?? BADGES.orange;
 
   // Explicit pixel size so the image never falls back to its intrinsic
   // (giant) dimensions when a parent's width isn't determinate.
@@ -44,7 +57,7 @@ export default function ReportBugBadge({
       accessibilityRole="button"
       accessibilityLabel="Report a bug or request a feature"
     >
-      <Image source={BADGE} style={{ width: w, height: h }} resizeMode="contain" />
+      <Image source={source} style={{ width: w, height: h }} resizeMode="contain" />
     </TouchableOpacity>
   );
 }
