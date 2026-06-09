@@ -41,6 +41,10 @@ Backend change-email tested by testing_agent (16/16 backend pass). All additive 
 
 ---
 
+### CHECKOUT-HISTORY + CLAIMS-HISTORY PAGES IRON FORGE SKIN (user 2026-06-09) — DONE (BUILD 253) ✅ screenshot-verified IronForge
+- [x] `app/checkout-history/[id].tsx` + `app/claims-history/[id].tsx`: added `useSkin`→isIndustrial, wrapped each in ImageBackground(SKIN.bg)+veil (transparent container), converted the list cards to metal `TbvFrame` (SKIN.window) wrapped in TouchableOpacity (cards are tappable → borrower/claim). Plain Light/Dark keep original ShadowBox/View cards. Verified claims card (metal frame w/ OPEN badge + NOTES) + checkout empty-state on metal.
+- Pattern reused from detail page (body var + `if (isIndustrial) return <ImageBackground>…`).
+
 ### DETAIL PAGE — ACTION BTN ONE-LINE + CLAIM CARD SKIN (user 2026-06-09) — DONE (BUILD 251) ✅ screenshot-verified IronForge+Arctic
 - [x] Bottom ACTION tiles: icon + label now on ONE LINE (actionTileSkin + plain actionTile → flexDirection row, gap 8). Steel button art unchanged.
 - [x] CLAIM INFORMATION card ("marked broken" section, `claimBox`) was a flat grey card → now wrapped in metal window frame via new `CardShell` adapter (industrial → TbvFrame SKIN.window; plain → original View). Inner EMAIL/TEXT/EDIT CLAIM/MARK FIXED stay as semantic colour CTAs inside the inset panel.

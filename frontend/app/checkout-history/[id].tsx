@@ -6,6 +6,7 @@ import {
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
+  ImageBackground,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -15,13 +16,17 @@ import { theme } from "../../src/theme";
 import { api } from "../../src/api";
 import { formatDateTime } from "../../src/dt";
 
-import { themedStyles } from "../../src/themeContext";
+import { themedStyles, useSkin } from "../../src/themeContext";
 import { IndustrialBanner } from "../../src/components/IndustrialBanner";
 import { ShadowBox } from "../../src/components/ShadowBox";
+import { SKIN, CAP, TBV } from "../../src/tbv/skins";
+import TbvFrame from "../../src/tbv/components/TbvFrame";
 
 export default function CheckoutHistoryPage() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const { skin } = useSkin();
+  const isIndustrial = skin === "industrial";
   const [tool, setTool] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
@@ -52,8 +57,8 @@ export default function CheckoutHistoryPage() {
     ? tool!.checkout_history.slice().reverse()
     : [];
 
-  return (
-    <SafeAreaView style={styles.container} edges={["top"]}>
+  const body = (
+    <SafeAreaView style={[styles.container, isIndustrial && styles.containerSkin]} edges={["top"]}>
       <IndustrialBanner
         title="CHECKOUT HISTORY"
         subtitle={tool?.name || "Borrowing record"}
@@ -83,45 +88,88 @@ export default function CheckoutHistoryPage() {
         </View>
       ) : (
         <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
-          {history.map((h: any, i: number) => (
-            <ShadowBox
-              key={i}
-              testID={`hist-${i}`}
-              style={styles.row}
-              onPress={h.borrower_id ? () => router.push(`/borrower/${h.borrower_id}`) : undefined}
-              activeOpacity={0.7}
-            >
-              <View style={styles.rowHead}>
-                <Text style={styles.name} numberOfLines={1}>
-                  {h.borrower_name || "Unknown"}
+          {history.map((h: any, i: number) => {
+            const onPress = h.borrower_id
+              ? () => router.push(`/borrower/${h.borrower_id}`)
+              : undefined;
+            const inner = (
+              <>
+                <View style={styles.rowHead}>
+                  <Text style={styles.name} numberOfLines={1}>
+                    {h.borrower_name || "Unknown"}
+                  </Text>
+                  {!!h.borrower_id && (
+                    <Ionicons
+                      name="chevron-forward"
+                      size={16}
+                      color={theme.colors.textMuted}
+                    />
+                  )}
+                </View>
+                <Text style={styles.line}>
+                  <Text style={styles.label}>Out: </Text>
+                  {formatDateTime(h.checked_out_at)}
                 </Text>
-                {!!h.borrower_id && (
-                  <Ionicons
-                    name="chevron-forward"
-                    size={16}
-                    color={theme.colors.textMuted}
-                  />
-                )}
-              </View>
-              <Text style={styles.line}>
-                <Text style={styles.label}>Out: </Text>
-                {formatDateTime(h.checked_out_at)}
-              </Text>
-              <Text style={styles.line}>
-                <Text style={styles.label}>In:  </Text>
-                {h.checked_in_at ? formatDateTime(h.checked_in_at) : "— currently out"}
-              </Text>
-              {!!h.notes && <Text style={styles.notes}>{h.notes}</Text>}
-            </ShadowBox>
-          ))}
+                <Text style={styles.line}>
+                  <Text style={styles.label}>In:  </Text>
+                  {h.checked_in_at ? formatDateTime(h.checked_in_at) : "— currently out"}
+                </Text>
+                {!!h.notes && <Text style={styles.notes}>{h.notes}</Text>}
+              </>
+            );
+            return isIndustrial ? (
+              <TouchableOpacity
+                key={i}
+                testID={`hist-${i}`}
+                activeOpacity={0.85}
+                onPress={onPress}
+                disabled={!onPress}
+                style={styles.rowSkinWrap}
+              >
+                <TbvFrame
+                  source={SKIN.window}
+                  capInsets={CAP.window}
+                  padX={18}
+                  padTop={16}
+                  padBottom={18}
+                >
+                  {inner}
+                </TbvFrame>
+              </TouchableOpacity>
+            ) : (
+              <ShadowBox
+                key={i}
+                testID={`hist-${i}`}
+                style={styles.row}
+                onPress={onPress}
+                activeOpacity={0.7}
+              >
+                {inner}
+              </ShadowBox>
+            );
+          })}
         </ScrollView>
       )}
     </SafeAreaView>
   );
+
+  if (isIndustrial) {
+    return (
+      <ImageBackground source={SKIN.bg} style={styles.skinBg} resizeMode="cover" fadeDuration={0}>
+        <View style={styles.skinVeil} pointerEvents="none" />
+        {body}
+      </ImageBackground>
+    );
+  }
+  return body;
 }
 
 const styles = themedStyles((c) => ({
   container: { flex: 1, backgroundColor: c.canvas },
+  containerSkin: { backgroundColor: "transparent" },
+  skinBg: { flex: 1, backgroundColor: TBV.ink },
+  skinVeil: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(10,10,10,0.60)" },
+  rowSkinWrap: { marginBottom: 10 },
   headerBar: {
     flexDirection: "row",
     alignItems: "center",

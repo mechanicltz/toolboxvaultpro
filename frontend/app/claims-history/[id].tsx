@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   Image,
   ActivityIndicator,
+  ImageBackground,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -16,8 +17,10 @@ import { theme } from "../../src/theme";
 import { api } from "../../src/api";
 import { formatDateUS } from "../../src/dateUtil";
 
-import { themedStyles } from "../../src/themeContext";
+import { themedStyles, useSkin } from "../../src/themeContext";
 import { IndustrialBanner } from "../../src/components/IndustrialBanner";
+import { SKIN, CAP, TBV } from "../../src/tbv/skins";
+import TbvFrame from "../../src/tbv/components/TbvFrame";
 
 const STATUS_COLORS: Record<string, string> = {
   broken: theme.colors.danger,
@@ -38,6 +41,8 @@ const STATUS_LABEL: Record<string, string> = {
 export default function ClaimsHistoryPage() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const { skin } = useSkin();
+  const isIndustrial = skin === "industrial";
   const [tool, setTool] = useState<any>(null);
   const [claims, setClaims] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -69,8 +74,8 @@ export default function ClaimsHistoryPage() {
   useAppResume(useCallback(() => { load(); }, [load]));
 
 
-  return (
-    <SafeAreaView style={styles.container} edges={["top"]}>
+  const body = (
+    <SafeAreaView style={[styles.container, isIndustrial && styles.containerSkin]} edges={["top"]}>
       <IndustrialBanner
         title="CLAIMS HISTORY"
         subtitle={tool?.name || "Warranty claims"}
@@ -104,14 +109,8 @@ export default function ClaimsHistoryPage() {
             const status = (c.claim_status || "broken").toLowerCase();
             const color = STATUS_COLORS[status] || theme.colors.textMuted;
             const label = STATUS_LABEL[status] || status.toUpperCase();
-            return (
-              <TouchableOpacity
-                key={c.id}
-                testID={`claim-${c.id}`}
-                style={styles.card}
-                activeOpacity={0.85}
-                onPress={() => router.push(`/claim/${c.id}`)}
-              >
+            const inner = (
+              <>
                 <View style={styles.cardRow}>
                   <View style={styles.numCol}>
                     <Text style={styles.num}>#{idx + 1}</Text>
@@ -157,6 +156,29 @@ export default function ClaimsHistoryPage() {
                     <Text style={styles.notes}>{c.notes}</Text>
                   </View>
                 )}
+              </>
+            );
+            return (
+              <TouchableOpacity
+                key={c.id}
+                testID={`claim-${c.id}`}
+                style={isIndustrial ? styles.cardSkinWrap : styles.card}
+                activeOpacity={0.85}
+                onPress={() => router.push(`/claim/${c.id}`)}
+              >
+                {isIndustrial ? (
+                  <TbvFrame
+                    source={SKIN.window}
+                    capInsets={CAP.window}
+                    padX={16}
+                    padTop={16}
+                    padBottom={16}
+                  >
+                    {inner}
+                  </TbvFrame>
+                ) : (
+                  inner
+                )}
               </TouchableOpacity>
             );
           })}
@@ -164,10 +186,24 @@ export default function ClaimsHistoryPage() {
       )}
     </SafeAreaView>
   );
+
+  if (isIndustrial) {
+    return (
+      <ImageBackground source={SKIN.bg} style={styles.skinBg} resizeMode="cover" fadeDuration={0}>
+        <View style={styles.skinVeil} pointerEvents="none" />
+        {body}
+      </ImageBackground>
+    );
+  }
+  return body;
 }
 
 const styles = themedStyles((c) => ({
   container: { flex: 1, backgroundColor: c.canvas },
+  containerSkin: { backgroundColor: "transparent" },
+  skinBg: { flex: 1, backgroundColor: TBV.ink },
+  skinVeil: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(10,10,10,0.60)" },
+  cardSkinWrap: { marginBottom: 12 },
   headerBar: {
     flexDirection: "row",
     alignItems: "center",
