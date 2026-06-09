@@ -72,25 +72,14 @@ export default function ToolDetail() {
   // same chrome as the dashboard/inventory). In plain Light/Dark they fall
   // back to the exact ShadowBox look the user locked in, so those themes are
   // left untouched.
-  const StatCard = ({ children }: { children: React.ReactNode }) =>
-    isIndustrial ? (
-      <View style={{ flex: 1 }}>
-        <TbvFrame source={SKIN.window} capInsets={CAP.window} padX={14} padTop={10} padBottom={10}>
-          {children}
-        </TbvFrame>
-      </View>
-    ) : (
-      <ShadowBox style={newStyles.statShadowBox}>{children}</ShadowBox>
-    );
-
   const GroupCard = ({ boxKey, children }: { boxKey: string; children: React.ReactNode }) =>
     isIndustrial ? (
       <TbvFrame
         source={SKIN.window}
         capInsets={CAP.window}
-        padX={18}
-        padTop={8}
-        padBottom={10}
+        padX={30}
+        padTop={30}
+        padBottom={32}
         testID={`details-box-${boxKey}`}
       >
         {children}
@@ -1557,38 +1546,66 @@ export default function ToolDetail() {
       <ScrollView contentContainerStyle={{ paddingBottom: 40 }}>
         <View style={newStyles.page}>
 
-          {/* PHOTO + 2 PILLBOX FIELDS (Status, Price) on the right, height-matched */}
-          <View style={newStyles.photoRow}>
-            <TouchableOpacity
-              testID="photo-thumb"
-              style={newStyles.photoFrame}
-              activeOpacity={photos.length ? 0.85 : 1}
-              onPress={photos.length ? () => { setPhotoIdx(0); setIsImageViewerVisible(true); } : promptAddPhoto}
-            >
-              {photos.length > 0 ? (
-                <Image source={{ uri: photos[0] }} style={newStyles.photoImg} />
-              ) : (
-                <View style={newStyles.photoEmpty}>
-                  <Ionicons name="camera" size={22} color={theme.colors.accent} />
-                  <Text style={newStyles.photoEmptyText}>ADD PHOTO</Text>
+          {/* PHOTO + STATUS/QTY/PRICE — in Iron Forge these live together in
+              the dealer "card" container; plain themes keep the photo + framed
+              stat box side-by-side. */}
+          {isIndustrial ? (
+            <TbvFrame source={SKIN.window} capInsets={CAP.window} padX={20} padTop={22} padBottom={24}>
+              <View style={newStyles.topUnifiedRow}>
+                <TouchableOpacity
+                  testID="photo-thumb"
+                  style={newStyles.topUnifiedPhoto}
+                  activeOpacity={photos.length ? 0.85 : 1}
+                  onPress={photos.length ? () => { setPhotoIdx(0); setIsImageViewerVisible(true); } : promptAddPhoto}
+                >
+                  {photos.length > 0 ? (
+                    <Image source={{ uri: photos[0] }} style={newStyles.photoImg} />
+                  ) : (
+                    <View style={newStyles.dealerPhotoEmpty}>
+                      <Ionicons name="camera" size={20} color={theme.colors.accent} />
+                      <Text style={newStyles.photoEmptyText}>ADD PHOTO</Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
+                <View style={newStyles.topUnifiedRows}>
+                  <PillRow first label="STATUS" value={statusInfo.label} valueColor={statusInfo.color} />
+                  <PillRow
+                    label="QUANTITY"
+                    value={String(Math.max(1, Number(tool.quantity) || 1))}
+                    onPress={() => setShowQtyModal(true)}
+                  />
+                  <PillRow label="PRICE" value={fmtMoney(tool.cost)} />
                 </View>
-              )}
-            </TouchableOpacity>
-            <StatCard>
-              <PillRow
-                first
-                label="STATUS"
-                value={statusInfo.label}
-                valueColor={statusInfo.color}
-              />
-              <PillRow
-                label="QUANTITY"
-                value={String(Math.max(1, Number(tool.quantity) || 1))}
-                onPress={() => setShowQtyModal(true)}
-              />
-              <PillRow label="PRICE" value={fmtMoney(tool.cost)} />
-            </StatCard>
-          </View>
+              </View>
+            </TbvFrame>
+          ) : (
+            <View style={newStyles.photoRow}>
+              <TouchableOpacity
+                testID="photo-thumb"
+                style={newStyles.photoFrame}
+                activeOpacity={photos.length ? 0.85 : 1}
+                onPress={photos.length ? () => { setPhotoIdx(0); setIsImageViewerVisible(true); } : promptAddPhoto}
+              >
+                {photos.length > 0 ? (
+                  <Image source={{ uri: photos[0] }} style={newStyles.photoImg} />
+                ) : (
+                  <View style={newStyles.photoEmpty}>
+                    <Ionicons name="camera" size={22} color={theme.colors.accent} />
+                    <Text style={newStyles.photoEmptyText}>ADD PHOTO</Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+              <ShadowBox style={newStyles.statShadowBox}>
+                <PillRow first label="STATUS" value={statusInfo.label} valueColor={statusInfo.color} />
+                <PillRow
+                  label="QUANTITY"
+                  value={String(Math.max(1, Number(tool.quantity) || 1))}
+                  onPress={() => setShowQtyModal(true)}
+                />
+                <PillRow label="PRICE" value={fmtMoney(tool.cost)} />
+              </ShadowBox>
+            </View>
+          )}
 
           {/* CLAIM INFORMATION — converted to the "card within a card" style
               (per user 2026-05-27, matching WarrantySection layout): outer
@@ -4354,6 +4371,32 @@ const newStyles = themedStyles((c) => ({
     flexDirection: "row",
     gap: 12,
     alignItems: "stretch",
+  },
+  // Iron Forge: photo + status/qty/price unified inside ONE metal window
+  // frame (the dealer "card" asset is a fixed-layout decorative card with
+  // baked photo/row slots, so it doesn't scale cleanly as a live container —
+  // the stretchable window frame gives the same one-container look reliably).
+  topUnifiedRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 14,
+  },
+  topUnifiedPhoto: {
+    width: 96,
+    height: 96,
+    borderRadius: 6,
+    overflow: "hidden",
+    backgroundColor: "#000",
+  },
+  topUnifiedRows: {
+    flex: 1,
+  },
+  dealerPhotoEmpty: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    backgroundColor: "rgba(0,0,0,0.35)",
   },
   photoFrame: {
     width: 110,

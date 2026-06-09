@@ -41,6 +41,11 @@ Backend change-email tested by testing_agent (16/16 backend pass). All additive 
 
 ---
 
+### DETAIL PAGE FIT FIXES (user 2026-06-09, on-device Crimson) — DONE (BUILD 247) ✅ screenshot-verified
+- [x] **Rows overflowing the frame rails**: GroupCard padding was too small (padTop 8 / padBottom 10) so first/last rows (LOCATION…BRAND) sat under the window-frame top/bottom metal rails. Bumped to padX 30 / padTop 30 / padBottom 32 — rows now sit cleanly inside the window. Verified.
+- [x] **Photo + STATUS/QTY/PRICE in ONE container** (user asked about `tbv_card_dealer_dark`): tried that asset — it's a FIXED-LAYOUT decorative card (baked photo slot + 4 row slots, RGB no-alpha) that balloons on wide layouts and didn't render/scale cleanly as a live container. Pivoted to the stretchable `SKIN.window` metal frame: photo (96×96) on the left + 3 PillRows on the right, all inside ONE window frame. Same one-container result, reliable. Verified.
+- NOTE: `SKIN.cardDealer` is still defined but unused. If the user really wants that exact art, it'd need to be rebuilt as a 9-slice/stretchable frame (or content absolutely-positioned to its baked slots at a fixed aspect).
+
 ### INVENTORY DETAIL PAGE (app/tool/[id].tsx) IRON FORGE SKIN — DONE (BUILD 245) ✅ screenshot-verified industrial + plain
 - [x] Was unskinned in industrial: stack-scene WHITE bands showed behind the banner + ACTIONS area, cards were flat. Now dual-renders like inventory/dashboard.
 - [x] Added `useSkin()` → `isIndustrial`. Wrapped the whole screen in `<ImageBackground source={SKIN.bg}>` + 60% veil (container goes transparent) so metal covers the page edge-to-edge and the white scene bg is never visible.
