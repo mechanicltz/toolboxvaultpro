@@ -129,6 +129,23 @@ export default function ToolDetail() {
       </ShadowBoxMini>
     );
 
+  // Generic "info card" shell — metal window frame in Iron Forge, the original
+  // flat card (claim / checked-out / sale) in plain Light/Dark.
+  const CardShell = ({
+    plainStyle,
+    children,
+  }: {
+    plainStyle: any;
+    children: React.ReactNode;
+  }) =>
+    isIndustrial ? (
+      <TbvFrame source={SKIN.window} capInsets={CAP.window} padX={20} padTop={22} padBottom={24}>
+        {children}
+      </TbvFrame>
+    ) : (
+      <View style={plainStyle}>{children}</View>
+    );
+
   const [tool, setTool] = useState<any>(null);
   const [borrowers, setBorrowers] = useState<any[]>([]);
   const [dealers, setDealers] = useState<any[]>([]);
@@ -1652,7 +1669,7 @@ export default function ToolDetail() {
               inner inset card holding the claim data rows + action buttons.
               Shown FIRST under the photo when the tool is broken/in-repair. */}
           {tool.needs_repair && (
-            <View style={newStyles.claimBox}>
+            <CardShell plainStyle={newStyles.claimBox}>
               {/* Flat header — icon + title + status badge */}
               <View style={newStyles.claimHead}>
                 <Ionicons name="build" size={18} color={theme.colors.danger} />
@@ -1765,7 +1782,7 @@ export default function ToolDetail() {
                   </TouchableOpacity>
                 </View>
               </View>
-            </View>
+            </CardShell>
           )}
 
           {/* CHECKED OUT — shown in the SAME slot as the claim card
@@ -5033,9 +5050,10 @@ const newStyles = themedStyles((c) => ({
   actionTile: {
     width: "48.5%",
     minHeight: 60,
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 6,
+    gap: 8,
     backgroundColor: c.bgSecondary,
     borderColor: c.border,
     borderWidth: 1,
@@ -5064,9 +5082,10 @@ const newStyles = themedStyles((c) => ({
   actionTileSkin: {
     width: "100%",
     height: "100%",
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 5,
+    gap: 8,
     paddingHorizontal: 6,
   },
   actionTileSkinImg: {

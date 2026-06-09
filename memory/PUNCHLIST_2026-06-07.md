@@ -41,6 +41,11 @@ Backend change-email tested by testing_agent (16/16 backend pass). All additive 
 
 ---
 
+### DETAIL PAGE — ACTION BTN ONE-LINE + CLAIM CARD SKIN (user 2026-06-09) — DONE (BUILD 251) ✅ screenshot-verified IronForge+Arctic
+- [x] Bottom ACTION tiles: icon + label now on ONE LINE (actionTileSkin + plain actionTile → flexDirection row, gap 8). Steel button art unchanged.
+- [x] CLAIM INFORMATION card ("marked broken" section, `claimBox`) was a flat grey card → now wrapped in metal window frame via new `CardShell` adapter (industrial → TbvFrame SKIN.window; plain → original View). Inner EMAIL/TEXT/EDIT CLAIM/MARK FIXED stay as semantic colour CTAs inside the inset panel.
+- NOTE: `CardShell` is reusable — checked-out & sale info cards could get the same frame later if the user wants.
+
 ### DETAIL PAGE BOTTOM ACTION BUTTONS SKINNED (user 2026-06-09) — DONE (BUILD 250) ✅ screenshot-verified
 - [x] Bottom ACTION grid tiles (CHECK OUT/IN, MARK FIXED/BROKEN, EXPORT, LIST FOR SALE / EDIT LISTING / MARK SOLD) were flat dark ShadowBoxMini. Added `ActionTile` adapter: in industrial renders the skinned steel button art (`SKIN.btnSecondary` ImageBackground, auto-recolors per theme) at a FIXED 64px height (ImageBackground reserves intrinsic image height if height isn't fixed → must pin height); keeps the semantic icon colour (green=fixed, red=broken, pink=sale). Plain Light/Dark keep ShadowBoxMini. Verified Crimson.
 - [x] REPORT LOST/STOLEN left as its deliberate red-outline danger button (reads fine on metal).
