@@ -248,3 +248,12 @@ Root cause (stretching): `TbvFrame`'s internal wrap is `width:100%`, so any `mar
 - **Dealer detail bg "disappeared"** (`app/dealer/[id].tsx`): root container used `backgroundColor: c.bg` (OPAQUE) which blocked the global `<AppBackground>` metal backdrop — so the page was solid black. Once BUILD 266 gave the cards real side margins, that black showed around them. FIX: container → `c.canvas` (transparent in non-light themes), exactly like the Contact page, so the global metal photo now shows through behind the cards.
 - **PDF/report viewer "giant black space above"** (`app/pdf-viewer.tsx`): the screen's `SafeAreaView` used `edges={["top",...]}` ON TOP OF the native Stack header, adding a redundant top safe-area inset = a black band between header and the metal. FIX: dropped the `top` edge (`edges={["left","right"]}`) — native header already handles the inset, so the metal now stretches right up to the banner.
 - ⚠️ On-device (iOS) confirm pending for both.
+
+---
+
+## ✅ FIXES (2026-06-09, BUILD 268) — report viewer: black void, light-theme bg, themed header
+`app/pdf-viewer.tsx` reworked (+ `_layout.tsx` pdf-viewer screen → `headerShown:false`):
+- **Black area under the PDF removed**: the bezel was `flex:1` so a 1-page report left a huge black void (iOS PDFKit empty-area bg) below it. Bezel now uses `aspectRatio: 612/792` (US-letter) so it hugs the page; the area below shows the themed bg (white/metal) instead of black. Multi-page reports still scroll inside the WebView.
+- **Light theme = white background**: metal `SKIN.bg` now only renders for non-light themes (`mode !== "light"`). Light theme uses a clean white `bgArea`/container.
+- **Top buttons now match theme**: replaced the native iOS nav header (whose back/share buttons showed out-of-theme dark "glass" ovals) with a CUSTOM in-screen themed header — `headerBar` (bg `c.surface`), circular `headerBtn`s (`c.bg` + `c.border`), accent back chevron, themed title. Uses `useColors()` + `useThemeMode()` so it's fully reactive across all themes.
+- Bundle verified compiling (iOS). ⚠️ On-device confirm pending.

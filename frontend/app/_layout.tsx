@@ -307,12 +307,12 @@ function ShellNav() {
             <Stack.Screen name="tool/[id]" />
             <Stack.Screen name="tool/edit" />
             <Stack.Screen name="paywall" options={{ animation: "slide_from_bottom", presentation: "modal" }} />
-            {/* In-app PDF preview — header gets configured by the screen
-                itself (sets title + Share button on the right). */}
+            {/* In-app PDF preview — renders its OWN themed header inside the
+                screen, so the native nav header stays hidden. */}
             <Stack.Screen
               name="pdf-viewer"
               options={{
-                headerShown: true,
+                headerShown: false,
                 animation: "slide_from_right",
                 presentation: "card",
               }}

@@ -33,12 +33,15 @@ import { WebView } from "react-native-webview";
 import * as Sharing from "expo-sharing";
 import { ContactIconImage } from "../src/components/ContactIcons";
 import { theme } from "../src/theme";
-import { themedStyles, useSkin } from "../src/themeContext";
+import { themedStyles, useSkin, useColors, useThemeMode } from "../src/themeContext";
 import { SKIN, TBV } from "../src/tbv/skins";
 
 export default function PdfViewerScreen(): React.ReactElement {
   const router = useRouter();
   useSkin(); // subscribe so the SKIN proxy re-resolves on theme/variant change
+  const c = useColors();
+  const { mode } = useThemeMode();
+  const isLight = mode === "light";
   const params = useLocalSearchParams<{
     uri?: string;
     title?: string;
@@ -110,47 +113,45 @@ export default function PdfViewerScreen(): React.ReactElement {
   }, [router]);
 
   return (
-    <SafeAreaView style={styles.container} edges={["left", "right"]}>
-      <Stack.Screen
-        options={{
-          title,
-          headerStyle: { backgroundColor: theme.colors.bg },
-          headerTintColor: theme.colors.textPrimary,
-          headerTitleStyle: { color: theme.colors.textPrimary, fontWeight: "700" },
-          headerLeft: () => (
-            <TouchableOpacity
-              testID="pdf-back-btn"
-              onPress={handleBack}
-              style={{ paddingHorizontal: 12, paddingVertical: 6, marginLeft: -4 }}
-              accessibilityLabel="Back"
-              hitSlop={8}
-            >
-              <Ionicons name="chevron-back" size={26} color={theme.colors.accent} />
-            </TouchableOpacity>
-          ),
-          headerRight: () => (
-            <TouchableOpacity
-              testID="pdf-share-btn"
-              onPress={onShare}
-              style={{ paddingHorizontal: 12, paddingVertical: 6 }}
-              accessibilityLabel="Share"
-            >
-              <ContactIconImage type="share" size={30} />
-            </TouchableOpacity>
-          ),
-        }}
-      />
+    <SafeAreaView style={[styles.container, isLight && styles.containerLight]} edges={["top", "left", "right"]}>
+      <Stack.Screen options={{ headerShown: false }} />
 
-      <View style={styles.metalBg}>
-        {/* Metal texture sits BEHIND everything (explicit first child so it
-            never paints over the PDF — RN-Web's ImageBackground does). */}
-        <Image
-          source={SKIN.bg}
-          resizeMode="repeat"
-          fadeDuration={0}
-          pointerEvents="none"
-          style={StyleSheet.absoluteFill}
-        />
+      {/* Custom themed header — replaces the native nav bar so the back/share
+          buttons + bar colour follow the active theme (no out-of-theme iOS
+          glass-button ovals). */}
+      <View style={styles.headerBar}>
+        <TouchableOpacity
+          testID="pdf-back-btn"
+          onPress={handleBack}
+          style={styles.headerBtn}
+          accessibilityLabel="Back"
+          hitSlop={8}
+        >
+          <Ionicons name="chevron-back" size={24} color={c.accent} />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle} numberOfLines={1}>{title}</Text>
+        <TouchableOpacity
+          testID="pdf-share-btn"
+          onPress={onShare}
+          style={styles.headerBtn}
+          accessibilityLabel="Share"
+        >
+          <ContactIconImage type="share" size={26} />
+        </TouchableOpacity>
+      </View>
+
+      <View style={[styles.bgArea, isLight && styles.bgAreaLight]}>
+        {/* Metal texture only for non-light themes; light theme keeps a clean
+            white page background. */}
+        {!isLight && (
+          <Image
+            source={SKIN.bg}
+            resizeMode="repeat"
+            fadeDuration={0}
+            pointerEvents="none"
+            style={StyleSheet.absoluteFill}
+          />
+        )}
         {!uri ? (
           <View style={styles.empty}>
             <Ionicons name="document-text-outline" size={48} color={theme.colors.textMuted} />
@@ -161,8 +162,9 @@ export default function PdfViewerScreen(): React.ReactElement {
           </View>
         ) : (
           <View style={styles.pdfArea}>
-            {/* Beveled metal bezel framing the white document. Flex layout so it
-                renders reliably on web & native (no fragile absolute sizing). */}
+            {/* Beveled steel bezel framing the white document. Sized to a letter
+                page aspect ratio so a short report doesn't leave a giant black
+                void below it; longer reports scroll inside the WebView. */}
             <View style={styles.pdfBezel}>
               <View style={styles.pdfCard}>
                 {Platform.OS === "web" ? (
@@ -224,17 +226,52 @@ const styles = themedStyles((c) => ({
     flex: 1,
     backgroundColor: TBV.ink,
   },
-  metalBg: {
+  containerLight: {
+    backgroundColor: "#FFFFFF",
+  },
+  headerBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    backgroundColor: c.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: c.border,
+  },
+  headerBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: c.bg,
+    borderWidth: 1,
+    borderColor: c.border,
+  },
+  headerTitle: {
+    flex: 1,
+    textAlign: "center",
+    color: c.textPrimary,
+    fontWeight: "800",
+    fontSize: 15,
+  },
+  bgArea: {
     flex: 1,
     backgroundColor: TBV.ink,
+  },
+  bgAreaLight: {
+    backgroundColor: "#FFFFFF",
   },
   pdfArea: {
     flex: 1,
     position: "relative",
     padding: 14,
+    justifyContent: "flex-start",
   },
   pdfBezel: {
-    flex: 1,
+    width: "100%",
+    aspectRatio: 612 / 792,
     borderRadius: 6,
     borderWidth: 3,
     borderColor: "#878d96",
