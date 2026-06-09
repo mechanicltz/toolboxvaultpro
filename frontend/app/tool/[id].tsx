@@ -118,7 +118,6 @@ export default function ToolDetail() {
           style={newStyles.actionTileSkin}
           imageStyle={newStyles.actionTileSkinImg}
         >
-          <Ionicons name={icon} size={20} color={iconColor} />
           <Text style={newStyles.actionTileText}>{label}</Text>
         </ImageBackground>
       </TouchableOpacity>
