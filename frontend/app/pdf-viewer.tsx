@@ -34,7 +34,7 @@ import * as Sharing from "expo-sharing";
 import { ContactIconImage } from "../src/components/ContactIcons";
 import { theme } from "../src/theme";
 import { themedStyles, useSkin } from "../src/themeContext";
-import { SKIN, CAP, TBV } from "../src/tbv/skins";
+import { SKIN, TBV } from "../src/tbv/skins";
 
 export default function PdfViewerScreen(): React.ReactElement {
   const router = useRouter();
@@ -198,19 +198,6 @@ export default function PdfViewerScreen(): React.ReactElement {
                 )}
               </View>
             </View>
-            {/* iOS: overlay the ornate window frame (bolts/corners) — capInsets
-                9-slices perfectly on native. Web omits it (capInsets unsupported)
-                and relies on the bezel above. Non-interactive. */}
-            {Platform.OS === "ios" && (
-              <Image
-                source={SKIN.window}
-                capInsets={CAP.window}
-                resizeMode="stretch"
-                fadeDuration={0}
-                pointerEvents="none"
-                style={StyleSheet.absoluteFill}
-              />
-            )}
           </View>
         )}
       </View>

@@ -255,29 +255,29 @@ export default function DealerDetail() {
     else Linking.openURL(`tel:${val.replace(/[^0-9+]/g, "")}`);
   };
 
-  // Industrial themes wrap the panel cards in a metal TbvFrame window; plain
-  // Light/Dark keep the flat ShadowBox.
+  // Industrial themes wrap the panel cards in a metal TbvFrame; plain
+  // Light/Dark keep the flat ShadowBox. `thin` uses the slim plate frame
+  // (for single-row banners); otherwise the taller window frame. Padding is
+  // sized to clear the metal rails on iOS (window rails ~32-38pt).
   const CardShell = ({
     children,
     testID,
     plainStyle,
-    padTop = 12,
-    padBottom = 12,
+    thin,
   }: {
     children: React.ReactNode;
     testID?: string;
     plainStyle?: any;
-    padTop?: number;
-    padBottom?: number;
+    thin?: boolean;
   }) =>
     isIndustrial ? (
       <TbvFrame
-        source={SKIN.window}
-        capInsets={CAP.window}
+        source={thin ? SKIN.plate : SKIN.window}
+        capInsets={thin ? CAP.plate : CAP.window}
         style={styles.cardSkinFrame}
-        padX={32}
-        padTop={padTop}
-        padBottom={padBottom}
+        padX={thin ? 28 : 40}
+        padTop={thin ? 14 : 30}
+        padBottom={thin ? 14 : 30}
         testID={testID}
       >
         {children}
@@ -340,12 +340,12 @@ export default function DealerDetail() {
         {/* Route info banner */}
         {isIndustrial ? (
           <TbvFrame
-            source={SKIN.window}
-            capInsets={CAP.window}
+            source={SKIN.plate}
+            capInsets={CAP.plate}
             style={styles.cardSkinFrame}
-            padX={22}
-            padTop={10}
-            padBottom={10}
+            padX={28}
+            padTop={14}
+            padBottom={14}
             leftStripe={theme.colors.accent}
           >
             <View style={styles.routeRowInner}>
@@ -384,7 +384,7 @@ export default function DealerDetail() {
 
         {/* TOTAL PURCHASED — its own ShadowBox, directly under the heading and
             above the company-details card. */}
-        <CardShell plainStyle={styles.detailsBox} testID="dealer-total-purchased" padTop={4} padBottom={4}>
+        <CardShell plainStyle={styles.detailsBox} testID="dealer-total-purchased" thin>
           <TouchableOpacity
             style={[styles.detailsRow, styles.detailsRowLast]}
             activeOpacity={0.6}
@@ -403,7 +403,7 @@ export default function DealerDetail() {
           </TouchableOpacity>
         </CardShell>
 
-        <CardShell plainStyle={styles.companyCard} padTop={6} padBottom={6}>
+        <CardShell plainStyle={styles.companyCard}>
           {!!dealer.phone && (
             <View style={styles.dealerContactPhoneRow}>
               <Text style={styles.dealerContactPhoneText} numberOfLines={1}>
@@ -477,7 +477,7 @@ export default function DealerDetail() {
             }}
           />
         </View>
-        <CardShell plainStyle={styles.detailsBox} testID="dealer-agents-box" padTop={4} padBottom={4}>
+        <CardShell plainStyle={styles.detailsBox} testID="dealer-agents-box">
             {allAgents.length === 0 && (
               <View style={[styles.detailsRow, styles.detailsRowLast]}>
                 <Text style={[styles.detailsValue, { color: theme.colors.textMuted, textAlign: "left", flex: 1, fontWeight: "500" }]}>

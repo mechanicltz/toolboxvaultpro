@@ -270,9 +270,9 @@ export default function BorrowerHistory() {
         source={SKIN.window}
         capInsets={CAP.window}
         style={styles.cardSkinFrame}
-        padX={24}
-        padTop={18}
-        padBottom={18}
+        padX={34}
+        padTop={28}
+        padBottom={28}
         testID={testID}
       >
         {children}
@@ -325,9 +325,9 @@ export default function BorrowerHistory() {
             source={SKIN.window}
             capInsets={CAP.window}
             style={styles.statSkinFrame}
-            padX={20}
-            padTop={14}
-            padBottom={14}
+            padX={30}
+            padTop={34}
+            padBottom={34}
           >
             <View style={styles.statGridInner}>
               <Cell flat label="Total checkouts" value={String(data.total_checkouts || 0)} />

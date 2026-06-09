@@ -222,3 +222,12 @@ Backend change-email tested by testing_agent (16/16 backend pass). All additive 
 - In-app preview ONLY — the generated PDF file itself is unchanged (stays clean for share/email/print), per user request.
 - Verified on web (data-URI sample): white doc renders centered, steel bezel + metal texture surround. ⚠️ iOS ornate-overlay needs a quick on-device visual check (frame border thickness vs doc inset).
 - NOTE: expo dev server was thrashing/serving stale bundles during dev — a clean `supervisorctl restart expo` was required to see changes.
+
+---
+
+## ✅ FIXES (2026-06-09, BUILD 265) — skinning-box shifting + reports
+Root cause: metal rails render full thickness on iOS via `capInsets` (window: top32/bottom34/sides38pt; plate: top/bottom12) but NOT on web — so web previews looked fine while iOS content overlapped/clipped rails. Padding was far too small (e.g. padTop=4).
+- **PDF viewer**: removed the broken iOS ornate window-frame overlay (it rendered as a floating landscape box). Now just the steel bezel + variant-aware metal texture (`SKIN.bg`). Reliable on web & iOS.
+- **Dealer detail**: ROUTE banner + TOTAL PURCHASED switched to the slim **plate** frame (CardShell gained a `thin` prop → SKIN.plate, padX28/padTop14). Company/Agents window cards → padX40, padTop/padBottom30 (clears iOS rails; fixes "TOTAL PURCHASED" left-clip & high text).
+- **Contact detail**: stat panel padTop/padBottom 14→34, padX→30 (numbers/labels no longer overlap rails); NOTES card padX→34, padTop/padBottom→28.
+- ⚠️ Padding sized from CAP rail values; web can't render capInsets so these need a quick on-device (iOS) confirmation.
