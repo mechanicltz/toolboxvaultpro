@@ -363,11 +363,7 @@ export default function WarrantyClaimsScreen() {
       <IndustrialBanner
         title="WARRANTY CLAIMS"
         subtitle="By Dealer · Status Pipeline"
-        leftSlot={
-          <TouchableOpacity testID="claims-back" onPress={() => router.back()} hitSlop={10}>
-            <Ionicons name="arrow-back" size={22} color="#F97316" />
-          </TouchableOpacity>
-        }
+        onBack={() => router.back()}
       />
       <View style={{ display: "none" }}>
         <View style={{ flexDirection: "row", gap: 14 }}>

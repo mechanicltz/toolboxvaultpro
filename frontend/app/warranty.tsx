@@ -61,11 +61,7 @@ export default function WarrantyScreen() {
       <IndustrialBanner
         title="WARRANTY ALERTS"
         subtitle="Expiring & Expired"
-        leftSlot={
-          <TouchableOpacity onPress={() => router.back()} hitSlop={10}>
-            <Ionicons name="arrow-back" size={22} color="#F97316" />
-          </TouchableOpacity>
-        }
+        onBack={() => router.back()}
       />
       <ScrollView contentContainerStyle={{ paddingBottom: 60 }}>
         <Text style={styles.sectionLabel}>EXPIRING SOON ({data.expiring.length})</Text>

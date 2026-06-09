@@ -118,11 +118,7 @@ export default function ChangeEmailScreen() {
       <IndustrialBanner
         title="CHANGE LOGIN EMAIL"
         subtitle="Update the email you sign in with"
-        leftSlot={
-          <TouchableOpacity onPress={() => router.back()} hitSlop={10} testID="ce-back">
-            <Ionicons name="chevron-back" size={22} color="#F97316" />
-          </TouchableOpacity>
-        }
+        onBack={() => router.back()} backIcon="chevron-back"
       />
 
       <KeyboardAvoidingView

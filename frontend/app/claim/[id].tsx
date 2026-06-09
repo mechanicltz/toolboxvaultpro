@@ -86,25 +86,17 @@ export default function ClaimDetailScreen() {
       <IndustrialBanner
         title="WARRANTY CLAIM"
         subtitle={isHistorical ? "Historical Record" : "Active Claim"}
-        leftSlot={
-          <TouchableOpacity
-            testID="claim-back-btn"
-            onPress={() => {
-              try {
-                if (router.canGoBack()) {
-                  router.back();
-                } else {
-                  router.replace("/claims");
-                }
-              } catch {
-                router.replace("/claims");
-              }
-            }}
-            hitSlop={10}
-          >
-            <Ionicons name="arrow-back" size={22} color="#F97316" />
-          </TouchableOpacity>
-        }
+        onBack={() => {
+          try {
+            if (router.canGoBack()) {
+              router.back();
+            } else {
+              router.replace("/claims");
+            }
+          } catch {
+            router.replace("/claims");
+          }
+        }}
       />
 
       <ScrollView contentContainerStyle={{ padding: 18, paddingBottom: 100 }}>

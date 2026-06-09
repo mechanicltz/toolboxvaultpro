@@ -128,11 +128,7 @@ export default function PersonalInfoScreen() {
       <IndustrialBanner
         title="PERSONAL INFORMATION"
         subtitle="Used for Insurance Reports"
-        leftSlot={
-          <TouchableOpacity testID="pi-back" onPress={() => router.back()} hitSlop={10}>
-            <Ionicons name="arrow-back" size={22} color="#F97316" />
-          </TouchableOpacity>
-        }
+        onBack={() => router.back()}
         rightSlot={undefined}
       />
 

@@ -69,11 +69,7 @@ export default function DealerToolsScreen() {
       <IndustrialBanner
         title={dealerName || "TOOLS"}
         subtitle="Tools Purchased From"
-        leftSlot={
-          <TouchableOpacity onPress={() => router.back()} hitSlop={10} testID="back-btn">
-            <Ionicons name="chevron-back" size={22} color="#F97316" />
-          </TouchableOpacity>
-        }
+        onBack={() => router.back()} backIcon="chevron-back"
       />
       <View style={{display:"none"}}>
       </View>

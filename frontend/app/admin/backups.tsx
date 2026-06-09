@@ -488,11 +488,7 @@ export default function AdminBackupsPage() {
       <IndustrialBanner
         title="DATABASE BACKUPS"
         subtitle="Admin Only"
-        leftSlot={
-          <TouchableOpacity onPress={() => router.back()} hitSlop={10}>
-            <Ionicons name="chevron-back" size={22} color="#F97316" />
-          </TouchableOpacity>
-        }
+        onBack={() => router.back()} backIcon="chevron-back"
       />
 
       <ScrollView

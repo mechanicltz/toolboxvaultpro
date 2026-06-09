@@ -1572,11 +1572,7 @@ export default function ToolDetail() {
       <IndustrialBanner
         title={tool.name || "Untitled Tool"}
         subtitle={tool.brand ? String(tool.brand) : "Item Details"}
-        leftSlot={
-          <TouchableOpacity testID="back-btn" onPress={() => router.back()} hitSlop={10}>
-            <Ionicons name="arrow-back" size={22} color="#F97316" />
-          </TouchableOpacity>
-        }
+        onBack={() => router.back()}
       />
       {/* ACTION PILL BUTTONS — sits just below the banner so the title up there
           gets every bit of available width. Mirrors the pattern we use on

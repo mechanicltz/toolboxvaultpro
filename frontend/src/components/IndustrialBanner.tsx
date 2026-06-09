@@ -24,7 +24,8 @@
 // =============================================================================
 
 import React from "react";
-import { View, Text, StyleSheet, Image, useWindowDimensions } from "react-native";
+import { View, Text, StyleSheet, Image, TouchableOpacity, useWindowDimensions } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { SKIN } from "../tbv/skins";
 import { useColors } from "../themeContext";
 import { APP_VERSION } from "../version";
@@ -38,11 +39,19 @@ type Props = {
   rightSlot?: React.ReactNode;
   /** Optional element on the left of the label row (e.g. a back arrow). */
   leftSlot?: React.ReactNode;
+  /**
+   * Convenience back button — renders a themed (variant-accent) arrow in the
+   * left slot. Preferred over passing a hand-built leftSlot back button so the
+   * icon recolours with the active skin (orange/crimson/arctic/emerald).
+   */
+  onBack?: () => void;
+  /** Icon for the onBack button (default "arrow-back"). */
+  backIcon?: keyof typeof Ionicons.glyphMap;
 };
 
 const ACCENT = "#F97316";
 
-export function IndustrialBanner({ title, subtitle, rightSlot, leftSlot }: Props) {
+export function IndustrialBanner({ title, subtitle, rightSlot, leftSlot, onBack, backIcon }: Props) {
   const c = useColors();
   // Match the LOGIN page nameplate size exactly: width = min(94% of the
   // screen width, 400), height derived from the master nameplate ratio.
@@ -85,7 +94,15 @@ export function IndustrialBanner({ title, subtitle, rightSlot, leftSlot }: Props
 
       {/* Label row: back (left) · PAGE NAME (center) · action (right). */}
       <View style={styles.labelRow}>
-        {leftSlot ? <View style={styles.leftSlot}>{leftSlot}</View> : null}
+        {leftSlot ? (
+          <View style={styles.leftSlot}>{leftSlot}</View>
+        ) : onBack ? (
+          <View style={styles.leftSlot}>
+            <TouchableOpacity onPress={onBack} hitSlop={10} testID="back-btn">
+              <Ionicons name={backIcon ?? "arrow-back"} size={22} color={c.accent} />
+            </TouchableOpacity>
+          </View>
+        ) : null}
         <View style={styles.titleCol}>
           <Text style={[styles.title, { color: c.accent }]} numberOfLines={1} allowFontScaling={false}>
             {(title || "").toUpperCase()}

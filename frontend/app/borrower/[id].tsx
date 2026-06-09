@@ -215,11 +215,7 @@ export default function BorrowerHistory() {
       <IndustrialBanner
         title={b.name}
         subtitle="Contact Details"
-        leftSlot={
-          <TouchableOpacity onPress={() => router.back()} hitSlop={10}>
-            <Ionicons name="arrow-back" size={22} color="#F97316" />
-          </TouchableOpacity>
-        }
+        onBack={() => router.back()}
       />
       <View style={styles.detailActionsRow}>
         <PillButton

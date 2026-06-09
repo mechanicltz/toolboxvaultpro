@@ -408,11 +408,7 @@ export default function ImportExportScreen() {
       <IndustrialBanner
         title="IMPORT / EXPORT"
         subtitle="Backup & Restore"
-        leftSlot={
-          <TouchableOpacity onPress={() => router.back()} hitSlop={10}>
-            <Ionicons name="chevron-back" size={22} color="#F97316" />
-          </TouchableOpacity>
-        }
+        onBack={() => router.back()} backIcon="chevron-back"
       />
 
       <ScrollView contentContainerStyle={{ padding: 18 }}>

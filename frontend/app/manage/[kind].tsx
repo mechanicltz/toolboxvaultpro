@@ -107,11 +107,7 @@ export default function ManageScreen() {
     <SafeAreaView style={styles.container} edges={["top"]}>
       <IndustrialBanner
         title={TITLES[k]}
-        leftSlot={
-          <TouchableOpacity onPress={() => router.back()} hitSlop={10}>
-            <Ionicons name="arrow-back" size={22} color="#F97316" />
-          </TouchableOpacity>
-        }
+        onBack={() => router.back()}
       />
       <View style={styles.addRow}>
         <TextInput

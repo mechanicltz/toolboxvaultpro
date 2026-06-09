@@ -79,11 +79,7 @@ export default function ClaimsHistoryPage() {
       <IndustrialBanner
         title="CLAIMS HISTORY"
         subtitle={tool?.name || "Warranty claims"}
-        leftSlot={
-          <TouchableOpacity onPress={() => router.back()} hitSlop={10} testID="back-btn">
-            <Ionicons name="arrow-back" size={22} color="#F97316" />
-          </TouchableOpacity>
-        }
+        onBack={() => router.back()}
       />
       <View style={{ display: "none" }}>
         <View style={styles.headerCount}>

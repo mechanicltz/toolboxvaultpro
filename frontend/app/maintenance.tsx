@@ -68,11 +68,7 @@ export default function MaintenanceScreen() {
       <IndustrialBanner
         title="MAINTENANCE"
         subtitle="Calibration · Service · Inspection"
-        leftSlot={
-          <TouchableOpacity onPress={() => router.back()} hitSlop={10}>
-            <Ionicons name="chevron-back" size={22} color="#F97316" />
-          </TouchableOpacity>
-        }
+        onBack={() => router.back()} backIcon="chevron-back"
       />
 
       <View style={styles.statRow}>

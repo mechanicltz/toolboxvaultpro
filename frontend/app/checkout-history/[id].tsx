@@ -62,11 +62,7 @@ export default function CheckoutHistoryPage() {
       <IndustrialBanner
         title="CHECKOUT HISTORY"
         subtitle={tool?.name || "Borrowing record"}
-        leftSlot={
-          <TouchableOpacity onPress={() => router.back()} hitSlop={10} testID="back-btn">
-            <Ionicons name="arrow-back" size={22} color="#F97316" />
-          </TouchableOpacity>
-        }
+        onBack={() => router.back()}
       />
       <View style={{ display: "none" }}>
         <View style={styles.headerCount}>
