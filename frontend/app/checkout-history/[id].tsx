@@ -129,9 +129,9 @@ export default function CheckoutHistoryPage() {
                 <TbvFrame
                   source={SKIN.window}
                   capInsets={CAP.window}
-                  padX={18}
-                  padTop={16}
-                  padBottom={18}
+                  padX={40}
+                  padTop={28}
+                  padBottom={30}
                 >
                   {inner}
                 </TbvFrame>

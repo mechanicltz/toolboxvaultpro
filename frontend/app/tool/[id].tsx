@@ -77,7 +77,7 @@ export default function ToolDetail() {
       <TbvFrame
         source={SKIN.window}
         capInsets={CAP.window}
-        padX={30}
+        padX={36}
         padTop={30}
         padBottom={32}
         testID={`details-box-${boxKey}`}
@@ -138,7 +138,7 @@ export default function ToolDetail() {
     children: React.ReactNode;
   }) =>
     isIndustrial ? (
-      <TbvFrame source={SKIN.window} capInsets={CAP.window} padX={20} padTop={22} padBottom={24}>
+      <TbvFrame source={SKIN.window} capInsets={CAP.window} padX={40} padTop={30} padBottom={32}>
         {children}
       </TbvFrame>
     ) : (

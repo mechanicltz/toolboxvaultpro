@@ -41,6 +41,11 @@ Backend change-email tested by testing_agent (16/16 backend pass). All additive 
 
 ---
 
+### OUT-OF-BOUNDS FIX — TbvFrame content under side rails (user 2026-06-09, on-device) — DONE (BUILD 255) ✅ verified @414px
+- ROOT CAUSE: window-frame side rails render ~38pt wide (CAP.window left/right=38), but padX was 16–20 → full-bleed content (claim buttons, history text rows, NOTES boxes) bled UNDER the rails on real phones. Desktop-width screenshots hid it (rails tiny vs wide column).
+- FIX (padX must be ≥ rail width): claim `CardShell` padX 20→40 (top/bot 30/32); detail `GroupCard` padX 30→36; `checkout-history` padX 18→40; `claims-history` padX 16→38 (top/bot 28/30). Verified at 414px viewport — all content inside rails.
+- ⚠️ RULE FOR FUTURE SKINNING: TbvFrame(SKIN.window) needs padX≥36, padTop≥30, padBottom≥32 for any full-width content. ALWAYS screenshot-test at phone width (≤414px), not desktop.
+
 ### CLAIM CARD — DROP INSET SHADOW-BOX IN SKINNED THEMES (user 2026-06-09) — DONE (BUILD 254) ✅ screenshot-verified IronForge
 - [x] The claim card's inner `claimCard` inset (bg + border + elevation shadow behind the data rows + EMAIL/TEXT/EDIT CLAIM/MARK FIXED buttons) now uses `claimCardSkin` override (transparent bg, no border, no shadow/elevation) when `isIndustrial`, so content sits directly on the CardShell metal frame. Plain Light/Dark unchanged.
 

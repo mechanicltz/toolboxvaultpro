@@ -170,9 +170,9 @@ export default function ClaimsHistoryPage() {
                   <TbvFrame
                     source={SKIN.window}
                     capInsets={CAP.window}
-                    padX={16}
-                    padTop={16}
-                    padBottom={16}
+                    padX={38}
+                    padTop={28}
+                    padBottom={30}
                   >
                     {inner}
                   </TbvFrame>
