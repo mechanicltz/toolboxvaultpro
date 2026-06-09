@@ -281,3 +281,10 @@ Skinned all three modes with metal `TbvFrame` panels (industrial only; plain/lig
 - New styles: `rowSkinWrap`, `rowSkinInner`, `panelSkinWrap`, `openItemFlat(/Last)`. testIDs preserved (`claim-dealer-*`, `open-tool-*`, `history-claim-*`).
 - Search-results view (BevelCards) left as-is (not in scope).
 - Bundle verified compiling (iOS, 17 style refs, no transform errors). ⚠️ Web auto-login unavailable; needs on-device (iOS) confirm on a metal theme.
+
+## ✅ SKIN (2026-06-09, BUILD 271) — Claims tab TOP CHROME (`app/(tabs)/claims.tsx`)
+Skinned the header controls (industrial only; plain branch preserved):
+- **Stat row** (Total/Open/Replacement/Done): wrapped in a `SKIN.plate` frame with flat transparent cells (`Stat` gained a `flat` prop → `statBoxFlat`). Styles: `statRowSkinWrap`, `statRowInner`.
+- **Mode chips** (OPEN/DEALERS/HISTORY): `modeChipSkin` (dark translucent metal bg + light border); active keeps accent border.
+- **Search bar**: `SKIN.plate` framed (mirrors inventory's `searchFrameSkin`/`searchBoxInner`/`searchInputSkin`, placeholder `#C8C8C8`).
+- Bundle verified compiling (iOS). ⚠️ On-device confirm pending.

@@ -295,17 +295,30 @@ export default function ClaimsScreen() {
     <SafeAreaView style={styles.container} edges={["top"]}>
       <IndustrialBanner title="CLAIMS" subtitle="Broken Items by Dealer" />
 
-      <View style={styles.statRow}>
-        <Stat label="Total" value={summary?.totals?.total ?? 0} />
-        <Stat label="Open" value={summary?.totals?.open ?? 0} color={theme.colors.danger} />
-        <Stat label="Replacement" value={summary?.totals?.waiting_replacement ?? 0} color={theme.colors.accentSecondary} />
-        <Stat label="Done" value={summary?.totals?.completed ?? 0} color={theme.colors.success} />
-      </View>
+      {isIndustrial ? (
+        <View style={styles.statRowSkinWrap}>
+          <TbvFrame source={SKIN.plate} capInsets={CAP.plate} padX={16} padTop={10} padBottom={10}>
+            <View style={styles.statRowInner}>
+              <Stat flat label="Total" value={summary?.totals?.total ?? 0} />
+              <Stat flat label="Open" value={summary?.totals?.open ?? 0} color={theme.colors.danger} />
+              <Stat flat label="Replacement" value={summary?.totals?.waiting_replacement ?? 0} color={theme.colors.accentSecondary} />
+              <Stat flat label="Done" value={summary?.totals?.completed ?? 0} color={theme.colors.success} />
+            </View>
+          </TbvFrame>
+        </View>
+      ) : (
+        <View style={styles.statRow}>
+          <Stat label="Total" value={summary?.totals?.total ?? 0} />
+          <Stat label="Open" value={summary?.totals?.open ?? 0} color={theme.colors.danger} />
+          <Stat label="Replacement" value={summary?.totals?.waiting_replacement ?? 0} color={theme.colors.accentSecondary} />
+          <Stat label="Done" value={summary?.totals?.completed ?? 0} color={theme.colors.success} />
+        </View>
+      )}
 
       <View style={styles.modeRow}>
         <TouchableOpacity
           testID="mode-all-open"
-          style={[styles.modeChip, mode === "all-open" && styles.modeChipOn]}
+          style={[styles.modeChip, isIndustrial && styles.modeChipSkin, mode === "all-open" && styles.modeChipOn]}
           onPress={() => setMode("all-open")}
         >
           <Text style={[styles.modeText, mode === "all-open" && styles.modeTextOn]}>
@@ -314,7 +327,7 @@ export default function ClaimsScreen() {
         </TouchableOpacity>
         <TouchableOpacity
           testID="mode-dealers"
-          style={[styles.modeChip, mode === "dealers" && styles.modeChipOn]}
+          style={[styles.modeChip, isIndustrial && styles.modeChipSkin, mode === "dealers" && styles.modeChipOn]}
           onPress={() => setMode("dealers")}
         >
           <Text style={[styles.modeText, mode === "dealers" && styles.modeTextOn]}>
@@ -323,7 +336,7 @@ export default function ClaimsScreen() {
         </TouchableOpacity>
         <TouchableOpacity
           testID="mode-history"
-          style={[styles.modeChip, mode === "history" && styles.modeChipOn]}
+          style={[styles.modeChip, isIndustrial && styles.modeChipSkin, mode === "history" && styles.modeChipOn]}
           onPress={() => setMode("history")}
         >
           <Text style={[styles.modeText, mode === "history" && styles.modeTextOn]}>
@@ -333,22 +346,45 @@ export default function ClaimsScreen() {
       </View>
 
       {/* Search bar — visible in BOTH modes; searches current + history claims */}
-      <View style={styles.searchBox}>
-        <Ionicons name="search" size={16} color={theme.colors.textMuted} />
-        <TextInput
-          placeholder="Search current & history claims..."
-          placeholderTextColor={theme.colors.textMuted}
-          value={search}
-          onChangeText={setSearch}
-          style={styles.searchInput}
-          testID="claims-search"
-        />
-        {!!search && (
-          <TouchableOpacity onPress={() => setSearch("")} hitSlop={8}>
-            <Ionicons name="close-circle" size={16} color={theme.colors.textMuted} />
-          </TouchableOpacity>
-        )}
-      </View>
+      {isIndustrial ? (
+        <View style={styles.searchRowSkin}>
+          <TbvFrame source={SKIN.plate} capInsets={CAP.plate} style={styles.searchFrameSkin} padX={16} padTop={4} padBottom={6}>
+            <View style={styles.searchBoxInner}>
+              <Ionicons name="search" size={16} color="#C8C8C8" />
+              <TextInput
+                placeholder="Search current & history claims..."
+                placeholderTextColor="#C8C8C8"
+                value={search}
+                onChangeText={setSearch}
+                style={[styles.searchInput, styles.searchInputSkin]}
+                testID="claims-search"
+              />
+              {!!search && (
+                <TouchableOpacity onPress={() => setSearch("")} hitSlop={8}>
+                  <Ionicons name="close-circle" size={16} color="#C8C8C8" />
+                </TouchableOpacity>
+              )}
+            </View>
+          </TbvFrame>
+        </View>
+      ) : (
+        <View style={styles.searchBox}>
+          <Ionicons name="search" size={16} color={theme.colors.textMuted} />
+          <TextInput
+            placeholder="Search current & history claims..."
+            placeholderTextColor={theme.colors.textMuted}
+            value={search}
+            onChangeText={setSearch}
+            style={styles.searchInput}
+            testID="claims-search"
+          />
+          {!!search && (
+            <TouchableOpacity onPress={() => setSearch("")} hitSlop={8}>
+              <Ionicons name="close-circle" size={16} color={theme.colors.textMuted} />
+            </TouchableOpacity>
+          )}
+        </View>
+      )}
 
       <ScrollView
         contentContainerStyle={{ padding: 16, paddingBottom: 100 }}
@@ -738,9 +774,9 @@ export default function ClaimsScreen() {
     </SafeAreaView>
   );
 }
-function Stat({ label, value, color }: { label: string; value: number; color?: string }) {
+function Stat({ label, value, color, flat }: { label: string; value: number; color?: string; flat?: boolean }) {
   return (
-    <View style={styles.statBox}>
+    <View style={[styles.statBox, flat && styles.statBoxFlat]}>
       <Text style={[styles.statValue, color && { color }]}>{value}</Text>
       <Text style={styles.statLabel}>{label.toUpperCase()}</Text>
     </View>
@@ -758,6 +794,8 @@ const styles = themedStyles((c) => ({
     borderBottomColor: c.border,
     borderBottomWidth: 1,
   },
+  statRowSkinWrap: { paddingHorizontal: 14, paddingTop: 12, paddingBottom: 2 },
+  statRowInner: { flexDirection: "row", gap: 6 },
   statBox: {
     flex: 1,
     backgroundColor: c.bgSecondary,
@@ -767,6 +805,13 @@ const styles = themedStyles((c) => ({
     alignItems: "center",
     borderRadius: 8,
     ...(theme.elevation.md as object),
+  },
+  statBoxFlat: {
+    backgroundColor: "transparent",
+    borderColor: "transparent",
+    paddingVertical: 4,
+    shadowOpacity: 0,
+    elevation: 0,
   },
   statValue: {
     fontSize: 14,
@@ -902,6 +947,10 @@ const styles = themedStyles((c) => ({
     letterSpacing: 1.2,
   },
   modeTextOn: { color: c.accent },
+  modeChipSkin: {
+    backgroundColor: "rgba(12,12,12,0.88)",
+    borderColor: "rgba(255,255,255,0.18)",
+  },
   searchBox: {
     marginHorizontal: 16,
     marginBottom: 6,
@@ -918,6 +967,10 @@ const styles = themedStyles((c) => ({
     ...(theme.elevation.md as object),
   },
   searchInput: { flex: 1, color: c.textPrimary, fontSize: 10 },
+  searchRowSkin: { paddingHorizontal: 16, marginBottom: 6 },
+  searchFrameSkin: { minHeight: 50, justifyContent: "center" },
+  searchBoxInner: { flexDirection: "row", alignItems: "center", height: 38, gap: 8 },
+  searchInputSkin: { color: "#F2F2F2", fontWeight: "600" },
   empty: { color: c.textMuted, fontStyle: "italic", paddingVertical: 16 },
   dealerRow: {
     flexDirection: "row",
