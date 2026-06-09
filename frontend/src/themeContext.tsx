@@ -42,6 +42,8 @@ import {
   currentPalette,
   darkPalette,
   darkPalettePink,
+  darkPaletteArctic,
+  darkPaletteEmerald,
   lightPalette,
 } from "./theme";
 import { setIndustrialVariant as applyIndustrialVariant } from "./tbv/skins";
@@ -55,11 +57,17 @@ export type ThemeMode = "dark" | "light";
  */
 export type SkinMode = "industrial" | "plain";
 
-/** Colour variant of the industrial skin: original orange vs recolored pink. */
-export type IndustrialVariant = "orange" | "pink";
+/** Colour variant of the industrial skin (orange base + Pillow recolors). */
+export type IndustrialVariant = "orange" | "pink" | "arctic" | "emerald";
 
-/** The 4 user-facing appearance choices shown in the picker. */
-export type AppearanceOption = "light" | "dark" | "industrial" | "industrial-pink";
+/** The user-facing appearance choices shown in the picker. */
+export type AppearanceOption =
+  | "light"
+  | "dark"
+  | "industrial"
+  | "industrial-pink"
+  | "industrial-arctic"
+  | "industrial-emerald";
 
 type Ctx = {
   mode: ThemeMode;
@@ -77,17 +85,25 @@ const STORAGE_KEY = "toolbox.themeMode";
 const STORAGE_KEY_SKIN = "toolbox.skinMode";
 const STORAGE_KEY_VARIANT = "toolbox.industrialVariant";
 
+/** Accent palette per industrial colour variant (only the accent family differs). */
+const VARIANT_PALETTE: Record<IndustrialVariant, ColorPalette> = {
+  orange: darkPalette,
+  pink: darkPalettePink,
+  arctic: darkPaletteArctic,
+  emerald: darkPaletteEmerald,
+};
+
 /**
  * The palette that should actually be applied for a given skin + mode + variant
- * combo. Industrial always renders on the dark workshop palette; the pink
- * variant swaps only the accent family (darkPalettePink).
+ * combo. Industrial always renders on the dark workshop palette; each colour
+ * variant swaps only the accent family.
  */
 function effectivePalette(
   skin: SkinMode,
   mode: ThemeMode,
   variant: IndustrialVariant,
 ): ColorPalette {
-  if (skin === "industrial") return variant === "pink" ? darkPalettePink : darkPalette;
+  if (skin === "industrial") return VARIANT_PALETTE[variant] ?? darkPalette;
   return mode === "light" ? lightPalette : darkPalette;
 }
 
@@ -125,7 +141,12 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
         ]);
         const m: ThemeMode = storedMode === "light" ? "light" : "dark";
         const s: SkinMode = storedSkin === "plain" ? "plain" : "industrial";
-        const v: IndustrialVariant = storedVariant === "pink" ? "pink" : "orange";
+        const v: IndustrialVariant =
+          storedVariant === "pink" ||
+          storedVariant === "arctic" ||
+          storedVariant === "emerald"
+            ? storedVariant
+            : "orange";
         modeRef.current = m;
         skinRef.current = s;
         variantRef.current = v;
@@ -168,10 +189,10 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  // Atomic setter for the 4 appearance options — sets skin + mode + industrial
+  // Atomic setter for the appearance options — sets skin + mode + industrial
   // variant together so the palette + skin art always resolve in one pass.
-  // Light/Dark/Industrial force the orange variant; only "industrial-pink"
-  // turns on pink (which also tints the locked login/forgot screens).
+  // Plain Light/Dark force the orange variant; the industrial-* options each
+  // map to their colour variant (which also tints the locked login screens).
   const setAppearance = useCallback(async (opt: AppearanceOption) => {
     let s: SkinMode;
     let m: ThemeMode;
@@ -180,10 +201,15 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       s = "plain"; m = "light"; v = "orange";
     } else if (opt === "dark") {
       s = "plain"; m = "dark"; v = "orange";
-    } else if (opt === "industrial") {
-      s = "industrial"; m = modeRef.current; v = "orange";
-    } else {
+    } else if (opt === "industrial-pink") {
       s = "industrial"; m = modeRef.current; v = "pink";
+    } else if (opt === "industrial-arctic") {
+      s = "industrial"; m = modeRef.current; v = "arctic";
+    } else if (opt === "industrial-emerald") {
+      s = "industrial"; m = modeRef.current; v = "emerald";
+    } else {
+      // "industrial" → Iron Forge (orange)
+      s = "industrial"; m = modeRef.current; v = "orange";
     }
     skinRef.current = s;
     modeRef.current = m;
@@ -220,7 +246,11 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
         : "dark"
       : industrialVariant === "pink"
         ? "industrial-pink"
-        : "industrial";
+        : industrialVariant === "arctic"
+          ? "industrial-arctic"
+          : industrialVariant === "emerald"
+            ? "industrial-emerald"
+            : "industrial";
 
   const value = useMemo<Ctx>(
     () => ({

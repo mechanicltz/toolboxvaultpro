@@ -42,6 +42,8 @@ import NotificationsSettingsSection from "../../src/sections/NotificationsSettin
 // theme: "Iron Forge" in orange, "Crimson Steel" in pink.
 const IRON_ORANGE = "#FF6A00";
 const CRIMSON_PINK = "#FF1A6B";
+const ARCTIC_AQUA = "#1FC3E8";
+const EMERALD_GREEN = "#16C871";
 
 // The 4 appearance choices shown in the Theme accordion. `color` (when set)
 // forces the label + icon + active radio to that fixed hue across all themes.
@@ -59,6 +61,20 @@ const APPEARANCE_OPTIONS = [
     title: "Crimson Steel",
     sub: "Same metal panels · pink glow",
     color: CRIMSON_PINK,
+  },
+  {
+    id: "industrial-arctic",
+    icon: "snow",
+    title: "Arctic",
+    sub: "Same metal panels · aqua-blue glow",
+    color: ARCTIC_AQUA,
+  },
+  {
+    id: "industrial-emerald",
+    icon: "leaf",
+    title: "Emerald",
+    sub: "Same metal panels · Irish-green glow",
+    color: EMERALD_GREEN,
   },
   {
     id: "light",

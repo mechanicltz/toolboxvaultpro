@@ -130,6 +130,26 @@ export const darkPalettePink: ColorPalette = {
   accentSecondary: "#E11860",
 };
 
+// Industrial ARCTIC — aqua-blue accent family (pairs with the blue-recolored
+// frame art under tbv-v2/trimmed-arctic). Only the accent family changes.
+export const darkPaletteArctic: ColorPalette = {
+  ...darkPalette,
+  glass: "rgba(31, 195, 232, 0.08)",
+  glassBorder: "rgba(31, 195, 232, 0.24)",
+  accent: "#1FC3E8",
+  accentSecondary: "#18A6C4",
+};
+
+// Industrial EMERALD — rich Irish-green accent family (pairs with the
+// green-recolored frame art under tbv-v2/trimmed-emerald).
+export const darkPaletteEmerald: ColorPalette = {
+  ...darkPalette,
+  glass: "rgba(22, 200, 113, 0.08)",
+  glassBorder: "rgba(22, 200, 113, 0.24)",
+  accent: "#16C871",
+  accentSecondary: "#12A85E",
+};
+
 // Light palette — soft cool grey-blue (NOT pure white per user request).
 // Cards are pure white so they "raise" out of the grey-blue background.
 // Yellow accent kept as the industrial brand colour. Text is near-black for

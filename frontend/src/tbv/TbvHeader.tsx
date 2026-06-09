@@ -12,7 +12,7 @@
 import React from "react";
 import { View, Text, Pressable, StyleSheet, StyleProp, ViewStyle } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { TBV, getIndustrialVariant } from "./skins";
+import { TBV, getIndustrialVariant, VARIANT_ACCENT } from "./skins";
 
 export interface TbvHeaderProps {
   /** Main title text (rendered UPPERCASE in steel). */
@@ -30,7 +30,7 @@ export interface TbvHeaderProps {
 
 export function TbvHeader({ title, accent, size = 30, onBack, right, style }: TbvHeaderProps) {
   // Accent follows the active industrial colour variant (orange ↔ pink).
-  const accentColor = getIndustrialVariant() === "pink" ? "#FF1A6B" : TBV.orange;
+  const accentColor = VARIANT_ACCENT[getIndustrialVariant()];
   return (
     <View style={[styles.row, style]}>
       <View style={styles.side}>

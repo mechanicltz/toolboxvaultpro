@@ -77,9 +77,72 @@ export const SKIN_PINK: Record<string, ImageSourcePropType> = {
   nameplate:    require("../../assets/tbv-v2/trimmed-pink/Branding/tbv_master_nameplate.png"),
 };
 
-export type IndustrialVariant = "orange" | "pink";
+export const SKIN_ARCTIC: Record<string, ImageSourcePropType> = {
+  bg:           require("../../assets/tbv-v2/trimmed-arctic/Backgrounds/tbv_background_industrial_dark.png"),
+  panel:        require("../../assets/tbv-v2/trimmed-arctic/Panels/tbv_login_panel_dark.png"),
+  modalPanel:   require("../../assets/tbv-v2/trimmed-arctic/Panels/tbv_modal_panel_dark.png"),
+  card:         require("../../assets/tbv-v2/trimmed-arctic/Frames/tbv_card_frame.png"),
+  panelFrame:   require("../../assets/tbv-v2/trimmed-arctic/Frames/tbv_panel_frame.png"),
+  statFrame:    require("../../assets/tbv-v2/trimmed-arctic/Frames/tbv_stat_frame.png"),
+  window:       require("../../assets/tbv-v2/trimmed-arctic/Frames/tbv_window_frame.png"),
+  plate:        require("../../assets/tbv-v2/trimmed-arctic/Frames/tbv_plate_frame.png"),
+  cardRaw:      require("../../assets/tbv-v2/trimmed-arctic/Cards/tbv_card_dark.png"),
+  cardStat:     require("../../assets/tbv-v2/trimmed-arctic/Cards/tbv_card_stat_dark.png"),
+  cardDealer:   require("../../assets/tbv-v2/trimmed-arctic/Cards/tbv_card_dealer_dark.png"),
+  cardWarranty: require("../../assets/tbv-v2/trimmed-arctic/Cards/tbv_card_warranty_dark.png"),
+  cardInventory:require("../../assets/tbv-v2/trimmed-arctic/Cards/tbv_card_inventory_dark.png"),
+  headerPanel:  require("../../assets/tbv-v2/trimmed-arctic/Headers/tbv_header_panel_dark.png"),
+  searchBar:    require("../../assets/tbv-v2/trimmed-arctic/Search/tbv_search_bar_dark.png"),
+  divider:      require("../../assets/tbv-v2/trimmed-arctic/Accents/tbv_section_divider_dark.png"),
+  accentBar:    require("../../assets/tbv-v2/trimmed-arctic/Accents/tbv_accent_bar_orange.png"),
+  fab:          require("../../assets/tbv-v2/trimmed-arctic/Buttons/tbv_floating_action_button_orange.png"),
+  tabActive:    require("../../assets/tbv-v2/trimmed-arctic/Tabs/tbv_tab_active_orange.png"),
+  tabInactive:  require("../../assets/tbv-v2/trimmed-arctic/Tabs/tbv_tab_inactive_dark.png"),
+  input:        require("../../assets/tbv-v2/trimmed-arctic/Inputs/tbv_input_dark_slim.png"),
+  btnPrimary:   require("../../assets/tbv-v2/trimmed-arctic/Buttons/tbv_btn_primary_orange.png"),
+  btnSecondary: require("../../assets/tbv-v2/trimmed-arctic/Buttons/tbv_btn_secondary_dark.png"),
+  masterLogo:   require("../../assets/tbv-v2/trimmed-arctic/Branding/tbv_master_logo_dark_v2.png"),
+  nameplate:    require("../../assets/tbv-v2/trimmed-arctic/Branding/tbv_master_nameplate.png"),
+};
+
+export const SKIN_EMERALD: Record<string, ImageSourcePropType> = {
+  bg:           require("../../assets/tbv-v2/trimmed-emerald/Backgrounds/tbv_background_industrial_dark.png"),
+  panel:        require("../../assets/tbv-v2/trimmed-emerald/Panels/tbv_login_panel_dark.png"),
+  modalPanel:   require("../../assets/tbv-v2/trimmed-emerald/Panels/tbv_modal_panel_dark.png"),
+  card:         require("../../assets/tbv-v2/trimmed-emerald/Frames/tbv_card_frame.png"),
+  panelFrame:   require("../../assets/tbv-v2/trimmed-emerald/Frames/tbv_panel_frame.png"),
+  statFrame:    require("../../assets/tbv-v2/trimmed-emerald/Frames/tbv_stat_frame.png"),
+  window:       require("../../assets/tbv-v2/trimmed-emerald/Frames/tbv_window_frame.png"),
+  plate:        require("../../assets/tbv-v2/trimmed-emerald/Frames/tbv_plate_frame.png"),
+  cardRaw:      require("../../assets/tbv-v2/trimmed-emerald/Cards/tbv_card_dark.png"),
+  cardStat:     require("../../assets/tbv-v2/trimmed-emerald/Cards/tbv_card_stat_dark.png"),
+  cardDealer:   require("../../assets/tbv-v2/trimmed-emerald/Cards/tbv_card_dealer_dark.png"),
+  cardWarranty: require("../../assets/tbv-v2/trimmed-emerald/Cards/tbv_card_warranty_dark.png"),
+  cardInventory:require("../../assets/tbv-v2/trimmed-emerald/Cards/tbv_card_inventory_dark.png"),
+  headerPanel:  require("../../assets/tbv-v2/trimmed-emerald/Headers/tbv_header_panel_dark.png"),
+  searchBar:    require("../../assets/tbv-v2/trimmed-emerald/Search/tbv_search_bar_dark.png"),
+  divider:      require("../../assets/tbv-v2/trimmed-emerald/Accents/tbv_section_divider_dark.png"),
+  accentBar:    require("../../assets/tbv-v2/trimmed-emerald/Accents/tbv_accent_bar_orange.png"),
+  fab:          require("../../assets/tbv-v2/trimmed-emerald/Buttons/tbv_floating_action_button_orange.png"),
+  tabActive:    require("../../assets/tbv-v2/trimmed-emerald/Tabs/tbv_tab_active_orange.png"),
+  tabInactive:  require("../../assets/tbv-v2/trimmed-emerald/Tabs/tbv_tab_inactive_dark.png"),
+  input:        require("../../assets/tbv-v2/trimmed-emerald/Inputs/tbv_input_dark_slim.png"),
+  btnPrimary:   require("../../assets/tbv-v2/trimmed-emerald/Buttons/tbv_btn_primary_orange.png"),
+  btnSecondary: require("../../assets/tbv-v2/trimmed-emerald/Buttons/tbv_btn_secondary_dark.png"),
+  masterLogo:   require("../../assets/tbv-v2/trimmed-emerald/Branding/tbv_master_logo_dark_v2.png"),
+  nameplate:    require("../../assets/tbv-v2/trimmed-emerald/Branding/tbv_master_nameplate.png"),
+};
+
+const VARIANT_MAPS: Record<string, Record<string, ImageSourcePropType>> = {
+  orange: SKIN_ORANGE,
+  pink: SKIN_PINK,
+  arctic: SKIN_ARCTIC,
+  emerald: SKIN_EMERALD,
+};
+
+export type IndustrialVariant = "orange" | "pink" | "arctic" | "emerald";
 let _variant: IndustrialVariant = "orange";
-/** Set by the ThemeProvider when the user picks Industrial vs Industrial Pink. */
+/** Set by the ThemeProvider when the user picks an industrial colour theme. */
 export function setIndustrialVariant(v: IndustrialVariant) {
   _variant = v;
 }
@@ -87,12 +150,12 @@ export function getIndustrialVariant(): IndustrialVariant {
   return _variant;
 }
 
-/** Live, variant-aware skin map. `SKIN.window` returns orange or pink art. */
+/** Live, variant-aware skin map. `SKIN.window` returns the active variant art. */
 export const SKIN: Record<string, ImageSourcePropType> = new Proxy(
   {} as Record<string, ImageSourcePropType>,
   {
     get(_, key: string) {
-      return (_variant === "pink" ? SKIN_PINK : SKIN_ORANGE)[key];
+      return (VARIANT_MAPS[_variant] ?? SKIN_ORANGE)[key];
     },
     has(_, key: string) {
       return key in SKIN_ORANGE;
@@ -104,16 +167,18 @@ export const SKIN: Record<string, ImageSourcePropType> = new Proxy(
       return {
         enumerable: true,
         configurable: true,
-        value: (_variant === "pink" ? SKIN_PINK : SKIN_ORANGE)[key],
+        value: (VARIANT_MAPS[_variant] ?? SKIN_ORANGE)[key],
       };
     },
   },
 );
 
-/** Flat list of every skin module (BOTH variants) — used to preload/decode. */
+/** Flat list of every skin module (ALL variants) — used to preload/decode. */
 export const SKIN_LIST = [
   ...Object.values(SKIN_ORANGE),
   ...Object.values(SKIN_PINK),
+  ...Object.values(SKIN_ARCTIC),
+  ...Object.values(SKIN_EMERALD),
 ];
 
 /** Aspect ratios (width / height) of key skins. */
@@ -154,3 +219,12 @@ export const TBV = {
 };
 
 export const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
+
+/** Accent hex per industrial colour variant — used by the locked login/forgot
+ * screens and TbvHeader, which tint native UI to match the active skin. */
+export const VARIANT_ACCENT: Record<IndustrialVariant, string> = {
+  orange: TBV.orange,
+  pink: "#FF1A6B",
+  arctic: "#1FC3E8",
+  emerald: "#16C871",
+};

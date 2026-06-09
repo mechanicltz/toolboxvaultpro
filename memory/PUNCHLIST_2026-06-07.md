@@ -41,7 +41,19 @@ Backend change-email tested by testing_agent (16/16 backend pass). All additive 
 
 ---
 
-## 📋 CONFIRMED CURRENT BATCH (user list 2026-06-07) — user said "I confirm, ready to start"
+### NEW THEMES: ARCTIC (aqua) + EMERALD (Irish green) — DONE (BUILD 242) ✅ screenshot-verified both
+- Generalized the crimson recolor into `frontend/scripts/recolor_theme.py` (walks a folder, applies any HSV hue rotation). Base orange accent ≈ 23°.
+  - **Arctic** = +167° → accent hue ~190° (aqua). Accent `#1FC3E8`. Folder `assets/tbv-v2/trimmed-arctic/` (55 PNGs).
+  - **Emerald** = +127° → accent hue ~150° (Irish green). Accent `#16C871`. Folder `assets/tbv-v2/trimmed-emerald/` (55 PNGs).
+- Wiring (mirrors the pink path exactly):
+  - `theme.ts`: `darkPaletteArctic`, `darkPaletteEmerald` (accent family only).
+  - `skins.ts`: `SKIN_ARCTIC`, `SKIN_EMERALD` maps + `VARIANT_MAPS` + Proxy now keys off `VARIANT_MAPS[_variant]`; `IndustrialVariant` extended; `SKIN_LIST` includes all 4; added `VARIANT_ACCENT` map.
+  - `themeContext.tsx`: `IndustrialVariant` + `AppearanceOption` extended (`industrial-arctic`/`industrial-emerald`); `VARIANT_PALETTE` map; `effectivePalette`, hydration parse, `setAppearance`, `appearance` derivation all handle the 2 new variants.
+  - `more.tsx`: Theme accordion now lists Arctic (snow icon) + Emerald (leaf icon).
+  - Locked login/forgot + `TbvHeader` now use `VARIANT_ACCENT[...]` (was hardcoded pink-vs-orange) so those screens tint correctly for all 4 colors.
+- **To add more colors later**: run `recolor_theme.py trimmed trimmed-<name> <delta>`, copy a SKIN_* map + palette + VARIANT_* entries + 1 picker row. ~10 min, no design work.
+
+
 
 ### CRIMSON HEADER + FLOATING ADD BUTTONS (user request 2026-06-08) — DONE (BUILD 239)
 - [x] **Crimson header = new design**: Crimson theme was still using the OLD nameplate art. Crimson assets are produced from Iron Forge by a Pillow hue-rotation. Reverse-engineered the exact transform from the orange/pink plate-frame pair = **uniform -37° HSV hue rotation** (preserves S/V/alpha; metal greys stay neutral; ~1/255 error). Created reusable `frontend/scripts/recolor_crimson.py` and regenerated `assets/tbv-v2/trimmed-pink/Branding/tbv_master_nameplate.png` from the NEW orange nameplate (old backed up as `*.OLD.png`). New crimson nameplate: 1100×275 (matches orange), accent hue 345.7° (matches theme). `SKIN_PINK.nameplate` already wired → IndustrialBanner shows it on ALL pages automatically when crimson variant active. Verified at code/asset level (web harness can't drive the theme switcher). USER to confirm on-device in Crimson.

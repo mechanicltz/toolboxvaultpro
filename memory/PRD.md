@@ -142,3 +142,11 @@ retailer-specific CSV parser.
 3. **Add Terms link inside the paywall and More tab** — user will hand over the public URL after step 2. Targets: `app/paywall.tsx` (subscription terms-of-use link required by Apple), `app/(tabs)/more.tsx` Account section (Terms + Privacy rows).
 4. **Remove the DEV Downgrade button + endpoint** — delete the row in `app/(tabs)/more.tsx` (search "DEV: Downgrade to Free") AND the backend endpoint in `subscriptions.py` (search `/dev/downgrade-to-free`). Both have prominent inline comments saying REMOVE BEFORE SUBMISSION.
 
+
+---
+### CHANGELOG — 2026-06-09 (fork continuation)
+- **Iron Forge inventory skin (Stages 1-3)**: metal bg + framed search bar + skinned FAB, item cards on metal plate frame, framed Filter accordion + pickers. Plain themes untouched. Later removed the search-bar select icon (multi-select still via long-press), search bar now full width.
+- **Crimson header fixed**: regenerated crimson nameplate from the NEW Iron Forge nameplate via -37° HSV hue rotation (`frontend/scripts/recolor_crimson.py`).
+- **Floating + FAB** added to Dealers/Contacts/Claims/For Sale (shared `src/components/AddFab.tsx`, real black drop shadow); removed old Add buttons; Inventory+Wishlist FABs got the same shadow.
+- **TWO NEW THEMES — Arctic (aqua) + Emerald (Irish green)**: full asset sets via `frontend/scripts/recolor_theme.py` (Arctic +167°, Emerald +127°). Wired in theme.ts (palettes), skins.ts (SKIN maps + VARIANT_MAPS + VARIANT_ACCENT), themeContext.tsx (variant/appearance/palette), more.tsx (picker rows). Login/forgot/TbvHeader now tint via VARIANT_ACCENT. Verified both end-to-end. To add more colors: run recolor_theme.py + copy SKIN/palette/variant/picker entries.
+- Current build stamp: BUILD 242.

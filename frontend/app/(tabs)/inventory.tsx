@@ -664,14 +664,6 @@ export default function InventoryScreen() {
         ) : (
           <View style={[styles.searchBox, { flex: 1 }]}>{searchInner}</View>
         )}
-        <TouchableOpacity
-          testID="select-mode-btn"
-          style={[styles.selectHeaderBtn, isIndustrial && styles.selectHeaderBtnBare]}
-          onPress={() => setSelectMode(true)}
-          hitSlop={6}
-        >
-          <Ionicons name="create-outline" size={22} color={theme.colors.accent} />
-        </TouchableOpacity>
       </View>
 
       {/* #24 — All filters live inside a "Filter" ShadowBox accordion, closed by default. */}
@@ -1923,21 +1915,6 @@ const styles = themedStyles((c) => ({
     fontSize: 7,
     fontWeight: "900",
     letterSpacing: 0.5,
-  },
-  selectHeaderBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 4,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: c.bgSecondary,
-    borderWidth: 1,
-    borderColor: c.border,
-  },
-  // Iron Forge: bare edit icon (no border/panel) beside the framed search bar.
-  selectHeaderBtnBare: {
-    backgroundColor: "transparent",
-    borderWidth: 0,
   },
   searchBox: {
     flexDirection: "row",

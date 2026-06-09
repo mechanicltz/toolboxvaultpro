@@ -37,7 +37,7 @@ import {
 import { Exo2_400Regular, Exo2_500Medium, Exo2_700Bold } from "@expo-google-fonts/exo-2";
 import { api, setToken } from "../src/api";
 import { useAuth } from "../src/AuthContext";
-import { SKIN, AR, TBV, clamp, getIndustrialVariant } from "../src/tbv/skins";
+import { SKIN, AR, TBV, clamp, getIndustrialVariant, VARIANT_ACCENT } from "../src/tbv/skins";
 import { TbvHeader } from "../src/tbv/TbvHeader";
 import { useTbvSkinsReady } from "../src/tbv/useTbvSkins";
 
@@ -49,7 +49,7 @@ export default function ForgotPasswordScreen() {
   const win = useWindowDimensions();
 
   // Accent tint honours the Industrial-Pink variant on this LOCKED screen.
-  const TINT = getIndustrialVariant() === "pink" ? "#FF1A6B" : TBV.orange;
+  const TINT = VARIANT_ACCENT[getIndustrialVariant()];
 
   const [fontsLoaded, fontError] = useGoogleFonts({
     BebasNeue_400Regular,

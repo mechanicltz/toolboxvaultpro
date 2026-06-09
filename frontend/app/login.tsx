@@ -44,7 +44,7 @@ import { APP_VERSION_LABEL } from "../src/version";
 // LOCKED to the industrial look but MUST honour the Industrial-Pink variant,
 // so it pulls the same Proxy every other screen uses instead of a hardcoded
 // orange require() map.
-import { SKIN, getIndustrialVariant } from "../src/tbv/skins";
+import { SKIN, getIndustrialVariant, VARIANT_ACCENT } from "../src/tbv/skins";
 
 const AR = { logo: 0.968, card: 2.407, nameplate: 3.746 };
 const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
@@ -57,7 +57,8 @@ export default function LoginScreen() {
   // Industrial colour variant → drives the accent tint (orange vs pink) for
   // icons/labels so this LOCKED login screen visually matches the user's
   // chosen Industrial / Industrial-Pink variant.
-  const TINT = getIndustrialVariant() === "pink" ? "#FF1A6B" : "#FF8533";
+  const _v = getIndustrialVariant();
+  const TINT = _v === "orange" ? "#FF8533" : VARIANT_ACCENT[_v];
 
   const [fontsLoaded, fontError] = useGoogleFonts({
     BebasNeue_400Regular,
