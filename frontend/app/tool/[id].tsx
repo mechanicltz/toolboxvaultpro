@@ -2402,11 +2402,6 @@ export default function ToolDetail() {
               now collapse/expand inline; checkout & claims history tap to
               navigate). */}
 
-          {/* REPORT LOST OR STOLEN */}
-          <View style={{ marginTop: 16 }}>
-            <ReportLostButton tool={tool} onChange={load} />
-          </View>
-
           {/* ===== BOTTOM ACTION CLUSTER (final section on the page) ===== */}
           <View style={newStyles.divider} />
           <Text style={newStyles.sectionTitle}>ACTIONS</Text>
@@ -2501,6 +2496,12 @@ export default function ToolDetail() {
             )}
 
             {/* DELETE — moved to top-right header icon. */}
+          </View>
+
+          {/* REPORT LOST OR STOLEN — moved below the action grid (under the
+              other buttons) per user request, all themes. */}
+          <View style={{ marginTop: 16 }}>
+            <ReportLostButton tool={tool} onChange={load} />
           </View>
 
           {/* TAGS row was moved into the grouped details box (Group 4)
