@@ -1702,8 +1702,9 @@ export default function ToolDetail() {
                 </View>
               </View>
               {/* Inset inner card — data rows + action buttons (matches
-                  WarrantySection.card style exactly) */}
-              <View style={newStyles.claimCard}>
+                  WarrantySection.card style exactly). In skinned themes the
+                  inset shadow-box is dropped so content sits on the metal frame. */}
+              <View style={[newStyles.claimCard, isIndustrial && newStyles.claimCardSkin]}>
                 {/*
                   Only show "Notified" date when the user has explicitly
                   notified the dealer — i.e. the repair_status is anything
@@ -4898,6 +4899,18 @@ const newStyles = themedStyles((c) => ({
     borderRadius: 6,
     padding: 12,
     ...(theme.elevation.md as object),
+  },
+  // Skinned themes: drop the inset shadow-box so the rows + buttons sit
+  // directly on the metal frame.
+  claimCardSkin: {
+    backgroundColor: "transparent",
+    borderWidth: 0,
+    padding: 0,
+    shadowColor: "transparent",
+    shadowOpacity: 0,
+    shadowRadius: 0,
+    shadowOffset: { width: 0, height: 0 },
+    elevation: 0,
   },
   claimRow: {
     flexDirection: "row",

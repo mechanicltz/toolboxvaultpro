@@ -41,6 +41,9 @@ Backend change-email tested by testing_agent (16/16 backend pass). All additive 
 
 ---
 
+### CLAIM CARD — DROP INSET SHADOW-BOX IN SKINNED THEMES (user 2026-06-09) — DONE (BUILD 254) ✅ screenshot-verified IronForge
+- [x] The claim card's inner `claimCard` inset (bg + border + elevation shadow behind the data rows + EMAIL/TEXT/EDIT CLAIM/MARK FIXED buttons) now uses `claimCardSkin` override (transparent bg, no border, no shadow/elevation) when `isIndustrial`, so content sits directly on the CardShell metal frame. Plain Light/Dark unchanged.
+
 ### CHECKOUT-HISTORY + CLAIMS-HISTORY PAGES IRON FORGE SKIN (user 2026-06-09) — DONE (BUILD 253) ✅ screenshot-verified IronForge
 - [x] `app/checkout-history/[id].tsx` + `app/claims-history/[id].tsx`: added `useSkin`→isIndustrial, wrapped each in ImageBackground(SKIN.bg)+veil (transparent container), converted the list cards to metal `TbvFrame` (SKIN.window) wrapped in TouchableOpacity (cards are tappable → borrower/claim). Plain Light/Dark keep original ShadowBox/View cards. Verified claims card (metal frame w/ OPEN badge + NOTES) + checkout empty-state on metal.
 - Pattern reused from detail page (body var + `if (isIndustrial) return <ImageBackground>…`).
