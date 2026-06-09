@@ -41,6 +41,7 @@ import {
   applyPalette,
   currentPalette,
   darkPalette,
+  darkPaletteIndustrial,
   darkPalettePink,
   darkPaletteArctic,
   darkPaletteEmerald,
@@ -87,7 +88,7 @@ const STORAGE_KEY_VARIANT = "toolbox.industrialVariant";
 
 /** Accent palette per industrial colour variant (only the accent family differs). */
 const VARIANT_PALETTE: Record<IndustrialVariant, ColorPalette> = {
-  orange: darkPalette,
+  orange: darkPaletteIndustrial,
   pink: darkPalettePink,
   arctic: darkPaletteArctic,
   emerald: darkPaletteEmerald,

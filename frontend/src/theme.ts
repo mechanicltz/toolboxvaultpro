@@ -118,12 +118,22 @@ export const darkPalette: ColorPalette = {
   tabBarBorder: "#1F1F1F",
 };
 
+// Industrial base — same workshop palette as plain-dark, BUT with a brighter
+// "muted" text colour. On the textured metal frames (skinned themes) the plain
+// #737373 muted grey is too dark to read, so on ANY industrial variant we lift
+// secondary/label text to a near-white steel tone. Plain-dark keeps darkPalette
+// (with the dimmer muted grey) so flat-card hierarchy there is unchanged.
+export const darkPaletteIndustrial: ColorPalette = {
+  ...darkPalette,
+  textMuted: "#E5E5E5",
+};
+
 // Industrial PINK — identical to the dark workshop palette but with the
 // magenta-pink accent (used by the "Industrial Pink" theme). Only the accent
 // family changes; all the metal/dark surfaces stay the same so it pairs with
 // the pink-recolored frame art.
 export const darkPalettePink: ColorPalette = {
-  ...darkPalette,
+  ...darkPaletteIndustrial,
   glass: "rgba(255, 26, 107, 0.08)",
   glassBorder: "rgba(255, 26, 107, 0.22)",
   accent: "#FF1A6B",
@@ -133,7 +143,7 @@ export const darkPalettePink: ColorPalette = {
 // Industrial ARCTIC — aqua-blue accent family (pairs with the blue-recolored
 // frame art under tbv-v2/trimmed-arctic). Only the accent family changes.
 export const darkPaletteArctic: ColorPalette = {
-  ...darkPalette,
+  ...darkPaletteIndustrial,
   glass: "rgba(31, 195, 232, 0.08)",
   glassBorder: "rgba(31, 195, 232, 0.24)",
   accent: "#1FC3E8",
@@ -143,7 +153,7 @@ export const darkPaletteArctic: ColorPalette = {
 // Industrial EMERALD — rich Irish-green accent family (pairs with the
 // green-recolored frame art under tbv-v2/trimmed-emerald).
 export const darkPaletteEmerald: ColorPalette = {
-  ...darkPalette,
+  ...darkPaletteIndustrial,
   glass: "rgba(22, 200, 113, 0.08)",
   glassBorder: "rgba(22, 200, 113, 0.24)",
   accent: "#16C871",

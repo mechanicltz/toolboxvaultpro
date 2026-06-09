@@ -257,3 +257,16 @@ Root cause (stretching): `TbvFrame`'s internal wrap is `width:100%`, so any `mar
 - **Light theme = white background**: metal `SKIN.bg` now only renders for non-light themes (`mode !== "light"`). Light theme uses a clean white `bgArea`/container.
 - **Top buttons now match theme**: replaced the native iOS nav header (whose back/share buttons showed out-of-theme dark "glass" ovals) with a CUSTOM in-screen themed header — `headerBar` (bg `c.surface`), circular `headerBtn`s (`c.bg` + `c.border`), accent back chevron, themed title. Uses `useColors()` + `useThemeMode()` so it's fully reactive across all themes.
 - Bundle verified compiling (iOS). ⚠️ On-device confirm pending.
+
+---
+
+## ✅ FIX (2026-06-09, BUILD 269) — legible secondary text on skinned themes
+Request: text needs to be white on dealer/contact DETAIL pages + both LISTS so it's readable on the metal (skinned) themes.
+Root cause: the 4 industrial variants and "Plain Dark" all shared `darkPalette`, whose `textMuted` is `#737373` (medium grey) — too dark to read on textured metal. (`textSecondary` `#E5E5E5` was already fine.)
+Fix — CENTRAL (clean, low-risk; chosen over per-element because `DepartmentRow`/`Cell` are top-level components without `isIndustrial`):
+- `src/theme.ts`: new `darkPaletteIndustrial = { ...darkPalette, textMuted: "#E5E5E5" }`. The pink/arctic/emerald variants now spread from it.
+- `src/themeContext.tsx`: `VARIANT_PALETTE.orange` → `darkPaletteIndustrial` (+ import).
+- Plain-dark + light keep the original dim `#737373` (flat-card hierarchy unchanged there).
+- NOTE: this lifts muted text on ALL industrial/skinned screens (dashboard, inventory, history, vault, etc.) — a legibility win everywhere, not just the 4 named screens.
+- Also added explicit `skinTextBright` (#FFFFFF) on the two list rows' meta/sub text (belt-and-suspenders; visually ~identical to the palette value).
+- Bundle verified compiling (iOS). ⚠️ On-device confirm pending.

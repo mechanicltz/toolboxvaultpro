@@ -186,10 +186,10 @@ export default function DealersScreen() {
               <DealerLogo logo={item.logo} size={DEALER_LOGO_SLOT.list} style={{ marginRight: 0 }} />
               <View style={{ flex: 1 }}>
                 <Text style={styles.rowTitle}>{item.name}</Text>
-                <Text style={styles.rowSub}>
+                <Text style={[styles.rowSub, isIndustrial && styles.skinTextBright]}>
                   {cur ? `Agent: ${cur.name}` : "No current agent"}
                 </Text>
-                <Text style={styles.rowMeta}>
+                <Text style={[styles.rowMeta, isIndustrial && styles.skinTextBright]}>
                   {s.count} TOOL{s.count === 1 ? "" : "S"}
                   {prefs.show_prices ? `  ·  $${s.total.toFixed(2)}` : ""}
                   {`  ·  ${routeLabel(item)}`}
@@ -552,6 +552,7 @@ const styles = themedStyles((c) => ({
     letterSpacing: 1,
   },
   rowTitle: { color: c.textPrimary, fontWeight: "700", fontSize: 12 },
+  skinTextBright: { color: "#FFFFFF" },
   rowSub: { color: c.textSecondary, fontSize: 9, marginTop: 2 },
   rowMeta: {
     color: c.textMuted,

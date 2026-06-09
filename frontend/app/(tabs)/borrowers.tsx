@@ -159,7 +159,7 @@ export default function BorrowersScreen() {
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={styles.rowTitle}>{item.name}</Text>
-                <Text style={styles.rowMeta}>
+                <Text style={[styles.rowMeta, isIndustrial && styles.skinTextBright]}>
                   Tools Checked out: {active.length}
                 </Text>
                 {emails.map((em) => (
@@ -583,6 +583,7 @@ const styles = themedStyles((c) => ({
     fontSize: 14,
   },
   rowTitle: { color: c.textPrimary, fontWeight: "700", fontSize: 12 },
+  skinTextBright: { color: "#FFFFFF" },
   rowSub: { color: c.textSecondary, fontSize: 9, marginTop: 2 },
   rowMeta: {
     color: c.textMuted,
