@@ -5065,11 +5065,11 @@ const newStyles = themedStyles((c) => ({
   actionGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 5,
+    gap: 2,
     marginTop: 8,
   },
   actionTile: {
-    width: "49.3%",
+    width: "49.4%",
     minHeight: 60,
     flexDirection: "row",
     alignItems: "center",
@@ -5097,7 +5097,7 @@ const newStyles = themedStyles((c) => ({
   },
   // Iron Forge skinned action tile (steel button art)
   actionTileSkinWrap: {
-    width: "48.5%",
+    width: "49.4%",
     height: 64,
   },
   actionTileSkin: {
@@ -5107,7 +5107,7 @@ const newStyles = themedStyles((c) => ({
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
-    paddingHorizontal: 6,
+    paddingHorizontal: 2,
   },
   actionTileSkinImg: {
     borderRadius: 10,
