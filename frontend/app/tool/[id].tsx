@@ -113,12 +113,12 @@ export default function ToolDetail() {
         style={newStyles.actionTileSkinWrap}
       >
         <ImageBackground
-          source={SKIN.btnSecondary}
+          source={SKIN.btnPrimary}
           resizeMode="stretch"
           style={newStyles.actionTileSkin}
           imageStyle={newStyles.actionTileSkinImg}
         >
-          <Text style={newStyles.actionTileText}>{label}</Text>
+          <Text style={newStyles.actionTileSkinText}>{label}</Text>
         </ImageBackground>
       </TouchableOpacity>
     ) : (
@@ -1625,7 +1625,7 @@ export default function ToolDetail() {
                     value={String(Math.max(1, Number(tool.quantity) || 1))}
                     onPress={() => setShowQtyModal(true)}
                   />
-                  <PillRow label="PRICE" value={fmtMoney(tool.cost)} />
+                  <PillRow label="PRICE EACH" value={fmtMoney(tool.cost)} />
                 </View>
               </View>
             </TbvFrame>
@@ -1653,7 +1653,7 @@ export default function ToolDetail() {
                   value={String(Math.max(1, Number(tool.quantity) || 1))}
                   onPress={() => setShowQtyModal(true)}
                 />
-                <PillRow label="PRICE" value={fmtMoney(tool.cost)} />
+                <PillRow label="PRICE EACH" value={fmtMoney(tool.cost)} />
               </ShadowBox>
             </View>
           )}
@@ -2511,7 +2511,10 @@ export default function ToolDetail() {
       </ScrollView>
 
             <Modal visible={showCheckout} transparent animationType="slide">
-        <View style={styles.modalBg}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+          style={styles.modalBg}
+        >
           <View style={styles.modalCard}>
             <Text style={styles.modalTitle}>CHECK OUT TOOL</Text>
 
@@ -2648,7 +2651,7 @@ export default function ToolDetail() {
               </TouchableOpacity>
             </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
 
       {/* Repair Modal — quick mark-broken / edit repair info */}
@@ -5108,6 +5111,16 @@ const newStyles = themedStyles((c) => ({
   },
   actionTileSkinImg: {
     borderRadius: 10,
+  },
+  // Matches the dashboard's primary metal buttons (dark bold label on the
+  // glowing btnPrimary plate, nudged up to clear the bottom bevel).
+  actionTileSkinText: {
+    color: "#0A0A0A",
+    fontWeight: "900",
+    fontSize: 12,
+    letterSpacing: 0.8,
+    textAlign: "center",
+    marginBottom: 4,
   },
 
   // ---------- ATTACHMENTS (collapsible pillboxes) ----------

@@ -592,7 +592,7 @@ const styles = themedStyles((c) => ({
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
-    backgroundColor: "transparent",
+    backgroundColor: c.accent,
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 4,

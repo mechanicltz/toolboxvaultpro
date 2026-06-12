@@ -34,6 +34,7 @@ import { useResponsive } from "../../src/responsive";
 import { themedStyles, useSkin } from "../../src/themeContext";
 import { ShadowBox } from "../../src/components/ShadowBox";
 import { IndustrialBanner } from "../../src/components/IndustrialBanner";
+import { AddFab } from "../../src/components/AddFab";
 // Iron Forge (industrial) skin — metal background + framed chrome, mirrors the
 // dashboard's dual-render pattern. Plain themes keep the flat canvas look.
 import { SKIN, CAP } from "../../src/tbv/skins";
@@ -1246,33 +1247,10 @@ export default function InventoryScreen() {
             </TouchableOpacity>
           </ScrollView>
         </View>
-      ) : isIndustrial ? (
-        // Iron Forge: skinned metal FAB (octagonal frame + glowing core art).
-        <TouchableOpacity
-          testID="add-item-fab"
-          style={styles.fabSkin}
-          onPress={() => router.push("/tool/edit")}
-          activeOpacity={0.85}
-        >
-          <ImageBackground
-            source={SKIN.fab}
-            style={styles.fabSkinFill}
-            imageStyle={styles.fabSkinImg}
-            resizeMode="contain"
-          >
-            <Ionicons name="add" size={30} color="#2A1400" style={styles.fabIconSkin} />
-          </ImageBackground>
-        </TouchableOpacity>
       ) : (
-        // Floating round "+" FAB, bottom-right — matches the Wishlist page.
-        <TouchableOpacity
-          testID="add-item-fab"
-          style={styles.fab}
-          onPress={() => router.push("/tool/edit")}
-          activeOpacity={0.85}
-        >
-          <Ionicons name="add" size={32} color="#000" />
-        </TouchableOpacity>
+        // Non-skinned round "+" FAB — matches the Contacts/Wishlist page on ALL
+        // themes (per user: keep this button un-skinned).
+        <AddFab testID="add-item-fab" onPress={() => router.push("/tool/edit")} />
       )}
 
       {/* Filter: Location picker modal */}

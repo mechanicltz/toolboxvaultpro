@@ -941,7 +941,7 @@ function MultiSelectDropdown({
                       onPress={() => toggle(i.id)}
                     >
                       <View style={[styles.dropdownCheck, active && styles.dropdownCheckOn]}>
-                        {active && <Ionicons name="checkmark" size={14} color={c.accent} />}
+                        {active && <Ionicons name="checkmark" size={14} color={theme.colors.accent} />}
                       </View>
                       <Text style={[styles.dropdownRowText, { flex: 1 }]} numberOfLines={1}>
                         {i.label}

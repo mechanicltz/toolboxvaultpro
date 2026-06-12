@@ -295,3 +295,14 @@ Root cause: `FormCard` (the metal section wrapper) was defined INSIDE `ToolEdit(
 Fix (`app/tool/edit.tsx`): hoisted `FormCard` to module scope as `function FormCard({ children, isIndustrial })`, passing `isIndustrial` as a prop at all 3 usages. Stable identity → React preserves the subtree → focus retained.
 Note: other in-component wrappers (`CardShell`/`RowShell`/`GroupCard`/`ActionTile` in detail/view screens) are read-only with NO text inputs → no focus bug; left as-is (minor re-render churn only).
 Bundle verified compiling (iOS). ⚠️ On-device confirm pending.
+
+## ✅ BATCH (2026-06-09, BUILD 273) — 8 item/inventory/reports fixes
+1. **Add Item photo — camera now offered**: new `addPhoto()` Alert (Take Photo / Choose from Library) wired to the photo ADD button (was library-only). `app/tool/edit.tsx`.
+2. **Attachment buttons renamed → "ADD"** (Photos/Documents/Receipts) — fixes the doc button overflowing on skinned themes. `app/tool/edit.tsx`.
+3. **Tag chips readable on skin**: `Pickers.tsx` tag `chip` bg was transparent w/ black text (invisible on dark) → now solid `c.accent` (black text reads on every accent).
+4. **Item detail price label**: "PRICE" → "PRICE EACH" (both skinned + plain). `app/tool/[id].tsx`.
+5. **Item detail action buttons** now match the dashboard's 2 top buttons on skin: `ActionTile` uses `SKIN.btnPrimary` + dark bold `actionTileSkinText` (was `btnSecondary`). `app/tool/[id].tsx`.
+6. **Checkout "new person" keyboard**: wrapped the checkout `<Modal>` in `KeyboardAvoidingView` (behavior padding on iOS) so name/notes fields lift above the keyboard. `app/tool/[id].tsx`.
+7. **Inventory "+" FAB de-skinned**: replaced the metal `SKIN.fab` (and plain fallback) with the shared non-skinned `<AddFab>` (same as Contacts). `app/(tabs)/inventory.tsx`.
+8. **🐛 reports crash fixed**: `MultiSelectDropdown` referenced out-of-scope `c.accent` (only valid inside `themedStyles`) → ReferenceError when a dealer was selected (e.g., backing out of the PDF/Excel chooser). Changed to `theme.colors.accent`. `app/(tabs)/reports.tsx:944`.
+Bundle verified compiling (iOS, HTTP 200, all refs present, no stray `c.`). ⚠️ On-device confirm pending.

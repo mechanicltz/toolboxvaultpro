@@ -362,6 +362,20 @@ export default function ToolEdit() {
     );
   };
 
+  // Photo-add entry point — Camera / Library chooser (so users can snap a new
+  // photo, not only pick from the stored library).
+  const addPhoto = () => {
+    Alert.alert(
+      "Add Photo",
+      "Attach a photo to this item.",
+      [
+        { text: "Take Photo", onPress: () => pickPhoto(true) },
+        { text: "Choose from Library", onPress: () => pickPhoto(false) },
+        { text: "Cancel", style: "cancel" },
+      ],
+    );
+  };
+
   const computeExpiry = (startDate: string, months: string) => {
     const m = parseInt(months);
     if (!startDate || !m) return "";
@@ -884,10 +898,10 @@ export default function ToolEdit() {
             <Text style={styles.label}>PHOTOS ({photos.length})</Text>
             <PillButton
               testID="add-photo-btn"
-              label="ADD PHOTO"
+              label="ADD"
               icon="add-circle"
               variant="active"
-              onPress={() => pickPhoto(false)}
+              onPress={addPhoto}
             />
           </View>
           {photos.length > 0 ? (
@@ -930,7 +944,7 @@ export default function ToolEdit() {
             <Text style={styles.label}>DOCUMENTS ({documents.length})</Text>
             <PillButton
               testID="add-doc-btn"
-              label="ADD DOCUMENT"
+              label="ADD"
               icon="add-circle"
               variant="active"
               onPress={pickDocument}
@@ -968,7 +982,7 @@ export default function ToolEdit() {
             <Text style={styles.label}>RECEIPTS ({receipts.length})</Text>
             <PillButton
               testID="add-receipt-btn"
-              label="ADD RECEIPT"
+              label="ADD"
               icon="add-circle"
               variant="active"
               onPress={pickReceipt}
