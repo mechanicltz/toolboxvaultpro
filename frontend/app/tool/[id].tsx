@@ -2176,7 +2176,7 @@ export default function ToolDetail() {
                                     onPress={promptAddPhoto}
                                   >
                                     <Ionicons name="add-circle" size={12} color={theme.colors.accent} />
-                                    <Text style={newStyles.attachAddBtnText}>ADD PHOTO</Text>
+                                    <Text style={newStyles.attachAddBtnText}>ADD</Text>
                                   </TouchableOpacity>
                                 </View>
                                 {photos.length === 0 ? (
@@ -5065,11 +5065,11 @@ const newStyles = themedStyles((c) => ({
   actionGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 8,
+    gap: 5,
     marginTop: 8,
   },
   actionTile: {
-    width: "48.5%",
+    width: "49.3%",
     minHeight: 60,
     flexDirection: "row",
     alignItems: "center",
@@ -5080,7 +5080,7 @@ const newStyles = themedStyles((c) => ({
     borderWidth: 1,
     borderRadius: 12,
     paddingVertical: 14,
-    paddingHorizontal: 6,
+    paddingHorizontal: 4,
   
     ...(theme.elevation.md as object),
   },
@@ -5117,8 +5117,8 @@ const newStyles = themedStyles((c) => ({
   actionTileSkinText: {
     color: "#0A0A0A",
     fontWeight: "900",
-    fontSize: 12,
-    letterSpacing: 0.8,
+    fontSize: 11,
+    letterSpacing: 0.3,
     textAlign: "center",
     marginBottom: 4,
   },

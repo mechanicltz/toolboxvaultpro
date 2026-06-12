@@ -50,7 +50,7 @@ export function ReceiptsSection({ receipts, onAdd }: Props) {
           <Text style={styles.sectionLabel}>RECEIPTS</Text>
           <PillButton
             testID="add-receipt-empty"
-            label="ADD RECEIPT"
+            label="ADD"
             icon="add-circle"
             variant="active"
             onPress={onAdd}
@@ -71,7 +71,7 @@ export function ReceiptsSection({ receipts, onAdd }: Props) {
           {onAdd && (
             <PillButton
               testID="add-receipt-header"
-              label="ADD RECEIPT"
+              label="ADD"
               icon="add-circle"
               variant="active"
               onPress={onAdd}

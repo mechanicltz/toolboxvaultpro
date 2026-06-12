@@ -275,17 +275,18 @@ function BalanceCard({
 
   if (isIndustrial) {
     return (
-      <TbvFrame
-        source={SKIN.window}
-        capInsets={CAP.window}
-        style={styles.balCardSkinFrame}
-        padX={30}
-        padTop={18}
-        padBottom={18}
-        testID={`account-card-${idBase}`}
-      >
-        {inner}
-      </TbvFrame>
+      <View style={styles.balCardSkinFrame}>
+        <TbvFrame
+          source={SKIN.window}
+          capInsets={CAP.window}
+          padX={30}
+          padTop={18}
+          padBottom={18}
+          testID={`account-card-${idBase}`}
+        >
+          {inner}
+        </TbvFrame>
+      </View>
     );
   }
 

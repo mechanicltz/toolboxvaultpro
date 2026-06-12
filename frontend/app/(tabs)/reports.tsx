@@ -89,6 +89,11 @@ export default function ReportsHubScreen() {
   const [format, setFormat] = useState<ReportFormat>("pdf");
   const [running, setRunning] = useState<ReportAction | null>(null);
   const presetApplied = useRef(false);
+  // When the dealer "See report" deep-links straight into a wizard step
+  // (e.g. "format"), the earlier steps were skipped — so "back" from that entry
+  // step must pop the navigator (return to the dealer), not walk back a step
+  // that the user never visited.
+  const presetEntryStep = useRef<WizardStep | null>(null);
 
   // Fetch report catalog once. If the backend is unreachable we surface the
   // problem inline (specs stays null → loading spinner persists with a quiet
@@ -126,6 +131,7 @@ export default function ReportsHubScreen() {
             }
             // Allow caller to deep-link directly to the format/preview step.
             setStep((params.step as WizardStep) || "options");
+            if (params.step) presetEntryStep.current = params.step as WizardStep;
             presetApplied.current = true;
           }
         }
@@ -334,7 +340,11 @@ export default function ReportsHubScreen() {
       <SafeAreaView style={styles.container}>
         <Header
           title={selected.title}
-          onBack={() => setStep(selected.options_schema?.length ? "options" : "type")}
+          onBack={() =>
+            presetEntryStep.current === "format"
+              ? router.back()
+              : setStep(selected.options_schema?.length ? "options" : "type")
+          }
         />
         <Crumbs current={2} />
         <ScrollView contentContainerStyle={styles.body}>
@@ -363,7 +373,11 @@ export default function ReportsHubScreen() {
           </View>
         </ScrollView>
         <FooterButtons
-          onBack={() => setStep(selected.options_schema?.length ? "options" : "type")}
+          onBack={() =>
+            presetEntryStep.current === "format"
+              ? router.back()
+              : setStep(selected.options_schema?.length ? "options" : "type")
+          }
           onNext={() => setStep("fields")}
         />
       </SafeAreaView>

@@ -570,7 +570,7 @@ export function DocumentsSection({
         </Text>
         <PillButton
           testID="add-document-btn"
-          label={busy ? "..." : "ADD DOCUMENT"}
+          label={busy ? "..." : "ADD"}
           icon={busy ? undefined : "add-circle"}
           variant="active"
           disabled={busy}

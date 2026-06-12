@@ -901,6 +901,7 @@ export default function ToolEdit() {
               label="ADD"
               icon="add-circle"
               variant="active"
+              compact
               onPress={addPhoto}
             />
           </View>
@@ -947,6 +948,7 @@ export default function ToolEdit() {
               label="ADD"
               icon="add-circle"
               variant="active"
+              compact
               onPress={pickDocument}
             />
           </View>
@@ -985,6 +987,7 @@ export default function ToolEdit() {
               label="ADD"
               icon="add-circle"
               variant="active"
+              compact
               onPress={pickReceipt}
             />
           </View>

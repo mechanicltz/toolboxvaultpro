@@ -36,6 +36,8 @@ type Props = {
   style?: ViewStyle;
   /** Disable interaction & dim the button. */
   disabled?: boolean;
+  /** Smaller, shorter pill (less vertical/horizontal padding). */
+  compact?: boolean;
 };
 
 function colorsFor(variant: Variant) {
@@ -73,6 +75,7 @@ export function PillButton({
   testID,
   style,
   disabled,
+  compact,
 }: Props) {
   const c = colorsFor(variant);
   return (
@@ -83,6 +86,7 @@ export function PillButton({
       activeOpacity={0.75}
       style={[
         styles.base,
+        compact && styles.compact,
         {
           borderColor: c.border,
           borderWidth: c.borderWidth,
@@ -108,6 +112,11 @@ const styles = StyleSheet.create({
     paddingVertical: 9,
     borderRadius: theme.radii.pill,
     backgroundColor: "transparent",
+  },
+  compact: {
+    paddingHorizontal: 11,
+    paddingVertical: 4,
+    gap: 4,
   },
   label: {
     fontWeight: "800",
