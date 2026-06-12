@@ -2170,14 +2170,14 @@ export default function ToolDetail() {
                                   <Text style={newStyles.attachSectionLabel}>
                                     PHOTOS{photos.length > 0 ? ` (${photos.length})` : ""}
                                   </Text>
-                                  <TouchableOpacity
+                                  <PillButton
                                     testID="add-photo-btn"
-                                    style={newStyles.attachAddBtn}
+                                    label="ADD"
+                                    icon="add-circle"
+                                    variant="active"
+                                    compact
                                     onPress={promptAddPhoto}
-                                  >
-                                    <Ionicons name="add-circle" size={12} color={theme.colors.accent} />
-                                    <Text style={newStyles.attachAddBtnText}>ADD</Text>
-                                  </TouchableOpacity>
+                                  />
                                 </View>
                                 {photos.length === 0 ? (
                                   <Text style={newStyles.attachEmpty}>

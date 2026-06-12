@@ -53,6 +53,7 @@ export function ReceiptsSection({ receipts, onAdd }: Props) {
             label="ADD"
             icon="add-circle"
             variant="active"
+            compact
             onPress={onAdd}
           />
         </View>
@@ -74,6 +75,7 @@ export function ReceiptsSection({ receipts, onAdd }: Props) {
               label="ADD"
               icon="add-circle"
               variant="active"
+              compact
               onPress={onAdd}
             />
           )}

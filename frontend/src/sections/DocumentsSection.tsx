@@ -573,6 +573,7 @@ export function DocumentsSection({
           label={busy ? "..." : "ADD"}
           icon={busy ? undefined : "add-circle"}
           variant="active"
+          compact
           disabled={busy}
           onPress={pickAndUpload}
         />
