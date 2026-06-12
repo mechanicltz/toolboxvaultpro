@@ -29,29 +29,34 @@ import { BevelCard } from "../../src/components/BevelCard";
 import { MaintenanceSection } from "../../src/sections/MaintenanceSection";
 import { formatDateUS } from "../../src/dateUtil";
 
+// Iron Forge: each form section becomes a metal window frame; plain Light/Dark
+// keep the original flat detailsBox. MUST live at module scope (not inside the
+// screen component) — otherwise it's a brand-new component type on every render,
+// which remounts its children and makes every TextInput lose focus after each
+// keystroke.
+function FormCard({ children, isIndustrial }: { children: React.ReactNode; isIndustrial: boolean }) {
+  return isIndustrial ? (
+    <TbvFrame
+      source={SKIN.window}
+      capInsets={CAP.window}
+      style={styles.formCardSkin}
+      padX={34}
+      padTop={14}
+      padBottom={16}
+    >
+      {children}
+    </TbvFrame>
+  ) : (
+    <View style={styles.detailsBox}>{children}</View>
+  );
+}
+
 export default function ToolEdit() {
   const { id } = useLocalSearchParams<{ id?: string }>();
   const router = useRouter();
   const { skin } = useSkin();
   const isIndustrial = skin === "industrial";
 
-  // Iron Forge: each form section becomes a metal window frame; plain Light/Dark
-  // keep the original flat detailsBox.
-  const FormCard = ({ children }: { children: React.ReactNode }) =>
-    isIndustrial ? (
-      <TbvFrame
-        source={SKIN.window}
-        capInsets={CAP.window}
-        style={styles.formCardSkin}
-        padX={34}
-        padTop={14}
-        padBottom={16}
-      >
-        {children}
-      </TbvFrame>
-    ) : (
-      <View style={styles.detailsBox}>{children}</View>
-    );
   const isEdit = !!id;
   const { user } = useAuth();
 
@@ -568,7 +573,7 @@ export default function ToolEdit() {
 
           <Text style={styles.formTip}>Tap each line to fill in details</Text>
 
-          <FormCard>
+          <FormCard isIndustrial={isIndustrial}>
           <AccordionRow
             label="NAME"
             icon="pricetag"
@@ -864,7 +869,7 @@ export default function ToolEdit() {
           </AccordionRow>
           </FormCard>
 
-          <FormCard>
+          <FormCard isIndustrial={isIndustrial}>
           <AccordionRow
             label="PHOTOS"
             icon="camera"
@@ -995,7 +1000,7 @@ export default function ToolEdit() {
           </AccordionRow>
           </FormCard>
 
-          <FormCard>
+          <FormCard isIndustrial={isIndustrial}>
           <AccordionRow
             label="WARRANTY"
             icon="shield-checkmark"
@@ -1249,7 +1254,7 @@ export default function ToolEdit() {
           </AccordionRow>
           </FormCard>
 
-          <FormCard>
+          <FormCard isIndustrial={isIndustrial}>
           <AccordionRow
             label="CATEGORY"
             icon="folder"
@@ -1289,7 +1294,7 @@ export default function ToolEdit() {
           </AccordionRow>
           </FormCard>
 
-          <FormCard>
+          <FormCard isIndustrial={isIndustrial}>
           <AccordionRow
             label="DESCRIPTION"
             icon="document-text"

@@ -288,3 +288,10 @@ Skinned the header controls (industrial only; plain branch preserved):
 - **Mode chips** (OPEN/DEALERS/HISTORY): `modeChipSkin` (dark translucent metal bg + light border); active keeps accent border.
 - **Search bar**: `SKIN.plate` framed (mirrors inventory's `searchFrameSkin`/`searchBoxInner`/`searchInputSkin`, placeholder `#C8C8C8`).
 - Bundle verified compiling (iOS). ⚠️ On-device confirm pending.
+
+## 🐛 FIX (2026-06-09, BUILD 272) — Add/Edit Item: TextInputs lost focus after every keystroke
+Symptom: in the Add/Edit Item form, every field stopped accepting input after a single character (felt like tapping outside after each char).
+Root cause: `FormCard` (the metal section wrapper) was defined INSIDE `ToolEdit()` — so every keystroke (state update → re-render) created a brand-new `FormCard` component TYPE. React then unmounted/remounted the entire subtree (AccordionRows + all TextInputs), destroying keyboard focus each character.
+Fix (`app/tool/edit.tsx`): hoisted `FormCard` to module scope as `function FormCard({ children, isIndustrial })`, passing `isIndustrial` as a prop at all 3 usages. Stable identity → React preserves the subtree → focus retained.
+Note: other in-component wrappers (`CardShell`/`RowShell`/`GroupCard`/`ActionTile` in detail/view screens) are read-only with NO text inputs → no focus bug; left as-is (minor re-render churn only).
+Bundle verified compiling (iOS). ⚠️ On-device confirm pending.
