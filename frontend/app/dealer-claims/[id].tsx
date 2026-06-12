@@ -26,7 +26,7 @@ import * as Sharing from "expo-sharing";
 import * as FileSystem from "expo-file-system/legacy";
 
 import { themedStyles } from "../../src/themeContext";
-import { BevelCard } from "../../src/components/BevelCard";
+import { SkinPlate } from "../../src/components/SkinPlate";
 import { ContactIconImage } from "../../src/components/ContactIcons";
 import { IndustrialBanner } from "../../src/components/IndustrialBanner";
 import { PillButton } from "../../src/components/PillButton";
@@ -359,9 +359,12 @@ export default function DealerClaimsScreen() {
                 : theme.colors.accentSecondary;
             const photo = t.repair_info?.broken_photo || t.photos?.[0];
             return (
-              <BevelCard
+              <SkinPlate
                 key={t._archivedClaim ? `claim-${t.claim_id || t.id}` : `tool-${t.id}`}
                 style={styles.card}
+                padX={12}
+                padTop={12}
+                padBottom={12}
               >
                 <TouchableOpacity
                   testID={`open-claim-${t.id}`}
@@ -448,7 +451,7 @@ export default function DealerClaimsScreen() {
                     </TouchableOpacity>
                   </View>
                 )}
-              </BevelCard>
+              </SkinPlate>
             );
           })
         )}
@@ -617,12 +620,7 @@ const styles = themedStyles((c) => ({
   emptyTitle: { color: c.textPrimary, fontWeight: "900", letterSpacing: 1.5, fontSize: 10 },
   emptyText: { color: c.textMuted, fontSize: 9, textAlign: "center", lineHeight: 14 },
   card: {
-    padding: 12,
     marginBottom: 10,
-    /* Surface gradient + borders now come from <BevelCard>. The red
-       left-border accent (3 px) was a visual indicator for OPEN repairs;
-       it competed with BevelCard's bevel highlight, so we removed it. The
-       status pill inside the row already conveys urgency. */
   },
   cardHead: { flexDirection: "row", alignItems: "center", gap: 12 },
   thumb: {

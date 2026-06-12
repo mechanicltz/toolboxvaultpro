@@ -8,6 +8,7 @@ import {
   Image,
   ActivityIndicator,
   Alert,
+  Modal,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -20,6 +21,7 @@ import { formatPhonesInText } from "../../src/contactLinks";
 
 import { themedStyles } from "../../src/themeContext";
 import { IndustrialBanner } from "../../src/components/IndustrialBanner";
+import { SkinPlate } from "../../src/components/SkinPlate";
 
 const STATUS_COLORS: Record<string, string> = {
   broken: theme.colors.danger,
@@ -42,6 +44,7 @@ export default function ClaimDetailScreen() {
   const router = useRouter();
   const [claim, setClaim] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [lightbox, setLightbox] = useState(false);
 
   const load = useCallback(async () => {
     if (!id) return;
@@ -105,9 +108,10 @@ export default function ClaimDetailScreen() {
           <Text style={[styles.statusText, { color }]}>{label}</Text>
         </View>
 
-        <TouchableOpacity
+        <SkinPlate
           testID="claim-tool-link"
-          style={styles.toolCard}
+          style={styles.toolCardOuter}
+          innerStyle={styles.toolCardInner}
           onPress={() => claim.tool_id && router.push(`/tool/${claim.tool_id}`)}
         >
           {claim.broken_photo ? (
@@ -122,7 +126,7 @@ export default function ClaimDetailScreen() {
             <Text style={styles.toolMeta}>Tap to open the tool</Text>
           </View>
           <Ionicons name="chevron-forward" size={18} color={theme.colors.textMuted} />
-        </TouchableOpacity>
+        </SkinPlate>
 
         <Section label="DEALER">
           <Text style={styles.value}>
@@ -194,10 +198,24 @@ export default function ClaimDetailScreen() {
 
         {!!claim.broken_photo && (
           <Section label="PHOTO OF BROKEN PART">
-            <Image source={{ uri: claim.broken_photo }} style={styles.photoLarge} />
+            <TouchableOpacity testID="claim-photo" activeOpacity={0.9} onPress={() => setLightbox(true)}>
+              <Image source={{ uri: claim.broken_photo }} style={styles.photoLarge} />
+            </TouchableOpacity>
           </Section>
         )}
       </ScrollView>
+      <Modal visible={lightbox} transparent onRequestClose={() => setLightbox(false)}>
+        <TouchableOpacity
+          testID="claim-photo-close"
+          style={styles.lightboxBg}
+          activeOpacity={1}
+          onPress={() => setLightbox(false)}
+        >
+          {!!claim.broken_photo && (
+            <Image source={{ uri: claim.broken_photo }} style={styles.lightboxImg} resizeMode="contain" />
+          )}
+        </TouchableOpacity>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -206,7 +224,7 @@ function Section({ label, children }: { label: string; children: React.ReactNode
   return (
     <View style={styles.section}>
       <Text style={styles.sectionLabel}>{label}</Text>
-      <View style={styles.sectionBody}>{children}</View>
+      <SkinPlate padX={12} padTop={12} padBottom={12}>{children}</SkinPlate>
     </View>
   );
 }
@@ -248,18 +266,13 @@ const styles = themedStyles((c) => ({
   },
   statusDot: { width: 12, height: 12, borderRadius: 6 },
   statusText: { fontSize: 10, fontWeight: "900", letterSpacing: 1.5 },
-  toolCard: {
+  toolCardOuter: {
+    marginBottom: 14,
+  },
+  toolCardInner: {
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
-    backgroundColor: c.bgSecondary,
-    borderWidth: 1,
-    borderColor: c.border,
-    borderRadius: 6,
-    padding: 12,
-    marginBottom: 14,
-  
-    ...(theme.elevation.md as object),
   },
   toolPhoto: { width: 60, height: 60, borderRadius: 4 },
   toolPhotoPh: {
@@ -350,5 +363,16 @@ const styles = themedStyles((c) => ({
     height: 240,
     borderRadius: 4,
     backgroundColor: c.bg,
+  },
+  lightboxBg: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.92)",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 16,
+  },
+  lightboxImg: {
+    width: "100%",
+    height: "80%",
   },
 }));

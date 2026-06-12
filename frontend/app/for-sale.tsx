@@ -24,9 +24,9 @@ import { ResponsiveContainer } from "../src/ResponsiveContainer";
 import { useResponsive } from "../src/responsive";
 
 import { themedStyles } from "../src/themeContext";
-import { ShadowBox, ShadowBoxMini } from "../src/components/ShadowBox";
+import { ShadowBox } from "../src/components/ShadowBox";
 import { IndustrialBanner } from "../src/components/IndustrialBanner";
-import { AddFab } from "../src/components/AddFab";
+import { SkinPlate } from "../src/components/SkinPlate";
 
 type Tool = any;
 
@@ -140,9 +140,13 @@ export default function ForSaleScreen() {
     const isSold = tab === "sold";
     const price = isSold ? (item.sold_price || 0) : (item.sale_price || 0);
     return (
-      <ShadowBox
+      <SkinPlate
         testID={`fs-card-${item.id}`}
         style={[styles.card, { flex: numColumns > 1 ? 1 : undefined }]}
+        innerStyle={styles.cardInner}
+        padX={10}
+        padTop={10}
+        padBottom={10}
         onPress={() => router.push(`/tool/${item.id}`)}
       >
         {photoUri ? (
@@ -183,7 +187,7 @@ export default function ForSaleScreen() {
               : (item.sale_listed_at ? `Listed ${formatDateUS(item.sale_listed_at)}` : "")}
           </Text>
         </View>
-      </ShadowBox>
+      </SkinPlate>
     );
   };
 
@@ -240,16 +244,16 @@ export default function ForSaleScreen() {
 
         {/* Summary */}
         <View style={styles.statsRow}>
-          <ShadowBoxMini style={styles.statBox}>
+          <SkinPlate style={styles.statBox} padTop={10} padBottom={10}>
             <Text style={styles.statLabel}>{tab === "listed" ? "LISTED" : "SOLD"}</Text>
             <Text style={styles.statValue}>{totals.count}</Text>
-          </ShadowBoxMini>
-          <ShadowBoxMini style={styles.statBox}>
+          </SkinPlate>
+          <SkinPlate style={styles.statBox} padTop={10} padBottom={10}>
             <Text style={styles.statLabel}>{tab === "listed" ? "ASKING TOTAL" : "SOLD TOTAL"}</Text>
             <Text style={[styles.statValue, { color: tab === "sold" ? "#27AE60" : theme.colors.accent }]}>
               ${totals.value.toFixed(2)}
             </Text>
-          </ShadowBoxMini>
+          </SkinPlate>
         </View>
       </ResponsiveContainer>
 
@@ -327,7 +331,6 @@ export default function ForSaleScreen() {
           </View>
         </View>
       </Modal>
-      <AddFab testID="add-item-fab" onPress={() => router.push("/tool/edit")} />
     </SafeAreaView>
   );
 }
@@ -443,11 +446,10 @@ const styles = themedStyles((c) => ({
   statLabel: { color: c.textMuted, fontSize: 7, fontWeight: "800", letterSpacing: 1.5 },
   statValue: { color: c.textPrimary, fontSize: 14, fontWeight: "900", marginTop: 2 },
   card: {
-    borderRadius: 10,
-    overflow: "hidden",
+    marginBottom: 10,
+  },
+  cardInner: {
     flexDirection: "row",
-    paddingHorizontal: 0,
-    paddingVertical: 0,
   },
   cardImg: { width: 120, height: 120, backgroundColor: c.bg },
   cardBody: { flex: 1, padding: 10 },

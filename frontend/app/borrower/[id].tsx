@@ -381,7 +381,7 @@ export default function BorrowerHistory() {
         )}
 
         <Text style={styles.sectionLabel}>
-          PER-TOOL TOTALS
+          CHECKED OUT TOOL TOTALS
         </Text>
         {data.per_tool.length === 0 ? (
           <Text style={styles.empty}>No checkout history yet.</Text>

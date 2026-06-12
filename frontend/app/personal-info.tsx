@@ -23,7 +23,7 @@ import { formatPhone } from "../src/contactLinks";
 
 import { themedStyles } from "../src/themeContext";
 import { IndustrialBanner } from "../src/components/IndustrialBanner";
-import { ShadowBox } from "../src/components/ShadowBox";
+import { SkinPlate } from "../src/components/SkinPlate";
 
 type Profile = {
   name: string;
@@ -142,7 +142,7 @@ export default function PersonalInfoScreen() {
         >
           {!editing && (
             <>
-              <ShadowBox style={styles.viewCard}>
+              <SkinPlate style={styles.viewCard} padX={12} padTop={4} padBottom={4}>
                 <InfoRow
                   label="Type"
                   value={form.is_company ? "Company Entity" : "Individual"}
@@ -152,16 +152,16 @@ export default function PersonalInfoScreen() {
                   value={form.name}
                   last
                 />
-              </ShadowBox>
+              </SkinPlate>
 
               <Text style={styles.viewSection}>CONTACT</Text>
-              <ShadowBox style={styles.viewCard}>
+              <SkinPlate style={styles.viewCard} padX={12} padTop={4} padBottom={4}>
                 <InfoRow
                   label="Phone"
                   value={form.phone ? formatPhone(form.phone) : ""}
                 />
                 <InfoRow label="Email" value={user?.email || form.email} last />
-              </ShadowBox>
+              </SkinPlate>
 
               {/* #32/#33 — Email is the account login (centralized). Users
                   change it here via the secure verification flow. */}
@@ -177,7 +177,7 @@ export default function PersonalInfoScreen() {
               </TouchableOpacity>
 
               <Text style={styles.viewSection}>ADDRESS</Text>
-              <ShadowBox style={styles.viewCard}>
+              <SkinPlate style={styles.viewCard} padX={12} padTop={4} padBottom={4}>
                 <InfoRow label="Street" value={form.address} />
                 {!!form.address2 && (
                   <InfoRow label="Apt / Suite" value={form.address2} />
@@ -186,14 +186,14 @@ export default function PersonalInfoScreen() {
                 <InfoRow label="State" value={form.state} />
                 <InfoRow label="Zip / Postal" value={form.zip_code} />
                 <InfoRow label="Country" value={form.country} last />
-              </ShadowBox>
+              </SkinPlate>
 
               <Text style={styles.viewSection}>INSURANCE</Text>
-              <ShadowBox style={styles.viewCard}>
+              <SkinPlate style={styles.viewCard} padX={12} padTop={4} padBottom={4}>
                 <InfoRow label="Insurance Co." value={form.insurance_company} />
                 <InfoRow label="Policy #" value={form.policy_number} />
                 <InfoRow label="Notes" value={form.notes} last />
-              </ShadowBox>
+              </SkinPlate>
             </>
           )}
 
@@ -477,7 +477,6 @@ const styles = themedStyles((c) => ({
   viewCard: {
     marginTop: 6,
     marginBottom: 2,
-    paddingVertical: 4,
   },
   viewSection: {
     color: c.accent,

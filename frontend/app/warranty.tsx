@@ -7,7 +7,7 @@ import { useAppResume } from "../src/appLifecycle";
 import { theme } from "../src/theme";
 import { api } from "../src/api";
 import { formatDateUS } from "../src/dateUtil";
-import { ShadowBox } from "../src/components/ShadowBox";
+import { SkinPlate } from "../src/components/SkinPlate";
 import { IndustrialBanner } from "../src/components/IndustrialBanner";
 
 import { themedStyles } from "../src/themeContext";
@@ -31,13 +31,13 @@ export default function WarrantyScreen() {
     const ex = t.warranty?.expiry_date || "";
     const accent = kind === "expired" ? theme.colors.danger : theme.colors.warning;
     return (
-      <ShadowBox
+      <SkinPlate
         key={t.id}
         testID={`warranty-${t.id}`}
-        style={styles.row}
+        style={styles.rowOuter}
+        innerStyle={styles.rowInner}
         onPress={() => router.push(`/tool/${t.id}`)}
       >
-        <View style={[styles.kindBar, { backgroundColor: accent }]} />
         <View style={styles.thumb}>
           {t.photos?.[0] ? (
             <Image source={{ uri: t.photos[0] }} style={{ width: "100%", height: "100%" }} />
@@ -52,7 +52,7 @@ export default function WarrantyScreen() {
           </Text>
         </View>
         <Ionicons name="chevron-forward" size={18} color={theme.colors.textMuted} />
-      </ShadowBox>
+      </SkinPlate>
     );
   };
 
@@ -102,26 +102,14 @@ const styles = themedStyles((c) => ({
     paddingTop: 20,
     paddingBottom: 8,
   },
-  row: {
-    /* Surface (gradient + bevel borders + drop shadow) comes from
-       <BevelCard>. We just describe layout + margins here. The
-       per-item red/yellow indicator now lives in a 4px left-edge bar
-       inside the card (see `kindBar` below) instead of borderLeftColor
-       on the container — that would have fought BevelCard's bevel. */
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 12,
-    paddingLeft: 0,
-    paddingRight: 16,
+  rowOuter: {
     marginHorizontal: 16,
     marginBottom: 8,
-    gap: 12,
-    overflow: "hidden",
   },
-  kindBar: {
-    width: 4,
-    alignSelf: "stretch",
-    marginRight: 8,
+  rowInner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
   },
   thumb: {
     width: 44,

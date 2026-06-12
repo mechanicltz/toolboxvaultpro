@@ -28,6 +28,7 @@ import { runReport, ReportAction, ReportFormat } from "../../src/reportRunner";
 import { themedStyles } from "../../src/themeContext";
 import { IndustrialBanner } from "../../src/components/IndustrialBanner";
 import { ShadowBox } from "../../src/components/ShadowBox";
+import { SkinPlate } from "../../src/components/SkinPlate";
 
 // ---- Types --------------------------------------------------------------
 
@@ -274,11 +275,11 @@ export default function ReportsHubScreen() {
             export options.
           </Text>
           {specs.map((s) => (
-            <ShadowBox
+            <SkinPlate
               key={s.id}
               style={styles.typeCard}
+              innerStyle={styles.typeCardInner}
               onPress={() => pickType(s)}
-              activeOpacity={0.85}
               testID={`pick-${s.id}`}
             >
               <View style={[styles.typeIcon, { backgroundColor: s.accent }]}>
@@ -289,7 +290,7 @@ export default function ReportsHubScreen() {
                 <Text style={styles.typeDesc}>{s.description}</Text>
               </View>
               <Ionicons name="chevron-forward" size={20} color={theme.colors.textSecondary} />
-            </ShadowBox>
+            </SkinPlate>
           ))}
         </ScrollView>
       </SafeAreaView>
@@ -350,8 +351,11 @@ export default function ReportsHubScreen() {
         <ScrollView contentContainerStyle={styles.body}>
           <Text style={styles.sectionLabel}>Export format</Text>
           <View style={styles.formatRow}>
-            <ShadowBox
+            <SkinPlate
               style={[styles.formatCard, format === "pdf" && styles.formatCardOn]}
+              innerStyle={styles.formatCardInner}
+              padTop={22}
+              padBottom={22}
               onPress={() => setFormat("pdf")}
             >
               <Ionicons name="document-text" size={28} color={format === "pdf" ? theme.colors.accent : theme.colors.textPrimary} />
@@ -359,9 +363,12 @@ export default function ReportsHubScreen() {
               <Text style={[styles.formatSub, format === "pdf" && { color: theme.colors.accent }]}>
                 Formatted report{"\n"}max {MAX_PDF_COLUMNS} columns
               </Text>
-            </ShadowBox>
-            <ShadowBox
+            </SkinPlate>
+            <SkinPlate
               style={[styles.formatCard, format === "csv" && styles.formatCardOn]}
+              innerStyle={styles.formatCardInner}
+              padTop={22}
+              padBottom={22}
               onPress={() => setFormat("csv")}
             >
               <Ionicons name="grid" size={28} color={format === "csv" ? theme.colors.accent : theme.colors.textPrimary} />
@@ -369,7 +376,7 @@ export default function ReportsHubScreen() {
               <Text style={[styles.formatSub, format === "csv" && { color: theme.colors.accent }]}>
                 Spreadsheet file{"\n"}all columns supported
               </Text>
-            </ShadowBox>
+            </SkinPlate>
           </View>
         </ScrollView>
         <FooterButtons
@@ -535,15 +542,7 @@ export default function ReportsHubScreen() {
 
 function Header({ title, onBack }: { title: string; onBack: () => void }) {
   return (
-    <View style={styles.header}>
-      <TouchableOpacity onPress={onBack} hitSlop={10}>
-        <Ionicons name="chevron-back" size={24} color={theme.colors.textPrimary} />
-      </TouchableOpacity>
-      <Text style={styles.headerTitle} numberOfLines={1}>
-        {title}
-      </Text>
-      <View style={{ width: 24 }} />
-    </View>
+    <IndustrialBanner title={title} onBack={onBack} />
   );
 }
 
@@ -1260,12 +1259,12 @@ const styles = themedStyles((c) => ({
   },
   // ---- type cards ----
   typeCard: {
+    marginBottom: 10,
+  },
+  typeCardInner: {
     flexDirection: "row",
     alignItems: "center",
     gap: 14,
-    paddingVertical: 14,
-    paddingHorizontal: 14,
-    marginBottom: 10,
   },
   typeIcon: {
     width: 44,
@@ -1589,8 +1588,8 @@ const styles = themedStyles((c) => ({
   formatRow: { flexDirection: "row", gap: 12, marginTop: 4 },
   formatCard: {
     flex: 1,
-    paddingVertical: 22,
-    paddingHorizontal: 16,
+  },
+  formatCardInner: {
     alignItems: "center",
   },
   formatCardOn: { borderColor: c.accent, borderWidth: 2 },

@@ -778,7 +778,7 @@ function Stat({ label, value, color, flat }: { label: string; value: number; col
   return (
     <View style={[styles.statBox, flat && styles.statBoxFlat]}>
       <Text style={[styles.statValue, color && { color }]}>{value}</Text>
-      <Text style={styles.statLabel}>{label.toUpperCase()}</Text>
+      <Text style={styles.statLabel} numberOfLines={1} adjustsFontSizeToFit>{label.toUpperCase()}</Text>
     </View>
   );
 }

@@ -28,7 +28,8 @@ import { confirm } from "../src/confirm";
 import { useAuth } from "../src/AuthContext";
 
 import { themedStyles } from "../src/themeContext";
-import { ShadowBox, ShadowBoxMini } from "../src/components/ShadowBox";
+import { ShadowBox } from "../src/components/ShadowBox";
+import { SkinPlate } from "../src/components/SkinPlate";
 import { ContactIconImage } from "../src/components/ContactIcons";
 import { IndustrialBanner } from "../src/components/IndustrialBanner";
 import { PillButton } from "../src/components/PillButton";
@@ -556,11 +557,13 @@ export default function WishlistScreen() {
           const meta = PRIORITIES.find((p) => p.key === (item.priority || "normal")) || PRIORITIES[1];
           const isSelected = selected.has(item.id);
           return (
-            <ShadowBox
+            <SkinPlate
               style={[styles.card, selectMode && isSelected && styles.cardSelected]}
               testID={`wish-card-${item.id}`}
+              padX={14}
+              padTop={14}
+              padBottom={14}
               onPress={selectMode ? () => toggleSelected(item.id) : undefined}
-              activeOpacity={selectMode ? 0.7 : 1}
             >
               {/* Top-right manage toolbar: share / edit / delete */}
               <View style={styles.cardTopActions}>
@@ -646,7 +649,7 @@ export default function WishlistScreen() {
                       testID={`wish-convert-${item.id}`}
                       label="Convert"
                       icon="add-circle-outline"
-                      variant="default"
+                      variant="active"
                       onPress={() => convert(item)}
                       style={{ flex: 1, justifyContent: "center" }}
                     />
@@ -680,7 +683,7 @@ export default function WishlistScreen() {
                   <Text style={styles.toolLinkText}>VIEW TOOL ›</Text>
                 </TouchableOpacity>
               )}
-            </ShadowBox>
+            </SkinPlate>
           );
         }}
       />
@@ -892,10 +895,10 @@ export default function WishlistScreen() {
 
 function Stat({ label, value, color }: { label: string; value: string; color?: string }) {
   return (
-    <ShadowBoxMini style={styles.statBox}>
+    <SkinPlate style={styles.statBox} innerStyle={styles.statInner} padTop={12} padBottom={12}>
       <Text style={[styles.statValue, color ? { color } : null]}>{value}</Text>
       <Text style={styles.statLabel}>{label}</Text>
-    </ShadowBoxMini>
+    </SkinPlate>
   );
 }
 
@@ -908,7 +911,8 @@ const styles = themedStyles((c) => ({
   statRow: { flexDirection: "row", padding: 16, gap: 8 },
   statBox: {
     flex: 1,
-    paddingVertical: 12,
+  },
+  statInner: {
     alignItems: "center",
   },
   statValue: { color: c.textPrimary, fontSize: 14, fontWeight: "900" },
@@ -926,8 +930,6 @@ const styles = themedStyles((c) => ({
   card: {
     marginHorizontal: 16,
     marginBottom: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 14,
   },
   cardHead: { flexDirection: "row", alignItems: "flex-start", gap: 10 },
   cardThumb: {

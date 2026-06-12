@@ -17,8 +17,8 @@ import { api } from "../src/api";
 import { formatDateUS } from "../src/dateUtil";
 
 import { themedStyles } from "../src/themeContext";
-import { ShadowBox, ShadowBoxMini } from "../src/components/ShadowBox";
 import { IndustrialBanner } from "../src/components/IndustrialBanner";
+import { SkinPlate } from "../src/components/SkinPlate";
 
 function daysUntil(iso: string): number {
   if (!iso) return 9999;
@@ -71,26 +71,26 @@ export default function MaintenanceScreen() {
         onBack={() => router.back()} backIcon="chevron-back"
       />
 
-      <View style={styles.statRow}>
-        <ShadowBoxMini style={styles.statCard}>
+      <SkinPlate style={styles.statPlate} innerStyle={styles.statRowInner} padTop={10} padBottom={10}>
+        <View style={styles.statCard}>
           <Text style={[styles.statValue, { color: theme.colors.danger }]}>
             {data.overdue}
           </Text>
-          <Text style={styles.statLabel}>OVERDUE</Text>
-        </ShadowBoxMini>
-        <ShadowBoxMini style={styles.statCard}>
+          <Text style={styles.statLabel} numberOfLines={1} adjustsFontSizeToFit>OVERDUE</Text>
+        </View>
+        <View style={styles.statCard}>
           <Text style={[styles.statValue, { color: theme.colors.accent }]}>
             {data.due_soon}
           </Text>
-          <Text style={styles.statLabel}>DUE SOON</Text>
-        </ShadowBoxMini>
-        <ShadowBoxMini style={styles.statCard}>
+          <Text style={styles.statLabel} numberOfLines={1} adjustsFontSizeToFit>DUE SOON</Text>
+        </View>
+        <View style={styles.statCard}>
           <Text style={[styles.statValue, { color: theme.colors.textPrimary }]}>
             {data.total}
           </Text>
-          <Text style={styles.statLabel}>TOTAL TRACKED</Text>
-        </ShadowBoxMini>
-      </View>
+          <Text style={styles.statLabel} numberOfLines={1} adjustsFontSizeToFit>TOTAL TRACKED</Text>
+        </View>
+      </SkinPlate>
 
       <View style={styles.horizonRow}>
         {[
@@ -132,12 +132,12 @@ export default function MaintenanceScreen() {
             const isOverdue = it.is_overdue;
             const isUrgent = !isOverdue && days <= 30;
             return (
-              <ShadowBox
+              <SkinPlate
                 key={`${it.tool_id}-${it.schedule_id}`}
                 testID={`mnt-${it.schedule_id}`}
                 style={styles.itemCard}
+                innerStyle={styles.itemRow}
                 onPress={() => router.push(`/tool/${it.tool_id}`)}
-                activeOpacity={0.8}
               >
                 <View style={styles.thumb}>
                   {it.tool_photo ? (
@@ -174,7 +174,7 @@ export default function MaintenanceScreen() {
                     {isOverdue ? `${Math.abs(days)}D OVERDUE` : `${days}D`}
                   </Text>
                 </View>
-              </ShadowBox>
+              </SkinPlate>
             );
           })
         )}
@@ -196,8 +196,9 @@ const styles = themedStyles((c) => ({
   backBtn: { padding: 8 },
   title: { color: c.textPrimary, fontSize: 14, fontWeight: "900", letterSpacing: 2 },
   subtitle: { color: c.accent, fontSize: 7, fontWeight: "700", letterSpacing: 1.5, marginTop: 2 },
-  statRow: { flexDirection: "row", padding: 12, gap: 8 },
-  statCard: { flex: 1 },
+  statPlate: { marginHorizontal: 12, marginTop: 4, marginBottom: 4 },
+  statRowInner: { flexDirection: "row", gap: 8 },
+  statCard: { flex: 1, alignItems: "center" },
   statValue: { fontSize: 18, fontWeight: "900" },
   statLabel: { color: c.textMuted, fontSize: 7, fontWeight: "800", letterSpacing: 1.2, marginTop: 2 },
   horizonRow: {
@@ -223,12 +224,13 @@ const styles = themedStyles((c) => ({
   emptyTitle: { color: c.textPrimary, fontWeight: "900", letterSpacing: 2, fontSize: 10 },
   emptyText: { color: c.textMuted, fontSize: 9, textAlign: "center", lineHeight: 14, paddingHorizontal: 30 },
   itemCard: {
+    marginBottom: 10,
+    marginHorizontal: 12,
+  },
+  itemRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
-    paddingVertical: 12,
-    paddingHorizontal: 12,
-    marginBottom: 10,
   },
   thumb: {
     width: 50,
