@@ -681,7 +681,7 @@ const styles = themedStyles((c) => ({
     fontWeight: "800", letterSpacing: 1, marginTop: 2, textTransform: "uppercase",
   },
   sectionLabel: {
-    color: c.textMuted, fontSize: 8, fontWeight: "800",
+    color: c.textSecondary, fontSize: 8, fontWeight: "800",
     letterSpacing: 2, paddingHorizontal: 20, paddingTop: 16, paddingBottom: 8,
   },
   row: {
