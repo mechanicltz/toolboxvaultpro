@@ -21,7 +21,12 @@
 
 3. HOME_BUILD bumped 274 → 275 (`app/(tabs)/index.tsx`).
 
-## STILL PENDING (carry-over from batch 274)
+## BUILD 276 (2026-06-12)
+- Item-detail bottom ACTION buttons switched to **1 per row, full-width, centered**
+  labels (`tool/[id].tsx`): `actionTile` + `actionTileSkinWrap` width → 100%,
+  `actionGrid` gap → 8, skin paddingHorizontal restored to 6. Labels no longer
+  clip; buttons align under the panels above. Verified on web preview.
+- HOME_BUILD → BUILD 276.
 - Keyboard audit: wrap `forgot-password.tsx`, `manage/[kind].tsx`, `for-sale.tsx`
   in KeyboardAvoidingView.
 - Hardcoded orange back arrows: `wishlist.tsx`, `tool/edit.tsx`, `(tabs)/reports.tsx`.
