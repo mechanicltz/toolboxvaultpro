@@ -4123,6 +4123,14 @@ async def register(payload: RegisterRequest, request: Request):
         logging.getLogger("server").warning(
             "Default-content seed failed for user %s: %s", user.id, e
         )
+    # Seed the rich demo / prefilled dataset so the user can explore the app.
+    try:
+        from demo_seed import seed_demo_data_for_user
+        await seed_demo_data_for_user(real_db, user.id)
+    except Exception as e:
+        logging.getLogger("server").warning(
+            "Demo-data seed failed for user %s: %s", user.id, e
+        )
     token = create_token(user.id)
     return AuthResponse(token=token, user=to_public(user))
 
