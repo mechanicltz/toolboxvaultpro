@@ -150,3 +150,11 @@ retailer-specific CSV parser.
 - **Floating + FAB** added to Dealers/Contacts/Claims/For Sale (shared `src/components/AddFab.tsx`, real black drop shadow); removed old Add buttons; Inventory+Wishlist FABs got the same shadow.
 - **TWO NEW THEMES — Arctic (aqua) + Emerald (Irish green)**: full asset sets via `frontend/scripts/recolor_theme.py` (Arctic +167°, Emerald +127°). Wired in theme.ts (palettes), skins.ts (SKIN maps + VARIANT_MAPS + VARIANT_ACCENT), themeContext.tsx (variant/appearance/palette), more.tsx (picker rows). Login/forgot/TbvHeader now tint via VARIANT_ACCENT. Verified both end-to-end. To add more colors: run recolor_theme.py + copy SKIN/palette/variant/picker entries.
 - Current build stamp: BUILD 242.
+
+## Batch 284 (2026-06-13) — shipped, tested (iteration_24, all PASS)
+- P0 FIX: dealer "Schedule" (truck account) crash — missing KeyboardAvoidingView import in src/sections/BalanceSection.tsx.
+- Inventory skinned layout: all items now inside ONE metal panel (new src/tbv/components/TbvListPanel.tsx) instead of per-item frames.
+- Detail Summary Header: added summaryFrameSkin marginHorizontal (was too wide).
+- Default location seeding (backend): Main Toolbox>Drawer 1, Home Toolbox>Drawer 1 for new users (idempotent).
+- Insurance Claims one-tap email: "Email Detailed Report to Insurer" button auto-renders detailed PDF + prefilled polished email template (src/insuranceReport.ts renderClaimReportOnly, EmailModal prefill prop).
+- Build stamp: BUILD 284.
