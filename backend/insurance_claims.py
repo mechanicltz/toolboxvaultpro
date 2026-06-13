@@ -488,12 +488,12 @@ def _items_table(resolved: List[Dict[str, Any]], st: Dict[str, ParagraphStyle],
         if col == "brand":
             return esc(r["brand"])
         if col == "serial_model":
-            sm = []
-            if r["serials"]:
-                sm.append("S/N " + ", ".join(r["serials"]))
-            if r["models"]:
-                sm.append("M# " + ", ".join(r["models"]))
-            return esc(" · ".join(sm))
+            lines = []
+            for s in r["serials"]:
+                lines.append("S/N " + esc(s))
+            for m in r["models"]:
+                lines.append("M# " + esc(m))
+            return "<br/>".join(lines)
         if col == "qty":
             return str(r["quantity"])
         if col == "condition":

@@ -50,6 +50,8 @@ export default function ClaimDetail() {
   const [emailOpen, setEmailOpen] = useState(false);
   const [emailPrefill, setEmailPrefill] = useState<{ subject?: string; body?: string } | null>(null);
   const [oneTapBusy, setOneTapBusy] = useState(false);
+  const [oneTapColsOpen, setOneTapColsOpen] = useState(false);
+  const [oneTapCols, setOneTapCols] = useState<string[]>(ONE_TAP_DEFAULT_COLS);
   const [editItem, setEditItem] = useState<any>(null);
   const [selReport, setSelReport] = useState<any>(null);
   const [evThumbs, setEvThumbs] = useState<Record<string, string>>({});
@@ -125,12 +127,14 @@ export default function ClaimDetail() {
 
   // One-tap: silently generate a fresh DETAILED report, then open the email
   // composer pre-filled with the saved agent/adjuster + a polished template.
-  const oneTapEmailInsurer = async () => {
+  const oneTapEmailInsurer = async (chosenCols: string[]) => {
+    setOneTapColsOpen(false);
     setOneTapBusy(true);
     try {
       await renderClaimReportOnly(id, {
         kind: "detailed",
         ...TOGGLES.reduce((a, [k]) => ({ ...a, [k]: true }), {}),
+        item_columns: chosenCols.length ? chosenCols : ONE_TAP_DEFAULT_COLS,
       });
       // Don't rely on the X-Report-Id response header (the ingress can strip
       // custom headers) — re-fetch the report list and take the newest one
@@ -302,7 +306,7 @@ export default function ClaimDetail() {
           <ICButton
             label={oneTapBusy ? "Preparing report…" : "Email Detailed Report to Insurer"}
             icon="mail"
-            onPress={oneTapEmailInsurer}
+            onPress={() => { setOneTapCols(ONE_TAP_DEFAULT_COLS); setOneTapColsOpen(true); }}
             disabled={oneTapBusy}
             testID="icd-onetap-email"
           />
@@ -345,6 +349,25 @@ export default function ClaimDetail() {
       <ReportModal visible={reportOpen} onClose={() => setReportOpen(false)} id={id} onDone={() => { setReportOpen(false); load(); }} />
       <EmailModal visible={emailOpen} onClose={() => { setEmailOpen(false); setEmailPrefill(null); }} id={id} ins={ins} report={selReport} prefill={emailPrefill} onDone={() => { setEmailOpen(false); setEmailPrefill(null); load(); }} />
       <EvidenceViewer ev={viewEv} onClose={() => setViewEv(null)} />
+      <ICModal visible={oneTapColsOpen} onClose={() => setOneTapColsOpen(false)} title="Email Report — Choose Columns">
+        <Text style={styles.muted}>Pick which item details appear in the emailed report (Item name is always shown):</Text>
+        {ITEM_COLUMNS.map(([k, label]) => {
+          const on = oneTapCols.includes(k);
+          return (
+            <TouchableOpacity
+              key={k}
+              testID={`icd-onetap-col-${k}`}
+              style={styles.toggleRow}
+              onPress={() => setOneTapCols((cur) => cur.includes(k) ? cur.filter((x) => x !== k) : [...cur, k])}
+            >
+              <Text style={styles.itemName}>{label}</Text>
+              <Ionicons name={on ? "checkbox" : "square-outline"} size={20} color={on ? c.accent : c.textMuted} />
+            </TouchableOpacity>
+          );
+        })}
+        <View style={{ height: 12 }} />
+        <ICButton label={oneTapBusy ? "Generating…" : "Generate & Email"} icon="mail" onPress={() => oneTapEmailInsurer(oneTapCols)} disabled={oneTapBusy} testID="icd-onetap-go" />
+      </ICModal>
     </SafeAreaView>
   );
 }
@@ -495,6 +518,8 @@ const ITEM_COLUMNS: [string, string][] = [
   ["claimed", "Claimed value"],
 ];
 const DEFAULT_ITEM_COLUMNS = ["brand", "serial_model", "qty", "condition", "claimed"];
+// One-tap email defaults — intentionally EXCLUDES "condition" per user request.
+const ONE_TAP_DEFAULT_COLS = ["brand", "serial_model", "qty", "claimed"];
 
 function ReportModal({ visible, onClose, id, onDone }: any) {
   const c = useColors();

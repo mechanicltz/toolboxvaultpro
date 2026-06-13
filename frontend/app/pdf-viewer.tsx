@@ -84,25 +84,16 @@ export default function PdfViewerScreen(): React.ReactElement {
   // multiple previews), keep popping until we land back on something
   // else. This guarantees the X always returns to the reports tab.
   const handleBack = React.useCallback(() => {
+    // Pop exactly ONE screen so we return to wherever the PDF was opened from
+    // (claim detail, reports list, etc.) — NOT all the way to a main tab.
+    // Only fall back to the reports tab when there's genuinely nothing to pop
+    // (e.g. the viewer was opened via a cold deep-link).
     try {
-      router.back();
-      // If after backing we're STILL inside a pdf-viewer (multiple
-      // stacked previews), keep going. We schedule one extra pop on
-      // next tick so React Navigation has time to update the stack.
-      setTimeout(() => {
-        try {
-          // expo-router 5+ exposes canGoBack; fall back to a raw back call.
-          // @ts-ignore
-          if ((router as any).canGoBack?.()) {
-            // Heuristic: try to dismiss any remaining pdf-viewer in stack.
-            // If we're already on a non-pdf route this is harmless.
-            // @ts-ignore
-            (router as any).dismissAll?.();
-          }
-        } catch {
-          /* ignore */
-        }
-      }, 0);
+      if ((router as any).canGoBack?.()) {
+        router.back();
+      } else {
+        router.replace("/(tabs)/reports");
+      }
     } catch {
       try {
         router.replace("/(tabs)/reports");

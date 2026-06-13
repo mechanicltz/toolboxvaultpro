@@ -178,3 +178,8 @@ retailer-specific CSV parser.
 
 ## Batch 289 (2026-06-13)
 - Insurance claims main list compacted to one panel of dashboard-style rows (smaller text/badges, hairline dividers) — was oversized per-claim cards. BUILD 289.
+
+## Batch 293 (2026-06-13)
+- Reports: serial/model numbers list one per line (insurance report fixed; main reports already did).
+- Back-button: fixed pdf-viewer back dumping to a main tab (removed dismissAll heuristic) — most common "back goes to home" cause.
+- One-tap insurance email now prompts for item columns and excludes Condition by default. BUILD 293.

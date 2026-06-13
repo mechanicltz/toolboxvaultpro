@@ -50,3 +50,17 @@ Insurance Claims module — second polish/feature round.
   orange accent tick (rowTick) on each label, recessed "machined slot" row bg,
   and a recessed gauge-chip for the value. Replaces the prior 16px bold sans rows.
 - Verified via screenshot (BUILD 292).
+
+## Batch 293 (2026-06-13) — reports serial/model lines, back nav, one-tap prompt
+- #1 Insurance report itemized table: serial & model numbers now render ONE PER
+  LINE (<br/>) instead of comma-separated. (Main app reports already did this via
+  "\n".join.) insurance_claims.py _items_table serial_model cell.
+- #2 Back-button fix: app/pdf-viewer.tsx handleBack used router.back() then
+  dismissAll() on next tick (canGoBack was ~always true) → after viewing ANY PDF
+  the back arrow dumped you to a main tab. Now pops exactly ONE screen (returns to
+  claim detail / reports list), with replace("/(tabs)/reports") only as a cold
+  deep-link fallback.
+- #3 One-tap "Email Detailed Report to Insurer" now opens a column-picker prompt
+  (ITEM_COLUMNS) BEFORE generating; default selection EXCLUDES Condition
+  (ONE_TAP_DEFAULT_COLS = brand, serial_model, qty, claimed). Verified via screenshot.
+- BUILD 293.
