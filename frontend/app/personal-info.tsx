@@ -126,8 +126,7 @@ export default function PersonalInfoScreen() {
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <IndustrialBanner
-        title="PERSONAL INFORMATION"
-        subtitle="Used for Insurance Reports"
+        title="Personal Details"
         onBack={() => router.back()}
         rightSlot={undefined}
       />

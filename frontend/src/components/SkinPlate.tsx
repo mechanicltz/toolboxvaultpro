@@ -45,9 +45,9 @@ export function SkinPlate({
   testID,
   style,
   innerStyle,
-  padX = 16,
-  padTop = 12,
-  padBottom = 12,
+  padX,
+  padTop,
+  padBottom,
   frame = "plate",
 }: Props) {
   const { skin } = useSkin();
@@ -61,9 +61,19 @@ export function SkinPlate({
   if (isIndustrial) {
     const source = frame === "window" ? SKIN.window : SKIN.plate;
     const cap = frame === "window" ? CAP.window : CAP.plate;
+    // Content MUST clear the metal rails. The plate frame has 46px L/R rails +
+    // 12px T/B; the window frame has 38px L/R + ~32px T/B. We enforce these as
+    // minimums so content can never spill onto the bolts/rails, regardless of
+    // any (smaller) override a screen passes.
+    const railX = frame === "window" ? 38 : 44;
+    const railTop = frame === "window" ? 28 : 14;
+    const railBottom = frame === "window" ? 30 : 16;
+    const px = Math.max(padX ?? railX, railX);
+    const pt = Math.max(padTop ?? railTop, railTop);
+    const pb = Math.max(padBottom ?? railBottom, railBottom);
     return (
       <Wrap testID={testID} style={style} {...wrapProps}>
-        <TbvFrame source={source} capInsets={cap} padX={padX} padTop={padTop} padBottom={padBottom}>
+        <TbvFrame source={source} capInsets={cap} padX={px} padTop={pt} padBottom={pb}>
           <View style={innerStyle}>{children}</View>
         </TbvFrame>
       </Wrap>
@@ -74,7 +84,7 @@ export function SkinPlate({
     <Wrap testID={testID} style={[styles.plainCard, style]} {...wrapProps}>
       <View
         style={[
-          { paddingHorizontal: padX, paddingTop: padTop, paddingBottom: padBottom },
+          { paddingHorizontal: padX ?? 14, paddingTop: padTop ?? 12, paddingBottom: padBottom ?? 12 },
           innerStyle,
         ]}
       >

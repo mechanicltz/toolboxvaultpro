@@ -515,19 +515,18 @@ export default function WishlistScreen() {
           </TouchableOpacity>
       </View>
 
-      <View style={styles.statRow}>
+      <SkinPlate style={styles.statPlate} innerStyle={styles.statRowInner} padTop={11} padBottom={11}>
         <Stat label="Open" value={String(openCount)} />
         <Stat label="Planned" value={`$${totalPlanned.toFixed(0)}`} color={theme.colors.accent} />
-        <Stat label="Bought" value={String(doneCount)} color={theme.colors.success} />
         <Stat label="Spent" value={`$${totalSpent.toFixed(0)}`} color={theme.colors.success} />
-      </View>
+      </SkinPlate>
 
       <View style={styles.toggleRow}>
         {[
           { k: false, label: "OPEN" },
           { k: true, label: "PURCHASED" },
         ].map((t) => (
-          <ShadowBox
+          <TouchableOpacity
             key={String(t.k)}
             testID={`wish-tab-${t.k ? "done" : "open"}`}
             style={[styles.tabBtn, showPurchased === t.k && styles.tabBtnActive]}
@@ -535,7 +534,7 @@ export default function WishlistScreen() {
             activeOpacity={0.8}
           >
             <Text style={[styles.tabText, showPurchased === t.k && styles.tabTextActive]}>{t.label}</Text>
-          </ShadowBox>
+          </TouchableOpacity>
         ))}
       </View>
 
@@ -650,6 +649,7 @@ export default function WishlistScreen() {
                       label="Convert"
                       icon="add-circle-outline"
                       variant="active"
+                      compact
                       onPress={() => convert(item)}
                       style={{ flex: 1, justifyContent: "center" }}
                     />
@@ -658,6 +658,7 @@ export default function WishlistScreen() {
                       label="Purchased"
                       icon="checkmark-circle"
                       variant="active"
+                      compact
                       onPress={() => togglePurchased(item)}
                       style={{ flex: 1, justifyContent: "center" }}
                     />
@@ -668,6 +669,7 @@ export default function WishlistScreen() {
                     label="Restore to Wishlist"
                     icon="arrow-undo"
                     variant="default"
+                    compact
                     onPress={() => togglePurchased(item)}
                     style={{ flex: 1, justifyContent: "center" }}
                   />
@@ -895,10 +897,10 @@ export default function WishlistScreen() {
 
 function Stat({ label, value, color }: { label: string; value: string; color?: string }) {
   return (
-    <SkinPlate style={styles.statBox} innerStyle={styles.statInner} padTop={12} padBottom={12}>
+    <View style={styles.statBox}>
       <Text style={[styles.statValue, color ? { color } : null]}>{value}</Text>
-      <Text style={styles.statLabel}>{label}</Text>
-    </SkinPlate>
+      <Text style={styles.statLabel} numberOfLines={1} adjustsFontSizeToFit>{label}</Text>
+    </View>
   );
 }
 
@@ -908,18 +910,23 @@ const styles = themedStyles((c) => ({
   wishActionsRow: { flexDirection: "row", justifyContent: "flex-end", paddingHorizontal: 16, paddingTop: 10, paddingBottom: 4, gap: 8 },
   title: { color: c.textPrimary, fontSize: 14, fontWeight: "900", letterSpacing: 2 },
   subtitle: { color: c.accent, fontSize: 7, fontWeight: "700", letterSpacing: 1.5, marginTop: 2 },
-  statRow: { flexDirection: "row", padding: 16, gap: 8 },
+  statPlate: { marginHorizontal: 16, marginTop: 8, marginBottom: 4 },
+  statRowInner: { flexDirection: "row", gap: 4 },
   statBox: {
     flex: 1,
-  },
-  statInner: {
     alignItems: "center",
   },
   statValue: { color: c.textPrimary, fontSize: 14, fontWeight: "900" },
   statLabel: { color: c.textMuted, fontSize: 7, fontWeight: "800", letterSpacing: 1, marginTop: 4 },
   toggleRow: { flexDirection: "row", paddingHorizontal: 16, marginBottom: 8, gap: 8 },
   tabBtn: {
-    flex: 1, paddingVertical: 8, alignItems: "center",
+    flex: 1,
+    paddingVertical: 10,
+    alignItems: "center",
+    backgroundColor: "rgba(12,12,12,0.88)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.18)",
+    borderRadius: theme.radii.pill,
   },
   tabBtnActive: { borderColor: c.accent, borderWidth: 2 },
   tabText: { color: c.textSecondary, fontSize: 9, fontWeight: "800", letterSpacing: 1.5 },

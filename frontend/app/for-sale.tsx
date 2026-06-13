@@ -205,26 +205,28 @@ export default function ForSaleScreen() {
       <ResponsiveContainer>
         {/* Tabs */}
         <View style={styles.tabRow}>
-          <ShadowBox
+          <TouchableOpacity
+            activeOpacity={0.8}
             testID="tab-listed"
             style={[styles.tabBtn, tab === "listed" && styles.tabBtnActive]}
             onPress={() => setTab("listed")}
           >
             <Ionicons name="pricetag" size={14} color={tab === "listed" ? theme.colors.accent : theme.colors.textSecondary} />
             <Text style={[styles.tabText, tab === "listed" && styles.tabTextActive]}>LISTED</Text>
-          </ShadowBox>
-          <ShadowBox
+          </TouchableOpacity>
+          <TouchableOpacity
+            activeOpacity={0.8}
             testID="tab-sold"
             style={[styles.tabBtn, tab === "sold" && styles.tabBtnActiveSold]}
             onPress={() => setTab("sold")}
           >
             <Ionicons name="checkmark-circle" size={14} color={tab === "sold" ? theme.colors.accent : theme.colors.textSecondary} />
             <Text style={[styles.tabText, tab === "sold" && { color: theme.colors.accent }]}>SOLD</Text>
-          </ShadowBox>
+          </TouchableOpacity>
         </View>
 
         {/* Search */}
-        <ShadowBox style={styles.searchWrap}>
+        <SkinPlate style={styles.searchWrap} innerStyle={styles.searchInner} padTop={6} padBottom={6}>
           <Ionicons name="search" size={16} color={theme.colors.textMuted} />
           <TextInput
             testID="fs-search"
@@ -240,21 +242,21 @@ export default function ForSaleScreen() {
               {filterCount > 0 ? `FILTERS · ${filterCount}` : "FILTERS"}
             </Text>
           </TouchableOpacity>
-        </ShadowBox>
+        </SkinPlate>
 
         {/* Summary */}
-        <View style={styles.statsRow}>
-          <SkinPlate style={styles.statBox} padTop={10} padBottom={10}>
+        <SkinPlate style={styles.statPlate} innerStyle={styles.statsRowInner} padTop={11} padBottom={11}>
+          <View style={styles.statBox}>
             <Text style={styles.statLabel}>{tab === "listed" ? "LISTED" : "SOLD"}</Text>
             <Text style={styles.statValue}>{totals.count}</Text>
-          </SkinPlate>
-          <SkinPlate style={styles.statBox} padTop={10} padBottom={10}>
+          </View>
+          <View style={styles.statBox}>
             <Text style={styles.statLabel}>{tab === "listed" ? "ASKING TOTAL" : "SOLD TOTAL"}</Text>
             <Text style={[styles.statValue, { color: tab === "sold" ? "#27AE60" : theme.colors.accent }]}>
               ${totals.value.toFixed(2)}
             </Text>
-          </SkinPlate>
-        </View>
+          </View>
+        </SkinPlate>
       </ResponsiveContainer>
 
       {/* List */}
@@ -409,19 +411,23 @@ const styles = themedStyles((c) => ({
     alignItems: "center",
     justifyContent: "center",
     paddingVertical: 10,
+    backgroundColor: "rgba(12,12,12,0.88)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.18)",
+    borderRadius: theme.radii.pill,
   },
   tabBtnActive: { borderColor: c.accent, borderWidth: 2 },
   tabBtnActiveSold: { borderColor: c.accent, borderWidth: 2 },
   tabText: { color: c.textSecondary, fontWeight: "900", fontSize: 9, letterSpacing: 1.5 },
   tabTextActive: { color: c.accent },
   searchWrap: {
+    marginHorizontal: 16,
+    marginTop: 12,
+  },
+  searchInner: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    marginHorizontal: 16,
-    marginTop: 12,
   },
   searchInput: {
     flex: 1,
@@ -439,9 +445,11 @@ const styles = themedStyles((c) => ({
     paddingVertical: 6,
   },
   filterBtnText: { color: c.textPrimary, fontSize: 8, fontWeight: "800", letterSpacing: 1.5 },
-  statsRow: { flexDirection: "row", gap: 10, paddingHorizontal: 16, marginTop: 12, marginBottom: 4 },
+  statPlate: { marginHorizontal: 16, marginTop: 12, marginBottom: 4 },
+  statsRowInner: { flexDirection: "row", gap: 8 },
   statBox: {
     flex: 1,
+    alignItems: "center",
   },
   statLabel: { color: c.textMuted, fontSize: 7, fontWeight: "800", letterSpacing: 1.5 },
   statValue: { color: c.textPrimary, fontSize: 14, fontWeight: "900", marginTop: 2 },
