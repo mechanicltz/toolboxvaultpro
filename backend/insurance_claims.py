@@ -584,6 +584,16 @@ def build_claim_pdf(claim: Dict[str, Any], resolved: List[Dict[str, Any]],
                     evidence: List[Dict[str, Any]], opts: ReportOptions,
                     version: int) -> bytes:
     st = _styles(ACCENT)
+    # Readability fix: section + table headers were navy text (`accent`) on a
+    # near-black (#111) bar — unreadable. Override to a dark-grey bar with WHITE
+    # text for the insurance reports only (other report types are untouched).
+    HEADER_BAR = "#3A3A3A"
+    st["section"] = ParagraphStyle("ins_section", parent=st["section"],
+                                   textColor=colors.white,
+                                   backColor=colors.HexColor(HEADER_BAR))
+    st["th"] = ParagraphStyle("ins_th", parent=st["th"], textColor=colors.white)
+    st["th_right"] = ParagraphStyle("ins_th_right", parent=st["th_right"],
+                                    textColor=colors.white)
     detailed = opts.kind == "detailed"
     ins = claim.get("insurance") or {}
     story: List[Any] = []

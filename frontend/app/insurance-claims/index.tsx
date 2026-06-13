@@ -92,9 +92,9 @@ export default function InsuranceClaimsDashboard() {
           {/* Summary cards */}
           <View style={styles.cardGrid}>
             {cards.map((card) => (
-              <SkinPlate key={card.label} style={styles.statCard} padX={14} padTop={12} padBottom={12} testID={`ic-stat-${card.label}`}>
-                <Text style={[styles.statValue, { color: card.color }]} numberOfLines={1}>{card.value}</Text>
-                <Text style={styles.statLabel}>{card.label.toUpperCase()}</Text>
+              <SkinPlate key={card.label} style={styles.statCard} innerStyle={styles.statInner} padX={14} padTop={12} padBottom={12} testID={`ic-stat-${card.label}`}>
+                <Text style={[styles.statValue, { color: card.color }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6}>{card.value}</Text>
+                <Text style={styles.statLabel} numberOfLines={2}>{card.label.toUpperCase()}</Text>
               </SkinPlate>
             ))}
           </View>
@@ -176,8 +176,8 @@ export default function InsuranceClaimsDashboard() {
                     </Text>
                   </View>
                   <View style={{ alignItems: "flex-end" }}>
-                    <View style={[styles.badge, { borderColor: tint(claim.status) }]}>
-                      <Text style={[styles.badgeText, { color: tint(claim.status) }]}>{claim.status}</Text>
+                    <View style={[styles.badge, { backgroundColor: tint(claim.status), borderColor: tint(claim.status) }]}>
+                      <Text style={styles.badgeText}>{claim.status}</Text>
                     </View>
                     <Ionicons name="chevron-forward" size={18} color={c.textMuted} style={{ marginTop: 8 }} />
                   </View>
@@ -201,8 +201,9 @@ const styles = themedStyles((c) => ({
   headerTitle: { color: c.textPrimary, fontSize: 18, fontWeight: "800", letterSpacing: 0.3 },
   cardGrid: { flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", gap: 0 },
   statCard: { width: "48.5%", marginBottom: 12 },
-  statValue: { fontSize: 20, fontWeight: "900", color: c.textPrimary },
-  statLabel: { fontSize: 10, fontWeight: "800", color: c.textMuted, letterSpacing: 0.6, marginTop: 2 },
+  statInner: { minHeight: 50, justifyContent: "center" },
+  statValue: { fontSize: 22, fontWeight: "900", color: c.textPrimary },
+  statLabel: { fontSize: 10, fontWeight: "800", color: c.textSecondary, letterSpacing: 0.6, marginTop: 3 },
   searchRow: {
     flexDirection: "row", alignItems: "center", backgroundColor: c.surface,
     borderWidth: 1, borderColor: c.border, borderRadius: 10, paddingHorizontal: 12,
@@ -218,8 +219,8 @@ const styles = themedStyles((c) => ({
   claimRow: { flexDirection: "row", alignItems: "center", gap: 10 },
   claimTitle: { color: c.textPrimary, fontSize: 16, fontWeight: "800" },
   claimMeta: { color: c.textMuted, fontSize: 12, marginTop: 2 },
-  badge: { borderWidth: 1.2, borderRadius: 12, paddingHorizontal: 9, paddingVertical: 3 },
-  badgeText: { fontSize: 11, fontWeight: "800" },
+  badge: { borderWidth: 1.2, borderRadius: 12, paddingHorizontal: 11, paddingVertical: 4 },
+  badgeText: { fontSize: 12, fontWeight: "900", color: "#FFFFFF", letterSpacing: 0.3 },
   emptyTitle: { color: c.textPrimary, fontSize: 18, fontWeight: "800", marginTop: 12 },
   emptySub: { color: c.textMuted, fontSize: 13, textAlign: "center", marginTop: 6, lineHeight: 18 },
   primaryBtn: {

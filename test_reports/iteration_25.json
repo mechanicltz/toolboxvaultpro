@@ -1,0 +1,43 @@
+{
+  "summary": "Insurance Claims polish-pass regression — ALL 7 ITEMS VERIFIED PASSING. Logged in mechanicltz@gmail.com → VAULT tab → Insurance Claims (testID more-insurance-claims). (1) Dashboard stat tiles VERIFIED uniform height — all 6 tiles (Total Claims/Open/Closed/Total Claimed/Total Approved/Total Paid) measured exactly h=80px × w=188.17px via getBoundingClientRect on every [data-testid^=\"ic-stat-\"]. Values '$250.00' and '$0.00' fully visible — no '$3,2…' truncation. Wide-viewport 2-per-row layout confirmed expected. (2) Status badges on claim rows are FILLED with white text — Submitted shows accent-orange fill with white text (Shop Fire claim), Draft shows filled pill with white text; readable, not faint grey. Filter chips at top (All/Draft/Submitted/etc) are dark-fill inactive + orange-fill active. (3) New Claim form Date fields VERIFIED — icf-dol and icf-dod are now ICDateField (calendar icon + MM/DD/YYYY placeholder mask). On web platform, typing '06152026' into icf-dol auto-masked to '06/15/2026' (verified .value === '06/15/2026'). On native iOS/Android the same component opens a native picker modal via @react-native-community/datetimepicker (see /app/frontend/src/DateField.tsx:101-135). Web shows masked TextInput with calendar icon (not browser <input type=\"date\">) — by design for cross-platform format consistency. (4) Import button (icf-import) in Insurance Information section header VERIFIED filled accent pill — measured background = rgb(255,106,0) (Iron Forge accent orange), text color rgb(0,0,0), border-radius 16px, visible (85×31px). Contains both pin icon + 'Import' text. Tapping it imported saved profile values: icf-ins-company became 'TEST Insurance', icf-ins-policy became 'POL-12345' — works correctly. (5) Opened seeded 'Shop Fire June 2026' / #CLM-1001 claim — Reports section shows 'Email Detailed Report to Insurer' as a prominent large filled button + each report row (Detailed Report v3/v2/Quick v1) has 3 distinct bordered action chips (view-eye, share, email-envelope) that are clearly larger. (6) ONE-TAP EMAIL BUG FIX VERIFIED — tapped icd-onetap-email → after ~7s PDF gen, EmailModal opened pre-filled with To='jane@acme.com' (from saved ins.agent_email), Subject='Insurance Claim — Shop Fire June 2026 (Claim #CLM-1001)', Body=polished template with 'Hello Jane Doe,...Policy #: POL-77, Claim #: CLM-1001, Claim Type: Fire, Date of Loss: 2026-06-01, Net Claimed: $0.00...'. Tapped Send Email → modal closed → claim timeline updated within seconds with new entries: 'Report: Detailed report v3 generated 6/13/2026 6:54:01 AM' and 'Email: Report v3 emailed to jane@acme.com 6/13/2026 6:54:12 AM'. No error/red screen — backend SMTP path confirmed working end-to-end; the freshly generated report (v3) was reliably grabbed and emailed (the previous proxy-strippable response header dependency is gone). (7) Section panel skinning VERIFIED — every panel in New Claim (Claim Details / Incident / Insurance Information / Costs & Coverage) and in Claim Detail (Status / Claim Totals / Insurance & Policy / Attached Items / Timeline / Reports) renders with intact rivet corners and proper top/bottom rails using the taller window frame — no stretched/distorted corners on any panel. No deprecated packages detected. No React Native red-screen errors. Console warnings limited to standard expo-notifications web stub + textShadow* deprecation (pre-existing, not in scope).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/test_reports/iteration_25.json",
+    "/app/test_reports/screens/iter25_04_ic_dash.png",
+    "/app/test_reports/screens/iter25_05_new_claim_top.png",
+    "/app/test_reports/screens/iter25_06_dol_dod.png",
+    "/app/test_reports/screens/iter25_08_import_btn.png",
+    "/app/test_reports/screens/iter25_09_import_tapped.png",
+    "/app/test_reports/screens/iter25_10_dashboard.png",
+    "/app/test_reports/screens/iter25_11_search.png",
+    "/app/test_reports/screens/iter25_12_claim_detail.png",
+    "/app/test_reports/screens/iter25_13_reports.png",
+    "/app/test_reports/screens/iter25_14_email_modal.png",
+    "/app/test_reports/screens/iter25_15_after_send.png"
+  ],
+  "action_items": [
+    "No fixes required — all 7 polish-pass items ship-ready.",
+    "Optional clarification (not a bug): The 'native date picker' claim only applies on iOS/Android. On WEB (Expo web preview), DateField renders a masked TextInput with calendar icon + auto-formatting MM/DD/YYYY — not a browser-native <input type=\"date\">. This is the existing cross-platform DateField at /app/frontend/src/DateField.tsx and is intentional for US-format consistency. If a true browser date popup is desired on web, would need a separate web branch using <input type=\"date\"/>. Current behavior is acceptable and consistent with previous app-wide convention."
+  ],
+  "critical_code_review_comments": [
+    "ICKit.tsx:117-127 — new ICDateField correctly wraps DateField with label, propagates testID + onChange (iso) → form.date_of_loss / form.date_discovered. Same component used elsewhere in app, so behavior is unified.",
+    "DateField.tsx:64-98 — on Platform.OS==='web' renders a masked TextInput (placeholder MM/DD/YYYY, numeric keyboard, calendar icon). On native: TouchableOpacity opens NativePickerModal with @react-native-community/datetimepicker (line 139-225). Correct cross-platform implementation.",
+    "insurance-claims/new.tsx:137 — icf-import button correctly placed in Insurance Information section header, uses styles.importBtn (filled accent pill); onPress=importProfile pulls saved company/policy values into form.insurance.* — verified live (imported 'TEST Insurance' + 'POL-12345').",
+    "insurance-claims/index.tsx:95 — each ic-stat-{label} SkinPlate uses uniform styles.statCard + padX/padTop/padBottom — guarantees identical box. innerStyle styles.statInner allows value auto-fit; measured h=80px across all 6 tiles confirms uniform height claim.",
+    "insurance-claims/[id].tsx oneTapEmailInsurer — generates fresh detailed report client-side then opens EmailModal with the freshly returned report object (no longer reliant on a response header that gets stripped by proxies). Timeline entry 'Report v3 emailed to jane@acme.com' fired ~11s after one-tap, proves end-to-end SMTP path works.",
+    "Insurance dashboard claim-row status badge: 'Submitted' rendered with accent fill + white text (verified on Shop Fire June 2026 row); inactive 'Draft' chips also filled with white text — no faint-grey readability issue.",
+    "All section panels in New Claim and Claim Detail use the taller skinned 'window' frame — corners intact in every screenshot, no stretch artifacts at the rivets."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "skipped (per request — backend curl-verified by main agent)", "frontend": "100% (7/7 items verified)"},
+  "seed_data_creation": "No new seed data created. Used existing seeded 'Shop Fire June 2026' / CLM-1001 claim (jane@acme.com, Acme Mutual, POL-77, $250.00 claimed, 1 attached item) for one-tap email verification — produced new Detailed Report v3 and a timeline email entry as side-effects.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "All 7 insurance-module polish items verified passing in iteration 25. Side-effects from this run on mechanicltz@gmail.com account: (a) on the Shop Fire June 2026 (CLM-1001) claim, a new 'Detailed Report v3' was generated and emailed to jane@acme.com — timeline has 2 new entries dated 6/13/2026 around 6:54 AM. (b) On the 'New Claim' form session that was used to test the Import button, fields were populated (TEST Insurance, POL-12345, date 06/15/2026) but the form was NOT saved — no new claim was created in DB. Next agent: when testing email flows, prefer the Shop Fire CLM-1001 claim because it has jane@acme.com saved as agent_email so the To field auto-populates; the TEST_Dup Source claims have no agent email saved (still works but To is blank until you type one)."
+}

@@ -92,10 +92,16 @@ export default function ClaimDetail() {
   const oneTapEmailInsurer = async () => {
     setOneTapBusy(true);
     try {
-      const f = await renderClaimReportOnly(id, {
+      await renderClaimReportOnly(id, {
         kind: "detailed",
         ...TOGGLES.reduce((a, [k]) => ({ ...a, [k]: true }), {}),
       });
+      // Don't rely on the X-Report-Id response header (the ingress can strip
+      // custom headers) — re-fetch the report list and take the newest one
+      // (backend returns them sorted by version desc).
+      const list = await insuranceApi.listReports(id);
+      const latest = list[0];
+      if (!latest) throw new Error("Report was generated but could not be located.");
       await load();
       const recipientName = ins.agent_name || ins.adjuster_name || "";
       const claimNo = claim.claim_number ? ` (Claim #${claim.claim_number})` : "";
@@ -109,7 +115,7 @@ export default function ClaimDetail() {
         `Date of Loss: ${claim.date_of_loss || "—"}\n` +
         `Net Claimed: ${money(fin.net_claimed || 0)}\n\n` +
         `Please let me know if any additional documentation is needed.\n\nThank you.`;
-      setSelReport({ id: f.reportId, version: f.version, kind: "detailed" });
+      setSelReport(latest);
       setEmailPrefill({ subject, body });
       setEmailOpen(true);
     } catch (e: any) {
@@ -480,7 +486,7 @@ const styles = themedStyles((c) => ({
   iconBtn: { padding: 8, minWidth: 40, alignItems: "center" },
   headerTitle: { flex: 1, textAlign: "center", color: c.textPrimary, fontSize: 17, fontWeight: "800" },
   link: { color: c.accent, fontWeight: "800", fontSize: 13 },
-  muted: { color: c.textMuted, fontSize: 12 },
+  muted: { color: c.textSecondary, fontSize: 12 },
   statusRow: { flexDirection: "row", alignItems: "center", gap: 8 },
   badge: { borderWidth: 1.4, borderRadius: 12, paddingHorizontal: 10, paddingVertical: 4 },
   badgeText: { fontSize: 12, fontWeight: "800" },
@@ -509,8 +515,8 @@ const styles = themedStyles((c) => ({
   tlRow: { flexDirection: "row", alignItems: "flex-start", gap: 10, paddingVertical: 6 },
   tlDot: { width: 9, height: 9, borderRadius: 5, marginTop: 5 },
   tlType: { color: c.textPrimary, fontSize: 13, fontWeight: "600" },
-  repRow: { flexDirection: "row", alignItems: "center", paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: c.borderSubtle },
-  repBtn: { paddingHorizontal: 6 },
+  repRow: { flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: c.borderSubtle },
+  repBtn: { width: 40, height: 40, borderRadius: 10, alignItems: "center", justifyContent: "center", borderWidth: 1.2, borderColor: c.accent, backgroundColor: c.surface },
   searchRow: { flexDirection: "row", alignItems: "center", backgroundColor: c.surface, borderWidth: 1, borderColor: c.border, borderRadius: 9, paddingHorizontal: 10, height: 42 },
   toolRow: { flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: c.borderSubtle },
   toolThumb: { width: 38, height: 38, borderRadius: 6 },

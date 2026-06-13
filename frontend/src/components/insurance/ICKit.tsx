@@ -9,13 +9,14 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { themedStyles, useColors } from "../../themeContext";
 import { SkinPlate } from "../SkinPlate";
+import { DateField } from "../../DateField";
 
 export const ICSection = ({ title, right, children, testID }: {
   title: string; right?: ReactNode; children: ReactNode; testID?: string;
 }) => {
   const s = styles;
   return (
-    <SkinPlate style={{ marginBottom: 14 }} padX={16} padTop={14} padBottom={16} testID={testID}>
+    <SkinPlate style={{ marginBottom: 14 }} padX={18} padTop={16} padBottom={16} frame="window" testID={testID}>
       <View style={s.sectionHead}>
         <Text style={s.sectionTitle}>{title.toUpperCase()}</Text>
         {right}
@@ -92,8 +93,8 @@ export const ICButton = ({ label, onPress, icon, variant = "primary", testID, di
   label: string; onPress: () => void; icon?: any; variant?: "primary" | "ghost" | "danger"; testID?: string; disabled?: boolean;
 }) => {
   const c = useColors();
-  const bg = variant === "primary" ? c.accent : variant === "danger" ? c.danger : "transparent";
-  const fg = variant === "ghost" ? c.textSecondary : c.textOnAccent;
+  const bg = variant === "primary" ? c.accent : variant === "danger" ? c.danger : c.surface;
+  const fg = variant === "ghost" ? c.textPrimary : c.textOnAccent;
   return (
     <TouchableOpacity
       testID={testID}
@@ -101,14 +102,27 @@ export const ICButton = ({ label, onPress, icon, variant = "primary", testID, di
       onPress={onPress}
       activeOpacity={0.8}
       style={{
-        flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6,
-        backgroundColor: bg, borderWidth: variant === "ghost" ? 1 : 0, borderColor: c.border,
-        paddingHorizontal: 16, paddingVertical: 11, borderRadius: 22, opacity: disabled ? 0.5 : 1,
+        flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8,
+        backgroundColor: bg, borderWidth: variant === "ghost" ? 1.5 : 0, borderColor: c.accent,
+        paddingHorizontal: 18, paddingVertical: 13, borderRadius: 12, minHeight: 50, opacity: disabled ? 0.5 : 1,
       }}
     >
-      {icon && <Ionicons name={icon} size={16} color={fg} />}
-      <Text style={{ color: fg, fontWeight: "800", fontSize: 14 }}>{label}</Text>
+      {icon && <Ionicons name={icon} size={19} color={fg} />}
+      <Text style={{ color: fg, fontWeight: "800", fontSize: 15 }}>{label}</Text>
     </TouchableOpacity>
+  );
+};
+
+/** Date field that matches ICField look but opens the app's native date picker. */
+export const ICDateField = ({ label, value, onChange, placeholder, testID }: {
+  label: string; value: string; onChange: (iso: string) => void; placeholder?: string; testID?: string;
+}) => {
+  const s = styles;
+  return (
+    <View style={s.fieldWrap}>
+      <Text style={s.fieldLabel}>{label}</Text>
+      <DateField value={value} onChange={onChange} placeholder={placeholder} testID={testID} />
+    </View>
   );
 };
 
@@ -137,7 +151,7 @@ const styles = themedStyles((c) => ({
   sectionHead: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 10 },
   sectionTitle: { color: c.accent, fontSize: 12, fontWeight: "900", letterSpacing: 0.8 },
   fieldWrap: { marginBottom: 12 },
-  fieldLabel: { color: c.textMuted, fontSize: 11, fontWeight: "800", letterSpacing: 0.4, marginBottom: 5 },
+  fieldLabel: { color: c.textSecondary, fontSize: 12, fontWeight: "800", letterSpacing: 0.3, marginBottom: 5 },
   input: {
     backgroundColor: c.surface, borderWidth: 1, borderColor: c.border, borderRadius: 9,
     paddingHorizontal: 12, paddingVertical: 10, color: c.textPrimary, fontSize: 15, minHeight: 44,

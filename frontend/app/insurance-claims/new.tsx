@@ -4,7 +4,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { themedStyles, useColors } from "../../src/themeContext";
-import { ICSection, ICField, ICSelect, ICButton } from "../../src/components/insurance/ICKit";
+import { ICSection, ICField, ICSelect, ICButton, ICDateField } from "../../src/components/insurance/ICKit";
 import { insuranceApi, ClaimSpec } from "../../src/insuranceApi";
 
 const blankInsurance = {
@@ -118,8 +118,8 @@ export default function ClaimForm() {
             <ICSelect label="Claim Type" value={form.claim_type} options={spec?.claim_types || []} onSelect={(v) => set("claim_type", v)} testID="icf-type" />
             {!isEdit && <ICSelect label="Status" value={form.status} options={spec?.statuses || []} onSelect={(v) => set("status", v)} testID="icf-status" />}
             <ICField label="Claim Number" value={form.claim_number} onChangeText={(t) => set("claim_number", t)} testID="icf-number" />
-            <ICField label="Date of Loss" value={form.date_of_loss} onChangeText={(t) => set("date_of_loss", t)} placeholder="YYYY-MM-DD" testID="icf-dol" />
-            <ICField label="Date Discovered" value={form.date_discovered} onChangeText={(t) => set("date_discovered", t)} placeholder="YYYY-MM-DD" testID="icf-dod" />
+            <ICDateField label="Date of Loss" value={form.date_of_loss} onChange={(t) => set("date_of_loss", t)} testID="icf-dol" />
+            <ICDateField label="Date Discovered" value={form.date_discovered} onChange={(t) => set("date_discovered", t)} testID="icf-dod" />
             <ICField label="Loss Location" value={form.loss_location} onChangeText={(t) => set("loss_location", t)} testID="icf-loc" />
           </ICSection>
 
@@ -134,8 +134,8 @@ export default function ClaimForm() {
           <ICSection
             title="Insurance Information"
             right={
-              <TouchableOpacity testID="icf-import" onPress={importProfile} style={styles.importBtn}>
-                <Ionicons name="download-outline" size={14} color={c.accent} />
+              <TouchableOpacity testID="icf-import" onPress={importProfile} style={styles.importBtn} activeOpacity={0.8}>
+                <Ionicons name="download-outline" size={16} color={c.textOnAccent} />
                 <Text style={styles.importText}>Import</Text>
               </TouchableOpacity>
             }
@@ -176,6 +176,9 @@ const styles = themedStyles((c) => ({
   },
   iconBtn: { padding: 8, minWidth: 40, alignItems: "center" },
   headerTitle: { color: c.textPrimary, fontSize: 18, fontWeight: "800" },
-  importBtn: { flexDirection: "row", alignItems: "center", gap: 4 },
-  importText: { color: c.accent, fontSize: 12, fontWeight: "800" },
+  importBtn: {
+    flexDirection: "row", alignItems: "center", gap: 5,
+    backgroundColor: c.accent, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 16,
+  },
+  importText: { color: c.textOnAccent, fontSize: 13, fontWeight: "800" },
 }));
