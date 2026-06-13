@@ -1011,7 +1011,142 @@ def _normalise_tool_row(t: Dict[str, Any]) -> Dict[str, Any]:
         "quantity": qty,
         "photo": photo,
         "receipts": t.get("receipts") or [],
+        "bundle_id": t.get("bundle_id"),
     }
+
+
+# ---- BUNDLES / SETS (report grouping + dual sums) ----------------------------
+#
+# A "Set" (bundle) groups several items that each keep their own price, while the
+# set itself has a single "set price". Reports must never double-count: the
+# "Items Only" total sums every item's individual price; the "Items + Bundles"
+# total sums UNBUNDLED items' individual prices PLUS each represented set's set
+# price counted exactly once.
+
+# Segmented option offered on inventory/insurance/year-end reports.
+SET_PRICING_OPTION = {
+    "id": "set_pricing",
+    "type": "segmented",
+    "label": "Set Pricing",
+    "choices": [
+        {"id": "individual", "label": "Individual"},
+        {"id": "bundle", "label": "Bundle"},
+        {"id": "both", "label": "Both"},
+    ],
+    "default": "both",
+}
+
+
+async def _load_bundles_map(db) -> Dict[str, Dict[str, Any]]:
+    """Map of bundle_id -> bundle document for the current dataset."""
+    bundles = await db.bundles.find({}, {"_id": 0}).to_list(5000)
+    return {b.get("id"): b for b in bundles if b.get("id")}
+
+
+def _bundle_sums(
+    rows: List[Dict[str, Any]],
+    bundles_map: Dict[str, Dict[str, Any]],
+) -> Tuple[float, float, bool]:
+    """Returns (items_only_sum, items_and_bundles_sum, has_bundles).
+
+    items_only_sum            — every row's extended individual cost.
+    items_and_bundles_sum     — unbundled rows' individual cost + each
+                                represented set's set_price (counted ONCE).
+    has_bundles               — whether any row belongs to a known set.
+    """
+    items_only = 0.0
+    unbundled_cost = 0.0
+    seen_bundles: set = set()
+    for r in rows:
+        if r.get("_section_header"):
+            continue
+        c = float(r.get("cost") or 0)
+        items_only += c
+        bid = r.get("bundle_id")
+        if bid and bid in bundles_map:
+            seen_bundles.add(bid)
+        else:
+            unbundled_cost += c
+    bundle_total = sum(
+        float(bundles_map[b].get("set_price") or 0) for b in seen_bundles
+    )
+    return (
+        round(items_only, 2),
+        round(unbundled_cost + bundle_total, 2),
+        len(seen_bundles) > 0,
+    )
+
+
+def _group_rows_by_bundle(
+    rows: List[Dict[str, Any]],
+    bundles_map: Dict[str, Dict[str, Any]],
+) -> List[Dict[str, Any]]:
+    """Insert a section header for each set (showing its set price) followed by
+    that set's item rows; unbundled items fall under an 'Individual Items'
+    header. Returns rows unchanged when there are no represented sets."""
+    bundled: Dict[str, List[Dict[str, Any]]] = {}
+    unbundled: List[Dict[str, Any]] = []
+    for r in rows:
+        bid = r.get("bundle_id")
+        if bid and bid in bundles_map:
+            bundled.setdefault(bid, []).append(r)
+        else:
+            unbundled.append(r)
+    if not bundled:
+        return rows
+
+    out: List[Dict[str, Any]] = []
+    for bid in sorted(
+        bundled, key=lambda b: (bundles_map[b].get("name") or "").lower()
+    ):
+        b = bundles_map[bid]
+        name = b.get("name") or "Set"
+        sp = float(b.get("set_price") or 0)
+        part = b.get("part_number") or ""
+        n = len(bundled[bid])
+        bits = [name]
+        if part:
+            bits.append(f"#{part}")
+        bits.append(f"SET PRICE {fmt_money(sp)}")
+        bits.append(f"{n} item" + ("" if n == 1 else "s"))
+        out.append({
+            "_section_header": True,
+            "_section_label": "  ·  ".join(bits),
+        })
+        out.extend(bundled[bid])
+    if unbundled:
+        out.append({"_section_header": True, "_section_label": "Individual Items"})
+        out.extend(unbundled)
+    return out
+
+
+def _bundle_value_stats(
+    rows: List[Dict[str, Any]],
+    bundles_map: Dict[str, Dict[str, Any]],
+    mode: str,
+    plain_label: str,
+) -> Tuple[List[Tuple[str, str, bool]], bool]:
+    """Build the money stat tuple(s) for a tool-list report based on the chosen
+    set-pricing mode. Returns (stats, should_group).
+
+    When there are no sets in the data we always fall back to the single
+    `plain_label` total, regardless of mode.
+    """
+    items_only, items_bundles, has_bundles = _bundle_sums(rows, bundles_map)
+    if not has_bundles or mode == "individual":
+        return [(plain_label, fmt_money(items_only), True)], False
+    if mode == "bundle":
+        return [("Items + Bundles", fmt_money(items_bundles), True)], True
+    # both
+    return (
+        [
+            ("Items Only", fmt_money(items_only), True),
+            ("Items + Bundles", fmt_money(items_bundles), True),
+        ],
+        True,
+    )
+
+
 
 
 # ---------------------------------------------------------------------------
@@ -1226,19 +1361,24 @@ async def _fetch_insurance(db, user, options: Dict[str, Any]) -> Dict[str, Any]:
     if options.get("include_personal", True) and profile.get("name"):
         pi = profile
 
-    total_value = sum(numeric_value(r, "cost") for r in rows)
     total_units = sum(int(r.get("quantity") or 1) for r in rows)
     items_label = (
         f"{len(rows)}" if total_units == len(rows)
         else f"{len(rows)} · {total_units} units"
     )
-    stats = [
-        ("Total Items", items_label, False),
-        ("Total Value", fmt_money(total_value), True),
-    ]
+    receipts_meta = (
+        _build_receipts_meta(rows) if options.get("include_receipts") else None
+    )
+    # Set pricing: dual sums + grouping under each set's header.
+    bundles_map = await _load_bundles_map(db)
+    mode = (options.get("set_pricing") or "both").strip().lower()
+    value_stats, should_group = _bundle_value_stats(rows, bundles_map, mode, "Total Value")
+    if should_group:
+        rows = _group_rows_by_bundle(rows, bundles_map)
+    stats = [("Total Items", items_label, False), *value_stats]
     out: Dict[str, Any] = {"rows": rows, "stats": stats, "personal_info": pi}
-    if options.get("include_receipts"):
-        out["receipts_meta"] = _build_receipts_meta(rows)
+    if receipts_meta is not None:
+        out["receipts_meta"] = receipts_meta
     return out
 
 
@@ -1279,19 +1419,25 @@ async def _fetch_inventory(db, user, options: Dict[str, Any]) -> Dict[str, Any]:
         tools = [t for t in tools if in_range(t.get("purchase_date"), start, end)]
 
     rows = [_normalise_tool_row(t) for t in tools]
-    total = sum(numeric_value(r, "cost") for r in rows)
     total_units = sum(int(r.get("quantity") or 1) for r in rows)
     items_label = (
         f"{len(rows)}" if total_units == len(rows)
         else f"{len(rows)} · {total_units} units"
     )
-    stats = [
-        ("Total Items", items_label, False),
-        ("Total Cost", fmt_money(total), True),
-    ]
+    # Receipts appendix is built from the flat (ungrouped) row order.
+    receipts_meta = (
+        _build_receipts_meta(rows) if options.get("include_receipts") else None
+    )
+    # Set pricing: dual sums + grouping under each set's header.
+    bundles_map = await _load_bundles_map(db)
+    mode = (options.get("set_pricing") or "both").strip().lower()
+    value_stats, should_group = _bundle_value_stats(rows, bundles_map, mode, "Total Cost")
+    if should_group:
+        rows = _group_rows_by_bundle(rows, bundles_map)
+    stats = [("Total Items", items_label, False), *value_stats]
     out: Dict[str, Any] = {"rows": rows, "stats": stats}
-    if options.get("include_receipts"):
-        out["receipts_meta"] = _build_receipts_meta(rows)
+    if receipts_meta is not None:
+        out["receipts_meta"] = receipts_meta
     return out
 
 
@@ -2104,6 +2250,7 @@ async def _fetch_year_end(db, user, options: Dict[str, Any]) -> Dict[str, Any]:
     tools = await db.tools.find(q, {"_id": 0}).to_list(20000)
 
     rows: List[Dict[str, Any]] = []
+    acquired_rows: List[Dict[str, Any]] = []
     total_acquired_count = 0
     total_sold_count = 0
     total_lost_count = 0
@@ -2138,6 +2285,7 @@ async def _fetch_year_end(db, user, options: Dict[str, Any]) -> Dict[str, Any]:
             r["ye_recovered"] = 0
             r["repair_cost"] = 0
             rows.append(r)
+            acquired_rows.append(r)
             total_acquired_count += 1
             total_spent += float(r.get("cost") or 0)
         # Sold
@@ -2213,12 +2361,27 @@ async def _fetch_year_end(db, user, options: Dict[str, Any]) -> Dict[str, Any]:
         return r.get("ye_event_date") or ""
     rows.sort(key=_key)
 
+    # Set pricing applied to "Total Spent" (acquisitions only). Year-End stays
+    # chronological, so we surface dual sums in the stats rather than regrouping.
+    bundles_map = await _load_bundles_map(db)
+    mode = (options.get("set_pricing") or "both").strip().lower()
+    spent_only, spent_bundles, spent_has_bundles = _bundle_sums(acquired_rows, bundles_map)
+    if not spent_has_bundles or mode == "individual":
+        spent_stats = [("Total Spent", fmt_money(spent_only), True)]
+    elif mode == "bundle":
+        spent_stats = [("Total Spent", fmt_money(spent_bundles), True)]
+    else:
+        spent_stats = [
+            ("Spent · Items", fmt_money(spent_only), True),
+            ("Spent · +Sets", fmt_money(spent_bundles), True),
+        ]
+
     stats = [
         ("Year", str(year), False),
         ("Acquired", str(total_acquired_count), False),
         ("Sold", str(total_sold_count), False),
         ("Lost / Stolen", str(total_lost_count + total_stolen_count), False),
-        ("Total Spent", fmt_money(total_spent), True),
+        *spent_stats,
         ("Total Recovered", fmt_money(total_recovered), True),
     ]
     if include_repairs:
@@ -2244,6 +2407,7 @@ REPORTS: Dict[str, ReportSpec] = {
         default_columns=["photo", "name", "quantity", "brand", "serial", "cost"],
         fetch=_fetch_insurance,
         options_schema=[
+            SET_PRICING_OPTION,
             {"id": "include_personal", "type": "toggle",
              "label": "Include personal / address info", "default": True},
             {"id": "include_receipts", "type": "toggle",
@@ -2261,6 +2425,7 @@ REPORTS: Dict[str, ReportSpec] = {
         default_columns=["photo", "name", "quantity", "brand", "serial", "cost"],
         fetch=_fetch_inventory,
         options_schema=[
+            SET_PRICING_OPTION,
             {"id": "location_id", "type": "location", "label": "Location"},
             {"id": "tag_ids", "type": "tag_multi", "label": "Tags"},
             {"id": "brands", "type": "brand_multi", "label": "Brands"},
@@ -2421,6 +2586,7 @@ REPORTS: Dict[str, ReportSpec] = {
         default_columns=["name", "serial", "purchase_date", "ye_status", "ye_event_date", "cost", "ye_recovered"],
         fetch=_fetch_year_end,
         options_schema=[
+            SET_PRICING_OPTION,
             # The "year" choice list is injected dynamically per-user
             # (see make_reports_router → reports_spec) so users only see
             # years where they actually have data.

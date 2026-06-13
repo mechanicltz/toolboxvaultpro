@@ -20,10 +20,11 @@ its own model #, price, photo; the bundle has its own photo, part #, and set pri
 - ADD "+" button prompts: "Add Item" vs "Add Set/Bundle". ✅
 - Add Bundle flow: input set data + choose existing items to add. ✅
 - Assign item to a bundle from the item edit form (BUNDLE / SET accordion). ✅
-- REPORTS (Phase 2 — NOT STARTED): toggle individual / bundle / both pricing;
-  dual sums to avoid double counting — "Items & bundles sum" (unbundled items +
-  bundle prices) vs "Items only sum" (all items at individual value, ignoring
-  bundle prices); items listed on own rows grouped under their bundle.
+- REPORTS (Phase 2 — ✅ DONE): toggle individual / bundle / both pricing;
+  dual sums to avoid double counting — "Items + Bundles" (unbundled items +
+  set prices, each set once) vs "Items Only" (all items at individual value);
+  bundled items listed on own rows grouped under a per-set section header
+  showing the set price. Applied to Inventory, Insurance, Year-End reports.
 
 ## Implemented (2026-02 / build 294)
 ### Backend (Phase 1 — done & tested, 14/14 pytest in /app/backend/tests/test_bundles.py)
