@@ -1113,16 +1113,6 @@ export default function InventoryScreen() {
                       {item.dealer_name}
                     </Text>
                   )}
-                  {item.is_set && (
-                    <View style={styles.setBadge}>
-                      <Ionicons name="cube" size={10} color="#000" />
-                      <Text style={styles.setBadgeText}>
-                        SET{Array.isArray(item.set_serials) && item.set_serials.length > 0
-                          ? ` · ${item.set_serials.length}`
-                          : ""}
-                      </Text>
-                    </View>
-                  )}
                   {item.bundle_id && (
                     <View style={styles.bundleBadge}>
                       <Ionicons name="cube" size={10} color={theme.colors.accent} />

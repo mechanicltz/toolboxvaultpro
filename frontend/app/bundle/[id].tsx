@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, type ReactNode } from "react";
 import {
   View, Text, ScrollView, TouchableOpacity, Image, Alert, ActivityIndicator,
 } from "react-native";
@@ -8,12 +8,17 @@ import { useLocalSearchParams, useRouter, useFocusEffect } from "expo-router";
 import { theme } from "../../src/theme";
 import { api } from "../../src/api";
 import { confirm } from "../../src/confirm";
-import { themedStyles } from "../../src/themeContext";
+import { themedStyles, useSkin } from "../../src/themeContext";
 import { IndustrialBanner } from "../../src/components/IndustrialBanner";
+import { ShadowBox } from "../../src/components/ShadowBox";
+import { SKIN, CAP } from "../../src/tbv/skins";
+import { TbvFrame } from "../../src/tbv/components/TbvFrame";
 
 export default function BundleDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const { skin } = useSkin();
+  const isIndustrial = skin === "industrial";
   const [bundle, setBundle] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
@@ -60,6 +65,17 @@ export default function BundleDetail() {
   const items = bundle.items || [];
   const itemsTotal = items.reduce((s: number, i: any) => s + (i.cost || 0), 0);
 
+  const CardShell = ({ children, testID }: { children: ReactNode; testID?: string }) =>
+    isIndustrial ? (
+      <View style={styles.cardSkinWrap}>
+        <TbvFrame source={SKIN.window} capInsets={CAP.window} padX={36} padTop={26} padBottom={26} testID={testID}>
+          {children}
+        </TbvFrame>
+      </View>
+    ) : (
+      <ShadowBox testID={testID} style={styles.card}>{children}</ShadowBox>
+    );
+
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <IndustrialBanner
@@ -89,7 +105,7 @@ export default function BundleDetail() {
           <Image source={{ uri: bundle.photos[0] }} style={styles.hero} />
         )}
 
-        <View style={styles.card}>
+        <CardShell testID="bundle-info-card">
           <Text style={styles.bigName}>{bundle.name}</Text>
           <View style={styles.metaRow}>
             {!!bundle.part_number && (
@@ -104,10 +120,10 @@ export default function BundleDetail() {
             </View>
           </View>
           {!!bundle.notes && <Text style={styles.notes}>{bundle.notes}</Text>}
-        </View>
+        </CardShell>
 
         {/* Pricing comparison */}
-        <View style={styles.card}>
+        <CardShell testID="bundle-pricing-card">
           <View style={styles.priceRow}>
             <Text style={styles.priceLabel}>SET PRICE</Text>
             <Text style={styles.priceValAccent}>${(bundle.set_price || 0).toFixed(2)}</Text>
@@ -116,7 +132,7 @@ export default function BundleDetail() {
             <Text style={styles.priceLabel}>ITEMS TOTAL (individual)</Text>
             <Text style={styles.priceVal}>${itemsTotal.toFixed(2)}</Text>
           </View>
-        </View>
+        </CardShell>
 
         {/* Items */}
         <Text style={styles.sectionTitle}>ITEMS IN THIS SET</Text>
@@ -159,7 +175,8 @@ export default function BundleDetail() {
 }
 
 const styles = themedStyles((c) => ({
-  container: { flex: 1, backgroundColor: c.bg },
+  container: { flex: 1, backgroundColor: c.canvas },
+  cardSkinWrap: { marginBottom: 14 },
   hero: { width: "100%", height: 180, borderRadius: 12, marginBottom: 14 },
   card: {
     backgroundColor: c.surface, borderRadius: 12, padding: 16, marginBottom: 14,

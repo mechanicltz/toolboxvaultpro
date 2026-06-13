@@ -20,7 +20,7 @@ import { ImageSourcePropType } from "react-native";
  * contained inside it so all rows align and all icons read the same size.
  */
 export const DEALER_LOGO_SLOT = {
-  compact: 46, // dashboard "Dealer Accounts" rows + balance rows
+  compact: 40, // dashboard "Dealer Accounts" rows + balance rows
   list: 54, // Dealers tab list rows
   hero: 150, // Dealer detail header
   picker: 56, // add / edit modal preview
