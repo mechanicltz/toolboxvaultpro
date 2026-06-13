@@ -116,6 +116,13 @@ export async function renderAndViewClaimReport(claimId: string, opts: any): Prom
   return file;
 }
 
+/** Render a NEW report version WITHOUT opening the viewer — used by the
+ *  one-tap "Email to Insurer" flow, which generates a fresh Detailed report
+ *  silently and then hands its id straight to the email composer. */
+export async function renderClaimReportOnly(claimId: string, opts: any): Promise<Fetched> {
+  return fetchPdf(`${BACKEND}/api/insurance-claims/${claimId}/reports/render`, "POST", opts);
+}
+
 /** View an already-generated stored report version. */
 export async function viewStoredClaimReport(claimId: string, reportId: string): Promise<void> {
   const file = await fetchPdf(

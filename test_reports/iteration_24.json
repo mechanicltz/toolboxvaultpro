@@ -1,0 +1,41 @@
+{
+  "summary": "Frontend regression test of 4 changes. ALL FOUR VERIFIED PASSING. (1) P0 KeyboardAvoidingView CRASH FIXED — logged in mechanicltz@gmail.com → CONTACTS tab → Dealers → Cornwell Tools dealer detail → tapped schedule-TRUCK-ACCOUNT pill. The TRUCK PAYMENT SCHEDULE modal opened cleanly (sched-amount + sched-save + Cancel rendered, 'TRUCK PAYMENT SCHEDULE' title visible). NO red error screen, NO 'KeyboardAvoidingView doesn't exist' text in page body, no pageerror in console. The import added at /app/frontend/src/sections/BalanceSection.tsx:10 resolved the regression. Also verified schedule-CREDIT-ACCOUNT opens the same modal flow (no crash). (2) Inventory single-panel layout VERIFIED — INVENTORY tab now renders ONE single large metal TbvListPanel (CAP.window 9-slice frame, inset marginHorizontal:10) that contains the entire FlatList; the single visible item 'Test Drill' renders as a PLAIN row (rowSkinPlain) with hairline divider styling — NOT a per-item TbvFrame. The empty area inside the panel proves it's the SAME panel (flex:1 child of TbvListPanel). Tapping the row navigates to /tool/{id} successfully. FAB (add-item-fab) remains present and tappable at bottom-right. (3) Detail Summary Header marginHorizontal VERIFIED in code — styles.summaryFrameSkin = { marginHorizontal: 12, marginBottom: 8 } at inventory.tsx:1801, applied to the TbvFrame wrapper at line 929. The summary panel only renders when prefs.show_details_summary && agg exists; this user has it OFF so visual capture not possible, but the inset is correctly applied (left/right gutters match the search bar above). (4) One-tap Email to Insurer VERIFIED — VAULT → Insurance Claims → tapped first claim → scrolled to Reports section → tapped icd-onetap-email button. After ~3s PDF gen, the Email Report v1 modal opened with: icd-email-subject pre-filled 'Insurance Claim — TEST_Dup Source (Copy)' (matches `Insurance Claim — ${title}${claimNo}` template), icd-email-body pre-filled with full polished template ('Hello,\\n\\nPlease find attached the detailed insurance claim report for ...\\n\\nPolicy #: —\\nClaim #: —\\nClaim Type: ...\\nDate of Loss: ...\\nNet Claimed: $0.00\\n\\nPlease let me know if any additional documentation is needed.\\n\\nThank you.'). icd-email-to was empty for this specific claim because it has no insurance.agent_email/adjuster_email saved (data-driven, not a code bug — code at line 100 correctly does `ins.agent_email || ins.adjuster_email || ''`). The per-report mail icon (icd-email-{r.id}) clears emailPrefill via setEmailPrefill(null) before opening modal — verified in code at line 282. NO red error screen, NO crashes on any screen.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/test_reports/iteration_24.json",
+    "/app/test_reports/screens/iter24_07_dealer_cornwell.png",
+    "/app/test_reports/screens/iter24_08_dealer_scrolled.png",
+    "/app/test_reports/screens/iter24_09_truck_sched_modal.png",
+    "/app/test_reports/screens/iter24_10_inventory.png",
+    "/app/test_reports/screens/iter24_11_tool_detail.png",
+    "/app/test_reports/screens/iter24_17_ic_dash.png",
+    "/app/test_reports/screens/iter24_18_claim_reports.png",
+    "/app/test_reports/screens/iter24_20_email_modal.png"
+  ],
+  "action_items": [
+    "No fixes required — all 4 features ship-ready.",
+    "Optional UX polish (not a bug): when the inventory list has only 1-2 items, the single TbvListPanel has a lot of empty space below the last row. This is correct flex:1 fill behavior and matches the design intent (panel fills viewport). If you want to make it look less empty on small accounts, consider showing a soft ghost 'Tap + to add tools' line inside the panel below the last row when displayedTools.length < 3.",
+    "Optional verification (not a bug): the icd-onetap-email To field is empty when the claim has no agent_email/adjuster_email saved. This is correct behavior, but you may want to surface a small inline hint in the modal (e.g. 'No insurer email saved — enter one above') so users know why the To field is empty. Cosmetic only."
+  ],
+  "critical_code_review_comments": [
+    "BalanceSection.tsx:10 — KeyboardAvoidingView now correctly imported from 'react-native'. Used at line 373 inside ScheduleModal. P0 fix verified.",
+    "inventory.tsx:1213-1226 — isIndustrial branch correctly wraps FlatList inside ONE TbvListPanel with SKIN.window + CAP.window; FlatList gets styles.listFlexed (flex:1) so virtualization scrolls INSIDE the panel. Single-panel layout confirmed.",
+    "inventory.tsx:1168-1187 — when isIndustrial, rows render as plain TouchableOpacity with rowSkinPlain divider styling (no per-item TbvFrame). Non-skinned themes still use ShadowBox.",
+    "inventory.tsx:1801 — summaryFrameSkin: { marginHorizontal: 12, marginBottom: 8 } correctly insets the Detail Summary Header from screen edges via styles.summaryFrameSkin at line 929.",
+    "insurance-claims/[id].tsx:92-120 — oneTapEmailInsurer correctly: (a) calls renderClaimReportOnly with kind='detailed' + all TOGGLES enabled, (b) builds polished subject `Insurance Claim — ${title}${claimNo}`, (c) builds polished body with Policy/Claim/Type/Date of Loss/Net Claimed, (d) sets selReport and emailPrefill, (e) opens EmailModal. Catch block surfaces errors via Alert.",
+    "insurance-claims/[id].tsx:282 — per-report mail icon calls setEmailPrefill(null) BEFORE setEmailOpen(true), so stale one-tap prefill never leaks into per-report email. Correct.",
+    "insurance-claims/[id].tsx:455 — EmailModal useEffect resets subject/body from prefill?.subject and prefill?.body on each open; To field auto-populates from ins?.agent_email || ins?.adjuster_email || ''. Correct prefill behavior."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "skipped (locations seeding curl-verified by main agent)", "frontend": "100% (4/4 features verified)"},
+  "seed_data_creation": "No new test data created.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "All 4 changes in iteration 24 verified: (1) P0 dealer Schedule modal no longer crashes (KeyboardAvoidingView imported). (2) Inventory single TbvListPanel layout shipped. (3) Summary header marginHorizontal:12 inset verified in code (not visually since this account has show_details_summary off — to visually test, enable Vault → Preferences → 'Show details summary'). (4) icd-onetap-email button opens Email modal with pre-filled subject + body template (and To from agent_email/adjuster_email if saved). The TEST_Dup Source (Copy) claim used in test had no agent_email saved so To was empty — for a richer demo, test against the 'Shop Fire June 2026' / CLM-1001 claim which has Acme Mutual agent saved."
+}

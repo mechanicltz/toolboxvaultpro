@@ -12,7 +12,7 @@ import * as FileSystem from "expo-file-system/legacy";
 import { themedStyles, useColors } from "../../src/themeContext";
 import { ICSection, ICField, ICSelect, ICButton, ICModal } from "../../src/components/insurance/ICKit";
 import { insuranceApi, ClaimSpec } from "../../src/insuranceApi";
-import { renderAndViewClaimReport, viewStoredClaimReport, shareStoredClaimReport } from "../../src/insuranceReport";
+import { renderAndViewClaimReport, viewStoredClaimReport, shareStoredClaimReport, renderClaimReportOnly } from "../../src/insuranceReport";
 
 const money = (n: number) => "$" + (Number(n) || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const fmtDate = (s?: string) => { if (!s) return ""; const d = new Date(s); return isNaN(+d) ? s : d.toLocaleString(); };
@@ -48,6 +48,8 @@ export default function ClaimDetail() {
   const [noteOpen, setNoteOpen] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
   const [emailOpen, setEmailOpen] = useState(false);
+  const [emailPrefill, setEmailPrefill] = useState<{ subject?: string; body?: string } | null>(null);
+  const [oneTapBusy, setOneTapBusy] = useState(false);
   const [editItem, setEditItem] = useState<any>(null);
   const [selReport, setSelReport] = useState<any>(null);
 
@@ -83,6 +85,38 @@ export default function ClaimDetail() {
       { text: "Delete", style: "destructive", onPress: confirmDelete },
       { text: "Cancel", style: "cancel" },
     ]);
+  };
+
+  // One-tap: silently generate a fresh DETAILED report, then open the email
+  // composer pre-filled with the saved agent/adjuster + a polished template.
+  const oneTapEmailInsurer = async () => {
+    setOneTapBusy(true);
+    try {
+      const f = await renderClaimReportOnly(id, {
+        kind: "detailed",
+        ...TOGGLES.reduce((a, [k]) => ({ ...a, [k]: true }), {}),
+      });
+      await load();
+      const recipientName = ins.agent_name || ins.adjuster_name || "";
+      const claimNo = claim.claim_number ? ` (Claim #${claim.claim_number})` : "";
+      const subject = `Insurance Claim — ${claim.title}${claimNo}`;
+      const body =
+        `Hello${recipientName ? ` ${recipientName}` : ""},\n\n` +
+        `Please find attached the detailed insurance claim report for "${claim.title}".\n\n` +
+        `Policy #: ${ins.policy_number || "—"}\n` +
+        `Claim #: ${claim.claim_number || "—"}\n` +
+        `Claim Type: ${claim.claim_type || "—"}\n` +
+        `Date of Loss: ${claim.date_of_loss || "—"}\n` +
+        `Net Claimed: ${money(fin.net_claimed || 0)}\n\n` +
+        `Please let me know if any additional documentation is needed.\n\nThank you.`;
+      setSelReport({ id: f.reportId, version: f.version, kind: "detailed" });
+      setEmailPrefill({ subject, body });
+      setEmailOpen(true);
+    } catch (e: any) {
+      Alert.alert("Could not prepare email", e?.message || "");
+    } finally {
+      setOneTapBusy(false);
+    }
   };
 
   const addPhoto = async () => {
@@ -226,6 +260,16 @@ export default function ClaimDetail() {
 
         {/* Reports */}
         <ICSection title={`Reports (${reports.length})`} right={<TouchableOpacity testID="icd-generate" onPress={() => setReportOpen(true)}><Text style={styles.link}>Generate</Text></TouchableOpacity>}>
+          <ICButton
+            label={oneTapBusy ? "Preparing report…" : "Email Detailed Report to Insurer"}
+            icon="mail"
+            onPress={oneTapEmailInsurer}
+            disabled={oneTapBusy}
+            testID="icd-onetap-email"
+          />
+          <Text style={[styles.muted, { marginTop: 6, marginBottom: 10 }]}>
+            Generates the latest detailed PDF and pre-fills an email to your saved agent / adjuster.
+          </Text>
           {reports.length === 0 ? <Text style={styles.muted}>Generate a professional Quick or Detailed PDF report.</Text> :
             reports.map((r) => (
               <View key={r.id} style={styles.repRow}>
@@ -235,7 +279,7 @@ export default function ClaimDetail() {
                 </View>
                 <TouchableOpacity testID={`icd-view-${r.id}`} onPress={() => viewStoredClaimReport(id, r.id).catch((e) => Alert.alert("Error", e.message))} style={styles.repBtn}><Ionicons name="eye-outline" size={18} color={c.accent} /></TouchableOpacity>
                 <TouchableOpacity onPress={() => shareStoredClaimReport(id, r.id).catch((e) => Alert.alert("Error", e.message))} style={styles.repBtn}><Ionicons name="share-outline" size={18} color={c.accent} /></TouchableOpacity>
-                <TouchableOpacity testID={`icd-email-${r.id}`} onPress={() => { setSelReport(r); setEmailOpen(true); }} style={styles.repBtn}><Ionicons name="mail-outline" size={18} color={c.accent} /></TouchableOpacity>
+                <TouchableOpacity testID={`icd-email-${r.id}`} onPress={() => { setSelReport(r); setEmailPrefill(null); setEmailOpen(true); }} style={styles.repBtn}><Ionicons name="mail-outline" size={18} color={c.accent} /></TouchableOpacity>
               </View>
             ))}
         </ICSection>
@@ -247,7 +291,7 @@ export default function ClaimDetail() {
       <NoteModal visible={noteOpen} onClose={() => setNoteOpen(false)} spec={spec} id={id} onDone={() => { setNoteOpen(false); load(); }} />
       <ItemEditModal item={editItem} spec={spec} id={id} onClose={() => setEditItem(null)} onDone={() => { setEditItem(null); load(); }} />
       <ReportModal visible={reportOpen} onClose={() => setReportOpen(false)} id={id} onDone={() => { setReportOpen(false); load(); }} />
-      <EmailModal visible={emailOpen} onClose={() => setEmailOpen(false)} id={id} ins={ins} report={selReport} onDone={() => { setEmailOpen(false); load(); }} />
+      <EmailModal visible={emailOpen} onClose={() => { setEmailOpen(false); setEmailPrefill(null); }} id={id} ins={ins} report={selReport} prefill={emailPrefill} onDone={() => { setEmailOpen(false); setEmailPrefill(null); load(); }} />
     </SafeAreaView>
   );
 }
@@ -403,12 +447,12 @@ function ReportModal({ visible, onClose, id, onDone }: any) {
   );
 }
 
-function EmailModal({ visible, onClose, id, ins, report, onDone }: any) {
+function EmailModal({ visible, onClose, id, ins, report, prefill, onDone }: any) {
   const [to, setTo] = useState("");
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
   const [busy, setBusy] = useState(false);
-  useEffect(() => { if (visible) { setTo(ins?.agent_email || ins?.adjuster_email || ""); setSubject(""); setBody(""); } }, [visible]);
+  useEffect(() => { if (visible) { setTo(ins?.agent_email || ins?.adjuster_email || ""); setSubject(prefill?.subject || ""); setBody(prefill?.body || ""); } }, [visible]);
   const send = async () => {
     if (!to.trim() || !report) { Alert.alert("Recipient required", "Enter an email address."); return; }
     setBusy(true);

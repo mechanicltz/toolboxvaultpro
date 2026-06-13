@@ -39,6 +39,7 @@ import { AddFab } from "../../src/components/AddFab";
 // dashboard's dual-render pattern. Plain themes keep the flat canvas look.
 import { SKIN, CAP } from "../../src/tbv/skins";
 import { TbvFrame } from "../../src/tbv/components/TbvFrame";
+import { TbvListPanel } from "../../src/tbv/components/TbvListPanel";
 
 type Filter = "all" | "available" | "out" | "consumables" | "lost" | "maintenance" | "for_sale";
 
@@ -937,7 +938,10 @@ export default function InventoryScreen() {
         )
       )}
 
+      {(() => {
+        const listEl = (
       <FlatList
+        style={isIndustrial ? styles.listFlexed : undefined}
         data={displayedTools}
         keyExtractor={keyExtractor}
         key={`grid-${gridCols}`}
@@ -1162,28 +1166,22 @@ export default function InventoryScreen() {
           );
 
           if (isIndustrial) {
+            // Single-panel layout: rows render PLAIN (no per-item metal frame)
+            // — the whole list lives inside ONE <TbvListPanel/> wrapper below,
+            // separated by subtle metallic dividers.
             return (
               <TouchableOpacity
                 testID={`tool-card-${item.id}`}
                 style={[
-                  styles.rowSkinWrap,
-                  gridCols > 1 && { flex: 1, marginHorizontal: 0 },
-                  isSelected && styles.rowSkinSelected,
+                  styles.rowSkinPlain,
+                  gridCols > 1 && { flex: 1, marginHorizontal: 6 },
+                  isSelected && styles.rowSkinPlainSelected,
                 ]}
                 onPress={onCardPress}
                 onLongPress={onCardLongPress}
                 activeOpacity={0.7}
               >
-                <TbvFrame
-                  source={SKIN.plate}
-                  capInsets={CAP.plate}
-                  style={styles.rowSkinFrame}
-                  padX={20}
-                  padTop={14}
-                  padBottom={14}
-                >
-                  <View style={styles.rowSkinInner}>{cardContent}</View>
-                </TbvFrame>
+                <View style={styles.rowSkinInner}>{cardContent}</View>
               </TouchableOpacity>
             );
           }
@@ -1211,6 +1209,22 @@ export default function InventoryScreen() {
           );
         }}
       />
+        );
+        return isIndustrial ? (
+          <TbvListPanel
+            source={SKIN.window}
+            capInsets={CAP.window}
+            style={styles.invListPanel}
+            padX={14}
+            padTop={10}
+            padBottom={2}
+          >
+            {listEl}
+          </TbvListPanel>
+        ) : (
+          listEl
+        );
+      })()}
 
       {selectMode ? (
         <View style={styles.bulkBar}>
@@ -1782,6 +1796,9 @@ const styles = themedStyles((c) => ({
   skinBg: { flex: 1, backgroundColor: "#0A0A0A" },
   skinVeil: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(10,10,10,0.55)" },
   searchFrameSkin: { minHeight: 52, justifyContent: "center" },
+  // Detail Summary Header (skinned): inset from screen edges so the metal
+  // window frame doesn't run the full device width (was edge-to-edge / too wide).
+  summaryFrameSkin: { marginHorizontal: 12, marginBottom: 8 },
   searchBoxInner: {
     flexDirection: "row",
     alignItems: "center",
@@ -2047,18 +2064,27 @@ const styles = themedStyles((c) => ({
     borderWidth: 2,
     borderColor: c.accent,
   },
-  // Iron Forge skinned card (Stage 2): metal frame wrapper + row content.
-  rowSkinWrap: {
-    marginHorizontal: 16,
-    marginBottom: 14,
-    borderRadius: 10,
+  // Iron Forge — Stage 3: the WHOLE list lives inside ONE metal panel
+  // (<TbvListPanel/>); rows render plain with a subtle divider instead of a
+  // frame each. `invListPanel` insets the panel from screen edges; `listFlexed`
+  // lets the FlatList fill + scroll inside it.
+  invListPanel: {
+    flex: 1,
+    marginHorizontal: 10,
+    marginBottom: 8,
   },
-  rowSkinSelected: {
+  listFlexed: { flex: 1 },
+  rowSkinPlain: {
+    paddingVertical: 14,
+    paddingHorizontal: 4,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: "rgba(255,255,255,0.10)",
+  },
+  rowSkinPlainSelected: {
     borderWidth: 2,
     borderColor: c.accent,
-    borderRadius: 12,
+    borderRadius: 10,
   },
-  rowSkinFrame: { width: "100%" },
   rowSkinInner: {
     flexDirection: "row",
     alignItems: "center",

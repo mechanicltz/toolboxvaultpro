@@ -3750,6 +3750,14 @@ DEFAULT_CATEGORIES_SEED: List[str] = [
     "Pneumatic Tools",
 ]
 
+# Default location hierarchy seeded for new users so the location picker isn't
+# empty on first launch and they have a concrete "toolbox → drawer" example to
+# build on. Each parent toolbox gets one starter drawer.
+DEFAULT_LOCATIONS_SEED: List[Dict[str, Any]] = [
+    {"name": "Main Toolbox", "children": ["Drawer 1"]},
+    {"name": "Home Toolbox", "children": ["Drawer 1"]},
+]
+
 
 async def seed_default_content_for_user(user_id: str) -> Dict[str, int]:
     """Insert the default dealers, tags and categories for *user_id*.
@@ -3758,7 +3766,7 @@ async def seed_default_content_for_user(user_id: str) -> Dict[str, int]:
     exact match for dealer names) are skipped. Returns a small counters
     dict for logging.
     """
-    counters = {"dealers": 0, "tags": 0, "categories": 0}
+    counters = {"dealers": 0, "tags": 0, "categories": 0, "locations": 0}
 
     # --- Dealers ---
     # NOTE: This function bypasses the `db` proxy (which auto-injects
@@ -3817,6 +3825,39 @@ async def seed_default_content_for_user(user_id: str) -> Dict[str, int]:
         rec["owner_id"] = user_id
         await real_db.categories.insert_one(rec)
         counters["categories"] += 1
+
+    # --- Locations (parent toolbox → starter drawer) ---
+    for loc in DEFAULT_LOCATIONS_SEED:
+        parent_name = loc["name"]
+        existing_parent = await real_db.locations.find_one(
+            {"owner_id": user_id, "name": {"$regex": f"^{re.escape(parent_name)}$", "$options": "i"}},
+            {"_id": 0, "id": 1},
+        )
+        if existing_parent:
+            parent_id = existing_parent["id"]
+        else:
+            parent = Location(name=parent_name)
+            prec = parent.dict()
+            prec["owner_id"] = user_id
+            await real_db.locations.insert_one(prec)
+            parent_id = parent.id
+            counters["locations"] += 1
+        for idx, child_name in enumerate(loc.get("children", [])):
+            existing_child = await real_db.locations.find_one(
+                {
+                    "owner_id": user_id,
+                    "parent_id": parent_id,
+                    "name": {"$regex": f"^{re.escape(child_name)}$", "$options": "i"},
+                },
+                {"_id": 0, "id": 1},
+            )
+            if existing_child:
+                continue
+            child = Location(name=child_name, parent_id=parent_id, drawer_index=idx)
+            crec = child.dict()
+            crec["owner_id"] = user_id
+            await real_db.locations.insert_one(crec)
+            counters["locations"] += 1
 
     return counters
 
