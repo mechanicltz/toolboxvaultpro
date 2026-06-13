@@ -29,6 +29,11 @@
 ---
 
 ### Recently shipped (for context — not backlog)
+- BUILD 283: **Insurance Claims module** (new) — full documentation & reporting system
+  (claims CRUD, item attachment referencing inventory, claim-only evidence photos/docs,
+  live financials, status engine + timeline, notes, professional Quick/Detailed PDF
+  reports with version history + email, search/filter/duplicate/archive). Free feature,
+  themed light/dark/skin. Backend 20/20 pytest green. Entry: Vault → Insurance Claims.
 - BUILD 280: App-wide KeyboardAvoidingView coverage (manage, reports-options, schedule modal,
   notifications custom-days modal, admin restore modal); re-enabled intro splash video.
 - BUILDS 274–279: metal-frame skinning of maintenance, warranty, wishlist, for-sale, reports,
