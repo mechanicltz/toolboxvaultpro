@@ -637,6 +637,17 @@ export default function MoreScreen() {
           />
         </SectionCard>
 
+        <SectionCard title="INSURANCE CLAIMS" testID="more-section-insurance">
+          <SectionRow
+            icon="shield-checkmark"
+            title="Insurance Claims"
+            subtitle="Document losses & generate insurance reports"
+            testID="more-insurance-claims"
+            onPress={() => router.push("/insurance-claims" as any)}
+            isLast
+          />
+        </SectionCard>
+
         <NotificationsSettingsSection prefs={prefs} update={update} />
 
         {/* SETTINGS — theme, home layout & home banners. */}

@@ -4824,6 +4824,15 @@ _make_reports_router(_reports_api_router, lambda: db, get_current_user)
 app.include_router(_reports_api_router)
 
 # ---------------------------------------------------------------------------
+# Insurance Claims module — documentation & reporting (see insurance_claims.py)
+# ---------------------------------------------------------------------------
+from insurance_claims import make_insurance_claims_router as _make_ic_router  # noqa: E402
+
+_ic_api_router = APIRouter(prefix="/api")
+_make_ic_router(_ic_api_router, lambda: db, get_current_user)
+app.include_router(_ic_api_router)
+
+# ---------------------------------------------------------------------------
 # HTML → PDF rendering endpoint (uses xhtml2pdf, runs entirely server-side
 # so reports work reliably regardless of browser quirks / CSP restrictions).
 # ---------------------------------------------------------------------------
