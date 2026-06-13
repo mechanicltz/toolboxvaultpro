@@ -91,11 +91,13 @@ export default function InsuranceClaimsDashboard() {
         >
           {/* Summary — single skinned panel, one stat per row */}
           {cards.length > 0 && (
-            <SkinPlate style={{ marginBottom: 14 }} frame="window" padX={18} padTop={8} padBottom={8} testID="ic-summary-panel">
-              {cards.map((card, i) => (
-                <View key={card.label} style={[styles.statRow, i === cards.length - 1 && { borderBottomWidth: 0 }]} testID={`ic-stat-${card.label}`}>
-                  <Text style={styles.statRowLabel}>{card.label.toUpperCase()}</Text>
-                  <Text style={[styles.statRowValue, { color: card.color }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>{card.value}</Text>
+            <SkinPlate style={{ marginBottom: 14 }} frame="window" padX={16} padTop={10} padBottom={10} testID="ic-summary-panel">
+              {cards.map((card) => (
+                <View key={card.label} style={styles.statRow} testID={`ic-stat-${card.label}`}>
+                  <View style={styles.rowTick} />
+                  <Text style={styles.statRowLabel} numberOfLines={1}>{card.label.toUpperCase()}</Text>
+                  <View style={{ flex: 1 }} />
+                  <Text style={[styles.statRowValue, { color: card.color }]} numberOfLines={1}>{card.value}</Text>
                 </View>
               ))}
             </SkinPlate>
@@ -203,11 +205,23 @@ const styles = themedStyles((c) => ({
   headerTitle: { color: c.textPrimary, fontSize: 18, fontWeight: "800", letterSpacing: 0.3 },
   cardGrid: { flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", gap: 0 },
   statRow: {
-    flexDirection: "row", alignItems: "center", justifyContent: "space-between",
-    paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: c.borderSubtle,
+    flexDirection: "row", alignItems: "center",
+    paddingVertical: 8, paddingHorizontal: 12, marginVertical: 2, borderRadius: 6,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    borderWidth: 1,
+    borderTopColor: "rgba(0,0,0,0.85)",
+    borderLeftColor: "rgba(0,0,0,0.7)",
+    borderRightColor: "rgba(255,255,255,0.07)",
+    borderBottomColor: "rgba(255,255,255,0.11)",
   },
-  statRowLabel: { fontSize: 11, fontWeight: "800", color: c.textSecondary, letterSpacing: 0.4 },
-  statRowValue: { fontSize: 16, fontWeight: "900", color: c.textPrimary, marginLeft: 12 },
+  rowTick: { width: 3, height: 16, borderRadius: 1.5, backgroundColor: c.accent, marginRight: 10 },
+  statRowLabel: { color: c.textMuted, fontFamily: "BebasNeue_400Regular", fontSize: 14, letterSpacing: 1.2 },
+  statRowValue: {
+    fontFamily: "BebasNeue_400Regular", fontSize: 14, letterSpacing: 1.2, color: c.textPrimary,
+    textAlign: "right",
+    backgroundColor: "rgba(0,0,0,0.34)", borderColor: "rgba(0,0,0,0.55)", borderWidth: 1,
+    borderRadius: 4, paddingHorizontal: 8, paddingVertical: 2, overflow: "hidden",
+  },
   searchRow: {
     flexDirection: "row", alignItems: "center", backgroundColor: c.surface,
     borderWidth: 1, borderColor: c.border, borderRadius: 10, paddingHorizontal: 12,

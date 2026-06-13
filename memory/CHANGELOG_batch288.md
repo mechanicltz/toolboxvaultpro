@@ -43,3 +43,10 @@ Insurance Claims module — second polish/feature round.
 - Insurance summary panel compacted further: statRow padding 12→8, label 13→11,
   value 20→16; panel padTop/padBottom 14→8. Reduces the "too large" top area.
 - Verified via screenshot (BUILD 291).
+
+## Batch 292 (2026-06-13) — Insurance summary matches home "Net Worth" readout
+- Insurance dashboard summary rows now replicate the home Dashboard detailsRow
+  gauge style EXACTLY: BebasNeue_400Regular font @ 14px, letterSpacing 1.2,
+  orange accent tick (rowTick) on each label, recessed "machined slot" row bg,
+  and a recessed gauge-chip for the value. Replaces the prior 16px bold sans rows.
+- Verified via screenshot (BUILD 292).
