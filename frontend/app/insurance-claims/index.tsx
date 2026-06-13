@@ -89,15 +89,17 @@ export default function InsuranceClaimsDashboard() {
           automaticallyAdjustKeyboardInsets
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }} tintColor={c.accent} />}
         >
-          {/* Summary cards */}
-          <View style={styles.cardGrid}>
-            {cards.map((card) => (
-              <SkinPlate key={card.label} style={styles.statCard} innerStyle={styles.statInner} padX={14} padTop={12} padBottom={12} testID={`ic-stat-${card.label}`}>
-                <Text style={[styles.statValue, { color: card.color }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6}>{card.value}</Text>
-                <Text style={styles.statLabel} numberOfLines={2}>{card.label.toUpperCase()}</Text>
-              </SkinPlate>
-            ))}
-          </View>
+          {/* Summary — single skinned panel, one stat per row */}
+          {cards.length > 0 && (
+            <SkinPlate style={{ marginBottom: 16 }} frame="window" padX={18} padTop={14} padBottom={14} testID="ic-summary-panel">
+              {cards.map((card, i) => (
+                <View key={card.label} style={[styles.statRow, i === cards.length - 1 && { borderBottomWidth: 0 }]} testID={`ic-stat-${card.label}`}>
+                  <Text style={styles.statRowLabel}>{card.label.toUpperCase()}</Text>
+                  <Text style={[styles.statRowValue, { color: card.color }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>{card.value}</Text>
+                </View>
+              ))}
+            </SkinPlate>
+          )}
 
           {/* Search */}
           <View style={styles.searchRow}>
@@ -200,10 +202,12 @@ const styles = themedStyles((c) => ({
   iconBtn: { padding: 8, minWidth: 40, alignItems: "center" },
   headerTitle: { color: c.textPrimary, fontSize: 18, fontWeight: "800", letterSpacing: 0.3 },
   cardGrid: { flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", gap: 0 },
-  statCard: { width: "48.5%", marginBottom: 12 },
-  statInner: { minHeight: 50, justifyContent: "center" },
-  statValue: { fontSize: 22, fontWeight: "900", color: c.textPrimary },
-  statLabel: { fontSize: 10, fontWeight: "800", color: c.textSecondary, letterSpacing: 0.6, marginTop: 3 },
+  statRow: {
+    flexDirection: "row", alignItems: "center", justifyContent: "space-between",
+    paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: c.borderSubtle,
+  },
+  statRowLabel: { fontSize: 13, fontWeight: "800", color: c.textSecondary, letterSpacing: 0.5 },
+  statRowValue: { fontSize: 20, fontWeight: "900", color: c.textPrimary, marginLeft: 12 },
   searchRow: {
     flexDirection: "row", alignItems: "center", backgroundColor: c.surface,
     borderWidth: 1, borderColor: c.border, borderRadius: 10, paddingHorizontal: 12,

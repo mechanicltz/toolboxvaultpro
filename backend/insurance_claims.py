@@ -289,7 +289,25 @@ class ReportOptions(BaseModel):
     include_financials: bool = True
     include_notes: bool = True
     include_evidence: bool = True
+    item_columns: List[str] = []         # which itemized-asset columns to show
     section_order: List[str] = []        # optional override of section order
+
+
+# Itemized-asset table columns the user can pick from. "#" (index) and "Item"
+# (name) are always shown. Each entry: (header label, relative width, align).
+ITEM_COL_DEFS: Dict[str, tuple] = {
+    "brand":         ("Brand",          0.13, "left"),
+    "serial_model":  ("Serial / Model", 0.20, "left"),
+    "qty":           ("Qty",            0.05, "left"),
+    "condition":     ("Condition",      0.16, "left"),
+    "purchase_date": ("Purchase Date",  0.12, "left"),
+    "category":      ("Category",       0.13, "left"),
+    "location":      ("Location",       0.13, "left"),
+    "cost":          ("Cost",           0.12, "right"),
+    "replacement":   ("Replacement",    0.12, "right"),
+    "claimed":       ("Claimed",        0.16, "right"),
+}
+DEFAULT_ITEM_COLUMNS: List[str] = ["brand", "serial_model", "qty", "condition", "claimed"]
 
 
 class EmailReportRequest(BaseModel):
@@ -460,36 +478,81 @@ def _money_summary(fin: Dict[str, Any], st: Dict[str, ParagraphStyle]) -> Table:
 
 
 def _items_table(resolved: List[Dict[str, Any]], st: Dict[str, ParagraphStyle],
-                 detailed: bool) -> Table:
-    header = ["#", "Item", "Brand", "Serial / Model", "Qty", "Condition", "Claimed"]
-    widths = [0.04, 0.26, 0.13, 0.20, 0.05, 0.16, 0.16]
-    data = [[_para(h, st["th"] if i < 6 else st["th_right"]) for i, h in enumerate(header)]]
+                 detailed: bool, columns: Optional[List[str]] = None) -> Table:
+    # Selected columns in canonical order ("#" and "Item" always lead).
+    sel = [c for c in ITEM_COL_DEFS if c in (columns or DEFAULT_ITEM_COLUMNS)]
+    if not sel:
+        sel = list(DEFAULT_ITEM_COLUMNS)
+
+    def cell_value(col: str, r: Dict[str, Any]) -> str:
+        if col == "brand":
+            return esc(r["brand"])
+        if col == "serial_model":
+            sm = []
+            if r["serials"]:
+                sm.append("S/N " + ", ".join(r["serials"]))
+            if r["models"]:
+                sm.append("M# " + ", ".join(r["models"]))
+            return esc(" · ".join(sm))
+        if col == "qty":
+            return str(r["quantity"])
+        if col == "condition":
+            cond = r["post_loss_condition"] or ""
+            if r["pre_loss_condition"]:
+                cond = f"{r['pre_loss_condition']} → {cond}"
+            return esc(cond)
+        if col == "purchase_date":
+            return esc(r.get("purchase_date") or "")
+        if col == "category":
+            return esc(r.get("category_name") or "")
+        if col == "location":
+            return esc(r.get("location_name") or "")
+        if col == "cost":
+            return fmt_money(r["line_purchase"])
+        if col == "replacement":
+            return fmt_money(r["line_replacement"])
+        if col == "claimed":
+            return fmt_money(r["line_claimed"])
+        return ""
+
+    # Header row
+    header_cells = [_para("#", st["th"]), _para("Item", st["th"])]
+    for col in sel:
+        label, _, align = ITEM_COL_DEFS[col]
+        header_cells.append(_para(label, st["th_right"] if align == "right" else st["th"]))
+    data = [header_cells]
+
     for idx, r in enumerate(resolved, 1):
-        sm = []
-        if r["flags"].get("include_serial") and r["serials"]:
-            sm.append("S/N " + ", ".join(r["serials"]))
-        if r["flags"].get("include_model") and r["models"]:
-            sm.append("M# " + ", ".join(r["models"]))
-        cond = r["post_loss_condition"] or ""
-        if r["pre_loss_condition"]:
-            cond = f"{r['pre_loss_condition']} → {cond}"
-        data.append([
-            _para(str(idx), st["small"]),
-            _para(esc(r["name"]), st["small"]),
-            _para(esc(r["brand"]), st["small"]),
-            _para(esc(" · ".join(sm)), st["small"]),
-            _para(str(r["quantity"]), st["small"]),
-            _para(esc(cond), st["small"]),
-            _para(fmt_money(r["line_claimed"]), st["small_right"]),
-        ])
-    total = sum(r["line_claimed"] for r in resolved)
-    data.append([_para("", st["small"]), _para("TOTAL", st["small_bold_right"]),
-                 _para("", st["small"]), _para("", st["small"]), _para("", st["small"]),
-                 _para("", st["small"]), _para(fmt_money(total), st["small_bold_right"])])
-    t = Table(data, colWidths=[PAGE_W * w for w in widths], repeatRows=1)
+        row = [_para(str(idx), st["small"]), _para(esc(r["name"]), st["small"])]
+        for col in sel:
+            _, _, align = ITEM_COL_DEFS[col]
+            style = st["small_right"] if align == "right" else st["small"]
+            row.append(_para(cell_value(col, r), style))
+        data.append(row)
+
+    # TOTAL row — sum the numeric columns that are shown.
+    numeric_sums = {
+        "cost": sum(r["line_purchase"] for r in resolved),
+        "replacement": sum(r["line_replacement"] for r in resolved),
+        "claimed": sum(r["line_claimed"] for r in resolved),
+    }
+    total_row = [_para("", st["small"]), _para("TOTAL", st["small_bold_right"])]
+    for col in sel:
+        if col in numeric_sums:
+            total_row.append(_para(fmt_money(numeric_sums[col]), st["small_bold_right"]))
+        else:
+            total_row.append(_para("", st["small"]))
+    data.append(total_row)
+
+    # Column widths — normalize the relative weights to fill the page.
+    weights = [0.04, 0.26] + [ITEM_COL_DEFS[c][1] for c in sel]
+    wsum = sum(weights) or 1.0
+    col_widths = [PAGE_W * (w / wsum) for w in weights]
+
+    t = Table(data, colWidths=col_widths, repeatRows=1)
     t.setStyle(TableStyle([
         ("VALIGN", (0, 0), (-1, -1), "TOP"),
-        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#111111")),
+        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#3A3A3A")),
         ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
         ("TOPPADDING", (0, 0), (-1, -1), 4),
         ("LINEBELOW", (0, 0), (-1, -1), 0.3, colors.HexColor("#dddddd")),
@@ -671,7 +734,7 @@ def build_claim_pdf(claim: Dict[str, Any], resolved: List[Dict[str, Any]],
         if not opts.include_items or not resolved:
             return
         story.append(_section(f"Itemized Asset List ({len(resolved)} items)", st))
-        story.append(_items_table(resolved, st, detailed))
+        story.append(_items_table(resolved, st, detailed, opts.item_columns or DEFAULT_ITEM_COLUMNS))
 
     def add_financials():
         if not opts.include_financials:

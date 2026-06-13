@@ -1,0 +1,41 @@
+{
+  "summary": "Frontend-only regression of 5 user-requested Insurance Claims fixes — ALL 7 ITEMS VERIFIED PASSING (mechanicltz@gmail.com on https://login-stretch-layout.preview.emergentagent.com, BUILD 288). (1) Dashboard SINGLE PANEL with 6 stat rows VERIFIED — queried [data-testid=\"ic-summary-panel\"] count = 1 (not 6 separate boxes); 6 rows under it (TOTAL CLAIMS 13, OPEN CLAIMS 13, CLOSED CLAIMS 0, TOTAL CLAIMED $250.00, TOTAL APPROVED $0.00, TOTAL PAID $0.00) — label left, value right, values fully visible, no $-truncation. (2) New Claim 'Import from my profile' button VERIFIED on its OWN ROW BELOW the 'Insurance Information' section title — orange filled pill (icf-import bbox x=54 y=430 w=199 h=35) sits between the title and 'Insurance Company' input; NOT overlapping the title. Tapping it imported saved profile values: Insurance Company became 'TEST Insurance', Policy Number became 'POL-12345'. (3) Date of Loss / Date Discovered fields VERIFIED — both render the masked DateField (calendar icon + MM/DD/YYYY placeholder). Typing '06152026' into icf-dol auto-masked to '06/15/2026' (web platform behavior; on native iOS/Android this is a native picker via @react-native-community/datetimepicker). (4) Timeline is the LAST section on claim detail — measured DOM y-positions on Shop Fire June 2026 claim: STATUS 104 → CLAIM TOTALS 261 → INSURANCE & POLICY 512 → ATTACHED ITEMS 778 → CLAIM EVIDENCE 926 → NOTES 1104 → REPORTS (above timeline, contains 'REPORTS (5)' header) → TIMELINE 1681. Timeline correctly sits at the very bottom, BELOW Reports. (5) Claim EVIDENCE renders real image thumbnails — found 2 <img> cells with data: URIs (Shop Fire claim has 1 Damage Photo evidence; thumbnail shown in iter26_09). Tapping icd-ev-open-* opened the full-screen image viewer (dark backdrop, image centered, 'Damage Photo · fire1.png' caption, X close at top-right with testID icd-ev-viewer-close). Close button worked, viewer dismissed cleanly. (6) Reports → 'Generate' modal VERIFIED — opened with kind selector (Quick/Detailed), 9 toggle rows, and a new 'Itemized asset columns (Item name always shown):' section with ALL 10 column toggles found: icd-col-brand, icd-col-serial_model, icd-col-qty, icd-col-condition, icd-col-purchase_date, icd-col-category, icd-col-location, icd-col-cost, icd-col-replacement, icd-col-claimed. Defaults match DEFAULT_ITEM_COLUMNS = [brand, serial_model, qty, condition, claimed] (verified visually). Tapped icd-col-condition (toggled OFF) and icd-col-purchase_date (toggled ON) — checkbox state changed correctly. Tapped icd-report-go ('Generate & View') → after ~10s the modal closed (icd-report-go no longer in DOM) and the Reports list went from 4 → 5 reports (new 'Detailed Report v5' at top, dated 6/13/2026 7:35:20 AM, 6 KB) — PDF generation HTTP 200 confirmed by client side. (7) Regression: icd-onetap-email button still present and labeled 'Email Detailed Report to Insurer' with mail icon; each of the 5 report rows has its 3 bordered action chips (eye icon, share icon, mail icon — confirmed counts: 5 view chips + 5 email chips). No deprecated packages detected in scope. No PAGEERRORs throughout the test session. No React Native red-screen errors.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/test_reports/iteration_26.json",
+    "/app/test_reports/screens/iter26_03_ic_dash.png",
+    "/app/test_reports/screens/iter26_05_import_btn.png",
+    "/app/test_reports/screens/iter26_06_after_import.png",
+    "/app/test_reports/screens/iter26_07_dates.png",
+    "/app/test_reports/screens/iter26_08_claim_top.png",
+    "/app/test_reports/screens/iter26_09_evidence.png",
+    "/app/test_reports/screens/iter26_10_evidence_viewer.png",
+    "/app/test_reports/screens/iter26_11_bottom_timeline.png",
+    "/app/test_reports/screens/iter26_12_report_modal.png",
+    "/app/test_reports/screens/iter26_13_cols_toggled.png",
+    "/app/test_reports/screens/iter26_14_after_generate.png"
+  ],
+  "action_items": [
+    "No fixes required — all 5 user-requested fixes + 2 regression checks verified passing and ship-ready."
+  ],
+  "critical_code_review_comments": [
+    "insurance-claims/index.tsx:93-102 — Summary is rendered as a SINGLE SkinPlate (frame=\"window\", testID=ic-summary-panel) wrapping a .map of 6 statRow Views; statRow has flexDirection:row + justifyContent:'space-between' (label left, value right) + borderBottomWidth:1 (last row has borderBottomWidth:0). Correct single-panel/one-stat-per-row layout. statRowValue uses adjustsFontSizeToFit + minimumFontScale:0.7 + numberOfLines:1 — prevents $-truncation.",
+    "insurance-claims/new.tsx:134-148 — Inside ICSection 'Insurance Information' the first child is now <TouchableOpacity testID=icf-import style=styles.importBtn> sitting BEFORE the first ICField — so the button renders on its own row below the section header bar, not in the right-action slot (no overlap with title). styles.importBtn at line 175 = filled accent pill (alignSelf:'flex-start', paddingX 14, paddingY 9, borderRadius 18, marginBottom 14, backgroundColor c.accent).",
+    "insurance-claims/[id].tsx:326-337 — Timeline ICSection is the FINAL child of the ScrollView (after Reports ICSection at lines 300-324). Matches the user spec 'at the very BOTTOM (after Reports)'.",
+    "insurance-claims/[id].tsx:58-90 — Evidence is async-lazy-loaded via insuranceApi.getEvidence (list endpoint omits heavy data_b64). Image evidence renders <Image source={{uri: thumb}}/> when thumb is loaded; non-image renders document-text icon. openEvidence at line 75 routes images to setViewEv (opens EvidenceViewer modal) and docs to openDataUriFile. Clean.",
+    "insurance-claims/[id].tsx:352-373 — EvidenceViewer is a transparent Modal with rgba(0,0,0,0.92) backdrop, full-bleed Image (height:80%), and icd-ev-viewer-close button at top-right. Caption shows kind + filename. Verified working live.",
+    "insurance-claims/[id].tsx:491-547 — ITEM_COLUMNS array defines all 10 user-facing columns (brand, serial_model, qty, condition, purchase_date, category, location, cost, replacement, claimed). The ReportModal renders one toggle row per column ONLY when 'Itemized assets' (include_items) is enabled (line 535), with testID icd-col-{key}. DEFAULT_ITEM_COLUMNS preselects [brand, serial_model, qty, condition, claimed]. The chosen subset is passed as item_columns in renderAndViewClaimReport at line 514 — backend builds the PDF table dynamically (HTTP 200 confirmed by client; new Detailed Report v5 appeared after Generate)."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "skipped per request (backend custom-column PDF render already curl-verified HTTP 200 by main agent)", "frontend": "100% (7/7 items verified)"},
+  "seed_data_creation": "No new seed data created. Side-effects on mechanicltz@gmail.com account during this test run: (a) Generated a new 'Detailed Report v5' on the Shop Fire June 2026 / CLM-1001 claim (with condition column OFF, purchase_date column ON, dated 6/13/2026 7:35:20 AM, 6 KB) — Reports list grew from 4 to 5. (b) The 'New Claim' form had Insurance Company / Policy Number imported (TEST Insurance / POL-12345) and Date of Loss set to 06/15/2026 BUT the form was NOT saved — no new claim was created.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "All 5 user-requested Insurance Claims fixes verified passing in iteration 26. Useful testIDs confirmed live: ic-summary-panel, ic-stat-{LABEL} (uppercased), ic-new, icf-import, icf-dol, icf-dod, icf-ins-company, icf-ins-policy, icd-generate, icd-col-{brand|serial_model|qty|condition|purchase_date|category|location|cost|replacement|claimed}, icd-report-go, icd-ev-open-{evId}, icd-ev-viewer-close, icd-onetap-email, icd-view-{rId}, icd-email-{rId}. The Shop Fire June 2026 claim now has 5 reports (v1 Quick + v2-v5 Detailed) and 1 evidence photo (fire1.png). For column-picker tests, defaults are [brand, serial_model, qty, condition, claimed] — toggling icd-col-condition turns OFF condition, toggling icd-col-purchase_date turns ON purchase_date; PDF gen confirmed succeeds with the chosen subset."
+}

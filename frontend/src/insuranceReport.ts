@@ -108,6 +108,34 @@ function viewFile(file: Fetched) {
   });
 }
 
+/** Open an arbitrary data-URI file (evidence photo/doc): web opens/downloads,
+ *  native writes to cache then routes to the in-app viewer. */
+export async function openDataUriFile(dataUri: string, filename: string, mime: string): Promise<void> {
+  if (Platform.OS === "web") {
+    const w: any = (globalThis as any).window;
+    const doc: any = w.document;
+    const a = doc.createElement("a");
+    a.href = dataUri;
+    a.target = "_blank";
+    a.rel = "noopener";
+    a.download = filename;
+    doc.body.appendChild(a);
+    a.click();
+    doc.body.removeChild(a);
+    return;
+  }
+  const base64 = dataUri.includes(",") ? dataUri.split(",")[1] : dataUri;
+  const cacheDir = (FileSystem as any).cacheDirectory || (FileSystem as any).documentDirectory || "";
+  const safeName = (filename || "evidence").replace(/[^A-Za-z0-9._-]+/g, "_");
+  const fileUri = `${cacheDir}${safeName}`;
+  await FileSystem.writeAsStringAsync(fileUri, base64, { encoding: FileSystem.EncodingType.Base64 });
+  if (await Sharing.isAvailableAsync()) {
+    await Sharing.shareAsync(fileUri, { mimeType: mime, dialogTitle: filename });
+  } else {
+    router.push({ pathname: "/pdf-viewer", params: { uri: fileUri, title: filename || "Evidence", mime } });
+  }
+}
+
 /** Render a NEW report version and immediately view it. Returns the stored
  *  report id/version so the caller can refresh history. */
 export async function renderAndViewClaimReport(claimId: string, opts: any): Promise<Fetched> {

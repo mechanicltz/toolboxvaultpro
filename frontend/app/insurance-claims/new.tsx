@@ -131,15 +131,11 @@ export default function ClaimForm() {
             <ICField label="Additional Notes" value={form.additional_notes} onChangeText={(t) => set("additional_notes", t)} multiline testID="icf-addl" />
           </ICSection>
 
-          <ICSection
-            title="Insurance Information"
-            right={
-              <TouchableOpacity testID="icf-import" onPress={importProfile} style={styles.importBtn} activeOpacity={0.8}>
-                <Ionicons name="download-outline" size={16} color={c.textOnAccent} />
-                <Text style={styles.importText}>Import</Text>
-              </TouchableOpacity>
-            }
-          >
+          <ICSection title="Insurance Information">
+            <TouchableOpacity testID="icf-import" onPress={importProfile} style={styles.importBtn} activeOpacity={0.8}>
+              <Ionicons name="download-outline" size={16} color={c.textOnAccent} />
+              <Text style={styles.importText}>Import from my profile</Text>
+            </TouchableOpacity>
             <ICField label="Insurance Company" value={form.insurance.company} onChangeText={(t) => setIns("company", t)} testID="icf-ins-company" />
             <ICField label="Policy Number" value={form.insurance.policy_number} onChangeText={(t) => setIns("policy_number", t)} testID="icf-ins-policy" />
             <ICField label="Agent Name" value={form.insurance.agent_name} onChangeText={(t) => setIns("agent_name", t)} testID="icf-agent-name" />
@@ -177,8 +173,8 @@ const styles = themedStyles((c) => ({
   iconBtn: { padding: 8, minWidth: 40, alignItems: "center" },
   headerTitle: { color: c.textPrimary, fontSize: 18, fontWeight: "800" },
   importBtn: {
-    flexDirection: "row", alignItems: "center", gap: 5,
-    backgroundColor: c.accent, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 16,
+    flexDirection: "row", alignItems: "center", gap: 6, alignSelf: "flex-start",
+    backgroundColor: c.accent, paddingHorizontal: 14, paddingVertical: 9, borderRadius: 18, marginBottom: 14,
   },
-  importText: { color: c.textOnAccent, fontSize: 13, fontWeight: "800" },
+  importText: { color: c.textOnAccent, fontSize: 14, fontWeight: "800" },
 }));

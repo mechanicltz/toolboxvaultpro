@@ -80,6 +80,8 @@ export const insuranceApi = {
   addEvidence: (id: string, data: any) =>
     req<any>(`/insurance-claims/${id}/evidence`, "POST", data),
   listEvidence: (id: string) => req<any[]>(`/insurance-claims/${id}/evidence`),
+  getEvidence: (id: string, evId: string) =>
+    req<any>(`/insurance-claims/${id}/evidence/${evId}`),
   deleteEvidence: (id: string, evId: string) =>
     req<any>(`/insurance-claims/${id}/evidence/${evId}`, "DELETE"),
   duplicate: (id: string) => req<any>(`/insurance-claims/${id}/duplicate`, "POST"),

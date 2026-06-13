@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import {
   View, Text, ScrollView, TouchableOpacity, Alert, ActivityIndicator, Image,
-  TextInput, Platform, RefreshControl,
+  TextInput, Platform, RefreshControl, Modal, StyleSheet,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -12,7 +12,7 @@ import * as FileSystem from "expo-file-system/legacy";
 import { themedStyles, useColors } from "../../src/themeContext";
 import { ICSection, ICField, ICSelect, ICButton, ICModal } from "../../src/components/insurance/ICKit";
 import { insuranceApi, ClaimSpec } from "../../src/insuranceApi";
-import { renderAndViewClaimReport, viewStoredClaimReport, shareStoredClaimReport, renderClaimReportOnly } from "../../src/insuranceReport";
+import { renderAndViewClaimReport, viewStoredClaimReport, shareStoredClaimReport, renderClaimReportOnly, openDataUriFile } from "../../src/insuranceReport";
 
 const money = (n: number) => "$" + (Number(n) || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const fmtDate = (s?: string) => { if (!s) return ""; const d = new Date(s); return isNaN(+d) ? s : d.toLocaleString(); };
@@ -52,6 +52,42 @@ export default function ClaimDetail() {
   const [oneTapBusy, setOneTapBusy] = useState(false);
   const [editItem, setEditItem] = useState<any>(null);
   const [selReport, setSelReport] = useState<any>(null);
+  const [evThumbs, setEvThumbs] = useState<Record<string, string>>({});
+  const [viewEv, setViewEv] = useState<any | null>(null);
+
+  // Lazy-load image evidence thumbnails (list endpoint omits the heavy data).
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      for (const e of evidence) {
+        if (!String(e.mime || "").startsWith("image")) continue;
+        if (evThumbs[e.id]) continue;
+        try {
+          const full = await insuranceApi.getEvidence(id, e.id);
+          if (!cancelled && full?.data_b64) setEvThumbs((m) => ({ ...m, [e.id]: full.data_b64 }));
+        } catch { /* ignore */ }
+      }
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [evidence, id]);
+
+  const openEvidence = async (e: any) => {
+    try {
+      const isImg = String(e.mime || "").startsWith("image");
+      let uri = evThumbs[e.id];
+      if (!uri) {
+        const full = await insuranceApi.getEvidence(id, e.id);
+        uri = full?.data_b64;
+        if (isImg && uri) setEvThumbs((m) => ({ ...m, [e.id]: uri! }));
+      }
+      if (!uri) throw new Error("Evidence file is unavailable.");
+      if (isImg) setViewEv({ ...e, data: uri });
+      else await openDataUriFile(uri, e.filename || "evidence", e.mime || "application/octet-stream");
+    } catch (err: any) {
+      Alert.alert("Could not open", err?.message || String(err));
+    }
+  };
 
   const load = useCallback(async () => {
     try {
@@ -223,17 +259,27 @@ export default function ClaimDetail() {
           {busy ? <ActivityIndicator color={c.accent} /> : null}
           {evidence.length === 0 ? <Text style={styles.muted}>Add disaster photos, police reports or documents (claim-only).</Text> :
             <View style={styles.evGrid}>
-              {evidence.map((e) => (
-                <View key={e.id} style={styles.evCell} testID={`icd-ev-${e.id}`}>
-                  {(e.mime || "").startsWith("image") ?
-                    <View style={styles.evThumb}><Ionicons name="image" size={22} color={c.textMuted} /></View> :
-                    <View style={styles.evThumb}><Ionicons name="document-text" size={22} color={c.textMuted} /></View>}
-                  <Text style={styles.evName} numberOfLines={1}>{e.kind}</Text>
-                  <TouchableOpacity onPress={() => { Alert.alert("Remove evidence?", e.filename, [{ text: "Cancel", style: "cancel" }, { text: "Remove", style: "destructive", onPress: async () => { await insuranceApi.deleteEvidence(id, e.id); load(); } }]); }} style={styles.evDel}>
-                    <Ionicons name="close-circle" size={18} color={c.danger} />
-                  </TouchableOpacity>
-                </View>
-              ))}
+              {evidence.map((e) => {
+                const isImg = String(e.mime || "").startsWith("image");
+                const thumb = evThumbs[e.id];
+                return (
+                  <View key={e.id} style={styles.evCell} testID={`icd-ev-${e.id}`}>
+                    <TouchableOpacity onPress={() => openEvidence(e)} activeOpacity={0.8} testID={`icd-ev-open-${e.id}`}>
+                      {isImg && thumb ? (
+                        <Image source={{ uri: thumb }} style={styles.evThumb} resizeMode="cover" />
+                      ) : (
+                        <View style={styles.evThumb}>
+                          <Ionicons name={isImg ? "image" : "document-text"} size={26} color={c.accent} />
+                        </View>
+                      )}
+                    </TouchableOpacity>
+                    <Text style={styles.evName} numberOfLines={1}>{e.kind}</Text>
+                    <TouchableOpacity onPress={() => { Alert.alert("Remove evidence?", e.filename, [{ text: "Cancel", style: "cancel" }, { text: "Remove", style: "destructive", onPress: async () => { await insuranceApi.deleteEvidence(id, e.id); load(); } }]); }} style={styles.evDel}>
+                      <Ionicons name="close-circle" size={18} color={c.danger} />
+                    </TouchableOpacity>
+                  </View>
+                );
+              })}
             </View>}
         </ICSection>
 
@@ -249,19 +295,6 @@ export default function ClaimDetail() {
                 </TouchableOpacity>
               </View>
             ))}
-        </ICSection>
-
-        {/* Timeline */}
-        <ICSection title="Timeline">
-          {(claim.timeline || []).slice().reverse().map((t: any) => (
-            <View key={t.id} style={styles.tlRow}>
-              <View style={[styles.tlDot, { backgroundColor: c.accent }]} />
-              <View style={{ flex: 1 }}>
-                <Text style={styles.tlType}>{t.type}{t.detail ? `: ${t.detail}` : ""}</Text>
-                <Text style={styles.muted}>{fmtDate(t.created_at)}</Text>
-              </View>
-            </View>
-          ))}
         </ICSection>
 
         {/* Reports */}
@@ -289,6 +322,19 @@ export default function ClaimDetail() {
               </View>
             ))}
         </ICSection>
+
+        {/* Timeline — kept at the bottom */}
+        <ICSection title="Timeline">
+          {(claim.timeline || []).slice().reverse().map((t: any) => (
+            <View key={t.id} style={styles.tlRow}>
+              <View style={[styles.tlDot, { backgroundColor: c.accent }]} />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.tlType}>{t.type}{t.detail ? `: ${t.detail}` : ""}</Text>
+                <Text style={styles.muted}>{fmtDate(t.created_at)}</Text>
+              </View>
+            </View>
+          ))}
+        </ICSection>
       </ScrollView>
 
       {/* ---------------- Modals ---------------- */}
@@ -298,9 +344,33 @@ export default function ClaimDetail() {
       <ItemEditModal item={editItem} spec={spec} id={id} onClose={() => setEditItem(null)} onDone={() => { setEditItem(null); load(); }} />
       <ReportModal visible={reportOpen} onClose={() => setReportOpen(false)} id={id} onDone={() => { setReportOpen(false); load(); }} />
       <EmailModal visible={emailOpen} onClose={() => { setEmailOpen(false); setEmailPrefill(null); }} id={id} ins={ins} report={selReport} prefill={emailPrefill} onDone={() => { setEmailOpen(false); setEmailPrefill(null); load(); }} />
+      <EvidenceViewer ev={viewEv} onClose={() => setViewEv(null)} />
     </SafeAreaView>
   );
 }
+
+/** Full-screen image viewer for a piece of evidence. */
+function EvidenceViewer({ ev, onClose }: any) {
+  if (!ev) return null;
+  return (
+    <Modal visible={!!ev} transparent animationType="fade" onRequestClose={onClose}>
+      <View style={evStyles.backdrop}>
+        <TouchableOpacity style={evStyles.closeBtn} onPress={onClose} testID="icd-ev-viewer-close">
+          <Ionicons name="close" size={28} color="#fff" />
+        </TouchableOpacity>
+        <Image source={{ uri: ev.data }} style={evStyles.image} resizeMode="contain" />
+        <Text style={evStyles.caption} numberOfLines={2}>{ev.kind}{ev.filename ? ` · ${ev.filename}` : ""}</Text>
+      </View>
+    </Modal>
+  );
+}
+
+const evStyles = StyleSheet.create({
+  backdrop: { flex: 1, backgroundColor: "rgba(0,0,0,0.92)", alignItems: "center", justifyContent: "center", padding: 16 },
+  closeBtn: { position: "absolute", top: 48, right: 20, zIndex: 2, padding: 8 },
+  image: { width: "100%", height: "80%" },
+  caption: { color: "#fff", fontSize: 13, marginTop: 12, textAlign: "center" },
+});
 
 /* ======================= Modals ======================= */
 
@@ -417,17 +487,32 @@ const TOGGLES: [string, string][] = [
   ["include_incident", "Incident description"],
 ];
 
+// Itemized-asset table columns the user can pick (must match backend ITEM_COL_DEFS).
+const ITEM_COLUMNS: [string, string][] = [
+  ["brand", "Brand"], ["serial_model", "Serial / Model"], ["qty", "Qty"],
+  ["condition", "Condition"], ["purchase_date", "Purchase Date"], ["category", "Category"],
+  ["location", "Location"], ["cost", "Cost (purchase)"], ["replacement", "Replacement value"],
+  ["claimed", "Claimed value"],
+];
+const DEFAULT_ITEM_COLUMNS = ["brand", "serial_model", "qty", "condition", "claimed"];
+
 function ReportModal({ visible, onClose, id, onDone }: any) {
   const c = useColors();
   const [kind, setKind] = useState<"quick" | "detailed">("detailed");
   const [opts, setOpts] = useState<any>({});
+  const [cols, setCols] = useState<string[]>(DEFAULT_ITEM_COLUMNS);
   const [busy, setBusy] = useState(false);
-  useEffect(() => { if (visible) { setKind("detailed"); setOpts({}); } }, [visible]);
+  useEffect(() => { if (visible) { setKind("detailed"); setOpts({}); setCols(DEFAULT_ITEM_COLUMNS); } }, [visible]);
   const val = (k: string) => opts[k] !== false;
+  const toggleCol = (k: string) => setCols((cur) => cur.includes(k) ? cur.filter((x) => x !== k) : [...cur, k]);
   const generate = async () => {
     setBusy(true);
     try {
-      await renderAndViewClaimReport(id, { kind, ...TOGGLES.reduce((a, [k]) => ({ ...a, [k]: val(k) }), {}) });
+      await renderAndViewClaimReport(id, {
+        kind,
+        ...TOGGLES.reduce((a, [k]) => ({ ...a, [k]: val(k) }), {}),
+        item_columns: cols.length ? cols : DEFAULT_ITEM_COLUMNS,
+      });
       onDone();
     } catch (e: any) { Alert.alert("Report failed", e?.message || ""); } finally { setBusy(false); }
   };
@@ -447,6 +532,20 @@ function ReportModal({ visible, onClose, id, onDone }: any) {
           <Ionicons name={val(k) ? "checkbox" : "square-outline"} size={20} color={val(k) ? c.accent : c.textMuted} />
         </TouchableOpacity>
       ))}
+      {val("include_items") && (
+        <>
+          <Text style={[styles.muted, { marginTop: 14 }]}>Itemized asset columns (Item name always shown):</Text>
+          {ITEM_COLUMNS.map(([k, label]) => {
+            const on = cols.includes(k);
+            return (
+              <TouchableOpacity key={k} testID={`icd-col-${k}`} style={styles.toggleRow} onPress={() => toggleCol(k)}>
+                <Text style={styles.itemName}>{label}</Text>
+                <Ionicons name={on ? "checkbox" : "square-outline"} size={20} color={on ? c.accent : c.textMuted} />
+              </TouchableOpacity>
+            );
+          })}
+        </>
+      )}
       <View style={{ height: 10 }} />
       <ICButton label={busy ? "Generating…" : "Generate & View"} icon="document-text" onPress={generate} disabled={busy} testID="icd-report-go" />
     </ICModal>
