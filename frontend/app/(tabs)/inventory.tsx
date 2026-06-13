@@ -947,6 +947,7 @@ export default function InventoryScreen() {
         key={`grid-${gridCols}`}
         numColumns={gridCols}
         columnWrapperStyle={gridCols > 1 ? { gap: 12, paddingHorizontal: 16 } : undefined}
+        ItemSeparatorComponent={isIndustrial && gridCols === 1 ? () => <View style={styles.rowSkinDivider} /> : undefined}
         contentContainerStyle={{ paddingBottom: selectMode ? 240 : 120, paddingTop: gridCols > 1 ? 0 : 0 }}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.colors.accent} />
@@ -2077,8 +2078,14 @@ const styles = themedStyles((c) => ({
   rowSkinPlain: {
     paddingVertical: 14,
     paddingHorizontal: 4,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: "rgba(255,255,255,0.10)",
+  },
+  // Soft light divider drawn BETWEEN skinned rows (FlatList ItemSeparator) —
+  // a thin, slightly inset translucent line; gently separates without a box.
+  rowSkinDivider: {
+    height: 1,
+    marginHorizontal: 10,
+    borderRadius: 1,
+    backgroundColor: "rgba(255,255,255,0.14)",
   },
   rowSkinPlainSelected: {
     borderWidth: 2,
