@@ -28,3 +28,9 @@ Insurance Claims module — second polish/feature round.
   and normalized column widths dynamically from the selected columns. Numeric
   columns (cost/replacement/claimed) get a TOTAL row. Header bar #3A3A3A + white.
 - Verified: render with custom `item_columns` → HTTP 200.
+
+## Batch 289 (2026-06-13) — Insurance list compacted
+- Insurance claims main list: replaced one large metal SkinPlate card PER claim
+  with ONE skinned panel containing compact rows (matches main Dashboard pdRow
+  style): claimTitle 16→14, claimMeta 12→11, smaller badge (10px), 10px row
+  padding + hairline dividers, chevron 18→16. Verified via screenshot (BUILD 289).

@@ -158,16 +158,16 @@ export default function InsuranceClaimsDashboard() {
               </View>
             </SkinPlate>
           ) : (
-            claims.map((claim) => (
-              <SkinPlate
-                key={claim.id}
-                testID={`ic-claim-${claim.id}`}
-                style={{ marginTop: 12 }}
-                onPress={() => router.push(`/insurance-claims/${claim.id}` as any)}
-                padX={16} padTop={14} padBottom={14}
-              >
-                <View style={styles.claimRow}>
-                  <View style={{ flex: 1 }}>
+            <SkinPlate style={{ marginTop: 12 }} frame="window" padX={16} padTop={8} padBottom={8} testID="ic-claims-list">
+              {claims.map((claim, i) => (
+                <TouchableOpacity
+                  key={claim.id}
+                  testID={`ic-claim-${claim.id}`}
+                  onPress={() => router.push(`/insurance-claims/${claim.id}` as any)}
+                  activeOpacity={0.7}
+                  style={[styles.claimRow, i === claims.length - 1 && styles.claimRowLast]}
+                >
+                  <View style={{ flex: 1, minWidth: 0 }}>
                     <Text style={styles.claimTitle} numberOfLines={1}>{claim.title}</Text>
                     <Text style={styles.claimMeta} numberOfLines={1}>
                       {claim.claim_type}{claim.claim_number ? ` · #${claim.claim_number}` : ""}
@@ -177,15 +177,15 @@ export default function InsuranceClaimsDashboard() {
                       {claim._item_count || 0} item(s) · {money(claim._total_claimed || 0)} claimed
                     </Text>
                   </View>
-                  <View style={{ alignItems: "flex-end" }}>
+                  <View style={{ alignItems: "flex-end", flexShrink: 0 }}>
                     <View style={[styles.badge, { backgroundColor: tint(claim.status), borderColor: tint(claim.status) }]}>
                       <Text style={styles.badgeText}>{claim.status}</Text>
                     </View>
-                    <Ionicons name="chevron-forward" size={18} color={c.textMuted} style={{ marginTop: 8 }} />
+                    <Ionicons name="chevron-forward" size={16} color={c.textMuted} style={{ marginTop: 6 }} />
                   </View>
-                </View>
-              </SkinPlate>
-            ))
+                </TouchableOpacity>
+              ))}
+            </SkinPlate>
           )}
         </ScrollView>
       </KeyboardAvoidingView>
@@ -220,11 +220,15 @@ const styles = themedStyles((c) => ({
     borderColor: c.border, backgroundColor: c.surface,
   },
   chipText: { color: c.textSecondary, fontSize: 12, fontWeight: "700" },
-  claimRow: { flexDirection: "row", alignItems: "center", gap: 10 },
-  claimTitle: { color: c.textPrimary, fontSize: 16, fontWeight: "800" },
-  claimMeta: { color: c.textMuted, fontSize: 12, marginTop: 2 },
-  badge: { borderWidth: 1.2, borderRadius: 12, paddingHorizontal: 11, paddingVertical: 4 },
-  badgeText: { fontSize: 12, fontWeight: "900", color: "#FFFFFF", letterSpacing: 0.3 },
+  claimRow: {
+    flexDirection: "row", alignItems: "center", gap: 10,
+    paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: c.borderSubtle,
+  },
+  claimRowLast: { borderBottomWidth: 0 },
+  claimTitle: { color: c.textPrimary, fontSize: 14, fontWeight: "800", letterSpacing: 0.2 },
+  claimMeta: { color: c.textMuted, fontSize: 11, fontWeight: "600", marginTop: 2 },
+  badge: { borderWidth: 1, borderRadius: 10, paddingHorizontal: 8, paddingVertical: 3 },
+  badgeText: { fontSize: 10, fontWeight: "900", color: "#FFFFFF", letterSpacing: 0.3 },
   emptyTitle: { color: c.textPrimary, fontSize: 18, fontWeight: "800", marginTop: 12 },
   emptySub: { color: c.textMuted, fontSize: 13, textAlign: "center", marginTop: 6, lineHeight: 18 },
   primaryBtn: {

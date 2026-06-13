@@ -175,3 +175,6 @@ retailer-specific CSV parser.
 - Evidence now shows real image thumbnails + tap-to-open (full-screen viewer for images, open/share for docs); added insuranceApi.getEvidence + openDataUriFile.
 - Report generation: per-column picker for the itemized-asset table (backend ReportOptions.item_columns + dynamic _items_table).
 - Build stamp: BUILD 288.
+
+## Batch 289 (2026-06-13)
+- Insurance claims main list compacted to one panel of dashboard-style rows (smaller text/badges, hairline dividers) — was oversized per-claim cards. BUILD 289.
