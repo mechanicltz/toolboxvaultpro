@@ -23,3 +23,13 @@
 - Each tier verified with full iOS+Web Metro bundles (no resolve errors) + login render.
 - Records: `memory/FAT_TRIM_SCAN.md`, `memory/FAT_TRIM_DELETED_FILES.log` (for rollback ref).
 - NOT done (deferred): 5 dead source components, backend `generated/` (~30 MB) — pending user OK.
+
+## Follow-up (2026-06-13) — Dead code + backend trim
+- Deleted 5 verified 0-import components: `DiamondPlate.tsx`, `industrial/IndustrialTabBar.tsx`,
+  `sections/ClaimsHistorySection.tsx`, `tbv/components/TBVSteelHeader.tsx`, `tbv/components/TbvWordmark.tsx`.
+- Moved `backend/generated/` (30 MB) → `/app/design_archive/generated` (out of deploy bundle) and
+  removed the two temporary no-auth preview endpoints (`/api/preview/login-mockup`,
+  `/api/preview/texture/{name}`) that were its only consumers.
+- Verified: backend startup clean; frontend iOS bundle HTTP 200, no resolve errors.
+- D3 "Downgrade to Free": NOT found in current code (no "REMOVE BEFORE SUBMISSION" markers,
+  no downgrade button text, no git history) — appears already removed in a prior session. Awaiting user pointer.
