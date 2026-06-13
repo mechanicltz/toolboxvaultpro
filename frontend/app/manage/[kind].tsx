@@ -124,7 +124,7 @@ export default function ManageScreen() {
           <Ionicons name="add" size={22} color="#000" />
         </TouchableOpacity>
       </View>
-      <ScrollView contentContainerStyle={{ paddingBottom: 60 }} keyboardShouldPersistTaps="handled">
+      <ScrollView contentContainerStyle={{ paddingBottom: 60 }} keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets>
         {!loaded ? (
           <View style={{ paddingVertical: 40, alignItems: "center" }}>
             <ActivityIndicator color={theme.colors.accent} />

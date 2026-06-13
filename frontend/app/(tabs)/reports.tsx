@@ -302,7 +302,7 @@ export default function ReportsHubScreen() {
       <SafeAreaView style={styles.container}>
         <Header title={selected.title} onBack={() => setStep("type")} />
         <Crumbs current={1} />
-        <ScrollView contentContainerStyle={styles.body}>
+        <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets>
           <Text style={styles.sectionLabel}>Filters</Text>
           {(() => {
             // Show the "leave dates blank for ALL dates" hint exactly once,

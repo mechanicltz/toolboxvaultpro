@@ -73,10 +73,9 @@ TextInputAny.defaultProps.allowFontScaling = false;
 TextInputAny.defaultProps.maxFontSizeMultiplier = 1;
 
 // ── INTRO VIDEO TOGGLE ───────────────────────────────────────────────
-// Temporarily disabled so the brand splash video doesn't gate the screen
-// during development/screenshots. Flip back to `true` to re-enable the
-// cold-boot + 5-min-idle intro exactly as before. (Nothing else changed.)
-const INTRO_ENABLED = false;
+// Re-enabled for production: plays the brand splash video on cold boot
+// and on 5-min-idle resume. Flip to `false` to mute during dev/screenshots.
+const INTRO_ENABLED = true;
 
 function AuthGate({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();

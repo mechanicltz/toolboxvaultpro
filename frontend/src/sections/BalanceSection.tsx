@@ -368,7 +368,10 @@ function ScheduleModal({
 
   return (
     <Modal visible transparent animationType="slide" onRequestClose={onClose}>
-      <View style={styles.modalBg}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        style={styles.modalBg}
+      >
         <View style={styles.modalSheet}>
           <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
             <Text style={styles.modalTitle}>{acctLabel.toUpperCase()} PAYMENT SCHEDULE</Text>
@@ -447,7 +450,7 @@ function ScheduleModal({
             <View style={{ height: 16 }} />
           </ScrollView>
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }

@@ -742,7 +742,7 @@ export default function NotificationsSettingsSection({ prefs, update }: Props) {
                 <Ionicons name="close" size={24} color={theme.colors.textPrimary} />
               </TouchableOpacity>
             </View>
-            <ScrollView style={{ maxHeight: 460 }}>
+            <ScrollView style={{ maxHeight: 460 }} keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets>
               {BORROW_PRESETS.map((p) => {
                 const active = prefs.borrow_reminder_hours === p.hours;
                 return (

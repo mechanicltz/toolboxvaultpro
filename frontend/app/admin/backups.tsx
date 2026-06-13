@@ -13,6 +13,8 @@ import {
   RefreshControl,
   Modal,
   TextInput,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
 import * as DocumentPicker from "expo-document-picker";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -826,7 +828,10 @@ export default function AdminBackupsPage() {
         animationType="fade"
         onRequestClose={() => setRestoreTarget(null)}
       >
-        <View style={styles.modalOverlay}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          style={styles.modalOverlay}
+        >
           <View style={styles.modalCard}>
             <Text style={styles.modalTitle}>Confirm restore</Text>
             <Text style={styles.bannerLine} numberOfLines={2}>
@@ -869,7 +874,7 @@ export default function AdminBackupsPage() {
               </View>
             </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
     </SafeAreaView>
   );
