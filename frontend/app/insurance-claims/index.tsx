@@ -57,7 +57,7 @@ export default function InsuranceClaimsDashboard() {
 
   const tint = (key: string) => {
     const t = STATUS_TINT[key] || "muted";
-    return t === "muted" ? c.textMuted : t === "accent" ? c.accent
+    return t === "muted" ? c.textSecondary : t === "accent" ? c.accent
       : t === "success" ? c.success : t === "danger" ? c.danger : c.warning;
   };
 
@@ -91,7 +91,7 @@ export default function InsuranceClaimsDashboard() {
         >
           {/* Summary — single skinned panel, one stat per row */}
           {cards.length > 0 && (
-            <SkinPlate style={{ marginBottom: 16 }} frame="window" padX={18} padTop={14} padBottom={14} testID="ic-summary-panel">
+            <SkinPlate style={{ marginBottom: 14 }} frame="window" padX={18} padTop={8} padBottom={8} testID="ic-summary-panel">
               {cards.map((card, i) => (
                 <View key={card.label} style={[styles.statRow, i === cards.length - 1 && { borderBottomWidth: 0 }]} testID={`ic-stat-${card.label}`}>
                   <Text style={styles.statRowLabel}>{card.label.toUpperCase()}</Text>
@@ -178,8 +178,8 @@ export default function InsuranceClaimsDashboard() {
                     </Text>
                   </View>
                   <View style={{ alignItems: "flex-end", flexShrink: 0 }}>
-                    <View style={[styles.badge, { backgroundColor: tint(claim.status), borderColor: tint(claim.status) }]}>
-                      <Text style={styles.badgeText}>{claim.status}</Text>
+                    <View style={[styles.badge, { backgroundColor: tint(claim.status) + "22", borderColor: tint(claim.status) }]}>
+                      <Text style={[styles.badgeText, { color: tint(claim.status) }]}>{claim.status}</Text>
                     </View>
                     <Ionicons name="chevron-forward" size={16} color={c.textMuted} style={{ marginTop: 6 }} />
                   </View>
@@ -204,10 +204,10 @@ const styles = themedStyles((c) => ({
   cardGrid: { flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", gap: 0 },
   statRow: {
     flexDirection: "row", alignItems: "center", justifyContent: "space-between",
-    paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: c.borderSubtle,
+    paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: c.borderSubtle,
   },
-  statRowLabel: { fontSize: 13, fontWeight: "800", color: c.textSecondary, letterSpacing: 0.5 },
-  statRowValue: { fontSize: 20, fontWeight: "900", color: c.textPrimary, marginLeft: 12 },
+  statRowLabel: { fontSize: 11, fontWeight: "800", color: c.textSecondary, letterSpacing: 0.4 },
+  statRowValue: { fontSize: 16, fontWeight: "900", color: c.textPrimary, marginLeft: 12 },
   searchRow: {
     flexDirection: "row", alignItems: "center", backgroundColor: c.surface,
     borderWidth: 1, borderColor: c.border, borderRadius: 10, paddingHorizontal: 12,

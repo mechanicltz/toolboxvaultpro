@@ -34,3 +34,12 @@ Insurance Claims module — second polish/feature round.
   with ONE skinned panel containing compact rows (matches main Dashboard pdRow
   style): claimTitle 16→14, claimMeta 12→11, smaller badge (10px), 10px row
   padding + hairline dividers, chevron 18→16. Verified via screenshot (BUILD 289).
+
+## Batch 290-291 (2026-06-13) — Insurance list badge + tighter summary
+- Status badge now matches the app convention (WarrantySection style): translucent
+  tinted bg (tint+"22") + colored border + COLORED text, instead of white-on-solid.
+  Draft "muted" tint uses textSecondary (was textMuted) for legibility. Fixes the
+  unreadable grey/white "Draft" pill.
+- Insurance summary panel compacted further: statRow padding 12→8, label 13→11,
+  value 20→16; panel padTop/padBottom 14→8. Reduces the "too large" top area.
+- Verified via screenshot (BUILD 291).
