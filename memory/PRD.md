@@ -158,3 +158,12 @@ retailer-specific CSV parser.
 - Default location seeding (backend): Main Toolbox>Drawer 1, Home Toolbox>Drawer 1 for new users (idempotent).
 - Insurance Claims one-tap email: "Email Detailed Report to Insurer" button auto-renders detailed PDF + prefilled polished email template (src/insuranceReport.ts renderClaimReportOnly, EmailModal prefill prop).
 - Build stamp: BUILD 284.
+
+## Batch 287 (2026-06-13) — Insurance module polish, tested (iteration_25, all PASS)
+- BUG FIX: one-tap "Email Detailed Report to Insurer" now reliably grabs the freshly generated report (was relying on a proxy-strippable header); verified email actually sent.
+- New Claim date fields → date pickers (ICDateField); Import button → filled accent pill.
+- Buttons enlarged/clearer module-wide; report-row actions → 40x40 bordered chips.
+- Claim status badge → filled white-text (Draft now readable); dashboard tiles uniform height + value auto-fit.
+- Stretched skinned panels fixed: ICSection now uses the taller window frame (not the short plate frame).
+- Backend: insurance PDF section/table headers → dark-grey bars with white text (was navy-on-black).
+- Build stamp: BUILD 287.
