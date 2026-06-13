@@ -1216,8 +1216,8 @@ export default function InventoryScreen() {
             source={SKIN.window}
             capInsets={CAP.window}
             style={styles.invListPanel}
-            padX={14}
-            padTop={10}
+            padX={28}
+            padTop={12}
             padBottom={2}
           >
             {listEl}
