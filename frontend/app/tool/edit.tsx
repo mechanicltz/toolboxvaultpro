@@ -52,7 +52,8 @@ function FormCard({ children, isIndustrial }: { children: React.ReactNode; isInd
 }
 
 export default function ToolEdit() {
-  const { id } = useLocalSearchParams<{ id?: string }>();
+  const { id, bundle_id: paramBundleId, bundle_name: paramBundleName } =
+    useLocalSearchParams<{ id?: string; bundle_id?: string; bundle_name?: string }>();
   const router = useRouter();
   const { skin } = useSkin();
   const isIndustrial = skin === "industrial";
@@ -162,6 +163,12 @@ export default function ToolEdit() {
   const [locations, setLocations] = useState<any[]>([]);
   const [dealers, setDealers] = useState<any[]>([]);
 
+  // Bundle / Set assignment — link this item to a "set" (e.g. socket set).
+  const [bundleId, setBundleId] = useState<string | null>(paramBundleId || null);
+  const [bundleName, setBundleName] = useState<string>(paramBundleName || "");
+  const [bundles, setBundles] = useState<any[]>([]);
+  const [showBundlePicker, setShowBundlePicker] = useState(false);
+
   // AI Receipt Scan was REMOVED on 2026-05-27 per user request. All scan
   // state, modals, dealer-charge prompt, and multi-item picker have been
   // deleted. Only plain photo attachment for receipts remains.
@@ -175,6 +182,8 @@ export default function ToolEdit() {
       ]);
       setLocations(loc);
       setDealers(deal);
+      const bundleList = await api.listBundles().catch(() => [] as any[]);
+      setBundles(Array.isArray(bundleList) ? bundleList : []);
       setBrandList(
         (Array.isArray(brnds) ? brnds : [])
           .map((b: any) => String(b?.name || "").trim())
@@ -209,6 +218,13 @@ export default function ToolEdit() {
         setCategory(t.category_id ? { id: t.category_id, name: t.category_name } : null);
         setTags((t.tag_ids || []).map((tid: string, i: number) => ({ id: tid, name: t.tag_names?.[i] || "" })));
         setPhotos(t.photos || []); setDocuments(t.documents || []); setReceipts(t.receipts || []);
+        if (t.bundle_id) {
+          setBundleId(t.bundle_id);
+          const found = (Array.isArray(bundleList) ? bundleList : []).find(
+            (b: any) => b.id === t.bundle_id,
+          );
+          setBundleName(found?.name || "Set");
+        }
         setIsConsumable(!!t.is_consumable);
         if (t.consumable_info) setConsumableInfo({ ...consumableInfo, ...t.consumable_info });
         setNeedsRepair(!!t.needs_repair);
@@ -529,6 +545,7 @@ export default function ToolEdit() {
       dealer_id: dealerId, dealer_name: dealerName,
       purchased_from_agent_id: purchasedAgentId,
       purchased_from_agent_name: purchasedAgentName,
+      bundle_id: bundleId,
     };
 
     try {
@@ -546,7 +563,7 @@ export default function ToolEdit() {
       }
     }
     finally { setSaving(false); }
-  }, [name, description, brand, model, serial, isSet, setSerials, modelNumbers, serialNumbers, cost, msrpPrice, quantity, purchaseDate, condition, locationId, locationName, category, tags, photos, documents, receipts, isConsumable, consumableInfo, needsRepair, repairInfo, hasWarranty, warranty, dealerId, dealerName, purchasedAgentId, purchasedAgentName, isEdit, id, router]);
+  }, [name, description, brand, model, serial, isSet, setSerials, modelNumbers, serialNumbers, cost, msrpPrice, quantity, purchaseDate, condition, locationId, locationName, category, tags, photos, documents, receipts, isConsumable, consumableInfo, needsRepair, repairInfo, hasWarranty, warranty, dealerId, dealerName, purchasedAgentId, purchasedAgentName, bundleId, isEdit, id, router]);
 
   if (loading) {
     return (
@@ -806,6 +823,46 @@ export default function ToolEdit() {
               </View>
             </>
           )}
+          </AccordionRow>
+          <AccordionRow
+            label="BUNDLE / SET"
+            icon="cube"
+            summary={(bundleName || "Not part of a set") as any}
+            open={openKey === "bundle"}
+            onToggle={() => toggle("bundle")}
+            testID="acc-bundle"
+          >
+          <Text style={[styles.label, { fontSize: 7, marginBottom: 6 }]}>
+            Group this item under a set (e.g. a socket set). The set keeps its own
+            part # and price; this item keeps its own price.
+          </Text>
+          <BevelCard testID="pick-bundle-btn" style={styles.pickerRow} onPress={() => setShowBundlePicker(true)}>
+            <Ionicons name="cube" size={18} color={theme.colors.accent} />
+            <Text style={[styles.pickerText, !bundleName && { color: theme.colors.textMuted }]}>
+              {bundleName || "Select a set (optional)"}
+            </Text>
+            {bundleName ? (
+              <TouchableOpacity
+                testID="clear-bundle-btn"
+                onPress={() => { setBundleId(null); setBundleName(""); }}
+                hitSlop={8}
+              >
+                <Ionicons name="close" size={18} color={theme.colors.danger} />
+              </TouchableOpacity>
+            ) : (
+              <Ionicons name="chevron-forward" size={18} color={theme.colors.textMuted} />
+            )}
+          </BevelCard>
+          <TouchableOpacity
+            testID="create-bundle-link"
+            onPress={() => router.push("/bundle/edit")}
+            style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 8 }}
+          >
+            <Ionicons name="add-circle" size={14} color={theme.colors.accent} />
+            <Text style={{ color: theme.colors.accent, fontSize: 11, fontWeight: "700" }}>
+              CREATE A NEW SET
+            </Text>
+          </TouchableOpacity>
           </AccordionRow>
           <AccordionRow
             label="BRAND"
@@ -1368,7 +1425,51 @@ export default function ToolEdit() {
         </View>
       </Modal>
 
-      {/* Inline new dealer modal */}
+      {/* Bundle / Set picker */}
+      <Modal visible={showBundlePicker} transparent animationType="slide" onRequestClose={() => setShowBundlePicker(false)}>
+        <View style={styles.modalBg}>
+          <View style={styles.modalCard}>
+            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+              <Text style={styles.modalTitle}>SELECT A SET</Text>
+              <TouchableOpacity
+                testID="open-new-bundle-btn"
+                style={styles.newInlineBtn}
+                onPress={() => { setShowBundlePicker(false); router.push("/bundle/edit"); }}
+              >
+                <Ionicons name="add" size={16} color="#000" />
+                <Text style={styles.newInlineBtnText}>NEW</Text>
+              </TouchableOpacity>
+            </View>
+            <ScrollView style={{ maxHeight: 300 }}>
+              {bundles.length === 0 ? (
+                <Text style={{ color: theme.colors.textMuted, padding: 16 }}>
+                  No sets yet. Tap NEW above to create one.
+                </Text>
+              ) : (
+                bundles.map((b) => (
+                  <TouchableOpacity
+                    key={b.id}
+                    testID={`mod-bundle-${b.id}`}
+                    style={styles.dealerOpt}
+                    onPress={() => { setBundleId(b.id); setBundleName(b.name); setShowBundlePicker(false); }}
+                  >
+                    <Text style={styles.dealerOptName}>{b.name}</Text>
+                    <Text style={styles.dealerOptSub}>
+                      {(b.part_number ? `#${b.part_number} · ` : "")}
+                      {b.set_price ? `$${b.set_price} · ` : ""}
+                      {b.item_count || 0} item{(b.item_count || 0) === 1 ? "" : "s"}
+                    </Text>
+                  </TouchableOpacity>
+                ))
+              )}
+            </ScrollView>
+            <TouchableOpacity style={styles.btnGhost} onPress={() => setShowBundlePicker(false)}>
+              <Text style={styles.btnGhostText}>CLOSE</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
       <Modal visible={showNewDealer} transparent animationType="slide" onRequestClose={() => setShowNewDealer(false)}>
         <KeyboardAvoidingView
           behavior={Platform.OS === "ios" ? "padding" : "height"}

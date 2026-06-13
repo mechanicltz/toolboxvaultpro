@@ -35,6 +35,7 @@ import { themedStyles, useSkin } from "../../src/themeContext";
 import { ShadowBox } from "../../src/components/ShadowBox";
 import { IndustrialBanner } from "../../src/components/IndustrialBanner";
 import { AddFab } from "../../src/components/AddFab";
+import { AddChooser } from "../../src/components/AddChooser";
 // Iron Forge (industrial) skin — metal background + framed chrome, mirrors the
 // dashboard's dual-render pattern. Plain themes keep the flat canvas look.
 import { SKIN, CAP } from "../../src/tbv/skins";
@@ -126,6 +127,7 @@ export default function InventoryScreen() {
   // Location filter
   const [locationFilter, setLocationFilter] = useState<string | null>(null);
   const [showLocationPicker, setShowLocationPicker] = useState(false);
+  const [showAddChooser, setShowAddChooser] = useState(false);
 
   // Tag filter (multi-select)
   const [tagFilter, setTagFilter] = useState<string[]>([]);
@@ -1121,6 +1123,12 @@ export default function InventoryScreen() {
                       </Text>
                     </View>
                   )}
+                  {item.bundle_id && (
+                    <View style={styles.bundleBadge}>
+                      <Ionicons name="cube" size={10} color={theme.colors.accent} />
+                      <Text style={styles.bundleBadgeText}>IN SET</Text>
+                    </View>
+                  )}
                   <View style={styles.rowQtyPill}>
                     <Text style={styles.rowQtyPillText}>×{Math.max(1, Number(item.quantity) || 1)}</Text>
                   </View>
@@ -1310,8 +1318,10 @@ export default function InventoryScreen() {
       ) : (
         // Non-skinned round "+" FAB — matches the Contacts/Wishlist page on ALL
         // themes (per user: keep this button un-skinned).
-        <AddFab testID="add-item-fab" onPress={() => router.push("/tool/edit")} />
+        <AddFab testID="add-item-fab" onPress={() => setShowAddChooser(true)} />
       )}
+
+      <AddChooser visible={showAddChooser} onClose={() => setShowAddChooser(false)} />
 
       {/* Filter: Location picker modal */}
       <Modal visible={showLocationPicker} transparent animationType="slide" onRequestClose={() => setShowLocationPicker(false)}>
@@ -2132,6 +2142,22 @@ const styles = themedStyles((c) => ({
   },
   setBadgeText: {
     color: "#000",
+    fontSize: 7,
+    fontWeight: "900",
+    letterSpacing: 0.5,
+  },
+  bundleBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 3,
+    borderWidth: 1,
+    borderColor: c.accent,
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    borderRadius: 3,
+  },
+  bundleBadgeText: {
+    color: c.accent,
     fontSize: 7,
     fontWeight: "900",
     letterSpacing: 0.5,

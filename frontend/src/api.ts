@@ -784,6 +784,21 @@ export const api = {
   markToolSold: (id: string, data: any) => request<any>(`/tools/${id}/mark-sold`, { method: "POST", body: JSON.stringify(data) }),
   unmarkToolSold: (id: string) => request<any>(`/tools/${id}/unmark-sold`, { method: "POST" }),
 
+  // Bundles / Sets — group items into a "set" with its own part # and set price
+  listBundles: (opts?: { forceFresh?: boolean }) =>
+    request<any[]>(`/bundles`, opts as any),
+  getBundle: (id: string) => request<any>(`/bundles/${id}`),
+  createBundle: (data: any) =>
+    request<any>(`/bundles`, { method: "POST", body: JSON.stringify(data) }),
+  updateBundle: (id: string, data: any) =>
+    request<any>(`/bundles/${id}`, { method: "PUT", body: JSON.stringify(data) }),
+  deleteBundle: (id: string) =>
+    request<any>(`/bundles/${id}`, { method: "DELETE" }),
+  addItemToBundle: (bundleId: string, toolId: string) =>
+    request<any>(`/bundles/${bundleId}/items/${toolId}`, { method: "POST" }),
+  removeItemFromBundle: (bundleId: string, toolId: string) =>
+    request<any>(`/bundles/${bundleId}/items/${toolId}`, { method: "DELETE" }),
+
   // Locations
   listLocations: () => request<any[]>(`/locations`),
   createLocation: (data: any) => request<any>(`/locations`, { method: "POST", body: JSON.stringify(data) }),

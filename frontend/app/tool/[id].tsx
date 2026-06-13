@@ -1983,6 +1983,15 @@ export default function ToolDetail() {
               icon: "ribbon",
               value: tool.brand ? String(tool.brand) : "—",
             });
+            if (tool.bundle_id) {
+              groupPrimary.push({
+                kind: "value",
+                label: "SET / BUNDLE",
+                icon: "cube",
+                value: "Part of a set · tap to view",
+                onPress: () => router.push(`/bundle/${tool.bundle_id}`),
+              });
+            }
 
             // Group 2: PHOTOS, DOCUMENTS, RECEIPTS
             groupAttachments.push({

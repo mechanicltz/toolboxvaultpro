@@ -596,6 +596,13 @@ export default function MoreScreen() {
 
         <SectionCard title="ORGANIZATION" testID="more-section-organization">
           <SectionRow
+            icon="cube"
+            title="Sets & Bundles"
+            subtitle="Group items into sets with a set price"
+            testID="more-bundles"
+            onPress={() => router.push("/bundle")}
+          />
+          <SectionRow
             icon="folder"
             title="Categories"
             subtitle="Manage tool categories"
