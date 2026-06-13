@@ -609,12 +609,20 @@ export default function InventoryScreen() {
     setRefreshing(false);
   };
 
+  const clearAllFilters = () => {
+    setFilter("all");
+    setLocationFilter(null);
+    setTagFilter([]);
+    setCategoryFilter(null);
+    setSortBy("date_desc");
+  };
+
   const searchInner = (
     <>
       <Ionicons name="search" size={18} color={theme.colors.textMuted} />
       <TextInput
         testID="search-input"
-        placeholder="Search name, brand, dealer, agent, tag..."
+        placeholder="Search name, brand, dealer, tag..."
         placeholderTextColor={isIndustrial ? "#C8C8C8" : theme.colors.textMuted}
         style={[styles.searchInput, isIndustrial && styles.searchInputSkin]}
         value={search}
@@ -625,6 +633,18 @@ export default function InventoryScreen() {
           <Ionicons name="close-circle" size={18} color={theme.colors.textMuted} />
         </TouchableOpacity>
       )}
+      <TouchableOpacity
+        testID="inv-filters-btn"
+        onPress={() => setShowFilters(true)}
+        hitSlop={6}
+        style={[styles.invFilterBtn, activeFilterCount > 0 && styles.invFilterBtnActive]}
+        activeOpacity={0.8}
+      >
+        <Ionicons name="filter" size={14} color={activeFilterCount > 0 ? "#000" : theme.colors.textPrimary} />
+        <Text style={[styles.invFilterBtnText, activeFilterCount > 0 && { color: "#000" }]} numberOfLines={1}>
+          {activeFilterCount > 0 ? activeFilterCount : "FILTERS"}
+        </Text>
+      </TouchableOpacity>
     </>
   );
 
@@ -656,7 +676,7 @@ export default function InventoryScreen() {
             source={SKIN.plate}
             capInsets={CAP.plate}
             style={[styles.searchFrameSkin, { flex: 1 }]}
-            padX={16}
+            padX={44}
             padTop={4}
             padBottom={6}
           >
@@ -667,30 +687,24 @@ export default function InventoryScreen() {
         )}
       </View>
 
-      {/* #24 — All filters live inside a "Filter" ShadowBox accordion, closed by default. */}
-      <FilterAccordionWrap isIndustrial={isIndustrial}>
-        <TouchableOpacity
-          testID="filter-accordion-toggle"
-          style={styles.filterAccordionHeader}
-          onPress={() => setShowFilters((s) => !s)}
-          activeOpacity={0.7}
-        >
-          <Ionicons name="filter" size={16} color={theme.colors.accent} />
-          <Text style={styles.filterAccordionTitle}>Filter</Text>
-          {activeFilterCount > 0 && (
-            <View style={styles.filterCountBadge}>
-              <Text style={styles.filterCountBadgeText}>{activeFilterCount}</Text>
+      <Modal
+        visible={showFilters}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowFilters(false)}
+      >
+        <View style={styles.modalBg}>
+          <View style={styles.modalSheet}>
+            <View style={styles.filterModalHeader}>
+              <Ionicons name="filter" size={20} color={theme.colors.accent} />
+              <Text style={styles.modalTitle}>FILTERS</Text>
+              <View style={{ flex: 1 }} />
+              <TouchableOpacity testID="filters-close" onPress={() => setShowFilters(false)} hitSlop={10}>
+                <Ionicons name="close" size={22} color={theme.colors.textPrimary} />
+              </TouchableOpacity>
             </View>
-          )}
-          <View style={{ flex: 1 }} />
-          <Ionicons
-            name={showFilters ? "chevron-up" : "chevron-down"}
-            size={18}
-            color={theme.colors.textMuted}
-          />
-        </TouchableOpacity>
-        {showFilters && (
-          <View style={styles.filterDropdownGrid}>
+            <ScrollView style={{ maxHeight: 440 }} showsVerticalScrollIndicator={false}>
+              <View style={styles.filterDropdownGrid}>
         <View style={styles.filterDropdownRow}>
           <TouchableOpacity
             testID="status-filter-btn"
@@ -884,9 +898,27 @@ export default function InventoryScreen() {
             )}
           </TouchableOpacity>
         </View>
+              </View>
+            </ScrollView>
+            <View style={styles.filterModalFooter}>
+              <TouchableOpacity
+                testID="filters-clear-all"
+                onPress={clearAllFilters}
+                style={[styles.filterModalBtn, { backgroundColor: theme.colors.bgSecondary, borderWidth: 1, borderColor: theme.colors.border }]}
+              >
+                <Text style={[styles.filterModalBtnText, { color: theme.colors.textPrimary }]}>CLEAR ALL</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                testID="filters-done"
+                onPress={() => setShowFilters(false)}
+                style={[styles.filterModalBtn, { backgroundColor: theme.colors.accent }]}
+              >
+                <Text style={[styles.filterModalBtnText, { color: "#000" }]}>DONE</Text>
+              </TouchableOpacity>
+            </View>
           </View>
-        )}
-      </FilterAccordionWrap>
+        </View>
+      </Modal>
 
       {prefs.show_details_summary && agg && (
         <SummaryHeader agg={agg} showPrices={prefs.show_prices} openClaims={openClaims} />
@@ -2140,6 +2172,50 @@ const styles = themedStyles((c) => ({
     fontWeight: "900",
     fontSize: 8,
     letterSpacing: 1.2,
+  },
+  invFilterBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: theme.radii.pill,
+    borderWidth: 1,
+    borderColor: c.border,
+    backgroundColor: "rgba(12,12,12,0.55)",
+  },
+  invFilterBtnActive: {
+    backgroundColor: c.accent,
+    borderColor: c.accent,
+  },
+  invFilterBtnText: {
+    color: c.textPrimary,
+    fontSize: 9,
+    fontWeight: "900",
+    letterSpacing: 0.5,
+  },
+  filterModalHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 14,
+  },
+  filterModalFooter: {
+    flexDirection: "row",
+    gap: 10,
+    marginTop: 16,
+  },
+  filterModalBtn: {
+    flex: 1,
+    height: 46,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: theme.radii.pill,
+  },
+  filterModalBtnText: {
+    fontWeight: "900",
+    fontSize: 11,
+    letterSpacing: 1,
   },
   modalBg: {
     flex: 1,

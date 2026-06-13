@@ -162,18 +162,6 @@ export default function PersonalInfoScreen() {
                 <InfoRow label="Email" value={user?.email || form.email} last />
               </SkinPlate>
 
-              {/* #32/#33 — Email is the account login (centralized). Users
-                  change it here via the secure verification flow. */}
-              <TouchableOpacity
-                testID="pi-change-email"
-                style={styles.changeEmailRow}
-                onPress={() => router.push("/change-email")}
-                activeOpacity={0.85}
-              >
-                <Ionicons name="mail-outline" size={16} color={theme.colors.accent} />
-                <Text style={styles.changeEmailText}>Change Login Email</Text>
-                <Ionicons name="chevron-forward" size={16} color={theme.colors.textMuted} />
-              </TouchableOpacity>
 
               <Text style={styles.viewSection}>ADDRESS</Text>
               <SkinPlate style={styles.viewCard} padX={12} padTop={4} padBottom={4}>

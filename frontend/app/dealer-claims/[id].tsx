@@ -437,7 +437,7 @@ export default function DealerClaimsScreen() {
                     </TouchableOpacity>
                     <TouchableOpacity
                       testID={`detail-${t.id}`}
-                      style={[styles.actionBtn, { backgroundColor: theme.colors.bg, borderWidth: 1, borderColor: theme.colors.border }]}
+                      style={styles.actionBtn}
                       onPress={() =>
                         t._archivedClaim && t.claim_id
                           ? router.push(`/claim/${t.claim_id}`)
@@ -445,7 +445,7 @@ export default function DealerClaimsScreen() {
                       }
                     >
                       <Ionicons name="open" size={14} color={theme.colors.accent} />
-                      <Text style={[styles.actionText, { color: theme.colors.accent }]}>
+                      <Text style={styles.actionText}>
                         {t._archivedClaim ? "VIEW CLAIM" : "OPEN"}
                       </Text>
                     </TouchableOpacity>
@@ -653,18 +653,19 @@ const styles = themedStyles((c) => ({
     borderLeftWidth: 2,
     borderLeftColor: c.border,
   },
-  actionRow: { flexDirection: "row", gap: 6, marginTop: 10 },
+  actionRow: { flexDirection: "row", gap: 8, marginTop: 12 },
   actionBtn: {
     flex: 1,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 5,
-    paddingVertical: 9,
-    backgroundColor: "transparent",
-    borderRadius: 4,
+    paddingVertical: 10,
+    paddingHorizontal: 4,
+    backgroundColor: "rgba(12,12,12,0.55)",
+    borderRadius: theme.radii.pill,
     borderWidth: 1.5,
-    borderColor: c.danger,
+    borderColor: c.accent,
   },
-  actionText: { color: c.danger, fontWeight: "900", fontSize: 8, letterSpacing: 1 },
+  actionText: { color: c.accent, fontWeight: "900", fontSize: 10, letterSpacing: 0.5 },
 }));

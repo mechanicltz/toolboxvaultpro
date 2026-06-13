@@ -103,10 +103,15 @@ export default function ClaimDetailScreen() {
       />
 
       <ScrollView contentContainerStyle={{ padding: 18, paddingBottom: 100 }}>
-        <View style={[styles.statusBanner, { borderColor: color }]}>
+        <SkinPlate
+          style={styles.statusBannerOuter}
+          innerStyle={styles.statusBannerInner}
+          padTop={11}
+          padBottom={11}
+        >
           <View style={[styles.statusDot, { backgroundColor: color }]} />
           <Text style={[styles.statusText, { color }]}>{label}</Text>
-        </View>
+        </SkinPlate>
 
         <SkinPlate
           testID="claim-tool-link"
@@ -153,7 +158,7 @@ export default function ClaimDetailScreen() {
           </Section>
         )}
 
-        <View style={styles.dateGrid}>
+        <SkinPlate style={styles.dateGridOuter} innerStyle={styles.dateGrid} padTop={12} padBottom={12}>
           {!!claim.notified_at && (
             <View style={styles.dateBox}>
               <Text style={styles.dateLabel}>NOTIFIED</Text>
@@ -178,7 +183,7 @@ export default function ClaimDetailScreen() {
               <Text style={styles.dateValue}>{formatDateTimeUS(claim.created_at)}</Text>
             </View>
           )}
-        </View>
+        </SkinPlate>
 
         {!!claim.notes && (
           <Section label="NOTES">
@@ -254,15 +259,14 @@ const styles = themedStyles((c) => ({
     letterSpacing: 2,
     marginTop: 2,
   },
-  statusBanner: {
+  statusBannerOuter: {
+    marginBottom: 14,
+  },
+  statusBannerInner: {
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "center",
     gap: 10,
-    padding: 14,
-    borderWidth: 1,
-    borderRadius: 6,
-    backgroundColor: c.bgSecondary,
-    marginBottom: 14,
   },
   statusDot: { width: 12, height: 12, borderRadius: 6 },
   statusText: { fontSize: 10, fontWeight: "900", letterSpacing: 1.5 },
@@ -319,21 +323,17 @@ const styles = themedStyles((c) => ({
     letterSpacing: 1,
     marginTop: 6,
   },
+  dateGridOuter: {
+    marginBottom: 14,
+  },
   dateGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 8,
-    marginBottom: 14,
+    rowGap: 12,
+    columnGap: 8,
   },
   dateBox: {
     flexBasis: "48%",
-    backgroundColor: c.bgSecondary,
-    borderWidth: 1,
-    borderColor: c.border,
-    borderRadius: 4,
-    padding: 10,
-  
-    ...(theme.elevation.md as object),
   },
   dateLabel: {
     color: c.textMuted,
