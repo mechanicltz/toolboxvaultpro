@@ -37,6 +37,7 @@ import { ShadowBox, ShadowBoxSubCard } from "../../src/components/ShadowBox";
 import ReportBugBadge from "../../src/components/ReportBugBadge";
 import DriveAlertBanner from "../../src/components/DriveAlertBanner";
 import { IndustrialBanner } from "../../src/components/IndustrialBanner";
+import { AddChooser } from "../../src/components/AddChooser";
 import { useSubscriptionChange } from "../../src/subscriptionEvents";
 import { useAppResume } from "../../src/appLifecycle";
 
@@ -62,7 +63,7 @@ import { Anton_400Regular } from "@expo-google-fonts/anton";
 
 // Manual verification beacon — bump this on every change so we can confirm
 // the device is actually showing the latest bundle. Rendered top-right of Home.
-const HOME_BUILD = "BUILD 294";
+const HOME_BUILD = "BUILD 295";
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -87,6 +88,7 @@ export default function HomeScreen() {
     getCached("claims_summary", { totals: { open: 0 } }),
   );
   const [refreshing, setRefreshing] = useState(false);
+  const [showAddChooser, setShowAddChooser] = useState(false);
   /** Admin-only counts of free vs subscribed accounts. `null` for non-admins
    *  (the /admin/user-stats endpoint returns 403, we swallow it). When set,
    *  the home header shows "FREE: N   SUB: N" next to the version label. */
@@ -546,7 +548,7 @@ export default function HomeScreen() {
           {/* #23 — Quick actions row: Add Item + New Claim. ShadowBox style
               for the plain (light/dark) themes. */}
           <View style={styles.quickRow}>
-            <ShadowBox style={styles.quickBtn} onPress={() => router.push("/tool/edit")} testID="quick-add-item">
+            <ShadowBox style={styles.quickBtn} onPress={() => setShowAddChooser(true)} testID="quick-add-item">
               <Ionicons name="add-circle-outline" size={20} color={theme.colors.accent} />
               <Text style={styles.quickBtnText}>ADD ITEM</Text>
             </ShadowBox>
@@ -705,6 +707,7 @@ export default function HomeScreen() {
             }}
           />
         )}
+        <AddChooser visible={showAddChooser} onClose={() => setShowAddChooser(false)} />
       </SafeAreaView>
     );
   }
@@ -755,7 +758,7 @@ export default function HomeScreen() {
           <TouchableOpacity
             style={styles.quickBtnSkin}
             activeOpacity={0.85}
-            onPress={() => router.push("/tool/edit")}
+            onPress={() => setShowAddChooser(true)}
             testID="quick-add-item"
           >
             <ImageBackground
@@ -974,6 +977,7 @@ export default function HomeScreen() {
           }}
         />
       )}
+      <AddChooser visible={showAddChooser} onClose={() => setShowAddChooser(false)} />
       </SafeAreaView>
     </ImageBackground>
   );

@@ -7,6 +7,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
+import * as ImageManipulator from "expo-image-manipulator";
 import { theme } from "../../src/theme";
 import { api } from "../../src/api";
 import { themedStyles } from "../../src/themeContext";
@@ -60,13 +61,21 @@ export default function BundleEdit() {
         ? await ImagePicker.requestCameraPermissionsAsync()
         : await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (!perm.granted) { Alert.alert("Permission needed"); return; }
-      const opts: any = { quality: 0.5, base64: true, allowsEditing: false };
+      const opts: any = { quality: 0.7, allowsEditing: false };
       const res = camera
         ? await ImagePicker.launchCameraAsync(opts)
         : await ImagePicker.launchImageLibraryAsync({ ...opts, mediaTypes: ImagePicker.MediaTypeOptions.Images });
       if (!res.canceled && res.assets[0]) {
-        const a = res.assets[0];
-        const dataUri = a.base64 ? `data:image/jpeg;base64,${a.base64}` : a.uri;
+        // Resize/compress so big phone photos stay well under the 5 MB
+        // server limit (raw base64 of a full-res photo is often 6-8 MB).
+        const out = await ImageManipulator.manipulateAsync(
+          res.assets[0].uri,
+          [{ resize: { width: 1600 } }],
+          { compress: 0.6, format: ImageManipulator.SaveFormat.JPEG, base64: true },
+        );
+        const dataUri = out.base64
+          ? `data:image/jpeg;base64,${out.base64}`
+          : res.assets[0].uri;
         setPhotos((p) => [...p, dataUri]);
       }
     } catch (e: any) { Alert.alert("Error", e.message); }
@@ -298,8 +307,11 @@ export default function BundleEdit() {
                   >
                     <Ionicons name="add-circle" size={18} color={theme.colors.accent} />
                     <View style={{ flex: 1 }}>
-                      <Text style={styles.itemName} numberOfLines={1}>{t.name}</Text>
-                      <Text style={styles.itemSub}>${t.cost || 0}</Text>
+                      <Text style={styles.itemName} numberOfLines={1}>{t.name || "Unnamed item"}</Text>
+                      <Text style={styles.itemSub}>
+                        {(t.model || t.model_numbers?.[0]) ? `${t.model || t.model_numbers[0]} · ` : ""}
+                        ${t.cost || 0}
+                      </Text>
                     </View>
                   </TouchableOpacity>
                 ))

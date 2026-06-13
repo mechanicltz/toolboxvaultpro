@@ -55,7 +55,7 @@ its own model #, price, photo; the bundle has its own photo, part #, and set pri
 ## Critical Dev Notes
 - Frontend is Expo. On EVERY frontend change bump `const HOME_BUILD = "BUILD XXX"`
   in `app/(tabs)/index.tsx` (+1) and `sudo supervisorctl restart expo`.
-  Current: **BUILD 294**.
+  Current: **BUILD 295**.
 - Backend: 0.0.0.0:8001, all routes `/api` prefixed. Frontend uses
   EXPO_PUBLIC_BACKEND_URL. Mongo via MONGO_URL / DB_NAME.
 - Preview/login URL: login-stretch-layout.preview.emergentagent.com
