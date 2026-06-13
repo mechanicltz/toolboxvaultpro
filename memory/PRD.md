@@ -167,3 +167,11 @@ retailer-specific CSV parser.
 - Stretched skinned panels fixed: ICSection now uses the taller window frame (not the short plate frame).
 - Backend: insurance PDF section/table headers → dark-grey bars with white text (was navy-on-black).
 - Build stamp: BUILD 287.
+
+## Batch 288 (2026-06-13) — Insurance polish round 2, tested (iteration_26, all PASS)
+- Import button moved to its own row under "Insurance Information" title (no overlap).
+- Claim detail Timeline moved to the very bottom.
+- Dashboard 6 stat boxes → ONE skinned panel with 6 stat rows.
+- Evidence now shows real image thumbnails + tap-to-open (full-screen viewer for images, open/share for docs); added insuranceApi.getEvidence + openDataUriFile.
+- Report generation: per-column picker for the itemized-asset table (backend ReportOptions.item_columns + dynamic _items_table).
+- Build stamp: BUILD 288.
