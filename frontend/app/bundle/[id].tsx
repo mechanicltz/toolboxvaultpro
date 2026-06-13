@@ -10,6 +10,7 @@ import { api } from "../../src/api";
 import { confirm } from "../../src/confirm";
 import { themedStyles, useSkin } from "../../src/themeContext";
 import { IndustrialBanner } from "../../src/components/IndustrialBanner";
+import { PillButton } from "../../src/components/PillButton";
 import { ShadowBox } from "../../src/components/ShadowBox";
 import { SKIN, CAP } from "../../src/tbv/skins";
 import { TbvFrame } from "../../src/tbv/components/TbvFrame";
@@ -25,8 +26,7 @@ export default function BundleDetail() {
   const load = useCallback(async () => {
     if (!id) return;
     try {
-      const b = await api.getBundle(id);
-      setBundle(b);
+      setBundle(await api.getBundle(id));
     } catch (e: any) {
       Alert.alert("Error", e?.detail || e?.message || "Could not load set");
     } finally { setLoading(false); }
@@ -53,6 +53,19 @@ export default function BundleDetail() {
     }
   }, [bundle, id, router]);
 
+  // Industrial themes wrap card content in a metal TbvFrame; plain Light/Dark
+  // use the flat ShadowBox. Mirrors the Dealer detail screen exactly.
+  const CardShell = ({ children, testID }: { children: ReactNode; testID?: string }) =>
+    isIndustrial ? (
+      <View style={styles.cardSkinWrap}>
+        <TbvFrame source={SKIN.window} capInsets={CAP.window} padX={36} padTop={20} padBottom={20} testID={testID}>
+          {children}
+        </TbvFrame>
+      </View>
+    ) : (
+      <ShadowBox testID={testID} style={styles.detailsBox}>{children}</ShadowBox>
+    );
+
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
@@ -63,112 +76,113 @@ export default function BundleDetail() {
   if (!bundle) return null;
 
   const items = bundle.items || [];
-  const itemsTotal = items.reduce((s: number, i: any) => s + (i.cost || 0), 0);
-
-  const CardShell = ({ children, testID }: { children: ReactNode; testID?: string }) =>
-    isIndustrial ? (
-      <View style={styles.cardSkinWrap}>
-        <TbvFrame source={SKIN.window} capInsets={CAP.window} padX={36} padTop={26} padBottom={26} testID={testID}>
-          {children}
-        </TbvFrame>
-      </View>
-    ) : (
-      <ShadowBox testID={testID} style={styles.card}>{children}</ShadowBox>
-    );
+  const itemsTotal = items.reduce((s: number, i: any) => s + (Number(i.cost) || 0), 0);
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <IndustrialBanner
         title="SET DETAILS"
         subtitle={bundle.name}
-        leftSlot={
-          <TouchableOpacity
-            testID="bundle-detail-back"
-            onPress={() => router.canGoBack() ? router.back() : router.replace("/inventory")}
-            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-          >
-            <Ionicons name="chevron-back" size={24} color="#F97316" />
-          </TouchableOpacity>
-        }
-        rightSlot={
-          <TouchableOpacity
-            testID="bundle-edit-btn"
-            onPress={() => router.push(`/bundle/edit?id=${id}`)}
-            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-          >
-            <Ionicons name="create-outline" size={22} color="#F97316" />
-          </TouchableOpacity>
-        }
+        onBack={() => router.canGoBack() ? router.back() : router.replace("/bundle")}
       />
-      <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 120 }}>
-        {bundle.photos?.length > 0 && (
-          <Image source={{ uri: bundle.photos[0] }} style={styles.hero} />
-        )}
 
-        <CardShell testID="bundle-info-card">
-          <Text style={styles.bigName}>{bundle.name}</Text>
-          <View style={styles.metaRow}>
-            {!!bundle.part_number && (
-              <View style={styles.pill}>
-                <Ionicons name="barcode-outline" size={12} color={theme.colors.accent} />
-                <Text style={styles.pillText}>{bundle.part_number}</Text>
-              </View>
-            )}
-            <View style={styles.pill}>
-              <Ionicons name="cube-outline" size={12} color={theme.colors.accent} />
-              <Text style={styles.pillText}>{items.length} item{items.length === 1 ? "" : "s"}</Text>
+      <View style={styles.actionsRow}>
+        <PillButton
+          testID="bundle-edit-btn"
+          label="EDIT"
+          icon="create-outline"
+          variant="active"
+          onPress={() => router.push(`/bundle/edit?id=${id}`)}
+        />
+        <PillButton
+          testID="bundle-delete-btn"
+          label="DELETE"
+          icon="trash-outline"
+          variant="danger"
+          onPress={onDelete}
+        />
+      </View>
+
+      <ScrollView style={{ backgroundColor: theme.colors.canvas }} contentContainerStyle={{ paddingBottom: 100 }}>
+        <View style={styles.heroBox}>
+          {bundle.photos?.[0] ? (
+            <Image source={{ uri: bundle.photos[0] }} style={styles.hero} />
+          ) : (
+            <View style={[styles.hero, styles.heroEmpty]}>
+              <Ionicons name="cube" size={40} color={theme.colors.textMuted} />
             </View>
-          </View>
-          {!!bundle.notes && <Text style={styles.notes}>{bundle.notes}</Text>}
-        </CardShell>
+          )}
+          <Text style={styles.setName}>{bundle.name}</Text>
+          {!!bundle.part_number && <Text style={styles.setSub}>PART #{bundle.part_number}</Text>}
+        </View>
 
-        {/* Pricing comparison */}
+        {/* PRICING */}
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionLabelStrong}>PRICING</Text>
+        </View>
         <CardShell testID="bundle-pricing-card">
-          <View style={styles.priceRow}>
-            <Text style={styles.priceLabel}>SET PRICE</Text>
-            <Text style={styles.priceValAccent}>${(bundle.set_price || 0).toFixed(2)}</Text>
+          <View style={styles.detailsRow}>
+            <Text style={styles.detailsLabel}>SET PRICE</Text>
+            <Text style={[styles.detailsValue, styles.valueAccent]}>${(Number(bundle.set_price) || 0).toFixed(2)}</Text>
           </View>
-          <View style={[styles.priceRow, { borderBottomWidth: 0 }]}>
-            <Text style={styles.priceLabel}>ITEMS TOTAL (individual)</Text>
-            <Text style={styles.priceVal}>${itemsTotal.toFixed(2)}</Text>
+          <View style={styles.detailsRow}>
+            <Text style={styles.detailsLabel}>ITEMS TOTAL (INDIVIDUAL)</Text>
+            <Text style={styles.detailsValue}>${itemsTotal.toFixed(2)}</Text>
+          </View>
+          <View style={[styles.detailsRow, styles.detailsRowLast]}>
+            <Text style={styles.detailsLabel}>ITEMS IN SET</Text>
+            <Text style={styles.detailsValue}>{items.length}</Text>
           </View>
         </CardShell>
 
-        {/* Items */}
-        <Text style={styles.sectionTitle}>ITEMS IN THIS SET</Text>
-        {items.length === 0 ? (
-          <Text style={styles.helper}>No items in this set yet. Tap edit to add some.</Text>
-        ) : (
-          items.map((it: any) => (
-            <TouchableOpacity
-              key={it.id}
-              testID={`bundle-detail-item-${it.id}`}
-              style={styles.itemRow}
-              onPress={() => router.push(`/tool/${it.id}`)}
-            >
-              {it.photos?.[0] ? (
-                <Image source={{ uri: it.photos[0] }} style={styles.itemThumb} />
-              ) : (
-                <View style={[styles.itemThumb, styles.itemThumbEmpty]}>
-                  <Ionicons name="construct" size={18} color={theme.colors.textMuted} />
-                </View>
-              )}
-              <View style={{ flex: 1 }}>
-                <Text style={styles.itemName} numberOfLines={1}>{it.name}</Text>
-                <Text style={styles.itemSub}>
-                  {(it.model || it.model_numbers?.[0]) ? `${it.model || it.model_numbers[0]} · ` : ""}
-                  ${it.cost || 0}
-                </Text>
-              </View>
-              <Ionicons name="chevron-forward" size={18} color={theme.colors.textMuted} />
-            </TouchableOpacity>
-          ))
+        {!!bundle.notes && (
+          <>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionLabelStrong}>NOTES</Text>
+            </View>
+            <CardShell testID="bundle-notes-card">
+              <Text style={styles.notes}>{bundle.notes}</Text>
+            </CardShell>
+          </>
         )}
 
-        <TouchableOpacity testID="bundle-delete-btn" style={styles.deleteBtn} onPress={onDelete}>
-          <Ionicons name="trash-outline" size={16} color={theme.colors.danger} />
-          <Text style={styles.deleteBtnText}>DELETE SET & ALL ITEMS</Text>
-        </TouchableOpacity>
+        {/* ITEMS IN THIS SET */}
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionLabelStrong}>ITEMS IN THIS SET</Text>
+        </View>
+        <CardShell testID="bundle-items-card">
+          {items.length === 0 ? (
+            <View style={[styles.detailsRow, styles.detailsRowLast]}>
+              <Text style={styles.emptyText}>No items in this set yet. Tap EDIT to add some.</Text>
+            </View>
+          ) : (
+            items.map((it: any, idx: number) => (
+              <TouchableOpacity
+                key={it.id}
+                testID={`bundle-detail-item-${it.id}`}
+                style={[styles.detailsRow, idx === items.length - 1 && styles.detailsRowLast]}
+                activeOpacity={0.6}
+                onPress={() => router.push(`/tool/${it.id}`)}
+              >
+                {it.photos?.[0] ? (
+                  <Image source={{ uri: it.photos[0] }} style={styles.itemThumb} />
+                ) : (
+                  <View style={[styles.itemThumb, styles.itemThumbEmpty]}>
+                    <Ionicons name="construct" size={16} color={theme.colors.textMuted} />
+                  </View>
+                )}
+                <View style={styles.itemTextWrap}>
+                  <Text style={styles.itemName} numberOfLines={1}>{it.name || "Unnamed item"}</Text>
+                  {(it.model || it.model_numbers?.[0]) ? (
+                    <Text style={styles.itemModel} numberOfLines={1}>{it.model || it.model_numbers[0]}</Text>
+                  ) : null}
+                </View>
+                <Text style={styles.itemCost}>${Number(it.cost) || 0}</Text>
+                <Ionicons name="chevron-forward" size={14} color={theme.colors.textMuted} />
+              </TouchableOpacity>
+            ))
+          )}
+        </CardShell>
       </ScrollView>
     </SafeAreaView>
   );
@@ -176,42 +190,61 @@ export default function BundleDetail() {
 
 const styles = themedStyles((c) => ({
   container: { flex: 1, backgroundColor: c.canvas },
-  cardSkinWrap: { marginBottom: 14 },
-  hero: { width: "100%", height: 180, borderRadius: 12, marginBottom: 14 },
-  card: {
-    backgroundColor: c.surface, borderRadius: 12, padding: 16, marginBottom: 14,
-    borderWidth: 1, borderColor: c.border,
+  actionsRow: { flexDirection: "row", justifyContent: "flex-end", gap: 8, paddingHorizontal: 16, paddingTop: 10, paddingBottom: 4 },
+
+  heroBox: { alignItems: "center", paddingTop: 8, paddingBottom: 4 },
+  hero: { width: 120, height: 120, borderRadius: 10, marginBottom: 8 },
+  heroEmpty: { backgroundColor: c.bgSecondary, borderWidth: 1, borderColor: c.border, alignItems: "center", justifyContent: "center" },
+  setName: { color: c.textPrimary, fontSize: 18, fontWeight: "900", letterSpacing: 1, marginTop: 4, textAlign: "center", paddingHorizontal: 24 },
+  setSub: { color: c.textMuted, fontSize: 8, fontWeight: "800", letterSpacing: 1.5, marginTop: 4 },
+
+  sectionHeader: { flexDirection: "row", alignItems: "center" },
+  sectionLabelStrong: {
+    color: c.textPrimary,
+    fontSize: 10,
+    fontWeight: "900",
+    letterSpacing: 2,
+    paddingHorizontal: 20,
+    paddingTop: 18,
+    paddingBottom: 10,
   },
-  bigName: { color: c.textPrimary, fontSize: 20, fontWeight: "900" },
-  metaRow: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 10 },
-  pill: {
-    flexDirection: "row", alignItems: "center", gap: 4,
-    backgroundColor: c.accent + "18", borderRadius: 6,
-    paddingHorizontal: 8, paddingVertical: 4,
+
+  // Skinned-card wrapper + flat fallback — identical tokens to Dealer detail.
+  cardSkinWrap: { marginHorizontal: 16, marginTop: 4, marginBottom: 12 },
+  detailsBox: {
+    backgroundColor: c.bgSecondary,
+    borderWidth: 1,
+    borderColor: c.border,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    marginHorizontal: 16,
+    marginTop: 4,
+    marginBottom: 12,
+    ...(theme.elevation.md as object),
   },
-  pillText: { color: c.accent, fontSize: 11, fontWeight: "800" },
-  notes: { color: c.textSecondary, fontSize: 13, marginTop: 12, lineHeight: 19 },
-  priceRow: {
-    flexDirection: "row", justifyContent: "space-between", alignItems: "center",
-    paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: c.border,
+  detailsRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: c.borderSubtle,
+    gap: 10,
   },
-  priceLabel: { color: c.textMuted, fontSize: 11, fontWeight: "800", letterSpacing: 0.5 },
-  priceVal: { color: c.textPrimary, fontSize: 16, fontWeight: "800" },
-  priceValAccent: { color: c.accent, fontSize: 18, fontWeight: "900" },
-  sectionTitle: { color: c.textMuted, fontSize: 11, fontWeight: "800", letterSpacing: 0.5, marginBottom: 8, marginTop: 4 },
-  helper: { color: c.textMuted, fontSize: 12, marginBottom: 12 },
-  itemRow: {
-    flexDirection: "row", alignItems: "center", gap: 12,
-    backgroundColor: c.surface, borderRadius: 10, padding: 12, marginBottom: 8,
-    borderWidth: 1, borderColor: c.border,
-  },
-  itemThumb: { width: 44, height: 44, borderRadius: 8 },
-  itemThumbEmpty: { backgroundColor: c.surfaceAlt, alignItems: "center", justifyContent: "center" },
-  itemName: { color: c.textPrimary, fontSize: 14, fontWeight: "700" },
-  itemSub: { color: c.textMuted, fontSize: 12, marginTop: 2 },
-  deleteBtn: {
-    flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8,
-    borderWidth: 1, borderColor: c.danger, borderRadius: 10, paddingVertical: 13, marginTop: 18,
-  },
-  deleteBtnText: { color: c.danger, fontWeight: "800", fontSize: 13, letterSpacing: 0.5 },
+  detailsRowLast: { borderBottomWidth: 0 },
+  detailsLabel: { color: c.textMuted, fontSize: 7, fontWeight: "800", letterSpacing: 1.5, flexShrink: 1 },
+  detailsValue: { color: c.textPrimary, fontSize: 10, fontWeight: "700", textAlign: "right" },
+  valueAccent: { color: c.accent },
+
+  notes: { color: c.textSecondary, fontSize: 11, lineHeight: 17, paddingVertical: 8 },
+
+  // Item rows inside the ITEMS card
+  itemThumb: { width: 34, height: 34, borderRadius: 6 },
+  itemThumbEmpty: { backgroundColor: c.bg, borderWidth: 1, borderColor: c.border, alignItems: "center", justifyContent: "center" },
+  itemTextWrap: { flex: 1, minWidth: 0 },
+  itemName: { color: c.textPrimary, fontSize: 12, fontWeight: "700" },
+  itemModel: { color: c.textMuted, fontSize: 8, fontWeight: "700", letterSpacing: 0.5, marginTop: 2 },
+  itemCost: { color: c.textPrimary, fontSize: 10, fontWeight: "700" },
+  emptyText: { color: c.textMuted, fontSize: 9, fontStyle: "italic", paddingVertical: 6 },
 }));

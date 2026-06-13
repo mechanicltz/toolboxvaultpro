@@ -206,7 +206,7 @@ export const styles = themedStyles((c) => ({
     justifyContent: "space-between",
     alignItems: "center",
     paddingVertical: 8,
-    paddingHorizontal: 8,
+    paddingHorizontal: 12,
     marginVertical: 2,
     borderRadius: 6,
     // Deep recessed "machined slot" — each line is its own seated container.
@@ -216,7 +216,7 @@ export const styles = themedStyles((c) => ({
     borderLeftColor: "rgba(0,0,0,0.7)",
     borderRightColor: "rgba(255,255,255,0.07)",
     borderBottomColor: "rgba(255,255,255,0.11)",
-    gap: 6,
+    gap: 8,
   },
   // Orange accent tick to the left of every row label (control-panel readout).
   rowTick: {
@@ -231,7 +231,7 @@ export const styles = themedStyles((c) => ({
     alignItems: "center",
     flex: 1,
     minWidth: 0,
-    marginRight: 4,
+    marginRight: 8,
   },
   detailsRowLast: {
     borderBottomWidth: 0,
@@ -252,7 +252,7 @@ export const styles = themedStyles((c) => ({
   detailsValueWrap: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
+    gap: 6,
     flexShrink: 0,
     justifyContent: "flex-end",
   },
@@ -260,15 +260,15 @@ export const styles = themedStyles((c) => ({
     color: TBV.steel,
     fontFamily: "BebasNeue_400Regular",
     fontSize: 14,
-    letterSpacing: 0.5,
+    letterSpacing: 1.2,
     textAlign: "right",
-    flexShrink: 0,
-    // Recessed "gauge readout" chip — hugs the number, no dead space.
+    flexShrink: 1,
+    // Recessed "gauge readout" chip
     backgroundColor: "rgba(0,0,0,0.34)",
     borderColor: "rgba(0,0,0,0.55)",
     borderWidth: 1,
     borderRadius: 4,
-    paddingHorizontal: 6,
+    paddingHorizontal: 8,
     paddingVertical: 2,
     overflow: "hidden",
   },
@@ -283,8 +283,8 @@ export const styles = themedStyles((c) => ({
     fontSize: 14,
   },
   dealerAdjustChip: {
-    width: 24,
-    height: 24,
+    width: 28,
+    height: 26,
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1.5,
@@ -294,7 +294,7 @@ export const styles = themedStyles((c) => ({
   dealerAdjustChipText: {
     color: c.accent,
     fontFamily: "BebasNeue_400Regular",
-    fontSize: 14,
+    fontSize: 15,
     letterSpacing: 0,
   },
 
