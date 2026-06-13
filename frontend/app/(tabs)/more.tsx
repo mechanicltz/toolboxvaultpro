@@ -269,6 +269,7 @@ export default function MoreScreen() {
   // while seeded demo data is still present on the account.
   const [demoPresent, setDemoPresent] = useState(false);
   const [demoBusy, setDemoBusy] = useState(false);
+  const [demoConfirmOpen, setDemoConfirmOpen] = useState(false);
   // Audit #11: track the auto-close timer for the change-password modal so
   // it can't fire setState after this screen unmounts.
   const pwCloseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -335,24 +336,16 @@ export default function MoreScreen() {
   }, []);
 
   const promptClearDemo = useCallback(() => {
-    Alert.alert(
-      "Delete Prefilled Information",
-      "Choose how much of the sample data to remove. This can't be undone.",
-      [
-        {
-          text: "Keep Setup (dealers, locations, tags, categories)",
-          onPress: () => runClearDemo("keep_taxonomy"),
-        },
-        {
-          text: "Remove Everything",
-          style: "destructive",
-          onPress: () => runClearDemo("everything"),
-        },
-        { text: "Cancel", style: "cancel" },
-      ],
-      { cancelable: true },
-    );
-  }, [runClearDemo]);
+    setDemoConfirmOpen(true);
+  }, []);
+
+  const chooseClearDemo = useCallback(
+    (mode: "everything" | "keep_taxonomy") => {
+      setDemoConfirmOpen(false);
+      runClearDemo(mode);
+    },
+    [runClearDemo],
+  );
 
   // Biometric (Face ID / Touch ID) status — re-read on focus so any
   // change made elsewhere is reflected here. Disabling on web is fine
@@ -1143,10 +1136,130 @@ export default function MoreScreen() {
         </KeyboardAvoidingView>
       </Modal>
 
+      {/* Delete Prefilled Information — choice modal (web-parity for the
+          3-option Alert: keep setup vs wipe everything). */}
+      <Modal
+        visible={demoConfirmOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setDemoConfirmOpen(false)}
+      >
+        <View style={demoStyles.backdrop}>
+          <View style={demoStyles.card} testID="demo-clear-modal">
+            <View style={demoStyles.header}>
+              <Ionicons name="sparkles" size={20} color={theme.colors.accent} />
+              <Text style={demoStyles.title}>DELETE PREFILLED INFO</Text>
+              <TouchableOpacity
+                onPress={() => setDemoConfirmOpen(false)}
+                hitSlop={10}
+                testID="demo-clear-close"
+              >
+                <Ionicons name="close" size={22} color={theme.colors.textPrimary} />
+              </TouchableOpacity>
+            </View>
+            <Text style={demoStyles.body}>
+              Choose how much of the sample data to remove. This can&apos;t be
+              undone.
+            </Text>
+
+            <TouchableOpacity
+              testID="demo-clear-keep"
+              style={demoStyles.optBtn}
+              activeOpacity={0.85}
+              onPress={() => chooseClearDemo("keep_taxonomy")}
+            >
+              <Ionicons name="albums-outline" size={18} color={theme.colors.accent} />
+              <View style={{ flex: 1 }}>
+                <Text style={demoStyles.optTitle}>Keep My Setup</Text>
+                <Text style={demoStyles.optSub}>
+                  Remove demo tools, claims & contacts — keep dealers, locations,
+                  tags & categories
+                </Text>
+              </View>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              testID="demo-clear-everything"
+              style={demoStyles.optBtn}
+              activeOpacity={0.85}
+              onPress={() => chooseClearDemo("everything")}
+            >
+              <Ionicons name="trash-outline" size={18} color={theme.colors.danger} />
+              <View style={{ flex: 1 }}>
+                <Text style={[demoStyles.optTitle, { color: theme.colors.danger }]}>
+                  Remove Everything
+                </Text>
+                <Text style={demoStyles.optSub}>
+                  Wipe all sample data including dealers, locations, tags &
+                  categories — start with a blank app
+                </Text>
+              </View>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              testID="demo-clear-cancel"
+              style={demoStyles.cancelBtn}
+              activeOpacity={0.85}
+              onPress={() => setDemoConfirmOpen(false)}
+            >
+              <Text style={demoStyles.cancelText}>CANCEL</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
 
     </SafeAreaView>
   );
 }
+
+const demoStyles = StyleSheet.create({
+  backdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.65)",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 24,
+  },
+  card: {
+    width: "100%",
+    maxWidth: 440,
+    backgroundColor: theme.colors.surface,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    padding: 20,
+  },
+  header: { flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 12 },
+  title: {
+    flex: 1,
+    color: theme.colors.textPrimary,
+    fontSize: 16,
+    fontWeight: "900",
+    letterSpacing: 0.5,
+  },
+  body: { color: theme.colors.textSecondary, fontSize: 14, lineHeight: 20, marginBottom: 16 },
+  optBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    padding: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.surfaceAlt,
+    marginBottom: 12,
+  },
+  optTitle: { color: theme.colors.textPrimary, fontSize: 15, fontWeight: "800" },
+  optSub: { color: theme.colors.textSecondary, fontSize: 12, lineHeight: 16, marginTop: 2 },
+  cancelBtn: { alignItems: "center", paddingVertical: 12, marginTop: 2 },
+  cancelText: {
+    color: theme.colors.textMuted,
+    fontSize: 14,
+    fontWeight: "700",
+    letterSpacing: 0.5,
+  },
+});
 
 const homeRowsModalStyles = themedStyles((c) => ({
   backdrop: {

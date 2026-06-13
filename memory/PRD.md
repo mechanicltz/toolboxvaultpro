@@ -26,6 +26,34 @@ its own model #, price, photo; the bundle has its own photo, part #, and set pri
   bundled items listed on own rows grouped under a per-set section header
   showing the set price. Applied to Inventory, Insurance, Year-End reports.
 
+## Prefilled Demo System (2026-02 / build 301 — DONE & TESTED)
+On registration, new accounts are auto-seeded with a rich demo dataset so users
+can explore every feature immediately. All demo records tagged `is_demo: true`
+(default dealers tagged `is_demo_enriched: true`) for clean removal.
+
+### Backend (`/app/backend/demo_seed.py` + routes in server.py ~2693)
+- `seed_demo_data_for_user()` hooked into `/api/auth/register` (idempotent).
+  Seeds 15 tools (checked-out/lost/stolen/broken/for-sale/sold/consumable),
+  1 bundle, 3 borrowers, 3 warranty claims (open+history), 1 full insurance
+  claim + evidence, 3 wishlist items, personal profile, and enriches 4 default
+  dealers with balances/routes/agents/payment schedules. Clipart PNGs via PIL.
+- `GET /api/demo/status` -> {present, intro_seen}
+- `POST /api/demo/intro-seen` -> marks one-time popup seen
+- `POST /api/demo/clear` body {mode:"everything"|"keep_taxonomy"}:
+  keep_taxonomy wipes demo records but keeps dealers/locations/tags/categories
+  (resets enriched dealers); everything also wipes taxonomy -> blank app.
+  Both set demo_present=false, intro_seen=true (popup never reappears).
+- Tests: `/app/backend/tests/test_demo_prefill.py` (11/11 pass).
+
+### Frontend
+- `src/api.ts`: demoStatus, demoIntroSeen, demoClear.
+- `src/components/DemoBanner.tsx`: one-time intro popup + persistent banner;
+  rendered in BOTH dashboard branches (plain + skin) in `app/(tabs)/index.tsx`.
+- `app/(tabs)/more.tsx` ACCOUNT card: "Delete Prefilled Information" row (shown
+  only while demo present) -> custom themed choice Modal (Keep My Setup / Remove
+  Everything / Cancel — web-parity, replaces 3-button Alert). Row + banner
+  disappear permanently after deletion (status refetched on focus).
+
 ## Implemented (2026-02 / build 294)
 ### Backend (Phase 1 — done & tested, 14/14 pytest in /app/backend/tests/test_bundles.py)
 - Models: `Bundle`, `BundleCreate`, `BundleUpdate` (server.py ~880). `tools.bundle_id`.
@@ -56,7 +84,7 @@ its own model #, price, photo; the bundle has its own photo, part #, and set pri
 ## Critical Dev Notes
 - Frontend is Expo. On EVERY frontend change bump `const HOME_BUILD = "BUILD XXX"`
   in `app/(tabs)/index.tsx` (+1) and `sudo supervisorctl restart expo`.
-  Current: **BUILD 299**.
+  Current: **BUILD 301**.
 - Backend: 0.0.0.0:8001, all routes `/api` prefixed. Frontend uses
   EXPO_PUBLIC_BACKEND_URL. Mongo via MONGO_URL / DB_NAME.
 - Preview/login URL: login-stretch-layout.preview.emergentagent.com
