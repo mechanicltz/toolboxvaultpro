@@ -2691,6 +2691,33 @@ async def remove_item_from_bundle(bundle_id: str, tool_id: str, user: User = Dep
     return Tool(**doc)
 
 
+# ---------- Prefilled Demo System ----------
+class DemoClearRequest(BaseModel):
+    mode: str = "keep_taxonomy"  # "everything" | "keep_taxonomy"
+
+
+@api_router.get("/demo/status")
+async def demo_status(user: User = Depends(get_current_user)):
+    from demo_seed import demo_status_for_user
+    return await demo_status_for_user(real_db, user.id)
+
+
+@api_router.post("/demo/intro-seen")
+async def demo_intro_seen(user: User = Depends(get_current_user)):
+    from demo_seed import mark_demo_intro_seen
+    await mark_demo_intro_seen(real_db, user.id)
+    return {"ok": True}
+
+
+@api_router.post("/demo/clear")
+async def demo_clear(payload: DemoClearRequest, user: User = Depends(get_current_user)):
+    from demo_seed import clear_demo_data_for_user
+    keep_taxonomy = (payload.mode or "keep_taxonomy") != "everything"
+    removed = await clear_demo_data_for_user(real_db, user.id, keep_taxonomy)
+    return {"ok": True, "mode": payload.mode, "removed": removed}
+
+
+
 # ---------- Sale / Sold ----------
 class MarkSoldRequest(BaseModel):
     sold_price: Optional[float] = 0.0

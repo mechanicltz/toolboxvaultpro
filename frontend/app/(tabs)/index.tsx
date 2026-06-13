@@ -36,6 +36,7 @@ import { BevelCard } from "../../src/components/BevelCard";
 import { ShadowBox, ShadowBoxSubCard } from "../../src/components/ShadowBox";
 import ReportBugBadge from "../../src/components/ReportBugBadge";
 import DriveAlertBanner from "../../src/components/DriveAlertBanner";
+import { DemoBanner } from "../../src/components/DemoBanner";
 import { IndustrialBanner } from "../../src/components/IndustrialBanner";
 import { AddChooser } from "../../src/components/AddChooser";
 import { useSubscriptionChange } from "../../src/subscriptionEvents";
@@ -63,7 +64,7 @@ import { Anton_400Regular } from "@expo-google-fonts/anton";
 
 // Manual verification beacon — bump this on every change so we can confirm
 // the device is actually showing the latest bundle. Rendered top-right of Home.
-const HOME_BUILD = "BUILD 299";
+const HOME_BUILD = "BUILD 300";
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -559,6 +560,7 @@ export default function HomeScreen() {
           </View>
 
           <DriveAlertBanner />
+          <DemoBanner />
           {prefs.home_logo_mode === "custom" && prefs.home_logo_data && (
             <View style={styles.logoWrap}>
               <Image
@@ -786,6 +788,8 @@ export default function HomeScreen() {
             </ImageBackground>
           </TouchableOpacity>
         </View>
+
+        <DemoBanner />
 
         {/* HOME LOGO — purely decorative, sits at the very top of the
             content scroll. Hidden by default; only renders when the user

@@ -265,6 +265,10 @@ export default function MoreScreen() {
   // Subscription + admin gates.
   const [sub, setSub] = useState<any>(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  // Prefilled Demo System — show the "Delete Prefilled Information" row only
+  // while seeded demo data is still present on the account.
+  const [demoPresent, setDemoPresent] = useState(false);
+  const [demoBusy, setDemoBusy] = useState(false);
   // Audit #11: track the auto-close timer for the change-password modal so
   // it can't fire setState after this screen unmounts.
   const pwCloseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -291,6 +295,12 @@ export default function MoreScreen() {
     } catch {
       setIsAdmin(false);
     }
+    try {
+      const ds = await api.demoStatus({ forceFresh: true });
+      setDemoPresent(!!ds?.present);
+    } catch {
+      setDemoPresent(false);
+    }
   }, []);
   useEffect(() => {
     refreshAccountState();
@@ -302,6 +312,47 @@ export default function MoreScreen() {
   );
   // Also refresh on app resume (e.g. after a backgrounded subscription change).
   useAppResume(useCallback(() => { refreshAccountState(); }, [refreshAccountState]));
+
+  // Prefilled Demo System — wipe the seeded demo data. `mode` is either
+  // "everything" (also removes dealers/locations/tags/categories for a blank
+  // app) or "keep_taxonomy" (keeps that setup, removes only demo records).
+  const runClearDemo = useCallback(async (mode: "everything" | "keep_taxonomy") => {
+    setDemoBusy(true);
+    try {
+      await api.demoClear(mode);
+      setDemoPresent(false);
+      Alert.alert(
+        "Demo Data Removed",
+        mode === "everything"
+          ? "All sample data — including dealers, locations, tags & categories — has been deleted. You now have a blank app."
+          : "Sample tools, claims and other demo records were removed. Your dealers, locations, tags & categories were kept.",
+      );
+    } catch {
+      Alert.alert("Couldn't Remove Demo Data", "Something went wrong. Please try again.");
+    } finally {
+      setDemoBusy(false);
+    }
+  }, []);
+
+  const promptClearDemo = useCallback(() => {
+    Alert.alert(
+      "Delete Prefilled Information",
+      "Choose how much of the sample data to remove. This can't be undone.",
+      [
+        {
+          text: "Keep Setup (dealers, locations, tags, categories)",
+          onPress: () => runClearDemo("keep_taxonomy"),
+        },
+        {
+          text: "Remove Everything",
+          style: "destructive",
+          onPress: () => runClearDemo("everything"),
+        },
+        { text: "Cancel", style: "cancel" },
+      ],
+      { cancelable: true },
+    );
+  }, [runClearDemo]);
 
   // Biometric (Face ID / Touch ID) status — re-read on focus so any
   // change made elsewhere is reflected here. Disabling on web is fine
@@ -887,6 +938,20 @@ export default function MoreScreen() {
               )
             }
           />
+          {demoPresent && (
+            <SectionRow
+              icon="sparkles"
+              iconColor={theme.colors.accent}
+              title="Delete Prefilled Information"
+              subtitle={
+                demoBusy
+                  ? "Removing sample data…"
+                  : "Remove the sample/demo data added when you signed up"
+              }
+              testID="more-delete-demo"
+              onPress={demoBusy ? undefined : promptClearDemo}
+            />
+          )}
           <SectionRow
             icon="log-out"
             iconColor={theme.colors.danger}

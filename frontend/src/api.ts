@@ -799,6 +799,13 @@ export const api = {
   removeItemFromBundle: (bundleId: string, toolId: string) =>
     request<any>(`/bundles/${bundleId}/items/${toolId}`, { method: "DELETE" }),
 
+  // Prefilled Demo System
+  demoStatus: (opts?: { forceFresh?: boolean }) =>
+    request<{ present: boolean; intro_seen: boolean }>(`/demo/status`, opts as any),
+  demoIntroSeen: () => request<any>(`/demo/intro-seen`, { method: "POST" }),
+  demoClear: (mode: "everything" | "keep_taxonomy") =>
+    request<any>(`/demo/clear`, { method: "POST", body: JSON.stringify({ mode }) }),
+
   // Locations
   listLocations: () => request<any[]>(`/locations`),
   createLocation: (data: any) => request<any>(`/locations`, { method: "POST", body: JSON.stringify(data) }),

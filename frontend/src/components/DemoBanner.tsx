@@ -1,0 +1,244 @@
+import React, { useCallback, useState } from "react";
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  Modal,
+  ScrollView,
+} from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { useRouter, useFocusEffect } from "expo-router";
+import { theme } from "../theme";
+import { api } from "../api";
+
+/**
+ * Prefilled Demo System surface for the Dashboard.
+ *
+ * Renders two things while the account still holds seeded demo data:
+ *   1. A one-time, dismissible intro popup (only until `intro_seen`).
+ *   2. A small persistent banner that stays until the user removes the demo
+ *      data from Account → "Delete Prefilled Information".
+ *
+ * Self-contained: it fetches `/demo/status` on focus, so once the data is
+ * deleted (and the user returns to the dashboard) both the popup and banner
+ * vanish permanently.
+ */
+export function DemoBanner() {
+  const router = useRouter();
+  const [present, setPresent] = useState(false);
+  const [showIntro, setShowIntro] = useState(false);
+
+  const load = useCallback(async () => {
+    try {
+      const s = await api.demoStatus({ forceFresh: true });
+      setPresent(!!s?.present);
+      setShowIntro(!!s?.present && !s?.intro_seen);
+    } catch {
+      // not logged in / backend down — stay silent
+      setPresent(false);
+      setShowIntro(false);
+    }
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      load();
+    }, [load]),
+  );
+
+  const dismissIntro = useCallback(async () => {
+    setShowIntro(false);
+    try {
+      await api.demoIntroSeen();
+    } catch {
+      /* best-effort — it will retry-mark on next dismiss */
+    }
+  }, []);
+
+  const goManage = useCallback(async () => {
+    await dismissIntro();
+    router.push("/(tabs)/more" as any);
+  }, [dismissIntro, router]);
+
+  if (!present) return null;
+
+  return (
+    <>
+      {/* Persistent banner */}
+      <TouchableOpacity
+        testID="demo-banner"
+        activeOpacity={0.85}
+        onPress={() => setShowIntro(true)}
+        style={styles.banner}
+      >
+        <View style={styles.iconWrap}>
+          <Ionicons name="sparkles" size={18} color="#fff" />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.bannerTitle}>DEMO DATA LOADED</Text>
+          <Text style={styles.bannerSub} numberOfLines={2}>
+            Sample tools, dealers & claims fill the app so you can explore. Tap
+            to learn how to remove it.
+          </Text>
+        </View>
+        <Ionicons name="information-circle" size={20} color="#fff" />
+      </TouchableOpacity>
+
+      {/* One-time intro popup */}
+      <Modal
+        visible={showIntro}
+        transparent
+        animationType="fade"
+        onRequestClose={dismissIntro}
+      >
+        <View style={styles.overlay}>
+          <View style={styles.card} testID="demo-intro-modal">
+            <View style={styles.cardHeader}>
+              <Ionicons name="sparkles" size={26} color={theme.colors.accent} />
+              <Text style={styles.cardTitle}>Welcome — Demo Data Loaded</Text>
+            </View>
+
+            <ScrollView style={styles.cardBodyScroll} bounces={false}>
+              <Text style={styles.cardBody}>
+                To help you explore every corner of the app, we&apos;ve
+                prefilled your account with a realistic sample workshop:
+              </Text>
+              {[
+                "~15 inventory items — including checked-out, lost, stolen, broken, for-sale & sold tools",
+                "A bundled \"Set\" and contacts who borrow tools",
+                "Dealer accounts with balances, routes & payment schedules",
+                "Warranty claims (open + history) and maintenance alerts",
+                "A full insurance claim with evidence, plus a wishlist",
+              ].map((line) => (
+                <View key={line} style={styles.bulletRow}>
+                  <Ionicons
+                    name="checkmark-circle"
+                    size={16}
+                    color={theme.colors.success}
+                    style={{ marginTop: 1 }}
+                  />
+                  <Text style={styles.bulletText}>{line}</Text>
+                </View>
+              ))}
+              <Text style={[styles.cardBody, { marginTop: 12 }]}>
+                Ready to start fresh? Remove it anytime from{" "}
+                <Text style={styles.bodyStrong}>
+                  Account → Delete Prefilled Information
+                </Text>
+                . You&apos;ll choose whether to wipe everything or keep your
+                dealers, locations, tags &amp; categories.
+              </Text>
+            </ScrollView>
+
+            <TouchableOpacity
+              testID="demo-intro-manage"
+              activeOpacity={0.85}
+              onPress={goManage}
+              style={styles.secondaryBtn}
+            >
+              <Ionicons
+                name="trash-outline"
+                size={16}
+                color={theme.colors.textSecondary}
+              />
+              <Text style={styles.secondaryBtnText}>Manage in Account</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              testID="demo-intro-dismiss"
+              activeOpacity={0.85}
+              onPress={dismissIntro}
+              style={styles.primaryBtn}
+            >
+              <Text style={styles.primaryBtnText}>GOT IT — START EXPLORING</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+    </>
+  );
+}
+
+const styles = StyleSheet.create({
+  banner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    backgroundColor: "#1F5E63",
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#E8A23C",
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    marginBottom: 14,
+  },
+  iconWrap: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: "rgba(255,255,255,0.18)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  bannerTitle: { color: "#fff", fontSize: 13, fontWeight: "900", letterSpacing: 0.5 },
+  bannerSub: { color: "rgba(255,255,255,0.92)", fontSize: 12, marginTop: 2, lineHeight: 16 },
+
+  overlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.6)",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 24,
+  },
+  card: {
+    width: "100%",
+    maxWidth: 440,
+    maxHeight: "82%",
+    backgroundColor: theme.colors.surface,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    padding: 22,
+  },
+  cardHeader: { flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 14 },
+  cardTitle: {
+    flex: 1,
+    color: theme.colors.textPrimary,
+    fontSize: 18,
+    fontWeight: "900",
+    letterSpacing: 0.3,
+  },
+  cardBodyScroll: { flexGrow: 0 },
+  cardBody: { color: theme.colors.textSecondary, fontSize: 14, lineHeight: 20 },
+  bodyStrong: { color: theme.colors.textPrimary, fontWeight: "800" },
+  bulletRow: { flexDirection: "row", gap: 8, marginTop: 10, paddingRight: 4 },
+  bulletText: { flex: 1, color: theme.colors.textSecondary, fontSize: 13, lineHeight: 18 },
+
+  secondaryBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    marginTop: 18,
+    paddingVertical: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.surfaceAlt,
+  },
+  secondaryBtnText: { color: theme.colors.textSecondary, fontSize: 14, fontWeight: "700" },
+  primaryBtn: {
+    marginTop: 10,
+    paddingVertical: 14,
+    borderRadius: 12,
+    backgroundColor: theme.colors.accent,
+    alignItems: "center",
+  },
+  primaryBtnText: {
+    color: theme.colors.textOnAccent,
+    fontSize: 14,
+    fontWeight: "900",
+    letterSpacing: 0.5,
+  },
+});
