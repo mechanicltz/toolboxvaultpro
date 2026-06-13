@@ -62,7 +62,7 @@ import { Anton_400Regular } from "@expo-google-fonts/anton";
 
 // Manual verification beacon — bump this on every change so we can confirm
 // the device is actually showing the latest bundle. Rendered top-right of Home.
-const HOME_BUILD = "BUILD 281";
+const HOME_BUILD = "BUILD 282";
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -856,7 +856,6 @@ export default function HomeScreen() {
               onPress={() => router.push("/dealers")}
             >
               <View style={styles.rowLabelWrap}>
-                <View style={styles.rowTick} />
                 <Text style={styles.detailsLabel}>DEALER ACCOUNTS</Text>
               </View>
               <Ionicons name="chevron-forward" size={14} color={theme.colors.textMuted} />
@@ -882,7 +881,6 @@ export default function HomeScreen() {
                         style={styles.rowLabelWrap}
                         testID={`home-dealer-${d.id}`}
                       >
-                        <View style={styles.rowTick} />
                         <DealerLogo logo={d.logo} size={DEALER_LOGO_SLOT.compact} style={{ marginRight: 10 }} />
                         <View style={{ flex: 1, minWidth: 0 }}>
                           <Text style={styles.detailsLabel} numberOfLines={1}>{d.name}</Text>

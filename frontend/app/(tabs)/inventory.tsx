@@ -921,7 +921,20 @@ export default function InventoryScreen() {
       </Modal>
 
       {prefs.show_details_summary && agg && (
-        <SummaryHeader agg={agg} showPrices={prefs.show_prices} openClaims={openClaims} />
+        isIndustrial ? (
+          <TbvFrame
+            source={SKIN.window}
+            capInsets={CAP.window}
+            style={styles.summaryFrameSkin}
+            padX={22}
+            padTop={12}
+            padBottom={14}
+          >
+            <SummaryHeader agg={agg} showPrices={prefs.show_prices} openClaims={openClaims} framed />
+          </TbvFrame>
+        ) : (
+          <SummaryHeader agg={agg} showPrices={prefs.show_prices} openClaims={openClaims} />
+        )
       )}
 
       <FlatList

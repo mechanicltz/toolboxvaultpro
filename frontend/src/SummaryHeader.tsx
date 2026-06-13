@@ -9,6 +9,7 @@ export function SummaryHeader({
   showPrices,
   compact,
   openClaims,
+  framed,
 }: {
   agg: any;
   showPrices: boolean;
@@ -17,6 +18,9 @@ export function SummaryHeader({
    *  the top-right of the header. Replaces the old TAGS count (which was
    *  rarely actionable). */
   openClaims?: number;
+  /** When true, the component drops its own card chrome (bg/border/margins)
+   *  because it's being wrapped in a metal <TbvFrame/> by the parent screen. */
+  framed?: boolean;
 }) {
   if (!agg) return null;
   const breakdown = (obj: Record<string, number>) => {
@@ -31,7 +35,7 @@ export function SummaryHeader({
   const dealers = breakdown(agg.dealer_breakdown);
 
   return (
-    <View style={styles.box} testID="summary-header">
+    <View style={[styles.box, framed && styles.boxFramed]} testID="summary-header">
       <View style={styles.statsRow}>
         <Stat label="Items" value={String(agg.count ?? 0)} />
         {showPrices && (
@@ -114,6 +118,20 @@ const styles = themedStyles((c) => ({
     borderLeftColor: c.accent,
     borderLeftWidth: 3,
     ...(theme.elevation.md as object),
+  },
+  // Skinned mode: parent wraps us in a metal <TbvFrame/>, so shed our own
+  // box chrome (background, borders, rounded corners, margins, shadow).
+  boxFramed: {
+    backgroundColor: "transparent",
+    borderWidth: 0,
+    borderLeftWidth: 0,
+    borderRadius: 0,
+    marginHorizontal: 0,
+    marginBottom: 0,
+    paddingVertical: 0,
+    paddingHorizontal: 0,
+    shadowOpacity: 0,
+    elevation: 0,
   },
   statsRow: { flexDirection: "row", justifyContent: "space-around" },
   stat: { alignItems: "center" },
