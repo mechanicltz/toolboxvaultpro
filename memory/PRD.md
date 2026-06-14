@@ -26,6 +26,18 @@ its own model #, price, photo; the bundle has its own photo, part #, and set pri
   bundled items listed on own rows grouped under a per-set section header
   showing the set price. Applied to Inventory, Insurance, Year-End reports.
 
+## Cold-start dashboard font bug (2026-02 / build 307 — FIXED)
+Symptom (iOS cold start only): the Home dashboard first-painted with an oversized
+fallback system font (truncated dealer names, huge labels); navigating away and
+back fixed it. Root cause: fonts (BebasNeue/Rajdhani/Exo2) were loaded PER-SCREEN
+with no root gate, so the dashboard (the first screen) could mount before glyphs
+were registered, and only self-corrected on remount.
+Fix: load the full font stack ONCE at the root (`useTbvFonts()` in ShellNav,
+`app/_layout.tsx`) and hold the screen Stack until it's ready — every screen's
+first paint now has fonts available. The boot intro overlay covers the brief
+gate on cold start. Verified the gate doesn't hang (login renders with correct
+fonts). Native-only bug (web preview doesn't exhibit it).
+
 ## UI fixes round 2 (2026-02 / build 306 — DONE)
 1. Insurance claims LIST: replaced custom header with shared `IndustrialBanner`
    (back arrow) + moved the add action to a floating `AddFab` (bottom-right),

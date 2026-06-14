@@ -30,6 +30,7 @@ import { ThemeProvider, useColors, useThemeMode } from "../src/themeContext";
 import { IndustrialThemeProvider } from "../src/components/industrial";
 import { notifyAppResume } from "../src/appLifecycle";
 import { preloadTbvSkins } from "../src/tbv/useTbvSkins";
+import { useTbvFonts } from "../src/tbv/useTbvFonts";
 
 // Transparent navigator theme so the global AppBackground photo shows through
 // the screen scenes on dark themes. (React Navigation defaults its scene
@@ -238,6 +239,13 @@ function ShellNav() {
   const router = useRouter();
   const c = useColors();
   const showShell = !!user;
+  // Load the whole industrial font stack ONCE at the root and gate the screen
+  // stack on it. Without this, the dashboard (the first screen) could mount on
+  // a cold start before BebasNeue/Rajdhani were registered and paint with a
+  // larger fallback system font (oversized labels / truncated dealer names),
+  // only self-correcting on a remount (navigate away + back). Gating here means
+  // every screen's first paint already has the fonts available.
+  const tbvFontsReady = useTbvFonts();
 
   // Register the 402 (payment required) interceptor exactly once.
   // When the backend rejects a write because the user hit the free
@@ -280,6 +288,17 @@ function ShellNav() {
     })();
     return () => { cancelled = true; };
   }, [user]);
+
+  // Hold the screen stack until the font stack is ready so no screen's first
+  // paint uses a fallback system font. The boot intro overlay (in AuthGate)
+  // covers this on cold start, so it's invisible to the user.
+  if (!tbvFontsReady) {
+    return (
+      <View style={{ flex: 1, backgroundColor: theme.colors.bg, alignItems: "center", justifyContent: "center" }}>
+        <ActivityIndicator color={theme.colors.accent} />
+      </View>
+    );
+  }
 
   return (
     <View style={{ flex: 1 }}>
