@@ -1,5 +1,30 @@
 # Toolbox Vault — PRD
 
+## God-file refactor (2026-02 — backend phases DONE & tested; frontend DEFERRED)
+Goal: split god-files for maintainability with ZERO behavior change.
+DONE (server.py 5,319 → 3,796 lines, −29%; 27/27 regression tests pass —
+`/app/backend/tests/test_refactor_regression.py`):
+- **B1** `models.py` — all Pydantic models + `now_iso` + constants.
+- **B2** `core.py` — env/Mongo client, owner-scoped DB proxy (`db`), context
+  vars, `get_current_user`, `to_public`, in-process rate limiter
+  (`_enforce_rate_limit`/`_client_ip`). `reports.py` now imports the limiter
+  from `core` (dropped the `from server import` workaround).
+- **B3 (partial)** `routes_taxonomy.py` (locations/tags/brands/categories/
+  borrowers + shared `_ensure_brand_saved`) and `routes_dealers.py`
+  (dealers/agents/transactions/per-account schedules). Registered via
+  `register_*_routes(api_router)`; modules import deps from core/models (no
+  cycle). All verified green via curl + backend testing agent.
+DEFERRED (P2 — next session, need care):
+- Remaining backend route groups still in server.py: **tools** (large; shares
+  `build_tool_query` with stats/aggregate and `_validate_photo_payload` with
+  bundles), **bundles**, **wishlist** (uses `enforce_tool_limit`/`Tool`),
+  **maintenance**, **warranty**, **stats/aggregate**, **personal-profile**,
+  **account-delete**. These need a shared `helpers.py` extracted first.
+- Frontend **F1 more.tsx** / **F2 index.tsx**: presentational components
+  (`Row`/`SectionRow`/`SectionCard`) are tightly coupled to a module-scope
+  themed `styles` object; safe extraction needs moving style blocks too +
+  on-device verification (web preview renders skinned screens black).
+
 ## Report redesign + Tablet UI (2026-02 / build 308 — DONE)
 Backend `reports.py` redesigned to ONE cohesive professional identity across
 ALL report types (Inventory, Insurance, Claims, Sales, Dealer Account):
