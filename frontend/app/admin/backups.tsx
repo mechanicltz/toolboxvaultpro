@@ -410,7 +410,9 @@ export default function AdminBackupsPage() {
         setTimeout(() => URL.revokeObjectURL(objUrl), 5000);
       } else {
         // Native fallback: use Expo FileSystem + Sharing dynamic import.
-        const FileSystem = await import("expo-file-system");
+        // SDK 54 moved writeAsStringAsync / cacheDirectory / EncodingType to
+        // the `/legacy` entrypoint (the new default export is the File API).
+        const FileSystem = await import("expo-file-system/legacy");
         const Sharing = await import("expo-sharing");
         // Friendly filename — matches Drive/web download
         let stamp = row.created_at;

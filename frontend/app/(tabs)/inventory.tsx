@@ -1215,8 +1215,8 @@ export default function InventoryScreen() {
             capInsets={CAP.window}
             style={styles.invListPanel}
             padX={28}
-            padTop={12}
-            padBottom={2}
+            padTop={22}
+            padBottom={14}
           >
             {listEl}
           </TbvListPanel>

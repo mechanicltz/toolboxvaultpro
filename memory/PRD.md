@@ -26,6 +26,18 @@ its own model #, price, photo; the bundle has its own photo, part #, and set pri
   bundled items listed on own rows grouped under a per-set section header
   showing the set price. Applied to Inventory, Insurance, Year-End reports.
 
+## UI fixes (2026-02 / build 305 — DONE & verified)
+1. Login header version: moved from bottom-right to CENTERED over the nameplate
+   (matches in-app IndustrialBanner placement). `app/login.tsx`.
+2. Backup download "cannot read property 'base64' of undefined": SDK 54 moved
+   `writeAsStringAsync/cacheDirectory/EncodingType` to `expo-file-system/legacy`
+   — switched the native download import. `app/admin/backups.tsx`.
+3. Skinned inventory list overflowing the frame: increased `TbvListPanel`
+   padTop 12→22, padBottom 2→14 so rows sit inside the frame. `app/(tabs)/inventory.tsx`.
+4. Insurance claim "Email Detailed Report to Insurer" → renamed "Email Report"
+   and restyled to the dashboard metal-plate ADD-button look on skinned themes
+   via new `src/components/SkinButton.tsx`. `app/insurance-claims/[id].tsx`.
+
 ## Memory / Photo Scaling — Phase 1 DONE (2026-02 / build 303 — TESTED)
 Root cause of the random Expo Go crashes: user photos stored as base64 *inside*
 Mongo tool documents (up to 5MB each) and rendered with RN `<Image>`, which

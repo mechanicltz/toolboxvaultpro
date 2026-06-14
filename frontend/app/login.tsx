@@ -295,26 +295,38 @@ export default function LoginScreen() {
                   style={{ width: logoW, height: logoH }}
                   resizeMode="contain"
                 />
-                <View style={{ width: nameplateW, marginTop: headerGap * 0.08 }}>
+                <View style={{ width: nameplateW, height: nameplateH, marginTop: headerGap * 0.08 }}>
                   <Image
                     source={SKIN.nameplate}
                     style={{ width: nameplateW, height: nameplateH }}
                     resizeMode="contain"
                   />
-                  <Text
+                  {/* Version — centered over the small plate near the bottom of
+                      the nameplate art, matching the in-app IndustrialBanner. */}
+                  <View
+                    pointerEvents="none"
                     style={{
-                      alignSelf: "flex-end",
-                      marginRight: nameplateW * 0.16,
-                      marginTop: -nameplateH * 0.245,
-                      color: TINT,
-                      fontSize: 11,
-                      fontWeight: "800",
-                      letterSpacing: 1,
+                      position: "absolute",
+                      left: 0,
+                      right: 0,
+                      top: nameplateH * 0.735,
+                      height: nameplateH * 0.19,
+                      alignItems: "center",
+                      justifyContent: "center",
                     }}
-                    allowFontScaling={false}
                   >
-                    {APP_VERSION_LABEL}
-                  </Text>
+                    <Text
+                      style={{
+                        color: TINT,
+                        fontSize: Math.round(nameplateH * 0.13),
+                        fontWeight: "800",
+                        letterSpacing: 1,
+                      }}
+                      allowFontScaling={false}
+                    >
+                      {APP_VERSION_LABEL}
+                    </Text>
+                  </View>
                 </View>
                 <Text
                   style={[styles.tagline, { fontSize: tagFont, maxWidth: WORK_W * 0.96, marginTop: headerGap * 0.06 }]}

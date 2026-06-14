@@ -13,6 +13,7 @@ import * as DocumentPicker from "expo-document-picker";
 import * as FileSystem from "expo-file-system/legacy";
 import { themedStyles, useColors } from "../../src/themeContext";
 import { ICSection, ICField, ICSelect, ICButton, ICModal } from "../../src/components/insurance/ICKit";
+import { SkinButton } from "../../src/components/SkinButton";
 import { insuranceApi, ClaimSpec } from "../../src/insuranceApi";
 import { renderAndViewClaimReport, viewStoredClaimReport, shareStoredClaimReport, renderClaimReportOnly, openDataUriFile } from "../../src/insuranceReport";
 
@@ -305,8 +306,8 @@ export default function ClaimDetail() {
 
         {/* Reports */}
         <ICSection title={`Reports (${reports.length})`} right={<TouchableOpacity testID="icd-generate" onPress={() => setReportOpen(true)}><Text style={styles.link}>Generate</Text></TouchableOpacity>}>
-          <ICButton
-            label={oneTapBusy ? "Preparing report…" : "Email Detailed Report to Insurer"}
+          <SkinButton
+            label={oneTapBusy ? "Preparing report…" : "Email Report"}
             icon="mail"
             onPress={() => { setOneTapCols(ONE_TAP_DEFAULT_COLS); setOneTapColsOpen(true); }}
             disabled={oneTapBusy}
