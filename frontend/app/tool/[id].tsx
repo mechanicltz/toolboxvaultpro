@@ -2511,7 +2511,7 @@ export default function ToolDetail() {
 
           {/* REPORT LOST OR STOLEN — moved below the action grid (under the
               other buttons) per user request, all themes. */}
-          <View style={{ marginTop: 16 }}>
+          <View style={{ marginTop: 16, width: "100%", maxWidth: 420, alignSelf: "center" }}>
             <ReportLostButton tool={tool} onChange={load} />
           </View>
 
@@ -5084,6 +5084,12 @@ const newStyles = themedStyles((c) => ({
     flexWrap: "wrap",
     gap: 8,
     marginTop: 8,
+    // Tablet/iPad: keep the stacked full-width action buttons at a normal
+    // button size & centered instead of spanning the whole page. Phones
+    // (content width < 420) are unaffected.
+    width: "100%",
+    maxWidth: 420,
+    alignSelf: "center",
   },
   actionTile: {
     width: "100%",
