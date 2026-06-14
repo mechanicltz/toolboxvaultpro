@@ -964,25 +964,47 @@ export default function InventoryScreen() {
         maxToRenderPerBatch={6}
         windowSize={5}
         updateCellsBatchingPeriod={40}
+        ListHeaderComponent={
+          hiddenCount > 0 ? (
+            <TouchableOpacity
+              testID="upgrade-banner-top"
+              activeOpacity={0.85}
+              onPress={() => router.push("/paywall")}
+              style={styles.lockedTopBanner}
+            >
+              <View style={styles.lockedTopIcon}>
+                <Ionicons name="lock-closed" size={18} color={theme.colors.textOnAccent} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.lockedTopTitle}>SUBSCRIPTION ENDED</Text>
+                <Text style={styles.lockedTopSub}>
+                  {hiddenCount} {hiddenCount === 1 ? "tool is" : "tools are"} hidden. Renew PRO to restore your full inventory.
+                </Text>
+              </View>
+              <View style={styles.lockedTopCta}>
+                <Text style={styles.lockedTopCtaText}>RENEW</Text>
+                <Ionicons name="chevron-forward" size={13} color={theme.colors.textOnAccent} />
+              </View>
+            </TouchableOpacity>
+          ) : null
+        }
         ListFooterComponent={
           hiddenCount > 0 ? (
             <TouchableOpacity
               testID="upgrade-banner"
               activeOpacity={0.85}
               onPress={() => router.push("/paywall")}
-              style={styles.upgradeBanner}
+              style={styles.lockedFooter}
             >
-              <View style={styles.upgradeIconWrap}>
-                <Ionicons name="lock-closed" size={22} color={theme.colors.accent} />
+              <View style={styles.lockedFooterIcon}>
+                <Ionicons name="lock-closed" size={16} color={theme.colors.accent} />
               </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.upgradeTitle}>SUBSCRIPTION ENDED</Text>
-                <Text style={styles.upgradeSub}>
-                  {hiddenCount} more {hiddenCount === 1 ? "tool is" : "tools are"} hidden.
-                  Tap to renew PRO and restore everything.
-                </Text>
+              <Text style={styles.lockedFooterText}>
+                {hiddenCount} {hiddenCount === 1 ? "tool" : "tools"} hidden on the free plan
+              </Text>
+              <View style={styles.lockedFooterCta}>
+                <Text style={styles.lockedFooterCtaText}>UPGRADE</Text>
               </View>
-              <Ionicons name="chevron-forward" size={18} color={theme.colors.accent} />
             </TouchableOpacity>
           ) : null
         }
