@@ -970,20 +970,16 @@ export default function InventoryScreen() {
               testID="upgrade-banner-top"
               activeOpacity={0.85}
               onPress={() => router.push("/paywall")}
-              style={styles.lockedTopBanner}
+              style={[styles.lockedFooter, { marginTop: 4, marginBottom: 12 }]}
             >
-              <View style={styles.lockedTopIcon}>
-                <Ionicons name="lock-closed" size={18} color={theme.colors.textOnAccent} />
+              <View style={styles.lockedFooterIcon}>
+                <Ionicons name="lock-closed" size={16} color={theme.colors.accent} />
               </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.lockedTopTitle}>SUBSCRIPTION ENDED</Text>
-                <Text style={styles.lockedTopSub}>
-                  {hiddenCount} {hiddenCount === 1 ? "tool is" : "tools are"} hidden. Renew PRO to restore your full inventory.
-                </Text>
-              </View>
-              <View style={styles.lockedTopCta}>
-                <Text style={styles.lockedTopCtaText}>RENEW</Text>
-                <Ionicons name="chevron-forward" size={13} color={theme.colors.textOnAccent} />
+              <Text style={styles.lockedFooterText}>
+                Free plan item limit reached - {hiddenCount} Hidden {hiddenCount === 1 ? "tool" : "tools"}
+              </Text>
+              <View style={styles.lockedFooterCta}>
+                <Text style={styles.lockedFooterCtaText}>UPGRADE</Text>
               </View>
             </TouchableOpacity>
           ) : null
@@ -1000,7 +996,7 @@ export default function InventoryScreen() {
                 <Ionicons name="lock-closed" size={16} color={theme.colors.accent} />
               </View>
               <Text style={styles.lockedFooterText}>
-                {hiddenCount} {hiddenCount === 1 ? "tool" : "tools"} hidden on the free plan
+                Free plan item limit reached - {hiddenCount} Hidden {hiddenCount === 1 ? "tool" : "tools"}
               </Text>
               <View style={styles.lockedFooterCta}>
                 <Text style={styles.lockedFooterCtaText}>UPGRADE</Text>
