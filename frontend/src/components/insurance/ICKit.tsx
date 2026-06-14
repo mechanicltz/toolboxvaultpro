@@ -138,7 +138,11 @@ export const ICModal = ({ visible, onClose, title, children }: {
             <Text style={s.sheetTitle}>{title}</Text>
             <TouchableOpacity testID="ic-modal-close" onPress={onClose}><Ionicons name="close" size={24} color="#888" /></TouchableOpacity>
           </View>
-          <ScrollView keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets>
+          <ScrollView
+            keyboardShouldPersistTaps="handled"
+            contentContainerStyle={{ paddingBottom: 8 }}
+            showsVerticalScrollIndicator={false}
+          >
             {children}
           </ScrollView>
         </View>

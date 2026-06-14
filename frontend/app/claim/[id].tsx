@@ -196,7 +196,7 @@ export default function ClaimDetailScreen() {
             what they recorded and what will roll up into reports. */}
         {!!claim.repair_cost && Number(claim.repair_cost) > 0 && (
           <Section label="REPAIR / REPLACEMENT COST">
-            <Text style={[styles.notes, { fontSize: 18, fontWeight: "700" }]}>
+            <Text style={[styles.notes, { fontSize: 18, lineHeight: 24, fontWeight: "700" }]}>
               ${Number(claim.repair_cost).toFixed(2)}
             </Text>
           </Section>
