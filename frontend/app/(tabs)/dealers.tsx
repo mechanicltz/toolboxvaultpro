@@ -240,12 +240,19 @@ export default function DealersScreen() {
                 <TbvFrame
                   source={SKIN.plate}
                   capInsets={CAP.plate}
-                  style={[styles.rowSkinFrame, gridCols > 1 && { flex: 1 }]}
+                  style={styles.rowSkinFrame}
                   padX={20}
                   padTop={14}
                   padBottom={14}
                 >
-                  <View style={styles.rowSkinInner}>{cardContent}</View>
+                  <View
+                    style={[
+                      styles.rowSkinInner,
+                      gridCols > 1 && styles.rowSkinInnerGrid,
+                    ]}
+                  >
+                    {cardContent}
+                  </View>
                 </TbvFrame>
               </TouchableOpacity>
             );
@@ -519,13 +526,18 @@ const styles = themedStyles((c) => ({
     borderRadius: 10,
   },
   rowSkinFrame: { width: "100%" },
-  // Tablet 2-column skinned cards: stretch each cell to the row's tallest card
-  // so the dealer plates line up at a uniform height (the FlatList row stretches
-  // cells; `flex:1` on the frame above makes the plate fill that height).
+  // Tablet 2-column skinned cards: `flex:1` gives each cell equal WIDTH.
   rowSkinGridWrap: {
     flex: 1,
     marginHorizontal: 0,
     marginTop: 8,
+  },
+  // TbvFrame self-sizes to its content height, so equal HEIGHT can't come from
+  // flex — instead we floor the card content at a fixed minHeight (tall enough
+  // for the agent phone quick-action variant). Cards without that row pad to
+  // match, so the 2-column grid lines up uniformly.
+  rowSkinInnerGrid: {
+    minHeight: 88,
   },
   rowSkinInner: {
     flexDirection: "row",
