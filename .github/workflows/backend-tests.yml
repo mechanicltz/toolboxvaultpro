@@ -26,6 +26,9 @@ jobs:
       MONGO_URL: mongodb://localhost:27017
       DB_NAME: toolbox_ci
       EXPO_PUBLIC_BACKEND_URL: http://localhost:8001
+      # Opt in early to the newer Node.js runtime for GitHub's helper actions,
+      # which silences the "Node.js 20 actions are deprecated" warning.
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
     steps:
       - name: Check out code
