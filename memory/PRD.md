@@ -1,5 +1,19 @@
 # Toolbox Vault — PRD
 
+## First-run onboarding tour (2026-02 — DONE & tested)
+Interactive guided "spotlight" tour (watch mode) that teaches new users the core
+features, then returns them to the dashboard. Implemented in `src/onboarding/`
+(`OnboardingTour.tsx` provider/hook, `OnboardingTourOverlay.tsx` dimmed coaching
+card, `tourSteps.ts` 7-step config). Wired into `_layout.tsx` (provider + overlay),
+`DemoBanner.tsx` (the demo-intro "GOT IT — SHOW ME AROUND" button auto-launches it
+for new accounts), and `more.tsx` (a "GETTING STARTED → Replay App Tour" row to
+re-run anytime). 7 steps: add item & bundle → mark item broken → set dealer agent →
+add personal data → insurance inventory report → turn on notifications → change
+theme. Steps 2 & 3 deep-link into a real demo tool/dealer (fetched async on start,
+list-screen fallback). NEXT/BACK/SKIP/FINISH + progress dots; dim layer blocks
+taps so it's pure "watch" mode. Testing agent verified Entry Point A fully
+(all 7 steps, deep-links, navigation, controls) — no bugs. Build marker BUILD 313.
+
 ## Test-suite triage & green-up (2026-02 — DONE & verified)
 Picked up the backend refactor handoff: verified the P0 import fix (extracted
 `routes_stats.py` / `routes_tool_actions.py`) — `/api/stats`, `/api/tools`,
