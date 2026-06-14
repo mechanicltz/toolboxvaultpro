@@ -21,6 +21,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter, useFocusEffect } from "expo-router";
 import { useAppResume } from "../../src/appLifecycle";
 import { theme } from "../../src/theme";
+import { useOnboardingTour } from "../../src/onboarding/OnboardingTour";
 import { useSkin } from "../../src/themeContext";import {
   getBiometricStatus,
   enableBiometric,
@@ -253,6 +254,7 @@ const SectionCard = ({
 
 export default function MoreScreen() {
   const router = useRouter();
+  const tour = useOnboardingTour();
   const { prefs, update } = usePrefs();
   const { user, logout } = useAuth();
   const [mntDue, setMntDue] = useState({ overdue: 0, due_soon: 0 });
@@ -605,6 +607,17 @@ export default function MoreScreen() {
         subtitle={user?.email || "Manage everything"}
       />
       <ScrollView contentContainerStyle={{ paddingBottom: 100, paddingTop: 8 }}>
+        <SectionCard title="GETTING STARTED" testID="more-section-getting-started">
+          <SectionRow
+            icon="compass"
+            title="Replay App Tour"
+            subtitle="A quick guided walkthrough of the main features"
+            testID="more-replay-tour"
+            onPress={() => tour.start()}
+            isLast
+          />
+        </SectionCard>
+
         <SectionCard title="RESOURCES" testID="more-section-system">
           <SectionRow
             icon="heart"

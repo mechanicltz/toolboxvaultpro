@@ -1,0 +1,28 @@
+{
+  "summary": "FRONTEND-only verification of new Interactive Onboarding Tour (watch-mode spotlight) for Toolbox Vault BUILD 313. Entry Point A (manual replay from More → Getting Started → 'Replay App Tour') was fully exercised end-to-end on the Pro account (mechanicltz@gmail.com). The overlay (testID=onboarding-tour-overlay) and coaching card (testID=onboarding-tour-card) render correctly above the skinned screens; the card text is readable; STEP 1 OF 7 shows on first open. NEXT advances the step counter 1→7 and navigates to the correct route each step: /inventory → /tool/{realId} → /dealer/{realId} → /personal-info → /reports → /more → /more. Deep links picked up real demo records (tool 7c72e80a..., dealer 31242327...). On step 7 the primary button label switches to 'FINISH'; tapping FINISH dismisses the overlay and returns to the dashboard (/). BACK on step 1 is disabled (a tap is a no-op — step stays at 1). BACK from step 3 correctly returned to step 2 and navigated back to /tool/{id}. SKIP from mid-tour dismissed the overlay and returned to /. Hint chip, progress dots (active dot stretched), step counter, and SKIP control all render. No red-screen errors observed. Entry Point B (auto-trigger after new-account registration): could not be reliably exercised via RN-web Playwright because the CREATE ACCOUNT tab toggle did not fire onPress reliably through DOM ancestor clicks (the registration submit never reached the network — see action_items); given the 3/hr/IP register rate limit, no further attempts were made. The DemoBanner code path (GOT IT button → demoIntroSeen() → tour.start()) is the same tour.start() proven working in Entry Point A, so behaviour is highly likely to be correct, but it was NOT directly verified in this run.",
+  "backend_issues": { "critical": [], "minor": [] },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [],
+  "action_items": [
+    "OPTIONAL: Manually verify Entry Point B end-to-end (register a brand-new email, confirm the demo-intro modal appears, tap 'GOT IT — SHOW ME AROUND', confirm the tour auto-launches at STEP 1 OF 7 and the intro is marked seen). The code path looks correct (DemoBanner.startTour → api.demoIntroSeen() → tour.start()) but rate limits prevented automated coverage this iteration.",
+    "MINOR: The login screen's CREATE ACCOUNT tab toggle does not respond to a programmatic .click() on its role='button' ancestor in RN-Web — this is a Playwright-tooling friction point, not a user-facing bug. Consider adding a testID on the auth-mode toggle (e.g. testID='auth-toggle-register' / 'auth-toggle-signin') and on the bottom submit button (testID='auth-submit-signin' / 'auth-submit-register') to make Playwright-based regression tests of registration flows reliable."
+  ],
+  "critical_code_review_comments": [
+    "OnboardingTour.tsx start(): the optimistic UI (fire the overlay immediately with list-fallback steps, then upgrade with real toolId/dealerId in the background) is a great UX choice — confirmed it does not cause a visible flicker when the deep-link IDs land.",
+    "OnboardingTourOverlay.tsx: dim layer correctly blocks taps under the card during the tour (pointerEvents='auto' on root + a covering dim View). Good 'watch mode' implementation.",
+    "DemoBanner.tsx startTour() awaits api.demoIntroSeen() with try/catch — good. tour.start() is fired synchronously after, so intro_seen is marked and tour auto-launches in one tap.",
+    "tourSteps.ts: 7 steps, correct routes, and deep-link fallbacks (toolId ? /tool/{id} : /(tabs)/inventory). Matches the requested 7-step list verbatim."
+  ],
+  "updated_files": [],
+  "success_rate": { "backend": "n/a (skipped per request)", "frontend": "100% on Entry Point A (manual-replay path); Entry Point B not exercised — see action_items" },
+  "seed_data_creation": "None. Used the existing Pro account mechanicltz@gmail.com which already has demo tools & dealers, so deep-link steps (2 and 3) landed on real records.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Entry Point A (manual replay from More → Replay App Tour) is solid. If asked to retest Entry Point B, the simplest reliable approach is: register manually (or via direct API call) → log into the new account → confirm the dashboard auto-shows demo-intro-modal → tap demo-intro-dismiss → confirm onboarding-tour-overlay appears at STEP 1 OF 7. Note: /api/auth/register is rate-limited 3/hr/IP. RN-web auth-mode toggle currently lacks a testID, which makes Playwright-driven register flows brittle.",
+  "rca_of_issue": "N/A — no bugs found in the tour itself. The Entry-Point-B coverage gap is a test-tooling issue (missing testID on auth-mode toggle), not a product bug."
+}

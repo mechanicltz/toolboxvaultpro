@@ -31,6 +31,8 @@ import { IndustrialThemeProvider } from "../src/components/industrial";
 import { notifyAppResume } from "../src/appLifecycle";
 import { preloadTbvSkins } from "../src/tbv/useTbvSkins";
 import { useTbvFonts } from "../src/tbv/useTbvFonts";
+import { OnboardingTourProvider } from "../src/onboarding/OnboardingTour";
+import { OnboardingTourOverlay } from "../src/onboarding/OnboardingTourOverlay";
 
 // Transparent navigator theme so the global AppBackground photo shows through
 // the screen scenes on dark themes. (React Navigation defaults its scene
@@ -344,6 +346,7 @@ function ShellNav() {
         {showShell && <ReportsFab />}
       </View>
       {showShell && <BottomBar />}
+      {showShell && <OnboardingTourOverlay />}
     </View>
   );
 }
@@ -371,11 +374,13 @@ export default function RootLayout() {
             <AuthProvider>
               <NetworkProvider>
                 <AuroraBackground>
-                  <AuthGate>
-                    <BiometricLockGate>
-                      <ShellNav />
-                    </BiometricLockGate>
-                  </AuthGate>
+                  <OnboardingTourProvider>
+                    <AuthGate>
+                      <BiometricLockGate>
+                        <ShellNav />
+                      </BiometricLockGate>
+                    </AuthGate>
+                  </OnboardingTourProvider>
                 </AuroraBackground>
               </NetworkProvider>
             </AuthProvider>
