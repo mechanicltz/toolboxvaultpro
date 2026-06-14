@@ -1,0 +1,38 @@
+{
+  "summary": "Backend regression suite for the god-file refactor (models.py / core.py / routes_taxonomy.py / routes_dealers.py / reports.py) — VERIFIED PASS. 27/27 pytest tests passed, 0 failures, 0 skips. Coverage spans: AUTH (login still returns 200+token, 401 on bad password, /me uses get_current_user from core.py); RATE-LIMIT WIRING (the moved _enforce_rate_limit still trips at the 6th login from a single IP — confirmed 5×401 → 1×429 against a unique X-Forwarded-For); TAXONOMY routes (locations/tags/brands/categories/borrowers full CRUD + idempotent re-create + history endpoint shape); BRAND AUTO-SAVE via _ensure_brand_saved (verified via PUT /api/tools/{id} since Ryan's account is at the 15/15 free-tool cap — the shared helper imported from routes_taxonomy correctly inserts the new brand into /api/brands); DEALERS full surface (CRUD, agents add/update/remove/set-current with auto-current-agent-id assignment, balance transactions with charge/payment math AND reverse-on-delete, account schedules: set/clear/confirm-payment-advances-date-and-decrements-balance/skip-payment-advances-date-only, GET /dealers/payments/upcoming including the freshly-set dealer, 400s on invalid account names); TOOLS (list, list-with-filter, 404 on unknown); STATS+AGGREGATE+warranty-claims/summary+insurance-claims+wishlist+maintenance/upcoming all return 200 with correct shape; REPORTS render endpoint (still imports _enforce_rate_limit from server.py via the documented local-import workaround) successfully renders PDFs for all 5 report types (inventory, account, insurance, claims, sales) — every response is %PDF-… and >500 bytes. NO API contract change detected; refactor is fully behaviour-preserving.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/test_reports/iteration_31.json",
+    "/app/backend/tests/test_refactor_regression.py",
+    "/app/test_reports/pytest/iter31_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "routes_taxonomy.py and routes_dealers.py both correctly avoid the cycle by importing ONLY from core/models/auth — they never import server. _ensure_brand_saved lives in routes_taxonomy and is re-exported from server.py:199 so existing create_tool/update_tool call sites still work unchanged.",
+    "reports.py uses a function-local `from server import _enforce_rate_limit` inside reports_render to break the import cycle (server imports reports at module-load, but reports needs the rate-limit helper at request-time). This is a deliberate, documented workaround — works correctly, but a cleaner long-term fix is to move _enforce_rate_limit + _client_ip into core.py (where the rate-limit buckets already live) so reports.py can import directly from core. Not a regression; just a tidiness note.",
+    "DealerCreate (models.py:161) intentionally does NOT accept credit_balance/personal_balance — those are computed via /transactions. The Dealer model defaults them to 0.0. This is the historical behavior and is preserved (verified in TestDealers).",
+    "routes_dealers.py register function nests _advance_payment_date and _schedule_field as inner helpers because they share `account` semantics with the route handlers. This is fine but slightly unusual; they could be module-level pure functions. No functional impact.",
+    "server.py is still 3796 lines after this round of extraction. ~2700 of those are now tools/auth/profile/reset/feedback/etc. Further god-file splits (tools, claims, wishlist, password-reset, feedback) are a natural next phase but out of scope here."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_refactor_regression.py (NEW — 27 regression tests covering every refactored endpoint group)"
+  ],
+  "success_rate": {
+    "backend": "100% — 27/27 passed, 0 failures, 0 skips. Test runtime ~5s.",
+    "frontend": "N/A — backend-only regression as requested."
+  },
+  "seed_data_creation": "None persistent. All test artifacts are uniquely-named (TEST_*) and cleaned up at end-of-test via try/finally: 1 dealer (with 2 agents, 2 transactions, 1 schedule that was set+confirmed+skipped+cleared, then dealer fully deleted); 1 location, 1 tag, 1 category, 1 brand, 1 borrower — all created and deleted within the same test. The brand-auto-save test temporarily PATCHed Ryan's existing tool with a TEST brand and restored the original brand string before exit; the TEST brand was also removed from /api/brands afterwards.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Regression suite lives at /app/backend/tests/test_refactor_regression.py — reuse for any future backend changes. Token cache file at /tmp/ryan_token.txt avoids repeated logins (5/min rate limit). Ryan's account ryan@ryan.com is at the 15/15 FREE_TOOL_LIMIT — POST /api/tools returns 402 free_limit_exceeded. The brand-auto-save test falls back to PUT /api/tools/{id} when 402 is encountered (also exercises the same _ensure_brand_saved hook). Login rate limit is enforced per-IP via X-Forwarded-For; use a unique fake XFF if you need to exercise the 429 path without locking out real users.",
+  "rca_of_issue": "No bugs found. The single test failure during the first run was a test-side mistake: I sent {credit_balance: 100.0} on POST /api/dealers, but DealerCreate (models.py:161) does not accept that field, so it was correctly stripped by Pydantic and the dealer started at 0.0. This is the historical behaviour. Corrected the test to start from 0.0 and adjusted downstream balance math; suite then went green at 27/27."
+}
