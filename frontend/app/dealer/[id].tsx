@@ -357,7 +357,6 @@ export default function DealerDetail() {
               padX={28}
               padTop={14}
               padBottom={14}
-              leftStripe={theme.colors.accent}
             >
               <View style={styles.routeRowInner}>
                 <Ionicons name="map" size={18} color={theme.colors.accent} />
