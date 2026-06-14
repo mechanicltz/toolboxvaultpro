@@ -525,16 +525,6 @@ export default function LoginScreen() {
                   )}
                 </View>
                 </View>
-
-                {/* Build number floats (absolute) high in the panel's top band,
-                    above the tabs. Absolute = takes NO flex space, so nothing
-                    else shifts. */}
-                <View pointerEvents="none" style={[styles.stampAnchor, { top: padTop * 0.22 }]}>
-                  <View style={styles.stampInline}>
-                    <Text numberOfLines={1} style={styles.stampHighlight}>#025</Text>
-                    <Text numberOfLines={1} style={styles.stampGroove}>#025</Text>
-                  </View>
-                </View>
               </View>
 
               {/* ===================== HELP BLOCK ===================== */}

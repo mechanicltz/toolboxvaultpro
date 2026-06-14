@@ -62,10 +62,6 @@ import {
 import { Teko_600SemiBold, Teko_700Bold } from "@expo-google-fonts/teko";
 import { Anton_400Regular } from "@expo-google-fonts/anton";
 
-// Manual verification beacon — bump this on every change so we can confirm
-// the device is actually showing the latest bundle. Rendered top-right of Home.
-const HOME_BUILD = "BUILD 320";
-
 export default function HomeScreen() {
   const router = useRouter();
   const { prefs } = usePrefs();
@@ -527,9 +523,6 @@ export default function HomeScreen() {
   if (skin === "plain") {
     return (
       <SafeAreaView style={styles.plainSafe} edges={["top"]}>
-        <Text style={styles.plainBuildStamp} allowFontScaling={false} testID="home-build-stamp">
-          {HOME_BUILD}
-        </Text>
         <IndustrialBanner
           title="DASHBOARD"
           subtitle={
@@ -731,10 +724,6 @@ export default function HomeScreen() {
       {/* dark veil so the textured plate reads but content stays legible */}
       <View style={styles.bgVeil} pointerEvents="none" />
       <SafeAreaView style={styles.container} edges={["top"]}>
-        {/* BUILD STAMP — top-right verification beacon. */}
-        <Text style={styles.buildStamp} allowFontScaling={false} testID="home-build-stamp">
-          {HOME_BUILD}
-        </Text>
         {/* Unified nameplate header (same on every page / theme). */}
         <IndustrialBanner
           title="DASHBOARD"
