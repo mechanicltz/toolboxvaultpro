@@ -239,9 +239,9 @@ export default function BorrowerHistory() {
           source={SKIN.plate}
           capInsets={CAP.plate}
           style={styles.rowSkinFrame}
-          padX={18}
-          padTop={12}
-          padBottom={12}
+          padX={22}
+          padTop={16}
+          padBottom={16}
           leftStripe={leftStripe}
         >
           <View style={styles.rowSkinInner}>{children}</View>

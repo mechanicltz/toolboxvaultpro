@@ -17,9 +17,11 @@ import { theme } from "../../../src/theme";
 import { api } from "../../../src/api";
 import { usePrefs } from "../../../src/prefs";
 
-import { themedStyles } from "../../../src/themeContext";
+import { themedStyles, useSkin } from "../../../src/themeContext";
 import { IndustrialBanner } from "../../../src/components/IndustrialBanner";
 import { BevelCard } from "../../../src/components/BevelCard";
+import { SKIN, CAP } from "../../../src/tbv/skins";
+import { TbvFrame } from "../../../src/tbv/components/TbvFrame";
 
 /**
  * Dedicated screen showing every tool that was purchased from a single
@@ -30,6 +32,8 @@ export default function DealerToolsScreen() {
   const { id, name } = useLocalSearchParams<{ id: string; name?: string }>();
   const router = useRouter();
   const { prefs } = usePrefs();
+  const { skin } = useSkin();
+  const isIndustrial = skin === "industrial";
   const [tools, setTools] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -64,6 +68,30 @@ export default function DealerToolsScreen() {
 
   const dealerName = (name as string) || "Dealer";
 
+  // Industrial theme: render the summary in a metal window frame and each tool
+  // row on a metal plate (mirrors the dealer detail screen). Plain themes keep
+  // the flat BevelCard look.
+  const RowShell = ({
+    children,
+    onPress,
+    testID,
+  }: {
+    children: React.ReactNode;
+    onPress?: () => void;
+    testID?: string;
+  }) =>
+    isIndustrial ? (
+      <TouchableOpacity testID={testID} style={styles.rowSkinWrap} onPress={onPress} activeOpacity={0.85}>
+        <TbvFrame source={SKIN.plate} capInsets={CAP.plate} padX={26} padTop={14} padBottom={14}>
+          <View style={styles.rowSkinInner}>{children}</View>
+        </TbvFrame>
+      </TouchableOpacity>
+    ) : (
+      <BevelCard testID={testID} style={styles.row} onPress={onPress} activeOpacity={0.85}>
+        {children}
+      </BevelCard>
+    );
+
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
@@ -76,16 +104,29 @@ export default function DealerToolsScreen() {
       </View>
 
       {/* Summary band */}
-      <View style={styles.summary}>
-        <View style={styles.summaryCell}>
-          <Text style={styles.summaryValue}>{tools.length}</Text>
-          <Text style={styles.summaryLabel}>TOTAL TOOLS</Text>
-        </View>
-        <View style={[styles.summaryCell, styles.summaryCellAccent]}>
-          <Text style={styles.summaryValueAccent}>${total.toFixed(2)}</Text>
-          <Text style={styles.summaryLabelAccent}>TOTAL INVESTED</Text>
-        </View>
-      </View>
+      {(() => {
+        const cells = (
+          <>
+            <View style={styles.summaryCell}>
+              <Text style={styles.summaryValue}>{tools.length}</Text>
+              <Text style={styles.summaryLabel}>TOTAL TOOLS</Text>
+            </View>
+            <View style={[styles.summaryCell, styles.summaryCellAccent]}>
+              <Text style={styles.summaryValueAccent}>${total.toFixed(2)}</Text>
+              <Text style={styles.summaryLabelAccent}>TOTAL INVESTED</Text>
+            </View>
+          </>
+        );
+        return isIndustrial ? (
+          <View style={styles.summarySkinWrap}>
+            <TbvFrame source={SKIN.window} capInsets={CAP.window} padX={26} padTop={18} padBottom={18}>
+              <View style={styles.summaryRowInner}>{cells}</View>
+            </TbvFrame>
+          </View>
+        ) : (
+          <View style={styles.summary}>{cells}</View>
+        );
+      })()}
 
       {loading ? (
         <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
@@ -111,12 +152,10 @@ export default function DealerToolsScreen() {
             const ext = (Number(t.cost) || 0) * qty;
             const photo = t.photos?.[0];
             return (
-              <BevelCard
+              <RowShell
                 key={t.id}
                 testID={`dealer-tool-${t.id}`}
-                style={styles.row}
                 onPress={() => router.push(`/tool/${t.id}`)}
-                activeOpacity={0.85}
               >
                 <Text style={styles.rowIndex}>{index + 1}</Text>
                 <View style={styles.rowThumb}>
@@ -161,7 +200,7 @@ export default function DealerToolsScreen() {
                   size={18}
                   color={theme.colors.textMuted}
                 />
-              </BevelCard>
+              </RowShell>
             );
           }}
         />
@@ -210,6 +249,10 @@ const styles = themedStyles((c) => ({
     paddingHorizontal: 14,
     paddingVertical: 12,
   },
+  summarySkinWrap: { marginHorizontal: 14, marginVertical: 10 },
+  summaryRowInner: { flexDirection: "row", gap: 10 },
+  rowSkinWrap: { marginHorizontal: 14, marginBottom: 10 },
+  rowSkinInner: { flexDirection: "row", alignItems: "center", gap: 10 },
   summaryCell: {
     flex: 1,
     paddingVertical: 12,

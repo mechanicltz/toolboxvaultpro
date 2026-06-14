@@ -15,6 +15,8 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter, useFocusEffect } from "expo-router";
 import { themedStyles, useColors } from "../../src/themeContext";
 import { SkinPlate } from "../../src/components/SkinPlate";
+import { IndustrialBanner } from "../../src/components/IndustrialBanner";
+import { AddFab } from "../../src/components/AddFab";
 import { insuranceApi, ClaimSummary } from "../../src/insuranceApi";
 
 const money = (n: number) =>
@@ -72,15 +74,7 @@ export default function InsuranceClaimsDashboard() {
 
   return (
     <SafeAreaView style={styles.safe} edges={["top"]}>
-      <View style={styles.header}>
-        <TouchableOpacity testID="ic-back" onPress={() => router.back()} style={styles.iconBtn}>
-          <Ionicons name="chevron-back" size={24} color={c.textPrimary} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Insurance Claims</Text>
-        <TouchableOpacity testID="ic-new" onPress={() => router.push("/insurance-claims/new" as any)} style={styles.iconBtn}>
-          <Ionicons name="add" size={26} color={c.accent} />
-        </TouchableOpacity>
-      </View>
+      <IndustrialBanner title="INSURANCE CLAIMS" onBack={() => router.back()} />
 
       <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1 }}>
         <ScrollView
@@ -191,6 +185,8 @@ export default function InsuranceClaimsDashboard() {
           )}
         </ScrollView>
       </KeyboardAvoidingView>
+
+      <AddFab testID="ic-new-fab" onPress={() => router.push("/insurance-claims/new" as any)} />
     </SafeAreaView>
   );
 }

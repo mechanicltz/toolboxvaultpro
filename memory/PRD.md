@@ -26,6 +26,23 @@ its own model #, price, photo; the bundle has its own photo, part #, and set pri
   bundled items listed on own rows grouped under a per-set section header
   showing the set price. Applied to Inventory, Insurance, Year-End reports.
 
+## UI fixes round 2 (2026-02 / build 306 — DONE)
+1. Insurance claims LIST: replaced custom header with shared `IndustrialBanner`
+   (back arrow) + moved the add action to a floating `AddFab` (bottom-right),
+   matching inventory. `app/insurance-claims/index.tsx`.
+2. Dealer "tools purchased" screen was unskinned: added industrial skin
+   (summary in SKIN.window frame, rows on SKIN.plate via a RowShell), mirroring
+   the dealer detail screen. `app/dealer/[id]/tools.tsx`.
+3. Contacts list now ALWAYS alphabetical by name (first letter of first name) —
+   `localeCompare` sort on load. `app/(tabs)/borrowers.tsx`.
+4. Contact detail "currently checked out" + "checked out tool totals" overflow
+   on skinned theme: increased RowShell plate padding (padX 18→22, padTop/Bottom
+   12→16) so taller content stays inside the plate. `app/borrower/[id].tsx`.
+Verification notes: #1/#2 mirror proven components/patterns + compile clean
+(screenshot tool renders nested routes black on web preview — a known artifact,
+fine on device). #3 is logic. #4 is narrow-screen only (screenshot tool locked
+to 1920px desktop) — confirm on device.
+
 ## UI fixes (2026-02 / build 305 — DONE & verified)
 1. Login header version: moved from bottom-right to CENTERED over the nameplate
    (matches in-app IndustrialBanner placement). `app/login.tsx`.

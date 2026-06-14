@@ -101,7 +101,11 @@ export default function BorrowersScreen() {
       api.listBorrowers(),
       api.listTools({ checked_out: true }),
     ]);
-    setBorrowers(b);
+    // Always alphabetical by name (first letter of the first name decides order).
+    const sorted = (b || []).slice().sort((x: any, y: any) =>
+      (x?.name || "").localeCompare(y?.name || "", undefined, { sensitivity: "base" }),
+    );
+    setBorrowers(sorted);
     setTools(t);
   }, []);
 
