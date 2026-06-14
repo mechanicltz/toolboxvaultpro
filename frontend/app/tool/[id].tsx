@@ -1,3 +1,5 @@
+import { compressToDataUri } from "../../src/lib/imageCompress";
+import { AppImage } from "../../src/components/AppImage";
 import React, { useState, useCallback, useEffect } from "react";
 import {
   View,
@@ -322,7 +324,7 @@ export default function ToolDetail() {
       if (!res.canceled && res.assets?.[0]) {
         const a = res.assets[0];
         const data =
-          a.base64 ? `data:image/jpeg;base64,${a.base64}` : a.uri;
+          await compressToDataUri(a.uri);
         setRepairForm((f) => ({ ...f, broken_photo: data }));
       }
     } catch (e: any) {
@@ -351,7 +353,7 @@ export default function ToolDetail() {
             });
       if (res.canceled || !res.assets?.[0]) return;
       const a = res.assets[0];
-      const data = a.base64 ? `data:image/jpeg;base64,${a.base64}` : a.uri;
+      const data = await compressToDataUri(a.uri);
       const next = [...(tool?.photos || []), data];
       await api.updateTool(tool.id, { photos: next });
       load();
@@ -393,7 +395,7 @@ export default function ToolDetail() {
             });
       if (res.canceled || !res.assets?.[0]) return;
       const a = res.assets[0];
-      const data = a.base64 ? `data:image/jpeg;base64,${a.base64}` : a.uri;
+      const data = await compressToDataUri(a.uri);
       const next = [...(tool?.receipts || []), data];
       await api.updateTool(tool.id, { receipts: next });
       load();
@@ -1610,7 +1612,7 @@ export default function ToolDetail() {
                   onPress={photos.length ? () => { setPhotoIdx(0); setIsImageViewerVisible(true); } : promptAddPhoto}
                 >
                   {photos.length > 0 ? (
-                    <Image source={{ uri: photos[0] }} style={newStyles.photoImg} />
+                    <AppImage source={{ uri: photos[0] }} style={newStyles.photoImg} />
                   ) : (
                     <View style={newStyles.dealerPhotoEmpty}>
                       <Ionicons name="camera" size={20} color={theme.colors.accent} />
@@ -1638,7 +1640,7 @@ export default function ToolDetail() {
                 onPress={photos.length ? () => { setPhotoIdx(0); setIsImageViewerVisible(true); } : promptAddPhoto}
               >
                 {photos.length > 0 ? (
-                  <Image source={{ uri: photos[0] }} style={newStyles.photoImg} />
+                  <AppImage source={{ uri: photos[0] }} style={newStyles.photoImg} />
                 ) : (
                   <View style={newStyles.photoEmpty}>
                     <Ionicons name="camera" size={22} color={theme.colors.accent} />
@@ -2209,7 +2211,7 @@ export default function ToolDetail() {
                                         }}
                                         activeOpacity={0.85}
                                       >
-                                        <Image source={{ uri: p }} style={newStyles.galleryThumb} />
+                                        <AppImage source={{ uri: p }} style={newStyles.galleryThumb} />
                                       </TouchableOpacity>
                                     ))}
                                   </ScrollView>

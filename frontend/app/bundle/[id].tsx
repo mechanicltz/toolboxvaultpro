@@ -1,3 +1,4 @@
+import { AppImage } from "../../src/components/AppImage";
 import { useState, useCallback, type ReactNode } from "react";
 import {
   View, Text, ScrollView, TouchableOpacity, Image, Alert, ActivityIndicator,
@@ -106,7 +107,7 @@ export default function BundleDetail() {
       <ScrollView style={{ backgroundColor: theme.colors.canvas }} contentContainerStyle={{ paddingBottom: 100 }}>
         <View style={styles.heroBox}>
           {bundle.photos?.[0] ? (
-            <Image source={{ uri: bundle.photos[0] }} style={styles.hero} />
+            <AppImage source={{ uri: bundle.photos[0] }} style={styles.hero} />
           ) : (
             <View style={[styles.hero, styles.heroEmpty]}>
               <Ionicons name="cube" size={40} color={theme.colors.textMuted} />
@@ -165,7 +166,7 @@ export default function BundleDetail() {
                 onPress={() => router.push(`/tool/${it.id}`)}
               >
                 {it.photos?.[0] ? (
-                  <Image source={{ uri: it.photos[0] }} style={styles.itemThumb} />
+                  <AppImage source={{ uri: it.photos[0] }} style={styles.itemThumb} />
                 ) : (
                   <View style={[styles.itemThumb, styles.itemThumbEmpty]}>
                     <Ionicons name="construct" size={16} color={theme.colors.textMuted} />

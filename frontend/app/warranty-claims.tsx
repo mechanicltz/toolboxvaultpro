@@ -1,3 +1,4 @@
+import { AppImage } from "../src/components/AppImage";
 import { useState, useCallback } from "react";
 import {
   View,
@@ -649,7 +650,7 @@ function ClaimCard({
     <BevelCard style={styles.claimCard} testID={`claim-${claim.id}`}>
       <TouchableOpacity style={styles.claimHead} onPress={onOpenTool} activeOpacity={0.7}>
         {claim.tool_photo ? (
-          <Image source={{ uri: claim.tool_photo }} style={styles.thumb} />
+          <AppImage source={{ uri: claim.tool_photo }} style={styles.thumb} />
         ) : (
           <View style={[styles.thumb, styles.thumbPh]}>
             <Ionicons name="construct" size={20} color={theme.colors.accent} />

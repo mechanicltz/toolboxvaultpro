@@ -1,3 +1,4 @@
+import { AppImage } from "../src/components/AppImage";
 import { useState, useCallback } from "react";
 import {
   View,
@@ -141,7 +142,7 @@ export default function MaintenanceScreen() {
               >
                 <View style={styles.thumb}>
                   {it.tool_photo ? (
-                    <Image source={{ uri: it.tool_photo }} style={styles.thumbImg} />
+                    <AppImage source={{ uri: it.tool_photo }} style={styles.thumbImg} />
                   ) : (
                     <Ionicons name="construct" size={24} color={theme.colors.accent} />
                   )}

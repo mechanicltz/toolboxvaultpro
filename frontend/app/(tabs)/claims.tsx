@@ -1,3 +1,4 @@
+import { AppImage } from "../../src/components/AppImage";
 import { useState, useCallback, useEffect } from "react";
 import {
   View,
@@ -203,7 +204,7 @@ export default function ClaimsScreen() {
       <>
         <View style={styles.itemThumb}>
           {t.photos?.[0] ? (
-            <Image source={{ uri: t.photos[0] }} style={styles.itemImg} />
+            <AppImage source={{ uri: t.photos[0] }} style={styles.itemImg} />
           ) : (
             <Ionicons name="build" size={18} color={theme.colors.danger} />
           )}
@@ -226,7 +227,7 @@ export default function ClaimsScreen() {
     <>
       <View style={styles.itemThumb}>
         {cl.broken_photo ? (
-          <Image source={{ uri: cl.broken_photo }} style={styles.itemImg} />
+          <AppImage source={{ uri: cl.broken_photo }} style={styles.itemImg} />
         ) : (
           <Ionicons name="checkmark-done" size={18} color={theme.colors.success} />
         )}
@@ -423,7 +424,7 @@ export default function ClaimsScreen() {
                   >
                     <View style={styles.itemThumb}>
                       {t.photos?.[0] ? (
-                        <Image source={{ uri: t.photos[0] }} style={styles.itemImg} />
+                        <AppImage source={{ uri: t.photos[0] }} style={styles.itemImg} />
                       ) : (
                         <Ionicons name="build" size={18} color={theme.colors.danger} />
                       )}
@@ -462,7 +463,7 @@ export default function ClaimsScreen() {
                 >
                   <View style={styles.itemThumb}>
                     {c.broken_photo ? (
-                      <Image source={{ uri: c.broken_photo }} style={styles.itemImg} />
+                      <AppImage source={{ uri: c.broken_photo }} style={styles.itemImg} />
                     ) : (
                       <Ionicons name="checkmark-done" size={18} color={theme.colors.success} />
                     )}
@@ -749,7 +750,7 @@ export default function ClaimsScreen() {
                   >
                     <View style={styles.ncThumb}>
                       {t.photos?.[0] ? (
-                        <Image source={{ uri: t.photos[0] }} style={styles.ncThumbImg} />
+                        <AppImage source={{ uri: t.photos[0] }} style={styles.ncThumbImg} />
                       ) : (
                         <Ionicons name="construct" size={18} color={theme.colors.accent} />
                       )}

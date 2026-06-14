@@ -1,3 +1,4 @@
+import { AppImage } from "../../../src/components/AppImage";
 import { useCallback, useState } from "react";
 import {
   View,
@@ -120,7 +121,7 @@ export default function DealerToolsScreen() {
                 <Text style={styles.rowIndex}>{index + 1}</Text>
                 <View style={styles.rowThumb}>
                   {photo ? (
-                    <Image source={{ uri: photo }} style={styles.thumb} />
+                    <AppImage source={{ uri: photo }} style={styles.thumb} />
                   ) : (
                     <Ionicons name="construct" size={20} color={theme.colors.textMuted} />
                   )}

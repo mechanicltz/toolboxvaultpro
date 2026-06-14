@@ -1,3 +1,4 @@
+import { AppImage } from "../../src/components/AppImage";
 import { useState, useEffect, useCallback } from "react";
 import {
   View,
@@ -120,7 +121,7 @@ export default function ClaimDetailScreen() {
           onPress={() => claim.tool_id && router.push(`/tool/${claim.tool_id}`)}
         >
           {claim.broken_photo ? (
-            <Image source={{ uri: claim.broken_photo }} style={styles.toolPhoto} />
+            <AppImage source={{ uri: claim.broken_photo }} style={styles.toolPhoto} />
           ) : (
             <View style={[styles.toolPhoto, styles.toolPhotoPh]}>
               <Ionicons name="construct" size={32} color={theme.colors.textMuted} />
@@ -204,7 +205,7 @@ export default function ClaimDetailScreen() {
         {!!claim.broken_photo && (
           <Section label="PHOTO OF BROKEN PART">
             <TouchableOpacity testID="claim-photo" activeOpacity={0.9} onPress={() => setLightbox(true)}>
-              <Image source={{ uri: claim.broken_photo }} style={styles.photoLarge} />
+              <AppImage source={{ uri: claim.broken_photo }} style={styles.photoLarge} />
             </TouchableOpacity>
           </Section>
         )}
@@ -217,7 +218,7 @@ export default function ClaimDetailScreen() {
           onPress={() => setLightbox(false)}
         >
           {!!claim.broken_photo && (
-            <Image source={{ uri: claim.broken_photo }} style={styles.lightboxImg} resizeMode="contain" />
+            <AppImage source={{ uri: claim.broken_photo }} style={styles.lightboxImg} resizeMode="contain" />
           )}
         </TouchableOpacity>
       </Modal>

@@ -1,3 +1,5 @@
+import { compressToDataUri } from "../../src/lib/imageCompress";
+import { AppImage } from "../../src/components/AppImage";
 import { useEffect, useState, useCallback } from "react";
 import {
   View, Text, ScrollView, TouchableOpacity, Alert, ActivityIndicator, Image,
@@ -172,7 +174,7 @@ export default function ClaimDetail() {
     if (res.canceled || !res.assets?.length) return;
     const a = res.assets[0];
     const mime = a.mimeType || "image/jpeg";
-    const data = a.base64 ? `data:${mime};base64,${a.base64}` : await uriToDataUri(a.uri, mime);
+    const data = await compressToDataUri(a.uri);
     setBusy(true);
     try {
       await insuranceApi.addEvidence(id, { filename: a.fileName || `photo-${Date.now()}.jpg`, mime, kind: "Damage Photo", data_b64: data });
@@ -270,7 +272,7 @@ export default function ClaimDetail() {
                   <View key={e.id} style={styles.evCell} testID={`icd-ev-${e.id}`}>
                     <TouchableOpacity onPress={() => openEvidence(e)} activeOpacity={0.8} testID={`icd-ev-open-${e.id}`}>
                       {isImg && thumb ? (
-                        <Image source={{ uri: thumb }} style={styles.evThumb} resizeMode="cover" />
+                        <AppImage source={{ uri: thumb }} style={styles.evThumb} resizeMode="cover" />
                       ) : (
                         <View style={styles.evThumb}>
                           <Ionicons name={isImg ? "image" : "document-text"} size={26} color={c.accent} />
@@ -381,7 +383,7 @@ function EvidenceViewer({ ev, onClose }: any) {
         <TouchableOpacity style={evStyles.closeBtn} onPress={onClose} testID="icd-ev-viewer-close">
           <Ionicons name="close" size={28} color="#fff" />
         </TouchableOpacity>
-        <Image source={{ uri: ev.data }} style={evStyles.image} resizeMode="contain" />
+        <AppImage source={{ uri: ev.data }} style={evStyles.image} resizeMode="contain" />
         <Text style={evStyles.caption} numberOfLines={2}>{ev.kind}{ev.filename ? ` · ${ev.filename}` : ""}</Text>
       </View>
     </Modal>
@@ -489,7 +491,7 @@ function AttachModal({ visible, onClose, id, attached, onDone }: any) {
           filtered.slice(0, 300).map((t) => (
             <TouchableOpacity key={t.id} testID={`icd-tool-${t.id}`} style={styles.toolRow} onPress={() => toggle(t.id)}>
               <Ionicons name={sel.has(t.id) ? "checkbox" : "square-outline"} size={20} color={sel.has(t.id) ? c.accent : c.textMuted} />
-              {t.photos?.[0] ? <Image source={{ uri: t.photos[0] }} style={styles.toolThumb} /> : <View style={[styles.toolThumb, { backgroundColor: c.surfaceAlt }]} />}
+              {t.photos?.[0] ? <AppImage source={{ uri: t.photos[0] }} style={styles.toolThumb} /> : <View style={[styles.toolThumb, { backgroundColor: c.surfaceAlt }]} />}
               <View style={{ flex: 1 }}>
                 <Text style={styles.itemName} numberOfLines={1}>{t.name}</Text>
                 <Text style={styles.muted} numberOfLines={1}>{[t.brand, t.cost ? money(t.cost) : null].filter(Boolean).join(" · ")}</Text>

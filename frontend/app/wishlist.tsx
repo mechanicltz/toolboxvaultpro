@@ -1,3 +1,5 @@
+import { compressToDataUri } from "../src/lib/imageCompress";
+import { AppImage } from "../src/components/AppImage";
 import { useState, useCallback } from "react";
 import {
   View,
@@ -176,7 +178,7 @@ export default function WishlistScreen() {
           });
       if (!res.canceled && res.assets[0]) {
         const a = res.assets[0];
-        const dataUri = a.base64 ? `data:image/jpeg;base64,${a.base64}` : a.uri;
+        const dataUri = await compressToDataUri(a.uri);
         setEditing({ ...editing, photos: [dataUri] });
       }
     } catch (e: any) {
@@ -600,7 +602,7 @@ export default function WishlistScreen() {
                   </View>
                 )}
                 {!!(item.photos && item.photos[0]) && (
-                  <Image source={{ uri: item.photos[0] }} style={styles.cardThumb} resizeMode="cover" />
+                  <AppImage source={{ uri: item.photos[0] }} style={styles.cardThumb} resizeMode="cover" />
                 )}
                 <View style={{ flex: 1 }}>
                   <Text style={styles.itemName} numberOfLines={2}>
@@ -759,7 +761,7 @@ export default function WishlistScreen() {
             <Text style={styles.label}>PHOTO</Text>
             {editing?.photos && editing.photos[0] ? (
               <View style={styles.photoPreviewRow}>
-                <Image source={{ uri: editing.photos[0] }} style={styles.photoPreview} resizeMode="cover" />
+                <AppImage source={{ uri: editing.photos[0] }} style={styles.photoPreview} resizeMode="cover" />
                 <View style={{ flex: 1, gap: 8 }}>
                   <TouchableOpacity
                     testID="wish-photo-replace"

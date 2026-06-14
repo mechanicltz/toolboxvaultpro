@@ -1,3 +1,4 @@
+import { AppImage } from "../../src/components/AppImage";
 import { useCallback, useState } from "react";
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Modal, TextInput, KeyboardAvoidingView, Platform, Pressable, Share, Alert, Linking } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -397,7 +398,7 @@ export default function BorrowerHistory() {
               </View>
               <View style={styles.thumb}>
                 {t.photo ? (
-                  <Image source={{ uri: t.photo }} style={{ width: "100%", height: "100%" }} />
+                  <AppImage source={{ uri: t.photo }} style={{ width: "100%", height: "100%" }} />
                 ) : (
                   <Ionicons name="construct" size={18} color={theme.colors.accent} />
                 )}

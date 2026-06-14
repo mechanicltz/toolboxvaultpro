@@ -1,3 +1,4 @@
+import { AppImage } from "../components/AppImage";
 import React, { useState, useEffect, useRef } from "react";
 import {
   View,
@@ -302,7 +303,7 @@ function PdfPageItem({
       }}
     >
       {src ? (
-        <Image
+        <AppImage
           source={{ uri: src }}
           style={{ width: "100%", height: "100%" }}
           resizeMode="contain"
@@ -539,7 +540,7 @@ export function DocumentsSection({
     // ===== WEB =====
     if (mime.startsWith("image/")) {
       return (
-        <Image
+        <AppImage
           source={{ uri: imageUri }}
           style={{ flex: 1, width: "100%", height: "100%" }}
           resizeMode="contain"

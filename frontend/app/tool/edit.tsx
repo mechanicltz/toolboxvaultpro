@@ -1,3 +1,4 @@
+import { AppImage } from "../../src/components/AppImage";
 import { useState, useEffect, useCallback } from "react";
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Image, Alert,
@@ -966,7 +967,7 @@ export default function ToolEdit() {
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 8 }}>
               {photos.map((p, i) => (
                 <View key={i} style={styles.photoWrap}>
-                  <Image source={{ uri: p }} style={styles.photo} />
+                  <AppImage source={{ uri: p }} style={styles.photo} />
                   <TouchableOpacity testID={`remove-photo-${i}`} style={styles.photoRemove}
                     onPress={() => setPhotos((arr) => arr.filter((_, idx) => idx !== i))}>
                     <Ionicons name="close" size={16} color={theme.colors.textPrimary} />
@@ -1052,7 +1053,7 @@ export default function ToolEdit() {
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 8 }}>
               {receipts.map((r, i) => (
                 <View key={i} style={styles.photoWrap}>
-                  <Image source={{ uri: r }} style={styles.photo} />
+                  <AppImage source={{ uri: r }} style={styles.photo} />
                   <TouchableOpacity
                     testID={`remove-receipt-${i}`}
                     style={styles.photoRemove}

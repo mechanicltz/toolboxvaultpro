@@ -1,3 +1,4 @@
+import { AppImage } from "../src/components/AppImage";
 import { useCallback, useState } from "react";
 import { View, Text, ScrollView, TouchableOpacity, Image } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -40,7 +41,7 @@ export default function WarrantyScreen() {
       >
         <View style={styles.thumb}>
           {t.photos?.[0] ? (
-            <Image source={{ uri: t.photos[0] }} style={{ width: "100%", height: "100%" }} />
+            <AppImage source={{ uri: t.photos[0] }} style={{ width: "100%", height: "100%" }} />
           ) : (
             <Ionicons name="construct" size={24} color={theme.colors.accent} />
           )}

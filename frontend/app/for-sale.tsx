@@ -1,3 +1,4 @@
+import { AppImage } from "../src/components/AppImage";
 import { useState, useEffect, useCallback, useMemo } from "react";
 import {
   View,
@@ -150,7 +151,7 @@ export default function ForSaleScreen() {
         onPress={() => router.push(`/tool/${item.id}`)}
       >
         {photoUri ? (
-          <Image source={{ uri: photoUri }} style={styles.cardImg} resizeMode="cover" />
+          <AppImage source={{ uri: photoUri }} style={styles.cardImg} resizeMode="cover" />
         ) : (
           <View style={[styles.cardImg, { alignItems: "center", justifyContent: "center" }]}>
             <Ionicons name="cube" size={40} color={theme.colors.textMuted} />

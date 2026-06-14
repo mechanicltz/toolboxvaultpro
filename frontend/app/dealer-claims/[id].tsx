@@ -1,3 +1,4 @@
+import { AppImage } from "../../src/components/AppImage";
 import { useState, useCallback } from "react";
 import {
   View,
@@ -378,7 +379,7 @@ export default function DealerClaimsScreen() {
                 >
                   <View style={styles.thumb}>
                     {photo ? (
-                      <Image source={{ uri: photo }} style={styles.thumbImg} />
+                      <AppImage source={{ uri: photo }} style={styles.thumbImg} />
                     ) : (
                       <Ionicons name="build" size={24} color={theme.colors.danger} />
                     )}

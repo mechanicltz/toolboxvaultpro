@@ -1,3 +1,4 @@
+import { AppImage } from "../../src/components/AppImage";
 import { useState, useCallback, type ReactNode } from "react";
 import {
   View, Text, ScrollView, TouchableOpacity, Image, ActivityIndicator, RefreshControl,
@@ -82,7 +83,7 @@ export default function BundlesList() {
                   onPress={() => router.push(`/bundle/${b.id}`)}
                 >
                   {b.photos?.[0] ? (
-                    <Image source={{ uri: b.photos[0] }} style={styles.thumb} />
+                    <AppImage source={{ uri: b.photos[0] }} style={styles.thumb} />
                   ) : (
                     <View style={[styles.thumb, styles.thumbEmpty]}>
                       <Ionicons name="cube" size={18} color={theme.colors.accent} />

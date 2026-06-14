@@ -1,3 +1,4 @@
+import { AppImage } from "../../src/components/AppImage";
 import { useCallback, useState } from "react";
 import {
   View,
@@ -112,7 +113,7 @@ export default function ClaimsHistoryPage() {
                     <Text style={styles.num}>#{idx + 1}</Text>
                   </View>
                   {c.broken_photo ? (
-                    <Image source={{ uri: c.broken_photo }} style={styles.thumb} />
+                    <AppImage source={{ uri: c.broken_photo }} style={styles.thumb} />
                   ) : (
                     <View style={[styles.thumb, styles.thumbPlaceholder]}>
                       <Ionicons name="image-outline" size={20} color={theme.colors.textMuted} />

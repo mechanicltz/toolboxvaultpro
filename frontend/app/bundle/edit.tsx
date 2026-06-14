@@ -1,3 +1,4 @@
+import { AppImage } from "../../src/components/AppImage";
 import { useState, useEffect, useCallback } from "react";
 import {
   View, Text, ScrollView, TouchableOpacity, TextInput, Image, Alert,
@@ -216,7 +217,7 @@ export default function BundleEdit() {
               <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 8 }}>
                 {photos.map((p, i) => (
                   <View key={`bp-${i}`} style={{ marginRight: 8 }}>
-                    <Image source={{ uri: p }} style={styles.thumb} />
+                    <AppImage source={{ uri: p }} style={styles.thumb} />
                     <TouchableOpacity
                       testID={`bundle-photo-remove-${i}`}
                       style={styles.thumbX}
