@@ -60,6 +60,8 @@ def non_admin_token():
         json={"email": email, "password": password, "name": "Snap Tester"},
         timeout=20,
     )
+    if r.status_code == 429:
+        pytest.skip("register rate-limited (3/hr/IP) on shared backend")
     if r.status_code != 200:
         r2 = requests.post(
             f"{BASE_URL}/api/auth/login",
@@ -67,8 +69,8 @@ def non_admin_token():
             timeout=20,
         )
         assert r2.status_code == 200, f"non-admin register/login failed: {r.text} / {r2.text}"
-        return r2.json()["token"]
-    return r.json()["token"]
+        return r2.json().get("token") or r2.json().get("access_token")
+    return r.json().get("token") or r.json().get("access_token")
 
 
 @pytest.fixture(scope="module")

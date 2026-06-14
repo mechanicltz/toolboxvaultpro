@@ -11,6 +11,14 @@ API = f"{BASE_URL}/api"
 def s():
     sess = requests.Session()
     sess.headers.update({"Content-Type": "application/json"})
+    r = requests.post(
+        f"{API}/auth/login",
+        json={"email": "mechanicltz@gmail.com", "password": "Blue321!"},
+        timeout=30,
+    )
+    assert r.status_code == 200, f"login failed: {r.status_code} {r.text}"
+    tok = r.json().get("token") or r.json().get("access_token")
+    sess.headers.update({"Authorization": f"Bearer {tok}"})
     return sess
 
 
@@ -18,7 +26,7 @@ def s():
 def test_root_health(s):
     r = s.get(f"{API}/")
     assert r.status_code == 200
-    assert r.json().get("message") == "Tool Tracker API"
+    assert r.json().get("message") == "Toolbox Vault API"
 
 
 # ---------- Locations ----------

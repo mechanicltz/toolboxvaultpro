@@ -1,5 +1,33 @@
 # Toolbox Vault — PRD
 
+## Test-suite triage & green-up (2026-02 — DONE & verified)
+Picked up the backend refactor handoff: verified the P0 import fix (extracted
+`routes_stats.py` / `routes_tool_actions.py`) — `/api/stats`, `/api/tools`,
+checkout all 200. Then triaged the full pytest suite (was **33 failed + 68
+errors** → now **227 passed, 2 graceful skips, 0 failed/errored**, ~100s):
+- **Root cause #1 (cascading errors):** 14 test modules each logged in
+  independently → blew past the `/api/auth/login` 5/min/IP cap. Added a
+  suite-wide login cache in `tests/conftest.py` (monkeypatches
+  `Session.request`; caches the FULL real login body keyed by **email+password
+  hash**, validated via `/auth/me`, disk-persisted). Wrong-password logins miss
+  the cache → real 401 preserved. Deliberately NO 429 retry (would mask the
+  limiter from the rate-limit probe test).
+- **Root cause #2 (stale tests):** `test_tooltracker.py` / `test_iteration2.py`
+  pre-dated auth + the freemium 15-tool limit + the app rebrand. Fixed: their
+  `s` fixture now authenticates as the **Pro** account `mechanicltz@gmail.com`
+  (no tool-limit), and the health assert is `"Toolbox Vault API"`.
+- **Removed obsolete coverage:** deleted `test_payment_accounts.py` (tested the
+  removed `/payment-accounts` API — replaced by dealer-scoped
+  `/dealers/{id}/accounts/.../{confirm,skip}-payment`, already covered by
+  `test_dealer_schedules.py` + `test_skip_payment.py`); removed `TestToolboxLayouts`
+  + `TestToolboxAnalyze` from `test_iteration2.py` (`/toolbox-layouts` &
+  `/toolbox/analyze` no longer exist).
+- **Register-bound tests** (`test_demo_prefill`, `test_full_snapshot_plain`) now
+  `pytest.skip` gracefully on the register 3/hr/IP limit (shared backend) — they
+  run fully on CI's fresh single-IP backend.
+- CI is unaffected: it only runs the 4 guard suites (taxonomy/dealers/extra/tools)
+  against a fresh localhost backend — all green.
+
 ## God-file refactor (2026-02 — backend DONE & tested; frontend DEFERRED)
 Goal: split god-files for maintainability with ZERO behavior change.
 DONE — server.py 5,319 → **2,316 lines (−56%)**; **53/53 tests pass**

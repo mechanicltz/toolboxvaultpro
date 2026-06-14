@@ -15,9 +15,6 @@ Covers:
 - _id leak check on every endpoint
 """
 import os
-import io
-import base64
-import urllib.request
 import pytest
 import requests
 
@@ -31,6 +28,14 @@ API = f"{BASE_URL}/api"
 def s():
     sess = requests.Session()
     sess.headers.update({"Content-Type": "application/json"})
+    r = requests.post(
+        f"{API}/auth/login",
+        json={"email": "mechanicltz@gmail.com", "password": "Blue321!"},
+        timeout=30,
+    )
+    assert r.status_code == 200, f"login failed: {r.status_code} {r.text}"
+    tok = r.json().get("token") or r.json().get("access_token")
+    sess.headers.update({"Authorization": f"Bearer {tok}"})
     return sess
 
 
@@ -313,89 +318,3 @@ class TestToolNewFields:
     def test_cleanup_tools(self, s):
         for tid in (pytest.tool_new_id, pytest.consumable_id, pytest.expired_id):
             s.delete(f"{API}/tools/{tid}")
-
-
-# ---------- Toolbox layouts ----------
-class TestToolboxLayouts:
-    def test_crud(self, s):
-        payload = {
-            "name": "TEST_Layout",
-            "photo": "data:image/png;base64,iVBORw0KGgo=",
-            "drawers": [
-                {"id": "d1", "name": "Top", "x": 0.1, "y": 0.1, "width": 0.8, "height": 0.2}
-            ],
-        }
-        r = s.post(f"{API}/toolbox-layouts", json=payload)
-        assert r.status_code == 200, r.text
-        lay = r.json()
-        _no_id_leak(lay)
-        lid = lay["id"]
-        assert len(lay["drawers"]) == 1
-
-        r = s.get(f"{API}/toolbox-layouts")
-        assert r.status_code == 200
-        assert any(x["id"] == lid for x in r.json())
-
-        r = s.get(f"{API}/toolbox-layouts/{lid}")
-        assert r.status_code == 200
-
-        r = s.put(f"{API}/toolbox-layouts/{lid}", json={"name": "TEST_Layout2"})
-        assert r.status_code == 200 and r.json()["name"] == "TEST_Layout2"
-
-        r = s.delete(f"{API}/toolbox-layouts/{lid}")
-        assert r.status_code == 200
-
-        r = s.get(f"{API}/toolbox-layouts/{lid}")
-        assert r.status_code == 404
-
-
-# ---------- AI Toolbox Analyze ----------
-def _real_jpeg_base64():
-    """Fetch a small real photo from a public domain source. Falls back to a
-    generated PIL image with edges/text if network is unavailable."""
-    urls = [
-        "https://images.unsplash.com/photo-1530124566582-a618bc2615dc?w=600&q=60&fm=jpg",
-        "https://picsum.photos/seed/toolbox/600/400.jpg",
-    ]
-    for u in urls:
-        try:
-            req = urllib.request.Request(u, headers={"User-Agent": "Mozilla/5.0"})
-            with urllib.request.urlopen(req, timeout=10) as resp:
-                data = resp.read()
-                if len(data) > 5000:
-                    return base64.b64encode(data).decode()
-        except Exception:
-            continue
-    # Fallback: create a JPEG with shapes using PIL
-    try:
-        from PIL import Image, ImageDraw
-        img = Image.new("RGB", (600, 400), (180, 180, 180))
-        draw = ImageDraw.Draw(img)
-        for i in range(4):
-            y = 40 + i * 80
-            draw.rectangle([40, y, 560, y + 60], outline=(20, 20, 20), width=4)
-            draw.rectangle([280, y + 25, 320, y + 35], fill=(60, 60, 60))
-        buf = io.BytesIO()
-        img.save(buf, format="JPEG", quality=85)
-        return base64.b64encode(buf.getvalue()).decode()
-    except Exception:
-        return None
-
-
-class TestToolboxAnalyze:
-    def test_analyze_response_shape(self, s):
-        b64 = _real_jpeg_base64()
-        if not b64:
-            pytest.skip("No real test image available")
-        r = s.post(f"{API}/toolbox/analyze", json={"image_base64": b64}, timeout=120)
-        assert r.status_code == 200, f"AI analyze failed: {r.status_code} {r.text[:300]}"
-        d = r.json()
-        for k in ["suggested_drawers", "labels", "confidence", "notes"]:
-            assert k in d, f"missing {k} in {d}"
-        assert isinstance(d["suggested_drawers"], int)
-        assert isinstance(d["labels"], list)
-        assert d["confidence"] in ("low", "medium", "high")
-        # be lenient about drawer count
-        assert d["suggested_drawers"] >= 0
-        # labels length must match suggested drawers (server pads/truncates)
-        assert len(d["labels"]) == d["suggested_drawers"]
