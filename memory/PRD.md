@@ -26,6 +26,40 @@ its own model #, price, photo; the bundle has its own photo, part #, and set pri
   bundled items listed on own rows grouped under a per-set section header
   showing the set price. Applied to Inventory, Insurance, Year-End reports.
 
+## Memory / Photo Scaling — Phase 1 DONE (2026-02 / build 303 — TESTED)
+Root cause of the random Expo Go crashes: user photos stored as base64 *inside*
+Mongo tool documents (up to 5MB each) and rendered with RN `<Image>`, which
+decodes every photo into a full-res bitmap kept in memory → OOM (native crash =
+Expo Go closes to home) during fast navigation on photo-heavy lists.
+
+Phase 1 (client memory relief — shipped & regression-tested, 0 broken images
+across 13 screens, no crashes on rapid-nav stress):
+- New `src/components/AppImage.tsx`: wrapper over `expo-image` (downsamples to
+  display size, bounded memory cache, disk cache, `recyclingKey`). Maps RN's
+  `resizeMode` → expo-image `contentFit`. Swapped ALL ~35 user-photo `<Image>`
+  renders across 20 files to `<AppImage>` (static metal-skin PNGs left on RN
+  Image intentionally).
+- New `src/lib/imageCompress.ts` (`compressToDataUri`, 1280px/JPEG 0.55) wired
+  into previously-uncompressed upload paths: wishlist, tool/[id] repair photos,
+  insurance-claims evidence (tool/edit, more, dealers, bundle/edit, dealer/[id]
+  already compressed).
+
+### Phase 2 + 3 — NEXT (NOT started): MongoDB GridFS migration
+IMPORTANT FINDING: Emergent has NO first-party object storage in this env
+(emergentintegrations exposes only llm + payments; no storage env vars). The
+verified platform-recommended path is **MongoDB GridFS** (reuses MONGO_URL, no
+external keys). Plan:
+- Backend: GridFS bucket via `AsyncIOMotorGridFSBucket`; `/api/files` upload
+  (+Pillow thumbnail ~256px), streaming GET with cache headers, DELETE w/ owner
+  check. Change tool/bundle/claim/etc photo fields from base64 → file-id/URL +
+  thumb ref. Update create/update/list/get + demo_seed. List endpoints return
+  thumbnails only.
+- Frontend: upload returns file id; render via `${BACKEND_URL}/api/files/{id}`
+  with AppImage; lists use thumbnail URL.
+- Migration: backfill existing base64 → GridFS (full + thumb), keep base64 until
+  verified, then unset. Run as a script/endpoint.
+- After memory work: god-file refactor (split server.py / more.tsx / index.tsx).
+
 ## Prefilled Demo System (2026-02 / build 301 — DONE & TESTED)
 On registration, new accounts are auto-seeded with a rich demo dataset so users
 can explore every feature immediately. All demo records tagged `is_demo: true`
