@@ -73,7 +73,11 @@ jobs:
         working-directory: backend
         run: |
           rm -f /tmp/ryan_token.txt
-          python -m pytest tests/test_routes_taxonomy.py tests/test_routes_dealers.py -v
+          python -m pytest \
+            tests/test_routes_taxonomy.py \
+            tests/test_routes_dealers.py \
+            tests/test_routes_extra.py \
+            -v
 
       - name: Show backend log on failure
         if: failure()

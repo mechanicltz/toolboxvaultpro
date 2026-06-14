@@ -1,33 +1,31 @@
 # Toolbox Vault — PRD
 
-## God-file refactor (2026-02 — backend phases DONE & tested; frontend DEFERRED)
+## God-file refactor (2026-02 — backend DONE & tested; frontend DEFERRED)
 Goal: split god-files for maintainability with ZERO behavior change.
-DONE (server.py 5,319 → 3,796 lines, −29%; 27/27 regression tests pass —
-`/app/backend/tests/test_refactor_regression.py`):
+DONE — server.py 5,319 → **3,179 lines (−40%)**; **45/45 tests pass**
+(`tests/test_refactor_regression.py` + `test_routes_taxonomy.py` +
+`test_routes_dealers.py` + `test_routes_extra.py`):
 - **B1** `models.py` — all Pydantic models + `now_iso` + constants.
 - **B2** `core.py` — env/Mongo client, owner-scoped DB proxy (`db`), context
-  vars, `get_current_user`, `to_public`, in-process rate limiter
-  (`_enforce_rate_limit`/`_client_ip`). `reports.py` now imports the limiter
-  from `core` (dropped the `from server import` workaround).
-- **B3 (partial)** `routes_taxonomy.py` (locations/tags/brands/categories/
-  borrowers + shared `_ensure_brand_saved`) and `routes_dealers.py`
-  (dealers/agents/transactions/per-account schedules). Registered via
-  `register_*_routes(api_router)`; modules import deps from core/models (no
-  cycle). All verified green via curl + backend testing agent.
-- **Automated guard tests** added: `tests/conftest.py` (shared rate-limit-safe
-  login fixtures) + `tests/test_routes_taxonomy.py` + `tests/test_routes_dealers.py`
-  (13 self-cleaning CRUD lifecycle tests, all passing). Run:
-  `cd /app/backend && python -m pytest tests/test_routes_taxonomy.py tests/test_routes_dealers.py -v`
-DEFERRED (P2 — next session, need care):
-- Remaining backend route groups still in server.py: **tools** (large; shares
-  `build_tool_query` with stats/aggregate and `_validate_photo_payload` with
-  bundles), **bundles**, **wishlist** (uses `enforce_tool_limit`/`Tool`),
-  **maintenance**, **warranty**, **stats/aggregate**, **personal-profile**,
-  **account-delete**. These need a shared `helpers.py` extracted first.
-- Frontend **F1 more.tsx** / **F2 index.tsx**: presentational components
-  (`Row`/`SectionRow`/`SectionCard`) are tightly coupled to a module-scope
-  themed `styles` object; safe extraction needs moving style blocks too +
-  on-device verification (web preview renders skinned screens black).
+  vars, `get_current_user`, `to_public`, in-process rate limiter.
+- **B3** route groups extracted via `register_*_routes(api_router)` (deps from
+  core/models/helpers, no cycles):
+  - `helpers.py` — shared `build_tool_query`, `_validate_photo_payload` + photo
+    size constants.
+  - `routes_taxonomy.py` (locations/tags/brands/categories/borrowers + shared
+    `_ensure_brand_saved`), `routes_dealers.py` (dealers/agents/transactions/
+    schedules), `routes_maintenance.py`, `routes_bundles.py`, `routes_warranty.py`
+    (orphan-purge throttle globals at module level), `routes_wishlist.py`.
+- **CI:** `.github/workflows/backend-tests.yml` spins up its own Mongo+backend and
+  runs the guard suites on every push (Node24 opt-in to silence deprecation warn).
+STILL in server.py (intentionally — heavily shared / large): tools CRUD +
+import/export, stats/aggregate, personal-profile, account-delete, auth/admin,
+demo-seed, startup/indexes. These are the remaining P2 targets.
+DEFERRED (P2): frontend `more.tsx`/`index.tsx` — components tightly coupled to a
+module-scope themed `styles` object; needs style-block extraction + on-device
+verification (web preview renders skinned screens black).
+
+## God-file refactor — earlier checkpoint notes
 
 ## Report redesign + Tablet UI (2026-02 / build 308 — DONE)
 Backend `reports.py` redesigned to ONE cohesive professional identity across
