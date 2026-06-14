@@ -11,7 +11,6 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter, useFocusEffect } from "expo-router";
 import { theme } from "../theme";
 import { api } from "../api";
-import { useOnboardingTour } from "../onboarding/OnboardingTour";
 
 /**
  * Prefilled Demo System surface for the Dashboard.
@@ -27,7 +26,6 @@ import { useOnboardingTour } from "../onboarding/OnboardingTour";
  */
 export function DemoBanner() {
   const router = useRouter();
-  const tour = useOnboardingTour();
   const [present, setPresent] = useState(false);
   const [showIntro, setShowIntro] = useState(false);
 
@@ -62,18 +60,6 @@ export function DemoBanner() {
     await dismissIntro();
     router.push("/(tabs)/more" as any);
   }, [dismissIntro, router]);
-
-  // Primary "GOT IT" action: mark the intro seen, then immediately launch the
-  // guided onboarding tour so a brand-new user is shown how everything works.
-  const startTour = useCallback(async () => {
-    setShowIntro(false);
-    try {
-      await api.demoIntroSeen();
-    } catch {
-      /* best-effort */
-    }
-    tour.start();
-  }, [tour]);
 
   if (!present) return null;
 
@@ -162,10 +148,10 @@ export function DemoBanner() {
             <TouchableOpacity
               testID="demo-intro-dismiss"
               activeOpacity={0.85}
-              onPress={startTour}
+              onPress={dismissIntro}
               style={styles.primaryBtn}
             >
-              <Text style={styles.primaryBtnText}>GOT IT — SHOW ME AROUND</Text>
+              <Text style={styles.primaryBtnText}>GOT IT — START EXPLORING</Text>
             </TouchableOpacity>
           </View>
         </View>
