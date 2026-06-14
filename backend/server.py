@@ -90,10 +90,16 @@ async def attach_user_to_context(request: Request, call_next):
                 # Count first; if <= 15, no filter needed.
                 cnt = await real_db.tools.count_documents({"owner_id": uid})
                 if cnt > 15:
+                    # Keep the 15 most useful tools visible. Prioritize ACTIVE
+                    # (non-sold) inventory, newest first — sold tools live in a
+                    # separate archive and are excluded from the main list, so
+                    # they should not consume a visible slot ahead of a tool the
+                    # user would actually see. Sorting by (is_sold ASC,
+                    # created_at DESC) puts non-sold/newest first.
                     cursor = real_db.tools.find(
                         {"owner_id": uid},
                         {"id": 1, "_id": 0},
-                    ).sort("created_at", 1).limit(15)
+                    ).sort([("is_sold", 1), ("created_at", -1)]).limit(15)
                     ids = {doc["id"] async for doc in cursor if "id" in doc}
                     visible_var = free_visible_tool_ids_var.set(ids)
         except Exception:
