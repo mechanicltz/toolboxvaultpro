@@ -281,6 +281,7 @@ async def attach_user_to_context(request: Request, call_next):
         or path.startswith("/api/bootstrap/")
         or path == "/api/admin/gdrive/oauth-callback"
         or path.startswith("/api/preview/")
+        or path.startswith("/api/files/")
     ):
         return await call_next(request)
     auth = request.headers.get("Authorization", "")
@@ -1830,6 +1831,9 @@ async def create_tool(payload: ToolCreate, user: User = Depends(get_current_user
         )
         tool.category_name = (cat or {}).get("name", "") or ""
 
+    tool.photos = (await media.offload_list(user.id, tool.photos)) or []
+    tool.receipts = (await media.offload_list(user.id, getattr(tool, "receipts", None))) or []
+    tool.documents = (await media.offload_list(user.id, getattr(tool, "documents", None))) or []
     await db.tools.insert_one(tool.dict())
     # If created already broken, also create a warranty claim mirror with broken_photo
     if tool.needs_repair:
@@ -2427,7 +2431,7 @@ async def list_tools(
     for i in items:
         # Slim payload: keep only first photo, drop documents & receipts
         photos = i.get("photos") or []
-        i["photos"] = photos[:1] if photos else []
+        i["photos"] = [media.thumb_url(photos[0])] if photos else []
         i["documents"] = []
         i["receipts"] = []
         out.append(Tool(**i))
@@ -2457,6 +2461,12 @@ async def update_tool(tool_id: str, payload: ToolUpdate):
     # could only be reassigned, never removed.
     updates = payload.dict(exclude_unset=True)
     updates["updated_at"] = now_iso()
+
+    # Offload any incoming base64 photos to GridFS (-> /api/files URLs).
+    _owner = doc.get("owner_id") or ""
+    for _f in ("photos", "receipts", "documents"):
+        if _f in updates:
+            updates[_f] = (await media.offload_list(_owner, updates[_f])) or []
 
     # Keep legacy model/serial fields and new model_numbers/serial_numbers
     # arrays in sync — whichever shape the client sent, both get persisted.
@@ -2593,9 +2603,14 @@ async def update_tool(tool_id: str, payload: ToolUpdate):
 
 @api_router.delete("/tools/{tool_id}")
 async def delete_tool(tool_id: str):
+    _doc = await db.tools.find_one({"id": tool_id}, {"_id": 0, "photos": 1, "receipts": 1, "documents": 1})
     res = await db.tools.delete_one({"id": tool_id})
     if res.deleted_count == 0:
         raise HTTPException(404, "Tool not found")
+    if _doc:
+        await media.delete_values(_doc.get("photos"))
+        await media.delete_values(_doc.get("receipts"))
+        await media.delete_values(_doc.get("documents"))
     # Cascade: also remove any warranty claims that referenced this tool —
     # otherwise the dealer-claims summary keeps counting orphaned claims
     # but the detail screen can't resolve them back to a tool.
@@ -2608,6 +2623,7 @@ async def delete_tool(tool_id: str):
 async def create_bundle(payload: BundleCreate, user: User = Depends(get_current_user)):
     _validate_photo_payload(payload.photos)
     b = Bundle(**payload.dict())
+    b.photos = (await media.offload_list(user.id, b.photos)) or []
     await db.bundles.insert_one(b.dict())
     return b
 
@@ -2618,7 +2634,8 @@ async def list_bundles(user: User = Depends(get_current_user)):
     for b in bundles:
         b["item_count"] = await db.tools.count_documents({"bundle_id": b["id"]})
         # keep payload slim — drop heavy photo data from the list view
-        b["photos"] = (b.get("photos") or [])[:1]
+        _bp = (b.get("photos") or [])
+        b["photos"] = [media.thumb_url(_bp[0])] if _bp else []
     return bundles
 
 
@@ -2630,7 +2647,7 @@ async def get_bundle(bundle_id: str, user: User = Depends(get_current_user)):
     items = await db.tools.find({"bundle_id": bundle_id}, {"_id": 0}).sort("created_at", -1).to_list(2000)
     for i in items:
         photos = i.get("photos") or []
-        i["photos"] = photos[:1] if photos else []
+        i["photos"] = [media.thumb_url(photos[0])] if photos else []
         i["documents"] = []
         i["receipts"] = []
     b["items"] = [Tool(**i).dict() for i in items]
@@ -2646,6 +2663,8 @@ async def update_bundle(bundle_id: str, payload: BundleUpdate, user: User = Depe
         raise HTTPException(404, "Bundle not found")
     updates = payload.dict(exclude_unset=True)
     updates["updated_at"] = now_iso()
+    if "photos" in updates:
+        updates["photos"] = (await media.offload_list(doc.get("owner_id") or "", updates["photos"])) or []
     await db.bundles.update_one({"id": bundle_id}, {"$set": updates})
     new = await db.bundles.find_one({"id": bundle_id}, {"_id": 0})
     return Bundle(**new)
@@ -3649,6 +3668,7 @@ async def create_wishlist(payload: WishlistItemCreate):
         d = await db.dealers.find_one({"id": item.dealer_id}, {"_id": 0, "name": 1})
         if d:
             item.dealer_name = d.get("name") or ""
+    item.photos = (await media.offload_list(current_user_id_var.get(None) or "", item.photos)) or []
     await db.wishlist_items.insert_one(item.dict())
     return item
 
@@ -3664,6 +3684,8 @@ async def update_wishlist(item_id: str, payload: WishlistItemUpdate):
         d = await db.dealers.find_one({"id": updates["dealer_id"]}, {"_id": 0, "name": 1})
         if d:
             updates["dealer_name"] = d.get("name") or ""
+    if "photos" in updates:
+        updates["photos"] = (await media.offload_list(doc.get("owner_id") or "", updates["photos"])) or []
     if updates.get("purchased") is True and not doc.get("purchased"):
         updates["purchased_at"] = now_iso()
     elif updates.get("purchased") is False:
@@ -4695,6 +4717,15 @@ async def ocr_receipt_gone():
 
 app.include_router(api_router)
 app.include_router(auth_router)
+
+# ---------------------------------------------------------------------------
+# GridFS-backed media storage (/api/files/*) — offloads base64 photos out of
+# Mongo documents. init_media() binds the GridFS bucket to the real database.
+# ---------------------------------------------------------------------------
+import media  # noqa: E402
+
+media.init_media(real_db)
+app.include_router(media.router, prefix="/api")
 
 
 # ---------------------------------------------------------------------------

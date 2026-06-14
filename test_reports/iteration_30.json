@@ -1,0 +1,38 @@
+{
+  "summary": "GridFS photo offload (Phase 2/3) — VERIFIED PASS. Wrote /app/backend/tests/test_media_gridfs.py (20 tests) — 19 passed, 1 skipped (no /api/claims aggregate endpoint exists). All file-serving error paths confirmed: /api/files/<bad-id> → 400, /api/files/<valid-but-missing>/ and /thumb → 404, /api/files/* is PUBLIC (no 401/403 without Authorization). Create→Update→Delete cycle works end-to-end: POST /api/tools with a base64 data: URI returns photos=['/api/files/<oid>'] (offloaded, not base64), the file GETs 200 with image/* content-type, the auto-generated /thumb GETs 200 too; PUT /api/tools/{id} with a NEW base64 mints a NEW /api/files URL; DELETE /api/tools/{id} returns 200 and the GridFS file becomes 404 (cleanup works). List endpoint shape verified: GET /api/tools returns ALL photo URLs in /thumb form (0 leftover FULL URLs in list payload across demo account's 14 active photo tools); GET /api/tools/{id} detail returns the FULL /api/files/{id} URL (no /thumb). Regression: list_tools 200, stats 200, dashboard-equivalent 200. Demo-account broad photo coverage: /api/tools all GridFS (gridfs>0, base64=0); /api/bundles base64=0; /api/wishlist base64=0; /api/warranty-claims base64=0. Frontend Playwright (mobile 390x844, demo account smoketest_1781392054@example.com) confirmed 18 live /api/files/* requests across home/inventory/claims/bundle/wishlist/warranty-claims/tool-detail, ALL 18 returned 200 — 16 /thumb (list-view) + 2 FULL (tool-detail gallery). ZERO broken <img> across all screens. The inventory-list spec (THUMB urls for covers) and tool-detail spec (FULL urls in gallery) are both enforced correctly by the backend and respected by AppImage on the client.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/test_reports/iteration_30.json",
+    "/app/backend/tests/test_media_gridfs.py",
+    "/app/test_reports/pytest/iter30_results.xml"
+  ],
+  "action_items": [
+    "(INFO — DESIGN CALL, NOT A BUG) Insurance claim ITEM payloads at /api/insurance-claims still contain small base64 `items[*].snapshot.photo` strings (~2KB each, only 2 found on the demo account). These appear to be frozen historical snapshots taken AT claim time so the photo doesn't change if the underlying tool is edited/deleted later. The Phase-2/3 migration deliberately did not touch them. Confirm with the product owner this is intentional; if it is, this can stay as-is — they are tiny (well under the per-doc 16MB limit and the OOM crash threshold). If not, run migrate_media on the `insurance_claims.items.snapshot.photo` field.",
+    "(INFO — TEST-INFRA) The demo account smoketest_1781392054@example.com sits exactly at the FREE_TOOL_LIMIT=15 (subscriptions.py:181). Any test that needs to POST /api/tools on the demo account will receive 402 free_limit_exceeded. The test suite now uses the general account (mechanicltz@gmail.com, 1 tool) for the Create/Update/Delete flow and demo for read-only coverage — but a future regression with auto-cleanup of the test tool would still work cleanly. Consider adding a `pro_test_account` or bumping the limit for demo accounts."
+  ],
+  "critical_code_review_comments": [
+    "media.py is clean and well-documented (~220 lines). The thumbnail pipeline (PIL convert→RGB→thumbnail(256)→JPEG quality 70) is appropriate for list rendering. ObjectId validation up front returns proper 400; missing file returns 404. Streaming via AsyncIOMotorGridFSBucket.open_download_stream + readchunk avoids loading the full image into memory.",
+    "Cache-Control: public, max-age=31536000, immutable + ETag headers on /api/files/* are correctly set, which enables CDN-edge caching and avoids re-downloads — critical for the photo-scaling goal.",
+    "offload_value() is a clean pass-through for non-base64 values (already-migrated /api/files URLs, empty strings, and remote URLs all flow through untouched), and the per-call pattern in create_tool/update_tool (`updates[_f] = await media.offload_list(_owner, updates[_f])`) is consistent and easy to extend to new fields.",
+    "delete_value() is best-effort and swallows all exceptions, which is the right call for cleanup paths — orphan GridFS blobs are tolerable, but a tool-delete must never 500 because a cleanup step failed. Confirmed working end-to-end: after DELETE /api/tools, the previously-served /api/files/{id} returned 404 within 1s.",
+    "GET /api/files/* is unauthenticated by design per the module docstring (ObjectIds are unguessable, matches the prior inline-base64 exposure model). The auth middleware whitelist for /api/files/ at server.py:283 is therefore expected. This is documented in the request as an acceptable v1 tradeoff.",
+    "Frontend AppImage.tsx (src/components/AppImage.tsx) correctly prefixes relative /api/files URLs with EXPO_PUBLIC_BACKEND_URL — verified by Playwright network capture showing absolute https://.../api/files/.../thumb requests."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_media_gridfs.py (NEW — 20 GridFS media tests)"
+  ],
+  "success_rate": {
+    "backend": "95% (19/20 pytest passed, 1 skipped because no /api/claims aggregate endpoint exists). 0 failures.",
+    "frontend": "100% — 18/18 /api/files/* network requests returned 200, 0 broken <img> across 7 photo-bearing screens (home, inventory, claims, bundle, wishlist, warranty-claims, tool-detail). Inventory served 16 /thumb URLs; tool-detail served FULL URLs (no /thumb)."
+  },
+  "seed_data_creation": "None persistent. Created+updated+deleted ONE temporary tool 'TEST_GridFS_Tool' on the general account (mechanicltz@gmail.com) — fully cleaned up by the delete test. 4 transient GridFS blobs were uploaded and then removed (2 from create, 2 from update; only the post-update pair remained at delete time, and both were verified 404 afterwards). No demo-account data was modified.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "GridFS test suite lives at /app/backend/tests/test_media_gridfs.py. Reuse it as a regression suite. Auth pattern: API login + inject localStorage['tt.auth.token'] in Playwright works on this app and avoids the 5/min login + 3/hr register rate limits. Free-tier limit is 15 active tools (subscriptions.py:FREE_TOOL_LIMIT) — counts only NOT-sold-NOT-lost tools. Demo account smoketest_1781392054@example.com is at the cap, so POST /api/tools on demo returns 402; the general account mechanicltz@gmail.com only has 1 tool and is the right place for write tests. Known acceptable base64 holdouts: dealer logos, home logo, demo-seed tiles, AND insurance-claims items[].snapshot.photo (~2KB frozen historical snapshots). /api/files/* is intentionally public (unauthenticated)."
+}
