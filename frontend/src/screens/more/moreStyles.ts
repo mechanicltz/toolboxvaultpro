@@ -1,0 +1,557 @@
+// More screen styles — extracted from app/(tabs)/more.tsx to keep that
+// screen file small (god-file refactor F1). Theme-reactive via themedStyles;
+// behaviour/appearance is unchanged.
+import { StyleSheet } from "react-native";
+import { theme } from "../../theme";
+import { themedStyles } from "../../themeContext";
+
+
+export const demoStyles = StyleSheet.create({
+  backdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.65)",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 24,
+  },
+  card: {
+    width: "100%",
+    maxWidth: 440,
+    backgroundColor: theme.colors.surface,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    padding: 20,
+  },
+  header: { flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 12 },
+  title: {
+    flex: 1,
+    color: theme.colors.textPrimary,
+    fontSize: 16,
+    fontWeight: "900",
+    letterSpacing: 0.5,
+  },
+  body: { color: theme.colors.textSecondary, fontSize: 14, lineHeight: 20, marginBottom: 16 },
+  optBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    padding: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.surfaceAlt,
+    marginBottom: 12,
+  },
+  optTitle: { color: theme.colors.textPrimary, fontSize: 15, fontWeight: "800" },
+  optSub: { color: theme.colors.textSecondary, fontSize: 12, lineHeight: 16, marginTop: 2 },
+  cancelBtn: { alignItems: "center", paddingVertical: 12, marginTop: 2 },
+  cancelText: {
+    color: theme.colors.textMuted,
+    fontSize: 14,
+    fontWeight: "700",
+    letterSpacing: 0.5,
+  },
+});
+
+export const homeRowsModalStyles = themedStyles((c) => ({
+  backdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.7)",
+    justifyContent: "flex-end",
+  },
+  card: {
+    backgroundColor: c.bgSecondary,
+    padding: 20,
+    borderTopWidth: 2,
+    borderTopColor: c.accent,
+    paddingBottom: 32,
+  },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    marginBottom: 4,
+  },
+  title: {
+    flex: 1,
+    color: c.textPrimary,
+    fontSize: 14,
+    fontWeight: "900",
+    letterSpacing: 2,
+  },
+  help: {
+    color: c.textMuted,
+    fontSize: 10,
+    marginVertical: 12,
+    lineHeight: 14,
+  },
+  doneBtn: {
+    marginTop: 16,
+    backgroundColor: c.accent,
+    height: 48,
+    borderRadius: 4,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  doneBtnText: {
+    color: "#000",
+    fontWeight: "900",
+    letterSpacing: 2,
+    fontSize: 12,
+  },
+}));
+
+
+export const pwStyles = themedStyles((c) => ({
+  backdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.6)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 16,
+  },
+  card: {
+    width: "100%",
+    maxWidth: 440,
+    backgroundColor: c.bgSecondary,
+    borderRadius: 12,
+    padding: 18,
+    borderWidth: 1,
+    borderColor: c.border,
+  
+    ...(theme.elevation.md as object),
+  },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    marginBottom: 16,
+  },
+  title: {
+    flex: 1,
+    color: c.textPrimary,
+    fontSize: 10,
+    fontWeight: "900",
+    letterSpacing: 1.5,
+  },
+  label: {
+    color: c.textSecondary,
+    fontSize: 8,
+    fontWeight: "800",
+    letterSpacing: 1.5,
+    marginTop: 8,
+    marginBottom: 6,
+  },
+  input: {
+    backgroundColor: c.surface,
+    borderWidth: 1,
+    borderColor: c.border,
+    borderRadius: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    color: c.textPrimary,
+    fontSize: 10,
+  
+    ...(theme.elevation.input as object),
+  },
+  err: {
+    color: c.danger,
+    fontSize: 9,
+    marginTop: 10,
+  },
+  ok: {
+    color: "#27AE60",
+    fontSize: 9,
+    marginTop: 10,
+  },
+  primaryBtn: {
+    marginTop: 18,
+    backgroundColor: c.accent,
+    borderRadius: 8,
+    paddingVertical: 12,
+    alignItems: "center",
+  },
+  primaryBtnText: {
+    color: "#000",
+    fontWeight: "900",
+    letterSpacing: 1.5,
+    fontSize: 10,
+  },
+}));
+
+export const styles = themedStyles((c) => ({
+  container: { flex: 1, backgroundColor: c.canvas },
+  infoRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    paddingHorizontal: 20,
+    paddingTop: 10,
+    paddingBottom: 6,
+    flexWrap: "wrap",
+  },
+  header: {
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    paddingBottom: 12,
+  },
+  title: { color: c.textPrimary, fontSize: 14, fontWeight: "900", letterSpacing: 2.5 },
+  subtitle: {
+    color: c.accent,
+    fontSize: 8,
+    fontWeight: "700",
+    letterSpacing: 2,
+    textTransform: "uppercase",
+    marginTop: 2,
+  },
+  versionLine: {
+    color: c.textMuted,
+    fontSize: 10,
+    fontWeight: "700",
+    letterSpacing: 1.5,
+    marginTop: 4,
+  },
+  proBadge: {
+    alignSelf: "flex-start",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    paddingHorizontal: 9,
+    paddingVertical: 3,
+    borderRadius: 999,
+    borderWidth: 1,
+    marginTop: 6,
+  },
+  proBadgeText: {
+    fontSize: 9.5,
+    fontWeight: "900",
+    letterSpacing: 1.2,
+  },
+  sectionLabel: {
+    color: c.textPrimary,
+    fontSize: 16,
+    fontWeight: "900",
+    letterSpacing: 2,
+    paddingHorizontal: 20,
+    paddingTop: 22,
+    paddingBottom: 10,
+  },
+
+  /* ---------- Description-card grouping wrappers for each MORE section ---------- */
+  // Outer wrapper provides horizontal margin so the card edges align with
+  // existing screens. Inside it sits the section label + a single bordered
+  // box. (Each section now reads as ONE consolidated card instead of N
+  // separate floating row-cards — see "Description Cards" pattern used on
+  // Home/Tool/Dealer screens.)
+  sectionCardWrap: {
+    marginHorizontal: 16,
+    marginTop: 12,
+  },
+  sectionCard: {
+    backgroundColor: c.bgSecondary,
+    borderWidth: 1,
+    borderColor: c.border,
+    borderRadius: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    ...(theme.elevation.md as object),
+  },
+  // Each row inside a section card. Thin bottom divider between siblings
+  // (removed for the last row via `sectionRowLast`).
+  sectionRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 12,
+    gap: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: c.borderSubtle,
+  },
+  sectionRowLast: {
+    borderBottomWidth: 0,
+  },
+  sectionRowIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: c.surface,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: c.border,
+  },
+  sectionRowTitle: {
+    color: c.textPrimary,
+    fontSize: 12,
+    fontWeight: "700",
+  },
+  sectionRowSub: {
+    color: c.textSecondary,
+    fontSize: 9,
+    marginTop: 2,
+  },
+  row: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    gap: 12,
+    backgroundColor: c.bgSecondary,
+    marginHorizontal: 16,
+    marginTop: 10,
+    borderRadius: theme.radii.md,
+    borderWidth: 1,
+    borderColor: c.borderSubtle,
+    ...(theme.elevation.md as object),
+  },
+  toggleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    gap: 12,
+    backgroundColor: c.bgSecondary,
+    marginHorizontal: 16,
+    marginTop: 10,
+    borderRadius: theme.radii.md,
+    borderWidth: 1,
+    borderColor: c.borderSubtle,
+    ...(theme.elevation.md as object),
+  },
+  iconBox: {
+    width: 36,
+    height: 36,
+    backgroundColor: c.surface,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 4,
+  },
+  rowTitle: { color: c.textPrimary, fontWeight: "700", fontSize: 11 },
+  rowSub: { color: c.textSecondary, fontSize: 9, marginTop: 2 },
+  // ---- Appearance selector (skin + light/dark) ----
+  appearanceCard: {
+    backgroundColor: c.bgSecondary,
+    marginHorizontal: 16,
+    marginTop: 10,
+    borderRadius: theme.radii.md,
+    borderWidth: 1,
+    borderColor: c.borderSubtle,
+    overflow: "hidden",
+    ...(theme.elevation.md as object),
+  },
+  appearanceHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingTop: 14,
+    paddingBottom: 8,
+  },
+  appearanceTitle: {
+    color: c.textSecondary,
+    fontSize: 11,
+    fontWeight: "800",
+    letterSpacing: 1.2,
+  },
+  customizeSubHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingTop: 14,
+    paddingBottom: 6,
+  },
+  customizeSubLabel: {
+    color: c.textSecondary,
+    fontSize: 12,
+    fontWeight: "800",
+    letterSpacing: 0.6,
+  },
+  optRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderTopWidth: 1,
+    borderTopColor: c.borderSubtle,
+  },
+  optRowLast: {},
+  optRowActive: {
+    backgroundColor: c.glass,
+  },
+  /* Grouped theme picker — all choices inside one bordered sub-card with no
+     dividers and tighter spacing so they read as a single group. */
+  optGroup: {
+    marginHorizontal: 8,
+    marginTop: 6,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: c.border,
+    borderRadius: 10,
+    backgroundColor: c.surface,
+    ...(theme.elevation.md as object),
+  },
+  // Inside a metal TbvFrame the nested grey/bordered look reads as an ugly
+  // "box-in-box". Flatten it so the theme options sit directly on the frame.
+  optGroupFlat: {
+    marginHorizontal: 0,
+    borderWidth: 0,
+    backgroundColor: "transparent",
+    shadowOpacity: 0,
+    elevation: 0,
+  },
+  optRowGrouped: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+  },
+  optRowGroupedActive: {
+    backgroundColor: c.glass,
+  },
+  themeValueWrap: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    maxWidth: 160,
+  },
+  themeValueText: {
+    color: c.textSecondary,
+    fontSize: 12,
+    fontWeight: "800",
+    letterSpacing: 0.3,
+  },
+  timeValue: {
+    color: c.accent,
+    fontSize: 13,
+    fontWeight: "800",
+    letterSpacing: 0.5,
+  },
+  timeModalBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "flex-end",
+  },
+  timeModalSheet: {
+    backgroundColor: c.bg,
+    borderTopLeftRadius: 14,
+    borderTopRightRadius: 14,
+    paddingBottom: 28,
+    borderTopWidth: 1,
+    borderTopColor: c.border,
+  },
+  timeModalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 18,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: c.border,
+  },
+  timeModalTitle: {
+    color: c.textPrimary,
+    fontWeight: "800",
+    fontSize: 13,
+    letterSpacing: 1,
+  },
+  timeModalCancel: {
+    color: c.textSecondary,
+    fontSize: 13,
+    fontWeight: "600",
+  },
+  timeModalDone: {
+    color: c.accent,
+    fontSize: 13,
+    fontWeight: "800",
+  },
+  // Reminder-period picker rows (Borrow-Reminder modal)
+  periodOptionRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: c.border,
+  },
+  periodOptionRowActive: {
+    backgroundColor: "rgba(237, 126, 44, 0.08)",
+  },
+  periodOptionLabel: {
+    color: c.textPrimary,
+    fontSize: 15,
+    fontWeight: "600",
+  },
+  badge: {
+    minWidth: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: c.accent,
+    paddingHorizontal: 7,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 8,
+  },
+  badgeText: {
+    color: "#000",
+    fontSize: 8,
+    fontWeight: "900",
+    letterSpacing: 0.5,
+  },
+
+  homeRowsCard: {
+    marginHorizontal: 16,
+    marginBottom: 16,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    backgroundColor: c.surface,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: c.borderSubtle,
+  
+    ...(theme.elevation.md as object),
+  },
+  homeRowsTitle: {
+    color: c.accent,
+    fontSize: 8,
+    fontWeight: "900",
+    letterSpacing: 1.5,
+  },
+  homeRowsHelp: {
+    color: c.textSecondary,
+    fontSize: 8,
+    marginTop: 4,
+    marginBottom: 8,
+  },
+  homeRowToggle: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingVertical: 5,
+    borderTopWidth: 1,
+    borderTopColor: c.borderSubtle,
+  },
+  homeRowMoveCol: {
+    flexDirection: "column",
+    gap: 2,
+  },
+  homeRowMoveBtn: {
+    width: 20,
+    height: 15,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: c.border,
+    borderRadius: 4,
+    backgroundColor: c.bg,
+  },
+  homeRowToggleLabel: {
+    flex: 1,
+    color: c.textPrimary,
+    fontSize: 10,
+    fontWeight: "600",
+  },
+}));

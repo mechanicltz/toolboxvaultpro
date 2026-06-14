@@ -24,9 +24,14 @@ DONE — server.py 5,319 → **2,316 lines (−56%)**; **53/53 tests pass**
 STILL in server.py (P2 — large/shared, leave for later): stats/aggregate,
 sale/sold, per-tool documents, theft/loss, bulk ops, insurance-claims wiring,
 personal-profile, account-delete, auth/admin, demo-seed, startup/indexes.
-DEFERRED (P2): frontend `more.tsx`/`index.tsx` — components tightly coupled to a
-module-scope themed `styles` object; needs style-block extraction + on-device
-verification (web preview renders skinned screens black).
+DEFERRED (P2): frontend deep component extraction. PROGRESS: `more.tsx`
+1,764 → 1,219 lines — its 4 style blocks moved to `src/screens/more/moreStyles.ts`
+(F1a, behaviour-identical; More screen verified rendering on web). `index.tsx`
+styles already live in `src/screens/home/homeStyles.ts`. Remaining (riskier):
+extracting the More screen's presentational components (`Row`/`SectionRow`/
+`SectionCard`) — possible now that `styles` is an importable module — and any
+`index.tsx` sub-sections. Needs on-device verification (web preview renders
+skinned screens black; text-only checks pass).
 
 ## God-file refactor — earlier checkpoint notes
 
