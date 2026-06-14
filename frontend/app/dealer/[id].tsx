@@ -289,6 +289,16 @@ export default function DealerDetail() {
       </ShadowBox>
     );
 
+  // Expanded agent business-card body. In a metal skin the floating ShadowBox
+  // looks wrong sitting inside the frame, so render a flat plate (no shadow);
+  // plain Light/Dark themes keep the floating sub-card.
+  const AgentSubShell = ({ children }: { children: React.ReactNode }) =>
+    isIndustrial ? (
+      <View style={[styles.agentCard, styles.agentCardSkin]}>{children}</View>
+    ) : (
+      <ShadowBoxSubCard style={styles.agentCard}>{children}</ShadowBoxSubCard>
+    );
+
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <IndustrialBanner
@@ -551,7 +561,7 @@ export default function DealerDetail() {
                     </View>
                   </TouchableOpacity>
                   {isOpen && (
-                    <ShadowBoxSubCard style={styles.agentCard}>
+                    <AgentSubShell>
                       {/* Top action toolbar — contact + manage icons on their
                           own row, right-aligned, above the agent name. */}
                       <View style={styles.agentTopActions}>
@@ -671,7 +681,7 @@ export default function DealerDetail() {
                           </TouchableOpacity>
                         </View>
                       )}
-                    </ShadowBoxSubCard>
+                    </AgentSubShell>
                   )}
                 </View>
               );
@@ -1417,6 +1427,13 @@ const styles = themedStyles((c) => ({
     letterSpacing: 0.3,
   },
   agentCard: { paddingTop: 10, paddingBottom: 10, paddingHorizontal: 12 },
+  agentCardSkin: {
+    marginTop: 4,
+    marginBottom: 6,
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.accent + "44",
+    backgroundColor: "transparent",
+  },
   agentTopActions: {
     flexDirection: "row",
     alignItems: "center",

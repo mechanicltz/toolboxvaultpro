@@ -138,3 +138,32 @@ def test_fetch_inventory_no_bundles_falls_back():
     stats = _stats_dict(result)
     assert stats.get("Total Cost") == "$50.00"
     assert "Items + Bundles" not in stats
+
+
+def test_fetch_inventory_bundle_mode_sets_footer_override():
+    """In bundle mode the table footer total must be the unbundled items'
+    cost PLUS each set price (counted once) — NOT the sum of bundled items'
+    individual prices. Exposed via footer_total_overrides['cost']."""
+    db = _FakeDB(TOOLS, BUNDLES)
+    result = asyncio.get_event_loop().run_until_complete(
+        _fetch_inventory(db, None, {"set_pricing": "bundle"})
+    )
+    assert result.get("footer_total_overrides") == {"cost": 130.0}
+
+
+def test_fetch_inventory_both_mode_no_footer_override():
+    """Both/individual modes keep the raw per-item footer total (no override)."""
+    db = _FakeDB(TOOLS, BUNDLES)
+    for mode in ("both", "individual"):
+        result = asyncio.get_event_loop().run_until_complete(
+            _fetch_inventory(db, None, {"set_pricing": mode})
+        )
+        assert not result.get("footer_total_overrides")
+
+
+def test_fetch_inventory_bundle_mode_no_bundles_no_override():
+    db = _FakeDB([t for t in TOOLS if not t.get("bundle_id")], [])
+    result = asyncio.get_event_loop().run_until_complete(
+        _fetch_inventory(db, None, {"set_pricing": "bundle"})
+    )
+    assert not result.get("footer_total_overrides")

@@ -107,13 +107,14 @@ export default function DealerToolsScreen() {
       {(() => {
         const cells = (
           <>
-            <View style={styles.summaryCell}>
-              <Text style={styles.summaryValue}>{tools.length}</Text>
-              <Text style={styles.summaryLabel}>TOTAL TOOLS</Text>
+            <View style={[styles.summaryCell, isIndustrial && styles.summaryCellSkin]}>
+              <Text style={[styles.summaryValue, isIndustrial && styles.summaryValueSkin]}>{tools.length}</Text>
+              <Text style={[styles.summaryLabel, isIndustrial && styles.summaryLabelSkin]}>TOTAL TOOLS</Text>
             </View>
-            <View style={[styles.summaryCell, styles.summaryCellAccent]}>
-              <Text style={styles.summaryValueAccent}>${total.toFixed(2)}</Text>
-              <Text style={styles.summaryLabelAccent}>TOTAL INVESTED</Text>
+            {isIndustrial && <View style={styles.summaryDividerSkin} />}
+            <View style={[styles.summaryCell, styles.summaryCellAccent, isIndustrial && styles.summaryCellSkin]}>
+              <Text style={[styles.summaryValueAccent, isIndustrial && styles.summaryValueAccentSkin]}>${total.toFixed(2)}</Text>
+              <Text style={[styles.summaryLabelAccent, isIndustrial && styles.summaryLabelAccentSkin]}>TOTAL INVESTED</Text>
             </View>
           </>
         );
@@ -251,6 +252,31 @@ const styles = themedStyles((c) => ({
   },
   summarySkinWrap: { marginHorizontal: 14, marginVertical: 10 },
   summaryRowInner: { flexDirection: "row", gap: 10 },
+  // Skinned summary: drop the box chrome (surface bg / border / shadow) so the
+  // stats sit directly on the metal window. Text colors are bumped for
+  // legibility against the dark plate.
+  summaryCellSkin: {
+    backgroundColor: "transparent",
+    borderWidth: 0,
+    paddingVertical: 4,
+    paddingHorizontal: 6,
+    shadowColor: "transparent",
+    shadowOpacity: 0,
+    shadowRadius: 0,
+    shadowOffset: { width: 0, height: 0 },
+    elevation: 0,
+  },
+  summaryDividerSkin: {
+    width: 1,
+    alignSelf: "stretch",
+    marginVertical: 4,
+    backgroundColor: c.accent,
+    opacity: 0.35,
+  },
+  summaryValueSkin: { color: c.textPrimary },
+  summaryLabelSkin: { color: c.textSecondary, opacity: 1 },
+  summaryValueAccentSkin: { color: c.accent },
+  summaryLabelAccentSkin: { color: c.accent, opacity: 0.9 },
   rowSkinWrap: { marginHorizontal: 14, marginBottom: 10 },
   rowSkinInner: { flexDirection: "row", alignItems: "center", gap: 10 },
   summaryCell: {

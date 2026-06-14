@@ -586,9 +586,11 @@ def _truncate_to_fit(text: str, font: str, size: float, max_w: float) -> str:
 
 
 def _data_table(cols: List[Column], rows: List[Dict[str, Any]],
-                accent_hex: str, st: Dict[str, ParagraphStyle]) -> Any:
+                accent_hex: str, st: Dict[str, ParagraphStyle],
+                total_overrides: Optional[Dict[str, float]] = None) -> Any:
     if not rows:
         return _para("No items match the selected filters.", st["muted"])
+    total_overrides = total_overrides or {}
 
     accent = colors.HexColor(ACCENT_HEX)
     # Auto-prepend a "#" line-number column when there's >1 row.
@@ -680,10 +682,14 @@ def _data_table(cols: List[Column], rows: List[Dict[str, Any]],
         _items = [r for r in rows if not r.get("_section_header")]
         for c in cols:
             if c.type == "money":
-                t = sum(numeric_value(r, c.id) for r in _items)
+                t = total_overrides.get(c.id)
+                if t is None:
+                    t = sum(numeric_value(r, c.id) for r in _items)
                 foot.append(_para(f"<b>{fmt_money(t)}</b>", st["small_bold_right"]))
             elif c.type == "number":
-                t = sum(numeric_value(r, c.id) for r in _items)
+                t = total_overrides.get(c.id)
+                if t is None:
+                    t = sum(numeric_value(r, c.id) for r in _items)
                 foot.append(_para(f"<b>{t:,.0f}</b>", st["small_bold_right"]))
             elif not label_placed:
                 label_placed = True
@@ -881,6 +887,7 @@ def render_pdf(spec: ReportSpec, cols: List[Column],
     st = _styles(spec.accent)
     story: List[Any] = []
     story.extend(_title_block(spec, st, subtitle=fetch_result.get("subtitle")))
+    footer_total_overrides = fetch_result.get("footer_total_overrides") or {}
 
     if personal_info:
         story.append(_personal_info_block(personal_info, spec.accent, st))
@@ -935,7 +942,8 @@ def render_pdf(spec: ReportSpec, cols: List[Column],
             )
             story.append(_data_table(cols, grows, spec.accent, st))
     else:
-        story.append(_data_table(cols, rows, spec.accent, st))
+        story.append(_data_table(cols, rows, spec.accent, st,
+                                 total_overrides=footer_total_overrides))
 
     # Append receipt pages if requested (one page per receipt photo)
     receipts_meta = fetch_result.get("receipts_meta") or []
@@ -957,7 +965,9 @@ def render_pdf(spec: ReportSpec, cols: List[Column],
 # CSV rendering
 # ---------------------------------------------------------------------------
 
-def render_csv(cols: List[Column], rows: List[Dict[str, Any]]) -> bytes:
+def render_csv(cols: List[Column], rows: List[Dict[str, Any]],
+               total_overrides: Optional[Dict[str, float]] = None) -> bytes:
+    total_overrides = total_overrides or {}
     buf = io.StringIO()
     w = _csv.writer(buf)
     # Drop pseudo section-header rows — they are a PDF-only grouping affordance
@@ -985,7 +995,9 @@ def render_csv(cols: List[Column], rows: List[Dict[str, Any]]) -> bytes:
         first_label_placed = False
         for c in cols:
             if c.type in ("money", "number"):
-                tot = sum(numeric_value(r, c.id) for r in data_rows)
+                tot = total_overrides.get(c.id)
+                if tot is None:
+                    tot = sum(numeric_value(r, c.id) for r in data_rows)
                 foot.append(f"{tot:.2f}" if c.type == "money" else f"{tot:.0f}")
             elif not first_label_placed:
                 first_label_placed = True
@@ -1411,11 +1423,14 @@ async def _fetch_insurance(db, user, options: Dict[str, Any]) -> Dict[str, Any]:
     # Set pricing: dual sums + grouping under each set's header.
     bundles_map = await _load_bundles_map(db)
     mode = (options.get("set_pricing") or "both").strip().lower()
+    _, items_bundles, has_bundles = _bundle_sums(rows, bundles_map)
     value_stats, should_group = _bundle_value_stats(rows, bundles_map, mode, "Total Value")
     if should_group:
         rows = _group_rows_by_bundle(rows, bundles_map)
     stats = [("Total Items", items_label, False), *value_stats]
     out: Dict[str, Any] = {"rows": rows, "stats": stats, "personal_info": pi}
+    if mode == "bundle" and has_bundles:
+        out["footer_total_overrides"] = {"cost": items_bundles}
     if receipts_meta is not None:
         out["receipts_meta"] = receipts_meta
     return out
@@ -1470,11 +1485,17 @@ async def _fetch_inventory(db, user, options: Dict[str, Any]) -> Dict[str, Any]:
     # Set pricing: dual sums + grouping under each set's header.
     bundles_map = await _load_bundles_map(db)
     mode = (options.get("set_pricing") or "both").strip().lower()
+    _, items_bundles, has_bundles = _bundle_sums(rows, bundles_map)
     value_stats, should_group = _bundle_value_stats(rows, bundles_map, mode, "Total Cost")
     if should_group:
         rows = _group_rows_by_bundle(rows, bundles_map)
     stats = [("Total Items", items_label, False), *value_stats]
     out: Dict[str, Any] = {"rows": rows, "stats": stats}
+    # In "bundle" mode the table footer total must reflect unbundled items'
+    # individual cost PLUS each set's set price (counted once) — never the
+    # bundled items' individual prices. Override the "cost" column footer.
+    if mode == "bundle" and has_bundles:
+        out["footer_total_overrides"] = {"cost": items_bundles}
     if receipts_meta is not None:
         out["receipts_meta"] = receipts_meta
     return out
@@ -2421,7 +2442,6 @@ async def _fetch_year_end(db, user, options: Dict[str, Any]) -> Dict[str, Any]:
         ("Sold", str(total_sold_count), False),
         ("Lost / Stolen", str(total_lost_count + total_stolen_count), False),
         *spent_stats,
-        ("Total Recovered", fmt_money(total_recovered), True),
     ]
     if include_repairs:
         stats.append(("Repair Cost", fmt_money(total_repair_cost), True))
@@ -2619,10 +2639,9 @@ REPORTS: Dict[str, ReportSpec] = {
             Column("ye_event_date", "Event Date", "left", "date"),
             Column("cost", "Cost", "right", "money"),
             Column("msrp", "MSRP", "right", "money"),
-            Column("ye_recovered", "Recovered", "right", "money"),
             Column("repair_cost", "Repair Cost", "right", "money"),
         ],
-        default_columns=["name", "serial", "purchase_date", "ye_status", "ye_event_date", "cost", "ye_recovered"],
+        default_columns=["name", "serial", "purchase_date", "ye_status", "ye_event_date", "cost", "repair_cost"],
         fetch=_fetch_year_end,
         options_schema=[
             SET_PRICING_OPTION,
@@ -2804,7 +2823,8 @@ def make_reports_router(api_router: APIRouter, get_db, get_current_user) -> None
 
         filename_base = f"{spec.id}-report-{datetime.now().strftime('%Y%m%d-%H%M%S')}"
         if fmt == "csv":
-            data = render_csv(cols, result.get("rows") or [])
+            data = render_csv(cols, result.get("rows") or [],
+                              total_overrides=result.get("footer_total_overrides"))
             return Response(
                 content=data, media_type="text/csv",
                 headers={
