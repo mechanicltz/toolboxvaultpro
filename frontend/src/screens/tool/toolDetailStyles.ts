@@ -1,0 +1,1695 @@
+// Tool detail screen styles — extracted from app/tool/[id].tsx to shrink that
+// god-file (refactor F2). Theme-reactive via themedStyles; behaviour/appearance
+// is unchanged. The 4 blocks (qsStyles, styles, newStyles, pickerStyles) were
+// moved verbatim; only `export` was added to each top-level const.
+import { StyleSheet } from "react-native";
+import { theme } from "../../theme";
+import { themedStyles } from "../../themeContext";
+import { TBV } from "../../tbv/skins";
+
+export const qsStyles = themedStyles((c) => ({
+  box: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 14,
+    marginTop: 4,
+    marginBottom: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: c.border,
+    backgroundColor: c.surface,
+  
+    ...(theme.elevation.md as object),
+  },
+  label: {
+    color: c.textMuted,
+    fontSize: 7,
+    fontWeight: "800",
+    letterSpacing: 1.4,
+  },
+  sub: {
+    color: c.textSecondary,
+    fontSize: 9,
+    marginTop: 3,
+  },
+  row: { flexDirection: "row", alignItems: "center", gap: 6 },
+  btn: {
+    width: 36,
+    height: 36,
+    borderRadius: 8,
+    backgroundColor: c.accent,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  btnDisabled: {
+    backgroundColor: c.bg,
+    borderWidth: 1,
+    borderColor: c.border,
+  },
+  value: {
+    minWidth: 48,
+    textAlign: "center",
+    color: c.textPrimary,
+    fontSize: 16,
+    fontWeight: "900",
+    paddingHorizontal: 6,
+    paddingVertical: 0,
+  },
+}));
+
+
+
+export const styles = themedStyles((c) => ({
+  container: { flex: 1, backgroundColor: c.canvas },
+  // Iron Forge: container goes see-through so the metal ImageBackground (wrapped
+  // around this screen) reads through, and the stack scene's default white is
+  // never visible behind the banner / action cluster.
+  containerSkin: { backgroundColor: "transparent" },
+  skinBg: { flex: 1, backgroundColor: TBV.ink },
+  skinVeil: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(10,10,10,0.60)" },
+  bodyContainer: { paddingHorizontal: 16, paddingBottom: 12 },
+  infoCard: {
+    backgroundColor: c.bgSecondary,
+    borderWidth: 1,
+    borderColor: c.border,
+    borderRadius: theme.radii.md,
+    padding: 18,
+    marginBottom: 16,
+    overflow: "hidden",
+    ...(theme.elevation.md as object),
+  },
+  topBar: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+  },
+  heroBox: { backgroundColor: c.bgSecondary, marginBottom: 16 },
+  heroImg: { width: "100%", height: 280, resizeMode: "cover" },
+  heroPlaceholder: {
+    height: 220,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: c.surface,
+  },
+  addPhotoPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderRadius: theme.radii.md,
+    borderWidth: 1,
+    borderColor: c.accent,
+    backgroundColor: c.bgSecondary,
+    marginBottom: 14,
+    ...(theme.elevation.md as object),
+  },
+  addPhotoPillText: {
+    color: c.accent,
+    fontSize: 9,
+    fontWeight: "800",
+    letterSpacing: 1,
+  },
+  posterRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: 10,
+    paddingHorizontal: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: c.borderSubtle,
+  },
+  posterRowLabel: {
+    flex: 1,
+    color: c.textPrimary,
+    fontSize: 12,
+    fontWeight: "600",
+  },
+  thumbStrip: { backgroundColor: c.bg },
+  thumbSm: {
+    width: 56,
+    height: 56,
+    borderWidth: 1,
+    borderColor: c.border,
+  },
+  thumbActive: { borderColor: c.accent, borderWidth: 2 },
+  statusBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderWidth: 1,
+    borderRadius: theme.radii.md,
+    backgroundColor: c.bgSecondary,
+    gap: 8,
+    marginBottom: 14,
+    ...(theme.elevation.md as object),
+  },
+  statusDot: { width: 10, height: 10, borderRadius: 5 },
+  statusText: { color: c.textPrimary, fontWeight: "800", letterSpacing: 1, fontSize: 9 },
+  statusSub: { color: c.textSecondary, fontSize: 8, marginTop: 2 },
+  repairBanner: {
+    padding: 14,
+    borderWidth: 1,
+    borderColor: c.danger,
+    backgroundColor: "rgba(239, 68, 68, 0.18)",
+    borderRadius: theme.radii.md,
+    marginBottom: 16,
+    ...(theme.elevation.md as object),
+  },
+  repairTitle: {
+    color: "#FCA5A5",
+    fontWeight: "900",
+    letterSpacing: 1.5,
+    fontSize: 9,
+    marginBottom: 4,
+  },
+  repairLine: { color: c.textPrimary, fontSize: 10, marginTop: 1 },
+  brokenPhoto: {
+    width: "100%",
+    height: 220,
+    borderRadius: 6,
+    marginTop: 12,
+    backgroundColor: c.bg,
+  },
+  notifyRow: {
+    flexDirection: "row",
+    gap: 8,
+    marginTop: 12,
+  },
+  notifyBtn: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingVertical: 11,
+    backgroundColor: c.danger,
+    borderRadius: 4,
+  },
+  notifyText: {
+    color: "#fff",
+    fontWeight: "900",
+    fontSize: 8,
+    letterSpacing: 1.2,
+  },
+  title: { color: c.textPrimary, fontSize: 19, fontWeight: "900", letterSpacing: 1 },
+  description: { color: c.textSecondary, fontSize: 11, marginTop: 8, lineHeight: 16 },
+  tagWrap: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 16 },
+  detailRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    backgroundColor: c.surface,
+    borderWidth: 1,
+    borderColor: c.border,
+    borderRadius: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    marginTop: 10,
+  
+    ...(theme.elevation.md as object),
+  },
+  detailRowLabel: {
+    color: c.textMuted,
+    fontSize: 7,
+    fontWeight: "800",
+    letterSpacing: 1.8,
+    marginBottom: 2,
+  },
+  detailRowValue: {
+    color: c.textPrimary,
+    fontSize: 10,
+    fontWeight: "700",
+  },
+  // Sale / Sold banner
+  saleBanner: {
+    backgroundColor: c.accent,
+    borderRadius: 10,
+    padding: 14,
+    marginTop: 12,
+    marginBottom: 6,
+  },
+  listForSaleCta: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    backgroundColor: c.surface,
+    borderWidth: 1,
+    borderColor: c.accent,
+    borderStyle: "dashed",
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    marginTop: 12,
+    marginBottom: 6,
+  
+    ...(theme.elevation.md as object),
+  },
+  listForSaleCtaText: {
+    flex: 1,
+    color: c.accent,
+    fontWeight: "900",
+    fontSize: 10,
+    letterSpacing: 1.5,
+  },
+  saleBannerTitle: {
+    color: "#000",
+    fontWeight: "900",
+    fontSize: 10,
+    letterSpacing: 2,
+  },
+  saleBannerPrice: {
+    color: "#000",
+    fontSize: 14,
+    fontWeight: "900",
+    marginTop: 4,
+  },
+  saleBannerNotes: {
+    color: "rgba(0,0,0,0.7)",
+    fontSize: 8,
+    marginTop: 4,
+    fontStyle: "italic",
+  },
+  markSoldBtn: {
+    flexDirection: "row",
+    gap: 6,
+    alignItems: "center",
+    backgroundColor: "#27AE60",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 6,
+  },
+  markSoldText: {
+    color: "#fff",
+    fontWeight: "900",
+    fontSize: 8,
+    letterSpacing: 1.5,
+  },
+  // Generic modal helpers
+  modalBg: { flex: 1, backgroundColor: "rgba(0,0,0,0.7)", justifyContent: "flex-end" },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.6)",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 16,
+  },
+  modalCard: {
+    width: "100%",
+    maxWidth: 460,
+    backgroundColor: c.bgSecondary,
+    borderWidth: 1,
+    borderColor: c.border,
+    borderRadius: 12,
+    padding: 18,
+  },
+  modalHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    marginBottom: 12,
+  },
+  modalTitle: {
+    flex: 1,
+    color: c.textPrimary,
+    fontSize: 10,
+    fontWeight: "900",
+    letterSpacing: 1.5,
+  },
+  modalBtn: {
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: "center",
+  },
+  modalBtnText: {
+    fontWeight: "900",
+    fontSize: 9,
+    letterSpacing: 1.5,
+  },
+  tag: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderWidth: 1,
+    borderColor: c.accent,
+    backgroundColor: "rgba(249, 115, 22,0.15)",
+    borderRadius: 2,
+  },
+  tagText: { color: c.accent, fontSize: 8, fontWeight: "700", letterSpacing: 0.5 },
+  grid: { flexDirection: "row", flexWrap: "wrap", marginTop: 24, gap: 0 },
+  field: {
+    width: "50%",
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: c.borderSubtle,
+  },
+  fieldLabel: {
+    color: c.textMuted,
+    fontSize: 7,
+    letterSpacing: 1.5,
+    fontWeight: "800",
+    textTransform: "uppercase",
+  },
+  fieldValue: { color: c.textPrimary, fontSize: 10, fontWeight: "600", marginTop: 4 },
+  sectionLabel: {
+    color: c.textMuted,
+    fontSize: 8,
+    letterSpacing: 2,
+    fontWeight: "800",
+    marginTop: 28,
+    marginBottom: 12,
+  },
+  docRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: c.borderSubtle,
+  },
+  docName: { color: c.textPrimary, flex: 1, fontSize: 10 },
+  histRow: {
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: c.borderSubtle,
+  },
+  histName: { color: c.textPrimary, fontWeight: "700", fontSize: 10 },
+  histDate: { color: c.textSecondary, fontSize: 9, marginTop: 2 },
+  histNotes: { color: c.textMuted, fontSize: 9, marginTop: 4, fontStyle: "italic" },
+  consumableBox: {
+    marginTop: 16, padding: 12, borderWidth: 1,
+    borderColor: c.accent, backgroundColor: "rgba(249, 115, 22,0.08)", borderRadius: 4,
+  },
+  warrantyBox: {
+    marginTop: 12, padding: 12, borderWidth: 1,
+    borderColor: c.success, backgroundColor: "rgba(34,197,94,0.06)", borderRadius: 4,
+  },
+  consumableHead: { flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 8 },
+  consumableTitle: { color: c.accent, fontWeight: "900", letterSpacing: 1.5, fontSize: 9 },
+  consumableLine: { color: c.textPrimary, fontSize: 10, marginTop: 2 },
+  actionBar: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    paddingHorizontal: 14,
+    paddingTop: 14,
+    paddingBottom: 24,
+    backgroundColor: "rgba(15, 15, 15, 0.96)",
+    borderTopWidth: 1,
+    borderTopColor: c.border,
+  },
+  btn: {
+    flexDirection: "row",
+    backgroundColor: c.accent,
+    height: 54,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: theme.radii.md,
+    gap: 8,
+    ...(theme.elevation.accent as object),
+  },
+  btnSuccess: {
+    flexDirection: "row",
+    backgroundColor: c.success,
+    height: 54,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: theme.radii.md,
+    gap: 8,
+    ...(theme.elevation.md as object),
+  },
+  btnDanger: {
+    flexDirection: "row",
+    backgroundColor: c.danger,
+    height: 54,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: theme.radii.md,
+    gap: 6,
+    ...(theme.elevation.md as object),
+  },
+  repairLabel: {
+    color: c.textMuted,
+    fontSize: 7,
+    fontWeight: "800",
+    letterSpacing: 1.5,
+    marginTop: 8,
+    marginBottom: 4,
+  },
+  dealerLockBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: c.surface,
+    borderWidth: 1,
+    borderColor: c.border,
+    borderRadius: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginBottom: 8,
+  
+    ...(theme.elevation.md as object),
+  },
+  dealerLockName: {
+    flex: 1,
+    color: c.textPrimary,
+    fontSize: 10,
+    fontWeight: "700",
+  },
+  dealerLockMissing: {
+    flex: 1,
+    color: c.warning,
+    fontSize: 9,
+    fontStyle: "italic",
+  },
+  repChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderWidth: 1,
+    borderColor: c.border,
+    borderRadius: 4,
+  },
+  repChipActive: {
+    borderColor: c.danger,
+    backgroundColor: c.danger,
+  },
+  repChipText: { color: c.textSecondary, fontSize: 9, fontWeight: "700", letterSpacing: 0.5 },
+  repChipTextActive: { color: c.textPrimary },
+  btnText: { color: "#000", fontWeight: "900", letterSpacing: 2, fontSize: 10 },
+  segment: {
+    flexDirection: "row",
+    borderWidth: 1,
+    borderColor: c.border,
+    marginBottom: 14,
+    borderRadius: 4,
+    overflow: "hidden",
+  },
+  segBtn: { flex: 1, paddingVertical: 12, alignItems: "center" },
+  segBtnActive: { backgroundColor: "transparent", borderWidth: 2, borderColor: c.accent, borderRadius: 4 },
+  segText: { color: c.textSecondary, fontWeight: "800", fontSize: 9, letterSpacing: 1 },
+  segTextActive: { color: c.accent },
+  borrowerPick: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderWidth: 1,
+    borderColor: c.border,
+    marginBottom: 6,
+    borderRadius: 4,
+  },
+  borrowerPickActive: { borderColor: c.accent, backgroundColor: "rgba(249, 115, 22,0.1)" },
+  borrowerName: { color: c.textPrimary, fontWeight: "600", fontSize: 10 },
+  input: {
+    backgroundColor: c.bg,
+    borderWidth: 1,
+    borderColor: c.border,
+    color: c.textPrimary,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    height: 48,
+    borderRadius: 4,
+    marginBottom: 10,
+    fontSize: 11,
+  },
+  modalActions: { flexDirection: "row", gap: 10, marginTop: 4 },
+  helper: {
+    color: c.textMuted,
+    fontSize: 11,
+    lineHeight: 16,
+  },
+  locInlineRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "transparent",
+    marginBottom: 6,
+    backgroundColor: c.bgSecondary,
+  },
+  locInlineRowActive: {
+    borderColor: c.accent,
+    backgroundColor: "transparent",
+  },
+  locInlineText: {
+    flex: 1,
+    color: c.textPrimary,
+    fontSize: 14,
+    fontWeight: "700",
+  },
+  locInlineTextActive: {
+    color: c.accent,
+    fontWeight: "900",
+  },
+  btnGhost: {
+    borderWidth: 1,
+    borderColor: c.border,
+    height: 48,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 4,
+    marginTop: 4,
+  },
+  btnGhostText: { color: c.textPrimary, fontWeight: "800", letterSpacing: 2, fontSize: 10 },
+  btnPrimary: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    backgroundColor: c.accent,
+    height: 48,
+    borderRadius: 4,
+    paddingHorizontal: 12,
+  },
+  btnPrimaryText: {
+    color: "#000",
+    fontWeight: "900",
+    letterSpacing: 1.5,
+    fontSize: 11,
+    textAlign: "center",
+  },
+}));
+
+// New styles for the redesigned Tool Detail layout. Kept in a separate
+// StyleSheet so the original `styles` object isn't disturbed.
+export const newStyles = themedStyles((c) => ({
+  // ---------- DETAIL ACTIONS ROW (under banner) ----------
+  detailActionsRow: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingTop: 10,
+    paddingBottom: 4,
+  },
+  detailActionBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: "rgba(15,15,15,0.9)",
+    borderWidth: 1,
+    borderColor: c.accent,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 5,
+  },
+  detailActionText: {
+    color: c.accent,
+    fontSize: 8,
+    fontWeight: "900",
+    letterSpacing: 1.2,
+  },
+  // ---------- HEADER ----------
+  headerBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 14,
+    paddingTop: 8,
+    paddingBottom: 12,
+    gap: 10,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: c.border,
+  },
+  headerTitleCol: {
+    flex: 1,
+    minWidth: 0, // critical: lets the title shrink instead of pushing buttons off-screen
+  },
+  headerTitle: {
+    color: c.textPrimary,
+    fontWeight: "800",
+    fontSize: 20,
+    lineHeight: 24,
+  },
+  headerSerial: {
+    color: c.textMuted,
+    fontSize: 12,
+    fontWeight: "600",
+    letterSpacing: 0.6,
+    marginTop: 2,
+  },
+  headerActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 16,
+    flexShrink: 0,
+  },
+
+  // ---------- PAGE WRAPPER ----------
+  page: {
+    paddingHorizontal: 14,
+    paddingTop: 14,
+    gap: 14,
+    // Tablet/wide: keep the detail column (and its full-width action buttons)
+    // a readable size, centered, instead of stretching edge-to-edge. On phones
+    // (width < 760) maxWidth never constrains, so layout is unchanged.
+    width: "100%",
+    maxWidth: 760,
+    alignSelf: "center",
+  },
+
+  // ---------- STATUS PILLBOX ROW ----------
+  statusPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: c.bgSecondary,
+    borderColor: c.border,
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    gap: 8,
+  
+    ...(theme.elevation.md as object),
+  },
+  statusDot: {
+    width: 9,
+    height: 9,
+    borderRadius: 999,
+  },
+  statusLabel: {
+    color: c.textPrimary,
+    fontWeight: "800",
+    fontSize: 12,
+    letterSpacing: 0.8,
+    flexShrink: 1,
+  },
+  statusActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    flexShrink: 0,
+  },
+  statusBtn: {
+    backgroundColor: c.accent,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 999,
+  },
+  statusBtnText: {
+    color: "#000",
+    fontWeight: "900",
+    fontSize: 10,
+    letterSpacing: 0.8,
+  },
+  statusBtnGhost: {
+    backgroundColor: c.bg,
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: c.border,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  // ---------- PHOTO + RIGHT-COLUMN PILLBOX FIELDS ----------
+  photoRow: {
+    flexDirection: "row",
+    gap: 12,
+    alignItems: "stretch",
+  },
+  // Iron Forge: photo + status/qty/price unified inside ONE metal window
+  // frame (the dealer "card" asset is a fixed-layout decorative card with
+  // baked photo/row slots, so it doesn't scale cleanly as a live container —
+  // the stretchable window frame gives the same one-container look reliably).
+  topUnifiedRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 14,
+  },
+  topUnifiedPhoto: {
+    width: 96,
+    height: 96,
+    marginLeft: 16,
+    borderRadius: 6,
+    overflow: "hidden",
+    backgroundColor: "#000",
+  },
+  topUnifiedRows: {
+    flex: 1,
+  },
+  dealerPhotoEmpty: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    backgroundColor: "rgba(0,0,0,0.35)",
+  },
+  photoFrame: {
+    width: 110,
+    height: 110,
+    borderRadius: 8,
+    backgroundColor: c.bgSecondary,
+    borderColor: c.border,
+    borderWidth: 1,
+    overflow: "hidden",
+    ...(theme.elevation.md as object),
+  },
+  photoImg: { width: "100%", height: "100%" },
+  photoEmpty: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    backgroundColor: c.bgSecondary,
+  },
+  photoEmptyText: {
+    color: c.accent,
+    fontSize: 10,
+    fontWeight: "800",
+    letterSpacing: 0.8,
+  },
+  photoRightCol: {
+    flex: 1,
+    justifyContent: "space-between",
+    gap: 6,
+  },
+
+  // ---------- PILLBOX ROW (used in PillRow component) ----------
+  pillRow: {
+    /* Surface (gradient + bevel borders + drop shadow) comes from
+       <BevelCard>. We only describe the inner flex layout here so the
+       gradient isn't obliterated by a flat bgSecondary fill. */
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    gap: 10,
+    minHeight: 28,
+    marginBottom: 6,
+  },
+  pillRowLabel: {
+    color: c.textPrimary,
+    fontWeight: "800",
+    fontSize: 9.5,
+    letterSpacing: 0.8,
+  },
+  pillRowSub: {
+    color: c.textMuted,
+    fontWeight: "600",
+    fontSize: 9,
+    marginTop: 1,
+  },
+  pillRowValue: {
+    backgroundColor: c.bg,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: c.border,
+    maxWidth: "60%",
+  },
+  pillRowValueText: {
+    color: c.textPrimary,
+    fontWeight: "800",
+    fontSize: 10,
+    letterSpacing: 0.3,
+  },
+  pillRowFlat: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 9,
+    gap: 10,
+  },
+  pillRowDivider: {
+    borderTopWidth: 1,
+    borderTopColor: c.borderSubtle,
+  },
+  statShadowBox: {
+    flex: 1,
+    justifyContent: "center",
+  },
+
+  // ---------- DESCRIPTION ----------
+  descBox: {
+    backgroundColor: c.bgSecondary,
+    borderColor: c.border,
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  
+    ...(theme.elevation.md as object),
+  },
+  descText: {
+    color: c.textPrimary,
+    fontSize: 14,
+    lineHeight: 20,
+  },
+
+  // ---------- DETAILS BOX (groups location/dealer/brand/model/purchased/category) ----------
+  detailsBox: {
+    backgroundColor: c.bgSecondary,
+    borderWidth: 1,
+    borderColor: c.border,
+    borderRadius: 6,
+    padding: 12,
+    marginTop: 4,
+  
+    ...(theme.elevation.md as object),
+  },
+  detailsRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: c.borderSubtle,
+    gap: 8,
+  },
+  detailsRowLast: {
+    borderBottomWidth: 0,
+  },
+  detailsRowTouchable: {
+    // Touchable variant keeps the same row look — only adds a subtle hint via chevron icon.
+  },
+  detailsLabel: {
+    color: c.textPrimary,
+    fontSize: 8,
+    fontWeight: "900",
+    letterSpacing: 1.5,
+  },
+  detailsLabelWrap: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    flexShrink: 0,
+  },
+  detailsValueWrap: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    flexShrink: 1,
+    maxWidth: "70%",
+    justifyContent: "flex-end",
+  },
+  detailsValue: {
+    color: c.textPrimary,
+    fontSize: 10,
+    fontWeight: "700",
+    textAlign: "right",
+    flexShrink: 1,
+  },
+  detailsExpanded: {
+    paddingTop: 4,
+    paddingBottom: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: c.borderSubtle,
+  },
+
+  // ---------- CHECKED OUT CARD (sits in the same slot as the claim card —
+  // immediately under the photo, above the description — styled like the
+  // red claim card but with a soft yellow tint per user request) ----------
+  checkedOutCard: {
+    backgroundColor: "rgba(249, 115, 22, 0.10)",
+    borderColor: c.accent,
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 12,
+  },
+  checkedOutTitle: {
+    color: c.accent,
+    fontWeight: "900",
+    fontSize: 12,
+    letterSpacing: 0.8,
+  },
+  checkedOutLine: {
+    color: c.textPrimary,
+    fontSize: 12,
+    marginTop: 4,
+  },
+  // Quick-action buttons (TEXT REMINDER / CALL) shown on the checked-out
+  // card when the borrower's phone is on file. Transparent w/ orange border
+  // matches the active-toggle styling rule used across the app.
+  qaBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 6,
+    backgroundColor: "transparent",
+    borderColor: c.accent,
+    borderWidth: 1,
+  },
+  qaBtnText: {
+    color: c.accent,
+    fontSize: 10,
+    fontWeight: "900",
+    letterSpacing: 1,
+  },
+
+  // ---------- (legacy) CHECKED OUT PILL — kept for back-compat in case
+  // any other screen still references these style keys ----------
+  checkedOutBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    backgroundColor: c.accent,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
+  checkedOutHeader: {
+    color: "#000",
+    fontWeight: "900",
+    fontSize: 13,
+    letterSpacing: 0.3,
+  },
+  checkedOutSub: {
+    color: "rgba(0,0,0,0.7)",
+    fontWeight: "700",
+    fontSize: 11,
+    marginTop: 2,
+  },
+
+  // ---------- TAGS ----------
+  tagWrap: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 6,
+  },
+  tagChip: {
+    backgroundColor: c.bgSecondary,
+    borderColor: c.border,
+    borderWidth: 1,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 999,
+  
+    ...(theme.elevation.md as object),
+  },
+  tagChipText: {
+    color: c.textPrimary,
+    fontSize: 9.5,
+    fontWeight: "800",
+    letterSpacing: 0.4,
+  },
+
+  // ---------- FIELD GROUP ----------
+  fieldGroup: {
+    gap: 6,
+  },
+
+  // ---------- LOCATION (wide pill, NO label) ----------
+  locationWide: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: c.bgSecondary,
+    borderColor: c.border,
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    minHeight: 28,
+  
+    ...(theme.elevation.md as object),
+  },
+  locationWideText: {
+    flex: 1,
+    color: c.textPrimary,
+    fontWeight: "800",
+    fontSize: 10,
+    letterSpacing: 0.3,
+  },
+
+  // ---------- HISTORY LINK ROWS (navigates to a dedicated page) ----------
+  historyLink: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    backgroundColor: c.bgSecondary,
+    borderColor: c.border,
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    marginTop: 8,
+    minHeight: 28,
+  
+    ...(theme.elevation.md as object),
+  },
+  historyLinkLabel: {
+    flex: 1,
+    color: c.textPrimary,
+    fontWeight: "800",
+    fontSize: 9.5,
+    letterSpacing: 0.8,
+  },
+  historyCount: {
+    minWidth: 24,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 999,
+    backgroundColor: c.bg,
+    borderWidth: 1,
+    borderColor: c.border,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  historyCountText: {
+    color: c.textPrimary,
+    fontWeight: "800",
+    fontSize: 10,
+  },
+
+  // ---------- MODEL NUMBERS (under Dealer) ----------
+  serialBox: {
+    backgroundColor: c.bgSecondary,
+    borderColor: c.border,
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    gap: 4,
+  
+    ...(theme.elevation.md as object),
+  },
+  serialBoxLabel: {
+    color: c.textPrimary,
+    fontWeight: "800",
+    fontSize: 9.5,
+    letterSpacing: 0.8,
+    marginBottom: 2,
+  },
+  serialRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: c.bg,
+    borderWidth: 1,
+    borderColor: c.border,
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+  },
+  serialIdx: {
+    color: c.textMuted,
+    fontSize: 9.5,
+    fontWeight: "800",
+    minWidth: 16,
+  },
+  serialVal: {
+    color: c.textPrimary,
+    fontWeight: "800",
+    fontSize: 10,
+    letterSpacing: 0.3,
+    flex: 1,
+  },
+
+  // ---------- SET SERIALS ----------
+  setSerialBox: {
+    backgroundColor: c.bgSecondary,
+    borderColor: c.border,
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    gap: 6,
+  
+    ...(theme.elevation.md as object),
+  },
+  setSerialRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  setSerialIdx: {
+    color: c.textMuted,
+    fontSize: 12,
+    fontWeight: "700",
+    width: 20,
+  },
+  setSerialVal: {
+    color: c.textPrimary,
+    fontWeight: "700",
+    fontSize: 13,
+    flex: 1,
+  },
+  emptyHint: {
+    color: c.textMuted,
+    fontStyle: "italic",
+    fontSize: 12,
+  },
+
+  // ---------- REPAIR / SALE CARDS ----------
+  // CLAIM INFORMATION — Description-Card-styled (matches WarrantySection
+  // exactly): compact 10pt title, 7pt sub + badge, smaller icon, smaller
+  // padding. The header is allowed to wrap nowrap so the badge sits cleanly
+  // on the same line as the title even on narrow phones.
+  claimBox: {
+    backgroundColor: c.bgSecondary,
+    borderWidth: 1,
+    borderColor: c.danger,
+    borderRadius: 6,
+    paddingHorizontal: 14,
+    paddingTop: 14,
+    paddingBottom: 16,
+    marginTop: 10,
+    ...(theme.elevation.md as object),
+  },
+  claimHead: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 8,
+  },
+  claimTitle: {
+    color: c.textPrimary,
+    fontSize: 10,
+    fontWeight: "900",
+    letterSpacing: 2,
+  },
+  claimSub: {
+    color: c.textMuted,
+    fontSize: 7,
+    fontWeight: "700",
+    letterSpacing: 1.5,
+    marginTop: 2,
+  },
+  claimBadge: {
+    borderWidth: 1,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 3,
+  },
+  claimBadgeText: {
+    fontSize: 7,
+    fontWeight: "900",
+    letterSpacing: 1.2,
+  },
+  // Inner inset card — same recipe as WarrantySection.card
+  claimCard: {
+    backgroundColor: c.bgSecondary,
+    borderWidth: 1,
+    borderColor: c.border,
+    borderRadius: 6,
+    padding: 12,
+    ...(theme.elevation.md as object),
+  },
+  // Skinned themes: drop the inset shadow-box so the rows + buttons sit
+  // directly on the metal frame.
+  claimCardSkin: {
+    backgroundColor: "transparent",
+    borderWidth: 0,
+    padding: 0,
+    shadowColor: "transparent",
+    shadowOpacity: 0,
+    shadowRadius: 0,
+    shadowOffset: { width: 0, height: 0 },
+    elevation: 0,
+  },
+  claimRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 6,
+    borderBottomWidth: 1,
+    borderBottomColor: c.borderSubtle,
+  },
+  claimRowLabel: {
+    color: c.textMuted,
+    fontSize: 10,
+    fontWeight: "800",
+    letterSpacing: 1.2,
+  },
+  claimRowValue: {
+    color: c.textPrimary,
+    fontSize: 14,
+    fontWeight: "800",
+  },
+  claimNotes: {
+    marginTop: 10,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: c.borderSubtle,
+  },
+  claimNotesText: {
+    color: c.textPrimary,
+    fontSize: 13,
+    lineHeight: 18,
+    marginTop: 4,
+    fontWeight: "500",
+  },
+  claimActionBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    borderRadius: 4,
+  },
+  claimActionBtnOutline: {
+    backgroundColor: "transparent",
+    borderWidth: 1.5,
+    borderColor: c.danger,
+  },
+  claimActionText: {
+    fontSize: 8,
+    fontWeight: "900",
+    letterSpacing: 1.2,
+  },
+  // Legacy styles below — kept for backward compat with any other
+  // surfaces that may still reference them.
+  repairCard: {
+    backgroundColor: "rgba(231, 76, 60, 0.08)",
+    borderColor: c.danger,
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 12,
+  },
+  repairTitle: {
+    color: c.danger,
+    fontWeight: "900",
+    fontSize: 12,
+    letterSpacing: 0.8,
+  },
+  repairLine: {
+    color: c.textPrimary,
+    fontSize: 12,
+    marginTop: 4,
+  },
+  saleCard: {
+    backgroundColor: c.accent,
+    borderRadius: 12,
+    padding: 12,
+  },
+  saleTitle: {
+    color: "#000",
+    fontWeight: "900",
+    fontSize: 13,
+    letterSpacing: 0.8,
+  },
+  saleNotes: {
+    color: "#000",
+    fontSize: 12,
+    marginTop: 2,
+  },
+  saleBtn: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 4,
+    paddingVertical: 8,
+    borderRadius: 999,
+  },
+  saleBtnText: {
+    fontWeight: "900",
+    fontSize: 10,
+    letterSpacing: 0.8,
+  },
+
+  // ---------- BOTTOM ACTION CLUSTER ----------
+  divider: {
+    height: 1,
+    backgroundColor: c.border,
+    marginVertical: 6,
+  },
+  sectionTitle: {
+    color: c.textMuted,
+    fontWeight: "800",
+    fontSize: 11,
+    letterSpacing: 1.2,
+  },
+  actionBtn: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    backgroundColor: c.bgSecondary,
+    borderColor: c.border,
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingVertical: 12,
+  
+    ...(theme.elevation.md as object),
+  },
+  actionRow: {
+    flexDirection: "row",
+    gap: 8,
+    marginTop: 8,
+  },
+  actionBtnText: {
+    color: c.textPrimary,
+    fontWeight: "800",
+    fontSize: 11,
+    letterSpacing: 0.8,
+  },
+
+  // ---------- BOTTOM ACTION GRID (full-width stacked tiles) ----------
+  actionGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginTop: 8,
+    // Tablet/iPad: keep the stacked full-width action buttons at a normal
+    // button size & centered instead of spanning the whole page. Phones
+    // (content width < 420) are unaffected.
+    width: "100%",
+    maxWidth: 420,
+    alignSelf: "center",
+  },
+  actionTile: {
+    width: "100%",
+    minHeight: 60,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    backgroundColor: c.bgSecondary,
+    borderColor: c.border,
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 4,
+  
+    ...(theme.elevation.md as object),
+  },
+  actionTileDanger: {
+    borderColor: c.danger,
+    backgroundColor: "rgba(220,38,38,0.08)",
+  },
+  actionTileText: {
+    color: c.textPrimary,
+    fontWeight: "800",
+    fontSize: 11,
+    letterSpacing: 0.8,
+    textAlign: "center",
+  },
+  // Iron Forge skinned action tile (steel button art) — full width, 1 per row
+  actionTileSkinWrap: {
+    width: "100%",
+    height: 64,
+  },
+  actionTileSkin: {
+    width: "100%",
+    height: "100%",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingHorizontal: 6,
+  },
+  actionTileSkinImg: {
+    borderRadius: 10,
+  },
+  // Matches the dashboard's primary metal buttons (dark bold label on the
+  // glowing btnPrimary plate, nudged up to clear the bottom bevel).
+  actionTileSkinText: {
+    color: "#0A0A0A",
+    fontWeight: "900",
+    fontSize: 11,
+    letterSpacing: 0.3,
+    textAlign: "center",
+    marginBottom: 4,
+  },
+
+  // ---------- ATTACHMENTS (collapsible pillboxes) ----------
+  attachWrap: {
+    marginTop: 8,
+  },
+  attachHeaderLabel: {
+    flex: 1,
+    color: c.textPrimary,
+    fontWeight: "800",
+    fontSize: 9.5,
+    letterSpacing: 0.8,
+  },
+  attachCountPill: {
+    minWidth: 24,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 999,
+    backgroundColor: c.bg,
+    borderWidth: 1,
+    borderColor: c.border,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  attachCountText: {
+    color: c.textPrimary,
+    fontWeight: "800",
+    fontSize: 10,
+  },
+  attachBody: {
+    marginTop: 8,
+    paddingHorizontal: 4,
+  },
+
+  // ---------- GALLERY thumbnail strip ----------
+  galleryRow: {
+    flexDirection: "row",
+    gap: 8,
+    paddingVertical: 4,
+  },
+  galleryThumb: {
+    width: 84,
+    height: 84,
+    borderRadius: 10,
+    backgroundColor: c.bg,
+    borderWidth: 1,
+    borderColor: c.border,
+  },
+  galleryAddTile: {
+    width: 84,
+    height: 84,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderStyle: "dashed",
+    borderColor: c.accent,
+    backgroundColor: c.bgSecondary,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  galleryEmpty: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingVertical: 16,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderStyle: "dashed",
+    borderColor: c.accent,
+  },
+  galleryEmptyText: {
+    color: c.accent,
+    fontWeight: "800",
+    fontSize: 12,
+    letterSpacing: 1,
+  },
+
+  // ---------- UNIFIED NESTED DESCRIPTION CARD ----------
+  // EXACT same card style as the WarrantySection's card from commit
+  // dccd9b3e (the styling that produced the user's IMG_6427.png
+  // reference). The 18px horizontal margin gives the inset look.
+  nestedCard: {
+    backgroundColor: c.bgSecondary,
+    borderWidth: 1,
+    borderColor: c.border,
+    borderRadius: 6,
+    padding: 12,
+    marginHorizontal: 18,
+    marginTop: 4,
+    marginBottom: 12,
+    ...(theme.elevation.md as object),
+  },
+  attachSection: {
+    paddingTop: 4,
+  },
+  attachHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 10,
+  },
+  attachSectionLabel: {
+    color: c.textMuted,
+    fontSize: 9,
+    fontWeight: "900",
+    letterSpacing: 2,
+  },
+  // Orange OUTLINE add button matching user's IMG_6430.png reference
+  // (per 2026-05-27): borderWidth + accent color, transparent fill,
+  // small + icon + uppercase text — identical to edit.tsx smallScanBtn.
+  attachAddBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    borderWidth: 1,
+    borderColor: c.accent,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 4,
+    backgroundColor: "transparent",
+  },
+  attachAddBtnText: {
+    color: c.accent,
+    fontSize: 8,
+    fontWeight: "900",
+    letterSpacing: 1.5,
+  },
+  attachEmpty: {
+    color: c.textMuted,
+    fontSize: 10,
+    fontStyle: "italic",
+    paddingVertical: 4,
+    lineHeight: 14,
+  },
+  // ---------- CONSUMABLE accordion content ----------
+  consumableBadge: {
+    borderWidth: 1,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 3,
+  },
+  consumableBadgeYes: { borderColor: c.success, backgroundColor: c.success + "15" },
+  consumableBadgeNo: { borderColor: c.border, backgroundColor: c.border + "20" },
+  consumableBadgeText: {
+    fontSize: 8,
+    fontWeight: "900",
+    letterSpacing: 1.5,
+  },
+  consRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: c.borderSubtle,
+    gap: 8,
+  },
+  consLabel: {
+    color: c.textMuted,
+    fontSize: 9,
+    fontWeight: "800",
+    letterSpacing: 1.5,
+  },
+  consValue: {
+    color: c.textPrimary,
+    fontSize: 11,
+    fontWeight: "700",
+    flexShrink: 1,
+    textAlign: "right",
+  },
+
+  // ---------- CHECKOUT HISTORY ----------
+  histRow: {
+    backgroundColor: c.bgSecondary,
+    borderColor: c.border,
+    borderWidth: 1,
+    borderRadius: 10,
+    padding: 10,
+    marginTop: 6,
+    gap: 2,
+  
+    ...(theme.elevation.md as object),
+  },
+  histName: {
+    color: c.textPrimary,
+    fontWeight: "800",
+    fontSize: 13,
+  },
+  histDate: {
+    color: c.textMuted,
+    fontSize: 11,
+  },
+  histNotes: {
+    color: c.textPrimary,
+    fontSize: 12,
+    fontStyle: "italic",
+    marginTop: 4,
+  },
+}));
+
+export const pickerStyles = themedStyles((c) => ({
+  choice: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 14,
+    paddingVertical: 14,
+    paddingHorizontal: 14,
+    backgroundColor: c.surface,
+    borderWidth: 1,
+    borderColor: c.border,
+    borderRadius: 12,
+    marginBottom: 10,
+  
+    ...(theme.elevation.md as object),
+  },
+  iconCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: c.accent,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  choiceTitle: {
+    color: c.textPrimary,
+    fontSize: 15,
+    fontWeight: "700",
+    letterSpacing: 0.3,
+    marginBottom: 2,
+  },
+  choiceSub: {
+    color: c.textSecondary,
+    fontSize: 12,
+    lineHeight: 16,
+  },
+  busyCard: {
+    backgroundColor: c.surface,
+    borderWidth: 1,
+    borderColor: c.border,
+    borderRadius: 16,
+    paddingVertical: 28,
+    paddingHorizontal: 36,
+    alignItems: "center",
+    minWidth: 240,
+  
+    ...(theme.elevation.md as object),
+  },
+  busyOverlay: {
+    // Absolute, in-tree overlay (NOT a Modal). On iOS, only one presented
+    // view controller is allowed at a time — a Modal here would block
+    // expo-print's internal WKWebView VC from mounting, which is why the
+    // poster generation hung silently. Inline overlay sidesteps that.
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "rgba(0,0,0,0.65)",
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 9999,
+    elevation: 30,
+  },
+  busyText: {
+    color: c.textPrimary,
+    fontSize: 16,
+    fontWeight: "700",
+    letterSpacing: 1,
+    marginTop: 14,
+  },
+  busySub: {
+    color: c.textSecondary,
+    fontSize: 11,
+    marginTop: 4,
+    textAlign: "center",
+  },
+}));

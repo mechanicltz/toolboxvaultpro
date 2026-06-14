@@ -55,7 +55,11 @@ personal-profile, account-delete, auth/admin, demo-seed, startup/indexes.
 DEFERRED (P2): frontend deep component extraction. PROGRESS: `more.tsx`
 1,764 → 1,219 lines — its 4 style blocks moved to `src/screens/more/moreStyles.ts`
 (F1a, behaviour-identical; More screen verified rendering on web). `index.tsx`
-styles already live in `src/screens/home/homeStyles.ts`. Remaining (riskier):
+styles already live in `src/screens/home/homeStyles.ts`. **`tool/[id].tsx`
+5,423 → 3,738 lines (−31%)** — its 4 `themedStyles` blocks (qsStyles/styles/
+newStyles/pickerStyles) moved verbatim to `src/screens/tool/toolDetailStyles.ts`
+(F2, behaviour-identical; lint clean, tool route bundles without error on web —
+visual unchanged since styles moved verbatim, on-device spot-check still advised). Remaining (riskier):
 extracting the More screen's presentational components (`Row`/`SectionRow`/
 `SectionCard`) — possible now that `styles` is an importable module — and any
 `index.tsx` sub-sections. Needs on-device verification (web preview renders
@@ -264,7 +268,7 @@ can explore every feature immediately. All demo records tagged `is_demo: true`
 ## Critical Dev Notes
 - Frontend is Expo. On EVERY frontend change bump `const HOME_BUILD = "BUILD XXX"`
   in `app/(tabs)/index.tsx` (+1) and `sudo supervisorctl restart expo`.
-  Current: **BUILD 301**.
+  Current: **BUILD 312**.
 - Backend: 0.0.0.0:8001, all routes `/api` prefixed. Frontend uses
   EXPO_PUBLIC_BACKEND_URL. Mongo via MONGO_URL / DB_NAME.
 - Preview/login URL: login-stretch-layout.preview.emergentagent.com
