@@ -2789,13 +2789,18 @@ def make_reports_router(api_router: APIRouter, get_db, get_current_user) -> None
         # Every report carries the owner's letterhead (name/address/contact)
         # at the top when available. Fetchers that manage their own personal
         # block (e.g. insurance, with an opt-out) set the key themselves and
-        # are left untouched.
+        # are left untouched. For all OTHER reports we omit insurer/policy
+        # fields — those belong only on the Insurance report.
         if "personal_info" not in result:
             profile = await db.personal_profile.find_one(
                 {"id": "self"}, {"_id": 0}
             ) or {}
             if profile.get("name"):
-                result["personal_info"] = profile
+                pi = {
+                    k: v for k, v in profile.items()
+                    if k not in ("insurance_company", "policy_number")
+                }
+                result["personal_info"] = pi
 
         filename_base = f"{spec.id}-report-{datetime.now().strftime('%Y%m%d-%H%M%S')}"
         if fmt == "csv":
