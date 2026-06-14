@@ -77,6 +77,7 @@ jobs:
             tests/test_routes_taxonomy.py \
             tests/test_routes_dealers.py \
             tests/test_routes_extra.py \
+            tests/test_routes_tools.py \
             -v
 
       - name: Show backend log on failure

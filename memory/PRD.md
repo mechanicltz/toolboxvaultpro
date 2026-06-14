@@ -2,25 +2,28 @@
 
 ## God-file refactor (2026-02 — backend DONE & tested; frontend DEFERRED)
 Goal: split god-files for maintainability with ZERO behavior change.
-DONE — server.py 5,319 → **3,179 lines (−40%)**; **45/45 tests pass**
-(`tests/test_refactor_regression.py` + `test_routes_taxonomy.py` +
-`test_routes_dealers.py` + `test_routes_extra.py`):
+DONE — server.py 5,319 → **2,316 lines (−56%)**; **53/53 tests pass**
+(`test_refactor_regression` + `test_routes_taxonomy/dealers/extra/tools`):
 - **B1** `models.py` — all Pydantic models + `now_iso` + constants.
 - **B2** `core.py` — env/Mongo client, owner-scoped DB proxy (`db`), context
   vars, `get_current_user`, `to_public`, in-process rate limiter.
-- **B3** route groups extracted via `register_*_routes(api_router)` (deps from
-  core/models/helpers, no cycles):
-  - `helpers.py` — shared `build_tool_query`, `_validate_photo_payload` + photo
-    size constants.
+- **B3** route groups via `register_*_routes(api_router)` (deps from
+  core/models/helpers/routes_taxonomy, no cycles):
+  - `helpers.py` (shared `build_tool_query`, `_validate_photo_payload` + photo
+    size constants).
   - `routes_taxonomy.py` (locations/tags/brands/categories/borrowers + shared
-    `_ensure_brand_saved`), `routes_dealers.py` (dealers/agents/transactions/
-    schedules), `routes_maintenance.py`, `routes_bundles.py`, `routes_warranty.py`
-    (orphan-purge throttle globals at module level), `routes_wishlist.py`.
+    `_ensure_brand_saved`), `routes_dealers.py`, `routes_maintenance.py`,
+    `routes_bundles.py`, `routes_warranty.py`, `routes_wishlist.py`,
+    **`routes_tools.py`** (largest — CRUD + CSV import/export + list/filter).
+  - ⚠️ GOTCHA fixed: `routes_tools.py` must NOT use `from __future__ import
+    annotations` — its inline Pydantic body models (ImportPayload/ExportPayload)
+    are function-local, and lazy string annotations make FastAPI misread them
+    as query params (422). Keep eager annotations there.
 - **CI:** `.github/workflows/backend-tests.yml` spins up its own Mongo+backend and
-  runs the guard suites on every push (Node24 opt-in to silence deprecation warn).
-STILL in server.py (intentionally — heavily shared / large): tools CRUD +
-import/export, stats/aggregate, personal-profile, account-delete, auth/admin,
-demo-seed, startup/indexes. These are the remaining P2 targets.
+  runs all guard suites (taxonomy/dealers/extra/tools) on every push.
+STILL in server.py (P2 — large/shared, leave for later): stats/aggregate,
+sale/sold, per-tool documents, theft/loss, bulk ops, insurance-claims wiring,
+personal-profile, account-delete, auth/admin, demo-seed, startup/indexes.
 DEFERRED (P2): frontend `more.tsx`/`index.tsx` — components tightly coupled to a
 module-scope themed `styles` object; needs style-block extraction + on-device
 verification (web preview renders skinned screens black).
