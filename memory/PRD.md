@@ -44,21 +44,36 @@ across 13 screens, no crashes on rapid-nav stress):
   insurance-claims evidence (tool/edit, more, dealers, bundle/edit, dealer/[id]
   already compressed).
 
-### Phase 2 + 3 — NEXT (NOT started): MongoDB GridFS migration
+### Phase 2 + 3 — DONE & TESTED (2026-02 / build 304): MongoDB GridFS migration
 IMPORTANT FINDING: Emergent has NO first-party object storage in this env
-(emergentintegrations exposes only llm + payments; no storage env vars). The
-verified platform-recommended path is **MongoDB GridFS** (reuses MONGO_URL, no
-external keys). Plan:
-- Backend: GridFS bucket via `AsyncIOMotorGridFSBucket`; `/api/files` upload
-  (+Pillow thumbnail ~256px), streaming GET with cache headers, DELETE w/ owner
-  check. Change tool/bundle/claim/etc photo fields from base64 → file-id/URL +
-  thumb ref. Update create/update/list/get + demo_seed. List endpoints return
-  thumbnails only.
-- Frontend: upload returns file id; render via `${BACKEND_URL}/api/files/{id}`
-  with AppImage; lists use thumbnail URL.
-- Migration: backfill existing base64 → GridFS (full + thumb), keep base64 until
-  verified, then unset. Run as a script/endpoint.
-- After memory work: god-file refactor (split server.py / more.tsx / index.tsx).
+(emergentintegrations exposes only llm + payments). Used **MongoDB GridFS**
+(reuses MONGO_URL, no external keys) — the verified platform-recommended path.
+
+Implemented & verified (backend pytest 19/20 in test_media_gridfs.py; frontend
+18 live /api/files requests all 200, 16 thumbs + 2 full, 0 broken images):
+- `backend/media.py`: GridFS `media` bucket; `offload_value/offload_list`
+  (data: URI -> `/api/files/{id}`, Pillow 256px JPEG thumbnail linked via
+  metadata.thumb_id), `thumb_url`, `delete_value(s)`. Router `/api/files/{id}`
+  + `/api/files/{id}/thumb` (StreamingResponse, immutable cache headers).
+  init_media(real_db) + router included at server.py ~4700. Auth middleware
+  whitelists `/api/files/` (public by design; unguessable ObjectIds).
+- Wired offload into: create_tool/update_tool/delete_tool (photos+receipts+
+  documents, with GridFS cleanup on delete), list_tools (cover->thumb), create/
+  update bundle + list_bundles (cover->thumb) + get_bundle items (thumb),
+  create/update_wishlist. Tool detail/get returns FULL urls.
+- Frontend `AppImage` resolves relative `/api/files` URLs to
+  EXPO_PUBLIC_BACKEND_URL (works on native, not just web).
+- `backend/migrate_media.py` (idempotent): backfilled existing base64 -> GridFS.
+  Result: 177 blobs offloaded, 0 base64 remaining across tools/bundles/wishlist/
+  warranty; 356 GridFS files.
+- v1 tradeoffs (intentional, not bugs): replacing a photo on edit may orphan the
+  old GridFS file; dealer logos / home logo / demo-seed tiles / insurance
+  historical snapshot photos remain base64 (small/frozen); /api/files GET public.
+
+### NEXT: God-file refactor (maintainability only, NOT started)
+Split server.py (~5.3k lines) / more.tsx (~1.7k) / index.tsx (~1k) into modules
+(routes/, models/, services/). Pure cleanup — no behavior change. High regression
+risk, so do as its own carefully-tested pass.
 
 ## Prefilled Demo System (2026-02 / build 301 — DONE & TESTED)
 On registration, new accounts are auto-seeded with a rich demo dataset so users
