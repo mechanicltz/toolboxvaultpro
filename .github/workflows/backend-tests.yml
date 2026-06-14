@@ -1,0 +1,77 @@
+name: Backend guard tests
+
+# Runs automatically on every push and pull request. Spins up its own
+# throwaway MongoDB + backend, registers a test user, then runs the
+# self-contained guard suites (they create & delete their own data).
+#
+# These suites do NOT depend on the temporary preview server or on any real
+# account data, so the result is a clean green/red signal for every change.
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:   # lets you also trigger it manually from the Actions tab
+
+jobs:
+  guard-tests:
+    runs-on: ubuntu-latest
+
+    services:
+      mongo:
+        image: mongo:7
+        ports:
+          - 27017:27017
+
+    env:
+      MONGO_URL: mongodb://localhost:27017
+      DB_NAME: toolbox_ci
+      EXPO_PUBLIC_BACKEND_URL: http://localhost:8001
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt \
+            --extra-index-url https://d33sy5i8bnduwe.cloudfront.net/simple/
+
+      - name: Start backend
+        working-directory: backend
+        run: |
+          uvicorn server:app --host 0.0.0.0 --port 8001 > /tmp/backend.log 2>&1 &
+          ok=0
+          for i in $(seq 1 60); do
+            if curl -sf http://localhost:8001/api/health >/dev/null; then ok=1; break; fi
+            sleep 2
+          done
+          if [ "$ok" != "1" ]; then
+            echo "::error::Backend failed to start"
+            cat /tmp/backend.log
+            exit 1
+          fi
+          echo "Backend is up."
+
+      - name: Register the test user (ok if it already exists)
+        run: |
+          curl -s -X POST http://localhost:8001/api/auth/register \
+            -H 'Content-Type: application/json' \
+            -d '{"email":"ryan@ryan.com","password":"ryan1234","name":"Ryan"}' \
+            -o /dev/null -w "register HTTP %{http_code}\n" || true
+
+      - name: Run guard test suites
+        working-directory: backend
+        run: |
+          rm -f /tmp/ryan_token.txt
+          python -m pytest tests/test_routes_taxonomy.py tests/test_routes_dealers.py -v
+
+      - name: Show backend log on failure
+        if: failure()
+        run: cat /tmp/backend.log || true

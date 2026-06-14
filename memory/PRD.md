@@ -14,6 +14,10 @@ DONE (server.py 5,319 → 3,796 lines, −29%; 27/27 regression tests pass —
   (dealers/agents/transactions/per-account schedules). Registered via
   `register_*_routes(api_router)`; modules import deps from core/models (no
   cycle). All verified green via curl + backend testing agent.
+- **Automated guard tests** added: `tests/conftest.py` (shared rate-limit-safe
+  login fixtures) + `tests/test_routes_taxonomy.py` + `tests/test_routes_dealers.py`
+  (13 self-cleaning CRUD lifecycle tests, all passing). Run:
+  `cd /app/backend && python -m pytest tests/test_routes_taxonomy.py tests/test_routes_dealers.py -v`
 DEFERRED (P2 — next session, need care):
 - Remaining backend route groups still in server.py: **tools** (large; shares
   `build_tool_query` with stats/aggregate and `_validate_photo_payload` with
