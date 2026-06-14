@@ -231,7 +231,7 @@ export default function DealersScreen() {
                 testID={`dealer-card-${item.id}`}
                 style={[
                   styles.rowSkinWrap,
-                  gridCols > 1 && { flex: 1, marginHorizontal: 0 },
+                  gridCols > 1 && styles.rowSkinGridWrap,
                 ]}
                 onPress={() => router.push(`/dealer/${item.id}`)}
                 activeOpacity={isLocked ? 1 : 0.8}
@@ -240,7 +240,7 @@ export default function DealersScreen() {
                 <TbvFrame
                   source={SKIN.plate}
                   capInsets={CAP.plate}
-                  style={styles.rowSkinFrame}
+                  style={[styles.rowSkinFrame, gridCols > 1 && { flex: 1 }]}
                   padX={20}
                   padTop={14}
                   padBottom={14}
@@ -519,6 +519,14 @@ const styles = themedStyles((c) => ({
     borderRadius: 10,
   },
   rowSkinFrame: { width: "100%" },
+  // Tablet 2-column skinned cards: stretch each cell to the row's tallest card
+  // so the dealer plates line up at a uniform height (the FlatList row stretches
+  // cells; `flex:1` on the frame above makes the plate fill that height).
+  rowSkinGridWrap: {
+    flex: 1,
+    marginHorizontal: 0,
+    marginTop: 8,
+  },
   rowSkinInner: {
     flexDirection: "row",
     alignItems: "center",

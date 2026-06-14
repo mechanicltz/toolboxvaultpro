@@ -1173,7 +1173,7 @@ export default function InventoryScreen() {
                 testID={`tool-card-${item.id}`}
                 style={[
                   styles.rowSkinPlain,
-                  gridCols > 1 && { flex: 1, marginHorizontal: 6 },
+                  gridCols > 1 && styles.rowSkinGridCard,
                   isSelected && styles.rowSkinPlainSelected,
                 ]}
                 onPress={onCardPress}
@@ -2078,6 +2078,19 @@ const styles = themedStyles((c) => ({
   rowSkinPlain: {
     paddingVertical: 14,
     paddingHorizontal: 4,
+  },
+  // Multi-column (tablet) skinned cards: give each item a defined bordered
+  // plate so the 2-column grid reads as distinct cards instead of a garbled
+  // run-together block (the single-column divider doesn't apply across columns).
+  rowSkinGridCard: {
+    flex: 1,
+    marginHorizontal: 6,
+    marginVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.16)",
+    backgroundColor: "rgba(255,255,255,0.04)",
   },
   // Soft light divider drawn BETWEEN skinned rows (FlatList ItemSeparator) —
   // a thin, slightly inset translucent line; gently separates without a box.

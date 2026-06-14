@@ -1,5 +1,32 @@
 # Toolbox Vault — PRD
 
+## Report redesign + Tablet UI (2026-02 / build 308 — DONE)
+Backend `reports.py` redesigned to ONE cohesive professional identity across
+ALL report types (Inventory, Insurance, Claims, Sales, Dealer Account):
+- Unified palette constants (`ACCENT_HEX` steel-blue #2F5D8A, `HEADER_HEX`
+  slate #334155, slate inks, hairlines, steel tint). Per-report `spec.accent`
+  is now intentionally IGNORED for styling so every PDF matches. Removed all
+  harsh black (#111) header bars and orange/cream (#F97316 / #fff8e6) accents.
+- Table header + section/group/dealer header bars → slate w/ white text;
+  stat highlight cards + totals row + sub-headers → light steel tint; rules →
+  steel-blue. (Dealer-account report keeps semantic GREEN payments / RED
+  charges — intentional, standard for financial reports.)
+- Owner letterhead on EVERY report: render endpoint injects personal_profile
+  ("PREPARED FOR" block w/ name/address/contact) when available; insurance
+  still manages its own opt-out. Verified: 5 report types render valid PDFs;
+  visual analysis confirms steel-blue/slate + letterhead, no black/orange.
+- CSV remains pure data (no letterhead) by design.
+Tablet/iPad UI (lint-clean; native-only, verify on device — web preview renders
+skinned screens black, a known artifact):
+- Dashboard quick buttons (ADD ITEM / NEW CLAIM) capped at 480px & centered.
+- Skinned inventory 2-col cards get a bordered plate (`rowSkinGridCard`).
+- Skinned dealer 2-col cards stretch to uniform row height (`rowSkinGridWrap`
+  + frame flex:1).
+- Tool detail page content capped at 760px & centered (stops full-width button
+  stretch). All gated so phones (< cap) are unchanged.
+
+
+
 ## Product
 React Native/Expo (Expo Router) inventory app for tradespeople, with a FastAPI +
 MongoDB backend. Dynamic theming (Iron Forge industrial skin, Crimson, Arctic,

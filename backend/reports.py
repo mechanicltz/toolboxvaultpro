@@ -247,89 +247,119 @@ def _fit_image(src: Any, max_w: float, max_h: float, max_px: int = 360) -> Optio
 
 
 # ---------------------------------------------------------------------------
+# Unified professional palette
+# ---------------------------------------------------------------------------
+# Applied to EVERY report regardless of the per-report accent, so all
+# documents read like they come from the same system ("Fortune 500" look):
+# a muted steel-blue accent over slate-gray structure on white. The
+# per-spec `accent` colour is intentionally ignored for styling.
+
+ACCENT_HEX = "#2F5D8A"      # steel blue — rules, totals, highlights, prices
+HEADER_HEX = "#334155"      # slate-700 — table & section header bars
+HEADER_TEXT_HEX = "#FFFFFF"  # text on slate bars
+INK_HEX = "#1E293B"         # slate-800 — primary body ink / titles
+MUTED_HEX = "#64748B"       # slate-500 — sub-labels, captions, footer
+HAIRLINE_HEX = "#E2E8F0"    # slate-200 — grid lines, borders
+ZEBRA_HEX = "#F1F5F9"       # slate-100 — alternating rows / index column
+TINT_HEX = "#EAF1F8"        # light steel — totals row, highlight stat, letterhead
+CARD_HEX = "#F8FAFC"        # slate-50 — plain stat-card fill
+
+
+# ---------------------------------------------------------------------------
 # Paragraph styles — re-used everywhere
 # ---------------------------------------------------------------------------
 
 def _styles(accent_hex: str) -> Dict[str, ParagraphStyle]:
-    accent = colors.HexColor(accent_hex)
+    # Unified palette — the passed accent is ignored on purpose so every
+    # report shares one cohesive identity.
+    accent = colors.HexColor(ACCENT_HEX)
     base = "Helvetica"
     bold = "Helvetica-Bold"
     return {
         "title": ParagraphStyle(
             "title", fontName=bold, fontSize=22, leading=26,
-            alignment=TA_CENTER, textColor=colors.HexColor("#111"),
+            alignment=TA_CENTER, textColor=colors.HexColor(INK_HEX),
             spaceAfter=2,
         ),
         "title_sub": ParagraphStyle(
             "title_sub", fontName=base, fontSize=10, leading=12,
-            alignment=TA_CENTER, textColor=colors.HexColor("#666"),
+            alignment=TA_CENTER, textColor=colors.HexColor(MUTED_HEX),
         ),
         "section": ParagraphStyle(
             "section", fontName=bold, fontSize=11, leading=14,
-            textColor=accent, backColor=colors.HexColor("#111"),
+            textColor=colors.HexColor(HEADER_TEXT_HEX),
+            backColor=colors.HexColor(HEADER_HEX),
             leftIndent=8, rightIndent=8, spaceBefore=10, spaceAfter=4,
             borderPadding=(6, 8, 6, 8),
         ),
         "subsection": ParagraphStyle(
             "subsection", fontName=bold, fontSize=10, leading=13,
-            textColor=colors.HexColor("#111"),
-            backColor=colors.HexColor("#fff8e6"),
+            textColor=colors.HexColor(INK_HEX),
+            backColor=colors.HexColor(TINT_HEX),
             leftIndent=6, borderPadding=(4, 6, 4, 6),
             spaceBefore=6, spaceAfter=2,
         ),
         "muted": ParagraphStyle(
             "muted", fontName=base, fontSize=9, leading=12,
-            textColor=colors.HexColor("#999"),
+            textColor=colors.HexColor(MUTED_HEX),
         ),
         "small": ParagraphStyle(
             "small", fontName=base, fontSize=9, leading=11,
-            textColor=colors.HexColor("#222"),
+            textColor=colors.HexColor(INK_HEX),
         ),
         "small_right": ParagraphStyle(
             "small_right", fontName=base, fontSize=9, leading=11,
-            alignment=TA_RIGHT, textColor=colors.HexColor("#222"),
+            alignment=TA_RIGHT, textColor=colors.HexColor(INK_HEX),
         ),
         "small_bold_right": ParagraphStyle(
             "small_bold_right", fontName=bold, fontSize=9, leading=11,
-            alignment=TA_RIGHT, textColor=colors.HexColor("#222"),
+            alignment=TA_RIGHT, textColor=colors.HexColor(INK_HEX),
         ),
         "th": ParagraphStyle(
             "th", fontName=bold, fontSize=8, leading=10,
-            textColor=accent,
+            textColor=colors.HexColor(HEADER_TEXT_HEX),
         ),
         "th_right": ParagraphStyle(
             "th_right", fontName=bold, fontSize=8, leading=10,
-            alignment=TA_RIGHT, textColor=accent,
+            alignment=TA_RIGHT, textColor=colors.HexColor(HEADER_TEXT_HEX),
         ),
         "stat_l": ParagraphStyle(
             "stat_l", fontName=bold, fontSize=8, leading=10,
-            textColor=colors.HexColor("#666"),
+            textColor=colors.HexColor(MUTED_HEX),
         ),
         "stat_l_dark": ParagraphStyle(
             "stat_l_dark", fontName=bold, fontSize=8, leading=10,
-            textColor=colors.HexColor("#4a3500"),
+            textColor=accent,
         ),
         "stat_v": ParagraphStyle(
             "stat_v", fontName=bold, fontSize=18, leading=20,
-            textColor=colors.HexColor("#111"),
+            textColor=colors.HexColor(INK_HEX),
+        ),
+        "stat_v_accent": ParagraphStyle(
+            "stat_v_accent", fontName=bold, fontSize=18, leading=20,
+            textColor=accent,
         ),
         "pi_name": ParagraphStyle(
             "pi_name", fontName=bold, fontSize=12, leading=14,
-            textColor=colors.HexColor("#111"),
+            textColor=colors.HexColor(INK_HEX),
             spaceAfter=2,
         ),
         "pi_line": ParagraphStyle(
             "pi_line", fontName=base, fontSize=9.5, leading=12,
-            textColor=colors.HexColor("#333"),
+            textColor=colors.HexColor("#334155"),
         ),
         "pi_line_right": ParagraphStyle(
             "pi_line_right", fontName=base, fontSize=9.5, leading=12,
-            alignment=TA_RIGHT, textColor=colors.HexColor("#555"),
+            alignment=TA_RIGHT, textColor=colors.HexColor(MUTED_HEX),
+        ),
+        "pi_caption": ParagraphStyle(
+            "pi_caption", fontName=bold, fontSize=7.5, leading=10,
+            textColor=accent,
         ),
         # Per-item flyer
         "flyer_name": ParagraphStyle(
             "flyer_name", fontName=bold, fontSize=22, leading=24,
-            textColor=colors.HexColor("#111"),
+            textColor=colors.HexColor(INK_HEX),
         ),
         "flyer_price": ParagraphStyle(
             "flyer_price", fontName=bold, fontSize=28, leading=30,
@@ -337,20 +367,20 @@ def _styles(accent_hex: str) -> Dict[str, ParagraphStyle]:
         ),
         "ribbon": ParagraphStyle(
             "ribbon", fontName=bold, fontSize=9, leading=12,
-            textColor=colors.HexColor("#000"), backColor=accent,
+            textColor=colors.HexColor(HEADER_TEXT_HEX), backColor=accent,
             borderPadding=(3, 8, 3, 8),
         ),
         "spec_l": ParagraphStyle(
             "spec_l", fontName=bold, fontSize=8, leading=10,
-            textColor=colors.HexColor("#666"),
+            textColor=colors.HexColor(MUTED_HEX),
         ),
         "spec_v": ParagraphStyle(
             "spec_v", fontName=bold, fontSize=11, leading=13,
-            textColor=colors.HexColor("#111"),
+            textColor=colors.HexColor(INK_HEX),
         ),
         "footer": ParagraphStyle(
             "footer", fontName=base, fontSize=8, leading=10,
-            alignment=TA_CENTER, textColor=colors.HexColor("#999"),
+            alignment=TA_CENTER, textColor=colors.HexColor(MUTED_HEX),
         ),
     }
 
@@ -377,7 +407,7 @@ def _title_block(spec: ReportSpec, st: Dict[str, ParagraphStyle],
         out.append(_para(esc(subtitle), st["title_sub"]))
     out += [
         Spacer(1, 4),
-        _hr(spec.accent, 2.5),
+        _hr(ACCENT_HEX, 2.5),
         Spacer(1, 8),
     ]
     return out
@@ -397,13 +427,14 @@ def _hr(hex_color: str, width: float = 1.0) -> Table:
 def _stats_row(stats: List[Tuple[str, str, bool]], accent_hex: str,
                st: Dict[str, ParagraphStyle]) -> Table:
     """A row of stat cards. `stats` = [(label, value, highlight)]."""
-    accent = colors.HexColor(accent_hex)
+    accent = colors.HexColor(ACCENT_HEX)
     cells = []
     for label, value, hi in stats:
         l_style = st["stat_l_dark"] if hi else st["stat_l"]
+        v_style = st["stat_v_accent"] if hi else st["stat_v"]
         cells.append([
             _para(esc(label.upper()), l_style),
-            _para(esc(value), st["stat_v"]),
+            _para(esc(value), v_style),
         ])
     n = len(cells)
     col_w = (PAGE_W - 8 * (n - 1)) / n
@@ -434,8 +465,8 @@ def _stats_row(stats: List[Tuple[str, str, bool]], accent_hex: str,
     for k, (_, _, hi) in zip(real_idx, stats):
         if hi:
             style_cmds += [
-                ("BACKGROUND", (k, 0), (k, 0), accent),
-                ("BOX", (k, 0), (k, 0), 0.5, accent),
+                ("BACKGROUND", (k, 0), (k, 0), colors.HexColor(TINT_HEX)),
+                ("BOX", (k, 0), (k, 0), 1, accent),
                 ("LEFTPADDING", (k, 0), (k, 0), 12),
                 ("RIGHTPADDING", (k, 0), (k, 0), 12),
                 ("TOPPADDING", (k, 0), (k, 0), 10),
@@ -443,8 +474,8 @@ def _stats_row(stats: List[Tuple[str, str, bool]], accent_hex: str,
             ]
         else:
             style_cmds += [
-                ("BACKGROUND", (k, 0), (k, 0), colors.HexColor("#fafafa")),
-                ("BOX", (k, 0), (k, 0), 0.5, colors.HexColor("#dddddd")),
+                ("BACKGROUND", (k, 0), (k, 0), colors.HexColor(CARD_HEX)),
+                ("BOX", (k, 0), (k, 0), 0.5, colors.HexColor(HAIRLINE_HEX)),
                 ("LEFTPADDING", (k, 0), (k, 0), 12),
                 ("RIGHTPADDING", (k, 0), (k, 0), 12),
                 ("TOPPADDING", (k, 0), (k, 0), 10),
@@ -481,7 +512,10 @@ def _personal_info_block(pi: Dict[str, Any], accent_hex: str,
     if pi.get("policy_number"):
         contact_lines.append(f"Policy #{pi['policy_number']}")
 
-    left_flow: List[Any] = [_para(esc(pi.get("name", "")), st["pi_name"])]
+    left_flow: List[Any] = [
+        _para("PREPARED FOR", st["pi_caption"]),
+        _para(esc(pi.get("name", "")), st["pi_name"]),
+    ]
     for l in addr_lines:
         left_flow.append(_para(esc(l), st["pi_line"]))
     right_flow: List[Any] = [_para(esc(l), st["pi_line_right"]) for l in contact_lines]
@@ -492,12 +526,13 @@ def _personal_info_block(pi: Dict[str, Any], accent_hex: str,
     )
     t.setStyle(TableStyle([
         ("VALIGN", (0, 0), (-1, -1), "TOP"),
-        ("BOX", (0, 0), (-1, -1), 0.5, colors.HexColor("#cccccc")),
-        ("LINEBEFORE", (0, 0), (0, 0), 3, colors.HexColor(accent_hex)),
-        ("LEFTPADDING", (0, 0), (-1, -1), 12),
-        ("RIGHTPADDING", (0, 0), (-1, -1), 12),
-        ("TOPPADDING", (0, 0), (-1, -1), 8),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
+        ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor(CARD_HEX)),
+        ("BOX", (0, 0), (-1, -1), 0.5, colors.HexColor(HAIRLINE_HEX)),
+        ("LINEBEFORE", (0, 0), (0, 0), 4, colors.HexColor(ACCENT_HEX)),
+        ("LEFTPADDING", (0, 0), (-1, -1), 14),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 14),
+        ("TOPPADDING", (0, 0), (-1, -1), 10),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 10),
     ]))
     return t
 
@@ -555,7 +590,7 @@ def _data_table(cols: List[Column], rows: List[Dict[str, Any]],
     if not rows:
         return _para("No items match the selected filters.", st["muted"])
 
-    accent = colors.HexColor(accent_hex)
+    accent = colors.HexColor(ACCENT_HEX)
     # Auto-prepend a "#" line-number column when there's >1 row.
     show_index = len(rows) > 1
     col_w = _column_widths_pt(cols, with_index=show_index)
@@ -583,7 +618,7 @@ def _data_table(cols: List[Column], rows: List[Dict[str, Any]],
     section_label_style = ParagraphStyle(
         "section_label", parent=st["th"],
         fontName="Helvetica-Bold", fontSize=10,
-        textColor=colors.HexColor("#000000"),
+        textColor=colors.HexColor(HEADER_TEXT_HEX),
         leading=12,
     )
     data_row_counter = 0
@@ -668,7 +703,7 @@ def _data_table(cols: List[Column], rows: List[Dict[str, Any]],
 
     style_cmds: List[Any] = [
         # Header
-        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#111111")),
+        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor(HEADER_HEX)),
         ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
         ("LEFTPADDING", (0, 0), (-1, -1), 4),
         ("RIGHTPADDING", (0, 0), (-1, -1), 4),
@@ -677,12 +712,12 @@ def _data_table(cols: List[Column], rows: List[Dict[str, Any]],
         ("TOPPADDING", (0, 1), (-1, -1), 5),
         ("BOTTOMPADDING", (0, 1), (-1, -1), 5),
         # Body grid
-        ("LINEBELOW", (0, 0), (-1, -1), 0.25, colors.HexColor("#eeeeee")),
+        ("LINEBELOW", (0, 0), (-1, -1), 0.25, colors.HexColor(HAIRLINE_HEX)),
     ]
     if show_index:
         # Faint background to visually separate the # column
         style_cmds.append(("BACKGROUND", (0, 1), (0, -1 if not has_total else -2),
-                           colors.HexColor("#f3f3f3")))
+                           colors.HexColor(ZEBRA_HEX)))
     # Alternating row backgrounds (skip the # column to keep its grey)
     body_end = len(data) - (1 if has_total else 0)
     for ri in range(1, body_end):
@@ -692,7 +727,7 @@ def _data_table(cols: List[Column], rows: List[Dict[str, Any]],
             style_cmds.append((
                 "BACKGROUND",
                 (idx_off, ri), (-1, ri),
-                colors.HexColor("#fafafa"),
+                colors.HexColor(ZEBRA_HEX),
             ))
     # Section header rows: span all columns + accent background
     for ri in section_row_indices:
@@ -712,7 +747,7 @@ def _data_table(cols: List[Column], rows: List[Dict[str, Any]],
     if has_total:
         style_cmds += [
             ("LINEABOVE", (0, -1), (-1, -1), 1.5, accent),
-            ("BACKGROUND", (0, -1), (-1, -1), colors.HexColor("#fff8e6")),
+            ("BACKGROUND", (0, -1), (-1, -1), colors.HexColor(TINT_HEX)),
             ("TOPPADDING", (0, -1), (-1, -1), 7),
             ("BOTTOMPADDING", (0, -1), (-1, -1), 7),
         ]
@@ -764,7 +799,7 @@ def _build_receipt_pages(
         "ReceiptCoverTitle",
         parent=st["title"],
         fontSize=20,
-        textColor=colors.HexColor(spec.accent),
+        textColor=colors.HexColor(ACCENT_HEX),
         alignment=TA_CENTER,
         spaceAfter=10,
     )
@@ -791,7 +826,7 @@ def _build_receipt_pages(
         parent=st["small"],
         fontSize=11,
         leading=14,
-        textColor=colors.HexColor("#111111"),
+        textColor=colors.HexColor(INK_HEX),
         spaceAfter=6,
     )
     sub_style = ParagraphStyle(
@@ -884,7 +919,7 @@ def render_pdf(spec: ReportSpec, cols: List[Column],
             if not first:
                 story.append(PageBreak())
             first = False
-            # Group label header in the report's accent color
+            # Group label header in the unified accent color
             story.append(
                 Paragraph(
                     esc(str(g).upper()),
@@ -894,7 +929,7 @@ def render_pdf(spec: ReportSpec, cols: List[Column],
                         fontSize=14,
                         leading=18,
                         spaceAfter=6,
-                        textColor=colors.HexColor(spec.accent),
+                        textColor=colors.HexColor(ACCENT_HEX),
                     ),
                 )
             )
@@ -1545,7 +1580,7 @@ def _make_sales_per_item_factory(rows: List[Dict[str, Any]], mode: str,
             ]))
             page_flow.append(head)
             page_flow.append(Spacer(1, 6))
-            page_flow.append(_hr("#F97316", 1.5))
+            page_flow.append(_hr(ACCENT_HEX, 1.5))
             page_flow.append(Spacer(1, 10))
 
             # Photo
@@ -1716,10 +1751,10 @@ def _make_account_factory(per_dealer: List[Dict[str, Any]]):
             # Section header
             sect = Table([[_para(esc(d["name"].upper()), ParagraphStyle(
                 "sect_inner", fontName="Helvetica-Bold", fontSize=11,
-                leading=13, textColor=colors.HexColor("#F97316"),
+                leading=13, textColor=colors.HexColor(HEADER_TEXT_HEX),
             ))]], colWidths=[PAGE_W])
             sect.setStyle(TableStyle([
-                ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#111")),
+                ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor(HEADER_HEX)),
                 ("LEFTPADDING", (0, 0), (-1, -1), 10),
                 ("RIGHTPADDING", (0, 0), (-1, -1), 10),
                 ("TOPPADDING", (0, 0), (-1, -1), 6),
@@ -1734,11 +1769,11 @@ def _make_account_factory(per_dealer: List[Dict[str, Any]]):
                 # Subsection header
                 sub = Table([[_para(esc(label.upper()), ParagraphStyle(
                     "sub_inner", fontName="Helvetica-Bold", fontSize=10,
-                    leading=12, textColor=colors.HexColor("#111"),
+                    leading=12, textColor=colors.HexColor(INK_HEX),
                 ))]], colWidths=[PAGE_W])
                 sub.setStyle(TableStyle([
-                    ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#fff8e6")),
-                    ("LINEBEFORE", (0, 0), (0, 0), 3, colors.HexColor("#F97316")),
+                    ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor(TINT_HEX)),
+                    ("LINEBEFORE", (0, 0), (0, 0), 3, colors.HexColor(ACCENT_HEX)),
                     ("LEFTPADDING", (0, 0), (-1, -1), 8),
                     ("RIGHTPADDING", (0, 0), (-1, -1), 8),
                     ("TOPPADDING", (0, 0), (-1, -1), 4),
@@ -1763,9 +1798,9 @@ def _make_account_factory(per_dealer: List[Dict[str, Any]]):
                 ]], colWidths=[PAGE_W / 3, PAGE_W / 3, PAGE_W / 3])
                 summary.setStyle(TableStyle([
                     ("VALIGN", (0, 0), (-1, -1), "TOP"),
-                    ("BOX", (0, 0), (0, 0), 0.5, colors.HexColor("#dddddd")),
-                    ("BOX", (1, 0), (1, 0), 0.5, colors.HexColor("#dddddd")),
-                    ("BOX", (2, 0), (2, 0), 0.5, colors.HexColor("#dddddd")),
+                    ("BOX", (0, 0), (0, 0), 0.5, colors.HexColor(HAIRLINE_HEX)),
+                    ("BOX", (1, 0), (1, 0), 0.5, colors.HexColor(HAIRLINE_HEX)),
+                    ("BOX", (2, 0), (2, 0), 0.5, colors.HexColor(HAIRLINE_HEX)),
                     ("BACKGROUND", (0, 0), (-1, -1), colors.white),
                     ("LEFTPADDING", (0, 0), (-1, -1), 8),
                     ("RIGHTPADDING", (0, 0), (-1, -1), 8),
@@ -1827,26 +1862,26 @@ def _make_account_factory(per_dealer: List[Dict[str, Any]]):
 
                 tx_table = Table(data, colWidths=col_w, repeatRows=1)
                 tx_style: List[Any] = [
-                    ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#111111")),
-                    ("BACKGROUND", (0, 1), (0, -2), colors.HexColor("#f3f3f3")),
+                    ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor(HEADER_HEX)),
+                    ("BACKGROUND", (0, 1), (0, -2), colors.HexColor(ZEBRA_HEX)),
                     ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
                     ("LEFTPADDING", (0, 0), (-1, -1), 4),
                     ("RIGHTPADDING", (0, 0), (-1, -1), 4),
                     ("TOPPADDING", (0, 0), (-1, -1), 5),
                     ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
-                    ("LINEBELOW", (0, 0), (-1, -1), 0.25, colors.HexColor("#eeeeee")),
+                    ("LINEBELOW", (0, 0), (-1, -1), 0.25, colors.HexColor(HAIRLINE_HEX)),
                 ]
                 # alternating
                 for ri in range(1, len(data) - 1):
                     if ri % 2 == 0:
                         tx_style.append((
                             "BACKGROUND", (1, ri), (-1, ri),
-                            colors.HexColor("#fafafa"),
+                            colors.HexColor(ZEBRA_HEX),
                         ))
                 # footer
                 tx_style += [
-                    ("LINEABOVE", (0, -1), (-1, -1), 1.2, colors.HexColor("#F97316")),
-                    ("BACKGROUND", (0, -1), (-1, -1), colors.HexColor("#fff8e6")),
+                    ("LINEABOVE", (0, -1), (-1, -1), 1.2, colors.HexColor(ACCENT_HEX)),
+                    ("BACKGROUND", (0, -1), (-1, -1), colors.HexColor(TINT_HEX)),
                     ("SPAN", (1, -1), (3, -1)),
                 ]
                 tx_table.setStyle(TableStyle(tx_style))
@@ -2750,6 +2785,17 @@ def make_reports_router(api_router: APIRouter, get_db, get_current_user) -> None
         options = payload.get("options") or {}
         db = get_db()
         result = await spec.fetch(db, user, options)
+
+        # Every report carries the owner's letterhead (name/address/contact)
+        # at the top when available. Fetchers that manage their own personal
+        # block (e.g. insurance, with an opt-out) set the key themselves and
+        # are left untouched.
+        if "personal_info" not in result:
+            profile = await db.personal_profile.find_one(
+                {"id": "self"}, {"_id": 0}
+            ) or {}
+            if profile.get("name"):
+                result["personal_info"] = profile
 
         filename_base = f"{spec.id}-report-{datetime.now().strftime('%Y%m%d-%H%M%S')}"
         if fmt == "csv":

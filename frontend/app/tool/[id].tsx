@@ -4377,6 +4377,12 @@ const newStyles = themedStyles((c) => ({
     paddingHorizontal: 14,
     paddingTop: 14,
     gap: 14,
+    // Tablet/wide: keep the detail column (and its full-width action buttons)
+    // a readable size, centered, instead of stretching edge-to-edge. On phones
+    // (width < 760) maxWidth never constrains, so layout is unchanged.
+    width: "100%",
+    maxWidth: 760,
+    alignSelf: "center",
   },
 
   // ---------- STATUS PILLBOX ROW ----------

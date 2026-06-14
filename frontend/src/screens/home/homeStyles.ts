@@ -110,6 +110,11 @@ export const styles = themedStyles((c) => ({
     flexDirection: "row",
     gap: 12,
     marginBottom: 14,
+    // Tablet/wide: keep the two buttons a sensible size & centered instead of
+    // stretching edge-to-edge. On phones (width < 480) this never constrains.
+    width: "100%",
+    maxWidth: 480,
+    alignSelf: "center",
   },
   quickBtn: {
     flex: 1,
