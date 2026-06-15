@@ -283,6 +283,13 @@ can explore every feature immediately. All demo records tagged `is_demo: true`
   iOS-ONLY (uses setAlternateIconName; shows Apple's system confirmation popup).
   Icons must be predefined/bundled at build time. Android intentionally excluded
   (no clean runtime icon-swap API; activity-alias hack is fragile/flickery).
+- P2: SDK upgrade — Expo/React Native bump to clear Play Console "deprecated
+  edge-to-edge APIs (Android 15)" warning. Comes from RN's StatusBarModule
+  (setStatusBarColor/setNavigationBarColor); framework-level, non-blocking.
+- P3: Large-screen support — app is locked PORTRAIT (android:screenOrientation).
+  Android 16 ignores the lock on tablets/foldables (Play Console warning).
+  Decide whether to build a proper landscape/resizable tablet layout (deferred
+  intentionally; earlier tablet-stretch issues drove the portrait lock).
 
 ## Critical Dev Notes
 - Frontend is Expo. On EVERY frontend change bump `const HOME_BUILD = "BUILD XXX"`
