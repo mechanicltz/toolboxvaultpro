@@ -1,5 +1,11 @@
 # Toolbox Vault — PRD
 
+> 🚨 **HARD RULE — APP ICON:** ALL app icons/launcher/splash/favicon MUST be the
+> bright-orange octagon master at `frontend/assets/branding/app_icon_master.png`.
+> The ONLY exception is the transparent login logo (`tbv_master_logo_*`). See
+> `/app/memory/APP_ICON_RULE.md` before touching ANY image asset.
+
+
 ## First-run onboarding tour (2026-02 — DONE & tested)
 Interactive guided "spotlight" tour (watch mode) that teaches new users the core
 features, then returns them to the dashboard. Implemented in `src/onboarding/`
