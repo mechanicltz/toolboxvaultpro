@@ -278,6 +278,11 @@ can explore every feature immediately. All demo records tagged `is_demo: true`
 - P2: Google OAuth → Production (move consent screen out of Testing).
 - P3: Server-driven "Upcoming Features" list.
 - P3: Admin Broadcast Notices (in-app popups).
+- P3: iOS themed app icon (alternate app icons) — let users switch the home-screen
+  icon to match their chosen theme (Iron Forge / Crimson / Arctic / Emerald).
+  iOS-ONLY (uses setAlternateIconName; shows Apple's system confirmation popup).
+  Icons must be predefined/bundled at build time. Android intentionally excluded
+  (no clean runtime icon-swap API; activity-alias hack is fragile/flickery).
 
 ## Critical Dev Notes
 - Frontend is Expo. On EVERY frontend change bump `const HOME_BUILD = "BUILD XXX"`
