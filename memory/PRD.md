@@ -1,5 +1,24 @@
 # Toolbox Vault — PRD
 
+## BACKLOG (on hold) — Dealer Catalog Lookup System (proposed 2026-06, HELD by user)
+Large multi-phase feature. Admin panel to store direct URLs to dealer tool-catalog
+PDFs (Matco, Mac Tools, Cornwell, Snap-on; later retail: Amazon/Home Depot/Harbor
+Freight). System auto-downloads each catalog every 30 days, AI (vision LLM) parses
+PDFs → model #, description, price, and bundle/kit membership (individual + set
+pricing), stored in a catalog DB. New "add item" flow: pick dealer → enter model #
+→ search parsed catalog → auto-fill matched info; if bundle, auto-add all bundled
+items; if no match, prompt manual entry. Imported items stored like existing items
+so data persists even if a future catalog drops a tool.
+COST NOTES: AI cost only during 30-day refresh (NOT per user lookup — lookups are free
+DB queries). Est. ~$0.005–0.01/page vision parsing → ~$15–65/month for 4 PDF dealers.
+Phase 2 retail sites need product-data APIs (Rainforest ~$5.90/1k Amazon lookups;
+Home Depot APIs $25–150/mo) — usage-based, separate. Build est. ~400–600 Emergent
+credits (phased). RISKS: PDF extraction accuracy (esp. bundle detection), legal/IP of
+redisplaying copyrighted catalog data, catalog must be a direct file URL.
+RECOMMENDED NEXT STEP when resumed: cheap one-PDF Proof-of-Concept (parse one real
+Matco/Snap-on catalog) to measure real accuracy + token cost before full build.
+
+
 ## Upcoming Features / Roadmap + Vault Facebook link (2026-06 — DONE & tested)
 Admin-managed GLOBAL roadmap shown to all users. Backend `routes_upcoming.py`
 (non-owner-scoped `real_db.upcoming_releases`): public `GET /api/upcoming-features`
