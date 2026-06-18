@@ -24,7 +24,7 @@ import { NetworkProvider, OfflineBanner } from "../src/NetworkProvider";
 import { theme } from "../src/theme";
 import { initRevenueCat, identifyRevenueCatUser, getCurrentCustomerInfo, buildSyncPayload } from "../src/revenuecat";
 import { setPaymentRequiredHandler, api, abortAllInFlight } from "../src/api";
-import { shouldShowIntro, markAppActive } from "../src/idle";
+import { shouldShowIntro, markAppActive, getIntroVideoEnabledAsync } from "../src/idle";
 import { IntroOverlay } from "../src/IntroOverlay";
 import { ThemeProvider, useColors, useThemeMode } from "../src/themeContext";
 import { IndustrialThemeProvider } from "../src/components/industrial";
@@ -106,6 +106,20 @@ function AuthGate({ children }: { children: React.ReactNode }) {
       preloadTbvSkins();
     });
     return () => handle.cancel();
+  }, []);
+
+  // Respect the user's "intro video" preference (Vault → Settings). The
+  // cold-boot intro is initialised ON; if the user turned it off, disable
+  // it before the overlay renders (the auth-loading gate gives us time).
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const on = await getIntroVideoEnabledAsync();
+      if (!cancelled && !on) setShowIntro(false);
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   // (No async shouldShowIntro check here anymore — the intro just runs

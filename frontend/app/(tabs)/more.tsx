@@ -14,6 +14,7 @@ import {
   Linking,
 } from "react-native";
 import { AppSwitch } from "../../src/components/AppSwitch";
+import { getIntroVideoEnabledAsync, setIntroVideoEnabled } from "../../src/idle";
 import * as ImagePicker from "expo-image-picker";
 import * as ImageManipulator from "expo-image-manipulator";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -285,6 +286,16 @@ export default function MoreScreen() {
       }, 400);
     }
   }, [params?.openTheme]);
+
+  // Intro-video preference (device-level). Default ON.
+  const [introVideoOn, setIntroVideoOn] = useState(true);
+  useEffect(() => {
+    getIntroVideoEnabledAsync().then(setIntroVideoOn);
+  }, []);
+  const onToggleIntroVideo = useCallback((v: boolean) => {
+    setIntroVideoOn(v);
+    setIntroVideoEnabled(v);
+  }, []);
 
   // Subscription + admin gates.
   const [sub, setSub] = useState<any>(null);
@@ -854,12 +865,26 @@ export default function MoreScreen() {
             icon="notifications"
             title="Warranty Expiring Alerts"
             subtitle="Banner on inventory tab"
-            isLast
             rightSlot={
               <AppSwitch
                 testID="toggle-warranty-alerts"
                 value={prefs.warranty_alerts}
                 onValueChange={(v) => update({ warranty_alerts: v })}
+                trackColor={{ true: theme.colors.accent, false: theme.colors.border }}
+                thumbColor="#fff"
+              />
+            }
+          />
+          <SectionRow
+            icon="film"
+            title="Intro Video"
+            subtitle="Play the splash video when the app starts"
+            isLast
+            rightSlot={
+              <AppSwitch
+                testID="toggle-intro-video"
+                value={introVideoOn}
+                onValueChange={onToggleIntroVideo}
                 trackColor={{ true: theme.colors.accent, false: theme.colors.border }}
                 thumbColor="#fff"
               />
