@@ -9,8 +9,13 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter, useFocusEffect } from "expo-router";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { theme } from "../theme";
 import { api } from "../api";
+
+// One-time flag for the post-demo "choose your theme" popup. Shown once, right
+// after the user dismisses the demo-data intro on a fresh account.
+const THEME_INTRO_KEY = "tbv_theme_intro_seen";
 
 /**
  * Prefilled Demo System surface for the Dashboard.
@@ -28,6 +33,7 @@ export function DemoBanner() {
   const router = useRouter();
   const [present, setPresent] = useState(false);
   const [showIntro, setShowIntro] = useState(false);
+  const [showThemeIntro, setShowThemeIntro] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -60,6 +66,35 @@ export function DemoBanner() {
     await dismissIntro();
     router.push("/(tabs)/more" as any);
   }, [dismissIntro, router]);
+
+  // Primary "GOT IT" on the demo popup → dismiss demo intro, then (one time
+  // only) chain into the "choose your theme" popup for fresh accounts.
+  const onGotItDemo = useCallback(async () => {
+    setShowIntro(false);
+    try {
+      await api.demoIntroSeen();
+    } catch {
+      /* best-effort */
+    }
+    try {
+      const seen = await AsyncStorage.getItem(THEME_INTRO_KEY);
+      if (seen !== "1") setShowThemeIntro(true);
+    } catch {
+      setShowThemeIntro(true);
+    }
+  }, []);
+
+  // Theme popup OK → mark seen, close, jump to Vault with the Theme accordion
+  // pre-opened so the user can pick a theme immediately.
+  const startTheming = useCallback(async () => {
+    setShowThemeIntro(false);
+    try {
+      await AsyncStorage.setItem(THEME_INTRO_KEY, "1");
+    } catch {
+      /* best-effort */
+    }
+    router.push({ pathname: "/(tabs)/more", params: { openTheme: "1" } } as any);
+  }, [router]);
 
   if (!present) return null;
 
@@ -148,10 +183,41 @@ export function DemoBanner() {
             <TouchableOpacity
               testID="demo-intro-dismiss"
               activeOpacity={0.85}
-              onPress={dismissIntro}
+              onPress={onGotItDemo}
               style={styles.primaryBtn}
             >
               <Text style={styles.primaryBtnText}>GOT IT — START EXPLORING</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Second one-time popup — theme customization, shown right after the
+          demo intro on a fresh account. OK → jump to Vault with Theme open. */}
+      <Modal
+        visible={showThemeIntro}
+        transparent
+        animationType="fade"
+        onRequestClose={startTheming}
+      >
+        <View style={styles.overlay}>
+          <View style={styles.card} testID="theme-intro-modal">
+            <View style={styles.cardHeader}>
+              <Ionicons name="color-palette" size={26} color={theme.colors.accent} />
+              <Text style={styles.cardTitle}>Make It Yours</Text>
+            </View>
+            <Text style={styles.cardBody}>
+              Toolbox Vault offers{" "}
+              <Text style={styles.bodyStrong}>6 different theme styles</Text> to
+              suit your needs. Choose your desired theme to get started.
+            </Text>
+            <TouchableOpacity
+              testID="theme-intro-choose"
+              activeOpacity={0.85}
+              onPress={startTheming}
+              style={styles.primaryBtn}
+            >
+              <Text style={styles.primaryBtnText}>CHOOSE MY THEME</Text>
             </TouchableOpacity>
           </View>
         </View>

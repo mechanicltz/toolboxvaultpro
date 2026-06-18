@@ -18,7 +18,7 @@ import * as ImagePicker from "expo-image-picker";
 import * as ImageManipulator from "expo-image-manipulator";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter, useFocusEffect } from "expo-router";
+import { useRouter, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { useAppResume } from "../../src/appLifecycle";
 import { theme } from "../../src/theme";
 import { useSkin } from "../../src/themeContext";import {
@@ -266,6 +266,25 @@ export default function MoreScreen() {
   const [themeOpen, setThemeOpen] = useState(false);
   const { appearance, setAppearance, skin } = useSkin();
   const isIndustrial = skin === "industrial";
+
+  // Deep-link from the new-account "choose your theme" popup. When arriving
+  // with ?openTheme=1, pre-open the Theme accordion and scroll to it.
+  const params = useLocalSearchParams<{ openTheme?: string }>();
+  const scrollRef = useRef<ScrollView>(null);
+  const settingsYRef = useRef(0);
+  const themeParamHandledRef = useRef(false);
+  useEffect(() => {
+    if (params?.openTheme === "1" && !themeParamHandledRef.current) {
+      themeParamHandledRef.current = true;
+      setThemeOpen(true);
+      setTimeout(() => {
+        scrollRef.current?.scrollTo({
+          y: Math.max(settingsYRef.current - 12, 0),
+          animated: true,
+        });
+      }, 400);
+    }
+  }, [params?.openTheme]);
 
   // Subscription + admin gates.
   const [sub, setSub] = useState<any>(null);
@@ -604,7 +623,7 @@ export default function MoreScreen() {
         title={isPro ? "VAULT - SUBSCRIBED" : "VAULT"}
         subtitle={user?.email || "Manage everything"}
       />
-      <ScrollView contentContainerStyle={{ paddingBottom: 100, paddingTop: 8 }}>
+      <ScrollView ref={scrollRef} contentContainerStyle={{ paddingBottom: 100, paddingTop: 8 }}>
         <SectionCard title="RESOURCES" testID="more-section-system">
           <SectionRow
             icon="heart"
@@ -706,6 +725,12 @@ export default function MoreScreen() {
 
         <NotificationsSettingsSection prefs={prefs} update={update} />
 
+        {/* Position marker so ?openTheme can scroll the Theme accordion into view. */}
+        <View
+          onLayout={(e) => {
+            settingsYRef.current = e.nativeEvent.layout.y;
+          }}
+        />
         {/* SETTINGS — theme, home layout & home banners. */}
         <SectionCard title="SETTINGS" testID="more-section-customize">
           {/* Theme — accordion row; expands to a grouped card of choices. */}
