@@ -26,13 +26,18 @@ import {
   UpcomingFeatureItem,
 } from "../../src/api";
 import { themedStyles, useColors } from "../../src/themeContext";
-import { BevelCard } from "../../src/components/BevelCard";
+import { SkinnedCard } from "../../src/components/SkinnedCard";
 import { IndustrialBanner } from "../../src/components/IndustrialBanner";
 import { DateField } from "../../src/DateField";
 
 const STATUSES: UpcomingFeatureStatus[] = ["On The List", "Work Started", "Completed"];
 
-type DraftFeature = { id: string; title: string; status: UpcomingFeatureStatus };
+type DraftFeature = {
+  id: string;
+  title: string;
+  description: string;
+  status: UpcomingFeatureStatus;
+};
 
 function formatDate(iso: string): string {
   try {
@@ -119,6 +124,7 @@ export default function AdminUpcomingFeaturesScreen() {
       (rel.features || []).map((f: UpcomingFeatureItem) => ({
         id: f.id,
         title: f.title,
+        description: f.description || "",
         status: f.status,
       })),
     );
@@ -128,7 +134,12 @@ export default function AdminUpcomingFeaturesScreen() {
   const addFeatureRow = () =>
     setDraftFeatures((prev) => [
       ...prev,
-      { id: `new-${Date.now()}-${prev.length}`, title: "", status: "On The List" },
+      {
+        id: `new-${Date.now()}-${prev.length}`,
+        title: "",
+        description: "",
+        status: "On The List",
+      },
     ]);
 
   const updateFeature = (idx: number, patch: Partial<DraftFeature>) =>
@@ -151,7 +162,12 @@ export default function AdminUpcomingFeaturesScreen() {
       return;
     }
     const features = draftFeatures
-      .map((f) => ({ id: f.id, title: f.title.trim(), status: f.status }))
+      .map((f) => ({
+        id: f.id,
+        title: f.title.trim(),
+        description: f.description.trim(),
+        status: f.status,
+      }))
       .filter((f) => f.title);
     setSaving(true);
     try {
@@ -253,7 +269,7 @@ export default function AdminUpcomingFeaturesScreen() {
             </Text>
           ) : (
             releases.map((rel) => (
-              <BevelCard key={rel.id} style={styles.card}>
+              <SkinnedCard key={rel.id} style={styles.card}>
                 <View style={styles.cardHeader}>
                   <Ionicons name="calendar" size={18} color={c.accent} />
                   <View style={{ flex: 1 }}>
@@ -272,17 +288,22 @@ export default function AdminUpcomingFeaturesScreen() {
                   <Text style={styles.noFeatures}>No features added.</Text>
                 ) : (
                   rel.features.map((f) => (
-                    <View key={f.id} style={styles.featureRow}>
-                      <Text style={styles.featureTitle}>{f.title}</Text>
-                      <View style={[styles.statusPill, { borderColor: statusColor(f.status) }]}>
-                        <Text style={[styles.statusText, { color: statusColor(f.status) }]}>
-                          {f.status}
-                        </Text>
+                    <View key={f.id} style={styles.featureBlock}>
+                      <View style={styles.featureRow}>
+                        <Text style={styles.featureTitle}>{f.title}</Text>
+                        <View style={[styles.statusPill, { borderColor: statusColor(f.status) }]}>
+                          <Text style={[styles.statusText, { color: statusColor(f.status) }]}>
+                            {f.status}
+                          </Text>
+                        </View>
                       </View>
+                      {!!f.description && (
+                        <Text style={styles.featureDesc}>{f.description}</Text>
+                      )}
                     </View>
                   ))
                 )}
-              </BevelCard>
+              </SkinnedCard>
             ))
           )}
         </ScrollView>
@@ -326,30 +347,42 @@ export default function AdminUpcomingFeaturesScreen() {
               </View>
 
               {draftFeatures.length === 0 ? (
-                <Text style={styles.noFeatures}>Tap + to add a feature line.</Text>
+                <Text style={styles.noFeatures}>Tap + to add a feature.</Text>
               ) : (
                 draftFeatures.map((f, idx) => (
-                  <View key={f.id} style={styles.draftRow}>
+                  <View key={f.id} style={styles.draftCard}>
+                    <View style={styles.draftCardHead}>
+                      <Text style={styles.draftIndex}>FEATURE {idx + 1}</Text>
+                      <TouchableOpacity
+                        onPress={() => cycleStatus(idx)}
+                        style={[styles.statusPill, { borderColor: statusColor(f.status) }]}
+                        testID={`upcoming-feature-status-${idx}`}
+                      >
+                        <Text style={[styles.statusText, { color: statusColor(f.status) }]}>
+                          {f.status}
+                        </Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity onPress={() => removeFeature(idx)} hitSlop={6}>
+                        <Ionicons name="close-circle" size={20} color={c.textMuted} />
+                      </TouchableOpacity>
+                    </View>
                     <TextInput
                       value={f.title}
                       onChangeText={(t) => updateFeature(idx, { title: t })}
-                      placeholder="Feature description"
+                      placeholder="Feature title"
                       placeholderTextColor={c.textMuted}
-                      style={[styles.input, { flex: 1, marginTop: 0 }]}
+                      style={[styles.input, { marginTop: 8 }]}
                       testID={`upcoming-feature-${idx}`}
                     />
-                    <TouchableOpacity
-                      onPress={() => cycleStatus(idx)}
-                      style={[styles.statusPill, { borderColor: statusColor(f.status) }]}
-                      testID={`upcoming-feature-status-${idx}`}
-                    >
-                      <Text style={[styles.statusText, { color: statusColor(f.status) }]}>
-                        {f.status}
-                      </Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity onPress={() => removeFeature(idx)} hitSlop={6}>
-                      <Ionicons name="close-circle" size={20} color={c.textMuted} />
-                    </TouchableOpacity>
+                    <TextInput
+                      value={f.description}
+                      onChangeText={(t) => updateFeature(idx, { description: t })}
+                      placeholder="Description (optional)"
+                      placeholderTextColor={c.textMuted}
+                      style={[styles.input, styles.inputMultiline, { marginTop: 8 }]}
+                      multiline
+                      testID={`upcoming-feature-desc-${idx}`}
+                    />
                   </View>
                 ))
               )}
@@ -375,7 +408,7 @@ export default function AdminUpcomingFeaturesScreen() {
 }
 
 const styles = themedStyles((c) => ({
-  safe: { flex: 1, backgroundColor: c.bg },
+  safe: { flex: 1, backgroundColor: c.canvas },
   center: { flex: 1, alignItems: "center", justifyContent: "center" },
   content: { padding: 16, paddingBottom: 60 },
   createBtn: {
@@ -390,15 +423,17 @@ const styles = themedStyles((c) => ({
   },
   createBtnText: { color: "#000", fontWeight: "800", fontSize: 14, letterSpacing: 0.6 },
   emptyText: { color: c.textMuted, fontSize: 14, textAlign: "center", lineHeight: 20, marginTop: 30 },
-  card: { padding: 16, marginBottom: 14 },
+  card: { marginBottom: 14 },
   cardHeader: { flexDirection: "row", alignItems: "center", gap: 8 },
   cardDate: { fontSize: 16, fontWeight: "800", color: c.accent },
   cardTitle: { fontSize: 13, fontWeight: "600", color: c.textSecondary, marginTop: 2 },
   iconBtn: { padding: 4 },
   divider: { height: 1, backgroundColor: c.borderSubtle, marginVertical: 12 },
   noFeatures: { fontSize: 13, color: c.textMuted, fontStyle: "italic", marginTop: 4 },
-  featureRow: { flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 6 },
+  featureBlock: { paddingVertical: 6 },
+  featureRow: { flexDirection: "row", alignItems: "center", gap: 10 },
   featureTitle: { flex: 1, fontSize: 14, fontWeight: "600", color: c.textPrimary },
+  featureDesc: { fontSize: 12, color: c.textMuted, marginTop: 3, lineHeight: 17 },
   statusPill: { borderWidth: 1, borderRadius: 999, paddingHorizontal: 9, paddingVertical: 4 },
   statusText: { fontSize: 10, fontWeight: "800", letterSpacing: 0.4 },
   // Modal
@@ -433,12 +468,22 @@ const styles = themedStyles((c) => ({
     fontSize: 14,
     marginTop: 2,
   },
+  inputMultiline: { minHeight: 60, textAlignVertical: "top" },
   featuresHeader: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
   },
-  draftRow: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 8 },
+  draftCard: {
+    borderWidth: 1,
+    borderColor: c.border,
+    borderRadius: 10,
+    backgroundColor: c.surfaceAlt,
+    padding: 12,
+    marginTop: 10,
+  },
+  draftCardHead: { flexDirection: "row", alignItems: "center", gap: 10 },
+  draftIndex: { flex: 1, fontSize: 11, fontWeight: "900", color: c.textSecondary, letterSpacing: 0.8 },
   saveBtn: {
     backgroundColor: c.accent,
     alignItems: "center",

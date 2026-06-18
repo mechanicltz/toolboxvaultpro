@@ -32,6 +32,7 @@ FEATURE_STATUSES = ["On The List", "Work Started", "Completed"]
 class FeatureItem(BaseModel):
     id: str = Field(default_factory=lambda: uuid.uuid4().hex)
     title: str
+    description: Optional[str] = ""
     status: str = "On The List"
 
 
@@ -66,6 +67,7 @@ def _clean_features(features) -> List[dict]:
         out.append({
             "id": d.get("id") or uuid.uuid4().hex,
             "title": (d.get("title") or "").strip(),
+            "description": (d.get("description") or "").strip(),
             "status": status,
         })
     return [f for f in out if f["title"]]

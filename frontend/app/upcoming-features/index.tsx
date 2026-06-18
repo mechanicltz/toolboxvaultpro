@@ -14,7 +14,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter, useFocusEffect } from "expo-router";
 import { api, UpcomingRelease, UpcomingFeatureStatus } from "../../src/api";
 import { themedStyles, useColors } from "../../src/themeContext";
-import { BevelCard } from "../../src/components/BevelCard";
+import { SkinnedCard } from "../../src/components/SkinnedCard";
 import { IndustrialBanner } from "../../src/components/IndustrialBanner";
 import ReportBugBadge from "../../src/components/ReportBugBadge";
 
@@ -97,16 +97,18 @@ export default function UpcomingFeaturesScreen() {
           }
         >
           {releases.length === 0 ? (
-            <BevelCard style={styles.empty}>
-              <Ionicons name="rocket-outline" size={30} color={c.accent} />
-              <Text style={styles.emptyTitle}>No updates scheduled yet</Text>
-              <Text style={styles.emptyText}>
-                Check back soon — we're always working on new tools and fixes.
-              </Text>
-            </BevelCard>
+            <SkinnedCard style={styles.emptyWrap} padding={22}>
+              <View style={styles.emptyInner}>
+                <Ionicons name="rocket-outline" size={30} color={c.accent} />
+                <Text style={styles.emptyTitle}>No updates scheduled yet</Text>
+                <Text style={styles.emptyText}>
+                  Check back soon — we're always working on new tools and fixes.
+                </Text>
+              </View>
+            </SkinnedCard>
           ) : (
             releases.map((rel) => (
-              <BevelCard key={rel.id} style={styles.card}>
+              <SkinnedCard key={rel.id} style={styles.card}>
                 <View style={styles.cardHeader}>
                   <Ionicons name="calendar" size={18} color={c.accent} />
                   <View style={{ flex: 1 }}>
@@ -123,18 +125,25 @@ export default function UpcomingFeaturesScreen() {
                     const col = statusColor(meta.key);
                     return (
                       <View key={f.id} style={styles.featureRow}>
-                        <Ionicons name={meta.icon} size={18} color={col} />
-                        <Text style={styles.featureTitle}>{f.title}</Text>
-                        <View style={[styles.statusPill, { borderColor: col }]}>
-                          <Text style={[styles.statusText, { color: col }]}>
-                            {f.status}
-                          </Text>
+                        <Ionicons name={meta.icon} size={18} color={col} style={{ marginTop: 1 }} />
+                        <View style={{ flex: 1 }}>
+                          <View style={styles.featureTitleRow}>
+                            <Text style={styles.featureTitle}>{f.title}</Text>
+                            <View style={[styles.statusPill, { borderColor: col }]}>
+                              <Text style={[styles.statusText, { color: col }]}>
+                                {f.status}
+                              </Text>
+                            </View>
+                          </View>
+                          {!!f.description && (
+                            <Text style={styles.featureDesc}>{f.description}</Text>
+                          )}
                         </View>
                       </View>
                     );
                   })
                 )}
-              </BevelCard>
+              </SkinnedCard>
             ))
           )}
 
@@ -150,13 +159,14 @@ export default function UpcomingFeaturesScreen() {
 }
 
 const styles = themedStyles((c) => ({
-  safe: { flex: 1, backgroundColor: c.bg },
+  safe: { flex: 1, backgroundColor: c.canvas },
   center: { flex: 1, alignItems: "center", justifyContent: "center" },
   content: { padding: 16, paddingBottom: 60 },
-  empty: { padding: 22, alignItems: "center", gap: 10 },
+  emptyWrap: { marginTop: 4 },
+  emptyInner: { alignItems: "center", gap: 10 },
   emptyTitle: { fontSize: 16, fontWeight: "800", color: c.textPrimary, textAlign: "center" },
   emptyText: { fontSize: 13, color: c.textMuted, textAlign: "center", lineHeight: 19 },
-  card: { padding: 16, marginBottom: 14 },
+  card: { marginBottom: 14 },
   cardHeader: { flexDirection: "row", alignItems: "center", gap: 10 },
   cardDate: { fontSize: 16, fontWeight: "800", color: c.accent, letterSpacing: 0.3 },
   cardTitle: { fontSize: 13, fontWeight: "600", color: c.textSecondary, marginTop: 2 },
@@ -164,11 +174,13 @@ const styles = themedStyles((c) => ({
   noFeatures: { fontSize: 13, color: c.textMuted, fontStyle: "italic" },
   featureRow: {
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "flex-start",
     gap: 10,
     paddingVertical: 7,
   },
+  featureTitleRow: { flexDirection: "row", alignItems: "center", gap: 8 },
   featureTitle: { flex: 1, fontSize: 14, fontWeight: "600", color: c.textPrimary },
+  featureDesc: { fontSize: 12, color: c.textMuted, marginTop: 3, lineHeight: 17 },
   statusPill: {
     borderWidth: 1,
     borderRadius: 999,

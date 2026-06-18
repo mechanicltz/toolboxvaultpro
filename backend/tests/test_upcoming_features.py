@@ -112,6 +112,62 @@ def test_admin_create_release(admin_session: requests.Session, created_releases:
     created_releases.append(data["id"])
 
 
+def test_create_with_descriptions_persists(admin_session: requests.Session, user_session: requests.Session, created_releases: list[str]):
+    """NEW: each feature now carries an optional description. Verify POST + GET round-trip."""
+    payload = {
+        "release_date": "2099-08-20",
+        "title": "TEST_desc_release",
+        "features": [
+            {"title": "Cloud sync", "description": "Backup tools to the cloud automatically.", "status": "On The List"},
+            {"title": "PDF export", "description": "", "status": "Work Started"},
+            {"title": "Multi-user", "description": "Share toolboxes with crew members.", "status": "Completed"},
+        ],
+    }
+    r = admin_session.post(f"{BASE_URL}/api/admin/upcoming-features", json=payload)
+    assert r.status_code == 200, r.text
+    data = r.json()
+    created_releases.append(data["id"])
+    by_title = {f["title"]: f for f in data["features"]}
+    assert by_title["Cloud sync"]["description"] == "Backup tools to the cloud automatically."
+    assert by_title["PDF export"]["description"] == ""
+    assert by_title["Multi-user"]["description"] == "Share toolboxes with crew members."
+
+    # Re-fetch through the public list to confirm DB persistence
+    r2 = user_session.get(f"{BASE_URL}/api/upcoming-features")
+    assert r2.status_code == 200
+    match = next((x for x in r2.json() if x["id"] == data["id"]), None)
+    assert match is not None
+    by_title2 = {f["title"]: f for f in match["features"]}
+    assert by_title2["Cloud sync"]["description"] == "Backup tools to the cloud automatically."
+    assert by_title2["Multi-user"]["description"] == "Share toolboxes with crew members."
+
+
+def test_update_changes_description(admin_session: requests.Session, created_releases: list[str]):
+    """Editing a release must update the per-feature description in place."""
+    # Find the description release we just created
+    rid = None
+    r = admin_session.get(f"{BASE_URL}/api/upcoming-features")
+    for x in r.json():
+        if x.get("title") == "TEST_desc_release":
+            rid = x["id"]
+            break
+    assert rid, "TEST_desc_release not found; create test must run first"
+
+    r = admin_session.put(
+        f"{BASE_URL}/api/admin/upcoming-features/{rid}",
+        json={
+            "features": [
+                {"title": "Cloud sync", "description": "UPDATED description text.", "status": "Completed"},
+            ],
+        },
+    )
+    assert r.status_code == 200, r.text
+    data = r.json()
+    assert len(data["features"]) == 1
+    assert data["features"][0]["description"] == "UPDATED description text."
+    assert data["features"][0]["status"] == "Completed"
+
+
 def test_status_validation_and_empty_titles(admin_session: requests.Session, created_releases: list[str]):
     payload = {
         "release_date": "2099-07-01",

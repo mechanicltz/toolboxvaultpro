@@ -469,6 +469,7 @@ export type UpcomingFeatureStatus = "On The List" | "Work Started" | "Completed"
 export interface UpcomingFeatureItem {
   id: string;
   title: string;
+  description?: string;
   status: UpcomingFeatureStatus;
 }
 
@@ -504,7 +505,7 @@ export const api = {
   adminCreateUpcomingFeature: (body: {
     release_date: string;
     title?: string;
-    features?: { id?: string; title: string; status?: string }[];
+    features?: { id?: string; title: string; description?: string; status?: string }[];
   }) =>
     request<UpcomingRelease>(`/admin/upcoming-features`, {
       method: "POST",
@@ -515,7 +516,7 @@ export const api = {
     body: {
       release_date?: string;
       title?: string;
-      features?: { id?: string; title: string; status?: string }[];
+      features?: { id?: string; title: string; description?: string; status?: string }[];
     },
   ) =>
     request<UpcomingRelease>(`/admin/upcoming-features/${id}`, {
