@@ -464,6 +464,23 @@ export interface DealerPaymentDue {
   overdue: boolean;
 }
 
+export type UpcomingFeatureStatus = "On The List" | "Work Started" | "Completed";
+
+export interface UpcomingFeatureItem {
+  id: string;
+  title: string;
+  status: UpcomingFeatureStatus;
+}
+
+export interface UpcomingRelease {
+  id: string;
+  release_date: string; // ISO "YYYY-MM-DD"
+  title?: string;
+  features: UpcomingFeatureItem[];
+  created_at?: string;
+  updated_at?: string;
+}
+
 export const api = {
   // Auth
   register: (data: { email: string; password: string; name?: string }) =>
@@ -481,7 +498,36 @@ export const api = {
   // Admin (gated by ADMIN_EMAILS server-side)
   adminWhoAmI: () => request<{ is_admin: boolean; email: string }>(`/admin/me`),
 
-  // Admin · Database backups (audit #17)
+  // ---- Upcoming Features / Roadmap ----
+  listUpcomingFeatures: () =>
+    request<UpcomingRelease[]>(`/upcoming-features`),
+  adminCreateUpcomingFeature: (body: {
+    release_date: string;
+    title?: string;
+    features?: { id?: string; title: string; status?: string }[];
+  }) =>
+    request<UpcomingRelease>(`/admin/upcoming-features`, {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+  adminUpdateUpcomingFeature: (
+    id: string,
+    body: {
+      release_date?: string;
+      title?: string;
+      features?: { id?: string; title: string; status?: string }[];
+    },
+  ) =>
+    request<UpcomingRelease>(`/admin/upcoming-features/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(body),
+    }),
+  adminDeleteUpcomingFeature: (id: string) =>
+    request<{ ok: boolean }>(`/admin/upcoming-features/${id}`, {
+      method: "DELETE",
+    }),
+
+  // ---- Admin (gated by ADMIN_EMAILS server-side)
   adminBackupConfig: () =>
     request<{
       schedule: string;

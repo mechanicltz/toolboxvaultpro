@@ -198,6 +198,10 @@ register_tool_action_routes(api_router)
 from routes_stats import register_stats_routes  # noqa: E402
 register_stats_routes(api_router)
 
+# Upcoming Features / Roadmap (global, admin-managed) -> routes_upcoming.py.
+from routes_upcoming import register_upcoming_routes  # noqa: E402
+register_upcoming_routes(api_router)
+
 # ---------- Personal Profile (singleton) ----------
 class PersonalProfile(BaseModel):
     name: Optional[str] = ""

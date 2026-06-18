@@ -635,6 +635,27 @@ export default function MoreScreen() {
         subtitle={user?.email || "Manage everything"}
       />
       <ScrollView ref={scrollRef} contentContainerStyle={{ paddingBottom: 100, paddingTop: 8 }}>
+        <SectionCard title="ROADMAP" testID="more-section-roadmap">
+          <SectionRow
+            icon="rocket"
+            title="Upcoming Features"
+            subtitle="See what we're building next"
+            testID="more-upcoming-features"
+            onPress={() => router.push("/upcoming-features" as any)}
+            isLast={!isAdmin}
+          />
+          {isAdmin && (
+            <SectionRow
+              icon="construct"
+              title="Admin · Manage Roadmap"
+              subtitle="Add, edit & schedule upcoming releases"
+              testID="more-admin-upcoming"
+              onPress={() => router.push("/admin/upcoming-features" as any)}
+              isLast
+            />
+          )}
+        </SectionCard>
+
         <SectionCard title="RESOURCES" testID="more-section-system">
           <SectionRow
             icon="heart"
@@ -1037,6 +1058,17 @@ export default function MoreScreen() {
 
         {/* Report a bug — industrial badge image, pinned to the very bottom */}
         <ReportBugBadge style={{ marginTop: 14 }} testID="more-feedback" />
+
+        {/* Follow us on Facebook */}
+        <TouchableOpacity
+          style={styles.fbRow}
+          testID="more-facebook"
+          activeOpacity={0.7}
+          onPress={() => Linking.openURL("https://www.facebook.com/toolboxvault")}
+        >
+          <Ionicons name="logo-facebook" size={20} color="#1877F2" />
+          <Text style={styles.fbText}>Follow us on Facebook</Text>
+        </TouchableOpacity>
       </ScrollView>
 
       {/* Home Screen Rows modal — pick which rows show on Home and reorder them */}

@@ -554,4 +554,18 @@ export const styles = themedStyles((c) => ({
     fontSize: 10,
     fontWeight: "600",
   },
+  fbRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    marginTop: 18,
+    paddingVertical: 10,
+  },
+  fbText: {
+    color: c.textSecondary,
+    fontSize: 13,
+    fontWeight: "700",
+    letterSpacing: 0.3,
+  },
 }));

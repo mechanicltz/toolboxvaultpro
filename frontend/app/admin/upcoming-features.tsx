@@ -1,0 +1,451 @@
+// Admin · Upcoming Features (roadmap manager).
+// Only visible to ADMIN_EMAILS accounts. Non-admins are redirected to More.
+// Lets the admin create dated releases and manage each release's feature list
+// (title + status: On The List / Work Started / Completed).
+import { useCallback, useEffect, useState } from "react";
+import {
+  View,
+  Text,
+  ScrollView,
+  TouchableOpacity,
+  ActivityIndicator,
+  Alert,
+  TextInput,
+  Modal,
+  KeyboardAvoidingView,
+  Platform,
+  RefreshControl,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { Ionicons } from "@expo/vector-icons";
+import { useRouter, useFocusEffect } from "expo-router";
+import {
+  api,
+  UpcomingRelease,
+  UpcomingFeatureStatus,
+  UpcomingFeatureItem,
+} from "../../src/api";
+import { themedStyles, useColors } from "../../src/themeContext";
+import { BevelCard } from "../../src/components/BevelCard";
+import { IndustrialBanner } from "../../src/components/IndustrialBanner";
+import { DateField } from "../../src/DateField";
+
+const STATUSES: UpcomingFeatureStatus[] = ["On The List", "Work Started", "Completed"];
+
+type DraftFeature = { id: string; title: string; status: UpcomingFeatureStatus };
+
+function formatDate(iso: string): string {
+  try {
+    const [y, m, d] = (iso || "").split("-").map((n) => parseInt(n, 10));
+    if (!y || !m || !d) return iso || "No date";
+    return new Date(y, m - 1, d).toLocaleDateString(undefined, {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+  } catch {
+    return iso;
+  }
+}
+
+export default function AdminUpcomingFeaturesScreen() {
+  const router = useRouter();
+  const c = useColors();
+  const [checking, setChecking] = useState(true);
+  const [releases, setReleases] = useState<UpcomingRelease[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  // Edit modal state
+  const [editOpen, setEditOpen] = useState(false);
+  const [editId, setEditId] = useState<string | null>(null);
+  const [draftDate, setDraftDate] = useState("");
+  const [draftTitle, setDraftTitle] = useState("");
+  const [draftFeatures, setDraftFeatures] = useState<DraftFeature[]>([]);
+
+  // Admin gate
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      try {
+        const me = await api.adminWhoAmI();
+        if (!me?.is_admin) {
+          router.replace("/(tabs)/more");
+          return;
+        }
+      } catch {
+        if (active) router.replace("/(tabs)/more");
+        return;
+      }
+      if (active) setChecking(false);
+    })();
+    return () => {
+      active = false;
+    };
+  }, [router]);
+
+  const load = useCallback(async () => {
+    try {
+      const data = await api.listUpcomingFeatures();
+      setReleases(data || []);
+    } catch {
+      setReleases([]);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (!checking) load();
+    }, [checking, load]),
+  );
+
+  const openCreate = () => {
+    setEditId(null);
+    setDraftDate("");
+    setDraftTitle("");
+    setDraftFeatures([]);
+    setEditOpen(true);
+  };
+
+  const openEdit = (rel: UpcomingRelease) => {
+    setEditId(rel.id);
+    setDraftDate(rel.release_date || "");
+    setDraftTitle(rel.title || "");
+    setDraftFeatures(
+      (rel.features || []).map((f: UpcomingFeatureItem) => ({
+        id: f.id,
+        title: f.title,
+        status: f.status,
+      })),
+    );
+    setEditOpen(true);
+  };
+
+  const addFeatureRow = () =>
+    setDraftFeatures((prev) => [
+      ...prev,
+      { id: `new-${Date.now()}-${prev.length}`, title: "", status: "On The List" },
+    ]);
+
+  const updateFeature = (idx: number, patch: Partial<DraftFeature>) =>
+    setDraftFeatures((prev) =>
+      prev.map((f, i) => (i === idx ? { ...f, ...patch } : f)),
+    );
+
+  const removeFeature = (idx: number) =>
+    setDraftFeatures((prev) => prev.filter((_, i) => i !== idx));
+
+  const cycleStatus = (idx: number) => {
+    const cur = draftFeatures[idx].status;
+    const next = STATUSES[(STATUSES.indexOf(cur) + 1) % STATUSES.length];
+    updateFeature(idx, { status: next });
+  };
+
+  const save = async () => {
+    if (!draftDate) {
+      Alert.alert("Date required", "Please choose a release date.");
+      return;
+    }
+    const features = draftFeatures
+      .map((f) => ({ id: f.id, title: f.title.trim(), status: f.status }))
+      .filter((f) => f.title);
+    setSaving(true);
+    try {
+      if (editId) {
+        await api.adminUpdateUpcomingFeature(editId, {
+          release_date: draftDate,
+          title: draftTitle.trim(),
+          features,
+        });
+      } else {
+        await api.adminCreateUpcomingFeature({
+          release_date: draftDate,
+          title: draftTitle.trim(),
+          features,
+        });
+      }
+      setEditOpen(false);
+      await load();
+    } catch (e: any) {
+      Alert.alert("Couldn't save", String(e?.message || e));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const confirmDelete = (rel: UpcomingRelease) => {
+    Alert.alert(
+      "Delete release?",
+      `Remove the ${formatDate(rel.release_date)} update and all its features? This can't be undone.`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await api.adminDeleteUpcomingFeature(rel.id);
+              await load();
+            } catch (e: any) {
+              Alert.alert("Couldn't delete", String(e?.message || e));
+            }
+          },
+        },
+      ],
+    );
+  };
+
+  const statusColor = (s: UpcomingFeatureStatus) =>
+    s === "Completed" ? c.success : s === "Work Started" ? c.warning : c.textMuted;
+
+  if (checking) {
+    return (
+      <SafeAreaView style={styles.safe} edges={["top"]}>
+        <View style={styles.center}>
+          <ActivityIndicator color={c.accent} />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  return (
+    <SafeAreaView style={styles.safe} edges={["top"]}>
+      <IndustrialBanner
+        title="UPCOMING FEATURES"
+        subtitle="Admin · manage the roadmap"
+        onBack={() => router.back()}
+        rightSlot={
+          <TouchableOpacity onPress={openCreate} hitSlop={10} testID="upcoming-add">
+            <Ionicons name="add-circle" size={26} color={c.accent} />
+          </TouchableOpacity>
+        }
+      />
+      {loading ? (
+        <View style={styles.center}>
+          <ActivityIndicator color={c.accent} />
+        </View>
+      ) : (
+        <ScrollView
+          contentContainerStyle={styles.content}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={() => {
+                setRefreshing(true);
+                load();
+              }}
+              tintColor={c.accent}
+            />
+          }
+        >
+          <TouchableOpacity style={styles.createBtn} onPress={openCreate} testID="upcoming-create">
+            <Ionicons name="add" size={18} color="#000" />
+            <Text style={styles.createBtnText}>NEW DATED UPDATE</Text>
+          </TouchableOpacity>
+
+          {releases.length === 0 ? (
+            <Text style={styles.emptyText}>
+              No releases yet. Tap “New Dated Update” to publish your first roadmap entry.
+            </Text>
+          ) : (
+            releases.map((rel) => (
+              <BevelCard key={rel.id} style={styles.card}>
+                <View style={styles.cardHeader}>
+                  <Ionicons name="calendar" size={18} color={c.accent} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.cardDate}>{formatDate(rel.release_date)}</Text>
+                    {!!rel.title && <Text style={styles.cardTitle}>{rel.title}</Text>}
+                  </View>
+                  <TouchableOpacity onPress={() => openEdit(rel)} hitSlop={8} style={styles.iconBtn}>
+                    <Ionicons name="create-outline" size={20} color={c.accent} />
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={() => confirmDelete(rel)} hitSlop={8} style={styles.iconBtn}>
+                    <Ionicons name="trash-outline" size={20} color={c.danger} />
+                  </TouchableOpacity>
+                </View>
+                <View style={styles.divider} />
+                {rel.features.length === 0 ? (
+                  <Text style={styles.noFeatures}>No features added.</Text>
+                ) : (
+                  rel.features.map((f) => (
+                    <View key={f.id} style={styles.featureRow}>
+                      <Text style={styles.featureTitle}>{f.title}</Text>
+                      <View style={[styles.statusPill, { borderColor: statusColor(f.status) }]}>
+                        <Text style={[styles.statusText, { color: statusColor(f.status) }]}>
+                          {f.status}
+                        </Text>
+                      </View>
+                    </View>
+                  ))
+                )}
+              </BevelCard>
+            ))
+          )}
+        </ScrollView>
+      )}
+
+      {/* Create / Edit modal */}
+      <Modal visible={editOpen} transparent animationType="slide" onRequestClose={() => setEditOpen(false)}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+          style={styles.modalBg}
+        >
+          <View style={styles.modalCard}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>
+                {editId ? "EDIT UPDATE" : "NEW UPDATE"}
+              </Text>
+              <TouchableOpacity onPress={() => setEditOpen(false)} hitSlop={10}>
+                <Ionicons name="close" size={22} color={c.textPrimary} />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={{ maxHeight: 460 }} keyboardShouldPersistTaps="handled">
+              <Text style={styles.label}>RELEASE DATE</Text>
+              <DateField value={draftDate} onChange={setDraftDate} testID="upcoming-date" />
+
+              <Text style={styles.label}>UPDATE NAME (optional)</Text>
+              <TextInput
+                value={draftTitle}
+                onChangeText={setDraftTitle}
+                placeholder="e.g. Bug fixes & polish"
+                placeholderTextColor={c.textMuted}
+                style={styles.input}
+                testID="upcoming-title"
+              />
+
+              <View style={styles.featuresHeader}>
+                <Text style={styles.label}>FEATURES</Text>
+                <TouchableOpacity onPress={addFeatureRow} hitSlop={8} testID="upcoming-add-feature">
+                  <Ionicons name="add-circle-outline" size={22} color={c.accent} />
+                </TouchableOpacity>
+              </View>
+
+              {draftFeatures.length === 0 ? (
+                <Text style={styles.noFeatures}>Tap + to add a feature line.</Text>
+              ) : (
+                draftFeatures.map((f, idx) => (
+                  <View key={f.id} style={styles.draftRow}>
+                    <TextInput
+                      value={f.title}
+                      onChangeText={(t) => updateFeature(idx, { title: t })}
+                      placeholder="Feature description"
+                      placeholderTextColor={c.textMuted}
+                      style={[styles.input, { flex: 1, marginTop: 0 }]}
+                      testID={`upcoming-feature-${idx}`}
+                    />
+                    <TouchableOpacity
+                      onPress={() => cycleStatus(idx)}
+                      style={[styles.statusPill, { borderColor: statusColor(f.status) }]}
+                      testID={`upcoming-feature-status-${idx}`}
+                    >
+                      <Text style={[styles.statusText, { color: statusColor(f.status) }]}>
+                        {f.status}
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={() => removeFeature(idx)} hitSlop={6}>
+                      <Ionicons name="close-circle" size={20} color={c.textMuted} />
+                    </TouchableOpacity>
+                  </View>
+                ))
+              )}
+            </ScrollView>
+
+            <TouchableOpacity
+              style={[styles.saveBtn, saving && { opacity: 0.6 }]}
+              disabled={saving}
+              onPress={save}
+              testID="upcoming-save"
+            >
+              {saving ? (
+                <ActivityIndicator color="#000" />
+              ) : (
+                <Text style={styles.saveBtnText}>{editId ? "SAVE CHANGES" : "PUBLISH"}</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
+    </SafeAreaView>
+  );
+}
+
+const styles = themedStyles((c) => ({
+  safe: { flex: 1, backgroundColor: c.bg },
+  center: { flex: 1, alignItems: "center", justifyContent: "center" },
+  content: { padding: 16, paddingBottom: 60 },
+  createBtn: {
+    backgroundColor: c.accent,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingVertical: 13,
+    borderRadius: 10,
+    marginBottom: 16,
+  },
+  createBtnText: { color: "#000", fontWeight: "800", fontSize: 14, letterSpacing: 0.6 },
+  emptyText: { color: c.textMuted, fontSize: 14, textAlign: "center", lineHeight: 20, marginTop: 30 },
+  card: { padding: 16, marginBottom: 14 },
+  cardHeader: { flexDirection: "row", alignItems: "center", gap: 8 },
+  cardDate: { fontSize: 16, fontWeight: "800", color: c.accent },
+  cardTitle: { fontSize: 13, fontWeight: "600", color: c.textSecondary, marginTop: 2 },
+  iconBtn: { padding: 4 },
+  divider: { height: 1, backgroundColor: c.borderSubtle, marginVertical: 12 },
+  noFeatures: { fontSize: 13, color: c.textMuted, fontStyle: "italic", marginTop: 4 },
+  featureRow: { flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 6 },
+  featureTitle: { flex: 1, fontSize: 14, fontWeight: "600", color: c.textPrimary },
+  statusPill: { borderWidth: 1, borderRadius: 999, paddingHorizontal: 9, paddingVertical: 4 },
+  statusText: { fontSize: 10, fontWeight: "800", letterSpacing: 0.4 },
+  // Modal
+  modalBg: { flex: 1, backgroundColor: "rgba(0,0,0,0.65)", justifyContent: "flex-end" },
+  modalCard: {
+    backgroundColor: c.bgSecondary,
+    borderTopLeftRadius: 18,
+    borderTopRightRadius: 18,
+    padding: 18,
+    paddingBottom: 28,
+    borderTopWidth: 2,
+    borderTopColor: c.accent,
+  },
+  modalHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 8 },
+  modalTitle: { fontSize: 15, fontWeight: "900", color: c.textPrimary, letterSpacing: 1.5 },
+  label: {
+    fontSize: 11,
+    fontWeight: "800",
+    color: c.textSecondary,
+    letterSpacing: 0.8,
+    marginTop: 14,
+    marginBottom: 6,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: c.border,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 11,
+    color: c.textPrimary,
+    backgroundColor: c.surface,
+    fontSize: 14,
+    marginTop: 2,
+  },
+  featuresHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  draftRow: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 8 },
+  saveBtn: {
+    backgroundColor: c.accent,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 14,
+    borderRadius: 10,
+    marginTop: 16,
+  },
+  saveBtnText: { color: "#000", fontWeight: "800", fontSize: 15, letterSpacing: 0.6 },
+}));
