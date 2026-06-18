@@ -151,6 +151,7 @@ type SectionRowProps = {
   iconColor?: string;
   badge?: number;
   badgeColor?: string;
+  newBadge?: boolean;
 };
 
 const SectionRow = ({
@@ -165,6 +166,7 @@ const SectionRow = ({
   iconColor,
   badge,
   badgeColor,
+  newBadge,
 }: SectionRowProps) => {
   const Wrapper: any = onPress ? TouchableOpacity : View;
   const wrapperProps = onPress ? { onPress, activeOpacity: 0.6 } : {};
@@ -202,6 +204,11 @@ const SectionRow = ({
           ]}
         >
           <Text style={styles.badgeText}>{badge > 99 ? "99+" : String(badge)}</Text>
+        </View>
+      )}
+      {newBadge && (
+        <View style={styles.newPill}>
+          <Text style={styles.newPillText}>NEW</Text>
         </View>
       )}
       {rightSlot
@@ -300,6 +307,9 @@ export default function MoreScreen() {
   // Subscription + admin gates.
   const [sub, setSub] = useState<any>(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  // Roadmap — show a "NEW" badge on the Upcoming Features row whenever the
+  // admin has published at least one release (hidden when the list is empty).
+  const [hasUpcoming, setHasUpcoming] = useState(false);
   // Prefilled Demo System — show the "Delete Prefilled Information" row only
   // while seeded demo data is still present on the account.
   const [demoPresent, setDemoPresent] = useState(false);
@@ -336,6 +346,12 @@ export default function MoreScreen() {
       setDemoPresent(!!ds?.present);
     } catch {
       setDemoPresent(false);
+    }
+    try {
+      const ru = await api.listUpcomingFeatures();
+      setHasUpcoming(Array.isArray(ru) && ru.length > 0);
+    } catch {
+      setHasUpcoming(false);
     }
   }, []);
   useEffect(() => {
@@ -642,6 +658,7 @@ export default function MoreScreen() {
             subtitle="See what we're building next"
             testID="more-upcoming-features"
             onPress={() => router.push("/upcoming-features" as any)}
+            newBadge={hasUpcoming}
             isLast={!isAdmin}
           />
           {isAdmin && (

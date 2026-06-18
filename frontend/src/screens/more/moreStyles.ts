@@ -568,4 +568,17 @@ export const styles = themedStyles((c) => ({
     fontWeight: "700",
     letterSpacing: 0.3,
   },
+  newPill: {
+    backgroundColor: c.accent,
+    borderRadius: 999,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    marginRight: 6,
+  },
+  newPillText: {
+    color: c.textOnAccent,
+    fontSize: 9,
+    fontWeight: "900",
+    letterSpacing: 0.8,
+  },
 }));
