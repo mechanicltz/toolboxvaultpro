@@ -12,6 +12,7 @@
       "bundleIdentifier": "app.emergent.assetlocator128c92565d",
       "buildNumber": "28",
       "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false,
         "NSCameraUsageDescription": "Take photos of your tools",
         "NSPhotoLibraryUsageDescription": "Add photos of tools from your gallery",
         "NSPhotoLibraryAddUsageDescription": "Save tool photos to your library",
