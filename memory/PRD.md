@@ -1,5 +1,24 @@
 # Toolbox Vault — PRD
 
+## Upcoming Features / Roadmap + Vault Facebook link (2026-06 — DONE & tested)
+Admin-managed GLOBAL roadmap shown to all users. Backend `routes_upcoming.py`
+(non-owner-scoped `real_db.upcoming_releases`): public `GET /api/upcoming-features`
+(any signed-in user; sorted soonest `release_date` first) + admin-gated
+`POST/PUT/DELETE /api/admin/upcoming-features` (ADMIN_EMAILS via `_require_admin`).
+Each release = one `release_date` (ISO YYYY-MM-DD) + optional `title` + `features`
+list, each feature `{id,title,status}` where status ∈ On The List / Work Started /
+Completed (invalid → "On The List"; empty titles dropped). Admin may publish
+multiple dated releases. Frontend: api.ts methods + `UpcomingRelease` type; user
+screen `app/upcoming-features/index.tsx` (color-coded status pills, prompt "Want
+your idea to be put on this list? Send us a Message" above ReportBugBadge → /feedback);
+admin screen `app/admin/upcoming-features.tsx` (create/edit/delete modal, DateField,
+tap-to-cycle status pills; redirects non-admins to /more). Vault (`more.tsx`) gets a
+new top "ROADMAP" SectionCard ("Upcoming Features" row + admin-only "Manage Roadmap"
+row) and a "Follow us on Facebook" link (→ facebook.com/toolboxvault) at the bottom.
+Verified: backend 10/10 pytest (`tests/test_upcoming_features.py`), frontend admin +
+non-admin flows. NOTE: app version label now reads from app.json (no HOME_BUILD const).
+
+
 > 🚨 **HARD RULE — APP ICON:** ALL app icons/launcher/splash/favicon MUST be the
 > bright-orange octagon master at `frontend/assets/branding/app_icon_master.png`.
 > The ONLY exception is the transparent login logo (`tbv_master_logo_*`). See
