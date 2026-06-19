@@ -39,7 +39,7 @@ import DriveAlertBanner from "../../src/components/DriveAlertBanner";
 import { DemoBanner } from "../../src/components/DemoBanner";
 import { IndustrialBanner } from "../../src/components/IndustrialBanner";
 import { AddChooser } from "../../src/components/AddChooser";
-import { SILVER_SRC, SILVER_CAP, SILVER_FRAME_SCALE, SILVER_PAD } from "../../src/tbv/silver";
+import { STEEL_PANEL_FRAME, STEEL_ROW, STEEL_ROW_LAST, STEEL_VALUE, STEEL_HEADER_WRAP } from "../../src/tbv/steel";
 import { TbvHeader } from "../../src/components/TbvHeader";
 import { TbvButton } from "../../src/components/TbvButton";
 import { useSubscriptionChange } from "../../src/subscriptionEvents";
@@ -73,29 +73,18 @@ export default function HomeScreen() {
   const isSteel = industrialVariant === "steel";
   // Frame art for dashboard panels — silver when Steel is active, otherwise the
   // active industrial skin's window/plate art (unchanged for all other themes).
+  // Steel values come from the centralized theme sheet (src/tbv/steel.ts).
   const windowFrame: any = isSteel
-    ? { source: SILVER_SRC, capInsets: SILVER_CAP, frameScale: SILVER_FRAME_SCALE, padX: SILVER_PAD.padX, padTop: SILVER_PAD.padTop, padBottom: SILVER_PAD.padBottom }
+    ? STEEL_PANEL_FRAME
     : { source: SKIN.window, capInsets: CAP.window, padX: 30, padTop: 24, padBottom: 26 };
   const plateFrame: any = isSteel
-    ? { source: SILVER_SRC, capInsets: SILVER_CAP, frameScale: SILVER_FRAME_SCALE, padX: SILVER_PAD.padX, padTop: SILVER_PAD.padTop, padBottom: SILVER_PAD.padBottom }
+    ? STEEL_PANEL_FRAME
     : { source: SKIN.plate, capInsets: CAP.plate, padX: 30, padTop: 22, padBottom: 24 };
-  // Steel theme: strip the dark "recessed slot" background/borders behind each
-  // list row, leaving a clean hairline separator (like the inventory list).
-  const steelRowStyle: any = isSteel
-    ? {
-        backgroundColor: "transparent",
-        borderWidth: 0,
-        borderRadius: 0,
-        marginVertical: 0,
-        paddingHorizontal: 4,
-        borderBottomWidth: StyleSheet.hairlineWidth,
-        borderBottomColor: "rgba(255,255,255,0.13)",
-      }
-    : null;
-  const steelRowLastStyle: any = isSteel ? { borderBottomWidth: 0 } : null;
-  const steelValueStyle: any = isSteel
-    ? { backgroundColor: "transparent", borderWidth: 0, paddingHorizontal: 0 }
-    : null;
+  // Steel theme: strip the dark "recessed slot" behind each row, keep a hairline
+  // separator. All styling lives in the centralized theme sheet.
+  const steelRowStyle = isSteel ? STEEL_ROW : null;
+  const steelRowLastStyle = isSteel ? STEEL_ROW_LAST : null;
+  const steelValueStyle = isSteel ? STEEL_VALUE : null;
   const [fontsLoaded, fontError] = useGoogleFonts({
     BebasNeue_400Regular,
     Rajdhani_500Medium, Rajdhani_600SemiBold, Rajdhani_700Bold,
@@ -752,7 +741,7 @@ export default function HomeScreen() {
         {/* Unified nameplate header. Steel theme swaps in the brushed-metal
             TOOLBOX VAULT nameplate; all other themes keep the standard banner. */}
         {isSteel ? (
-          <View style={{ paddingHorizontal: 16, paddingTop: 8, paddingBottom: 4 }}>
+          <View style={STEEL_HEADER_WRAP}>
             <TbvHeader testID="tbv-header" />
           </View>
         ) : (

@@ -10,6 +10,7 @@ import {
 import { useRouter } from "expo-router";
 import { useSkin } from "../themeContext";
 import type { IndustrialVariant } from "../tbv/skins";
+import { STEEL_BADGE_SCALE } from "../tbv/steel";
 
 // Industrial "REPORT A BUG · REQUEST FEATURES" badge (transparent PNG).
 // One asset per colour variant — plain Light/Dark force the orange base, the
@@ -55,7 +56,7 @@ export default function ReportBugBadge({
   // Explicit pixel size so the image never falls back to its intrinsic
   // (giant) dimensions when a parent's width isn't determinate.
   // The Steel badge renders at 65% so it sits lighter on the page.
-  const scale = industrialVariant === "steel" ? 0.65 : 1;
+  const scale = industrialVariant === "steel" ? STEEL_BADGE_SCALE : 1;
   const w = Math.min(Math.max(screenW - inset, 120), maxWidth) * scale;
   const h = w / aspect;
 
