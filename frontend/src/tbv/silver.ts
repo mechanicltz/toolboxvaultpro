@@ -61,13 +61,15 @@ export const SILVER = {
   textMuted: "#C2C2C2",
   divider: "rgba(255,255,255,0.13)",
 
-  title: { fontSize: 16, fontWeight: "800" as const, letterSpacing: 1.4, color: "#F4F4F4" },
-  label: { fontSize: 13.5, fontWeight: "600" as const, letterSpacing: 0.3, color: "#C9C9C9" },
-  value: { fontSize: 14.5, fontWeight: "800" as const, color: "#FFFFFF" },
+  // Matched to the dashboard SUMMARY rows: theme.text.default
+  // (fontSize 11 / weight 800 / letterSpacing 0.3) in white, 18px accent icons.
+  title: { fontSize: 11, fontWeight: "800" as const, letterSpacing: 0.3, color: "#FFFFFF" },
+  label: { fontSize: 11, fontWeight: "800" as const, letterSpacing: 0.3, color: "#FFFFFF" },
+  value: { fontSize: 11, fontWeight: "800" as const, letterSpacing: 0.3, color: "#FFFFFF" },
 
-  headerIconSize: 19,
-  rowIconSize: 16,
-  rowIconSlot: 24, // fixed icon column width → values align across rows
+  headerIconSize: 18,
+  rowIconSize: 18,
+  rowIconSlot: 26, // fixed icon column width → values align across rows
   rowGap: 10,
   rowPadV: 9,
   dividerMarginV: 8,
