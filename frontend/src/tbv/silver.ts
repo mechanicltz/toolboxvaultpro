@@ -14,8 +14,17 @@
  * the corners ever bloating or smearing.
  */
 import { ImageSourcePropType } from "react-native";
+import { IndustrialVariant } from "./skins";
 
 export const SILVER_SRC: ImageSourcePropType = require("../../assets/silver/silver_panel.png");
+
+/** Brushed-silver panel art per colour variant (orange base + Pillow recolors). */
+export const SILVER_SRC_BY_COLOR: Record<IndustrialVariant, ImageSourcePropType> = {
+  orange: require("../../assets/silver/silver_panel.png"),
+  pink: require("../../assets/silver/silver_panel-pink.png"),
+  arctic: require("../../assets/silver/silver_panel-arctic.png"),
+  emerald: require("../../assets/silver/silver_panel-emerald.png"),
+};
 
 /**
  * 9-slice cap insets in SOURCE-IMAGE pixels. These freeze the metal border +

@@ -12,8 +12,17 @@
  * scales down to whatever width the button is given.
  */
 import { ImageSourcePropType } from "react-native";
+import { IndustrialVariant } from "./skins";
 
 export const BUTTON_SRC: ImageSourcePropType = require("../../assets/button/button_panel.png");
+
+/** Button art per colour variant (Pillow recolors of the orange base). */
+export const BUTTON_SRC_BY_COLOR: Record<IndustrialVariant, ImageSourcePropType> = {
+  orange: require("../../assets/button/button_panel.png"),
+  pink: require("../../assets/button/button_panel-pink.png"),
+  arctic: require("../../assets/button/button_panel-arctic.png"),
+  emerald: require("../../assets/button/button_panel-emerald.png"),
+};
 
 /** Intrinsic trimmed art size (px) → exact aspect ratio, no stretch ever. */
 export const BUTTON_W = 1490;

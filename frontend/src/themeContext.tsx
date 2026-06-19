@@ -59,7 +59,10 @@ export type ThemeMode = "dark" | "light";
 export type SkinMode = "industrial" | "plain";
 
 /** Colour variant of the industrial skin (orange base + Pillow recolors). */
-export type IndustrialVariant = "orange" | "pink" | "arctic" | "emerald" | "steel";
+export type IndustrialVariant = "orange" | "pink" | "arctic" | "emerald";
+
+/** Metal art family for the industrial skin: Iron Forge (textured) vs Steel (brushed silver). */
+export type MetalStyle = "iron" | "steel";
 
 /** The user-facing appearance choices shown in the picker. */
 export type AppearanceOption =
@@ -69,7 +72,10 @@ export type AppearanceOption =
   | "industrial-pink"
   | "industrial-arctic"
   | "industrial-emerald"
-  | "steel";
+  | "steel"
+  | "steel-pink"
+  | "steel-arctic"
+  | "steel-emerald";
 
 type Ctx = {
   mode: ThemeMode;
@@ -86,6 +92,7 @@ type Ctx = {
 const STORAGE_KEY = "toolbox.themeMode";
 const STORAGE_KEY_SKIN = "toolbox.skinMode";
 const STORAGE_KEY_VARIANT = "toolbox.industrialVariant";
+const STORAGE_KEY_METAL = "toolbox.metalStyle";
 
 /** Accent palette per industrial colour variant (only the accent family differs). */
 const VARIANT_PALETTE: Record<IndustrialVariant, ColorPalette> = {
@@ -93,9 +100,6 @@ const VARIANT_PALETTE: Record<IndustrialVariant, ColorPalette> = {
   pink: darkPalettePink,
   arctic: darkPaletteArctic,
   emerald: darkPaletteEmerald,
-  // Steel reuses the dark workshop palette with the orange accent family — the
-  // metal/silver look comes from the dedicated Steel components, not the accent.
-  steel: darkPaletteIndustrial,
 };
 
 /**
@@ -118,6 +122,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [mode, setModeState] = useState<ThemeMode>("dark");
   const [skin, setSkinState] = useState<SkinMode>("industrial");
   const [industrialVariant, setVariantState] = useState<IndustrialVariant>("orange");
+  const [metalStyle, setMetalState] = useState<MetalStyle>("iron");
   const [hydrated, setHydrated] = useState(false);
 
   // Refs mirror the latest mode/skin so the setters always compute the
@@ -132,6 +137,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   // crashed setMode/setAppearance and prevented the pink variant from ever
   // being applied on cold start.)
   const variantRef = useRef<IndustrialVariant>("orange");
+  const metalRef = useRef<MetalStyle>("iron");
 
   // Hydrate both prefs from disk on first mount. Defaults: skin = industrial
   // (the premium textured look), mode = dark. Industrial forces the dark
@@ -139,29 +145,32 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     (async () => {
       try {
-        const [storedMode, storedSkin, storedVariant] = await Promise.all([
+        const [storedMode, storedSkin, storedVariant, storedMetal] = await Promise.all([
           AsyncStorage.getItem(STORAGE_KEY),
           AsyncStorage.getItem(STORAGE_KEY_SKIN),
           AsyncStorage.getItem(STORAGE_KEY_VARIANT),
+          AsyncStorage.getItem(STORAGE_KEY_METAL),
         ]);
         const m: ThemeMode = storedMode === "light" ? "light" : "dark";
         const s: SkinMode = storedSkin === "plain" ? "plain" : "industrial";
         const v: IndustrialVariant =
           storedVariant === "pink" ||
           storedVariant === "arctic" ||
-          storedVariant === "emerald" ||
-          storedVariant === "steel"
+          storedVariant === "emerald"
             ? storedVariant
             : "orange";
+        const metal: MetalStyle = storedMetal === "steel" ? "steel" : "iron";
         modeRef.current = m;
         skinRef.current = s;
         variantRef.current = v;
+        metalRef.current = metal;
         applyIndustrialVariant(v);
         applyPalette(effectivePalette(s, m, v));
         bumpStyleCacheVersion();
         setModeState(m);
         setSkinState(s);
         setVariantState(v);
+        setMetalState(metal);
       } catch {
         /* ignore */
       } finally {
@@ -203,36 +212,46 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     let s: SkinMode;
     let m: ThemeMode;
     let v: IndustrialVariant;
+    let metal: MetalStyle = "iron";
     if (opt === "light") {
       s = "plain"; m = "light"; v = "orange";
     } else if (opt === "dark") {
       s = "plain"; m = "dark"; v = "orange";
     } else if (opt === "industrial-pink") {
-      s = "industrial"; m = modeRef.current; v = "pink";
+      s = "industrial"; m = modeRef.current; v = "pink"; metal = "iron";
     } else if (opt === "industrial-arctic") {
-      s = "industrial"; m = modeRef.current; v = "arctic";
+      s = "industrial"; m = modeRef.current; v = "arctic"; metal = "iron";
     } else if (opt === "industrial-emerald") {
-      s = "industrial"; m = modeRef.current; v = "emerald";
+      s = "industrial"; m = modeRef.current; v = "emerald"; metal = "iron";
     } else if (opt === "steel") {
-      s = "industrial"; m = modeRef.current; v = "steel";
+      s = "industrial"; m = modeRef.current; v = "orange"; metal = "steel";
+    } else if (opt === "steel-pink") {
+      s = "industrial"; m = modeRef.current; v = "pink"; metal = "steel";
+    } else if (opt === "steel-arctic") {
+      s = "industrial"; m = modeRef.current; v = "arctic"; metal = "steel";
+    } else if (opt === "steel-emerald") {
+      s = "industrial"; m = modeRef.current; v = "emerald"; metal = "steel";
     } else {
       // "industrial" → Iron Forge (orange)
-      s = "industrial"; m = modeRef.current; v = "orange";
+      s = "industrial"; m = modeRef.current; v = "orange"; metal = "iron";
     }
     skinRef.current = s;
     modeRef.current = m;
     variantRef.current = v;
+    metalRef.current = metal;
     applyIndustrialVariant(v);
     applyPalette(effectivePalette(s, m, v));
     bumpStyleCacheVersion();
     setSkinState(s);
     setModeState(m);
     setVariantState(v);
+    setMetalState(metal);
     try {
       await Promise.all([
         AsyncStorage.setItem(STORAGE_KEY_SKIN, s),
         AsyncStorage.setItem(STORAGE_KEY, m),
         AsyncStorage.setItem(STORAGE_KEY_VARIANT, v),
+        AsyncStorage.setItem(STORAGE_KEY_METAL, metal),
       ]);
     } catch {
       /* ignore */
@@ -252,14 +271,20 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       ? mode === "light"
         ? "light"
         : "dark"
-      : industrialVariant === "pink"
-        ? "industrial-pink"
-        : industrialVariant === "arctic"
-          ? "industrial-arctic"
-          : industrialVariant === "emerald"
-            ? "industrial-emerald"
-            : industrialVariant === "steel"
-              ? "steel"
+      : metalStyle === "steel"
+        ? industrialVariant === "pink"
+          ? "steel-pink"
+          : industrialVariant === "arctic"
+            ? "steel-arctic"
+            : industrialVariant === "emerald"
+              ? "steel-emerald"
+              : "steel"
+        : industrialVariant === "pink"
+          ? "industrial-pink"
+          : industrialVariant === "arctic"
+            ? "industrial-arctic"
+            : industrialVariant === "emerald"
+              ? "industrial-emerald"
               : "industrial";
 
   const value = useMemo<Ctx>(
@@ -267,6 +292,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       mode,
       skin,
       industrialVariant,
+      metalStyle,
       appearance,
       colors: { ...currentPalette },
       setMode,
@@ -274,7 +300,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       setAppearance,
       toggle,
     }),
-    [mode, skin, industrialVariant, appearance, setMode, setSkin, setAppearance, toggle],
+    [mode, skin, industrialVariant, metalStyle, appearance, setMode, setSkin, setAppearance, toggle],
   );
 
   // Render the tree only AFTER hydration so the first paint already has the
@@ -310,6 +336,7 @@ export function useSkin() {
       skin: "industrial" as SkinMode,
       setSkin: async (_s: SkinMode) => {},
       industrialVariant: "orange" as IndustrialVariant,
+      metalStyle: "iron" as MetalStyle,
       appearance: "industrial" as AppearanceOption,
       setAppearance: async (_o: AppearanceOption) => {},
     };
@@ -318,6 +345,7 @@ export function useSkin() {
     skin: ctx.skin,
     setSkin: ctx.setSkin,
     industrialVariant: ctx.industrialVariant,
+    metalStyle: ctx.metalStyle,
     appearance: ctx.appearance,
     setAppearance: ctx.setAppearance,
   };
@@ -415,6 +443,16 @@ export function themedStyles<T extends Record<string, any>>(
       if (cachedVersion !== styleCacheVersion || cached === null) {
         cached = factory(currentPalette);
         cachedVersion = styleCacheVersion;
+      }
+      return {
+        enumerable: true,
+        configurable: true,
+        value: (cached as any)[key],
+      };
+    },
+  }) as T;
+}
+edVersion = styleCacheVersion;
       }
       return {
         enumerable: true,
