@@ -138,9 +138,13 @@ const VARIANT_MAPS: Record<string, Record<string, ImageSourcePropType>> = {
   pink: SKIN_PINK,
   arctic: SKIN_ARCTIC,
   emerald: SKIN_EMERALD,
+  // Steel reuses the orange art for any screen not yet migrated to the
+  // dedicated Steel (silver-metal) components — migrated screens swap in the
+  // Steel header / button / panel directly, page by page.
+  steel: SKIN_ORANGE,
 };
 
-export type IndustrialVariant = "orange" | "pink" | "arctic" | "emerald";
+export type IndustrialVariant = "orange" | "pink" | "arctic" | "emerald" | "steel";
 let _variant: IndustrialVariant = "orange";
 /** Set by the ThemeProvider when the user picks an industrial colour theme. */
 export function setIndustrialVariant(v: IndustrialVariant) {
@@ -227,4 +231,6 @@ export const VARIANT_ACCENT: Record<IndustrialVariant, string> = {
   pink: "#FF1A6B",
   arctic: "#1FC3E8",
   emerald: "#16C871",
+  // Steel keeps the warm orange edge glow as its accent.
+  steel: TBV.orange,
 };

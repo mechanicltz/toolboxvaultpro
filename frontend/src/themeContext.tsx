@@ -59,7 +59,7 @@ export type ThemeMode = "dark" | "light";
 export type SkinMode = "industrial" | "plain";
 
 /** Colour variant of the industrial skin (orange base + Pillow recolors). */
-export type IndustrialVariant = "orange" | "pink" | "arctic" | "emerald";
+export type IndustrialVariant = "orange" | "pink" | "arctic" | "emerald" | "steel";
 
 /** The user-facing appearance choices shown in the picker. */
 export type AppearanceOption =
@@ -68,7 +68,8 @@ export type AppearanceOption =
   | "industrial"
   | "industrial-pink"
   | "industrial-arctic"
-  | "industrial-emerald";
+  | "industrial-emerald"
+  | "steel";
 
 type Ctx = {
   mode: ThemeMode;
@@ -92,6 +93,9 @@ const VARIANT_PALETTE: Record<IndustrialVariant, ColorPalette> = {
   pink: darkPalettePink,
   arctic: darkPaletteArctic,
   emerald: darkPaletteEmerald,
+  // Steel reuses the dark workshop palette with the orange accent family — the
+  // metal/silver look comes from the dedicated Steel components, not the accent.
+  steel: darkPaletteIndustrial,
 };
 
 /**
@@ -145,7 +149,8 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
         const v: IndustrialVariant =
           storedVariant === "pink" ||
           storedVariant === "arctic" ||
-          storedVariant === "emerald"
+          storedVariant === "emerald" ||
+          storedVariant === "steel"
             ? storedVariant
             : "orange";
         modeRef.current = m;
@@ -208,6 +213,8 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       s = "industrial"; m = modeRef.current; v = "arctic";
     } else if (opt === "industrial-emerald") {
       s = "industrial"; m = modeRef.current; v = "emerald";
+    } else if (opt === "steel") {
+      s = "industrial"; m = modeRef.current; v = "steel";
     } else {
       // "industrial" → Iron Forge (orange)
       s = "industrial"; m = modeRef.current; v = "orange";
@@ -251,7 +258,9 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
           ? "industrial-arctic"
           : industrialVariant === "emerald"
             ? "industrial-emerald"
-            : "industrial";
+            : industrialVariant === "steel"
+              ? "steel"
+              : "industrial";
 
   const value = useMemo<Ctx>(
     () => ({

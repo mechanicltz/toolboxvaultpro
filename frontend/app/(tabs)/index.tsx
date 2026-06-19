@@ -39,7 +39,7 @@ import DriveAlertBanner from "../../src/components/DriveAlertBanner";
 import { DemoBanner } from "../../src/components/DemoBanner";
 import { IndustrialBanner } from "../../src/components/IndustrialBanner";
 import { AddChooser } from "../../src/components/AddChooser";
-import { SilverPanel, SilverHeader, SilverRow, SilverDivider } from "../../src/components/SilverPanel";
+import { SILVER_SRC, SILVER_CAP, SILVER_FRAME_SCALE, SILVER_PAD } from "../../src/tbv/silver";
 import { TbvHeader } from "../../src/components/TbvHeader";
 import { TbvButton } from "../../src/components/TbvButton";
 import { useSubscriptionChange } from "../../src/subscriptionEvents";
@@ -68,7 +68,17 @@ import { Anton_400Regular } from "@expo-google-fonts/anton";
 export default function HomeScreen() {
   const router = useRouter();
   const { prefs } = usePrefs();
-  const { skin } = useSkin();
+  const { skin, industrialVariant } = useSkin();
+  // Steel theme: dashboard swaps to the brushed-metal header, buttons & panels.
+  const isSteel = industrialVariant === "steel";
+  // Frame art for dashboard panels — silver when Steel is active, otherwise the
+  // active industrial skin's window/plate art (unchanged for all other themes).
+  const windowFrame: any = isSteel
+    ? { source: SILVER_SRC, capInsets: SILVER_CAP, frameScale: SILVER_FRAME_SCALE, padX: SILVER_PAD.padX, padTop: SILVER_PAD.padTop, padBottom: SILVER_PAD.padBottom }
+    : { source: SKIN.window, capInsets: CAP.window, padX: 30, padTop: 24, padBottom: 26 };
+  const plateFrame: any = isSteel
+    ? { source: SILVER_SRC, capInsets: SILVER_CAP, frameScale: SILVER_FRAME_SCALE, padX: SILVER_PAD.padX, padTop: SILVER_PAD.padTop, padBottom: SILVER_PAD.padBottom }
+    : { source: SKIN.plate, capInsets: CAP.plate, padX: 30, padTop: 22, padBottom: 24 };
   const [fontsLoaded, fontError] = useGoogleFonts({
     BebasNeue_400Regular,
     Rajdhani_500Medium, Rajdhani_600SemiBold, Rajdhani_700Bold,
@@ -727,13 +737,21 @@ export default function HomeScreen() {
       {/* dark veil so the textured plate reads but content stays legible */}
       <View style={styles.bgVeil} pointerEvents="none" />
       <SafeAreaView style={styles.container} edges={["top"]}>
-        {/* Unified nameplate header (same on every page / theme). */}
-        <IndustrialBanner
-          title="DASHBOARD"
-          subtitle={
-            userStats ? `FREE ${userStats.free} / SUB ${userStats.subscribed}` : undefined
-          }
-        />
+        {/* Unified nameplate header. Steel theme swaps in the brushed-metal
+            TOOLBOX VAULT nameplate; all other themes keep the standard banner. */}
+        {isSteel ? (
+          <TbvHeader
+            style={{ paddingHorizontal: 16, paddingTop: 8, paddingBottom: 4 }}
+            testID="tbv-header"
+          />
+        ) : (
+          <IndustrialBanner
+            title="DASHBOARD"
+            subtitle={
+              userStats ? `FREE ${userStats.free} / SUB ${userStats.subscribed}` : undefined
+            }
+          />
+        )}
 
       <ScrollView
         style={{ backgroundColor: "transparent" }}
@@ -746,44 +764,61 @@ export default function HomeScreen() {
           />
         }
       >
-        {/* TOOLBOX VAULT metal nameplate header — renders at its natural
-            aspect ratio (no stretch) with the live app version in the
-            bottom-right corner, in the same orange as "VAULT". */}
-        <TbvHeader style={{ marginBottom: 16 }} testID="tbv-header" />
-
-        {/* #23 — Quick actions row: Add Item + New Claim. Uses the new black
-            brushed-metal TbvButton (thin-rail 9-slice frame). */}
+        {/* #23 — Quick actions row: Add Item + New Claim. Steel theme uses the
+            brushed-metal TbvButton; all other themes use the skin's button plate. */}
         <View style={styles.quickRow}>
-          <TbvButton
-            label="ADD ITEM"
-            onPress={() => setShowAddChooser(true)}
-            style={{ flex: 1 }}
-            testID="quick-add-item"
-          />
-          <TbvButton
-            label="NEW CLAIM"
-            onPress={() => router.push("/claims?newClaim=1")}
-            style={{ flex: 1 }}
-            testID="quick-new-claim"
-          />
+          {isSteel ? (
+            <>
+              <TbvButton
+                label="ADD ITEM"
+                onPress={() => setShowAddChooser(true)}
+                style={{ flex: 1 }}
+                testID="quick-add-item"
+              />
+              <TbvButton
+                label="NEW CLAIM"
+                onPress={() => router.push("/claims?newClaim=1")}
+                style={{ flex: 1 }}
+                testID="quick-new-claim"
+              />
+            </>
+          ) : (
+            <>
+              <TouchableOpacity
+                style={styles.quickBtnSkin}
+                activeOpacity={0.85}
+                onPress={() => setShowAddChooser(true)}
+                testID="quick-add-item"
+              >
+                <ImageBackground
+                  source={SKIN.btnPrimary}
+                  style={styles.quickBtnSkinFill}
+                  imageStyle={styles.quickBtnSkinImg}
+                  resizeMode="stretch"
+                >
+                  <Text style={styles.quickBtnSkinText}>ADD ITEM</Text>
+                </ImageBackground>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.quickBtnSkin}
+                activeOpacity={0.85}
+                onPress={() => router.push("/claims?newClaim=1")}
+                testID="quick-new-claim"
+              >
+                <ImageBackground
+                  source={SKIN.btnPrimary}
+                  style={styles.quickBtnSkinFill}
+                  imageStyle={styles.quickBtnSkinImg}
+                  resizeMode="stretch"
+                >
+                  <Text style={styles.quickBtnSkinText}>NEW CLAIM</Text>
+                </ImageBackground>
+              </TouchableOpacity>
+            </>
+          )}
         </View>
 
         <DemoBanner />
-
-        {/* ============================================================
-            SILVER FRAME — TEST PLACEMENT (temporary, per user request to
-            preview on the dashboard). Renders the new centralized SilverPanel
-            with sample summary content. Remove this block once approved. */}
-        <SilverPanel style={{ marginBottom: 16 }} testID="silver-test-panel">
-          <SilverHeader icon="briefcase" title="PORTFOLIO SUMMARY" />
-          <SilverDivider />
-          <SilverRow icon="cube" label="TOTAL ITEMS" value="142" />
-          <SilverRow icon="cash" label="NET WORTH" value="$48,250" />
-          <SilverRow icon="arrow-redo" label="CHECKED OUT" value="3" />
-          <SilverRow icon="pricetag" label="SELLING" value="5" />
-          <SilverRow icon="heart" label="WISH LIST" value="12" />
-        </SilverPanel>
-        {/* ========================================================== */}
 
         {/* HOME LOGO — purely decorative, sits at the very top of the
             content scroll. Hidden by default; only renders when the user
@@ -804,12 +839,8 @@ export default function HomeScreen() {
         {/* Next dealer route — skinned panel to match the theme */}
         {nextRouteBanner && prefs.show_dealer_route_reminder && (
           <TbvFrame
-            source={SKIN.plate}
-            capInsets={CAP.plate}
+            {...plateFrame}
             style={styles.bannerLayout}
-            padX={30}
-            padTop={22}
-            padBottom={24}
           >
             <TouchableOpacity
               testID="next-route-banner"
@@ -842,12 +873,8 @@ export default function HomeScreen() {
             only renders when the user has the dealers row enabled). */}
         {renderSequence.some((it) => it.kind !== "stat") && (
           <TbvFrame
-            source={SKIN.window}
-            capInsets={CAP.window}
+            {...windowFrame}
             style={styles.detailsBoxLayout}
-            padX={30}
-            padTop={24}
-            padBottom={26}
             testID="home-dealers-widget"
           >
             <TouchableOpacity
@@ -925,12 +952,8 @@ export default function HomeScreen() {
         {/* STAT LIST PANEL — stat rows only, in the user's chosen order. */}
         {renderSequence.some((it) => it.kind === "stat") && (
           <TbvFrame
-            source={SKIN.window}
-            capInsets={CAP.window}
+            {...windowFrame}
             style={styles.detailsBoxLayout}
-            padX={30}
-            padTop={24}
-            padBottom={26}
             testID="home-details-box"
           >
             {renderSequence
