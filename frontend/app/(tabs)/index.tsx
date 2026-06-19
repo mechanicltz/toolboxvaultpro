@@ -39,7 +39,7 @@ import DriveAlertBanner from "../../src/components/DriveAlertBanner";
 import { DemoBanner } from "../../src/components/DemoBanner";
 import { IndustrialBanner } from "../../src/components/IndustrialBanner";
 import { AddChooser } from "../../src/components/AddChooser";
-import { SteelPanel, SteelHeader, SteelRow, SteelDivider } from "../../src/components/SteelPanel";
+import { SilverPanel, SilverHeader, SilverRow, SilverDivider } from "../../src/components/SilverPanel";
 import { useSubscriptionChange } from "../../src/subscriptionEvents";
 import { useAppResume } from "../../src/appLifecycle";
 
@@ -782,18 +782,18 @@ export default function HomeScreen() {
         <DemoBanner />
 
         {/* ============================================================
-            STEEL FRAME — TEST PLACEMENT (temporary, per user request to
-            preview on the dashboard). Renders the new centralized SteelPanel
+            SILVER FRAME — TEST PLACEMENT (temporary, per user request to
+            preview on the dashboard). Renders the new centralized SilverPanel
             with sample summary content. Remove this block once approved. */}
-        <SteelPanel orientation="vertical" style={{ marginBottom: 16 }} testID="steel-test-panel">
-          <SteelHeader icon="briefcase" title="PORTFOLIO SUMMARY" />
-          <SteelDivider />
-          <SteelRow icon="cube" label="TOTAL ITEMS" value="142" />
-          <SteelRow icon="cash" label="NET WORTH" value="$48,250" />
-          <SteelRow icon="arrow-redo" label="CHECKED OUT" value="3" />
-          <SteelRow icon="pricetag" label="SELLING" value="5" />
-          <SteelRow icon="heart" label="WISH LIST" value="12" />
-        </SteelPanel>
+        <SilverPanel style={{ marginBottom: 16 }} testID="silver-test-panel">
+          <SilverHeader icon="briefcase" title="PORTFOLIO SUMMARY" />
+          <SilverDivider />
+          <SilverRow icon="cube" label="TOTAL ITEMS" value="142" />
+          <SilverRow icon="cash" label="NET WORTH" value="$48,250" />
+          <SilverRow icon="arrow-redo" label="CHECKED OUT" value="3" />
+          <SilverRow icon="pricetag" label="SELLING" value="5" />
+          <SilverRow icon="heart" label="WISH LIST" value="12" />
+        </SilverPanel>
         {/* ========================================================== */}
 
         {/* HOME LOGO — purely decorative, sits at the very top of the
