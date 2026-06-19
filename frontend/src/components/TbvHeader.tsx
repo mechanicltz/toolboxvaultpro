@@ -29,10 +29,10 @@ export function TbvHeader({
   testID?: string;
 }) {
   return (
-    <View style={[styles.wrap, style]} testID={testID}>
+    <View style={[styles.wrap, { aspectRatio: HEADER_ASPECT }, style]} testID={testID}>
       <Image
         source={HEADER_SRC}
-        style={{ width: "100%", aspectRatio: HEADER_ASPECT }}
+        style={StyleSheet.absoluteFill}
         resizeMode="stretch"
         fadeDuration={0}
       />
