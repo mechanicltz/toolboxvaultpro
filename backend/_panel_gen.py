@@ -36,8 +36,15 @@ async def gen_one(name: str, prompt: str):
         if images:
             img_bytes = base64.b64decode(images[0]["data"])
             path = os.path.join(OUT, f"{name}.png")
-            with open(path, "wb") as f:
-                f.write(img_bytes)
+            # Gemini often returns JPEG bytes — re-encode to a REAL PNG so the
+            # native iOS asset loader doesn't crash ("Exception in HostFunction").
+            try:
+                import io
+                from PIL import Image
+                Image.open(io.BytesIO(img_bytes)).convert("RGB").save(path, "PNG")
+            except Exception:
+                with open(path, "wb") as f:
+                    f.write(img_bytes)
             print(f"OK  {name}  ({len(img_bytes)} bytes)")
         else:
             print(f"ERR {name}  no image returned")
