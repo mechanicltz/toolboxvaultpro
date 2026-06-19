@@ -38,16 +38,16 @@ export const SILVER_CAP = {
  * so the border looks thinner while the chamfered corners stay crisp. Lower =
  * thinner frame.
  */
-export const SILVER_FRAME_SCALE = 0.6;
+export const SILVER_FRAME_SCALE = 0.5;
 
 /**
  * Content padding (points) so inner content always clears the metal rails — a
  * touch larger than the (thinned) inner border so nothing kisses the frame edge.
  */
 export const SILVER_PAD = {
-  padX: 30,
-  padTop: 34,
-  padBottom: 36,
+  padX: 28,
+  padTop: 30,
+  padBottom: 32,
 };
 
 /**
