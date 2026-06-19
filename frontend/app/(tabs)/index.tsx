@@ -40,6 +40,8 @@ import { DemoBanner } from "../../src/components/DemoBanner";
 import { IndustrialBanner } from "../../src/components/IndustrialBanner";
 import { AddChooser } from "../../src/components/AddChooser";
 import { SilverPanel, SilverHeader, SilverRow, SilverDivider } from "../../src/components/SilverPanel";
+import { TbvHeader } from "../../src/components/TbvHeader";
+import { TbvButton } from "../../src/components/TbvButton";
 import { useSubscriptionChange } from "../../src/subscriptionEvents";
 import { useAppResume } from "../../src/appLifecycle";
 
@@ -744,39 +746,26 @@ export default function HomeScreen() {
           />
         }
       >
-        {/* #23 — Quick actions row: Add Item + New Claim. Skinned themes use
-            the skin's button plate art. */}
+        {/* TOOLBOX VAULT metal nameplate header — renders at its natural
+            aspect ratio (no stretch) with the live app version in the
+            bottom-right corner, in the same orange as "VAULT". */}
+        <TbvHeader style={{ marginBottom: 16 }} testID="tbv-header" />
+
+        {/* #23 — Quick actions row: Add Item + New Claim. Uses the new black
+            brushed-metal TbvButton (thin-rail 9-slice frame). */}
         <View style={styles.quickRow}>
-          <TouchableOpacity
-            style={styles.quickBtnSkin}
-            activeOpacity={0.85}
+          <TbvButton
+            label="ADD ITEM"
             onPress={() => setShowAddChooser(true)}
+            style={{ flex: 1 }}
             testID="quick-add-item"
-          >
-            <ImageBackground
-              source={SKIN.btnPrimary}
-              style={styles.quickBtnSkinFill}
-              imageStyle={styles.quickBtnSkinImg}
-              resizeMode="stretch"
-            >
-              <Text style={styles.quickBtnSkinText}>ADD ITEM</Text>
-            </ImageBackground>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.quickBtnSkin}
-            activeOpacity={0.85}
+          />
+          <TbvButton
+            label="NEW CLAIM"
             onPress={() => router.push("/claims?newClaim=1")}
+            style={{ flex: 1 }}
             testID="quick-new-claim"
-          >
-            <ImageBackground
-              source={SKIN.btnPrimary}
-              style={styles.quickBtnSkinFill}
-              imageStyle={styles.quickBtnSkinImg}
-              resizeMode="stretch"
-            >
-              <Text style={styles.quickBtnSkinText}>NEW CLAIM</Text>
-            </ImageBackground>
-          </TouchableOpacity>
+          />
         </View>
 
         <DemoBanner />
