@@ -27,7 +27,7 @@ const ASPECTS: Record<IndustrialVariant, number> = {
   pink: 1200 / 415,
   arctic: 1200 / 415,
   emerald: 1200 / 415,
-  steel: 1713 / 918,
+  steel: 1462 / 457,
 };
 
 type Props = {
