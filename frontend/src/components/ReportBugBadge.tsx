@@ -19,8 +19,16 @@ const BADGES: Record<IndustrialVariant, ImageSourcePropType> = {
   pink: require("../../assets/tbv/report-bug-badge-pink.png"),
   arctic: require("../../assets/tbv/report-bug-badge-arctic.png"),
   emerald: require("../../assets/tbv/report-bug-badge-emerald.png"),
+  steel: require("../../assets/tbv/report-bug-badge-steel.png"),
 };
-const ASPECT = 1200 / 415; // native trimmed dimensions (W/H)
+// Native trimmed dimensions (W/H). Steel uses its own taller artwork.
+const ASPECTS: Record<IndustrialVariant, number> = {
+  orange: 1200 / 415,
+  pink: 1200 / 415,
+  arctic: 1200 / 415,
+  emerald: 1200 / 415,
+  steel: 1713 / 918,
+};
 
 type Props = {
   style?: StyleProp<ViewStyle>;
@@ -42,11 +50,12 @@ export default function ReportBugBadge({
   const { width: screenW } = useWindowDimensions();
 
   const source = BADGES[industrialVariant] ?? BADGES.orange;
+  const aspect = ASPECTS[industrialVariant] ?? ASPECTS.orange;
 
   // Explicit pixel size so the image never falls back to its intrinsic
   // (giant) dimensions when a parent's width isn't determinate.
   const w = Math.min(Math.max(screenW - inset, 120), maxWidth);
-  const h = w / ASPECT;
+  const h = w / aspect;
 
   return (
     <TouchableOpacity
