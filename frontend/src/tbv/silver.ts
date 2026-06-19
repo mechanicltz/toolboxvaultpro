@@ -33,13 +33,21 @@ export const SILVER_CAP = {
 };
 
 /**
+ * How THICK the metal rails render, as a fraction of the captured corner art.
+ * The full corner is always drawn (never clipped) but shrunk to this fraction,
+ * so the border looks thinner while the chamfered corners stay crisp. Lower =
+ * thinner frame.
+ */
+export const SILVER_FRAME_SCALE = 0.6;
+
+/**
  * Content padding (points) so inner content always clears the metal rails — a
- * touch larger than the inner border so nothing ever kisses the frame edge.
+ * touch larger than the (thinned) inner border so nothing kisses the frame edge.
  */
 export const SILVER_PAD = {
-  padX: 44,
-  padTop: 50,
-  padBottom: 52,
+  padX: 30,
+  padTop: 34,
+  padBottom: 36,
 };
 
 /**

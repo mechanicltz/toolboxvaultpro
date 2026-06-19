@@ -19,7 +19,7 @@ import React, { ReactNode } from "react";
 import { View, Text, StyleProp, ViewStyle } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import TbvFrame from "../tbv/components/TbvFrame";
-import { SILVER, SILVER_SRC, SILVER_CAP, SILVER_PAD } from "../tbv/silver";
+import { SILVER, SILVER_SRC, SILVER_CAP, SILVER_FRAME_SCALE, SILVER_PAD } from "../tbv/silver";
 
 export function SilverPanel({
   style,
@@ -34,6 +34,7 @@ export function SilverPanel({
     <TbvFrame
       source={SILVER_SRC}
       capInsets={SILVER_CAP}
+      frameScale={SILVER_FRAME_SCALE}
       padX={SILVER_PAD.padX}
       padTop={SILVER_PAD.padTop}
       padBottom={SILVER_PAD.padBottom}

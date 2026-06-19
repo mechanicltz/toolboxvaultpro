@@ -53,6 +53,15 @@ export interface TbvFrameProps {
    * `Image.resolveAssetSource` (which is absent on react-native-web).
    */
   capInsets?: { top: number; left: number; bottom: number; right: number; w?: number; h?: number };
+  /**
+   * Optional uniform scale (0–1) for how THICK the frame rails render, without
+   * cropping any of the corner art. The full corner/rail source region is still
+   * drawn (so nothing is clipped) but shrunk to `inset * frameScale` points — a
+   * crisp down-scale that makes the metal border thinner while keeping the
+   * chamfered corners razor-sharp. Defaults to 1 (rails render at source size,
+   * unchanged behaviour for every existing skin).
+   */
+  frameScale?: number;
   /** Inner content padding to clear the frame rails. */
   padX?: number;
   padTop?: number;
@@ -129,6 +138,7 @@ function Slice({
 export function TbvFrame({
   source,
   capInsets,
+  frameScale = 1,
   padX = 18,
   padTop = 18,
   padBottom = 18,
@@ -149,19 +159,26 @@ export function TbvFrame({
   const SW = capInsets?.w || resolved?.width || 0;
   const SH = capInsets?.h || resolved?.height || 0;
 
-  // Cap insets in source pixels. The border bands render at their source size
-  // (in points) so the frame thickness matches the iOS capInsets look exactly.
+  // Cap insets in source pixels — how much of the ART is the frozen corner/rail.
   const cl = capInsets?.left ?? 0;
   const cr = capInsets?.right ?? 0;
   const ct = capInsets?.top ?? 0;
   const cb = capInsets?.bottom ?? 0;
 
-  const canSlice =
-    !!capInsets && SW > 0 && SH > 0 && w > 0 && h > 0 && cl + cr < SW && ct + cb < SH;
+  // Rendered rail thickness in POINTS. `frameScale` < 1 draws the full corner
+  // art shrunk down (crisp), so the metal border looks thinner without clipping.
+  const s = frameScale > 0 ? frameScale : 1;
+  const rl = cl * s;
+  const rr = cr * s;
+  const rt = ct * s;
+  const rb = cb * s;
 
-  // Center band sizes in DESTINATION points.
-  const midW = w - cl - cr;
-  const midH = h - ct - cb;
+  const canSlice =
+    !!capInsets && SW > 0 && SH > 0 && w > 0 && h > 0 && cl + cr < SW && ct + cb < SH && rl + rr < w && rt + rb < h;
+
+  // Center band sizes in DESTINATION points (using the rendered rail thickness).
+  const midW = w - rl - rr;
+  const midH = h - rt - rb;
   // Center band sizes in SOURCE pixels.
   const sMidW = SW - cl - cr;
   const sMidH = SH - ct - cb;
@@ -178,17 +195,17 @@ export function TbvFrame({
       {canSlice ? (
         <View style={StyleSheet.absoluteFill} pointerEvents="none">
           {/* Row 1 — top-left corner, top edge, top-right corner */}
-          <Slice source={source} SW={SW} SH={SH} x={0} y={0} dw={cl} dh={ct} sx={0} sy={0} sw={cl} sh={ct} />
-          <Slice source={source} SW={SW} SH={SH} x={cl} y={0} dw={midW} dh={ct} sx={cl} sy={0} sw={sMidW} sh={ct} />
-          <Slice source={source} SW={SW} SH={SH} x={w - cr} y={0} dw={cr} dh={ct} sx={SW - cr} sy={0} sw={cr} sh={ct} />
+          <Slice source={source} SW={SW} SH={SH} x={0} y={0} dw={rl} dh={rt} sx={0} sy={0} sw={cl} sh={ct} />
+          <Slice source={source} SW={SW} SH={SH} x={rl} y={0} dw={midW} dh={rt} sx={cl} sy={0} sw={sMidW} sh={ct} />
+          <Slice source={source} SW={SW} SH={SH} x={w - rr} y={0} dw={rr} dh={rt} sx={SW - cr} sy={0} sw={cr} sh={ct} />
           {/* Row 2 — left edge, center fill, right edge */}
-          <Slice source={source} SW={SW} SH={SH} x={0} y={ct} dw={cl} dh={midH} sx={0} sy={ct} sw={cl} sh={sMidH} />
-          <Slice source={source} SW={SW} SH={SH} x={cl} y={ct} dw={midW} dh={midH} sx={cl} sy={ct} sw={sMidW} sh={sMidH} />
-          <Slice source={source} SW={SW} SH={SH} x={w - cr} y={ct} dw={cr} dh={midH} sx={SW - cr} sy={ct} sw={cr} sh={sMidH} />
+          <Slice source={source} SW={SW} SH={SH} x={0} y={rt} dw={rl} dh={midH} sx={0} sy={ct} sw={cl} sh={sMidH} />
+          <Slice source={source} SW={SW} SH={SH} x={rl} y={rt} dw={midW} dh={midH} sx={cl} sy={ct} sw={sMidW} sh={sMidH} />
+          <Slice source={source} SW={SW} SH={SH} x={w - rr} y={rt} dw={rr} dh={midH} sx={SW - cr} sy={ct} sw={cr} sh={sMidH} />
           {/* Row 3 — bottom-left corner, bottom edge, bottom-right corner */}
-          <Slice source={source} SW={SW} SH={SH} x={0} y={h - cb} dw={cl} dh={cb} sx={0} sy={SH - cb} sw={cl} sh={cb} />
-          <Slice source={source} SW={SW} SH={SH} x={cl} y={h - cb} dw={midW} dh={cb} sx={cl} sy={SH - cb} sw={sMidW} sh={cb} />
-          <Slice source={source} SW={SW} SH={SH} x={w - cr} y={h - cb} dw={cr} dh={cb} sx={SW - cr} sy={SH - cb} sw={cr} sh={cb} />
+          <Slice source={source} SW={SW} SH={SH} x={0} y={h - rb} dw={rl} dh={rb} sx={0} sy={SH - cb} sw={cl} sh={cb} />
+          <Slice source={source} SW={SW} SH={SH} x={rl} y={h - rb} dw={midW} dh={rb} sx={cl} sy={SH - cb} sw={sMidW} sh={cb} />
+          <Slice source={source} SW={SW} SH={SH} x={w - rr} y={h - rb} dw={rr} dh={rb} sx={SW - cr} sy={SH - cb} sw={cr} sh={cb} />
         </View>
       ) : (
         // Fallback: no capInsets / not yet measured → plain stretched frame so
