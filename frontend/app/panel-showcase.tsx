@@ -2,7 +2,11 @@
 // TEMPORARY DESIGN SHOWCASE  —  /panel-showcase
 // 15 unique container-panel designs, each rendering the dashboard
 // "summary area". Horizontal selector at top to switch designs.
-// 9 panels use AI-generated textures (assets/images/panels/*).
+//
+// Textures are AI-generated (Gemini Nano Banana) and served OVER THE
+// NETWORK from the backend (/api/panels/*) — NOT bundled via require().
+// This keeps them out of the app's startup/asset graph and means a bad
+// image can never crash the app (it just shows the panel's fallback bg).
 // >>> TEMPORARY: remove this file + the Vault link when done testing. <<<
 // =====================================================================
 import React, { useState } from "react";
@@ -24,21 +28,9 @@ import { ShadowBox } from "../src/components/ShadowBox";
 import { TbvFrame } from "../src/tbv/components/TbvFrame";
 import { SKIN, CAP } from "../src/tbv/skins";
 
-// ---- AI-generated textures (Gemini Nano Banana) served OVER THE NETWORK ----
-// Loaded via { uri } (NOT require()) so they are never registered into the app's
-// startup JS/asset graph — a malformed bundled asset was crashing iOS at boot.
+// ---- Network-served textures (no bundled assets) ----
 const PANEL_BASE = `${process.env.EXPO_PUBLIC_BACKEND_URL}/api/panels`;
-const IMG = {
-  riveted_steel: { uri: `${PANEL_BASE}/riveted_steel.png` },
-  carbon_fiber: { uri: `${PANEL_BASE}/carbon_fiber.png` },
-  black_marble_gold: { uri: `${PANEL_BASE}/black_marble_gold.png` },
-  futuristic_hud: { uri: `${PANEL_BASE}/futuristic_hud.png` },
-  brushed_titanium: { uri: `${PANEL_BASE}/brushed_titanium.png` },
-  walnut_brass: { uri: `${PANEL_BASE}/walnut_brass.png` },
-  concrete_industrial: { uri: `${PANEL_BASE}/concrete_industrial.png` },
-  holographic_glass: { uri: `${PANEL_BASE}/holographic_glass.png` },
-  diamond_plate: { uri: `${PANEL_BASE}/diamond_plate.png` },
-};
+const url = (name: string) => ({ uri: `${PANEL_BASE}/${name}.png` });
 
 // ---- Dashboard summary demo data ----
 const ROWS: { icon: any; label: string; value: string }[] = [
@@ -117,18 +109,21 @@ const sb = StyleSheet.create({
   value: { fontSize: 13, fontWeight: "800", letterSpacing: 0.3 },
 });
 
-// Image panel wrapper — full-bleed texture, thin border, optional contrast scrim.
+// Image panel wrapper — network texture with a SOLID fallback colour so the
+// panel always renders even if the image is slow or fails to load.
 function ImagePanel({
-  source,
+  name,
   overlay,
+  fallback,
   borderColor,
   borderWidth = 1,
   radius = 16,
   glow,
   children,
 }: {
-  source: any;
+  name: string;
   overlay?: string;
+  fallback: string;
   borderColor: string;
   borderWidth?: number;
   radius?: number;
@@ -138,7 +133,13 @@ function ImagePanel({
   return (
     <View
       style={[
-        { borderRadius: radius, overflow: "hidden", borderWidth, borderColor },
+        {
+          borderRadius: radius,
+          overflow: "hidden",
+          borderWidth,
+          borderColor,
+          backgroundColor: fallback,
+        },
         glow
           ? (Platform.select({
               web: { boxShadow: `0 0 18px ${glow}` as any },
@@ -153,7 +154,12 @@ function ImagePanel({
           : null,
       ]}
     >
-      <ImageBackground source={source} resizeMode="cover" style={{ width: "100%" }}>
+      <ImageBackground
+        source={url(name)}
+        resizeMode="cover"
+        style={{ width: "100%" }}
+        onError={() => {}}
+      >
         {overlay ? (
           <View style={[StyleSheet.absoluteFillObject, { backgroundColor: overlay }]} />
         ) : null}
@@ -217,7 +223,7 @@ const PANELS: Panel[] = [
     name: "Riveted Plate",
     tag: "Steel plate bolted onto the background",
     render: () => (
-      <ImagePanel source={IMG.riveted_steel} overlay="rgba(10,12,16,0.34)" borderColor="#5a5f66" borderWidth={1}>
+      <ImagePanel name="riveted_steel" fallback="#3a3f45" overlay="rgba(10,12,16,0.34)" borderColor="#5a5f66">
         <SummaryBody
           t={{
             accent: "#FFB454",
@@ -238,7 +244,7 @@ const PANELS: Panel[] = [
     name: "Carbon Fiber",
     tag: "Glossy motorsport carbon weave",
     render: () => (
-      <ImagePanel source={IMG.carbon_fiber} overlay="rgba(8,8,10,0.28)" borderColor="#E11D2A" borderWidth={1.5}>
+      <ImagePanel name="carbon_fiber" fallback="#141416" overlay="rgba(8,8,10,0.28)" borderColor="#E11D2A" borderWidth={1.5}>
         <SummaryBody
           t={{
             accent: "#FF3B3B",
@@ -259,7 +265,7 @@ const PANELS: Panel[] = [
     name: "Black Marble & Gold",
     tag: "Fortune-500 executive luxury",
     render: () => (
-      <ImagePanel source={IMG.black_marble_gold} overlay="rgba(0,0,0,0.22)" borderColor="#C9A24B" borderWidth={1}>
+      <ImagePanel name="black_marble_gold" fallback="#15130f" overlay="rgba(0,0,0,0.22)" borderColor="#C9A24B">
         <SummaryBody
           t={{
             accent: "#E6C566",
@@ -281,10 +287,10 @@ const PANELS: Panel[] = [
     tag: "Glowing sci-fi command console",
     render: () => (
       <ImagePanel
-        source={IMG.futuristic_hud}
+        name="futuristic_hud"
+        fallback="#06121b"
         overlay="rgba(2,8,16,0.40)"
         borderColor="#27E0F0"
-        borderWidth={1}
         glow="rgba(39,224,240,0.5)"
       >
         <SummaryBody
@@ -307,7 +313,7 @@ const PANELS: Panel[] = [
     name: "Brushed Titanium",
     tag: "Precision aerospace metal",
     render: () => (
-      <ImagePanel source={IMG.brushed_titanium} overlay="rgba(240,242,245,0.30)" borderColor="#8a9098" borderWidth={1}>
+      <ImagePanel name="brushed_titanium" fallback="#c7ccd2" overlay="rgba(240,242,245,0.30)" borderColor="#8a9098">
         <SummaryBody
           t={{
             accent: "#2E6FB0",
@@ -328,7 +334,7 @@ const PANELS: Panel[] = [
     name: "Executive Walnut",
     tag: "Warm walnut & polished brass",
     render: () => (
-      <ImagePanel source={IMG.walnut_brass} overlay="rgba(20,10,2,0.30)" borderColor="#B08D57" borderWidth={1.5}>
+      <ImagePanel name="walnut_brass" fallback="#3a2417" overlay="rgba(20,10,2,0.30)" borderColor="#B08D57" borderWidth={1.5}>
         <SummaryBody
           t={{
             accent: "#E3B873",
@@ -349,7 +355,7 @@ const PANELS: Panel[] = [
     name: "Industrial Concrete",
     tag: "Minimalist architectural slab",
     render: () => (
-      <ImagePanel source={IMG.concrete_industrial} overlay="rgba(245,245,245,0.34)" borderColor="#9a9a98" borderWidth={1}>
+      <ImagePanel name="concrete_industrial" fallback="#ccccca" overlay="rgba(245,245,245,0.34)" borderColor="#9a9a98">
         <SummaryBody
           t={{
             accent: "#E8662A",
@@ -371,10 +377,10 @@ const PANELS: Panel[] = [
     tag: "Iridescent frosted future-glass",
     render: () => (
       <ImagePanel
-        source={IMG.holographic_glass}
+        name="holographic_glass"
+        fallback="#15122a"
         overlay="rgba(10,8,20,0.30)"
         borderColor="#B388FF"
-        borderWidth={1}
         glow="rgba(179,136,255,0.45)"
       >
         <SummaryBody
@@ -397,7 +403,7 @@ const PANELS: Panel[] = [
     name: "Diamond Plate",
     tag: "Rugged anti-slip tread metal",
     render: () => (
-      <ImagePanel source={IMG.diamond_plate} overlay="rgba(245,246,248,0.32)" borderColor="#6e7378" borderWidth={1.5}>
+      <ImagePanel name="diamond_plate" fallback="#b9bcc0" overlay="rgba(245,246,248,0.32)" borderColor="#6e7378" borderWidth={1.5}>
         <SummaryBody
           t={{
             accent: "#1B1D20",
