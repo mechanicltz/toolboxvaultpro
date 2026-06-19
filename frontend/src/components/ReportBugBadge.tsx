@@ -54,7 +54,9 @@ export default function ReportBugBadge({
 
   // Explicit pixel size so the image never falls back to its intrinsic
   // (giant) dimensions when a parent's width isn't determinate.
-  const w = Math.min(Math.max(screenW - inset, 120), maxWidth);
+  // The Steel badge renders at 65% so it sits lighter on the page.
+  const scale = industrialVariant === "steel" ? 0.65 : 1;
+  const w = Math.min(Math.max(screenW - inset, 120), maxWidth) * scale;
   const h = w / aspect;
 
   return (
