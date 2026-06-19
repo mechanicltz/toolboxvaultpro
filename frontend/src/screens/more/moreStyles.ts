@@ -411,6 +411,42 @@ export const styles = themedStyles((c) => ({
   optRowGroupedActive: {
     backgroundColor: c.glass,
   },
+  /* Theme family accordions (Iron Forge / Steel / Plain). */
+  familyHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 11,
+  },
+  familyHeaderDivider: {
+    borderTopWidth: 1,
+    borderTopColor: c.borderSubtle,
+  },
+  familyTitle: {
+    flex: 1,
+    color: c.textPrimary,
+    fontWeight: "800",
+    fontSize: 12,
+    letterSpacing: 0.8,
+  },
+  familyColorWrap: {
+    paddingLeft: 22,
+    paddingBottom: 6,
+  },
+  colorRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 8,
+  },
+  colorLabel: {
+    flex: 1,
+    color: c.textPrimary,
+    fontWeight: "700",
+    fontSize: 13,
+  },
   themeValueWrap: {
     flexDirection: "row",
     alignItems: "center",

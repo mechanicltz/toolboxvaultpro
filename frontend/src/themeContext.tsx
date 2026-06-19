@@ -81,6 +81,7 @@ type Ctx = {
   mode: ThemeMode;
   skin: SkinMode;
   industrialVariant: IndustrialVariant;
+  metalStyle: MetalStyle;
   appearance: AppearanceOption;
   colors: ColorPalette;
   setMode: (m: ThemeMode) => Promise<void>;
@@ -443,16 +444,6 @@ export function themedStyles<T extends Record<string, any>>(
       if (cachedVersion !== styleCacheVersion || cached === null) {
         cached = factory(currentPalette);
         cachedVersion = styleCacheVersion;
-      }
-      return {
-        enumerable: true,
-        configurable: true,
-        value: (cached as any)[key],
-      };
-    },
-  }) as T;
-}
-edVersion = styleCacheVersion;
       }
       return {
         enumerable: true,

@@ -54,59 +54,57 @@ const ARCTIC_AQUA = "#1FC3E8";
 const EMERALD_GREEN = "#16C871";
 const STEEL_SILVER = "#C7CDD3";
 
-// The appearance choices shown in the Theme accordion. `color` (when set)
-// forces the label + icon + active radio to that fixed hue across all themes.
-const APPEARANCE_OPTIONS = [
+// The Theme menu is three collapsible FAMILIES. Each family lists its colour
+// choices, and every colour's label is painted in its own signature hue. Only
+// one family opens at a time and they all start closed.
+type ThemeColor = { id: string; label: string; tint?: string };
+type ThemeFamily = {
+  key: "iron" | "steel" | "plain";
+  title: string; // accordion header (uppercase)
+  display: string; // friendly name for the collapsed summary line
+  icon: any;
+  tint?: string;
+  colors: ThemeColor[];
+};
+
+const THEME_FAMILIES: ThemeFamily[] = [
   {
-    id: "steel",
-    icon: "shield",
-    title: "Steel",
-    sub: "Brushed-metal header, buttons & panels",
-    color: STEEL_SILVER,
-  },
-  {
-    id: "industrial",
+    key: "iron",
+    title: "IRON FORGE",
+    display: "Iron Forge",
     icon: "construct",
-    title: "Iron Forge",
-    sub: "Textured metal panels · orange glow",
-    color: IRON_ORANGE,
+    tint: IRON_ORANGE,
+    colors: [
+      { id: "industrial", label: "Orange", tint: IRON_ORANGE },
+      { id: "industrial-pink", label: "Pink", tint: CRIMSON_PINK },
+      { id: "industrial-arctic", label: "Arctic", tint: ARCTIC_AQUA },
+      { id: "industrial-emerald", label: "Emerald", tint: EMERALD_GREEN },
+    ],
   },
   {
-    id: "industrial-pink",
-    icon: "color-wand",
-    title: "Crimson Steel",
-    sub: "Same metal panels · pink glow",
-    color: CRIMSON_PINK,
+    key: "steel",
+    title: "STEEL",
+    display: "Steel",
+    icon: "shield",
+    tint: STEEL_SILVER,
+    colors: [
+      { id: "steel", label: "Orange", tint: IRON_ORANGE },
+      { id: "steel-pink", label: "Pink", tint: CRIMSON_PINK },
+      { id: "steel-arctic", label: "Arctic", tint: ARCTIC_AQUA },
+      { id: "steel-emerald", label: "Emerald", tint: EMERALD_GREEN },
+    ],
   },
   {
-    id: "industrial-arctic",
-    icon: "snow",
-    title: "Arctic",
-    sub: "Same metal panels · aqua-blue glow",
-    color: ARCTIC_AQUA,
+    key: "plain",
+    title: "PLAIN",
+    display: "Plain",
+    icon: "contrast",
+    colors: [
+      { id: "light", label: "Light" },
+      { id: "dark", label: "Dark" },
+    ],
   },
-  {
-    id: "industrial-emerald",
-    icon: "leaf",
-    title: "Emerald",
-    sub: "Same metal panels · Irish-green glow",
-    color: EMERALD_GREEN,
-  },
-  {
-    id: "light",
-    icon: "sunny",
-    title: "Plain · Light",
-    sub: "No skins · soft grey-blue, dark text",
-    color: undefined as string | undefined,
-  },
-  {
-    id: "dark",
-    icon: "moon",
-    title: "Plain · Dark",
-    sub: "No skins · flat dark cards",
-    color: undefined as string | undefined,
-  },
-] as const;
+];
 
 type RowProps = {
   icon: any;
@@ -280,6 +278,9 @@ export default function MoreScreen() {
   const [pwOk, setPwOk] = useState("");
   const [homeRowsModal, setHomeRowsModal] = useState(false);
   const [themeOpen, setThemeOpen] = useState(false);
+  // Which theme family accordion is expanded ("iron" | "steel" | "plain").
+  // Only one open at a time; all start closed.
+  const [openFamily, setOpenFamily] = useState<"iron" | "steel" | "plain" | null>(null);
   const { appearance, setAppearance, skin } = useSkin();
   const isIndustrial = skin === "industrial";
 
@@ -655,10 +656,15 @@ export default function MoreScreen() {
 
   const totalDue = mntDue.overdue + mntDue.due_soon;
 
-  // Metadata (label + signature colour) for the currently-active theme, shown
-  // in the collapsed Theme accordion row.
-  const currentAppearanceMeta =
-    APPEARANCE_OPTIONS.find((o) => o.id === appearance) || APPEARANCE_OPTIONS[0];
+  // Active family + colour, shown on the collapsed Theme row (tinted to the hue).
+  const activeTheme = (() => {
+    for (const fam of THEME_FAMILIES) {
+      const col = fam.colors.find((c) => c.id === appearance);
+      if (col) return { summary: `${fam.display} · ${col.label}`, tint: col.tint };
+    }
+    const f = THEME_FAMILIES[0];
+    return { summary: `${f.display} · ${f.colors[0].label}`, tint: f.colors[0].tint };
+  })();
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
@@ -808,18 +814,18 @@ export default function MoreScreen() {
             title="Theme"
             subtitle="Choose the app's look & feel"
             testID="theme-accordion-row"
-            onPress={() => setThemeOpen((o) => !o)}
+            onPress={() => setThemeOpen((o) => { if (o) setOpenFamily(null); return !o; })}
             isLast={!themeOpen}
             rightSlot={
               <View style={styles.themeValueWrap}>
                 <Text
                   style={[
                     styles.themeValueText,
-                    currentAppearanceMeta.color ? { color: currentAppearanceMeta.color } : null,
+                    activeTheme.tint ? { color: activeTheme.tint } : null,
                   ]}
                   numberOfLines={1}
                 >
-                  {currentAppearanceMeta.title}
+                  {activeTheme.summary}
                 </Text>
                 <Ionicons
                   name={themeOpen ? "chevron-up" : "chevron-down"}
@@ -831,32 +837,55 @@ export default function MoreScreen() {
           />
           {themeOpen && (
             <View style={[styles.optGroup, isIndustrial && styles.optGroupFlat]}>
-              {APPEARANCE_OPTIONS.map((opt) => {
-                const active = appearance === opt.id;
-                const tint = opt.color || theme.colors.accent;
+              {THEME_FAMILIES.map((fam, fi) => {
+                const open = openFamily === fam.key;
                 return (
-                  <TouchableOpacity
-                    key={opt.id}
-                    testID={`appearance-${opt.id}`}
-                    activeOpacity={0.7}
-                    style={[styles.optRowGrouped, active && styles.optRowGroupedActive]}
-                    onPress={() => setAppearance(opt.id)}
-                  >
-                    <View style={styles.iconBox}>
-                      <Ionicons name={opt.icon} size={18} color={tint} />
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <Text style={[styles.rowTitle, opt.color ? { color: opt.color } : null]}>
-                        {opt.title}
+                  <View key={fam.key}>
+                    <TouchableOpacity
+                      testID={`theme-family-${fam.key}`}
+                      activeOpacity={0.7}
+                      style={[styles.familyHeader, fi > 0 && styles.familyHeaderDivider]}
+                      onPress={() => setOpenFamily(open ? null : fam.key)}
+                    >
+                      <View style={styles.iconBox}>
+                        <Ionicons name={fam.icon} size={18} color={fam.tint || theme.colors.accent} />
+                      </View>
+                      <Text style={[styles.familyTitle, fam.tint ? { color: fam.tint } : null]}>
+                        {fam.title}
                       </Text>
-                      <Text style={styles.rowSub}>{opt.sub}</Text>
-                    </View>
-                    <Ionicons
-                      name={active ? "radio-button-on" : "radio-button-off"}
-                      size={20}
-                      color={active ? tint : theme.colors.textMuted}
-                    />
-                  </TouchableOpacity>
+                      <Ionicons
+                        name={open ? "chevron-up" : "chevron-down"}
+                        size={16}
+                        color={theme.colors.textMuted}
+                      />
+                    </TouchableOpacity>
+                    {open && (
+                      <View style={styles.familyColorWrap}>
+                        {fam.colors.map((col) => {
+                          const active = appearance === col.id;
+                          const tint = col.tint || theme.colors.accent;
+                          return (
+                            <TouchableOpacity
+                              key={col.id}
+                              testID={`appearance-${col.id}`}
+                              activeOpacity={0.7}
+                              style={[styles.colorRow, active && styles.optRowGroupedActive]}
+                              onPress={() => setAppearance(col.id)}
+                            >
+                              <Text style={[styles.colorLabel, col.tint ? { color: col.tint } : null]}>
+                                {col.label}
+                              </Text>
+                              <Ionicons
+                                name={active ? "radio-button-on" : "radio-button-off"}
+                                size={20}
+                                color={active ? tint : theme.colors.textMuted}
+                              />
+                            </TouchableOpacity>
+                          );
+                        })}
+                      </View>
+                    )}
+                  </View>
                 );
               })}
             </View>
