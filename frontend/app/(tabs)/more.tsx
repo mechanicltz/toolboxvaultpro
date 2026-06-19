@@ -651,6 +651,18 @@ export default function MoreScreen() {
         subtitle={user?.email || "Manage everything"}
       />
       <ScrollView ref={scrollRef} contentContainerStyle={{ paddingBottom: 100, paddingTop: 8 }}>
+        {/* TEMP: design panel showcase link — remove after testing */}
+        <TouchableOpacity
+          testID="more-panel-showcase"
+          activeOpacity={0.8}
+          onPress={() => router.push("/panel-showcase" as any)}
+          style={styles.tempShowcaseLink}
+        >
+          <Ionicons name="color-palette" size={18} color="#FF6A00" />
+          <Text style={styles.tempShowcaseText}>Panel Design Showcase (TEMP)</Text>
+          <Ionicons name="chevron-forward" size={16} color="#FF6A00" />
+        </TouchableOpacity>
+
         <SectionCard title="ROADMAP" testID="more-section-roadmap">
           <SectionRow
             icon="rocket"
