@@ -315,6 +315,8 @@ export default function MoreScreen() {
   // Subscription + admin gates.
   const [sub, setSub] = useState<any>(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  // Admin-only FREE/SUB account counter shown in the VAULT header.
+  const [userStats, setUserStats] = useState<{ free: number; subscribed: number } | null>(null);
   // Roadmap — show a "NEW" badge on the Upcoming Features row whenever the
   // admin has published at least one release (hidden when the list is empty).
   const [hasUpcoming, setHasUpcoming] = useState(false);
@@ -348,6 +350,12 @@ export default function MoreScreen() {
       setIsAdmin(!!me?.is_admin);
     } catch {
       setIsAdmin(false);
+    }
+    try {
+      const us = await api.get("/admin/user-stats");
+      setUserStats(us ? { free: us.free, subscribed: us.subscribed } : null);
+    } catch {
+      setUserStats(null);
     }
     try {
       const ds = await api.demoStatus({ forceFresh: true });
@@ -656,7 +664,11 @@ export default function MoreScreen() {
     <SafeAreaView style={styles.container} edges={["top"]}>
       <IndustrialBanner
         title={isPro ? "VAULT - SUBSCRIBED" : "VAULT"}
-        subtitle={user?.email || "Manage everything"}
+        subtitle={
+          isAdmin && userStats
+            ? `FREE ${userStats.free} / SUB ${userStats.subscribed}`
+            : user?.email || "Manage everything"
+        }
       />
       <ScrollView ref={scrollRef} contentContainerStyle={{ paddingBottom: 100, paddingTop: 8 }}>
         <SectionCard title="ROADMAP" testID="more-section-roadmap">

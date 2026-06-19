@@ -79,6 +79,23 @@ export default function HomeScreen() {
   const plateFrame: any = isSteel
     ? { source: SILVER_SRC, capInsets: SILVER_CAP, frameScale: SILVER_FRAME_SCALE, padX: SILVER_PAD.padX, padTop: SILVER_PAD.padTop, padBottom: SILVER_PAD.padBottom }
     : { source: SKIN.plate, capInsets: CAP.plate, padX: 30, padTop: 22, padBottom: 24 };
+  // Steel theme: strip the dark "recessed slot" background/borders behind each
+  // list row, leaving a clean hairline separator (like the inventory list).
+  const steelRowStyle: any = isSteel
+    ? {
+        backgroundColor: "transparent",
+        borderWidth: 0,
+        borderRadius: 0,
+        marginVertical: 0,
+        paddingHorizontal: 4,
+        borderBottomWidth: StyleSheet.hairlineWidth,
+        borderBottomColor: "rgba(255,255,255,0.13)",
+      }
+    : null;
+  const steelRowLastStyle: any = isSteel ? { borderBottomWidth: 0 } : null;
+  const steelValueStyle: any = isSteel
+    ? { backgroundColor: "transparent", borderWidth: 0, paddingHorizontal: 0 }
+    : null;
   const [fontsLoaded, fontError] = useGoogleFonts({
     BebasNeue_400Regular,
     Rajdhani_500Medium, Rajdhani_600SemiBold, Rajdhani_700Bold,
@@ -388,7 +405,7 @@ export default function HomeScreen() {
       <Wrapper
         key={key}
         testID={`home-row-${key}`}
-        style={[styles.detailsRow, isLast && styles.detailsRowLast]}
+        style={[styles.detailsRow, steelRowStyle, isLast && styles.detailsRowLast, isLast && steelRowLastStyle]}
         {...wrapperProps}
       >
         <View style={styles.rowLabelWrap}>
@@ -536,12 +553,7 @@ export default function HomeScreen() {
   if (skin === "plain") {
     return (
       <SafeAreaView style={styles.plainSafe} edges={["top"]}>
-        <IndustrialBanner
-          title="DASHBOARD"
-          subtitle={
-            userStats ? `FREE ${userStats.free} / SUB ${userStats.subscribed}` : undefined
-          }
-        />
+        <IndustrialBanner title="DASHBOARD" />
         <ScrollView
           contentContainerStyle={styles.plainContent}
           refreshControl={
@@ -740,17 +752,11 @@ export default function HomeScreen() {
         {/* Unified nameplate header. Steel theme swaps in the brushed-metal
             TOOLBOX VAULT nameplate; all other themes keep the standard banner. */}
         {isSteel ? (
-          <TbvHeader
-            style={{ paddingHorizontal: 16, paddingTop: 8, paddingBottom: 4 }}
-            testID="tbv-header"
-          />
+          <View style={{ paddingHorizontal: 16, paddingTop: 8, paddingBottom: 4 }}>
+            <TbvHeader testID="tbv-header" />
+          </View>
         ) : (
-          <IndustrialBanner
-            title="DASHBOARD"
-            subtitle={
-              userStats ? `FREE ${userStats.free} / SUB ${userStats.subscribed}` : undefined
-            }
-          />
+          <IndustrialBanner title="DASHBOARD" />
         )}
 
       <ScrollView
@@ -878,7 +884,7 @@ export default function HomeScreen() {
             testID="home-dealers-widget"
           >
             <TouchableOpacity
-              style={styles.detailsRow}
+              style={[styles.detailsRow, steelRowStyle]}
               activeOpacity={0.6}
               testID="home-dealers-header"
               onPress={() => router.push("/dealers")}
@@ -890,7 +896,7 @@ export default function HomeScreen() {
             </TouchableOpacity>
 
             {dealersOwing.length === 0 ? (
-              <View style={[styles.detailsRow, styles.detailsRowLast]}>
+              <View style={[styles.detailsRow, steelRowStyle, styles.detailsRowLast, steelRowLastStyle]}>
                 <Text style={[styles.detailsValue, styles.noChip, { color: theme.colors.textMuted, textAlign: "left", flex: 1 }]}>
                   No outstanding balances.
                 </Text>
@@ -902,7 +908,7 @@ export default function HomeScreen() {
                   const truck = Number(d.personal_balance) || 0;
                   const dTotal = credit + truck;
                   return (
-                    <View key={d.id} style={styles.detailsRow}>
+                    <View key={d.id} style={[styles.detailsRow, steelRowStyle]}>
                       <TouchableOpacity
                         onPress={() => router.push(`/dealer/${d.id}`)}
                         activeOpacity={0.6}
@@ -920,7 +926,7 @@ export default function HomeScreen() {
                         </View>
                       </TouchableOpacity>
                       <View style={styles.detailsValueWrap}>
-                        <Text style={[styles.detailsValue, dTotal === 0 && styles.valueMuted]}>
+                        <Text style={[styles.detailsValue, steelValueStyle, dTotal === 0 && styles.valueMuted]}>
                           ${dTotal.toFixed(2)}
                         </Text>
                         <TouchableOpacity
@@ -936,7 +942,7 @@ export default function HomeScreen() {
                   );
                 })}
                 <View
-                  style={[styles.detailsRow, styles.detailsRowLast, styles.nestedTotalRow]}
+                  style={[styles.detailsRow, steelRowStyle, styles.detailsRowLast, styles.nestedTotalRow]}
                   testID="home-dealers-total"
                 >
                   <Text style={styles.nestedTotalLabel}>TOTAL</Text>
