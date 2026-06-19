@@ -24,17 +24,20 @@ import { ShadowBox } from "../src/components/ShadowBox";
 import { TbvFrame } from "../src/tbv/components/TbvFrame";
 import { SKIN, CAP } from "../src/tbv/skins";
 
-// ---- AI-generated textures (Gemini Nano Banana) ----
+// ---- AI-generated textures (Gemini Nano Banana) served OVER THE NETWORK ----
+// Loaded via { uri } (NOT require()) so they are never registered into the app's
+// startup JS/asset graph — a malformed bundled asset was crashing iOS at boot.
+const PANEL_BASE = `${process.env.EXPO_PUBLIC_BACKEND_URL}/api/panels`;
 const IMG = {
-  riveted_steel: require("../assets/images/panels/riveted_steel.png"),
-  carbon_fiber: require("../assets/images/panels/carbon_fiber.png"),
-  black_marble_gold: require("../assets/images/panels/black_marble_gold.png"),
-  futuristic_hud: require("../assets/images/panels/futuristic_hud.png"),
-  brushed_titanium: require("../assets/images/panels/brushed_titanium.png"),
-  walnut_brass: require("../assets/images/panels/walnut_brass.png"),
-  concrete_industrial: require("../assets/images/panels/concrete_industrial.png"),
-  holographic_glass: require("../assets/images/panels/holographic_glass.png"),
-  diamond_plate: require("../assets/images/panels/diamond_plate.png"),
+  riveted_steel: { uri: `${PANEL_BASE}/riveted_steel.png` },
+  carbon_fiber: { uri: `${PANEL_BASE}/carbon_fiber.png` },
+  black_marble_gold: { uri: `${PANEL_BASE}/black_marble_gold.png` },
+  futuristic_hud: { uri: `${PANEL_BASE}/futuristic_hud.png` },
+  brushed_titanium: { uri: `${PANEL_BASE}/brushed_titanium.png` },
+  walnut_brass: { uri: `${PANEL_BASE}/walnut_brass.png` },
+  concrete_industrial: { uri: `${PANEL_BASE}/concrete_industrial.png` },
+  holographic_glass: { uri: `${PANEL_BASE}/holographic_glass.png` },
+  diamond_plate: { uri: `${PANEL_BASE}/diamond_plate.png` },
 };
 
 // ---- Dashboard summary demo data ----

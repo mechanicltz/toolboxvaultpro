@@ -64,6 +64,7 @@ async def attach_user_to_context(request: Request, call_next):
         or path == "/api/admin/gdrive/oauth-callback"
         or path.startswith("/api/preview/")
         or path.startswith("/api/files/")
+        or path.startswith("/api/panels/")
     ):
         return await call_next(request)
     auth = request.headers.get("Authorization", "")
@@ -1343,6 +1344,19 @@ async def get_setup_guides():
 from fastapi.responses import FileResponse  # noqa: E402
 
 _MIG_DIR = Path(__file__).parent.parent / "migration"
+_PANELS_DIR = Path(__file__).parent / "static" / "panels"
+
+
+@app.get("/api/panels/{filename}")
+async def panel_image(filename: str):
+    """Public — serve temporary design-showcase panel textures over the network
+    so they are NOT bundled into the app's startup JS graph."""
+    if "/" in filename or ".." in filename or not filename.endswith(".png"):
+        raise HTTPException(404, "Not found")
+    fpath = _PANELS_DIR / filename
+    if not fpath.exists():
+        raise HTTPException(404, "Not found")
+    return FileResponse(path=str(fpath), media_type="image/png")
 
 
 @app.get("/api/migration/{filename}")
