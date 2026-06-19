@@ -344,3 +344,8 @@ can explore every feature immediately. All demo records tagged `is_demo: true`
 - Preview/login URL: login-stretch-layout.preview.emergentagent.com
 - `/api/auth/login` has a 5/min rate limit — space out automated logins.
 - pdf-viewer back button must NOT use dismissAll().
+
+## RULE — WRITTEN IN STONE (user demand, 2026-06-19)
+ALWAYS talk to this user in PLAIN ENGLISH. No code words, no file names, no
+technical jargon, no error-message copy-paste. Explain everything like you would
+to a smart friend who does not code. Keep it short. This is non-negotiable.
