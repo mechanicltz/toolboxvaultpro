@@ -39,6 +39,7 @@ import DriveAlertBanner from "../../src/components/DriveAlertBanner";
 import { DemoBanner } from "../../src/components/DemoBanner";
 import { IndustrialBanner } from "../../src/components/IndustrialBanner";
 import { AddChooser } from "../../src/components/AddChooser";
+import { SteelPanel, SteelHeader, SteelRow, SteelDivider } from "../../src/components/SteelPanel";
 import { useSubscriptionChange } from "../../src/subscriptionEvents";
 import { useAppResume } from "../../src/appLifecycle";
 
@@ -779,6 +780,21 @@ export default function HomeScreen() {
         </View>
 
         <DemoBanner />
+
+        {/* ============================================================
+            STEEL FRAME — TEST PLACEMENT (temporary, per user request to
+            preview on the dashboard). Renders the new centralized SteelPanel
+            with sample summary content. Remove this block once approved. */}
+        <SteelPanel orientation="vertical" style={{ marginBottom: 16 }} testID="steel-test-panel">
+          <SteelHeader icon="briefcase" title="PORTFOLIO SUMMARY" />
+          <SteelDivider />
+          <SteelRow icon="cube" label="TOTAL ITEMS" value="142" />
+          <SteelRow icon="cash" label="NET WORTH" value="$48,250" />
+          <SteelRow icon="arrow-redo" label="CHECKED OUT" value="3" />
+          <SteelRow icon="pricetag" label="SELLING" value="5" />
+          <SteelRow icon="heart" label="WISH LIST" value="12" />
+        </SteelPanel>
+        {/* ========================================================== */}
 
         {/* HOME LOGO — purely decorative, sits at the very top of the
             content scroll. Hidden by default; only renders when the user
