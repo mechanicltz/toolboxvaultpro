@@ -1,31 +1,26 @@
 /**
  * TbvButton — the black brushed-metal action button.
  *
- * All frame art, 9-slice geometry, padding and label style come from the central
- * src/tbv/button.ts config, so usage is trivial and 100% consistent across every
- * screen. The chamfered metal corners stay crisp while the dark center stretches
- * to fit the label at any width:
+ * Measures its own width and renders the button art at EXACTLY that width and
+ * the matching height for the art's natural aspect ratio, so the chamfered metal
+ * corners and centre detailing never stretch, smear or look "off". The label is
+ * centred on top of the metal plate.
  *
  *   <TbvButton label="ADD ITEM" onPress={...} />
  *   <TbvButton label="NEW CLAIM" onPress={...} style={{ flex: 1 }} />
  */
-import React, { ReactNode } from "react";
+import React, { useState } from "react";
 import {
   Pressable,
   Text,
   View,
+  Image,
+  StyleSheet,
   StyleProp,
   ViewStyle,
   TextStyle,
 } from "react-native";
-import TbvFrame from "../tbv/components/TbvFrame";
-import {
-  BUTTON_SRC,
-  BUTTON_CAP,
-  BUTTON_FRAME_SCALE,
-  BUTTON_PAD,
-  BUTTON_LABEL,
-} from "../tbv/button";
+import { BUTTON_SRC, BUTTON_ASPECT, BUTTON_LABEL } from "../tbv/button";
 
 export function TbvButton({
   label,
@@ -33,7 +28,6 @@ export function TbvButton({
   disabled,
   style,
   labelStyle,
-  children,
   testID,
 }: {
   label?: string;
@@ -41,35 +35,38 @@ export function TbvButton({
   disabled?: boolean;
   style?: StyleProp<ViewStyle>;
   labelStyle?: StyleProp<TextStyle>;
-  children?: ReactNode;
   testID?: string;
 }) {
+  const [w, setW] = useState(0);
+  const h = w > 0 ? w / BUTTON_ASPECT : 0;
+
   return (
     <Pressable
       onPress={onPress}
       disabled={disabled}
       testID={testID}
+      onLayout={(e) => {
+        const nw = e.nativeEvent.layout.width;
+        if (Math.abs(nw - w) > 0.5) setW(nw);
+      }}
       style={({ pressed }) => [
         { width: "100%", opacity: disabled ? 0.5 : pressed ? 0.85 : 1 },
         style,
       ]}
     >
-      <TbvFrame
-        source={BUTTON_SRC}
-        capInsets={BUTTON_CAP}
-        frameScale={BUTTON_FRAME_SCALE}
-        padX={BUTTON_PAD.padX}
-        padTop={BUTTON_PAD.padTop}
-        padBottom={BUTTON_PAD.padBottom}
-      >
-        <View style={{ alignItems: "center", justifyContent: "center" }}>
-          {children ?? (
-            <Text style={[BUTTON_LABEL, labelStyle]} numberOfLines={1}>
-              {label}
-            </Text>
-          )}
+      {w > 0 ? (
+        <View style={{ width: w, height: h, alignItems: "center", justifyContent: "center" }}>
+          <Image
+            source={BUTTON_SRC}
+            style={[StyleSheet.absoluteFill, { width: w, height: h }]}
+            resizeMode="stretch"
+            fadeDuration={0}
+          />
+          <Text style={[BUTTON_LABEL, labelStyle]} numberOfLines={1}>
+            {label}
+          </Text>
         </View>
-      </TbvFrame>
+      ) : null}
     </Pressable>
   );
 }

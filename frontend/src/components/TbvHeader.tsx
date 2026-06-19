@@ -1,15 +1,16 @@
 /**
  * TbvHeader — the brushed-metal "TOOLBOX VAULT" nameplate header.
  *
- * Renders the header art (with its baked-in lettering + detailing) at its EXACT
- * natural aspect ratio so nothing ever stretches or smears — it simply fills the
- * width it's given. The app version is painted into the bottom-right corner,
- * just inside the metal border, in the same warm orange as the "VAULT" word.
+ * Measures its own width and renders the header art at EXACTLY that width and
+ * the matching height for the art's natural aspect ratio, so the baked-in
+ * lettering + detailing never stretch, zoom or smear. The app version is painted
+ * into the bottom-right corner, just inside the metal border, in the same warm
+ * orange as the "VAULT" word.
  *
- *   <TbvHeader />                       // full-width, auto height, live version
- *   <TbvHeader style={{ marginBottom }} />
+ *   <TbvHeader />
+ *   <TbvHeader style={{ marginBottom: 16 }} />
  */
-import React from "react";
+import React, { useState } from "react";
 import { View, Image, Text, StyleSheet, StyleProp, ViewStyle } from "react-native";
 import {
   HEADER_SRC,
@@ -28,35 +29,45 @@ export function TbvHeader({
   showVersion?: boolean;
   testID?: string;
 }) {
+  const [w, setW] = useState(0);
+  const h = w > 0 ? w / HEADER_ASPECT : 0;
+
   return (
-    <View style={[styles.wrap, { aspectRatio: HEADER_ASPECT }, style]} testID={testID}>
-      <Image
-        source={HEADER_SRC}
-        style={StyleSheet.absoluteFill}
-        resizeMode="stretch"
-        fadeDuration={0}
-      />
-      {showVersion ? (
-        <Text
-          style={[
-            styles.version,
-            {
-              right: `${HEADER_VERSION_POS.rightPct * 100}%`,
-              bottom: `${HEADER_VERSION_POS.bottomPct * 100}%`,
-            },
-          ]}
-          numberOfLines={1}
-          testID="tbv-header-version"
-        >
-          {APP_VERSION_LABEL}
-        </Text>
+    <View
+      style={[{ width: "100%" }, style]}
+      testID={testID}
+      onLayout={(e) => {
+        const nw = e.nativeEvent.layout.width;
+        if (Math.abs(nw - w) > 0.5) setW(nw);
+      }}
+    >
+      {w > 0 ? (
+        <View style={{ width: w, height: h }}>
+          <Image
+            source={HEADER_SRC}
+            style={{ width: w, height: h }}
+            resizeMode="stretch"
+            fadeDuration={0}
+          />
+          {showVersion ? (
+            <Text
+              style={[
+                styles.version,
+                { right: w * HEADER_VERSION_POS.rightPct, bottom: h * HEADER_VERSION_POS.bottomPct },
+              ]}
+              numberOfLines={1}
+              testID="tbv-header-version"
+            >
+              {APP_VERSION_LABEL}
+            </Text>
+          ) : null}
+        </View>
       ) : null}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  wrap: { width: "100%", position: "relative" },
   version: {
     position: "absolute",
     color: HEADER_VAULT_ORANGE,
