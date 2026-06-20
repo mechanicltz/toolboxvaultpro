@@ -31,6 +31,7 @@ import { IndustrialBanner } from "../../src/components/IndustrialBanner";
 import { AddFab } from "../../src/components/AddFab";
 import { SKIN, CAP } from "../../src/tbv/skins";
 import { TbvFrame } from "../../src/tbv/components/TbvFrame";
+import { useIsSteel, useSteelPanelFrame } from "../../src/tbv/steel";
 
 type Mode = "dealers" | "all-open" | "history";
 
@@ -38,6 +39,13 @@ export default function ClaimsScreen() {
   const router = useRouter();
   const { skin } = useSkin();
   const isIndustrial = skin === "industrial";
+  const isSteel = useIsSteel();
+  const steelPanel = useSteelPanelFrame();
+  const plateSrc = isSteel ? steelPanel.source : SKIN.plate;
+  const plateCap = isSteel ? steelPanel.capInsets : CAP.plate;
+  const winSrc = isSteel ? steelPanel.source : SKIN.window;
+  const winCap = isSteel ? steelPanel.capInsets : CAP.window;
+  const steelScale = isSteel ? steelPanel.frameScale : undefined;
   const [mode, setMode] = useState<Mode>("all-open");
   const [dealers, setDealers] = useState<any[]>(() => getCached("dealers", []));
   const [tools, setTools] = useState<any[]>(() => getCached("claims_tools", []));
@@ -298,7 +306,7 @@ export default function ClaimsScreen() {
 
       {isIndustrial ? (
         <View style={styles.statRowSkinWrap}>
-          <TbvFrame source={SKIN.plate} capInsets={CAP.plate} padX={44} padTop={13} padBottom={13}>
+          <TbvFrame source={plateSrc} capInsets={plateCap} frameScale={steelScale} padX={44} padTop={13} padBottom={13}>
             <View style={styles.statRowInner}>
               <Stat flat label="Total" value={summary?.totals?.total ?? 0} />
               <Stat flat label="Open" value={summary?.totals?.open ?? 0} color={theme.colors.danger} />
@@ -349,7 +357,7 @@ export default function ClaimsScreen() {
       {/* Search bar — visible in BOTH modes; searches current + history claims */}
       {isIndustrial ? (
         <View style={styles.searchRowSkin}>
-          <TbvFrame source={SKIN.plate} capInsets={CAP.plate} style={styles.searchFrameSkin} padX={44} padTop={6} padBottom={8}>
+          <TbvFrame source={plateSrc} capInsets={plateCap} frameScale={steelScale} style={styles.searchFrameSkin} padX={44} padTop={6} padBottom={8}>
             <View style={styles.searchBoxInner}>
               <Ionicons name="search" size={16} color="#C8C8C8" />
               <TextInput
@@ -503,7 +511,7 @@ export default function ClaimsScreen() {
                     onPress={() => router.push(`/dealer-claims/${d.id}`)}
                     activeOpacity={0.85}
                   >
-                    <TbvFrame source={SKIN.plate} capInsets={CAP.plate} padX={44} padTop={14} padBottom={14}>
+                    <TbvFrame source={plateSrc} capInsets={plateCap} frameScale={steelScale} padX={44} padTop={14} padBottom={14}>
                       <View style={styles.rowSkinInner}>{dealerRowInner(d, opened, done)}</View>
                     </TbvFrame>
                   </TouchableOpacity>
@@ -511,7 +519,7 @@ export default function ClaimsScreen() {
               })}
               {(openByDealer["_unassigned"] || []).length > 0 && (
                 <View style={styles.rowSkinWrap}>
-                  <TbvFrame source={SKIN.plate} capInsets={CAP.plate} padX={44} padTop={14} padBottom={14}>
+                  <TbvFrame source={plateSrc} capInsets={plateCap} frameScale={steelScale} padX={44} padTop={14} padBottom={14}>
                     <View style={styles.rowSkinInner}>
                       <View style={styles.dealerThumb}>
                         <Ionicons name="alert-circle" size={20} color={theme.colors.danger} />
@@ -595,7 +603,7 @@ export default function ClaimsScreen() {
                     onPress={() => router.push(`/claim/${cl.id}`)}
                     activeOpacity={0.85}
                   >
-                    <TbvFrame source={SKIN.plate} capInsets={CAP.plate} padX={44} padTop={13} padBottom={13}>
+                    <TbvFrame source={plateSrc} capInsets={plateCap} frameScale={steelScale} padX={44} padTop={13} padBottom={13}>
                       <View style={styles.rowSkinInner}>{claimItemInner(cl)}</View>
                     </TbvFrame>
                   </TouchableOpacity>
@@ -643,7 +651,7 @@ export default function ClaimsScreen() {
                 isIndustrial ? (
                   // Skinned: each dealer's open claims live in ONE window panel.
                   <View key={group.d.id} style={styles.panelSkinWrap}>
-                    <TbvFrame source={SKIN.window} capInsets={CAP.window} padX={38} padTop={28} padBottom={28}>
+                    <TbvFrame source={winSrc} capInsets={winCap} frameScale={steelScale} padX={38} padTop={28} padBottom={28}>
                       <View style={styles.groupHeader}>
                         <Ionicons name="briefcase" size={14} color={theme.colors.accent} />
                         <Text style={styles.groupTitle}>{group.d.name}</Text>

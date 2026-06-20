@@ -40,6 +40,7 @@ import { DealerLogo } from "../../src/components/DealerLogo";
 import { STOCK_LOGO_OPTIONS, isDefaultLogo, DEALER_LOGO_SLOT } from "../../src/dealerLogos";
 import { SKIN, CAP } from "../../src/tbv/skins";
 import { TbvFrame } from "../../src/tbv/components/TbvFrame";
+import { useIsSteel, useSteelPanelFrame } from "../../src/tbv/steel";
 import * as ImagePicker from "expo-image-picker";
 import * as ImageManipulator from "expo-image-manipulator";
 
@@ -50,6 +51,11 @@ export default function DealersScreen() {
   const { gridCols } = useResponsive();
   const { skin } = useSkin();
   const isIndustrial = skin === "industrial";
+  const isSteel = useIsSteel();
+  const steelPanel = useSteelPanelFrame();
+  const plateSrc = isSteel ? steelPanel.source : SKIN.plate;
+  const plateCap = isSteel ? steelPanel.capInsets : CAP.plate;
+  const steelScale = isSteel ? steelPanel.frameScale : undefined;
   const [dealers, setDealers] = useState<any[]>(() => getCached("dealers", []));
   const [tools, setTools] = useState<any[]>(() => getCached("tools", []));
   const [showAdd, setShowAdd] = useState(false);
@@ -238,8 +244,9 @@ export default function DealersScreen() {
                 disabled={isLocked}
               >
                 <TbvFrame
-                  source={SKIN.plate}
-                  capInsets={CAP.plate}
+                  source={plateSrc}
+                  capInsets={plateCap}
+                  frameScale={steelScale}
                   style={styles.rowSkinFrame}
                   padX={20}
                   padTop={14}

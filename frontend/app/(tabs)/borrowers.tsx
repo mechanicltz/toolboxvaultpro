@@ -27,6 +27,7 @@ import { ContactIconButton, ContactIconImage } from "../../src/components/Contac
 import { EmailLink } from "../../src/components/EmailLink";
 import { SKIN, CAP } from "../../src/tbv/skins";
 import { TbvFrame } from "../../src/tbv/components/TbvFrame";
+import { useIsSteel, useSteelPanelFrame } from "../../src/tbv/steel";
 
 import {
   isDeviceContactsAvailable,
@@ -41,6 +42,11 @@ export default function BorrowersScreen() {
   const router = useRouter();
   const { skin } = useSkin();
   const isIndustrial = skin === "industrial";
+  const isSteel = useIsSteel();
+  const steelPanel = useSteelPanelFrame();
+  const plateSrc = isSteel ? steelPanel.source : SKIN.plate;
+  const plateCap = isSteel ? steelPanel.capInsets : CAP.plate;
+  const steelScale = isSteel ? steelPanel.frameScale : undefined;
   const [borrowers, setBorrowers] = useState<any[]>([]);
   const [tools, setTools] = useState<any[]>([]);
   const [showAdd, setShowAdd] = useState(false);
@@ -206,8 +212,9 @@ export default function BorrowersScreen() {
                 activeOpacity={0.8}
               >
                 <TbvFrame
-                  source={SKIN.plate}
-                  capInsets={CAP.plate}
+                  source={plateSrc}
+                  capInsets={plateCap}
+                  frameScale={steelScale}
                   style={styles.rowSkinFrame}
                   padX={20}
                   padTop={14}
