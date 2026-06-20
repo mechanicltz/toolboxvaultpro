@@ -24,6 +24,7 @@ import {
 export interface TbvListPanelProps {
   source: ImageSourcePropType;
   capInsets?: { top: number; left: number; bottom: number; right: number; w?: number; h?: number };
+  frameScale?: number;
   padX?: number;
   padTop?: number;
   padBottom?: number;
@@ -77,6 +78,7 @@ function Slice({
 export function TbvListPanel({
   source,
   capInsets,
+  frameScale = 1,
   padX = 16,
   padTop = 14,
   padBottom = 8,
@@ -97,11 +99,19 @@ export function TbvListPanel({
   const ct = capInsets?.top ?? 0;
   const cb = capInsets?.bottom ?? 0;
 
-  const canSlice =
-    !!capInsets && SW > 0 && SH > 0 && w > 0 && h > 0 && cl + cr < SW && ct + cb < SH;
+  // Rendered rail thickness (points). frameScale<1 shrinks the full corner art
+  // crisply so the metal border looks thinner without clipping — matches TbvFrame.
+  const s = frameScale > 0 ? frameScale : 1;
+  const rl = cl * s;
+  const rr = cr * s;
+  const rt = ct * s;
+  const rb = cb * s;
 
-  const midW = w - cl - cr;
-  const midH = h - ct - cb;
+  const canSlice =
+    !!capInsets && SW > 0 && SH > 0 && w > 0 && h > 0 && cl + cr < SW && ct + cb < SH && rl + rr < w && rt + rb < h;
+
+  const midW = w - rl - rr;
+  const midH = h - rt - rb;
   const sMidW = SW - cl - cr;
   const sMidH = SH - ct - cb;
 
@@ -118,15 +128,15 @@ export function TbvListPanel({
     >
       {canSlice ? (
         <View style={StyleSheet.absoluteFill} pointerEvents="none">
-          <Slice source={source} SW={SW} SH={SH} x={0} y={0} dw={cl} dh={ct} sx={0} sy={0} sw={cl} sh={ct} />
-          <Slice source={source} SW={SW} SH={SH} x={cl} y={0} dw={midW} dh={ct} sx={cl} sy={0} sw={sMidW} sh={ct} />
-          <Slice source={source} SW={SW} SH={SH} x={w - cr} y={0} dw={cr} dh={ct} sx={SW - cr} sy={0} sw={cr} sh={ct} />
-          <Slice source={source} SW={SW} SH={SH} x={0} y={ct} dw={cl} dh={midH} sx={0} sy={ct} sw={cl} sh={sMidH} />
-          <Slice source={source} SW={SW} SH={SH} x={cl} y={ct} dw={midW} dh={midH} sx={cl} sy={ct} sw={sMidW} sh={sMidH} />
-          <Slice source={source} SW={SW} SH={SH} x={w - cr} y={ct} dw={cr} dh={midH} sx={SW - cr} sy={ct} sw={cr} sh={sMidH} />
-          <Slice source={source} SW={SW} SH={SH} x={0} y={h - cb} dw={cl} dh={cb} sx={0} sy={SH - cb} sw={cl} sh={cb} />
-          <Slice source={source} SW={SW} SH={SH} x={cl} y={h - cb} dw={midW} dh={cb} sx={cl} sy={SH - cb} sw={sMidW} sh={cb} />
-          <Slice source={source} SW={SW} SH={SH} x={w - cr} y={h - cb} dw={cr} dh={cb} sx={SW - cr} sy={SH - cb} sw={cr} sh={cb} />
+          <Slice source={source} SW={SW} SH={SH} x={0} y={0} dw={rl} dh={rt} sx={0} sy={0} sw={cl} sh={ct} />
+          <Slice source={source} SW={SW} SH={SH} x={rl} y={0} dw={midW} dh={rt} sx={cl} sy={0} sw={sMidW} sh={ct} />
+          <Slice source={source} SW={SW} SH={SH} x={w - rr} y={0} dw={rr} dh={rt} sx={SW - cr} sy={0} sw={cr} sh={ct} />
+          <Slice source={source} SW={SW} SH={SH} x={0} y={rt} dw={rl} dh={midH} sx={0} sy={ct} sw={cl} sh={sMidH} />
+          <Slice source={source} SW={SW} SH={SH} x={rl} y={rt} dw={midW} dh={midH} sx={cl} sy={ct} sw={sMidW} sh={sMidH} />
+          <Slice source={source} SW={SW} SH={SH} x={w - rr} y={rt} dw={rr} dh={midH} sx={SW - cr} sy={ct} sw={cr} sh={sMidH} />
+          <Slice source={source} SW={SW} SH={SH} x={0} y={h - rb} dw={rl} dh={rb} sx={0} sy={SH - cb} sw={cl} sh={cb} />
+          <Slice source={source} SW={SW} SH={SH} x={rl} y={h - rb} dw={midW} dh={rb} sx={cl} sy={SH - cb} sw={sMidW} sh={cb} />
+          <Slice source={source} SW={SW} SH={SH} x={w - rr} y={h - rb} dw={rr} dh={rb} sx={SW - cr} sy={SH - cb} sw={cr} sh={cb} />
         </View>
       ) : (
         <Image

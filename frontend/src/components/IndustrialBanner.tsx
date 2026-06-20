@@ -27,8 +27,14 @@ import React from "react";
 import { View, Text, StyleSheet, Image, TouchableOpacity, useWindowDimensions } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { SKIN } from "../tbv/skins";
-import { useColors } from "../themeContext";
+import { useColors, useSkin } from "../themeContext";
 import { APP_VERSION } from "../version";
+import {
+  HEADER_SRC_BY_COLOR,
+  HEADER_ASPECT,
+  HEADER_VAULT_COLOR_BY_COLOR,
+  HEADER_VERSION_POS,
+} from "../tbv/header";
 
 type Props = {
   /** Page name shown under the nameplate (uppercased automatically). */
@@ -53,43 +59,64 @@ const ACCENT = "#F97316";
 
 export function IndustrialBanner({ title, subtitle, rightSlot, leftSlot, onBack, backIcon }: Props) {
   const c = useColors();
-  // Match the LOGIN page nameplate size exactly: width = min(94% of the
-  // screen width, 400), height derived from the master nameplate ratio.
+  const { metalStyle, industrialVariant } = useSkin();
+  // Steel theme swaps the dark iron nameplate for the brushed-silver "TOOLBOX
+  // VAULT" plate (recoloured to the active steel colour), keeping the page
+  // title + back row beneath it so every screen reads as Steel.
+  const isSteel = metalStyle === "steel";
   const { width } = useWindowDimensions();
   const nameplateW = Math.min(width * 0.94, 400);
-  const nameplateH = nameplateW / 4.0;
+  const nameplateH = isSteel ? nameplateW / HEADER_ASPECT : nameplateW / 4.0;
+  const nameplateSrc = isSteel ? HEADER_SRC_BY_COLOR[industrialVariant] : SKIN.nameplate;
   return (
     <View style={styles.wrap}>
-      {/* The constant brand nameplate. The app version is centered over the
-          small plate on the bottom border of the artwork. */}
+      {/* The brand nameplate (silver for Steel, dark iron otherwise). The app
+          version sits inside the small plate on the artwork. */}
       <View style={{ width: nameplateW, height: nameplateH, alignSelf: "center", marginBottom: 6 }}>
         <Image
-          source={SKIN.nameplate}
+          source={nameplateSrc}
           style={{ width: nameplateW, height: nameplateH }}
           resizeMode="contain"
           fadeDuration={0}
         />
-        {/* Version label — centered (H & V) inside the small plate that sits
-            near the bottom of the nameplate artwork (plate center ≈ 76% down). */}
-        <View
-          pointerEvents="none"
-          style={{
-            position: "absolute",
-            left: 0,
-            right: 0,
-            top: nameplateH * 0.735,
-            height: nameplateH * 0.19,
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
+        {isSteel ? (
           <Text
-            style={[styles.version, { color: c.accent, fontSize: Math.round(nameplateH * 0.13) }]}
+            pointerEvents="none"
             allowFontScaling={false}
+            style={[
+              styles.version,
+              {
+                position: "absolute",
+                right: nameplateW * HEADER_VERSION_POS.rightPct,
+                bottom: nameplateH * HEADER_VERSION_POS.bottomPct,
+                color: HEADER_VAULT_COLOR_BY_COLOR[industrialVariant],
+                fontSize: Math.round(nameplateH * 0.13),
+              },
+            ]}
           >
             {APP_VERSION}
           </Text>
-        </View>
+        ) : (
+          <View
+            pointerEvents="none"
+            style={{
+              position: "absolute",
+              left: 0,
+              right: 0,
+              top: nameplateH * 0.735,
+              height: nameplateH * 0.19,
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <Text
+              style={[styles.version, { color: c.accent, fontSize: Math.round(nameplateH * 0.13) }]}
+              allowFontScaling={false}
+            >
+              {APP_VERSION}
+            </Text>
+          </View>
+        )}
       </View>
 
       {/* Label row: back (left) · PAGE NAME (center) · action (right). */}

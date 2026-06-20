@@ -41,6 +41,7 @@ import { AddChooser } from "../../src/components/AddChooser";
 import { SKIN, CAP } from "../../src/tbv/skins";
 import { TbvFrame } from "../../src/tbv/components/TbvFrame";
 import { TbvListPanel } from "../../src/tbv/components/TbvListPanel";
+import { useIsSteel, useSteelPanelFrame } from "../../src/tbv/steel";
 
 type Filter = "all" | "available" | "out" | "consumables" | "lost" | "maintenance" | "for_sale";
 
@@ -76,6 +77,14 @@ export default function InventoryScreen() {
   const { gridCols, isPhone } = useResponsive();
   const { skin } = useSkin();
   const isIndustrial = skin === "industrial";
+  const isSteel = useIsSteel();
+  const steelPanel = useSteelPanelFrame();
+  // When Steel is active, every industrial metal frame swaps to brushed silver.
+  const winSrc = isSteel ? steelPanel.source : SKIN.window;
+  const winCap = isSteel ? steelPanel.capInsets : CAP.window;
+  const plateSrc = isSteel ? steelPanel.source : SKIN.plate;
+  const plateCap = isSteel ? steelPanel.capInsets : CAP.plate;
+  const steelScale = isSteel ? steelPanel.frameScale : undefined;
   // Allow other screens to deep-link into a specific inventory filter,
   // e.g. the Home dashboard's "CHECKED OUT" card sends ?filter=out.
   const params = useLocalSearchParams<{ filter?: string }>();
@@ -676,8 +685,9 @@ export default function InventoryScreen() {
         {isIndustrial ? (
           // Iron Forge: framed metal search bar (mirrors dashboard chrome).
           <TbvFrame
-            source={SKIN.plate}
-            capInsets={CAP.plate}
+            source={plateSrc}
+            capInsets={plateCap}
+            frameScale={steelScale}
             style={[styles.searchFrameSkin, { flex: 1 }]}
             padX={44}
             padTop={4}
@@ -926,8 +936,9 @@ export default function InventoryScreen() {
       {prefs.show_details_summary && agg && (
         isIndustrial ? (
           <TbvFrame
-            source={SKIN.window}
-            capInsets={CAP.window}
+            source={winSrc}
+            capInsets={winCap}
+            frameScale={steelScale}
             style={styles.summaryFrameSkin}
             padX={22}
             padTop={12}
@@ -1229,8 +1240,9 @@ export default function InventoryScreen() {
         );
         return isIndustrial ? (
           <TbvListPanel
-            source={SKIN.window}
-            capInsets={CAP.window}
+            source={winSrc}
+            capInsets={winCap}
+            frameScale={steelScale}
             style={styles.invListPanel}
             padX={28}
             padTop={22}
