@@ -310,6 +310,24 @@ export default function FeedbackScreen() {
             </Text>
           </TouchableOpacity>
 
+          {/* Update reminder — shown for bug reports so users first rule out an
+              out-of-date app (an update may already include the fix). */}
+          {isBug && (
+            <View style={styles.updateNote}>
+              <Ionicons
+                name="information-circle"
+                size={18}
+                color={theme.colors.accent}
+                style={{ marginTop: 1 }}
+              />
+              <Text style={styles.updateNoteText}>
+                Before reporting, please make sure your app is updated to the
+                latest version from the App Store. A recent update may already
+                fix the issue you&apos;re seeing.
+              </Text>
+            </View>
+          )}
+
           {/* Message */}
           <Text style={styles.label}>MESSAGE</Text>
           <TextInput
@@ -536,6 +554,25 @@ const styles = themedStyles((c) => ({
     fontStyle: "italic",
     marginTop: 16,
     textAlign: "center",
+  },
+  updateNote: {
+    flexDirection: "row",
+    gap: 8,
+    alignItems: "flex-start",
+    backgroundColor: c.bgSecondary,
+    borderWidth: 1,
+    borderColor: c.accent,
+    borderRadius: 6,
+    padding: 12,
+    marginTop: 4,
+    marginBottom: 4,
+  },
+  updateNoteText: {
+    flex: 1,
+    color: c.textSecondary,
+    fontSize: 11,
+    lineHeight: 16,
+    fontWeight: "600",
   },
   helperNote: {
     color: c.textMuted,
