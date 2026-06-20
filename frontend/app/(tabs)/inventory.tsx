@@ -689,9 +689,9 @@ export default function InventoryScreen() {
             capInsets={plateCap}
             frameScale={steelScale}
             style={[styles.searchFrameSkin, { flex: 1 }]}
-            padX={44}
-            padTop={4}
-            padBottom={6}
+            padX={isSteel ? 18 : 44}
+            padTop={isSteel ? 12 : 4}
+            padBottom={isSteel ? 14 : 6}
           >
             <View style={styles.searchBoxInner}>{searchInner}</View>
           </TbvFrame>
