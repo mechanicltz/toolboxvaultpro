@@ -37,6 +37,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { theme } from "../theme";
 import { themedStyles, useSkin } from "../themeContext";
 import { SKIN, CAP } from "../tbv/skins";
+import { useIsSteel, useSteelPanelFrame } from "../tbv/steel";
 import TbvFrame from "../tbv/components/TbvFrame";
 import { api } from "../api";
 import { Prefs } from "../prefs";
@@ -138,6 +139,8 @@ const BORROW_PRESETS: Array<{ hours: number; label: string }> = [
 export default function NotificationsSettingsSection({ prefs, update }: Props) {
   const { skin } = useSkin();
   const isIndustrial = skin === "industrial";
+  const isSteel = useIsSteel();
+  const steelPanel = useSteelPanelFrame();
   const [timePickerOpen, setTimePickerOpen] = useState(false);
   const [paymentTimePickerOpen, setPaymentTimePickerOpen] = useState(false);
   const [borrowPeriodPickerOpen, setBorrowPeriodPickerOpen] = useState(false);
@@ -350,9 +353,10 @@ export default function NotificationsSettingsSection({ prefs, update }: Props) {
   const Shell = ({ children }: { children: ReactNode }) =>
     isIndustrial ? (
       <TbvFrame
-        source={SKIN.window}
-        capInsets={CAP.window}
-        padX={30}
+        source={isSteel ? steelPanel.source : SKIN.window}
+        capInsets={isSteel ? steelPanel.capInsets : CAP.window}
+        frameScale={isSteel ? steelPanel.frameScale : undefined}
+        padX={isSteel ? 20 : 30}
         padTop={22}
         padBottom={22}
         testID="more-section-notifications"

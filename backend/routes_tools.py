@@ -27,7 +27,7 @@ from auth import User
 from helpers import build_tool_query, _validate_photo_payload
 from routes_taxonomy import _ensure_brand_saved
 import media
-from models import now_iso, ToolCreate, ToolUpdate, Tool, Document, RepairInfo
+from models import now_iso, ToolCreate, ToolUpdate, Tool, Document, RepairInfo, Category, Location, Dealer, Tag
 
 logger = logging.getLogger("routes_tools")
 
