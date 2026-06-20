@@ -1,5 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { apiCacheKey, getCached, hasCached, setCached, getCachedAt, clearCached } from "./cache";
+import { apiCacheKey, getCached, hasCached, setCached, getCachedAt, clearCachedByPrefix } from "./cache";
 import { isOnline, OfflineError } from "./network";
 import { showOfflineAlert } from "./offlineGuard";
 
@@ -416,15 +416,23 @@ function invalidateRelatedCaches(path: string) {
   // e.g. "/tools/abc/maintenance/x" → root segment "tools".
   const seg = path.split("/").filter(Boolean)[0];
   if (!seg) return;
-  // Always blow away common aggregate endpoints since they depend on lots of things.
-  const toClear: string[] = [
+  // Prefix-clear the resource root so EVERY variant is busted, not just the
+  // bare list. Covers `api:/tools`, `api:/tools?search=...` (filtered list),
+  // and `api:/tools/<id>` (per-item). Previously only the exact `api:/tools`
+  // key was cleared, so creating an item while a search filter was active
+  // left the filtered list stale → the new item appeared to "not save".
+  const prefixes: string[] = [
     apiCacheKey(`/${seg}`),
     apiCacheKey(`/stats`),
     apiCacheKey(`/aggregate`),
   ];
-  for (const k of toClear) {
-    clearCached(k);
-    _inFlightGetByKey.delete(k);
+  for (const pre of prefixes) {
+    clearCachedByPrefix(pre);
+    // Drop any in-flight GET dedupe entries under this prefix so the next
+    // read goes straight to the network instead of awaiting a stale promise.
+    for (const k of Array.from(_inFlightGetByKey.keys())) {
+      if (k.startsWith(pre)) _inFlightGetByKey.delete(k);
+    }
   }
 }
 

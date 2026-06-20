@@ -86,6 +86,28 @@ export function clearCached(...keys: string[]) {
 }
 
 /**
+ * Clear every cache entry whose key starts with `prefix`.
+ *
+ * Used by mutation cache-invalidation so that a write to `/tools` busts not
+ * just the bare `api:/tools` list but also every filtered/searched variant
+ * (`api:/tools?search=...`) and per-item entry (`api:/tools/<id>`). Without
+ * this, creating an item while a search filter was active left the cached
+ * filtered list stale, so the new item appeared to "not save" until the
+ * user pulled to refresh.
+ */
+export function clearCachedByPrefix(prefix: string) {
+  const matches: string[] = [];
+  for (const k of memory.keys()) {
+    if (k.startsWith(prefix)) matches.push(k);
+  }
+  // Also pick up any meta-only keys that have no live memory entry.
+  for (const k of meta.keys()) {
+    if (k.startsWith(prefix) && !matches.includes(k)) matches.push(k);
+  }
+  if (matches.length) clearCached(...matches);
+}
+
+/**
  * Hydrate the in-memory mirror from disk. Call once during app launch
  * (in the AuthProvider for example) so the very first render of any
  * screen that uses `getCached(...)` already has data.
