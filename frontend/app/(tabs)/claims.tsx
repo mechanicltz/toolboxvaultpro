@@ -357,7 +357,7 @@ export default function ClaimsScreen() {
       {/* Search bar — visible in BOTH modes; searches current + history claims */}
       {isIndustrial ? (
         <View style={styles.searchRowSkin}>
-          <TbvFrame source={plateSrc} capInsets={plateCap} frameScale={steelScale} style={styles.searchFrameSkin} padX={44} padTop={6} padBottom={8}>
+          <TbvFrame source={plateSrc} capInsets={plateCap} frameScale={steelScale} style={styles.searchFrameSkin} padX={isSteel ? 18 : 44} padTop={isSteel ? 12 : 6} padBottom={isSteel ? 14 : 8}>
             <View style={styles.searchBoxInner}>
               <Ionicons name="search" size={16} color="#C8C8C8" />
               <TextInput
@@ -499,42 +499,41 @@ export default function ClaimsScreen() {
           filteredDealers.length === 0 && (openByDealer["_unassigned"] || []).length === 0 ? (
             <Text style={styles.empty}>No dealers yet.</Text>
           ) : isIndustrial ? (
-            // Skinned: EACH dealer is its own metal plate panel.
-            <>
-              {filteredDealers.map((d) => {
-                const { opened, done } = dealerCounts(d);
-                return (
-                  <TouchableOpacity
-                    key={d.id}
-                    testID={`claim-dealer-${d.id}`}
-                    style={styles.rowSkinWrap}
-                    onPress={() => router.push(`/dealer-claims/${d.id}`)}
-                    activeOpacity={0.85}
-                  >
-                    <TbvFrame source={plateSrc} capInsets={plateCap} frameScale={steelScale} padX={44} padTop={14} padBottom={14}>
-                      <View style={styles.rowSkinInner}>{dealerRowInner(d, opened, done)}</View>
-                    </TbvFrame>
-                  </TouchableOpacity>
-                );
-              })}
-              {(openByDealer["_unassigned"] || []).length > 0 && (
-                <View style={styles.rowSkinWrap}>
-                  <TbvFrame source={plateSrc} capInsets={plateCap} frameScale={steelScale} padX={44} padTop={14} padBottom={14}>
-                    <View style={styles.rowSkinInner}>
-                      <View style={styles.dealerThumb}>
-                        <Ionicons name="alert-circle" size={20} color={theme.colors.danger} />
-                      </View>
-                      <View style={{ flex: 1 }}>
-                        <Text style={styles.dealerName}>NO DEALER ASSIGNED</Text>
-                        <Text style={styles.dealerSub}>
-                          {(openByDealer["_unassigned"] || []).length} broken item{(openByDealer["_unassigned"] || []).length === 1 ? "" : "s"} need a dealer
-                        </Text>
-                      </View>
+            // Skinned: ALL dealers inside ONE metal panel (rows + dividers).
+            <View style={styles.rowSkinWrap}>
+              <TbvFrame source={winSrc} capInsets={winCap} frameScale={steelScale} padX={isSteel ? 18 : 30} padTop={isSteel ? 6 : 10} padBottom={isSteel ? 6 : 10}>
+                {filteredDealers.map((d, idx) => {
+                  const { opened, done } = dealerCounts(d);
+                  const isLast =
+                    idx === filteredDealers.length - 1 &&
+                    (openByDealer["_unassigned"] || []).length === 0;
+                  return (
+                    <TouchableOpacity
+                      key={d.id}
+                      testID={`claim-dealer-${d.id}`}
+                      style={[styles.dealerListRow, isLast && { borderBottomWidth: 0 }]}
+                      onPress={() => router.push(`/dealer-claims/${d.id}`)}
+                      activeOpacity={0.7}
+                    >
+                      {dealerRowInner(d, opened, done)}
+                    </TouchableOpacity>
+                  );
+                })}
+                {(openByDealer["_unassigned"] || []).length > 0 && (
+                  <View style={[styles.dealerListRow, { borderBottomWidth: 0 }]}>
+                    <View style={styles.dealerThumb}>
+                      <Ionicons name="alert-circle" size={20} color={theme.colors.danger} />
                     </View>
-                  </TbvFrame>
-                </View>
-              )}
-            </>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.dealerName}>NO DEALER ASSIGNED</Text>
+                      <Text style={styles.dealerSub}>
+                        {(openByDealer["_unassigned"] || []).length} broken item{(openByDealer["_unassigned"] || []).length === 1 ? "" : "s"} need a dealer
+                      </Text>
+                    </View>
+                  </View>
+                )}
+              </TbvFrame>
+            </View>
           ) : (
             <ShadowBox style={{ marginBottom: 16 }}>
               <ShadowBoxSubCard>
@@ -977,8 +976,8 @@ const styles = themedStyles((c) => ({
   },
   searchInput: { flex: 1, color: c.textPrimary, fontSize: 10 },
   searchRowSkin: { paddingHorizontal: 16, marginBottom: 6 },
-  searchFrameSkin: { minHeight: 50, justifyContent: "center" },
-  searchBoxInner: { flexDirection: "row", alignItems: "center", height: 38, gap: 8 },
+  searchFrameSkin: { minHeight: 52, justifyContent: "center" },
+  searchBoxInner: { flexDirection: "row", alignItems: "center", height: 40, gap: 8 },
   searchInputSkin: { color: "#F2F2F2", fontWeight: "600" },
   empty: { color: c.textMuted, fontStyle: "italic", paddingVertical: 16 },
   dealerRow: {

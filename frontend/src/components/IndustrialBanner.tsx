@@ -59,15 +59,22 @@ const ACCENT = "#F97316";
 
 export function IndustrialBanner({ title, subtitle, rightSlot, leftSlot, onBack, backIcon }: Props) {
   const c = useColors();
-  const { metalStyle, industrialVariant } = useSkin();
+  const { metalStyle, industrialVariant, skin, mode } = useSkin();
   // Steel theme swaps the dark iron nameplate for the brushed-silver "TOOLBOX
   // VAULT" plate (recoloured to the active steel colour), keeping the page
   // title + back row beneath it so every screen reads as Steel.
-  const isSteel = metalStyle === "steel";
+  // The plain Light/Dark themes ALSO use the Steel nameplate now: Dark gets the
+  // orange plate, Light gets the blue (arctic) plate.
+  const isPlain = skin === "plain";
+  const useSteelHeader = metalStyle === "steel" || isPlain;
+  const headerVariant: typeof industrialVariant = isPlain
+    ? (mode === "light" ? "arctic" : "orange")
+    : industrialVariant;
+  const isSteel = useSteelHeader;
   const { width } = useWindowDimensions();
   const nameplateW = Math.min(width * 0.94, 400);
   const nameplateH = isSteel ? nameplateW / HEADER_ASPECT : nameplateW / 4.0;
-  const nameplateSrc = isSteel ? HEADER_SRC_BY_COLOR[industrialVariant] : SKIN.nameplate;
+  const nameplateSrc = isSteel ? HEADER_SRC_BY_COLOR[headerVariant] : SKIN.nameplate;
   return (
     <View style={styles.wrap}>
       {/* The brand nameplate (silver for Steel, dark iron otherwise). The app

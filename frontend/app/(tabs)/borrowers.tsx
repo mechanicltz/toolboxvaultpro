@@ -4,6 +4,7 @@ import {
   Text,
   StyleSheet,
   FlatList,
+  SectionList,
   TouchableOpacity,
   TextInput,
   Modal,
@@ -142,14 +143,32 @@ export default function BorrowersScreen() {
         borrowerName.toLowerCase()
     );
 
+  // Group contacts into an A–Z directory (letter section header on the left,
+  // names underneath) — sorted alphabetically by the first letter of the name.
+  const sections = useMemo(() => {
+    const groups: Record<string, any[]> = {};
+    for (const b of borrowers) {
+      const first = (b?.name || "").trim().charAt(0).toUpperCase();
+      const letter = /[A-Z]/.test(first) ? first : "#";
+      (groups[letter] = groups[letter] || []).push(b);
+    }
+    return Object.keys(groups)
+      .sort((a, z) => (a === "#" ? 1 : z === "#" ? -1 : a.localeCompare(z)))
+      .map((letter) => ({ title: letter, data: groups[letter] }));
+  }, [borrowers]);
+
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <IndustrialBanner title="CONTACTS" subtitle="Borrowers & Checkouts" />
 
-      <FlatList
-        data={borrowers}
+      <SectionList
+        sections={sections}
         keyExtractor={(i) => i.id}
         contentContainerStyle={{ paddingBottom: 100 }}
+        stickySectionHeadersEnabled={false}
+        renderSectionHeader={({ section }: any) => (
+          <Text style={styles.sectionLetter}>{section.title}</Text>
+        )}
         ListEmptyComponent={
           <View style={styles.empty}>
             <Ionicons name="people-outline" size={48} color={theme.colors.textMuted} />
@@ -162,11 +181,6 @@ export default function BorrowersScreen() {
           const firstPhone = phones[0];
           const cardContent = (
             <>
-              <View style={styles.avatar}>
-                <Text style={styles.avatarText}>
-                  {item.name.charAt(0).toUpperCase()}
-                </Text>
-              </View>
               <View style={{ flex: 1 }}>
                 <Text style={styles.rowTitle}>{item.name}</Text>
                 <Text style={[styles.rowMeta, isIndustrial && styles.skinTextBright]}>
@@ -594,6 +608,15 @@ const styles = themedStyles((c) => ({
     fontSize: 14,
   },
   rowTitle: { color: c.textPrimary, fontWeight: "700", fontSize: 12 },
+  sectionLetter: {
+    color: c.accent,
+    fontWeight: "900",
+    fontSize: 15,
+    letterSpacing: 1,
+    paddingHorizontal: 18,
+    paddingTop: 14,
+    paddingBottom: 4,
+  },
   skinTextBright: { color: "#FFFFFF" },
   rowSub: { color: c.textSecondary, fontSize: 9, marginTop: 2 },
   rowMeta: {

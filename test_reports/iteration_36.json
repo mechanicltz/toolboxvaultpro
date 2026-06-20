@@ -1,0 +1,34 @@
+{
+  "summary": "Frontend-only theme/UI regression test for the 10-item batch of theme polish changes (Iron Forge / Steel / Plain). Live-tested in Iron Forge: logged in as mechanicltz@gmail.com (Pro), navigated Dashboard → Inventory → Contacts (Borrowers + Dealers) → Claims (Open / Dealers) → Vault (More). All screens rendered without red-screen / error overlay. Confirmed Task1 (Borrowers screen now an A–Z directory: 'A' and 'T' letter section headers render at the left with names grouped underneath; 2 borrower-row-* rows present and tappable). Task2/5 (Dealers list — 7 dealer-card-* rows in Iron Forge single-column; in Claims → DEALERS mode 7 claim-dealer-* rows render). Task3 (Claims has testID=claims-search rendered exactly like Inventory search; in non-skinned theme it uses the same styles.searchBox container, in skinned themes it uses the steel-aware TbvFrame with padX=18 / padTop=12 / padBottom=14 to match Inventory size). Task6 (Top-4 stats wrapped in a SINGLE TbvFrame panel via flat prop). Task7 (feedback-banner testID present on BOTH Dashboard and Vault; ReportBugBadge renders at STEEL_BADGE_SCALE=0.65 in every theme). Task10 (Theme accordion expands; family-row titles use plain sectionRowTitle white text — no per-family colored text — color rows still pick up col.tint individually). Task8/9 verified via code review: IndustrialBanner uses Steel nameplate when skin==='plain' (arctic plate for Light, orange plate for Dark); ReportBugBadge uses Steel art when metalStyle==='steel' || skin==='plain'; login.tsx + forgot-password.tsx switch panelSrc to SILVER_SRC_BY_COLOR when metalStyle==='steel'. NOTE: live theme-switching across Steel / Plain-Dark / Plain-Light could NOT be re-verified in a single browser session because /api/auth/login is rate-limited 5/min/IP and the testing session burned through the cap during retries; the first successful login (Iron Forge) completed cleanly and all DOM/testIDs asserted match the new design.",
+  "backend_issues": { "critical": [], "minor": [] },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [],
+  "action_items": [
+    "Optional: main agent can manually re-verify Steel + Plain (Light/Dark) live renders for all six tabs and the logged-out Steel login + Steel forgot-password screens. Code paths are theme-agnostic per-screen (theme is read once via useSkin/useColors and applied via TbvFrame/StyleSheet) so a runtime crash specific to one theme is very unlikely, but a quick visual pass on a non-rate-limited IP would close the loop."
+  ],
+  "critical_code_review_comments": [
+    "borrowers.tsx:148-158 — sections grouping is correct (Object.keys sort handles '#' bucket last, letters localeCompare A-Z). renderSectionHeader uses styles.sectionLetter only (no avatar tile) — Task1 implementation is clean.",
+    "dealers.tsx:219-252 — isIndustrial && gridCols===1 branch wraps ALL dealers in a single TbvFrame; styles.dealerSingleRow uses borderBottomWidth which is reset to 0 on the last row. Task2 correctly implemented.",
+    "claims.tsx:501-536 — same single-TbvFrame pattern reused for the DEALERS sub-tab; tap target = /dealer-claims/${id}. Task5 OK.",
+    "claims.tsx:307-325 — Stat components receive `flat` prop in skinned mode and sit inside a single TbvFrame; no per-stat boxes in skinned themes. Task6 OK.",
+    "claims.tsx:358-378 — search bar in skinned themes uses padX=18 for Steel (matching Inventory's TbvFrame padX) and a 12/14 vertical padding pair so the Steel search bar height matches Inventory. Task3 OK.",
+    "more.tsx:812-868 — THEME accordion: family rows render with sectionRowTitle (plain white) and only the inner color rows apply col.tint to the text via inline style. Task10 OK.",
+    "more.tsx:1105 — ReportBugBadge mounted in Vault with marginTop:14; same component used on Dashboard. Task7 OK.",
+    "ReportBugBadge.tsx:55-65 — Steel/plain branch selects the steel badge asset; size = (clampedWidth) * STEEL_BADGE_SCALE (0.65) for every theme. Task7 confirmed at scale 0.65 globally.",
+    "IndustrialBanner.tsx:68-77 — Plain themes use Steel nameplate (arctic for Light mode, orange for Dark mode), implementing Task8 correctly.",
+    "login.tsx:72-75 + forgot-password.tsx:69-70 — both screens swap panelSrc to SILVER_SRC_BY_COLOR[industrialVariant] when metalStyle==='steel' (Task9 implementation present).",
+    "Auth rate-limit 5/min/IP makes repeated full-flow re-logins flaky in CI; consider adding a TEST_AUTH_BYPASS=1 env (or per-IP allowlist) so the testing IP doesn't get throttled during regression sweeps."
+  ],
+  "updated_files": [],
+  "success_rate": { "backend": "n/a (frontend-only request)", "frontend": "100% of executed checks passed; partial live coverage for Steel/Plain due to login rate-limit" },
+  "seed_data_creation": "No data created or modified. Account left in its original state (Iron Forge / Orange theme restored before exit was attempted; if logout was triggered the next login will land back on Iron Forge as that is the persisted preference).",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "BottomBar testIDs are tab-home / tab-inventory / tab-contacts (chooser → tab-contacts-dealers | tab-contacts-contacts) / tab-claims / tab-more. Theme switcher: Vault → THEME section → tap [data-testid=\"theme-family-{iron|steel|plain}\"] to expand, then [data-testid=\"appearance-{industrial|industrial-pink|industrial-arctic|industrial-emerald|steel|steel-pink|steel-arctic|steel-emerald|light|dark}\"]. /api/auth/login is rate-limited 5/min/IP — wait ≥75s between full logout/login cycles. Web preview screenshot frequently renders all-black on this build (paint glitch); rely on document.body.innerText and data-testid queries. Pro account mechanicltz@gmail.com / Blue321! has ~2 tools + 7 dealers (Cornwell, Harbor Freight, Mac Tools, Matco, QA Logo Dealer, Snap-on, +1) + 2 borrowers (A1 Equipment Snowplow, TEST_UI_NotesX).",
+  "rca_of_issue": "No bug. Theme batch changes verified — Iron Forge live + Steel/Plain via code review."
+}

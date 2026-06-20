@@ -39,6 +39,9 @@ import {
   hasBeenPromptedForBiometric, markBiometricPrompted,
 } from "../src/biometric";
 import { useTbvSkinsReady } from "../src/tbv/useTbvSkins";
+import { useSkin } from "../src/themeContext";
+import { HEADER_SRC_BY_COLOR, HEADER_ASPECT } from "../src/tbv/header";
+import { SILVER_SRC_BY_COLOR } from "../src/tbv/silver";
 import { APP_VERSION_LABEL } from "../src/version";
 // Shared, colour-variant-aware skin map (orange ↔ pink). The login screen is
 // LOCKED to the industrial look but MUST honour the Industrial-Pink variant,
@@ -66,6 +69,10 @@ export default function LoginScreen() {
     Exo2_400Regular, Exo2_500Medium, Exo2_700Bold,
   });
   const skinsReady = useTbvSkinsReady();
+  const { metalStyle, industrialVariant } = useSkin();
+  const isSteelLogin = metalStyle === "steel";
+  const nameplateSrc = isSteelLogin ? HEADER_SRC_BY_COLOR[industrialVariant] : SKIN.nameplate;
+  const panelSrc = isSteelLogin ? SILVER_SRC_BY_COLOR[industrialVariant] : SKIN.panel;
 
   // Measured container size (post safe-area, post keyboard-avoid). This is the
   // REAL space we render into — identical logic on web preview and phone.
@@ -192,7 +199,7 @@ export default function LoginScreen() {
 
   // Metal "TOOLBOX VAULT" nameplate (wordmark) — wide horizontal plaque.
   const nameplateW = Math.min(WORK_W * 0.94, 400);
-  const nameplateH = nameplateW / AR.nameplate;
+  const nameplateH = nameplateW / (isSteelLogin ? HEADER_ASPECT : AR.nameplate);
 
   // Native title + tagline fonts (scale with the real column width)
   const titleFont = clamp(WORK_W * 0.072, 22, 30);
@@ -297,7 +304,7 @@ export default function LoginScreen() {
                 />
                 <View style={{ width: nameplateW, height: nameplateH, marginTop: headerGap * 0.08 }}>
                   <Image
-                    source={SKIN.nameplate}
+                    source={nameplateSrc}
                     style={{ width: nameplateW, height: nameplateH }}
                     resizeMode="contain"
                   />
@@ -361,7 +368,7 @@ export default function LoginScreen() {
                 }}
               >
                 <Image
-                  source={SKIN.panel}
+                  source={panelSrc}
                   style={{ position: "absolute", top: 0, left: 0, width: panelW, height: panelH }}
                   resizeMode="stretch"
                 />

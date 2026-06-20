@@ -47,19 +47,20 @@ export default function ReportBugBadge({
   maxWidth = 520,
 }: Props) {
   const router = useRouter();
-  const { industrialVariant, metalStyle } = useSkin();
+  const { industrialVariant, metalStyle, skin } = useSkin();
   const { width: screenW } = useWindowDimensions();
 
-  // Steel family shows its own badge art (one shared asset for all colours);
-  // every other family follows its colour variant.
-  const badgeKey = metalStyle === "steel" ? "steel" : industrialVariant;
+  // Steel family AND the plain Light/Dark themes show the Steel badge art (one
+  // shared asset); the Iron Forge colour themes follow their colour variant.
+  const useSteelBadge = metalStyle === "steel" || skin === "plain";
+  const badgeKey = useSteelBadge ? "steel" : industrialVariant;
   const source = BADGES[badgeKey] ?? BADGES.orange;
   const aspect = ASPECTS[badgeKey] ?? ASPECTS.orange;
 
   // Explicit pixel size so the image never falls back to its intrinsic
   // (giant) dimensions when a parent's width isn't determinate.
-  // The Steel badge renders at 65% so it sits lighter on the page.
-  const scale = metalStyle === "steel" ? STEEL_BADGE_SCALE : 1;
+  // The badge renders at 65% in EVERY theme so it sits lighter on the page.
+  const scale = STEEL_BADGE_SCALE;
   const w = Math.min(Math.max(screenW - inset, 120), maxWidth) * scale;
   const h = w / aspect;
 

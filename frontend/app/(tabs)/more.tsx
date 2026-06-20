@@ -41,6 +41,7 @@ import { BevelCard } from "../../src/components/BevelCard";
 import { IndustrialBanner } from "../../src/components/IndustrialBanner";
 import ReportBugBadge from "../../src/components/ReportBugBadge";
 import { SKIN, CAP } from "../../src/tbv/skins";
+import { useIsSteel, useSteelPanelFrame } from "../../src/tbv/steel";
 import TbvFrame from "../../src/tbv/components/TbvFrame";
 
 import NotificationsSettingsSection from "../../src/sections/NotificationsSettingsSection";
@@ -245,14 +246,20 @@ const SectionCard = ({
 }) => {
   const { skin } = useSkin();
   const isIndustrial = skin === "industrial";
+  const isSteel = useIsSteel();
+  const steelPanel = useSteelPanelFrame();
+  const winSrc = isSteel ? steelPanel.source : SKIN.window;
+  const winCap = isSteel ? steelPanel.capInsets : CAP.window;
+  const steelScale = isSteel ? steelPanel.frameScale : undefined;
   return (
     <View style={styles.sectionCardWrap}>
       <Text style={styles.sectionLabel}>{title}</Text>
       {isIndustrial ? (
         <TbvFrame
-          source={SKIN.window}
-          capInsets={CAP.window}
-          padX={30}
+          source={winSrc}
+          capInsets={winCap}
+          frameScale={steelScale}
+          padX={isSteel ? 20 : 30}
           padTop={22}
           padBottom={22}
           testID={testID}
@@ -815,10 +822,10 @@ export default function MoreScreen() {
                   onPress={() => setOpenFamily(open ? null : fam.key)}
                 >
                   <View style={styles.sectionRowIcon}>
-                    <Ionicons name={fam.icon} size={18} color={fam.tint || theme.colors.accent} />
+                    <Ionicons name={fam.icon} size={18} color={theme.colors.accent} />
                   </View>
                   <Text
-                    style={[styles.sectionRowTitle, { flex: 1 }, fam.tint ? { color: fam.tint } : null]}
+                    style={[styles.sectionRowTitle, { flex: 1 }]}
                   >
                     {fam.display}
                   </Text>

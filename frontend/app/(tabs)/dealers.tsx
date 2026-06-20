@@ -55,6 +55,8 @@ export default function DealersScreen() {
   const steelPanel = useSteelPanelFrame();
   const plateSrc = isSteel ? steelPanel.source : SKIN.plate;
   const plateCap = isSteel ? steelPanel.capInsets : CAP.plate;
+  const winSrc = isSteel ? steelPanel.source : SKIN.window;
+  const winCap = isSteel ? steelPanel.capInsets : CAP.window;
   const steelScale = isSteel ? steelPanel.frameScale : undefined;
   const [dealers, setDealers] = useState<any[]>(() => getCached("dealers", []));
   const [tools, setTools] = useState<any[]>(() => getCached("tools", []));
@@ -159,6 +161,54 @@ export default function DealersScreen() {
     load();
   };
 
+  const dealerContent = (item: any) => {
+    const s = summaryFor(item.id);
+    const cur =
+      (item.agents || []).find((a: any) => a.id === item.current_agent_id) || null;
+    const isLocked = lockedDealerIds.has(item.id);
+    const cardContent = (
+      <>
+        <DealerLogo logo={item.logo} size={DEALER_LOGO_SLOT.list} style={{ marginRight: 0 }} />
+        <View style={{ flex: 1 }}>
+          <Text style={styles.rowTitle}>{item.name}</Text>
+          <Text style={[styles.rowSub, isIndustrial && styles.skinTextBright]}>
+            {cur ? `Agent: ${cur.name}` : "No current agent"}
+          </Text>
+          <Text style={[styles.rowMeta, isIndustrial && styles.skinTextBright]}>
+            {s.count} TOOL{s.count === 1 ? "" : "S"}
+            {prefs.show_prices ? `  ·  $${s.total.toFixed(2)}` : ""}
+            {`  ·  ${routeLabel(item)}`}
+          </Text>
+          {(() => {
+            const agentPhone = cur?.phone || "";
+            if (!agentPhone) return null;
+            return (
+              <View style={styles.rowContactBtns}>
+                <Text style={styles.rowContactPhone} numberOfLines={1}>
+                  {formatPhone(agentPhone)}
+                </Text>
+                <ContactIconButton
+                  type="call"
+                  size={26}
+                  testID={`dealer-row-call-${item.id}`}
+                  onPress={() => openPhone(agentPhone)}
+                />
+                <ContactIconButton
+                  type="text"
+                  size={26}
+                  testID={`dealer-row-text-${item.id}`}
+                  onPress={() => openSms(agentPhone)}
+                />
+              </View>
+            );
+          })()}
+        </View>
+        <Ionicons name="chevron-forward" size={20} color={theme.colors.textMuted} />
+      </>
+    );
+    return { cardContent, isLocked };
+  };
+
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <IndustrialBanner
@@ -166,6 +216,41 @@ export default function DealersScreen() {
         subtitle="Companies & Sales Agents"
       />
 
+      {isIndustrial && gridCols === 1 ? (
+        // Skinned single-column: ALL dealers in ONE metal panel (rows + dividers).
+        <ScrollView contentContainerStyle={{ paddingBottom: 100 }}>
+          {dealers.length === 0 ? (
+            <View style={styles.empty}>
+              <Ionicons name="briefcase-outline" size={48} color={theme.colors.textMuted} />
+              <Text style={styles.emptyTitle}>NO DEALERS</Text>
+              <Text style={styles.emptyText}>
+                Add tool dealers (Matco, Snap-on, etc) and track agents you buy from.
+              </Text>
+            </View>
+          ) : (
+            <View style={{ paddingHorizontal: 16, paddingTop: 8 }}>
+              <TbvFrame source={winSrc} capInsets={winCap} frameScale={steelScale} padX={isSteel ? 18 : 22} padTop={isSteel ? 6 : 8} padBottom={isSteel ? 6 : 8}>
+                {dealers.map((item, idx) => {
+                  const { cardContent, isLocked } = dealerContent(item);
+                  const isLast = idx === dealers.length - 1;
+                  return (
+                    <TouchableOpacity
+                      key={item.id}
+                      testID={`dealer-card-${item.id}`}
+                      style={[styles.dealerSingleRow, isLast && { borderBottomWidth: 0 }]}
+                      onPress={() => router.push(`/dealer/${item.id}`)}
+                      activeOpacity={isLocked ? 1 : 0.8}
+                      disabled={isLocked}
+                    >
+                      {cardContent}
+                    </TouchableOpacity>
+                  );
+                })}
+              </TbvFrame>
+            </View>
+          )}
+        </ScrollView>
+      ) : (
       <FlatList
         data={dealers}
         keyExtractor={(i) => i.id}
@@ -183,53 +268,7 @@ export default function DealersScreen() {
           </View>
         }
         renderItem={({ item }) => {
-          const s = summaryFor(item.id);
-          const cur =
-            (item.agents || []).find((a: any) => a.id === item.current_agent_id) || null;
-          const isLocked = lockedDealerIds.has(item.id);
-          const cardContent = (
-            <>
-              <DealerLogo logo={item.logo} size={DEALER_LOGO_SLOT.list} style={{ marginRight: 0 }} />
-              <View style={{ flex: 1 }}>
-                <Text style={styles.rowTitle}>{item.name}</Text>
-                <Text style={[styles.rowSub, isIndustrial && styles.skinTextBright]}>
-                  {cur ? `Agent: ${cur.name}` : "No current agent"}
-                </Text>
-                <Text style={[styles.rowMeta, isIndustrial && styles.skinTextBright]}>
-                  {s.count} TOOL{s.count === 1 ? "" : "S"}
-                  {prefs.show_prices ? `  ·  $${s.total.toFixed(2)}` : ""}
-                  {`  ·  ${routeLabel(item)}`}
-                </Text>
-                {/* Phone/text quick-actions — show ONLY when a current agent is
-                    set, and dial the AGENT's number (not the company line). Hidden
-                    entirely when no current agent. */}
-                {(() => {
-                  const agentPhone = cur?.phone || "";
-                  if (!agentPhone) return null;
-                  return (
-                    <View style={styles.rowContactBtns}>
-                      <Text style={styles.rowContactPhone} numberOfLines={1}>
-                        {formatPhone(agentPhone)}
-                      </Text>
-                      <ContactIconButton
-                        type="call"
-                        size={26}
-                        testID={`dealer-row-call-${item.id}`}
-                        onPress={() => openPhone(agentPhone)}
-                      />
-                      <ContactIconButton
-                        type="text"
-                        size={26}
-                        testID={`dealer-row-text-${item.id}`}
-                        onPress={() => openSms(agentPhone)}
-                      />
-                    </View>
-                  );
-                })()}
-              </View>
-              <Ionicons name="chevron-forward" size={20} color={theme.colors.textMuted} />
-            </>
-          );
+          const { cardContent, isLocked } = dealerContent(item);
 
           if (isIndustrial) {
             return (
@@ -283,6 +322,7 @@ export default function DealersScreen() {
           );
         }}
       />
+      )}
 
       {/* Add Dealer is now in the header (top-right) — bottom FAB removed. */}
 
@@ -580,6 +620,14 @@ const styles = themedStyles((c) => ({
   },
   rowTitle: { color: c.textPrimary, fontWeight: "700", fontSize: 12 },
   skinTextBright: { color: "#FFFFFF" },
+  dealerSingleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(255,255,255,0.12)",
+  },
   rowSub: { color: c.textSecondary, fontSize: 9, marginTop: 2 },
   rowMeta: {
     color: c.textMuted,

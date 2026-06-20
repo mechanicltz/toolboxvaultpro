@@ -40,6 +40,8 @@ import { useAuth } from "../src/AuthContext";
 import { SKIN, AR, TBV, clamp, getIndustrialVariant, VARIANT_ACCENT } from "../src/tbv/skins";
 import { TbvHeader } from "../src/tbv/TbvHeader";
 import { useTbvSkinsReady } from "../src/tbv/useTbvSkins";
+import { useSkin } from "../src/themeContext";
+import { SILVER_SRC_BY_COLOR } from "../src/tbv/silver";
 
 type Step = "request" | "verify";
 
@@ -64,6 +66,8 @@ export default function ForgotPasswordScreen() {
   const [box, setBox] = useState({ w: win.width, h: win.height });
   const [measuredInnerH, setMeasuredInnerH] = useState(0);
   const skinsReady = useTbvSkinsReady();
+  const { metalStyle, industrialVariant } = useSkin();
+  const panelSrc = metalStyle === "steel" ? SILVER_SRC_BY_COLOR[industrialVariant] : SKIN.panel;
 
   const [step, setStep] = useState<Step>("request");
   const [email, setEmail] = useState("");
@@ -223,7 +227,7 @@ export default function ForgotPasswordScreen() {
               {/* ===================== PANEL ===================== */}
               <View style={{ width: panelW, height: panelH, overflow: "hidden" }}>
                 <Image
-                  source={SKIN.panel}
+                  source={panelSrc}
                   style={{ position: "absolute", top: 0, left: 0, width: panelW, height: panelH }}
                   resizeMode="stretch"
                 />
