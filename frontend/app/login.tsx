@@ -42,6 +42,8 @@ import { useTbvSkinsReady } from "../src/tbv/useTbvSkins";
 import { useSkin } from "../src/themeContext";
 import { HEADER_SRC_BY_COLOR, HEADER_ASPECT } from "../src/tbv/header";
 import { SILVER_SRC_BY_COLOR } from "../src/tbv/silver";
+import { useSteelPanelFrame } from "../src/tbv/steel";
+import TbvFrame from "../src/tbv/components/TbvFrame";
 import { APP_VERSION_LABEL } from "../src/version";
 // Shared, colour-variant-aware skin map (orange ↔ pink). The login screen is
 // LOCKED to the industrial look but MUST honour the Industrial-Pink variant,
@@ -71,6 +73,7 @@ export default function LoginScreen() {
   const skinsReady = useTbvSkinsReady();
   const { metalStyle, industrialVariant } = useSkin();
   const isSteelLogin = metalStyle === "steel";
+  const steelPanel = useSteelPanelFrame();
   const nameplateSrc = isSteelLogin ? HEADER_SRC_BY_COLOR[industrialVariant] : SKIN.nameplate;
   const panelSrc = isSteelLogin ? SILVER_SRC_BY_COLOR[industrialVariant] : SKIN.panel;
 
@@ -367,11 +370,26 @@ export default function LoginScreen() {
                   overflow: "hidden",
                 }}
               >
-                <Image
-                  source={panelSrc}
-                  style={{ position: "absolute", top: 0, left: 0, width: panelW, height: panelH }}
-                  resizeMode="stretch"
-                />
+                {isSteelLogin ? (
+                  <View style={{ position: "absolute", top: 0, left: 0, width: panelW }}>
+                    <TbvFrame
+                      source={steelPanel.source}
+                      capInsets={steelPanel.capInsets}
+                      frameScale={steelPanel.frameScale}
+                      padX={0}
+                      padTop={0}
+                      padBottom={0}
+                    >
+                      <View style={{ height: panelH }} />
+                    </TbvFrame>
+                  </View>
+                ) : (
+                  <Image
+                    source={panelSrc}
+                    style={{ position: "absolute", top: 0, left: 0, width: panelW, height: panelH }}
+                    resizeMode="stretch"
+                  />
+                )}
                 <View
                   style={{
                     flex: 1,

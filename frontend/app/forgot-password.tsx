@@ -42,6 +42,8 @@ import { TbvHeader } from "../src/tbv/TbvHeader";
 import { useTbvSkinsReady } from "../src/tbv/useTbvSkins";
 import { useSkin } from "../src/themeContext";
 import { SILVER_SRC_BY_COLOR } from "../src/tbv/silver";
+import { useSteelPanelFrame } from "../src/tbv/steel";
+import TbvFrame from "../src/tbv/components/TbvFrame";
 
 type Step = "request" | "verify";
 
@@ -67,7 +69,9 @@ export default function ForgotPasswordScreen() {
   const [measuredInnerH, setMeasuredInnerH] = useState(0);
   const skinsReady = useTbvSkinsReady();
   const { metalStyle, industrialVariant } = useSkin();
-  const panelSrc = metalStyle === "steel" ? SILVER_SRC_BY_COLOR[industrialVariant] : SKIN.panel;
+  const isSteel = metalStyle === "steel";
+  const steelPanel = useSteelPanelFrame();
+  const panelSrc = isSteel ? SILVER_SRC_BY_COLOR[industrialVariant] : SKIN.panel;
 
   const [step, setStep] = useState<Step>("request");
   const [email, setEmail] = useState("");
@@ -226,11 +230,26 @@ export default function ForgotPasswordScreen() {
 
               {/* ===================== PANEL ===================== */}
               <View style={{ width: panelW, height: panelH, overflow: "hidden" }}>
-                <Image
-                  source={panelSrc}
-                  style={{ position: "absolute", top: 0, left: 0, width: panelW, height: panelH }}
-                  resizeMode="stretch"
-                />
+                {isSteel ? (
+                  <View style={{ position: "absolute", top: 0, left: 0, width: panelW }}>
+                    <TbvFrame
+                      source={steelPanel.source}
+                      capInsets={steelPanel.capInsets}
+                      frameScale={steelPanel.frameScale}
+                      padX={0}
+                      padTop={0}
+                      padBottom={0}
+                    >
+                      <View style={{ height: panelH }} />
+                    </TbvFrame>
+                  </View>
+                ) : (
+                  <Image
+                    source={panelSrc}
+                    style={{ position: "absolute", top: 0, left: 0, width: panelW, height: panelH }}
+                    resizeMode="stretch"
+                  />
+                )}
                 <View
                   style={{ flex: 1, paddingHorizontal: padX, paddingTop: padTop, paddingBottom: padBot }}
                 >
