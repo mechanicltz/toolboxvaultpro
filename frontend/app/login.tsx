@@ -71,7 +71,7 @@ export default function LoginScreen() {
     Exo2_400Regular, Exo2_500Medium, Exo2_700Bold,
   });
   const skinsReady = useTbvSkinsReady();
-  const { metalStyle, industrialVariant } = useSkin();
+  const { metalStyle, industrialVariant, skin: loginSkin } = useSkin();
   const isSteelLogin = metalStyle === "steel";
   const steelPanel = useSteelPanelFrame();
   const nameplateSrc = isSteelLogin ? HEADER_SRC_BY_COLOR[industrialVariant] : SKIN.nameplate;
@@ -276,6 +276,11 @@ export default function LoginScreen() {
   return (
     <ImageBackground source={SKIN.bg} style={styles.bg} resizeMode="cover" fadeDuration={0}>
       <View style={styles.veil} />
+      <View style={{ position: "absolute", top: 38, left: 0, right: 0, zIndex: 999, alignItems: "center" }} pointerEvents="none">
+        <Text style={{ color: "#00FF66", fontSize: 12, fontWeight: "900", backgroundColor: "rgba(0,0,0,0.85)", paddingHorizontal: 8, paddingVertical: 3 }}>
+          DBG-v9 metal={String(metalStyle)} skin={String(loginSkin)} var={String(industrialVariant)}
+        </Text>
+      </View>
 
       <SafeAreaView style={{ flex: 1 }} edges={["top", "bottom"]}>
           <View
