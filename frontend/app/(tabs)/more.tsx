@@ -277,12 +277,10 @@ export default function MoreScreen() {
   const [pwErr, setPwErr] = useState("");
   const [pwOk, setPwOk] = useState("");
   const [homeRowsModal, setHomeRowsModal] = useState(false);
-  const [themeOpen, setThemeOpen] = useState(false);
   // Which theme family accordion is expanded ("iron" | "steel" | "plain").
   // Only one open at a time; all start closed.
   const [openFamily, setOpenFamily] = useState<"iron" | "steel" | "plain" | null>(null);
-  const { appearance, setAppearance, skin } = useSkin();
-  const isIndustrial = skin === "industrial";
+  const { appearance, setAppearance } = useSkin();
 
   // Deep-link from the new-account "choose your theme" popup. When arriving
   // with ?openTheme=1, pre-open the Theme accordion and scroll to it.
@@ -293,7 +291,8 @@ export default function MoreScreen() {
   useEffect(() => {
     if (params?.openTheme === "1" && !themeParamHandledRef.current) {
       themeParamHandledRef.current = true;
-      setThemeOpen(true);
+      const fam = THEME_FAMILIES.find((f) => f.colors.some((c) => c.id === appearance));
+      setOpenFamily(fam?.key ?? "iron");
       setTimeout(() => {
         scrollRef.current?.scrollTo({
           y: Math.max(settingsYRef.current - 12, 0),
@@ -301,7 +300,7 @@ export default function MoreScreen() {
         });
       }, 400);
     }
-  }, [params?.openTheme]);
+  }, [params?.openTheme, appearance]);
 
   // Intro-video preference (device-level). Default ON.
   const [introVideoOn, setIntroVideoOn] = useState(true);
@@ -656,15 +655,7 @@ export default function MoreScreen() {
 
   const totalDue = mntDue.overdue + mntDue.due_soon;
 
-  // Active family + colour, shown on the collapsed Theme row (tinted to the hue).
-  const activeTheme = (() => {
-    for (const fam of THEME_FAMILIES) {
-      const col = fam.colors.find((c) => c.id === appearance);
-      if (col) return { summary: `${fam.display} · ${col.label}`, tint: col.tint };
-    }
-    const f = THEME_FAMILIES[0];
-    return { summary: `${f.display} · ${f.colors[0].label}`, tint: f.colors[0].tint };
-  })();
+  // Active family key (for deep-link auto-expand from onboarding).
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
@@ -800,96 +791,73 @@ export default function MoreScreen() {
 
         <NotificationsSettingsSection prefs={prefs} update={update} />
 
-        {/* Position marker so ?openTheme can scroll the Theme accordion into view. */}
+        {/* Position marker so ?openTheme can scroll the THEME section into view. */}
         <View
           onLayout={(e) => {
             settingsYRef.current = e.nativeEvent.layout.y;
           }}
         />
-        {/* SETTINGS — theme, home layout & home banners. */}
-        <SectionCard title="SETTINGS" testID="more-section-customize">
-          {/* Theme — accordion row; expands to a grouped card of choices. */}
-          <SectionRow
-            icon="color-palette"
-            title="Theme"
-            subtitle="Choose the app's look & feel"
-            testID="theme-accordion-row"
-            onPress={() => setThemeOpen((o) => { if (o) setOpenFamily(null); return !o; })}
-            isLast={!themeOpen}
-            rightSlot={
-              <View style={styles.themeValueWrap}>
-                <Text
-                  style={[
-                    styles.themeValueText,
-                    activeTheme.tint ? { color: activeTheme.tint } : null,
-                  ]}
-                  numberOfLines={1}
+        {/* THEME — its own section: pick a family, then a colour. */}
+        <SectionCard title="THEME" testID="more-section-theme">
+          {THEME_FAMILIES.map((fam, fi) => {
+            const open = openFamily === fam.key;
+            const isLastFamily = fi === THEME_FAMILIES.length - 1;
+            return (
+              <View key={fam.key}>
+                <TouchableOpacity
+                  testID={`theme-family-${fam.key}`}
+                  activeOpacity={0.6}
+                  style={[styles.sectionRow, isLastFamily && !open && styles.sectionRowLast]}
+                  onPress={() => setOpenFamily(open ? null : fam.key)}
                 >
-                  {activeTheme.summary}
-                </Text>
-                <Ionicons
-                  name={themeOpen ? "chevron-up" : "chevron-down"}
-                  size={16}
-                  color={theme.colors.textMuted}
-                />
-              </View>
-            }
-          />
-          {themeOpen && (
-            <View style={[styles.optGroup, isIndustrial && styles.optGroupFlat]}>
-              {THEME_FAMILIES.map((fam, fi) => {
-                const open = openFamily === fam.key;
-                return (
-                  <View key={fam.key}>
-                    <TouchableOpacity
-                      testID={`theme-family-${fam.key}`}
-                      activeOpacity={0.7}
-                      style={[styles.familyHeader, fi > 0 && styles.familyHeaderDivider]}
-                      onPress={() => setOpenFamily(open ? null : fam.key)}
-                    >
-                      <View style={styles.iconBox}>
-                        <Ionicons name={fam.icon} size={18} color={fam.tint || theme.colors.accent} />
-                      </View>
-                      <Text style={[styles.familyTitle, fam.tint ? { color: fam.tint } : null]}>
-                        {fam.title}
-                      </Text>
-                      <Ionicons
-                        name={open ? "chevron-up" : "chevron-down"}
-                        size={16}
-                        color={theme.colors.textMuted}
-                      />
-                    </TouchableOpacity>
-                    {open && (
-                      <View style={styles.familyColorWrap}>
-                        {fam.colors.map((col) => {
-                          const active = appearance === col.id;
-                          const tint = col.tint || theme.colors.accent;
-                          return (
-                            <TouchableOpacity
-                              key={col.id}
-                              testID={`appearance-${col.id}`}
-                              activeOpacity={0.7}
-                              style={[styles.colorRow, active && styles.optRowGroupedActive]}
-                              onPress={() => setAppearance(col.id)}
-                            >
-                              <Text style={[styles.colorLabel, col.tint ? { color: col.tint } : null]}>
-                                {col.label}
-                              </Text>
-                              <Ionicons
-                                name={active ? "radio-button-on" : "radio-button-off"}
-                                size={20}
-                                color={active ? tint : theme.colors.textMuted}
-                              />
-                            </TouchableOpacity>
-                          );
-                        })}
-                      </View>
-                    )}
+                  <View style={styles.sectionRowIcon}>
+                    <Ionicons name={fam.icon} size={18} color={fam.tint || theme.colors.accent} />
                   </View>
-                );
-              })}
-            </View>
-          )}
+                  <Text
+                    style={[styles.sectionRowTitle, { flex: 1 }, fam.tint ? { color: fam.tint } : null]}
+                  >
+                    {fam.display}
+                  </Text>
+                  <Ionicons
+                    name={open ? "chevron-up" : "chevron-down"}
+                    size={16}
+                    color={theme.colors.textMuted}
+                  />
+                </TouchableOpacity>
+                {open && (
+                  <View style={styles.familyColorWrap}>
+                    {fam.colors.map((col, ci) => {
+                      const active = appearance === col.id;
+                      const tint = col.tint || theme.colors.accent;
+                      const lastRow = isLastFamily && ci === fam.colors.length - 1;
+                      return (
+                        <TouchableOpacity
+                          key={col.id}
+                          testID={`appearance-${col.id}`}
+                          activeOpacity={0.6}
+                          style={[styles.colorRow, lastRow && styles.colorRowLast]}
+                          onPress={() => setAppearance(col.id)}
+                        >
+                          <Text style={[styles.colorLabel, col.tint ? { color: col.tint } : null]}>
+                            {col.label}
+                          </Text>
+                          <Ionicons
+                            name={active ? "radio-button-on" : "radio-button-off"}
+                            size={20}
+                            color={active ? tint : theme.colors.textMuted}
+                          />
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                )}
+              </View>
+            );
+          })}
+        </SectionCard>
+
+        {/* SETTINGS — home layout & home banners. */}
+        <SectionCard title="SETTINGS" testID="more-section-customize">
 
           {/* Home layout */}
           <SectionRow

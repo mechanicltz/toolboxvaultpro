@@ -48,5 +48,5 @@ export const HEADER_VAULT_COLOR_BY_COLOR: Record<IndustrialVariant, string> = {
  */
 export const HEADER_VERSION_POS = {
   rightPct: 0.06,
-  bottomPct: 0.16,
+  bottomPct: 0.21,
 };

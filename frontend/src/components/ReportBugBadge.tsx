@@ -15,7 +15,7 @@ import { STEEL_BADGE_SCALE } from "../tbv/steel";
 // Industrial "REPORT A BUG · REQUEST FEATURES" badge (transparent PNG).
 // One asset per colour variant — plain Light/Dark force the orange base, the
 // industrial colour themes (crimson/arctic/emerald) follow their accent hue.
-const BADGES: Record<IndustrialVariant, ImageSourcePropType> = {
+const BADGES: Record<IndustrialVariant | "steel", ImageSourcePropType> = {
   orange: require("../../assets/tbv/report-bug-badge.png"),
   pink: require("../../assets/tbv/report-bug-badge-pink.png"),
   arctic: require("../../assets/tbv/report-bug-badge-arctic.png"),
@@ -23,7 +23,7 @@ const BADGES: Record<IndustrialVariant, ImageSourcePropType> = {
   steel: require("../../assets/tbv/report-bug-badge-steel.png"),
 };
 // Native trimmed dimensions (W/H). Steel uses its own taller artwork.
-const ASPECTS: Record<IndustrialVariant, number> = {
+const ASPECTS: Record<IndustrialVariant | "steel", number> = {
   orange: 1200 / 415,
   pink: 1200 / 415,
   arctic: 1200 / 415,
@@ -47,16 +47,19 @@ export default function ReportBugBadge({
   maxWidth = 520,
 }: Props) {
   const router = useRouter();
-  const { industrialVariant } = useSkin();
+  const { industrialVariant, metalStyle } = useSkin();
   const { width: screenW } = useWindowDimensions();
 
-  const source = BADGES[industrialVariant] ?? BADGES.orange;
-  const aspect = ASPECTS[industrialVariant] ?? ASPECTS.orange;
+  // Steel family shows its own badge art (one shared asset for all colours);
+  // every other family follows its colour variant.
+  const badgeKey = metalStyle === "steel" ? "steel" : industrialVariant;
+  const source = BADGES[badgeKey] ?? BADGES.orange;
+  const aspect = ASPECTS[badgeKey] ?? ASPECTS.orange;
 
   // Explicit pixel size so the image never falls back to its intrinsic
   // (giant) dimensions when a parent's width isn't determinate.
   // The Steel badge renders at 65% so it sits lighter on the page.
-  const scale = industrialVariant === "steel" ? STEEL_BADGE_SCALE : 1;
+  const scale = metalStyle === "steel" ? STEEL_BADGE_SCALE : 1;
   const w = Math.min(Math.max(screenW - inset, 120), maxWidth) * scale;
   const h = w / aspect;
 

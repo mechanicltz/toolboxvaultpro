@@ -39,7 +39,7 @@ import DriveAlertBanner from "../../src/components/DriveAlertBanner";
 import { DemoBanner } from "../../src/components/DemoBanner";
 import { IndustrialBanner } from "../../src/components/IndustrialBanner";
 import { AddChooser } from "../../src/components/AddChooser";
-import { STEEL_PANEL_FRAME, STEEL_ROW, STEEL_ROW_LAST, STEEL_VALUE, STEEL_HEADER_WRAP } from "../../src/tbv/steel";
+import { useSteelPanelFrame, STEEL_ROW, STEEL_ROW_LAST, STEEL_VALUE, STEEL_HEADER_WRAP } from "../../src/tbv/steel";
 import { TbvHeader } from "../../src/components/TbvHeader";
 import { TbvButton } from "../../src/components/TbvButton";
 import { useSubscriptionChange } from "../../src/subscriptionEvents";
@@ -68,17 +68,19 @@ import { Anton_400Regular } from "@expo-google-fonts/anton";
 export default function HomeScreen() {
   const router = useRouter();
   const { prefs } = usePrefs();
-  const { skin, industrialVariant } = useSkin();
+  const { skin, metalStyle } = useSkin();
   // Steel theme: dashboard swaps to the brushed-metal header, buttons & panels.
-  const isSteel = industrialVariant === "steel";
+  const isSteel = metalStyle === "steel";
+  // Brushed-silver panel art for the active Steel colour (orange/pink/arctic/emerald).
+  const steelPanel = useSteelPanelFrame();
   // Frame art for dashboard panels — silver when Steel is active, otherwise the
   // active industrial skin's window/plate art (unchanged for all other themes).
   // Steel values come from the centralized theme sheet (src/tbv/steel.ts).
   const windowFrame: any = isSteel
-    ? STEEL_PANEL_FRAME
+    ? steelPanel
     : { source: SKIN.window, capInsets: CAP.window, padX: 30, padTop: 24, padBottom: 26 };
   const plateFrame: any = isSteel
-    ? STEEL_PANEL_FRAME
+    ? steelPanel
     : { source: SKIN.plate, capInsets: CAP.plate, padX: 30, padTop: 22, padBottom: 24 };
   // Steel theme: strip the dark "recessed slot" behind each row, keep a hairline
   // separator. All styling lives in the centralized theme sheet.
