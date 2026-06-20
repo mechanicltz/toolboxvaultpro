@@ -14,15 +14,26 @@
 import { useEffect, useState } from "react";
 import { Asset } from "expo-asset";
 import { SKIN_LIST } from "./skins";
+import { SILVER_SRC_BY_COLOR } from "./silver";
 
 let _ready = false;
 let _promise: Promise<void> | null = null;
+
+// Every industrial bitmap to warm at boot: the Iron Forge skin set PLUS the
+// Steel family's brushed-silver panel art (all 4 colour variants). The Steel
+// panels were previously NOT in this list, so they decoded lazily on the first
+// Steel screen — the art "took a moment to appear" vs Iron Forge's instant
+// paint. Preloading them here makes both families paint instantly.
+const PRELOAD_LIST = [
+  ...(SKIN_LIST as number[]),
+  ...(Object.values(SILVER_SRC_BY_COLOR) as number[]),
+];
 
 /** Kick off (or reuse) the one-time decode of every industrial skin. */
 export function preloadTbvSkins(): Promise<void> {
   if (_ready) return Promise.resolve();
   if (!_promise) {
-    _promise = Asset.loadAsync(SKIN_LIST as number[])
+    _promise = Asset.loadAsync(PRELOAD_LIST)
       .then(() => {
         _ready = true;
       })
