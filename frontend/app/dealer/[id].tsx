@@ -279,8 +279,9 @@ export default function DealerDetail() {
     isIndustrial ? (
       <View style={styles.cardSkinWrap}>
         <TbvFrame
-          source={thin ? SKIN.plate : SKIN.window}
-          capInsets={thin ? CAP.plate : CAP.window}
+          source={isSteel ? steelPanel.source : (thin ? SKIN.plate : SKIN.window)}
+          capInsets={isSteel ? steelPanel.capInsets : (thin ? CAP.plate : CAP.window)}
+          frameScale={steelScale}
           padX={thin ? 28 : 40}
           padTop={thin ? 14 : 30}
           padBottom={thin ? 14 : 30}
