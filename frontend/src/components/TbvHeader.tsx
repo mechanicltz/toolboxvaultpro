@@ -13,12 +13,14 @@
 import React, { useState } from "react";
 import { View, Image, Text, StyleSheet, StyleProp, ViewStyle } from "react-native";
 import {
-  HEADER_SRC,
+  HEADER_SRC_BY_COLOR,
   HEADER_ASPECT,
   HEADER_VAULT_ORANGE,
+  HEADER_VAULT_COLOR_BY_COLOR,
   HEADER_VERSION_POS,
 } from "../tbv/header";
 import { APP_VERSION_LABEL } from "../version";
+import { useSkin } from "../themeContext";
 
 export function TbvHeader({
   style,
@@ -31,6 +33,9 @@ export function TbvHeader({
 }) {
   const [w, setW] = useState(0);
   const h = w > 0 ? w / HEADER_ASPECT : 0;
+  const { industrialVariant } = useSkin();
+  const src = HEADER_SRC_BY_COLOR[industrialVariant] ?? HEADER_SRC_BY_COLOR.orange;
+  const vaultColor = HEADER_VAULT_COLOR_BY_COLOR[industrialVariant] ?? HEADER_VAULT_ORANGE;
 
   return (
     <View
@@ -44,7 +49,7 @@ export function TbvHeader({
       {w > 0 ? (
         <View style={{ width: w, height: h }}>
           <Image
-            source={HEADER_SRC}
+            source={src}
             style={{ width: w, height: h }}
             resizeMode="stretch"
             fadeDuration={0}
@@ -53,7 +58,7 @@ export function TbvHeader({
             <Text
               style={[
                 styles.version,
-                { right: w * HEADER_VERSION_POS.rightPct, bottom: h * HEADER_VERSION_POS.bottomPct },
+                { right: w * HEADER_VERSION_POS.rightPct, bottom: h * HEADER_VERSION_POS.bottomPct, color: vaultColor },
               ]}
               numberOfLines={1}
               testID="tbv-header-version"

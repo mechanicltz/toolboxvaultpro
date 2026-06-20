@@ -20,7 +20,8 @@ import {
   ViewStyle,
   TextStyle,
 } from "react-native";
-import { BUTTON_SRC, BUTTON_ASPECT, BUTTON_LABEL } from "../tbv/button";
+import { BUTTON_SRC_BY_COLOR, BUTTON_ASPECT, BUTTON_LABEL } from "../tbv/button";
+import { useSkin } from "../themeContext";
 
 export function TbvButton({
   label,
@@ -39,6 +40,8 @@ export function TbvButton({
 }) {
   const [w, setW] = useState(0);
   const h = w > 0 ? w / BUTTON_ASPECT : 0;
+  const { industrialVariant } = useSkin();
+  const src = BUTTON_SRC_BY_COLOR[industrialVariant] ?? BUTTON_SRC_BY_COLOR.orange;
 
   return (
     <Pressable
@@ -57,7 +60,7 @@ export function TbvButton({
       {w > 0 ? (
         <View style={{ width: w, height: h, alignItems: "center", justifyContent: "center" }}>
           <Image
-            source={BUTTON_SRC}
+            source={src}
             style={[StyleSheet.absoluteFill, { width: w, height: h }]}
             resizeMode="stretch"
             fadeDuration={0}

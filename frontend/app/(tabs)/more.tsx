@@ -176,6 +176,10 @@ const SectionRow = ({
 }: SectionRowProps) => {
   const Wrapper: any = onPress ? TouchableOpacity : View;
   const wrapperProps = onPress ? { onPress, activeOpacity: 0.6 } : {};
+  // The "go somewhere" arrow picks up the active theme colour on every theme
+  // except plain Light/Dark, where it stays a neutral muted grey.
+  const { skin } = useSkin();
+  const arrowColor = skin === "plain" ? theme.colors.textMuted : theme.colors.accent;
   return (
     <Wrapper
       testID={testID}
@@ -223,7 +227,7 @@ const SectionRow = ({
             <Ionicons
               name="chevron-forward"
               size={16}
-              color={theme.colors.textMuted}
+              color={arrowColor}
             />
           )}
     </Wrapper>
