@@ -20,6 +20,7 @@ import { themedStyles, useSkin } from "../../src/themeContext";
 import { IndustrialBanner } from "../../src/components/IndustrialBanner";
 import { ShadowBox } from "../../src/components/ShadowBox";
 import { SKIN, CAP, TBV } from "../../src/tbv/skins";
+import { useIsSteel, useSteelPanelFrame } from "../../src/tbv/steel";
 import TbvFrame from "../../src/tbv/components/TbvFrame";
 
 export default function CheckoutHistoryPage() {
@@ -27,6 +28,11 @@ export default function CheckoutHistoryPage() {
   const router = useRouter();
   const { skin } = useSkin();
   const isIndustrial = skin === "industrial";
+  const isSteel = useIsSteel();
+  const steelPanel = useSteelPanelFrame();
+  const winSrc = isSteel ? steelPanel.source : SKIN.window;
+  const winCap = isSteel ? steelPanel.capInsets : CAP.window;
+  const steelScale = isSteel ? steelPanel.frameScale : undefined;
   const [tool, setTool] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
@@ -123,8 +129,8 @@ export default function CheckoutHistoryPage() {
                 style={styles.rowSkinWrap}
               >
                 <TbvFrame
-                  source={SKIN.window}
-                  capInsets={CAP.window}
+                  source={winSrc}
+                  capInsets={winCap} frameScale={steelScale}
                   padX={40}
                   padTop={28}
                   padBottom={30}

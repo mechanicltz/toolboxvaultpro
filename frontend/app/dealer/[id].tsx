@@ -35,6 +35,7 @@ import { themedStyles, useSkin } from "../../src/themeContext";
 import { BevelCard } from "../../src/components/BevelCard";
 import { ShadowBox, ShadowBoxSubCard } from "../../src/components/ShadowBox";
 import { SKIN, CAP } from "../../src/tbv/skins";
+import { useIsSteel, useSteelPanelFrame } from "../../src/tbv/steel";
 import { TbvFrame } from "../../src/tbv/components/TbvFrame";
 import { EmailLink } from "../../src/components/EmailLink";
 import { shareOrSaveAgent } from "../../src/utils/agentShare";
@@ -58,6 +59,11 @@ export default function DealerDetail() {
   const { user } = useAuth();
   const { skin } = useSkin();
   const isIndustrial = skin === "industrial";
+  const isSteel = useIsSteel();
+  const steelPanel = useSteelPanelFrame();
+  const plateSrc = isSteel ? steelPanel.source : SKIN.plate;
+  const plateCap = isSteel ? steelPanel.capInsets : CAP.plate;
+  const steelScale = isSteel ? steelPanel.frameScale : undefined;
   const [dealer, setDealer] = useState<any>(null);
   const [tools, setTools] = useState<any[]>([]);
   const [editing, setEditing] = useState(false);
@@ -352,8 +358,8 @@ export default function DealerDetail() {
         {isIndustrial ? (
           <View style={styles.cardSkinFrame}>
             <TbvFrame
-              source={SKIN.plate}
-              capInsets={CAP.plate}
+              source={plateSrc}
+              capInsets={plateCap} frameScale={steelScale}
               padX={28}
               padTop={14}
               padBottom={14}

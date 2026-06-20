@@ -54,6 +54,7 @@ import { ContactIconImage } from "../../src/components/ContactIcons";
 import { IndustrialBanner } from "../../src/components/IndustrialBanner";
 import { PillButton } from "../../src/components/PillButton";
 import { SKIN, CAP, TBV } from "../../src/tbv/skins";
+import { useIsSteel, useSteelPanelFrame } from "../../src/tbv/steel";
 import TbvFrame from "../../src/tbv/components/TbvFrame";
 
 import {
@@ -69,6 +70,11 @@ export default function ToolDetail() {
   const router = useRouter();
   const { skin } = useSkin();
   const isIndustrial = skin === "industrial";
+  const isSteel = useIsSteel();
+  const steelPanel = useSteelPanelFrame();
+  const winSrc = isSteel ? steelPanel.source : SKIN.window;
+  const winCap = isSteel ? steelPanel.capInsets : CAP.window;
+  const steelScale = isSteel ? steelPanel.frameScale : undefined;
 
   // ── Iron Forge skin adapters ──────────────────────────────────────────
   // In the textured industrial themes these render real metal frames (the
@@ -78,8 +84,8 @@ export default function ToolDetail() {
   const GroupCard = ({ boxKey, children }: { boxKey: string; children: React.ReactNode }) =>
     isIndustrial ? (
       <TbvFrame
-        source={SKIN.window}
-        capInsets={CAP.window}
+        source={winSrc}
+        capInsets={winCap} frameScale={steelScale}
         padX={36}
         padTop={30}
         padBottom={32}
@@ -141,7 +147,7 @@ export default function ToolDetail() {
     children: React.ReactNode;
   }) =>
     isIndustrial ? (
-      <TbvFrame source={SKIN.window} capInsets={CAP.window} padX={40} padTop={30} padBottom={32}>
+      <TbvFrame source={winSrc} capInsets={winCap} frameScale={steelScale} padX={40} padTop={30} padBottom={32}>
         {children}
       </TbvFrame>
     ) : (
@@ -1604,7 +1610,7 @@ export default function ToolDetail() {
               the dealer "card" container; plain themes keep the photo + framed
               stat box side-by-side. */}
           {isIndustrial ? (
-            <TbvFrame source={SKIN.window} capInsets={CAP.window} padX={20} padTop={22} padBottom={24}>
+            <TbvFrame source={winSrc} capInsets={winCap} frameScale={steelScale} padX={20} padTop={22} padBottom={24}>
               <View style={newStyles.topUnifiedRow}>
                 <TouchableOpacity
                   testID="photo-thumb"

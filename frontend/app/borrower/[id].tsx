@@ -19,6 +19,7 @@ import { IndustrialBanner } from "../../src/components/IndustrialBanner";
 import { PillButton } from "../../src/components/PillButton";
 import { ShadowBox, ShadowBoxMini } from "../../src/components/ShadowBox";
 import { SKIN, CAP } from "../../src/tbv/skins";
+import { useIsSteel, useSteelPanelFrame } from "../../src/tbv/steel";
 import { TbvFrame } from "../../src/tbv/components/TbvFrame";
 
 export default function BorrowerHistory() {
@@ -26,6 +27,13 @@ export default function BorrowerHistory() {
   const router = useRouter();
   const { skin } = useSkin();
   const isIndustrial = skin === "industrial";
+  const isSteel = useIsSteel();
+  const steelPanel = useSteelPanelFrame();
+  const winSrc = isSteel ? steelPanel.source : SKIN.window;
+  const winCap = isSteel ? steelPanel.capInsets : CAP.window;
+  const plateSrc = isSteel ? steelPanel.source : SKIN.plate;
+  const plateCap = isSteel ? steelPanel.capInsets : CAP.plate;
+  const steelScale = isSteel ? steelPanel.frameScale : undefined;
   const [data, setData] = useState<any>(null);
   const [editing, setEditing] = useState(false);
   const [editForm, setEditForm] = useState<{ name: string; contact: string; notes: string }>({ name: "", contact: "", notes: "" });
@@ -236,8 +244,8 @@ export default function BorrowerHistory() {
         activeOpacity={0.85}
       >
         <TbvFrame
-          source={SKIN.plate}
-          capInsets={CAP.plate}
+          source={plateSrc}
+          capInsets={plateCap} frameScale={steelScale}
           style={styles.rowSkinFrame}
           padX={22}
           padTop={16}
@@ -269,8 +277,8 @@ export default function BorrowerHistory() {
     isIndustrial ? (
       <View style={styles.cardSkinFrame}>
         <TbvFrame
-          source={SKIN.window}
-          capInsets={CAP.window}
+          source={winSrc}
+          capInsets={winCap} frameScale={steelScale}
           padX={34}
           padTop={28}
           padBottom={28}
@@ -325,8 +333,8 @@ export default function BorrowerHistory() {
         {isIndustrial ? (
           <View style={styles.statSkinFrame}>
             <TbvFrame
-              source={SKIN.window}
-              capInsets={CAP.window}
+              source={winSrc}
+              capInsets={winCap} frameScale={steelScale}
               padX={30}
               padTop={34}
               padBottom={34}

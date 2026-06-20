@@ -24,6 +24,7 @@ import { useAuth } from "../../src/AuthContext";
 import { themedStyles, useSkin } from "../../src/themeContext";
 import { IndustrialBanner } from "../../src/components/IndustrialBanner";
 import { SKIN, CAP, TBV } from "../../src/tbv/skins";
+import { useIsSteel, useSteelPanelFrame } from "../../src/tbv/steel";
 import TbvFrame from "../../src/tbv/components/TbvFrame";
 import { PillButton } from "../../src/components/PillButton";
 import { BevelCard } from "../../src/components/BevelCard";
@@ -36,10 +37,15 @@ import { formatDateUS } from "../../src/dateUtil";
 // which remounts its children and makes every TextInput lose focus after each
 // keystroke.
 function FormCard({ children, isIndustrial }: { children: React.ReactNode; isIndustrial: boolean }) {
+  const isSteel = useIsSteel();
+  const steelPanel = useSteelPanelFrame();
+  const winSrc = isSteel ? steelPanel.source : SKIN.window;
+  const winCap = isSteel ? steelPanel.capInsets : CAP.window;
+  const steelScale = isSteel ? steelPanel.frameScale : undefined;
   return isIndustrial ? (
     <TbvFrame
-      source={SKIN.window}
-      capInsets={CAP.window}
+      source={winSrc}
+      capInsets={winCap} frameScale={steelScale}
       style={styles.formCardSkin}
       padX={34}
       padTop={14}

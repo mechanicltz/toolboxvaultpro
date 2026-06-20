@@ -14,6 +14,7 @@ import { IndustrialBanner } from "../../src/components/IndustrialBanner";
 import { PillButton } from "../../src/components/PillButton";
 import { ShadowBox } from "../../src/components/ShadowBox";
 import { SKIN, CAP } from "../../src/tbv/skins";
+import { useIsSteel, useSteelPanelFrame } from "../../src/tbv/steel";
 import { TbvFrame } from "../../src/tbv/components/TbvFrame";
 
 export default function BundleDetail() {
@@ -21,6 +22,11 @@ export default function BundleDetail() {
   const router = useRouter();
   const { skin } = useSkin();
   const isIndustrial = skin === "industrial";
+  const isSteel = useIsSteel();
+  const steelPanel = useSteelPanelFrame();
+  const winSrc = isSteel ? steelPanel.source : SKIN.window;
+  const winCap = isSteel ? steelPanel.capInsets : CAP.window;
+  const steelScale = isSteel ? steelPanel.frameScale : undefined;
   const [bundle, setBundle] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
@@ -59,7 +65,7 @@ export default function BundleDetail() {
   const CardShell = ({ children, testID }: { children: ReactNode; testID?: string }) =>
     isIndustrial ? (
       <View style={styles.cardSkinWrap}>
-        <TbvFrame source={SKIN.window} capInsets={CAP.window} padX={36} padTop={20} padBottom={20} testID={testID}>
+        <TbvFrame source={winSrc} capInsets={winCap} frameScale={steelScale} padX={36} padTop={20} padBottom={20} testID={testID}>
           {children}
         </TbvFrame>
       </View>
