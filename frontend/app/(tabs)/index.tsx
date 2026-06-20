@@ -419,7 +419,7 @@ export default function HomeScreen() {
             <Ionicons
               name="chevron-forward"
               size={14}
-              color={theme.colors.textMuted}
+              color={theme.colors.accent}
             />
           )}
         </View>
@@ -883,7 +883,7 @@ export default function HomeScreen() {
               <View style={styles.rowLabelWrap}>
                 <Text style={styles.detailsLabel}>DEALER ACCOUNTS</Text>
               </View>
-              <Ionicons name="chevron-forward" size={14} color={theme.colors.textMuted} />
+              <Ionicons name="chevron-forward" size={14} color={theme.colors.accent} />
             </TouchableOpacity>
 
             {dealersOwing.length === 0 ? (
