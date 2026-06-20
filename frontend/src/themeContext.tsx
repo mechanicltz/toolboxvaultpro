@@ -123,7 +123,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [mode, setModeState] = useState<ThemeMode>("dark");
   const [skin, setSkinState] = useState<SkinMode>("industrial");
   const [industrialVariant, setVariantState] = useState<IndustrialVariant>("orange");
-  const [metalStyle, setMetalState] = useState<MetalStyle>("iron");
+  const [metalStyle, setMetalState] = useState<MetalStyle>("steel");
   const [hydrated, setHydrated] = useState(false);
 
   // Refs mirror the latest mode/skin so the setters always compute the
@@ -138,7 +138,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   // crashed setMode/setAppearance and prevented the pink variant from ever
   // being applied on cold start.)
   const variantRef = useRef<IndustrialVariant>("orange");
-  const metalRef = useRef<MetalStyle>("iron");
+  const metalRef = useRef<MetalStyle>("steel");
 
   // Hydrate both prefs from disk on first mount. Defaults: skin = industrial
   // (the premium textured look), mode = dark. Industrial forces the dark
@@ -160,7 +160,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
           storedVariant === "emerald"
             ? storedVariant
             : "orange";
-        const metal: MetalStyle = storedMetal === "steel" ? "steel" : "iron";
+        const metal: MetalStyle = storedMetal === "iron" ? "iron" : "steel";
         modeRef.current = m;
         skinRef.current = s;
         variantRef.current = v;
