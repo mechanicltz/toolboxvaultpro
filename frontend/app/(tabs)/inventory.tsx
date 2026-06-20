@@ -1944,7 +1944,7 @@ const styles = themedStyles((c) => ({
     fontWeight: "700",
     letterSpacing: 0.5,
   },
-  searchRow: { paddingHorizontal: 20, marginTop: 14, marginBottom: 8, flexDirection: "row", alignItems: "center", gap: 8 },
+  searchRow: { paddingHorizontal: 12, marginTop: 14, marginBottom: 8, flexDirection: "row", alignItems: "center", gap: 8 },
   rowDealer: {
     color: c.textMuted,
     fontSize: 8,
@@ -2101,7 +2101,7 @@ const styles = themedStyles((c) => ({
   // lets the FlatList fill + scroll inside it.
   invListPanel: {
     flex: 1,
-    marginHorizontal: 10,
+    marginHorizontal: 12,
     marginBottom: 8,
   },
   listFlexed: { flex: 1 },
