@@ -42,6 +42,7 @@ import { useTbvSkinsReady } from "../src/tbv/useTbvSkins";
 import { useSkin } from "../src/themeContext";
 import { HEADER_SRC_BY_COLOR, HEADER_ASPECT } from "../src/tbv/header";
 import { SILVER_SRC_BY_COLOR } from "../src/tbv/silver";
+import { BUTTON_SRC_BY_COLOR } from "../src/tbv/button";
 import { useSteelPanelFrame } from "../src/tbv/steel";
 import TbvFrame from "../src/tbv/components/TbvFrame";
 import { APP_VERSION_LABEL } from "../src/version";
@@ -58,12 +59,6 @@ export default function LoginScreen() {
   const router = useRouter();
   const { login, register } = useAuth();
   const win = useWindowDimensions();
-
-  // Industrial colour variant → drives the accent tint (orange vs pink) for
-  // icons/labels so this LOCKED login screen visually matches the user's
-  // chosen Industrial / Industrial-Pink variant.
-  const _v = getIndustrialVariant();
-  const TINT = _v === "orange" ? "#FF8533" : VARIANT_ACCENT[_v];
 
   const [fontsLoaded, fontError] = useGoogleFonts({
     BebasNeue_400Regular,
@@ -83,6 +78,15 @@ export default function LoginScreen() {
   const steelPanel = useSteelPanelFrame();
   const nameplateSrc = isSteelLogin ? HEADER_SRC_BY_COLOR[headerVariant] : SKIN.nameplate;
   const panelSrc = isSteelLogin ? SILVER_SRC_BY_COLOR[headerVariant] : SKIN.panel;
+
+  // Accent tint. On the Steel/Plain look the inner controls (inputs, tabs,
+  // buttons) are rendered as brushed-steel controls tinted to the active Steel
+  // colour; on Iron Forge they keep the original orange/pink industrial tint.
+  const TINT = isSteelLogin
+    ? VARIANT_ACCENT[headerVariant]
+    : (industrialVariant === "orange" ? "#FF8533" : VARIANT_ACCENT[industrialVariant]);
+  // Black brushed-metal Steel button art (matches the rest of the app's TbvButton).
+  const steelBtnSrc = BUTTON_SRC_BY_COLOR[headerVariant] ?? BUTTON_SRC_BY_COLOR.orange;
 
   // Measured container size (post safe-area, post keyboard-avoid). This is the
   // REAL space we render into — identical logic on web preview and phone.
@@ -422,6 +426,8 @@ export default function LoginScreen() {
                       onPress={() => setMode("login")}
                       activeSkin={SKIN.tabActive}
                       inactiveSkin={SKIN.tabInactive}
+                      steel={isSteelLogin}
+                      tint={TINT}
                       testID="tab-login"
                     />
                     <TabButton
@@ -429,6 +435,8 @@ export default function LoginScreen() {
                       width={tabW}
                       active={mode === "register"}
                       onPress={() => setMode("register")}
+                      steel={isSteelLogin}
+                      tint={TINT}
                       activeSkin={SKIN.tabActive}
                       inactiveSkin={SKIN.tabInactive}
                       testID="tab-register"
@@ -438,14 +446,9 @@ export default function LoginScreen() {
                   {/* ----- EMAIL ----- */}
                   <View style={[styles.fieldGroup, { marginTop: innerGap, paddingHorizontal: fieldInset }]}>
                     <Text style={[styles.label, { height: labelH }]}>EMAIL</Text>
-                    <ImageBackground
-                      source={SKIN.input}
-                      style={{ width: fieldW, height: inputH, justifyContent: "center" }}
-                      imageStyle={styles.fillImage}
-                      resizeMode="stretch"
-                    >
+                    <FieldShell steel={isSteelLogin} tint={TINT} width={fieldW} height={inputH}>
                       <View style={styles.inputInner}>
-                        <Ionicons name="mail-outline" size={17} color="#FF8533" />
+                        <Ionicons name="mail-outline" size={17} color={TINT} />
                         <TextInput
                           value={email}
                           onChangeText={setEmail}
@@ -458,20 +461,15 @@ export default function LoginScreen() {
                           testID="auth-email"
                         />
                       </View>
-                    </ImageBackground>
+                    </FieldShell>
                   </View>
 
                   {/* ----- PASSWORD ----- */}
                   <View style={[styles.fieldGroup, { marginTop: innerGap, paddingHorizontal: fieldInset }]}>
                     <Text style={[styles.label, { height: labelH }]}>PASSWORD</Text>
-                    <ImageBackground
-                      source={SKIN.input}
-                      style={{ width: fieldW, height: inputH, justifyContent: "center" }}
-                      imageStyle={styles.fillImage}
-                      resizeMode="stretch"
-                    >
+                    <FieldShell steel={isSteelLogin} tint={TINT} width={fieldW} height={inputH}>
                       <View style={styles.inputInner}>
-                        <Ionicons name="lock-closed-outline" size={17} color="#FF8533" />
+                        <Ionicons name="lock-closed-outline" size={17} color={TINT} />
                         <TextInput
                           value={password}
                           onChangeText={setPassword}
@@ -494,7 +492,7 @@ export default function LoginScreen() {
                           />
                         </TouchableOpacity>
                       </View>
-                    </ImageBackground>
+                    </FieldShell>
                   </View>
 
                   {/* ----- ERROR ----- */}
@@ -519,19 +517,19 @@ export default function LoginScreen() {
                     testID="auth-submit"
                   >
                     <ImageBackground
-                      source={SKIN.btnPrimary}
+                      source={isSteelLogin ? steelBtnSrc : SKIN.btnPrimary}
                       style={styles.center}
                       imageStyle={styles.fillImage}
                       resizeMode="stretch"
                     >
                       {busy ? (
-                        <ActivityIndicator color="#0A0A0A" />
+                        <ActivityIndicator color={isSteelLogin ? "#FFFFFF" : "#0A0A0A"} />
                       ) : (
                         <View style={styles.row}>
                           {mode !== "register" && (
-                            <Ionicons name="lock-closed" size={18} color="#0A0A0A" />
+                            <Ionicons name="lock-closed" size={18} color={isSteelLogin ? "#FFFFFF" : "#0A0A0A"} />
                           )}
-                          <Text style={styles.submitText}>
+                          <Text style={[styles.submitText, isSteelLogin && { color: "#FFFFFF" }]}>
                             {mode === "register" ? "CREATE ACCOUNT" : "SIGN IN"}
                           </Text>
                         </View>
@@ -571,13 +569,17 @@ export default function LoginScreen() {
                   })}
                   testID="auth-biometric"
                 >
-                  <ImageBackground
-                    source={SKIN.btnSecondary}
-                    style={styles.center}
-                    imageStyle={styles.fillImage}
-                    resizeMode="stretch"
+                  <View
+                    style={
+                      isSteelLogin
+                        ? [styles.center, styles.steelSecondaryBtn, { borderColor: TINT + "AA" }]
+                        : undefined
+                    }
                   >
-                    <View style={styles.row}>
+                  {isSteelLogin ? null : (
+                    <Image source={SKIN.btnSecondary} style={StyleSheet.absoluteFill} resizeMode="stretch" />
+                  )}
+                  <View style={isSteelLogin ? styles.row : [styles.center, styles.row]}>
                       <Ionicons
                         name={
                           bio.label.toLowerCase().includes("face") ? "scan"
@@ -592,7 +594,7 @@ export default function LoginScreen() {
                         {`SIGN IN WITH ${bio.label.toUpperCase()}`}
                       </Text>
                     </View>
-                  </ImageBackground>
+                  </View>
                 </Pressable>
               ) : null}
 
@@ -607,11 +609,47 @@ export default function LoginScreen() {
 // Tab button — width is panel-relative, passed in from parent
 // =====================================================================
 function TabButton({
-  label, icon, active, onPress, testID, activeSkin, inactiveSkin, width,
+  label, icon, active, onPress, testID, activeSkin, inactiveSkin, width, steel, tint,
 }: {
-  label: string; icon: any; active: boolean; onPress: () => void;
-  testID?: string; activeSkin: any; inactiveSkin: any; width: number;
+  label: string; icon?: any; active: boolean; onPress: () => void;
+  testID?: string; activeSkin?: any; inactiveSkin?: any; width: number;
+  steel?: boolean; tint?: string;
 }) {
+  const inner = (
+    <View style={[styles.row, { gap: 5, paddingHorizontal: 6 }]}>
+      {icon ? (
+        <Ionicons name={icon} size={13} color={active ? "#FFFFFF" : "#C8C8C8"} />
+      ) : null}
+      <Text
+        style={[styles.tabText, active ? styles.tabTextActive : styles.tabTextInactive]}
+        numberOfLines={1}
+        adjustsFontSizeToFit
+        minimumFontScale={0.6}
+      >
+        {label}
+      </Text>
+    </View>
+  );
+  if (steel) {
+    return (
+      <Pressable
+        onPress={onPress}
+        testID={testID}
+        style={({ pressed }) => [
+          styles.center,
+          styles.steelTab,
+          {
+            width,
+            backgroundColor: active ? (tint ?? "#1FC3E8") : "rgba(12,14,17,0.55)",
+            borderColor: active ? (tint ?? "#1FC3E8") : "rgba(255,255,255,0.18)",
+            opacity: pressed ? 0.85 : 1,
+          },
+        ]}
+      >
+        {inner}
+      </Pressable>
+    );
+  }
   return (
     <Pressable
       onPress={onPress}
@@ -624,23 +662,40 @@ function TabButton({
         imageStyle={styles.fillImage}
         resizeMode="stretch"
       >
-        <View style={[styles.row, { gap: 5, paddingHorizontal: 6 }]}>
-          {icon ? (
-            <Ionicons name={icon} size={13} color={active ? "#FFFFFF" : "#C8C8C8"} />
-          ) : null}
-          <Text
-            style={[styles.tabText, active ? styles.tabTextActive : styles.tabTextInactive]}
-            numberOfLines={1}
-            adjustsFontSizeToFit
-            minimumFontScale={0.6}
-          >
-            {label}
-          </Text>
-        </View>
+        {inner}
       </ImageBackground>
     </Pressable>
   );
 }
+
+// =====================================================================
+// FieldShell — the text-input "slot". On the Steel/Plain look it's a clean
+// recessed brushed-steel slot (dark fill + accent hairline); on Iron Forge it
+// keeps the original orange industrial input skin. Module scope so it never
+// remounts on keystroke (which would reload the PNG and flicker).
+// =====================================================================
+function FieldShell({ steel, tint, width, height, children }: {
+  steel?: boolean; tint: string; width: number; height: number; children: React.ReactNode;
+}) {
+  if (steel) {
+    return (
+      <View style={[styles.steelField, { width, height, borderColor: tint + "AA" }]}>
+        {children}
+      </View>
+    );
+  }
+  return (
+    <ImageBackground
+      source={SKIN.input}
+      style={{ width, height, justifyContent: "center" }}
+      imageStyle={styles.fillImage}
+      resizeMode="stretch"
+    >
+      {children}
+    </ImageBackground>
+  );
+}
+
 
 // =====================================================================
 // Styles  (visual values unchanged — only layout/scaling logic moved)
@@ -671,6 +726,26 @@ const styles = StyleSheet.create({
 
   // ---- panel ----
   panelInner: { width: "100%" },
+
+  // ---- steel-look inner controls (inputs / tabs / secondary button) ----
+  steelField: {
+    justifyContent: "center",
+    backgroundColor: "rgba(12,14,17,0.72)",
+    borderRadius: 9,
+    borderWidth: 1.5,
+  },
+  steelTab: {
+    height: "100%",
+    borderRadius: 7,
+    borderWidth: 1.5,
+    overflow: "hidden",
+  },
+  steelSecondaryBtn: {
+    backgroundColor: "rgba(12,14,17,0.6)",
+    borderRadius: 10,
+    borderWidth: 1.5,
+    overflow: "hidden",
+  },
 
   // ---- tabs ----
   tabsRow: { flexDirection: "row", width: "100%" },

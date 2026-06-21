@@ -10,7 +10,7 @@
  * NOTE: the app uses a 6-digit CODE (not a magic link), so the primary button
  * reads "SEND RESET CODE".
  */
-import { useState } from "react";
+import { useState, ReactNode } from "react";
 import {
   View,
   Text,
@@ -37,11 +37,12 @@ import {
 import { Exo2_400Regular, Exo2_500Medium, Exo2_700Bold } from "@expo-google-fonts/exo-2";
 import { api, setToken } from "../src/api";
 import { useAuth } from "../src/AuthContext";
-import { SKIN, AR, TBV, clamp, getIndustrialVariant, VARIANT_ACCENT } from "../src/tbv/skins";
+import { SKIN, AR, TBV, clamp, VARIANT_ACCENT } from "../src/tbv/skins";
 import { TbvHeader } from "../src/tbv/TbvHeader";
 import { useTbvSkinsReady } from "../src/tbv/useTbvSkins";
 import { useSkin } from "../src/themeContext";
 import { SILVER_SRC_BY_COLOR } from "../src/tbv/silver";
+import { BUTTON_SRC_BY_COLOR } from "../src/tbv/button";
 import { useSteelPanelFrame } from "../src/tbv/steel";
 import TbvFrame from "../src/tbv/components/TbvFrame";
 
@@ -51,9 +52,6 @@ export default function ForgotPasswordScreen() {
   const router = useRouter();
   const { refresh } = useAuth();
   const win = useWindowDimensions();
-
-  // Accent tint honours the Industrial-Pink variant on this LOCKED screen.
-  const TINT = VARIANT_ACCENT[getIndustrialVariant()];
 
   const [fontsLoaded, fontError] = useGoogleFonts({
     BebasNeue_400Regular,
@@ -76,6 +74,13 @@ export default function ForgotPasswordScreen() {
     : industrialVariant;
   const steelPanel = useSteelPanelFrame();
   const panelSrc = isSteel ? SILVER_SRC_BY_COLOR[headerVariant] : SKIN.panel;
+
+  // Accent tint. On Steel/Plain the inner controls render as brushed-steel
+  // controls tinted to the active Steel colour; Iron Forge keeps its orange.
+  const TINT = isSteel
+    ? VARIANT_ACCENT[headerVariant]
+    : (industrialVariant === "orange" ? "#FF8533" : VARIANT_ACCENT[industrialVariant]);
+  const steelBtnSrc = BUTTON_SRC_BY_COLOR[headerVariant] ?? BUTTON_SRC_BY_COLOR.orange;
 
   const [step, setStep] = useState<Step>("request");
   const [email, setEmail] = useState("");
@@ -274,12 +279,7 @@ export default function ForgotPasswordScreen() {
 
                         <View style={[styles.fieldGroup, { marginTop: innerGap, paddingHorizontal: fieldInset }]}>
                           <Text style={styles.label}>EMAIL ADDRESS</Text>
-                          <ImageBackground
-                            source={SKIN.input}
-                            style={{ width: fieldW, height: inputH, justifyContent: "center" }}
-                            imageStyle={styles.fillImage}
-                            resizeMode="stretch"
-                          >
+                          <FieldShell steel={isSteel} tint={TINT} width={fieldW} height={inputH}>
                             <View style={styles.inputInner}>
                               <Ionicons name="mail" size={18} color={TINT} />
                               <TextInput
@@ -294,11 +294,13 @@ export default function ForgotPasswordScreen() {
                                 autoCorrect={false}
                               />
                             </View>
-                          </ImageBackground>
+                          </FieldShell>
                         </View>
 
                         <PrimaryButton
                           label="SEND RESET CODE"
+                          steel={isSteel}
+                          src={isSteel ? steelBtnSrc : SKIN.btnPrimary}
                           onPress={submitEmail}
                           busy={busy}
                           width={contentW}
@@ -316,12 +318,7 @@ export default function ForgotPasswordScreen() {
                         {/* code */}
                         <View style={[styles.fieldGroup, { marginTop: innerGap, paddingHorizontal: fieldInset }]}>
                           <Text style={styles.label}>6-DIGIT CODE</Text>
-                          <ImageBackground
-                            source={SKIN.input}
-                            style={{ width: fieldW, height: inputH, justifyContent: "center" }}
-                            imageStyle={styles.fillImage}
-                            resizeMode="stretch"
-                          >
+                          <FieldShell steel={isSteel} tint={TINT} width={fieldW} height={inputH}>
                             <TextInput
                               testID="fp-code"
                               style={[styles.input, styles.codeInput]}
@@ -332,18 +329,13 @@ export default function ForgotPasswordScreen() {
                               keyboardType="number-pad"
                               maxLength={6}
                             />
-                          </ImageBackground>
+                          </FieldShell>
                         </View>
 
                         {/* new password */}
                         <View style={[styles.fieldGroup, { marginTop: innerGap, paddingHorizontal: fieldInset }]}>
                           <Text style={styles.label}>NEW PASSWORD</Text>
-                          <ImageBackground
-                            source={SKIN.input}
-                            style={{ width: fieldW, height: inputH, justifyContent: "center" }}
-                            imageStyle={styles.fillImage}
-                            resizeMode="stretch"
-                          >
+                          <FieldShell steel={isSteel} tint={TINT} width={fieldW} height={inputH}>
                             <View style={styles.inputInner}>
                               <Ionicons name="lock-closed" size={18} color={TINT} />
                               <TextInput
@@ -365,18 +357,13 @@ export default function ForgotPasswordScreen() {
                                 />
                               </TouchableOpacity>
                             </View>
-                          </ImageBackground>
+                          </FieldShell>
                         </View>
 
                         {/* confirm password */}
                         <View style={[styles.fieldGroup, { marginTop: innerGap, paddingHorizontal: fieldInset }]}>
                           <Text style={styles.label}>CONFIRM NEW PASSWORD</Text>
-                          <ImageBackground
-                            source={SKIN.input}
-                            style={{ width: fieldW, height: inputH, justifyContent: "center" }}
-                            imageStyle={styles.fillImage}
-                            resizeMode="stretch"
-                          >
+                          <FieldShell steel={isSteel} tint={TINT} width={fieldW} height={inputH}>
                             <View style={styles.inputInner}>
                               <Ionicons name="lock-closed" size={18} color={TINT} />
                               <TextInput
@@ -391,12 +378,14 @@ export default function ForgotPasswordScreen() {
                                 autoCorrect={false}
                               />
                             </View>
-                          </ImageBackground>
+                          </FieldShell>
                         </View>
 
                         <PrimaryButton
                           label="RESET PASSWORD"
                           icon="checkmark-circle"
+                          steel={isSteel}
+                          src={isSteel ? steelBtnSrc : SKIN.btnPrimary}
                           onPress={submitCode}
                           busy={busy}
                           width={contentW}
@@ -445,6 +434,8 @@ function PrimaryButton({
   width,
   height,
   marginTop,
+  steel,
+  src,
 }: {
   label: string;
   icon?: keyof typeof Ionicons.glyphMap;
@@ -453,25 +444,52 @@ function PrimaryButton({
   width: number;
   height: number;
   marginTop: number;
+  steel?: boolean;
+  src?: any;
 }) {
+  const labelColor = steel ? "#FFFFFF" : TBV.ink;
   return (
     <Pressable onPress={onPress} disabled={busy} style={{ marginTop }}>
       <ImageBackground
-        source={SKIN.btnPrimary}
+        source={src ?? SKIN.btnPrimary}
         style={{ width, height, justifyContent: "center", alignItems: "center" }}
         imageStyle={styles.fillImage}
         resizeMode="stretch"
       >
         {busy ? (
-          <ActivityIndicator color={TBV.ink} />
+          <ActivityIndicator color={labelColor} />
         ) : (
           <View style={styles.row}>
-            {icon ? <Ionicons name={icon} size={18} color={TBV.ink} /> : null}
-            <Text style={styles.submitText}>{label}</Text>
+            {icon ? <Ionicons name={icon} size={18} color={labelColor} /> : null}
+            <Text style={[styles.submitText, steel && { color: "#FFFFFF" }]}>{label}</Text>
           </View>
         )}
       </ImageBackground>
     </Pressable>
+  );
+}
+
+// FieldShell — text-input slot. Steel/Plain: clean recessed brushed-steel slot
+// (dark fill + accent hairline). Iron Forge: original orange industrial skin.
+function FieldShell({ steel, tint, width, height, children }: {
+  steel?: boolean; tint: string; width: number; height: number; children: ReactNode;
+}) {
+  if (steel) {
+    return (
+      <View style={[styles.steelField, { width, height, borderColor: tint + "AA" }]}>
+        {children}
+      </View>
+    );
+  }
+  return (
+    <ImageBackground
+      source={SKIN.input}
+      style={{ width, height, justifyContent: "center" }}
+      imageStyle={styles.fillImage}
+      resizeMode="stretch"
+    >
+      {children}
+    </ImageBackground>
   );
 }
 
@@ -483,6 +501,14 @@ const styles = StyleSheet.create({
   scroll: { flexGrow: 1, alignItems: "center", justifyContent: "flex-start", paddingHorizontal: 8 },
 
   panelInner: { width: "100%" },
+
+  // steel-look recessed input slot
+  steelField: {
+    justifyContent: "center",
+    backgroundColor: "rgba(12,14,17,0.72)",
+    borderRadius: 9,
+    borderWidth: 1.5,
+  },
 
   subhead: {
     alignSelf: "center",
