@@ -370,22 +370,25 @@ export default function BorrowerHistory() {
       />
 
       <View style={styles.body}>
-        <View style={styles.heroBox}>
-          <Text style={styles.bigName}>{b.name}</Text>
-          <ContactActions raw={b.contact} />
-        </View>
+        <CardShell
+          testID="contact-header-card"
+          plainStyle={{ marginHorizontal: 16, marginTop: 8, paddingHorizontal: 16, paddingVertical: 16 }}
+        >
+          <View style={styles.heroInner}>
+            <Text style={styles.bigName}>{b.name}</Text>
+            <ContactActions raw={b.contact} />
+          </View>
 
-        {!!b.notes && (
-          <CardShell
-            testID="contact-notes-card"
-            plainStyle={{ marginHorizontal: 16, marginTop: 4, paddingHorizontal: 14, paddingVertical: 12 }}
-          >
-            <View style={styles.notesTag}>
-              <Text style={styles.notesTagText}>NOTES</Text>
-            </View>
-            <Text style={styles.notesBody}>{b.notes}</Text>
-          </CardShell>
-        )}
+          {!!b.notes && (
+            <>
+              <View style={styles.headerDivider} />
+              <View style={styles.notesTag}>
+                <Text style={styles.notesTagText}>NOTES</Text>
+              </View>
+              <Text style={styles.notesBody}>{b.notes}</Text>
+            </>
+          )}
+        </CardShell>
 
         {isIndustrial ? (
           <TbvListPanel
@@ -606,6 +609,8 @@ const styles = themedStyles((c) => ({
   },
   notesTag: { alignSelf: "flex-start", backgroundColor: c.accent, paddingHorizontal: 10, paddingVertical: 3, borderRadius: 6, marginBottom: 8 },
   notesTagText: { color: "#000", fontSize: 11, fontWeight: "800", letterSpacing: 1 },
+  heroInner: { alignItems: "center" },
+  headerDivider: { height: 1, backgroundColor: c.borderSubtle, marginTop: 14, marginBottom: 14, alignSelf: "stretch" },
   notesBody: { color: c.textPrimary, fontSize: 14, lineHeight: 20 },
   menuDotsBtn: { width: 40, height: 40, alignItems: "center", justifyContent: "center", borderRadius: 20 },
   detailActionsRow: { flexDirection: "row", justifyContent: "flex-end", paddingHorizontal: 16, paddingTop: 10, paddingBottom: 4, gap: 8 },
