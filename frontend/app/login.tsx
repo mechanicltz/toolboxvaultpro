@@ -39,7 +39,7 @@ import {
   hasBeenPromptedForBiometric, markBiometricPrompted,
 } from "../src/biometric";
 import { useTbvSkinsReady } from "../src/tbv/useTbvSkins";
-import { useSkin } from "../src/themeContext";
+import { useSkin, useColors } from "../src/themeContext";
 import { HEADER_SRC_BY_COLOR, HEADER_ASPECT } from "../src/tbv/header";
 import { SILVER_SRC_BY_COLOR } from "../src/tbv/silver";
 import { BUTTON_SRC_BY_COLOR } from "../src/tbv/button";
@@ -55,6 +55,28 @@ import { SKIN, getIndustrialVariant, VARIANT_ACCENT } from "../src/tbv/skins";
 const AR = { logo: 0.968, card: 2.407, nameplate: 3.746 };
 const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
 
+// Screen backdrop. Plain (Light/Dark) themes paint a flat theme colour exactly
+// like every other in-app screen; Steel and Iron Forge keep the industrial
+// background art.
+function ScreenBg({
+  plain,
+  bg,
+  children,
+}: {
+  plain: boolean;
+  bg: string;
+  children: React.ReactNode;
+}) {
+  if (plain) {
+    return <View style={{ flex: 1, backgroundColor: bg }}>{children}</View>;
+  }
+  return (
+    <ImageBackground source={SKIN.bg} style={{ flex: 1 }} resizeMode="cover">
+      {children}
+    </ImageBackground>
+  );
+}
+
 export default function LoginScreen() {
   const router = useRouter();
   const { login, register } = useAuth();
@@ -66,26 +88,27 @@ export default function LoginScreen() {
     Exo2_400Regular, Exo2_500Medium, Exo2_700Bold,
   });
   const skinsReady = useTbvSkinsReady();
+  const c = useColors();
   const { metalStyle, industrialVariant, skin: loginSkin, appearance } = useSkin();
-  const isPlainTheme = loginSkin === "plain";
-  // Login follows the user's theme. The Steel family AND the plain Light/Dark
-  // themes now show the brushed-silver look (Light = arctic/blue, Dark = orange),
-  // matching the in-app headers. Only Iron Forge keeps the dark iron nameplate.
-  const isSteelLogin = metalStyle === "steel" || isPlainTheme;
-  const headerVariant = isPlainTheme
+  const isPlain = loginSkin === "plain";
+  const isSteel = !isPlain && metalStyle === "steel";
+  const kind: "plain" | "steel" | "iron" = isPlain ? "plain" : isSteel ? "steel" : "iron";
+  // The brushed-silver nameplate is shared by Steel AND Plain (matching the
+  // in-app IndustrialBanner): Light → arctic plate, Dark → orange plate.
+  const useSteelArt = isSteel || isPlain;
+  const headerVariant = isPlain
     ? (appearance === "light" ? "arctic" : "orange")
     : industrialVariant;
   const steelPanel = useSteelPanelFrame();
-  const nameplateSrc = isSteelLogin ? HEADER_SRC_BY_COLOR[headerVariant] : SKIN.nameplate;
-  const panelSrc = isSteelLogin ? SILVER_SRC_BY_COLOR[headerVariant] : SKIN.panel;
+  const nameplateSrc = useSteelArt ? HEADER_SRC_BY_COLOR[headerVariant] : SKIN.nameplate;
+  const panelSrc = isSteel ? SILVER_SRC_BY_COLOR[headerVariant] : SKIN.panel;
 
-  // Accent tint. On the Steel/Plain look the inner controls (inputs, tabs,
-  // buttons) are rendered as brushed-steel controls tinted to the active Steel
-  // colour; on Iron Forge they keep the original orange/pink industrial tint.
-  const TINT = isSteelLogin
-    ? VARIANT_ACCENT[headerVariant]
-    : (industrialVariant === "orange" ? "#FF8533" : VARIANT_ACCENT[industrialVariant]);
-  // Black brushed-metal Steel button art (matches the rest of the app's TbvButton).
+  // Accent tint: plain → theme accent; steel → steel colour; iron → orange/variant.
+  const TINT = isPlain
+    ? c.accent
+    : isSteel
+      ? VARIANT_ACCENT[headerVariant]
+      : (industrialVariant === "orange" ? "#FF8533" : VARIANT_ACCENT[industrialVariant]);
   const steelBtnSrc = BUTTON_SRC_BY_COLOR[headerVariant] ?? BUTTON_SRC_BY_COLOR.orange;
 
   // Measured container size (post safe-area, post keyboard-avoid). This is the
@@ -213,7 +236,7 @@ export default function LoginScreen() {
 
   // Metal "TOOLBOX VAULT" nameplate (wordmark) — wide horizontal plaque.
   const nameplateW = Math.min(WORK_W * 0.94, 400);
-  const nameplateH = nameplateW / (isSteelLogin ? HEADER_ASPECT : AR.nameplate);
+  const nameplateH = nameplateW / (useSteelArt ? HEADER_ASPECT : AR.nameplate);
 
   // Native title + tagline fonts (scale with the real column width)
   const titleFont = clamp(WORK_W * 0.072, 22, 30);
@@ -275,19 +298,16 @@ export default function LoginScreen() {
   // never "pops in" after the layout has already painted.
   if ((!fontsLoaded && !fontError) || !skinsReady) {
     return (
-      <ImageBackground source={SKIN.bg} style={styles.bg} resizeMode="cover" fadeDuration={0}>
-        <View style={styles.veil} />
+      <ScreenBg plain={isPlain} bg={c.bg}>
         <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-          <ActivityIndicator color="#FF8533" size="large" />
+          <ActivityIndicator color={TINT} size="large" />
         </View>
-      </ImageBackground>
+      </ScreenBg>
     );
   }
 
   return (
-    <ImageBackground source={SKIN.bg} style={styles.bg} resizeMode="cover" fadeDuration={0}>
-      <View style={styles.veil} />
-
+    <ScreenBg plain={isPlain} bg={c.bg}>
       <SafeAreaView style={{ flex: 1 }} edges={["top", "bottom"]}>
           <View
             style={{ flex: 1 }}
@@ -350,7 +370,7 @@ export default function LoginScreen() {
                   </View>
                 </View>
                 <Text
-                  style={[styles.tagline, { fontSize: tagFont, maxWidth: WORK_W * 0.96, marginTop: headerGap * 0.06 }]}
+                  style={[styles.tagline, { fontSize: tagFont, maxWidth: WORK_W * 0.96, marginTop: headerGap * 0.06 }, isPlain && { color: c.textSecondary }]}
                   numberOfLines={1}
                   adjustsFontSizeToFit
                   minimumFontScale={0.8}
@@ -375,13 +395,13 @@ export default function LoginScreen() {
                   the border box — that mismatch was squeezing the frame art
                   into the center and leaving forgot-password on bare metal. */}
               <View
-                style={{
-                  width: panelW,
-                  height: panelH,
-                  overflow: "hidden",
-                }}
+                style={
+                  isPlain
+                    ? { width: panelW, minHeight: panelH, backgroundColor: c.bgSecondary, borderColor: c.border, borderWidth: 1, borderRadius: 14, shadowColor: "#000", shadowOpacity: 0.18, shadowRadius: 10, shadowOffset: { width: 0, height: 4 }, elevation: 4 }
+                    : { width: panelW, height: panelH, overflow: "hidden" }
+                }
               >
-                {isSteelLogin ? (
+                {kind === "steel" ? (
                   <View style={{ position: "absolute", top: 0, left: 0, width: panelW }}>
                     <TbvFrame
                       source={panelSrc}
@@ -394,13 +414,13 @@ export default function LoginScreen() {
                       <View style={{ height: panelH }} />
                     </TbvFrame>
                   </View>
-                ) : (
+                ) : kind === "iron" ? (
                   <Image
                     source={panelSrc}
                     style={{ position: "absolute", top: 0, left: 0, width: panelW, height: panelH }}
                     resizeMode="stretch"
                   />
-                )}
+                ) : null}
                 <View
                   style={{
                     flex: 1,
@@ -426,8 +446,10 @@ export default function LoginScreen() {
                       onPress={() => setMode("login")}
                       activeSkin={SKIN.tabActive}
                       inactiveSkin={SKIN.tabInactive}
-                      steel={isSteelLogin}
+                      kind={kind}
                       tint={TINT}
+                      c={c}
+                      steelSrc={steelBtnSrc}
                       testID="tab-login"
                     />
                     <TabButton
@@ -435,8 +457,10 @@ export default function LoginScreen() {
                       width={tabW}
                       active={mode === "register"}
                       onPress={() => setMode("register")}
-                      steel={isSteelLogin}
+                      kind={kind}
                       tint={TINT}
+                      c={c}
+                      steelSrc={steelBtnSrc}
                       activeSkin={SKIN.tabActive}
                       inactiveSkin={SKIN.tabInactive}
                       testID="tab-register"
@@ -445,19 +469,19 @@ export default function LoginScreen() {
 
                   {/* ----- EMAIL ----- */}
                   <View style={[styles.fieldGroup, { marginTop: innerGap, paddingHorizontal: fieldInset }]}>
-                    <Text style={[styles.label, { height: labelH }]}>EMAIL</Text>
-                    <FieldShell steel={isSteelLogin} tint={TINT} width={fieldW} height={inputH}>
+                    <Text style={[styles.label, { height: labelH }, isPlain && { color: c.textSecondary }]}>EMAIL</Text>
+                    <FieldShell kind={kind} tint={TINT} c={c} width={fieldW} height={inputH}>
                       <View style={styles.inputInner}>
                         <Ionicons name="mail-outline" size={17} color={TINT} />
                         <TextInput
                           value={email}
                           onChangeText={setEmail}
                           placeholder="you@example.com"
-                          placeholderTextColor="rgba(242,242,242,0.62)"
+                          placeholderTextColor={isPlain ? c.textMuted : "rgba(242,242,242,0.62)"}
                           autoCapitalize="none"
                           autoComplete="email"
                           keyboardType="email-address"
-                          style={styles.input}
+                          style={[styles.input, isPlain && { color: c.textPrimary }]}
                           testID="auth-email"
                         />
                       </View>
@@ -466,18 +490,18 @@ export default function LoginScreen() {
 
                   {/* ----- PASSWORD ----- */}
                   <View style={[styles.fieldGroup, { marginTop: innerGap, paddingHorizontal: fieldInset }]}>
-                    <Text style={[styles.label, { height: labelH }]}>PASSWORD</Text>
-                    <FieldShell steel={isSteelLogin} tint={TINT} width={fieldW} height={inputH}>
+                    <Text style={[styles.label, { height: labelH }, isPlain && { color: c.textSecondary }]}>PASSWORD</Text>
+                    <FieldShell kind={kind} tint={TINT} c={c} width={fieldW} height={inputH}>
                       <View style={styles.inputInner}>
                         <Ionicons name="lock-closed-outline" size={17} color={TINT} />
                         <TextInput
                           value={password}
                           onChangeText={setPassword}
                           placeholder="••••••••"
-                          placeholderTextColor="rgba(242,242,242,0.62)"
+                          placeholderTextColor={isPlain ? c.textMuted : "rgba(242,242,242,0.62)"}
                           secureTextEntry={!showPassword}
                           autoCapitalize="none"
-                          style={styles.input}
+                          style={[styles.input, isPlain && { color: c.textPrimary }]}
                           testID="auth-password"
                         />
                         <TouchableOpacity
@@ -516,25 +540,40 @@ export default function LoginScreen() {
                     })}
                     testID="auth-submit"
                   >
-                    <ImageBackground
-                      source={isSteelLogin ? steelBtnSrc : SKIN.btnPrimary}
-                      style={styles.center}
-                      imageStyle={styles.fillImage}
-                      resizeMode="stretch"
-                    >
-                      {busy ? (
-                        <ActivityIndicator color={isSteelLogin ? "#FFFFFF" : "#0A0A0A"} />
-                      ) : (
-                        <View style={styles.row}>
-                          {mode !== "register" && (
-                            <Ionicons name="lock-closed" size={18} color={isSteelLogin ? "#FFFFFF" : "#0A0A0A"} />
-                          )}
-                          <Text style={[styles.submitText, isSteelLogin && { color: "#FFFFFF" }]}>
-                            {mode === "register" ? "CREATE ACCOUNT" : "SIGN IN"}
-                          </Text>
-                        </View>
-                      )}
-                    </ImageBackground>
+                    {kind === "plain" ? (
+                      <View style={[styles.center, { backgroundColor: c.bgSecondary, borderRadius: 10, borderWidth: 1, borderColor: c.border, shadowColor: "#000", shadowOpacity: 0.18, shadowRadius: 8, shadowOffset: { width: 0, height: 3 }, elevation: 3 }]}>
+                        {busy ? (
+                          <ActivityIndicator color={c.accent} />
+                        ) : (
+                          <View style={styles.row}>
+                            {mode !== "register" && <Ionicons name="lock-closed" size={18} color={c.accent} />}
+                            <Text style={[styles.submitText, { color: c.accent }]}>
+                              {mode === "register" ? "CREATE ACCOUNT" : "SIGN IN"}
+                            </Text>
+                          </View>
+                        )}
+                      </View>
+                    ) : (
+                      <ImageBackground
+                        source={kind === "steel" ? steelBtnSrc : SKIN.btnPrimary}
+                        style={styles.center}
+                        imageStyle={styles.fillImage}
+                        resizeMode="stretch"
+                      >
+                        {busy ? (
+                          <ActivityIndicator color={kind === "steel" ? "#FFFFFF" : "#0A0A0A"} />
+                        ) : (
+                          <View style={styles.row}>
+                            {mode !== "register" && (
+                              <Ionicons name="lock-closed" size={18} color={kind === "steel" ? "#FFFFFF" : "#0A0A0A"} />
+                            )}
+                            <Text style={[styles.submitText, kind === "steel" && { color: "#FFFFFF" }]}>
+                              {mode === "register" ? "CREATE ACCOUNT" : "SIGN IN"}
+                            </Text>
+                          </View>
+                        )}
+                      </ImageBackground>
+                    )}
                   </Pressable>
 
                   {/* ----- FORGOT (placeholder keeps height in register mode) ----- */}
@@ -570,16 +609,17 @@ export default function LoginScreen() {
                   testID="auth-biometric"
                 >
                   <View
-                    style={
-                      isSteelLogin
-                        ? [styles.center, styles.steelSecondaryBtn, { borderColor: TINT + "AA" }]
-                        : undefined
-                    }
+                    style={[
+                      styles.center,
+                      kind !== "iron" && styles.steelSecondaryBtn,
+                      kind === "plain" ? { backgroundColor: c.bgSecondary, borderColor: c.border }
+                        : kind === "steel" ? { borderColor: TINT + "AA" } : null,
+                    ]}
                   >
-                  {isSteelLogin ? null : (
+                  {kind === "iron" ? (
                     <Image source={SKIN.btnSecondary} style={StyleSheet.absoluteFill} resizeMode="stretch" />
-                  )}
-                  <View style={isSteelLogin ? styles.row : [styles.center, styles.row]}>
+                  ) : null}
+                  <View style={kind === "iron" ? [styles.center, styles.row] : styles.row}>
                       <Ionicons
                         name={
                           bio.label.toLowerCase().includes("face") ? "scan"
@@ -601,7 +641,7 @@ export default function LoginScreen() {
             </ScrollView>
           </View>
       </SafeAreaView>
-    </ImageBackground>
+    </ScreenBg>
   );
 }
 
