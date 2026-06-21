@@ -684,35 +684,42 @@ export default function InventoryScreen() {
       )}
 
       <View style={styles.searchRow}>
-        {isIndustrial ? (
-          // Iron Forge: framed metal search bar (mirrors dashboard chrome).
-          <TbvFrame
-            source={plateSrc}
-            capInsets={plateCap}
-            frameScale={steelScale}
-            style={[styles.searchFrameSkin, { flex: 1 }]}
-            padX={isSteel ? 18 : 44}
-            padTop={isSteel ? 12 : 4}
-            padBottom={isSteel ? 14 : 6}
-          >
-            <View style={styles.searchBoxInner}>{searchInner}</View>
-          </TbvFrame>
-        ) : (
-          <View style={[styles.searchBox, { flex: 1 }]}>{searchInner}</View>
-        )}
-        <TouchableOpacity
-          testID="summary-accordion-toggle"
-          onPress={() => setSummaryOpen((o) => !o)}
-          hitSlop={8}
-          style={[styles.summaryToggleBtn, summaryOpen && styles.summaryToggleBtnActive]}
-          activeOpacity={0.7}
-        >
-          <Ionicons
-            name={summaryOpen ? "chevron-up" : "chevron-down"}
-            size={18}
-            color={summaryOpen ? "#000" : theme.colors.accent}
-          />
-        </TouchableOpacity>
+        <View style={{ flex: 1, position: "relative" }}>
+          {isIndustrial ? (
+            // Iron Forge: framed metal search bar (mirrors dashboard chrome).
+            <TbvFrame
+              source={plateSrc}
+              capInsets={plateCap}
+              frameScale={steelScale}
+              style={[styles.searchFrameSkin, { flex: 1 }]}
+              padX={isSteel ? 18 : 44}
+              padTop={isSteel ? 12 : 4}
+              padBottom={isSteel ? 14 : 6}
+            >
+              <View style={styles.searchBoxInner}>{searchInner}</View>
+            </TbvFrame>
+          ) : (
+            <View style={[styles.searchBox, { flex: 1 }]}>{searchInner}</View>
+          )}
+
+          {/* Accordion handle: small chevron centered on the bottom edge of the
+              search panel (over the orange glow). Tap to reveal the summary. */}
+          <View style={styles.summaryToggleWrap} pointerEvents="box-none">
+            <TouchableOpacity
+              testID="summary-accordion-toggle"
+              onPress={() => setSummaryOpen((o) => !o)}
+              hitSlop={{ top: 10, bottom: 10, left: 18, right: 18 }}
+              style={styles.summaryToggleBtn}
+              activeOpacity={0.7}
+            >
+              <Ionicons
+                name={summaryOpen ? "chevron-up" : "chevron-down"}
+                size={16}
+                color={theme.colors.accent}
+              />
+            </TouchableOpacity>
+          </View>
+        </View>
       </View>
 
       {summaryOpen && agg && (
@@ -1948,12 +1955,20 @@ const styles = themedStyles((c) => ({
     letterSpacing: 0.5,
   },
   searchRow: { paddingHorizontal: 12, marginTop: 14, marginBottom: 8, flexDirection: "row", alignItems: "center", gap: 8 },
-  summaryToggleBtn: {
-    width: 44, height: 44, alignItems: "center", justifyContent: "center",
-    borderRadius: 10, borderWidth: 1, borderColor: c.border, backgroundColor: c.bgSecondary,
+  summaryToggleWrap: {
+    position: "absolute",
+    left: 0, right: 0, bottom: -9,
+    alignItems: "center",
+    justifyContent: "center",
   },
-  summaryToggleBtnActive: { backgroundColor: c.accent, borderColor: c.accent },
-  summaryAccordionBody: { paddingHorizontal: 16, paddingTop: 4, paddingBottom: 4 },
+  summaryToggleBtn: {
+    minWidth: 46, height: 18, paddingHorizontal: 10,
+    alignItems: "center", justifyContent: "center",
+    borderRadius: 9,
+    backgroundColor: c.bgSecondary,
+    borderWidth: 1, borderColor: c.accent,
+  },
+  summaryAccordionBody: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 4 },
   rowDealer: {
     color: c.textMuted,
     fontSize: 8,
