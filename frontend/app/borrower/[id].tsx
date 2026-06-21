@@ -22,6 +22,7 @@ import { ShadowBox, ShadowBoxMini } from "../../src/components/ShadowBox";
 import { SKIN, CAP } from "../../src/tbv/skins";
 import { useIsSteel, useSteelPanelFrame } from "../../src/tbv/steel";
 import { TbvFrame } from "../../src/tbv/components/TbvFrame";
+import { TbvListPanel } from "../../src/tbv/components/TbvListPanel";
 
 export default function BorrowerHistory() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -32,8 +33,6 @@ export default function BorrowerHistory() {
   const steelPanel = useSteelPanelFrame();
   const winSrc = isSteel ? steelPanel.source : SKIN.window;
   const winCap = isSteel ? steelPanel.capInsets : CAP.window;
-  const plateSrc = isSteel ? steelPanel.source : SKIN.plate;
-  const plateCap = isSteel ? steelPanel.capInsets : CAP.plate;
   const steelScale = isSteel ? steelPanel.frameScale : undefined;
   const [data, setData] = useState<any>(null);
   const [editing, setEditing] = useState(false);
@@ -227,7 +226,9 @@ export default function BorrowerHistory() {
 
   // Industrial themes wrap rows/cards in metal frames; plain Light/Dark keep
   // the ShadowBox look.
-  const RowShell = ({
+  // Rows now live INSIDE one bounded panel (mirrors the Inventory page) — they
+  // render plain with a subtle divider instead of one metal frame per row.
+  const PanelRow = ({
     children,
     onPress,
     testID,
@@ -237,35 +238,16 @@ export default function BorrowerHistory() {
     onPress?: () => void;
     testID?: string;
     leftStripe?: string;
-  }) =>
-    isIndustrial ? (
-      <TouchableOpacity
-        testID={testID}
-        style={styles.rowSkinWrap}
-        onPress={onPress}
-        activeOpacity={0.85}
-      >
-        <TbvFrame
-          source={plateSrc}
-          capInsets={plateCap} frameScale={steelScale}
-          style={styles.rowSkinFrame}
-          padX={22}
-          padTop={16}
-          padBottom={16}
-          leftStripe={leftStripe}
-        >
-          <View style={styles.rowSkinInner}>{children}</View>
-        </TbvFrame>
-      </TouchableOpacity>
-    ) : (
-      <ShadowBox
-        testID={testID}
-        style={[styles.row, leftStripe ? { borderLeftColor: leftStripe, borderLeftWidth: 3 } : null]}
-        onPress={onPress}
-      >
-        {children}
-      </ShadowBox>
-    );
+  }) => (
+    <TouchableOpacity
+      testID={testID}
+      style={[styles.panelRow, leftStripe ? { borderLeftColor: leftStripe, borderLeftWidth: 3, paddingLeft: 10 } : null]}
+      onPress={onPress}
+      activeOpacity={0.7}
+    >
+      {children}
+    </TouchableOpacity>
+  );
 
   const CardShell = ({
     children,
@@ -295,6 +277,79 @@ export default function BorrowerHistory() {
       </ShadowBox>
     );
 
+  const statsRow = (
+    <View style={styles.statGridInner}>
+      <Cell flat={isIndustrial} label="Total checkouts" value={String(data.total_checkouts || 0)} />
+      <Cell flat={isIndustrial} label="Unique tools" value={String(data.unique_tools || 0)} />
+      <Cell flat={isIndustrial} label="Check Out" value={String(data.currently_held?.length || 0)} highlight={data.currently_held?.length > 0} />
+    </View>
+  );
+
+  const panelContent = (
+    <>
+      {statsRow}
+      <View style={styles.panelDivider} />
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={{ paddingBottom: 16 }}
+        showsVerticalScrollIndicator={false}
+      >
+        {data.currently_held?.length > 0 && (
+          <>
+            <Text style={styles.panelSectionLabel}>CURRENTLY CHECKED OUT</Text>
+            {data.currently_held.map((c: any) => (
+              <PanelRow
+                key={c.tool_id}
+                testID={`held-${c.tool_id}`}
+                leftStripe={theme.colors.accentSecondary}
+                onPress={() => router.push(`/tool/${c.tool_id}`)}
+              >
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.rowName}>{c.tool_name}</Text>
+                  <Text style={styles.rowMeta}>Out since {formatDateTime(c.checked_out_at)}</Text>
+                  {!!c.notes && <Text style={styles.rowNotes}>{c.notes}</Text>}
+                </View>
+                <Ionicons name="chevron-forward" size={18} color={theme.colors.textMuted} />
+              </PanelRow>
+            ))}
+          </>
+        )}
+
+        <Text style={styles.panelSectionLabel}>CHECKED OUT TOOL TOTALS</Text>
+        {data.per_tool.length === 0 ? (
+          <Text style={styles.empty}>No checkout history yet.</Text>
+        ) : (
+          data.per_tool.map((t: any, idx: number) => (
+            <PanelRow
+              key={t.tool_id}
+              testID={`per-tool-${t.tool_id}`}
+              onPress={() => router.push(`/tool/${t.tool_id}`)}
+            >
+              <View style={styles.rank}>
+                <Text style={styles.rankText}>{idx + 1}</Text>
+              </View>
+              <View style={styles.thumb}>
+                {t.photo ? (
+                  <AppImage source={{ uri: t.photo }} style={{ width: "100%", height: "100%" }} />
+                ) : (
+                  <Ionicons name="construct" size={18} color={theme.colors.accent} />
+                )}
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.rowName}>{t.tool_name}</Text>
+                <Text style={styles.rowMeta}>Last out {formatDateTime(t.last_checked_out_at)}</Text>
+              </View>
+              <View style={styles.countPill}>
+                <Text style={styles.countNum}>{t.checkout_count}</Text>
+                <Text style={styles.countLbl}>×</Text>
+              </View>
+            </PanelRow>
+          ))
+        )}
+      </ScrollView>
+    </>
+  );
+
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <IndustrialBanner
@@ -314,107 +369,40 @@ export default function BorrowerHistory() {
         }
       />
 
-      <ScrollView contentContainerStyle={{ paddingBottom: 60 }}>
+      <View style={styles.body}>
         <View style={styles.heroBox}>
           <Text style={styles.bigName}>{b.name}</Text>
           <ContactActions raw={b.contact} />
         </View>
-
-        {isIndustrial ? (
-          <View style={styles.statSkinFrame}>
-            <TbvFrame
-              source={winSrc}
-              capInsets={winCap} frameScale={steelScale}
-              padX={30}
-              padTop={34}
-              padBottom={34}
-            >
-              <View style={styles.statGridInner}>
-                <Cell flat label="Total checkouts" value={String(data.total_checkouts || 0)} />
-                <Cell flat label="Unique tools" value={String(data.unique_tools || 0)} />
-                <Cell flat label="Check Out" value={String(data.currently_held?.length || 0)} highlight={data.currently_held?.length > 0} />
-              </View>
-            </TbvFrame>
-          </View>
-        ) : (
-          <View style={styles.statGrid}>
-            <Cell label="Total checkouts" value={String(data.total_checkouts || 0)} />
-            <Cell label="Unique tools" value={String(data.unique_tools || 0)} />
-            <Cell label="Check Out" value={String(data.currently_held?.length || 0)} highlight={data.currently_held?.length > 0} />
-          </View>
-        )}
 
         {!!b.notes && (
           <CardShell
             testID="contact-notes-card"
             plainStyle={{ marginHorizontal: 16, marginTop: 4, paddingHorizontal: 14, paddingVertical: 12 }}
           >
-            <View style={{ alignSelf: "flex-start", backgroundColor: theme.colors.accent, paddingHorizontal: 10, paddingVertical: 3, borderRadius: 6, marginBottom: 8 }}>
-              <Text style={{ color: "#000", fontSize: 11, fontWeight: "800", letterSpacing: 1 }}>NOTES</Text>
+            <View style={styles.notesTag}>
+              <Text style={styles.notesTagText}>NOTES</Text>
             </View>
-            <Text style={{ color: theme.colors.textPrimary, fontSize: 14, lineHeight: 20 }}>{b.notes}</Text>
+            <Text style={styles.notesBody}>{b.notes}</Text>
           </CardShell>
         )}
 
-        {data.currently_held?.length > 0 && (
-          <>
-            <Text style={styles.sectionLabel}>CURRENTLY CHECKED OUT</Text>
-            {data.currently_held.map((c: any) => (
-              <RowShell
-                key={c.tool_id}
-                testID={`held-${c.tool_id}`}
-                leftStripe={theme.colors.accentSecondary}
-                onPress={() => router.push(`/tool/${c.tool_id}`)}
-              >
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.rowName}>{c.tool_name}</Text>
-                  <Text style={styles.rowMeta}>
-                    Out since {formatDateTime(c.checked_out_at)}
-                  </Text>
-                  {!!c.notes && <Text style={styles.rowNotes}>{c.notes}</Text>}
-                </View>
-                <Ionicons name="chevron-forward" size={18} color={theme.colors.textMuted} />
-              </RowShell>
-            ))}
-          </>
-        )}
-
-        <Text style={styles.sectionLabel}>
-          CHECKED OUT TOOL TOTALS
-        </Text>
-        {data.per_tool.length === 0 ? (
-          <Text style={styles.empty}>No checkout history yet.</Text>
+        {isIndustrial ? (
+          <TbvListPanel
+            source={winSrc}
+            capInsets={winCap}
+            frameScale={steelScale}
+            style={styles.detailPanel}
+            padX={24}
+            padTop={20}
+            padBottom={12}
+          >
+            {panelContent}
+          </TbvListPanel>
         ) : (
-          data.per_tool.map((t: any, idx: number) => (
-            <RowShell
-              key={t.tool_id}
-              testID={`per-tool-${t.tool_id}`}
-              onPress={() => router.push(`/tool/${t.tool_id}`)}
-            >
-              <View style={styles.rank}>
-                <Text style={styles.rankText}>{idx + 1}</Text>
-              </View>
-              <View style={styles.thumb}>
-                {t.photo ? (
-                  <AppImage source={{ uri: t.photo }} style={{ width: "100%", height: "100%" }} />
-                ) : (
-                  <Ionicons name="construct" size={18} color={theme.colors.accent} />
-                )}
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.rowName}>{t.tool_name}</Text>
-                <Text style={styles.rowMeta}>
-                  Last out {formatDateTime(t.last_checked_out_at)}
-                </Text>
-              </View>
-              <View style={styles.countPill}>
-                <Text style={styles.countNum}>{t.checkout_count}</Text>
-                <Text style={styles.countLbl}>×</Text>
-              </View>
-            </RowShell>
-          ))
+          <View style={styles.detailPanelPlain}>{panelContent}</View>
         )}
-      </ScrollView>
+      </View>
 
       {/* Edit contact modal */}
       <Modal visible={editing} transparent animationType="slide" onRequestClose={() => setEditing(false)}>
@@ -591,6 +579,34 @@ function ContactActions({ raw }: { raw?: string | null }) {
 
 const styles = themedStyles((c) => ({
   container: { flex: 1, backgroundColor: c.canvas },
+  body: { flex: 1 },
+  detailPanel: { flex: 1, marginHorizontal: 14, marginTop: 8, marginBottom: 14 },
+  detailPanelPlain: {
+    flex: 1,
+    marginHorizontal: 16,
+    marginTop: 8,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: c.border,
+    borderRadius: 10,
+    backgroundColor: c.bgSecondary,
+    paddingHorizontal: 14,
+    paddingTop: 14,
+    paddingBottom: 8,
+  },
+  panelDivider: { height: 1, backgroundColor: c.borderSubtle, marginTop: 14, marginBottom: 2 },
+  panelSectionLabel: {
+    color: c.textSecondary, fontSize: 8, fontWeight: "800",
+    letterSpacing: 2, paddingTop: 14, paddingBottom: 8,
+  },
+  panelRow: {
+    flexDirection: "row", alignItems: "center", gap: 10,
+    paddingVertical: 12,
+    borderBottomColor: c.borderSubtle, borderBottomWidth: 1,
+  },
+  notesTag: { alignSelf: "flex-start", backgroundColor: c.accent, paddingHorizontal: 10, paddingVertical: 3, borderRadius: 6, marginBottom: 8 },
+  notesTagText: { color: "#000", fontSize: 11, fontWeight: "800", letterSpacing: 1 },
+  notesBody: { color: c.textPrimary, fontSize: 14, lineHeight: 20 },
   menuDotsBtn: { width: 40, height: 40, alignItems: "center", justifyContent: "center", borderRadius: 20 },
   detailActionsRow: { flexDirection: "row", justifyContent: "flex-end", paddingHorizontal: 16, paddingTop: 10, paddingBottom: 4, gap: 8 },
   topBar: {

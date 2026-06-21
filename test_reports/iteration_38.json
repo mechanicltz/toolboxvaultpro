@@ -1,0 +1,29 @@
+{
+  "summary": "Frontend-only visual + interaction test of the restructured Contact (Borrower) details page (/app/frontend/app/borrower/[id].tsx) per the new layout spec. Logged in as ryan@ryan.com on the public Expo web preview at 390x844 mobile viewport, navigated CONTACTS bottom-tab -> Contacts/Borrowers sheet -> Mike Johnson (has 1 checkout), and verified the new layout in all 4 looks: Iron Forge, Steel, Plain Light, Plain Dark. ALL acceptance criteria pass: (1) NOTES card renders at the TOP, right under the name + phone + call/text icons, BEFORE the stats panel (measured notes_top ~= 240px which is above stats_top in every theme); (2) the stats row (Total Checkouts / Unique Tools / Check Out) renders at the TOP of ONE bounded panel — metal-framed (TbvListPanel) in industrial/steel, bordered card (detailPanelPlain) in plain light/dark — and that panel does NOT stretch the whole page: its bottom edge sits above the bottom tab bar in every screenshot; (3) for Mike (who has 1 active checkout) BOTH the 'CURRENTLY CHECKED OUT' section (with the left orange stripe) and the 'CHECKED OUT TOOL TOTALS' section render inside the SAME panel with the internal ScrollView; (4) tapping the CHECKED OUT TOOL TOTALS row navigates to /tool/{id} (verified URL changed to /tool/7ddfa4a4...); (5) the 3-dot kebab opens and shows Edit / Share / Delete contact items with the correct testIDs. Plain Light screenshot confirms the bordered-card variant renders with a clean light background and the panel correctly bounds the content. No render errors, no React Native red screen, no console warnings beyond a known 'props.pointerEvents is deprecated' from a third-party component.",
+  "backend_issues": { "critical": [], "minor": [] },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [],
+  "action_items": [
+    "No fixes required for the borrower page restructure — main agent can ship.",
+    "PRE-EXISTING (out of scope of this iteration): the Expo web preview occasionally has a full-viewport <video src=.../videos/intro.mp4> element overlapping the app at object-fit:contain. During my mouse-click test on the 'CURRENTLY CHECKED OUT' row at y~=491px (inside the video's letterboxed visible band), elementFromPoint returned the <video>, so a synthetic mouse click hit the video instead of the TouchableOpacity. The same code path works fine via JS .click() and the 'CHECKED OUT TOOL TOTALS' row (at y~=583, BELOW the video band) navigates correctly. This is NOT a borrower-page bug — the held-row onPress is wired identically to the per-tool row (same PanelRow component, same router.push) — but on a real device this overlay won't exist. If main agent wants to make web-preview automation easier, consider gating that intro video render with Platform.OS!=='web' or removing it once user interacts."
+  ],
+  "critical_code_review_comments": [
+    "borrower/[id].tsx (lines 288-351) cleanly composes panelContent as a JSX fragment with the stats row at the top, a divider, and an internal ScrollView containing the two conditional sections — correct pattern that mirrors Inventory's TbvListPanel usage.",
+    "Industrial branch uses <TbvListPanel style={styles.detailPanel}> where detailPanel is { flex:1, marginHorizontal:14, marginTop:8, marginBottom:14 } — flex:1 gives TbvListPanel a bounded parent so the inner ScrollView scrolls instead of stretching. Plain branch uses <View style={styles.detailPanelPlain}> with the same flex:1 bounded sizing plus borderWidth/borderRadius — consistent.",
+    "NOTES card is conditionally rendered ONLY when b.notes is truthy (line 378), and it is placed BEFORE the panel branch — correct order. Uses CardShell which is TbvFrame for industrial and ShadowBox for plain.",
+    "PanelRow is a local lightweight wrapper that adds a left stripe + bottom divider — appropriate for in-panel rows (no per-row metal frame, which was the user's complaint). leftStripe is only added on the CURRENTLY-CHECKED-OUT rows to visually distinguish them, good UX.",
+    "Both held rows and per-tool rows correctly call router.push(`/tool/${id}`) on press; verified per-tool navigates and verified held onPress fires via JS click."
+  ],
+  "updated_files": [],
+  "success_rate": { "backend": "n/a (frontend-only)", "frontend": "6/6 acceptance criteria pass across Iron Forge, Steel, Plain Light, Plain Dark" },
+  "seed_data_creation": "None — used existing demo borrower Mike Johnson who already has 1 active checkout (M18 FUEL Impact Driver). Did NOT need to check out an additional tool because Mike already exercises both the CURRENTLY-CHECKED-OUT section and the TOOL TOTALS section.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Layout positional measurements (Mike Johnson, 1 active checkout, 390x844 viewport): notes_top ~= 240, stats row ~360, CURRENTLY CHECKED OUT label ~415, CHECKED OUT TOOL TOTALS label ~510, panel bottom well above the tab bar at 770. Same numbers across all 4 themes (only the chrome differs: TbvListPanel metal frame vs detailPanelPlain bordered card). To switch themes: tap VAULT bottom tab -> scroll to THEME section -> tap Iron Forge / Steel / Plain (expands to Light/Dark sub-radios). To open kebab: testID 'borrower-menu-btn'. Menu items: 'menu-edit-borrower', 'menu-share-borrower', 'menu-delete-borrower'. Row testIDs: 'held-{tool_id}' for currently-checked-out, 'per-tool-{tool_id}' for totals.",
+  "rca_of_issue": "n/a — this iteration verified a UI restructure, no bugs found."
+}
