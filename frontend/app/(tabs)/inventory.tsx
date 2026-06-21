@@ -694,7 +694,7 @@ export default function InventoryScreen() {
               style={[styles.searchFrameSkin, { flex: 1 }]}
               padX={isSteel ? 18 : 44}
               padTop={isSteel ? 12 : 4}
-              padBottom={isSteel ? 14 : 6}
+              padBottom={isSteel ? 30 : 26}
             >
               <View style={styles.searchBoxInner}>{searchInner}</View>
             </TbvFrame>
@@ -1954,10 +1954,10 @@ const styles = themedStyles((c) => ({
     fontWeight: "700",
     letterSpacing: 0.5,
   },
-  searchRow: { paddingHorizontal: 12, marginTop: 14, marginBottom: 32, flexDirection: "row", alignItems: "center", gap: 8 },
+  searchRow: { paddingHorizontal: 12, marginTop: 14, marginBottom: 12, flexDirection: "row", alignItems: "center", gap: 8 },
   summaryToggleWrap: {
     position: "absolute",
-    left: 0, right: 0, bottom: -18,
+    left: 0, right: 0, bottom: 6,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -2126,7 +2126,7 @@ const styles = themedStyles((c) => ({
   invListPanel: {
     flex: 1,
     marginHorizontal: 12,
-    marginTop: 4,
+    marginTop: 6,
     marginBottom: 8,
   },
   listFlexed: { flex: 1 },
