@@ -79,6 +79,7 @@ export default function DealerDetail() {
   // Tracks which row of the new consolidated details box is currently
   // expanded. Values: "accounts" | `agent:<id>` | null.
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
+  const [showMenu, setShowMenu] = useState(false);
   const canImportContacts = isDeviceContactsAvailable();
 
   const filteredDeviceContacts = useMemo(() => {
@@ -234,8 +235,7 @@ export default function DealerDetail() {
 
   const atAgentLimit = false;
 
-  // 3-dots menu state + helpers (Edit / Add agent / Delete now live here).
-  const [showMenu, setShowMenu] = useState(false);
+  // 3-dots menu helpers (Edit / Add agent / Delete live in the menu).
   const openEditDealer = () => {
     setEditForm({
       name: dealer.name,

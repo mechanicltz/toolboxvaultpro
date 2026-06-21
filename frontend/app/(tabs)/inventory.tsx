@@ -935,18 +935,10 @@ export default function InventoryScreen() {
 
       {prefs.show_details_summary && agg && (
         isIndustrial ? (
-          <View style={{ paddingHorizontal: 12 }}>
-            <TbvFrame
-              source={winSrc}
-              capInsets={winCap}
-              frameScale={steelScale}
-              style={styles.summaryFrameSkin}
-              padX={22}
-              padTop={12}
-              padBottom={14}
-            >
-              <SummaryHeader agg={agg} showPrices={prefs.show_prices} openClaims={openClaims} framed />
-            </TbvFrame>
+          // Skinned: render the stats bar directly (NO recessed metal panel
+          // behind it) so there's no dark "box" behind the numbers.
+          <View style={{ paddingHorizontal: 16, paddingTop: 6, paddingBottom: 2 }}>
+            <SummaryHeader agg={agg} showPrices={prefs.show_prices} openClaims={openClaims} framed />
           </View>
         ) : (
           <SummaryHeader agg={agg} showPrices={prefs.show_prices} openClaims={openClaims} />
