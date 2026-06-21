@@ -694,7 +694,7 @@ export default function InventoryScreen() {
               style={[styles.searchFrameSkin, { flex: 1 }]}
               padX={isSteel ? 18 : 44}
               padTop={isSteel ? 12 : 4}
-              padBottom={isSteel ? 30 : 26}
+              padBottom={isSteel ? 16 : 14}
             >
               <View style={styles.searchBoxInner}>{searchInner}</View>
             </TbvFrame>
@@ -702,22 +702,16 @@ export default function InventoryScreen() {
             <View style={[styles.searchBox, { flex: 1 }]}>{searchInner}</View>
           )}
 
-          {/* Accordion handle: small chevron centered on the bottom edge of the
-              search panel (over the orange glow). Tap to reveal the summary. */}
+          {/* Invisible accordion tap-zone: bottom-center of the search panel.
+              No visible arrow — tapping here toggles the detail summary. */}
           <View style={styles.summaryToggleWrap} pointerEvents="box-none">
             <TouchableOpacity
               testID="summary-accordion-toggle"
               onPress={() => setSummaryOpen((o) => !o)}
-              hitSlop={{ top: 10, bottom: 10, left: 18, right: 18 }}
+              hitSlop={{ top: 8, bottom: 12, left: 24, right: 24 }}
               style={styles.summaryToggleBtn}
-              activeOpacity={0.7}
-            >
-              <Ionicons
-                name={summaryOpen ? "chevron-up" : "chevron-down"}
-                size={16}
-                color={theme.colors.accent}
-              />
-            </TouchableOpacity>
+              activeOpacity={1}
+            />
           </View>
         </View>
       </View>
@@ -1957,16 +1951,12 @@ const styles = themedStyles((c) => ({
   searchRow: { paddingHorizontal: 12, marginTop: 14, marginBottom: 12, flexDirection: "row", alignItems: "center", gap: 8 },
   summaryToggleWrap: {
     position: "absolute",
-    left: 0, right: 0, bottom: 6,
+    left: 0, right: 0, bottom: 0,
     alignItems: "center",
     justifyContent: "center",
   },
   summaryToggleBtn: {
-    minWidth: 46, height: 18, paddingHorizontal: 10,
-    alignItems: "center", justifyContent: "center",
-    borderRadius: 9,
-    backgroundColor: c.bgSecondary,
-    borderWidth: 1, borderColor: c.accent,
+    width: 150, height: 16, backgroundColor: "transparent",
   },
   summaryAccordionBody: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 4 },
   rowDealer: {
