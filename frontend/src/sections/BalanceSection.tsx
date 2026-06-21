@@ -223,7 +223,7 @@ function BalanceCard({
     <>
       <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
         <Text style={styles.balLabel}>{label}</Text>
-        <TouchableOpacity onPress={onHistory} testID={`open-report-${idBase}`}>
+        <TouchableOpacity onPress={onHistory} testID={`open-report-${idBase}`} style={{ marginTop: 8 }}>
           <Text style={styles.histLink}>OPEN REPORT ›</Text>
         </TouchableOpacity>
       </View>

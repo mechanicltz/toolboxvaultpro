@@ -365,8 +365,8 @@ export default function DealerDetail() {
               source={plateSrc}
               capInsets={plateCap} frameScale={steelScale}
               padX={28}
-              padTop={14}
-              padBottom={14}
+              padTop={22}
+              padBottom={22}
             >
               <View style={styles.routeRowInner}>
                 <Ionicons name="map" size={18} color={theme.colors.accent} />
