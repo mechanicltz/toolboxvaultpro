@@ -166,6 +166,8 @@ export default function InventoryScreen() {
 
   // #24 — All filter controls live inside a "Filter" accordion, closed by default.
   const [showFilters, setShowFilters] = useState(false);
+  // Detail-summary accordion: collapsed by default, expands under the search bar.
+  const [summaryOpen, setSummaryOpen] = useState(false);
   const activeFilterCount =
     (filter !== "all" ? 1 : 0) +
     (locationFilter ? 1 : 0) +
@@ -698,7 +700,26 @@ export default function InventoryScreen() {
         ) : (
           <View style={[styles.searchBox, { flex: 1 }]}>{searchInner}</View>
         )}
+        <TouchableOpacity
+          testID="summary-accordion-toggle"
+          onPress={() => setSummaryOpen((o) => !o)}
+          hitSlop={8}
+          style={[styles.summaryToggleBtn, summaryOpen && styles.summaryToggleBtnActive]}
+          activeOpacity={0.7}
+        >
+          <Ionicons
+            name={summaryOpen ? "chevron-up" : "chevron-down"}
+            size={18}
+            color={summaryOpen ? "#000" : theme.colors.accent}
+          />
+        </TouchableOpacity>
       </View>
+
+      {summaryOpen && agg && (
+        <View style={styles.summaryAccordionBody}>
+          <SummaryHeader agg={agg} showPrices={prefs.show_prices} openClaims={openClaims} framed />
+        </View>
+      )}
 
       <Modal
         visible={showFilters}
@@ -932,18 +953,6 @@ export default function InventoryScreen() {
           </View>
         </View>
       </Modal>
-
-      {prefs.show_details_summary && agg && (
-        isIndustrial ? (
-          // Skinned: render the stats bar directly (NO recessed metal panel
-          // behind it) so there's no dark "box" behind the numbers.
-          <View style={{ paddingHorizontal: 16, paddingTop: 6, paddingBottom: 2 }}>
-            <SummaryHeader agg={agg} showPrices={prefs.show_prices} openClaims={openClaims} framed />
-          </View>
-        ) : (
-          <SummaryHeader agg={agg} showPrices={prefs.show_prices} openClaims={openClaims} />
-        )
-      )}
 
       {(() => {
         const listEl = (
@@ -1939,6 +1948,12 @@ const styles = themedStyles((c) => ({
     letterSpacing: 0.5,
   },
   searchRow: { paddingHorizontal: 12, marginTop: 14, marginBottom: 8, flexDirection: "row", alignItems: "center", gap: 8 },
+  summaryToggleBtn: {
+    width: 44, height: 44, alignItems: "center", justifyContent: "center",
+    borderRadius: 10, borderWidth: 1, borderColor: c.border, backgroundColor: c.bgSecondary,
+  },
+  summaryToggleBtnActive: { backgroundColor: c.accent, borderColor: c.accent },
+  summaryAccordionBody: { paddingHorizontal: 16, paddingTop: 4, paddingBottom: 4 },
   rowDealer: {
     color: c.textMuted,
     fontSize: 8,

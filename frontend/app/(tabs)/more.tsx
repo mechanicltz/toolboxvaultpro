@@ -900,20 +900,6 @@ export default function MoreScreen() {
             }
           />
           <SectionRow
-            icon="stats-chart"
-            title="Detail summary headers"
-            subtitle="Show counts/breakdowns on lists"
-            rightSlot={
-              <AppSwitch
-                testID="toggle-summary"
-                value={prefs.show_details_summary}
-                onValueChange={(v) => update({ show_details_summary: v })}
-                trackColor={{ true: theme.colors.accent, false: theme.colors.border }}
-                thumbColor="#fff"
-              />
-            }
-          />
-          <SectionRow
             icon="map"
             title="Next dealer-route banner"
             subtitle="Show the highlighted reminder at the top of the home screen"

@@ -382,9 +382,6 @@ export default function BorrowerHistory() {
           {!!b.notes && (
             <>
               <View style={styles.headerDivider} />
-              <View style={styles.notesTag}>
-                <Text style={styles.notesTagText}>NOTES</Text>
-              </View>
               <Text style={styles.notesBody}>{b.notes}</Text>
             </>
           )}
