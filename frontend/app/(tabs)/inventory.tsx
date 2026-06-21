@@ -717,9 +717,7 @@ export default function InventoryScreen() {
       </View>
 
       {summaryOpen && agg && (
-        <View style={styles.summaryAccordionBody}>
-          <SummaryHeader agg={agg} showPrices={prefs.show_prices} openClaims={openClaims} framed />
-        </View>
+        <SummaryHeader agg={agg} showPrices={prefs.show_prices} openClaims={openClaims} />
       )}
 
       <Modal
