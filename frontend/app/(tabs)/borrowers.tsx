@@ -231,8 +231,8 @@ export default function BorrowersScreen() {
                   frameScale={steelScale}
                   style={styles.rowSkinFrame}
                   padX={20}
-                  padTop={14}
-                  padBottom={14}
+                  padTop={isSteel ? 22 : 14}
+                  padBottom={isSteel ? 22 : 14}
                 >
                   <View style={styles.rowSkinInner}>{cardContent}</View>
                 </TbvFrame>
