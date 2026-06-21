@@ -684,35 +684,35 @@ export default function InventoryScreen() {
       )}
 
       <View style={styles.searchRow}>
-        <View style={{ flex: 1, position: "relative" }}>
-          {isIndustrial ? (
-            // Iron Forge: framed metal search bar (mirrors dashboard chrome).
-            <TbvFrame
-              source={plateSrc}
-              capInsets={plateCap}
-              frameScale={steelScale}
-              style={[styles.searchFrameSkin, { flex: 1 }]}
-              padX={isSteel ? 18 : 44}
-              padTop={isSteel ? 12 : 4}
-              padBottom={isSteel ? 16 : 14}
-            >
-              <View style={styles.searchBoxInner}>{searchInner}</View>
-            </TbvFrame>
-          ) : (
-            <View style={[styles.searchBox, { flex: 1 }]}>{searchInner}</View>
-          )}
+        {isIndustrial ? (
+          // Iron Forge: framed metal search bar (mirrors dashboard chrome).
+          <TbvFrame
+            source={plateSrc}
+            capInsets={plateCap}
+            frameScale={steelScale}
+            style={[styles.searchFrameSkin, { flex: 1 }]}
+            padX={isSteel ? 18 : 44}
+            padTop={isSteel ? 12 : 4}
+            padBottom={isSteel ? 16 : 14}
+          >
+            <View style={styles.searchBoxInner}>{searchInner}</View>
+          </TbvFrame>
+        ) : (
+          <View style={[styles.searchBox, { flex: 1 }]}>{searchInner}</View>
+        )}
 
-          {/* Invisible accordion tap-zone: bottom-center of the search panel.
-              No visible arrow — tapping here toggles the detail summary. */}
-          <View style={styles.summaryToggleWrap} pointerEvents="box-none">
-            <TouchableOpacity
-              testID="summary-accordion-toggle"
-              onPress={() => setSummaryOpen((o) => !o)}
-              hitSlop={{ top: 8, bottom: 12, left: 24, right: 24 }}
-              style={styles.summaryToggleBtn}
-              activeOpacity={1}
-            />
-          </View>
+        {/* Invisible accordion tap-zone overlay: bottom strip of the search
+            panel. No visible arrow — tapping here toggles the detail summary.
+            Anchored to the row (position:relative) so it never affects the
+            metal frame's own auto-sizing. */}
+        <View style={styles.summaryToggleWrap} pointerEvents="box-none">
+          <TouchableOpacity
+            testID="summary-accordion-toggle"
+            onPress={() => setSummaryOpen((o) => !o)}
+            hitSlop={{ top: 6, bottom: 14, left: 24, right: 24 }}
+            style={styles.summaryToggleBtn}
+            activeOpacity={1}
+          />
         </View>
       </View>
 
@@ -1948,7 +1948,7 @@ const styles = themedStyles((c) => ({
     fontWeight: "700",
     letterSpacing: 0.5,
   },
-  searchRow: { paddingHorizontal: 12, marginTop: 14, marginBottom: 12, flexDirection: "row", alignItems: "center", gap: 8 },
+  searchRow: { paddingHorizontal: 12, marginTop: 14, marginBottom: 12, flexDirection: "row", alignItems: "center", gap: 8, position: "relative" },
   summaryToggleWrap: {
     position: "absolute",
     left: 0, right: 0, bottom: 0,
