@@ -685,7 +685,9 @@ export default function InventoryScreen() {
 
       <View style={styles.searchRow}>
         {isIndustrial ? (
-          // Iron Forge: framed metal search bar (mirrors dashboard chrome).
+          // Iron Forge: framed metal search bar. The detail summary lives INSIDE
+          // this same metal frame — when opened, the frame extends downward to
+          // reveal it (accordion). An invisible tap-link sits at the panel bottom.
           <TbvFrame
             source={plateSrc}
             capInsets={plateCap}
@@ -693,32 +695,42 @@ export default function InventoryScreen() {
             style={[styles.searchFrameSkin, { flex: 1 }]}
             padX={isSteel ? 18 : 44}
             padTop={isSteel ? 12 : 4}
-            padBottom={isSteel ? 16 : 14}
+            padBottom={isSteel ? 18 : 16}
           >
             <View style={styles.searchBoxInner}>{searchInner}</View>
+            {summaryOpen && agg && (
+              <View style={styles.searchSummaryInset}>
+                <SummaryHeader agg={agg} showPrices={prefs.show_prices} openClaims={openClaims} framed />
+              </View>
+            )}
+            <View style={styles.searchAccordionLink} pointerEvents="box-none">
+              <TouchableOpacity
+                testID="summary-accordion-toggle"
+                onPress={() => setSummaryOpen((o) => !o)}
+                style={styles.searchAccordionHit}
+                activeOpacity={1}
+              />
+            </View>
           </TbvFrame>
         ) : (
-          <View style={[styles.searchBox, { flex: 1 }]}>{searchInner}</View>
+          <View style={[styles.searchBoxCol, { flex: 1 }]}>
+            <View style={styles.searchRowPlainInner}>{searchInner}</View>
+            {summaryOpen && agg && (
+              <View style={styles.searchSummaryInset}>
+                <SummaryHeader agg={agg} showPrices={prefs.show_prices} openClaims={openClaims} framed />
+              </View>
+            )}
+            <View style={styles.searchAccordionLink} pointerEvents="box-none">
+              <TouchableOpacity
+                testID="summary-accordion-toggle"
+                onPress={() => setSummaryOpen((o) => !o)}
+                style={styles.searchAccordionHit}
+                activeOpacity={1}
+              />
+            </View>
+          </View>
         )}
-
-        {/* Invisible accordion tap-zone overlay: bottom strip of the search
-            panel. No visible arrow — tapping here toggles the detail summary.
-            Anchored to the row (position:relative) so it never affects the
-            metal frame's own auto-sizing. */}
-        <View style={styles.summaryToggleWrap} pointerEvents="box-none">
-          <TouchableOpacity
-            testID="summary-accordion-toggle"
-            onPress={() => setSummaryOpen((o) => !o)}
-            hitSlop={{ top: 6, bottom: 14, left: 24, right: 24 }}
-            style={styles.summaryToggleBtn}
-            activeOpacity={1}
-          />
-        </View>
       </View>
-
-      {summaryOpen && agg && (
-        <SummaryHeader agg={agg} showPrices={prefs.show_prices} openClaims={openClaims} />
-      )}
 
       <Modal
         visible={showFilters}
@@ -1947,16 +1959,34 @@ const styles = themedStyles((c) => ({
     letterSpacing: 0.5,
   },
   searchRow: { paddingHorizontal: 12, marginTop: 14, marginBottom: 12, flexDirection: "row", alignItems: "center", gap: 8, position: "relative" },
-  summaryToggleWrap: {
+  // Divider + inset for the summary that lives INSIDE the search panel.
+  searchSummaryInset: {
+    marginTop: 10,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: c.borderSubtle,
+  },
+  // Invisible tap-link anchored to the bottom edge of the search panel.
+  searchAccordionLink: {
     position: "absolute",
     left: 0, right: 0, bottom: 0,
+    height: 22,
     alignItems: "center",
     justifyContent: "center",
   },
-  summaryToggleBtn: {
-    width: 150, height: 16, backgroundColor: "transparent",
+  searchAccordionHit: { width: 140, height: 22, backgroundColor: "transparent" },
+  // Plain-theme expandable search container (column; grows to hold the summary).
+  searchBoxCol: {
+    backgroundColor: c.surfaceAlt,
+    borderColor: c.border,
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    paddingTop: 6,
+    paddingBottom: 18,
+    borderRadius: theme.radii.md,
+    ...(theme.elevation.inset as object),
   },
-  summaryAccordionBody: { paddingHorizontal: 16, paddingTop: 8, paddingBottom: 4 },
+  searchRowPlainInner: { flexDirection: "row", alignItems: "center", height: 40, gap: 8 },
   rowDealer: {
     color: c.textMuted,
     fontSize: 8,
