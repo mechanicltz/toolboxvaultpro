@@ -935,17 +935,19 @@ export default function InventoryScreen() {
 
       {prefs.show_details_summary && agg && (
         isIndustrial ? (
-          <TbvFrame
-            source={winSrc}
-            capInsets={winCap}
-            frameScale={steelScale}
-            style={styles.summaryFrameSkin}
-            padX={22}
-            padTop={12}
-            padBottom={14}
-          >
-            <SummaryHeader agg={agg} showPrices={prefs.show_prices} openClaims={openClaims} framed />
-          </TbvFrame>
+          <View style={{ paddingHorizontal: 12 }}>
+            <TbvFrame
+              source={winSrc}
+              capInsets={winCap}
+              frameScale={steelScale}
+              style={styles.summaryFrameSkin}
+              padX={22}
+              padTop={12}
+              padBottom={14}
+            >
+              <SummaryHeader agg={agg} showPrices={prefs.show_prices} openClaims={openClaims} framed />
+            </TbvFrame>
+          </View>
         ) : (
           <SummaryHeader agg={agg} showPrices={prefs.show_prices} openClaims={openClaims} />
         )
@@ -1829,7 +1831,7 @@ const styles = themedStyles((c) => ({
   searchFrameSkin: { minHeight: 52, justifyContent: "center" },
   // Detail Summary Header (skinned): inset from screen edges so the metal
   // window frame doesn't run the full device width (was edge-to-edge / too wide).
-  summaryFrameSkin: { marginHorizontal: 12, marginBottom: 8 },
+  summaryFrameSkin: { marginBottom: 8 },
   searchBoxInner: {
     flexDirection: "row",
     alignItems: "center",
