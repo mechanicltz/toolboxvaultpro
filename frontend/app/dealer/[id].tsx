@@ -80,6 +80,7 @@ export default function DealerDetail() {
   // expanded. Values: "accounts" | `agent:<id>` | null.
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
   const [showMenu, setShowMenu] = useState(false);
+  const [menuAgent, setMenuAgent] = useState<any>(null);
   const canImportContacts = isDeviceContactsAvailable();
 
   const filteredDeviceContacts = useMemo(() => {
@@ -561,71 +562,20 @@ export default function DealerDetail() {
                   </TouchableOpacity>
                   {isOpen && (
                     <AgentSubShell>
-                      {/* Top action toolbar — contact + manage icons on their
-                          own row, right-aligned, above the agent name. */}
-                      <View style={styles.agentTopActions}>
-                        {!!a.phone && (
-                          <ContactIconButton
-                            type="call"
-                            size={34}
-                            testID={`agent-call-${a.id}`}
-                            onPress={() => openPhone(a.phone)}
-                          />
-                        )}
-                        {!!a.phone && (
-                          <ContactIconButton
-                            type="text"
-                            size={34}
-                            testID={`agent-text-${a.id}`}
-                            onPress={() => openSms(a.phone)}
-                          />
-                        )}
-                        <ContactIconButton
-                          type="share"
-                          size={34}
-                          testID={`agent-share-${a.id}`}
-                          onPress={() =>
-                            shareOrSaveAgent(
-                              {
-                                name: a.name,
-                                phone: a.phone,
-                                email: a.email,
-                                location: a.location,
-                                notes: a.notes,
-                              },
-                              dealer?.name,
-                            )
-                          }
-                        />
+                      {/* Business-card header — agent name + 3-dots menu
+                          (call / text / email / edit / share / delete). */}
+                      <View style={styles.bizNameRow}>
+                        <Text style={[styles.bizName, { flex: 1 }]} numberOfLines={1}>{a.name}</Text>
                         <TouchableOpacity
-                          testID={`edit-agent-${a.id}`}
-                          style={styles.agentIconBtn}
-                          hitSlop={6}
-                          onPress={() =>
-                            setAgentForm({
-                              id: a.id,
-                              name: a.name || "",
-                              phone: a.phone || "",
-                              email: a.email || "",
-                              location: a.location || "",
-                              notes: a.notes || "",
-                            })
-                          }
+                          testID={`agent-menu-${a.id}`}
+                          onPress={() => setMenuAgent(a)}
+                          hitSlop={8}
+                          style={styles.menuDotsBtn}
+                          activeOpacity={0.7}
                         >
-                          <Ionicons name="create-outline" size={18} color={theme.colors.accent} />
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                          testID={`remove-agent-${a.id}`}
-                          style={[styles.agentIconBtn, { borderColor: theme.colors.danger }]}
-                          hitSlop={6}
-                          onPress={() => removeAgent(a.id, a.name)}
-                        >
-                          <Ionicons name="trash-outline" size={18} color={theme.colors.danger} />
+                          <Ionicons name="ellipsis-vertical" size={20} color={theme.colors.accent} />
                         </TouchableOpacity>
                       </View>
-
-                      {/* Business-card header — agent name */}
-                      <Text style={styles.bizName} numberOfLines={1}>{a.name}</Text>
                       {isCurrent && <Text style={styles.bizBadge}>CURRENT AGENT</Text>}
 
                       {/* Phone — plain text (call/text actions live in the footer) */}
@@ -985,6 +935,23 @@ export default function DealerDetail() {
           { label: "Delete dealer", icon: "trash-outline", onPress: removeDealer, color: theme.colors.danger, dividerAbove: true, testID: "menu-delete-dealer" },
         ]}
       />
+
+      <KebabMenu
+        visible={!!menuAgent}
+        onClose={() => setMenuAgent(null)}
+        items={menuAgent ? [
+          ...(menuAgent.phone ? [
+            { label: "Call", icon: "call-outline" as const, onPress: () => openPhone(menuAgent.phone), testID: "agent-menu-call" },
+            { label: "Text", icon: "chatbubble-outline" as const, onPress: () => openSms(menuAgent.phone), testID: "agent-menu-text" },
+          ] : []),
+          ...(menuAgent.email ? [
+            { label: "Email", icon: "mail-outline" as const, onPress: () => Linking.openURL(`mailto:${menuAgent.email}`), testID: "agent-menu-email" },
+          ] : []),
+          { label: "Edit agent", icon: "create-outline" as const, onPress: () => setAgentForm({ id: menuAgent.id, name: menuAgent.name || "", phone: menuAgent.phone || "", email: menuAgent.email || "", location: menuAgent.location || "", notes: menuAgent.notes || "" }), testID: "agent-menu-edit" },
+          { label: "Share agent", icon: "share-social-outline" as const, onPress: () => shareOrSaveAgent({ name: menuAgent.name, phone: menuAgent.phone, email: menuAgent.email, location: menuAgent.location, notes: menuAgent.notes }, dealer?.name), testID: "agent-menu-share" },
+          { label: "Delete agent", icon: "trash-outline" as const, color: theme.colors.danger, dividerAbove: true, onPress: () => removeAgent(menuAgent.id, menuAgent.name), testID: "agent-menu-delete" },
+        ] : []}
+      />
     </SafeAreaView>
   );
 }
@@ -1086,6 +1053,7 @@ const styles = themedStyles((c) => ({
   container: { flex: 1, backgroundColor: c.canvas },
   detailActionsRowDealer: { flexDirection: "row", justifyContent: "flex-end", gap: 8, paddingHorizontal: 16, paddingTop: 10, paddingBottom: 4 },
   menuDotsBtn: { width: 40, height: 40, alignItems: "center", justifyContent: "center", borderRadius: 20 },
+  bizNameRow: { flexDirection: "row", alignItems: "center", gap: 6 },
   topBar: {
     flexDirection: "row",
     justifyContent: "space-between",
