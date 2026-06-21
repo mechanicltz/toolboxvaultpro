@@ -26,17 +26,21 @@ export interface TbvHeaderProps {
   /** Optional right-side action button. */
   right?: { icon: keyof typeof Ionicons.glyphMap; onPress: () => void; testID?: string };
   style?: StyleProp<ViewStyle>;
+  /** Override the steel title colour (e.g. Plain themes use the palette text). */
+  titleColor?: string;
 }
 
-export function TbvHeader({ title, accent, size = 30, onBack, right, style }: TbvHeaderProps) {
+export function TbvHeader({ title, accent, size = 30, onBack, right, style, titleColor }: TbvHeaderProps) {
   // Accent follows the active industrial colour variant (orange ↔ pink).
   const accentColor = VARIANT_ACCENT[getIndustrialVariant()];
+  const chevronColor = titleColor ?? accentColor;
+  const faceColor = titleColor ?? TBV.steel;
   return (
     <View style={[styles.row, style]}>
       <View style={styles.side}>
         {onBack ? (
           <Pressable onPress={onBack} hitSlop={12} style={styles.iconBtn} testID="tbv-back">
-            <Ionicons name="chevron-back" size={26} color={accentColor} />
+            <Ionicons name="chevron-back" size={26} color={chevronColor} />
           </Pressable>
         ) : null}
       </View>
@@ -54,7 +58,7 @@ export function TbvHeader({ title, accent, size = 30, onBack, right, style }: Tb
           <Text
             numberOfLines={1}
             allowFontScaling={false}
-            style={[styles.face, { fontSize: size }]}
+            style={[styles.face, { fontSize: size, color: faceColor }]}
           >
             {title.toUpperCase()}
             {accent ? <Text style={{ color: accentColor }}>{` ${accent.toUpperCase()}`}</Text> : null}

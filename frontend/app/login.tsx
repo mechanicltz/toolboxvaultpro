@@ -649,19 +649,24 @@ export default function LoginScreen() {
 // Tab button — width is panel-relative, passed in from parent
 // =====================================================================
 function TabButton({
-  label, icon, active, onPress, testID, activeSkin, inactiveSkin, width, steel, tint,
+  label, icon, active, onPress, testID, activeSkin, inactiveSkin, width, kind, tint, c,
 }: {
   label: string; icon?: any; active: boolean; onPress: () => void;
   testID?: string; activeSkin?: any; inactiveSkin?: any; width: number;
-  steel?: boolean; tint?: string;
+  kind: "plain" | "steel" | "iron"; tint?: string; c?: any;
 }) {
+  const inactiveTextColor = kind === "plain" ? (c?.textSecondary ?? "#C8C8C8") : "#C8C8C8";
   const inner = (
     <View style={[styles.row, { gap: 5, paddingHorizontal: 6 }]}>
       {icon ? (
-        <Ionicons name={icon} size={13} color={active ? "#FFFFFF" : "#C8C8C8"} />
+        <Ionicons name={icon} size={13} color={active ? "#FFFFFF" : inactiveTextColor} />
       ) : null}
       <Text
-        style={[styles.tabText, active ? styles.tabTextActive : styles.tabTextInactive]}
+        style={[
+          styles.tabText,
+          active ? styles.tabTextActive : styles.tabTextInactive,
+          !active && kind === "plain" && { color: inactiveTextColor, textShadowColor: "transparent" },
+        ]}
         numberOfLines={1}
         adjustsFontSizeToFit
         minimumFontScale={0.6}
@@ -670,40 +675,48 @@ function TabButton({
       </Text>
     </View>
   );
-  if (steel) {
+
+  // Iron Forge keeps the textured orange/variant tab art.
+  if (kind === "iron") {
     return (
       <Pressable
         onPress={onPress}
         testID={testID}
-        style={({ pressed }) => [
-          styles.center,
-          styles.steelTab,
-          {
-            width,
-            backgroundColor: active ? (tint ?? "#1FC3E8") : "rgba(12,14,17,0.55)",
-            borderColor: active ? (tint ?? "#1FC3E8") : "rgba(255,255,255,0.18)",
-            opacity: pressed ? 0.85 : 1,
-          },
-        ]}
+        style={({ pressed }) => [{ width, height: "100%", opacity: pressed ? 0.85 : 1 }]}
       >
-        {inner}
+        <ImageBackground
+          source={active ? activeSkin : inactiveSkin}
+          style={styles.center}
+          imageStyle={styles.fillImage}
+          resizeMode="stretch"
+        >
+          {inner}
+        </ImageBackground>
       </Pressable>
     );
   }
+
+  // Steel + Plain: a clean solid tab tinted to the active theme (NO orange art).
+  const activeBg = kind === "plain" ? (c?.accent ?? tint ?? "#1FC3E8") : (tint ?? "#1FC3E8");
+  const inactiveBg = kind === "plain" ? (c?.bgSecondary ?? "rgba(12,14,17,0.55)") : "rgba(12,14,17,0.55)";
+  const activeBorder = kind === "plain" ? (c?.accent ?? tint ?? "#1FC3E8") : (tint ?? "#1FC3E8");
+  const inactiveBorder = kind === "plain" ? (c?.border ?? "rgba(255,255,255,0.18)") : "rgba(255,255,255,0.18)";
   return (
     <Pressable
       onPress={onPress}
       testID={testID}
-      style={({ pressed }) => [{ width, height: "100%", opacity: pressed ? 0.85 : 1 }]}
+      style={({ pressed }) => [
+        styles.center,
+        styles.steelTab,
+        {
+          width,
+          backgroundColor: active ? activeBg : inactiveBg,
+          borderColor: active ? activeBorder : inactiveBorder,
+          opacity: pressed ? 0.85 : 1,
+        },
+      ]}
     >
-      <ImageBackground
-        source={active ? activeSkin : inactiveSkin}
-        style={styles.center}
-        imageStyle={styles.fillImage}
-        resizeMode="stretch"
-      >
-        {inner}
-      </ImageBackground>
+      {inner}
     </Pressable>
   );
 }
@@ -714,25 +727,31 @@ function TabButton({
 // keeps the original orange industrial input skin. Module scope so it never
 // remounts on keystroke (which would reload the PNG and flicker).
 // =====================================================================
-function FieldShell({ steel, tint, width, height, children }: {
-  steel?: boolean; tint: string; width: number; height: number; children: React.ReactNode;
+function FieldShell({ kind, tint, width, height, c, children }: {
+  kind: "plain" | "steel" | "iron"; tint: string; width: number; height: number;
+  c?: any; children: React.ReactNode;
 }) {
-  if (steel) {
+  // Iron Forge keeps the textured orange input skin.
+  if (kind === "iron") {
     return (
-      <View style={[styles.steelField, { width, height, borderColor: tint + "AA" }]}>
+      <ImageBackground
+        source={SKIN.input}
+        style={{ width, height, justifyContent: "center" }}
+        imageStyle={styles.fillImage}
+        resizeMode="stretch"
+      >
         {children}
-      </View>
+      </ImageBackground>
     );
   }
+  // Steel + Plain: a clean recessed slot. Steel → dark fill + accent hairline;
+  // Plain → the theme's surface colour + border (matches every other screen).
+  const bg = kind === "plain" ? (c?.bgSecondary ?? "rgba(12,14,17,0.72)") : "rgba(12,14,17,0.72)";
+  const border = kind === "plain" ? (c?.border ?? tint + "AA") : tint + "AA";
   return (
-    <ImageBackground
-      source={SKIN.input}
-      style={{ width, height, justifyContent: "center" }}
-      imageStyle={styles.fillImage}
-      resizeMode="stretch"
-    >
+    <View style={[styles.steelField, { width, height, backgroundColor: bg, borderColor: border }]}>
       {children}
-    </ImageBackground>
+    </View>
   );
 }
 

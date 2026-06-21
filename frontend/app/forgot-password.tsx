@@ -40,13 +40,35 @@ import { useAuth } from "../src/AuthContext";
 import { SKIN, AR, TBV, clamp, VARIANT_ACCENT } from "../src/tbv/skins";
 import { TbvHeader } from "../src/tbv/TbvHeader";
 import { useTbvSkinsReady } from "../src/tbv/useTbvSkins";
-import { useSkin } from "../src/themeContext";
+import { useSkin, useColors } from "../src/themeContext";
 import { SILVER_SRC_BY_COLOR } from "../src/tbv/silver";
 import { BUTTON_SRC_BY_COLOR } from "../src/tbv/button";
 import { useSteelPanelFrame } from "../src/tbv/steel";
 import TbvFrame from "../src/tbv/components/TbvFrame";
 
 type Step = "request" | "verify";
+
+// Screen backdrop. Plain (Light/Dark) themes paint a flat theme colour like
+// every other in-app screen; Steel and Iron Forge keep the industrial photo.
+function ScreenBg({
+  plain,
+  bg,
+  children,
+}: {
+  plain: boolean;
+  bg: string;
+  children: ReactNode;
+}) {
+  if (plain) {
+    return <View style={[styles.bg, { backgroundColor: bg }]}>{children}</View>;
+  }
+  return (
+    <ImageBackground source={SKIN.bg} style={styles.bg} resizeMode="cover">
+      <View style={styles.veil} />
+      {children}
+    </ImageBackground>
+  );
+}
 
 export default function ForgotPasswordScreen() {
   const router = useRouter();
@@ -66,20 +88,23 @@ export default function ForgotPasswordScreen() {
   const [box, setBox] = useState({ w: win.width, h: win.height });
   const [measuredInnerH, setMeasuredInnerH] = useState(0);
   const skinsReady = useTbvSkinsReady();
+  const c = useColors();
   const { metalStyle, industrialVariant, skin, appearance } = useSkin();
   const isPlainTheme = skin === "plain";
-  const isSteel = metalStyle === "steel" || isPlainTheme;
+  const isSteel = !isPlainTheme && metalStyle === "steel";
+  const kind: "plain" | "steel" | "iron" = isPlainTheme ? "plain" : isSteel ? "steel" : "iron";
   const headerVariant = isPlainTheme
     ? (appearance === "light" ? "arctic" : "orange")
     : industrialVariant;
   const steelPanel = useSteelPanelFrame();
   const panelSrc = isSteel ? SILVER_SRC_BY_COLOR[headerVariant] : SKIN.panel;
 
-  // Accent tint. On Steel/Plain the inner controls render as brushed-steel
-  // controls tinted to the active Steel colour; Iron Forge keeps its orange.
-  const TINT = isSteel
-    ? VARIANT_ACCENT[headerVariant]
-    : (industrialVariant === "orange" ? "#FF8533" : VARIANT_ACCENT[industrialVariant]);
+  // Accent tint. Plain → theme accent; Steel → steel colour; Iron → orange.
+  const TINT = isPlainTheme
+    ? c.accent
+    : isSteel
+      ? VARIANT_ACCENT[headerVariant]
+      : (industrialVariant === "orange" ? "#FF8533" : VARIANT_ACCENT[industrialVariant]);
   const steelBtnSrc = BUTTON_SRC_BY_COLOR[headerVariant] ?? BUTTON_SRC_BY_COLOR.orange;
 
   const [step, setStep] = useState<Step>("request");
@@ -193,20 +218,18 @@ export default function ForgotPasswordScreen() {
   // ---------- font + skin gate ----------
   if ((!fontsLoaded && !fontError) || !skinsReady) {
     return (
-      <ImageBackground source={SKIN.bg} style={styles.bg} resizeMode="cover">
-        <View style={styles.veil} />
+      <ScreenBg plain={isPlainTheme} bg={c.bg}>
         <View style={styles.loading}>
           <ActivityIndicator color={TINT} size="large" />
         </View>
-      </ImageBackground>
+      </ScreenBg>
     );
   }
 
   const goBack = () => (step === "verify" ? (setStep("request"), setMeasuredInnerH(0)) : router.back());
 
   return (
-    <ImageBackground source={SKIN.bg} style={styles.bg} resizeMode="cover">
-      <View style={styles.veil} />
+    <ScreenBg plain={isPlainTheme} bg={c.bg}>
       <SafeAreaView style={{ flex: 1 }} edges={["top", "bottom"]}>
         <View
           style={{ flex: 1 }}
@@ -235,11 +258,18 @@ export default function ForgotPasswordScreen() {
                 size={headerSize}
                 onBack={goBack}
                 style={{ width: WORK_W }}
+                titleColor={isPlainTheme ? c.textPrimary : undefined}
               />
 
               {/* ===================== PANEL ===================== */}
-              <View style={{ width: panelW, height: panelH, overflow: "hidden" }}>
-                {isSteel ? (
+              <View
+                style={
+                  isPlainTheme
+                    ? { width: panelW, minHeight: panelH, backgroundColor: c.bgSecondary, borderColor: c.border, borderWidth: 1, borderRadius: 14, shadowColor: "#000", shadowOpacity: 0.18, shadowRadius: 10, shadowOffset: { width: 0, height: 4 }, elevation: 4 }
+                    : { width: panelW, height: panelH, overflow: "hidden" }
+                }
+              >
+                {kind === "steel" ? (
                   <View style={{ position: "absolute", top: 0, left: 0, width: panelW }}>
                     <TbvFrame
                       source={panelSrc}
@@ -252,13 +282,13 @@ export default function ForgotPasswordScreen() {
                       <View style={{ height: panelH }} />
                     </TbvFrame>
                   </View>
-                ) : (
+                ) : kind === "iron" ? (
                   <Image
                     source={panelSrc}
                     style={{ position: "absolute", top: 0, left: 0, width: panelW, height: panelH }}
                     resizeMode="stretch"
                   />
-                )}
+                ) : null}
                 <View
                   style={{ flex: 1, paddingHorizontal: padX, paddingTop: padTop, paddingBottom: padBot }}
                 >
@@ -272,19 +302,18 @@ export default function ForgotPasswordScreen() {
                     {step === "request" ? (
                       <>
                         <Text style={[styles.subhead, { color: TINT }]}>RESET PASSWORD</Text>
-                        <Text style={styles.intro}>
+                        <Text style={[styles.intro, isPlainTheme && { color: c.textSecondary }]}>
                           Enter the email associated with your account and we&apos;ll send a 6-digit
                           reset code.
                         </Text>
-
                         <View style={[styles.fieldGroup, { marginTop: innerGap, paddingHorizontal: fieldInset }]}>
-                          <Text style={styles.label}>EMAIL ADDRESS</Text>
-                          <FieldShell steel={isSteel} tint={TINT} width={fieldW} height={inputH}>
+                          <Text style={[styles.label, isPlainTheme && { color: c.textSecondary }]}>EMAIL ADDRESS</Text>
+                          <FieldShell kind={kind} c={c} tint={TINT} width={fieldW} height={inputH}>
                             <View style={styles.inputInner}>
                               <Ionicons name="mail" size={18} color={TINT} />
                               <TextInput
                                 testID="fp-email"
-                                style={styles.input}
+                                style={[styles.input, isPlainTheme && { color: c.textPrimary }]}
                                 placeholder="you@example.com"
                                 placeholderTextColor={TBV.placeholder}
                                 value={email}
@@ -299,7 +328,8 @@ export default function ForgotPasswordScreen() {
 
                         <PrimaryButton
                           label="SEND RESET CODE"
-                          steel={isSteel}
+                          kind={kind}
+                          c={c}
                           src={isSteel ? steelBtnSrc : SKIN.btnPrimary}
                           onPress={submitEmail}
                           busy={busy}
@@ -310,18 +340,18 @@ export default function ForgotPasswordScreen() {
                       </>
                     ) : (
                       <>
-                        <Text style={styles.intro}>
+                        <Text style={[styles.intro, isPlainTheme && { color: c.textSecondary }]}>
                           Enter the 6-digit code we sent to{" "}
                           <Text style={[styles.introEmail, { color: TINT }]}>{email}</Text>, then choose a new password.
                         </Text>
 
                         {/* code */}
                         <View style={[styles.fieldGroup, { marginTop: innerGap, paddingHorizontal: fieldInset }]}>
-                          <Text style={styles.label}>6-DIGIT CODE</Text>
-                          <FieldShell steel={isSteel} tint={TINT} width={fieldW} height={inputH}>
+                          <Text style={[styles.label, isPlainTheme && { color: c.textSecondary }]}>6-DIGIT CODE</Text>
+                          <FieldShell kind={kind} c={c} tint={TINT} width={fieldW} height={inputH}>
                             <TextInput
                               testID="fp-code"
-                              style={[styles.input, styles.codeInput]}
+                              style={[styles.input, styles.codeInput, isPlainTheme && { color: c.textPrimary }]}
                               placeholder="000000"
                               placeholderTextColor={TBV.placeholder}
                               value={code}
@@ -334,8 +364,8 @@ export default function ForgotPasswordScreen() {
 
                         {/* new password */}
                         <View style={[styles.fieldGroup, { marginTop: innerGap, paddingHorizontal: fieldInset }]}>
-                          <Text style={styles.label}>NEW PASSWORD</Text>
-                          <FieldShell steel={isSteel} tint={TINT} width={fieldW} height={inputH}>
+                          <Text style={[styles.label, isPlainTheme && { color: c.textSecondary }]}>NEW PASSWORD</Text>
+                          <FieldShell kind={kind} c={c} tint={TINT} width={fieldW} height={inputH}>
                             <View style={styles.inputInner}>
                               <Ionicons name="lock-closed" size={18} color={TINT} />
                               <TextInput
@@ -362,13 +392,13 @@ export default function ForgotPasswordScreen() {
 
                         {/* confirm password */}
                         <View style={[styles.fieldGroup, { marginTop: innerGap, paddingHorizontal: fieldInset }]}>
-                          <Text style={styles.label}>CONFIRM NEW PASSWORD</Text>
-                          <FieldShell steel={isSteel} tint={TINT} width={fieldW} height={inputH}>
+                          <Text style={[styles.label, isPlainTheme && { color: c.textSecondary }]}>CONFIRM NEW PASSWORD</Text>
+                          <FieldShell kind={kind} c={c} tint={TINT} width={fieldW} height={inputH}>
                             <View style={styles.inputInner}>
                               <Ionicons name="lock-closed" size={18} color={TINT} />
                               <TextInput
                                 testID="fp-confirm-password"
-                                style={styles.input}
+                                style={[styles.input, isPlainTheme && { color: c.textPrimary }]}
                                 placeholder="Re-enter new password"
                                 placeholderTextColor={TBV.placeholder}
                                 value={confirmPassword}
@@ -384,7 +414,8 @@ export default function ForgotPasswordScreen() {
                         <PrimaryButton
                           label="RESET PASSWORD"
                           icon="checkmark-circle"
-                          steel={isSteel}
+                          kind={kind}
+                          c={c}
                           src={isSteel ? steelBtnSrc : SKIN.btnPrimary}
                           onPress={submitCode}
                           busy={busy}
@@ -414,7 +445,7 @@ export default function ForgotPasswordScreen() {
             </ScrollView>
           </View>
       </SafeAreaView>
-    </ImageBackground>
+    </ScreenBg>
   );
 }
 
@@ -434,7 +465,8 @@ function PrimaryButton({
   width,
   height,
   marginTop,
-  steel,
+  kind,
+  c,
   src,
 }: {
   label: string;
@@ -444,10 +476,44 @@ function PrimaryButton({
   width: number;
   height: number;
   marginTop: number;
-  steel?: boolean;
+  kind: "plain" | "steel" | "iron";
+  c?: any;
   src?: any;
 }) {
-  const labelColor = steel ? "#FFFFFF" : TBV.ink;
+  // Plain (Light/Dark) themes use a flat themed button — no metal/orange art.
+  if (kind === "plain") {
+    return (
+      <Pressable onPress={onPress} disabled={busy} style={{ marginTop }}>
+        <View
+          style={{
+            width,
+            height,
+            justifyContent: "center",
+            alignItems: "center",
+            backgroundColor: c?.bgSecondary,
+            borderRadius: 10,
+            borderWidth: 1,
+            borderColor: c?.border,
+            shadowColor: "#000",
+            shadowOpacity: 0.18,
+            shadowRadius: 8,
+            shadowOffset: { width: 0, height: 3 },
+            elevation: 3,
+          }}
+        >
+          {busy ? (
+            <ActivityIndicator color={c?.accent} />
+          ) : (
+            <View style={styles.row}>
+              {icon ? <Ionicons name={icon} size={18} color={c?.accent} /> : null}
+              <Text style={[styles.submitText, { color: c?.accent }]}>{label}</Text>
+            </View>
+          )}
+        </View>
+      </Pressable>
+    );
+  }
+  const labelColor = kind === "steel" ? "#FFFFFF" : TBV.ink;
   return (
     <Pressable onPress={onPress} disabled={busy} style={{ marginTop }}>
       <ImageBackground
@@ -461,7 +527,7 @@ function PrimaryButton({
         ) : (
           <View style={styles.row}>
             {icon ? <Ionicons name={icon} size={18} color={labelColor} /> : null}
-            <Text style={[styles.submitText, steel && { color: "#FFFFFF" }]}>{label}</Text>
+            <Text style={[styles.submitText, kind === "steel" && { color: "#FFFFFF" }]}>{label}</Text>
           </View>
         )}
       </ImageBackground>
@@ -469,27 +535,29 @@ function PrimaryButton({
   );
 }
 
-// FieldShell — text-input slot. Steel/Plain: clean recessed brushed-steel slot
-// (dark fill + accent hairline). Iron Forge: original orange industrial skin.
-function FieldShell({ steel, tint, width, height, children }: {
-  steel?: boolean; tint: string; width: number; height: number; children: ReactNode;
+// FieldShell — text-input slot. Steel: dark recessed slot + accent hairline.
+// Plain: the theme's surface colour + border. Iron Forge: orange industrial skin.
+function FieldShell({ kind, tint, width, height, c, children }: {
+  kind: "plain" | "steel" | "iron"; tint: string; width: number; height: number; c?: any; children: ReactNode;
 }) {
-  if (steel) {
+  if (kind === "iron") {
     return (
-      <View style={[styles.steelField, { width, height, borderColor: tint + "AA" }]}>
+      <ImageBackground
+        source={SKIN.input}
+        style={{ width, height, justifyContent: "center" }}
+        imageStyle={styles.fillImage}
+        resizeMode="stretch"
+      >
         {children}
-      </View>
+      </ImageBackground>
     );
   }
+  const bg = kind === "plain" ? (c?.bgSecondary ?? "rgba(12,14,17,0.72)") : "rgba(12,14,17,0.72)";
+  const border = kind === "plain" ? (c?.border ?? tint + "AA") : tint + "AA";
   return (
-    <ImageBackground
-      source={SKIN.input}
-      style={{ width, height, justifyContent: "center" }}
-      imageStyle={styles.fillImage}
-      resizeMode="stretch"
-    >
+    <View style={[styles.steelField, { width, height, backgroundColor: bg, borderColor: border }]}>
       {children}
-    </ImageBackground>
+    </View>
   );
 }
 
