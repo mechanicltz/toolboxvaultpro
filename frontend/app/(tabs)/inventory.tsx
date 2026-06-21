@@ -1954,10 +1954,10 @@ const styles = themedStyles((c) => ({
     fontWeight: "700",
     letterSpacing: 0.5,
   },
-  searchRow: { paddingHorizontal: 12, marginTop: 14, marginBottom: 24, flexDirection: "row", alignItems: "center", gap: 8 },
+  searchRow: { paddingHorizontal: 12, marginTop: 14, marginBottom: 32, flexDirection: "row", alignItems: "center", gap: 8 },
   summaryToggleWrap: {
     position: "absolute",
-    left: 0, right: 0, bottom: -9,
+    left: 0, right: 0, bottom: -18,
     alignItems: "center",
     justifyContent: "center",
   },
