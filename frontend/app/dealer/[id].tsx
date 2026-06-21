@@ -41,6 +41,7 @@ import { EmailLink } from "../../src/components/EmailLink";
 import { shareOrSaveAgent } from "../../src/utils/agentShare";
 import { ContactIconButton, ContactIconImage } from "../../src/components/ContactIcons";
 import { IndustrialBanner } from "../../src/components/IndustrialBanner";
+import { KebabMenu } from "../../src/components/KebabMenu";
 import { PillButton } from "../../src/components/PillButton";
 import { DealerLogo } from "../../src/components/DealerLogo";
 import { STOCK_LOGO_OPTIONS, isDefaultLogo, DEALER_LOGO_SLOT } from "../../src/dealerLogos";
@@ -233,6 +234,28 @@ export default function DealerDetail() {
 
   const atAgentLimit = false;
 
+  // 3-dots menu state + helpers (Edit / Add agent / Delete now live here).
+  const [showMenu, setShowMenu] = useState(false);
+  const openEditDealer = () => {
+    setEditForm({
+      name: dealer.name,
+      logo: dealer.logo || "",
+      phone: dealer.phone || "",
+      website: dealer.website || "",
+      address: dealer.address || "",
+      notes: dealer.notes || "",
+      warranty_contact: dealer.warranty_contact || "",
+      tech_support_contact: dealer.tech_support_contact || "",
+      customer_support_contact: dealer.customer_support_contact || "",
+      route_frequency: dealer.route_frequency || "N/A",
+      route_day_of_week: dealer.route_day_of_week || "",
+      route_anchor_date: dealer.route_anchor_date || "",
+    });
+    setEditing(true);
+  };
+  const openAddAgent = () =>
+    setAgentForm({ name: "", phone: "", email: "", location: "", notes: "" });
+
   const setCurrent = async (agentId: string) => {
     const ok = await confirm("Change current agent?", "Past agents are kept in history.", "Set as current");
     if (!ok) return;
@@ -312,39 +335,18 @@ export default function DealerDetail() {
         title={dealer.name}
         subtitle="Dealer Details"
         onBack={() => router.back()}
+        rightSlot={
+          <TouchableOpacity
+            testID="dealer-menu-btn"
+            onPress={() => setShowMenu(true)}
+            hitSlop={10}
+            style={styles.menuDotsBtn}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="ellipsis-vertical" size={22} color={theme.colors.accent} />
+          </TouchableOpacity>
+        }
       />
-      <View style={styles.detailActionsRowDealer}>
-        <PillButton
-          testID="edit-dealer-btn"
-          label="EDIT"
-          icon="create-outline"
-          variant="active"
-          onPress={() => {
-            setEditForm({
-              name: dealer.name,
-              logo: dealer.logo || "",
-              phone: dealer.phone || "",
-              website: dealer.website || "",
-              address: dealer.address || "",
-              notes: dealer.notes || "",
-              warranty_contact: dealer.warranty_contact || "",
-              tech_support_contact: dealer.tech_support_contact || "",
-              customer_support_contact: dealer.customer_support_contact || "",
-              route_frequency: dealer.route_frequency || "N/A",
-              route_day_of_week: dealer.route_day_of_week || "",
-              route_anchor_date: dealer.route_anchor_date || "",
-            });
-            setEditing(true);
-          }}
-        />
-        <PillButton
-          testID="delete-dealer-btn"
-          label="DELETE"
-          icon="trash-outline"
-          variant="danger"
-          onPress={removeDealer}
-        />
-      </View>
 
       <ScrollView
         style={{ backgroundColor: theme.colors.canvas }}
@@ -485,15 +487,6 @@ export default function DealerDetail() {
             is an expandable row that opens a ShadowBox sub-card business card. */}
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionLabelStrong}>AGENTS ({allAgents.length})</Text>
-          <PillButton
-            testID="add-agent-btn"
-            label="ADD"
-            icon="add"
-            variant="active"
-            onPress={() => {
-              setAgentForm({ name: "", phone: "", email: "", location: "", notes: "" });
-            }}
-          />
         </View>
         <CardShell plainStyle={styles.detailsBox} testID="dealer-agents-box">
             {allAgents.length === 0 && (
@@ -982,6 +975,16 @@ export default function DealerDetail() {
           </SafeAreaView>
         </View>
       </Modal>
+
+      <KebabMenu
+        visible={showMenu}
+        onClose={() => setShowMenu(false)}
+        items={[
+          { label: "Edit dealer", icon: "create-outline", onPress: openEditDealer, testID: "menu-edit-dealer" },
+          { label: "Add agent", icon: "person-add-outline", onPress: openAddAgent, testID: "menu-add-agent" },
+          { label: "Delete dealer", icon: "trash-outline", onPress: removeDealer, color: theme.colors.danger, dividerAbove: true, testID: "menu-delete-dealer" },
+        ]}
+      />
     </SafeAreaView>
   );
 }
@@ -1082,6 +1085,7 @@ function CopyableRow({
 const styles = themedStyles((c) => ({
   container: { flex: 1, backgroundColor: c.canvas },
   detailActionsRowDealer: { flexDirection: "row", justifyContent: "flex-end", gap: 8, paddingHorizontal: 16, paddingTop: 10, paddingBottom: 4 },
+  menuDotsBtn: { width: 40, height: 40, alignItems: "center", justifyContent: "center", borderRadius: 20 },
   topBar: {
     flexDirection: "row",
     justifyContent: "space-between",

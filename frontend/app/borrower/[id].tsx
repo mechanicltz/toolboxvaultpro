@@ -16,6 +16,7 @@ import { EmailLink } from "../../src/components/EmailLink";
 
 import { themedStyles, useSkin } from "../../src/themeContext";
 import { IndustrialBanner } from "../../src/components/IndustrialBanner";
+import { KebabMenu } from "../../src/components/KebabMenu";
 import { PillButton } from "../../src/components/PillButton";
 import { ShadowBox, ShadowBoxMini } from "../../src/components/ShadowBox";
 import { SKIN, CAP } from "../../src/tbv/skins";
@@ -39,6 +40,7 @@ export default function BorrowerHistory() {
   const [editForm, setEditForm] = useState<{ name: string; contact: string; notes: string }>({ name: "", contact: "", notes: "" });
   const [saving, setSaving] = useState(false);
   const [showShareSheet, setShowShareSheet] = useState(false);
+  const [showMenu, setShowMenu] = useState(false);
 
   const load = useCallback(async () => {
     if (!id) return;
@@ -299,30 +301,18 @@ export default function BorrowerHistory() {
         title={b.name}
         subtitle="Contact Details"
         onBack={() => router.back()}
+        rightSlot={
+          <TouchableOpacity
+            testID="borrower-menu-btn"
+            onPress={() => setShowMenu(true)}
+            hitSlop={10}
+            style={styles.menuDotsBtn}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="ellipsis-vertical" size={22} color={theme.colors.accent} />
+          </TouchableOpacity>
+        }
       />
-      <View style={styles.detailActionsRow}>
-        <PillButton
-          testID="edit-borrower-btn"
-          label="EDIT"
-          icon="create-outline"
-          variant="active"
-          onPress={openEditModal}
-        />
-        <PillButton
-          testID="share-borrower-btn"
-          label="SHARE"
-          icon="share-social-outline"
-          variant="active"
-          onPress={handleShare}
-        />
-        <PillButton
-          testID="delete-borrower-btn"
-          label="DELETE"
-          icon="trash-outline"
-          variant="danger"
-          onPress={handleDelete}
-        />
-      </View>
 
       <ScrollView contentContainerStyle={{ paddingBottom: 60 }}>
         <View style={styles.heroBox}>
@@ -527,6 +517,16 @@ export default function BorrowerHistory() {
           </View>
         </View>
       </Modal>
+
+      <KebabMenu
+        visible={showMenu}
+        onClose={() => setShowMenu(false)}
+        items={[
+          { label: "Edit contact", icon: "create-outline", onPress: openEditModal, testID: "menu-edit-borrower" },
+          { label: "Share contact", icon: "share-social-outline", onPress: handleShare, testID: "menu-share-borrower" },
+          { label: "Delete contact", icon: "trash-outline", onPress: handleDelete, color: theme.colors.danger, dividerAbove: true, testID: "menu-delete-borrower" },
+        ]}
+      />
     </SafeAreaView>
   );
 }
@@ -591,6 +591,7 @@ function ContactActions({ raw }: { raw?: string | null }) {
 
 const styles = themedStyles((c) => ({
   container: { flex: 1, backgroundColor: c.canvas },
+  menuDotsBtn: { width: 40, height: 40, alignItems: "center", justifyContent: "center", borderRadius: 20 },
   detailActionsRow: { flexDirection: "row", justifyContent: "flex-end", paddingHorizontal: 16, paddingTop: 10, paddingBottom: 4, gap: 8 },
   topBar: {
     flexDirection: "row",
