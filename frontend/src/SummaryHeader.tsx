@@ -75,8 +75,15 @@ export function SummaryHeader({
 function Stat({ label, value, color }: { label: string; value: string; color?: string }) {
   return (
     <View style={styles.stat}>
-      <Text style={[styles.statValue, color ? { color } : null]}>{value}</Text>
-      <Text style={styles.statLabel}>{label}</Text>
+      <Text
+        style={[styles.statValue, color ? { color } : null]}
+        numberOfLines={1}
+        adjustsFontSizeToFit
+        minimumFontScale={0.6}
+      >
+        {value}
+      </Text>
+      <Text style={styles.statLabel} numberOfLines={1}>{label}</Text>
     </View>
   );
 }
@@ -133,8 +140,8 @@ const styles = themedStyles((c) => ({
     shadowOpacity: 0,
     elevation: 0,
   },
-  statsRow: { flexDirection: "row", justifyContent: "space-around" },
-  stat: { alignItems: "center" },
+  statsRow: { flexDirection: "row", justifyContent: "space-around", alignItems: "flex-start" },
+  stat: { alignItems: "center", flex: 1, minWidth: 0, paddingHorizontal: 2 },
   statValue: { color: c.textPrimary, fontWeight: "900", fontSize: 14 },
   statLabel: {
     color: c.textMuted,

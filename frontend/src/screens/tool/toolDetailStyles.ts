@@ -584,6 +584,52 @@ export const styles = themedStyles((c) => ({
 // StyleSheet so the original `styles` object isn't disturbed.
 export const newStyles = themedStyles((c) => ({
   // ---------- DETAIL ACTIONS ROW (under banner) ----------
+  // 3-dots menu button (top-right) + its contextual popover menu.
+  menuDotsBtn: {
+    width: 40,
+    height: 40,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 20,
+  },
+  menuOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.25)",
+    paddingTop: 150,
+    paddingRight: 12,
+    alignItems: "flex-end",
+  },
+  menuCard: {
+    minWidth: 232,
+    backgroundColor: c.bgSecondary,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: c.border,
+    paddingVertical: 6,
+    shadowColor: "#000",
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 12,
+  },
+  menuRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+  },
+  menuRowText: {
+    color: c.textPrimary,
+    fontSize: 15,
+    fontWeight: "600",
+  },
+  menuDivider: {
+    height: 1,
+    backgroundColor: c.border,
+    marginVertical: 4,
+    marginHorizontal: 8,
+  },
   detailActionsRow: {
     flexDirection: "row",
     justifyContent: "flex-end",

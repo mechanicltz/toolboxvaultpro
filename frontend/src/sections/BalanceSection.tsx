@@ -24,6 +24,7 @@ import { themedStyles, useSkin } from "../themeContext";
 import { ShadowBox, ShadowBoxSubCard } from "../components/ShadowBox";
 import { SKIN, CAP } from "../tbv/skins";
 import { TbvFrame } from "../tbv/components/TbvFrame";
+import { useIsSteel, useSteelPanelFrame } from "../tbv/steel";
 
 const FREQUENCIES: { id: "weekly" | "biweekly" | "monthly"; label: string }[] = [
   { id: "weekly", label: "Weekly" },
@@ -212,6 +213,8 @@ function BalanceCard({
   onMarkPaid: () => void;
   isIndustrial?: boolean;
 }) {
+  const isSteel = useIsSteel();
+  const steelPanel = useSteelPanelFrame();
   const owed = balance > 0;
   const hasSched = !!schedule?.enabled;
   const st = hasSched ? dueStatus(schedule?.next_due_date) : null;
@@ -279,8 +282,9 @@ function BalanceCard({
     return (
       <View style={styles.balCardSkinFrame}>
         <TbvFrame
-          source={SKIN.window}
-          capInsets={CAP.window}
+          source={isSteel ? steelPanel.source : SKIN.window}
+          capInsets={isSteel ? steelPanel.capInsets : CAP.window}
+          frameScale={isSteel ? steelPanel.frameScale : undefined}
           padX={30}
           padTop={18}
           padBottom={18}

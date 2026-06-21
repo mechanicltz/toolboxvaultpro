@@ -7,6 +7,7 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
+  Pressable,
   Image,
   Alert,
   Modal,
@@ -38,7 +39,7 @@ import { formatDateUS } from "../../src/dateUtil";
 import { DateField } from "../../src/DateField";
 import {
   LostStatusBanner,
-  ReportLostButton,
+  ReportLostModal,
 } from "../../src/sections/LostStatusSection";
 import { DocumentsSection } from "../../src/sections/DocumentsSection";
 import { buildLocationTree, flattenLocationTree } from "../../src/locationTree";
@@ -213,6 +214,9 @@ export default function ToolDetail() {
   const [showPosterBuilder, setShowPosterBuilder] = useState(false);
   // PDF type picker modal (replaces Alert.alert which is broken on RN Web)
   const [showExportPicker, setShowExportPicker] = useState(false);
+  // Contextual 3-dots action menu (replaces the old top pills + bottom buttons).
+  const [showActionMenu, setShowActionMenu] = useState(false);
+  const [showLost, setShowLost] = useState(false);
   const [pdfBusy, setPdfBusy] = useState(false);
   // Location picker — opened when user taps the LOCATION pill so they can
   // reassign THIS TOOL to a different existing location. (User report #3:
@@ -547,6 +551,35 @@ export default function ToolDetail() {
     if (!(await confirm("Delete tool?", "This cannot be undone.", "Delete", true))) return;
     await api.deleteTool(tool.id);
     router.back();
+  };
+
+  // Mark a lost/stolen tool as recovered (clears lost status).
+  const doRecover = async () => {
+    if (!(await confirm("Mark Recovered", "Mark this tool as found / recovered?", "Recover"))) return;
+    try {
+      await api.recoverTool(tool.id);
+      load();
+    } catch (e: any) {
+      Alert.alert("Error", e.message);
+    }
+  };
+
+  // Pull an item back off the for-sale market.
+  const doRemoveListing = async () => {
+    if (!(await confirm("Remove Listing", "Remove this item from sale?", "Remove"))) return;
+    try {
+      await api.updateTool(tool.id, { for_sale: false, sale_price: 0, sale_notes: "" });
+      load();
+    } catch (e: any) {
+      Alert.alert("Error", e.message);
+    }
+  };
+
+  // Run a menu action: close the popover first, then perform it next tick so
+  // the menu's dismissal doesn't clash with opening another modal (iOS).
+  const runMenuAction = (fn: () => void) => {
+    setShowActionMenu(false);
+    setTimeout(fn, Platform.OS === "ios" ? 320 : 60);
   };
 
   const notifyDealer = async (t: any, mode: "email" | "sms") => {
@@ -1582,26 +1615,18 @@ export default function ToolDetail() {
         title={tool.name || "Untitled Tool"}
         subtitle={tool.brand ? String(tool.brand) : "Item Details"}
         onBack={() => router.back()}
+        rightSlot={
+          <TouchableOpacity
+            testID="tool-menu-btn"
+            onPress={() => setShowActionMenu(true)}
+            hitSlop={10}
+            style={newStyles.menuDotsBtn}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="ellipsis-vertical" size={22} color={theme.colors.accent} />
+          </TouchableOpacity>
+        }
       />
-      {/* ACTION PILL BUTTONS — sits just below the banner so the title up there
-          gets every bit of available width. Mirrors the pattern we use on
-          other detail screens (dealer, claim, etc.). */}
-      <View style={newStyles.detailActionsRow}>
-        <PillButton
-          testID="edit-tool-btn"
-          label="EDIT"
-          icon="create-outline"
-          variant="active"
-          onPress={() => router.push({ pathname: "/tool/edit", params: { id: tool.id } })}
-        />
-        <PillButton
-          testID="delete-tool-btn"
-          label="DELETE"
-          icon="trash-outline"
-          variant="danger"
-          onPress={doDelete}
-        />
-      </View>
 
       <ScrollView contentContainerStyle={{ paddingBottom: 40 }}>
         <View style={newStyles.page}>
@@ -1962,8 +1987,7 @@ export default function ToolDetail() {
               kind: "value",
               label: "LOCATION",
               icon: "location",
-              value: tool.location_name || "No location · tap to assign",
-              onPress: () => setShowLocationPicker(true),
+              value: tool.location_name || "No location",
             });
             groupPrimary.push({
               kind: "models",
@@ -2420,113 +2444,132 @@ export default function ToolDetail() {
               now collapse/expand inline; checkout & claims history tap to
               navigate). */}
 
-          {/* ===== BOTTOM ACTION CLUSTER (final section on the page) ===== */}
-          <View style={newStyles.divider} />
-          <Text style={newStyles.sectionTitle}>ACTIONS</Text>
+          {/* Item actions now live entirely in the top-right 3-dots menu. */}
+        </View>
+      </ScrollView>
 
-          <View style={newStyles.actionGrid}>
-            {/* EDIT + DELETE moved to top-right header icons (matching the
-                dealer detail screen). Only state-change actions remain here. */}
+      {/* ===== CONTEXTUAL 3-DOTS ACTION MENU ===== */}
+      <Modal
+        visible={showActionMenu}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowActionMenu(false)}
+      >
+        <Pressable style={newStyles.menuOverlay} onPress={() => setShowActionMenu(false)}>
+          <View style={newStyles.menuCard}>
+            <TouchableOpacity
+              testID="menu-edit"
+              style={newStyles.menuRow}
+              onPress={() => runMenuAction(() => router.push({ pathname: "/tool/edit", params: { id: tool.id } }))}
+            >
+              <Ionicons name="create-outline" size={18} color={theme.colors.textPrimary} />
+              <Text style={newStyles.menuRowText}>Edit item</Text>
+            </TouchableOpacity>
 
-            {/* DOCUMENTS — expands the Documents pill in Attachments */}
-            {/* (DOCUMENTS bottom action removed — users can reach
-                 the Documents pillbox in the Attachments section.) */}
+            <TouchableOpacity
+              testID="menu-move"
+              style={newStyles.menuRow}
+              onPress={() => runMenuAction(() => setShowLocationPicker(true))}
+            >
+              <Ionicons name="navigate-outline" size={18} color={theme.colors.textPrimary} />
+              <Text style={newStyles.menuRowText}>Move location</Text>
+            </TouchableOpacity>
 
-            {/* CHECK OUT / CHECK IN (contextual) */}
             {!tool.is_sold && !tool.is_lost && (
               tool.is_checked_out ? (
-                <ActionTile
-                  testID="action-checkin"
-                  onPress={doCheckin}
-                  icon="log-in-outline"
-                  iconColor={theme.colors.accent}
-                  label="CHECK IN"
-                />
+                <TouchableOpacity testID="menu-checkin" style={newStyles.menuRow} onPress={() => runMenuAction(doCheckin)}>
+                  <Ionicons name="log-in-outline" size={18} color={theme.colors.accent} />
+                  <Text style={newStyles.menuRowText}>Check in</Text>
+                </TouchableOpacity>
               ) : (
-                <ActionTile
-                  testID="action-checkout"
-                  onPress={() => setShowCheckout(true)}
-                  icon="log-out-outline"
-                  iconColor={theme.colors.accent}
-                  label="CHECK OUT"
-                />
+                <TouchableOpacity testID="menu-checkout" style={newStyles.menuRow} onPress={() => runMenuAction(() => setShowCheckout(true))}>
+                  <Ionicons name="log-out-outline" size={18} color={theme.colors.accent} />
+                  <Text style={newStyles.menuRowText}>Check out</Text>
+                </TouchableOpacity>
               )
             )}
 
-            {/* MARK BROKEN / MARK FIXED (contextual) */}
             {!tool.is_sold && !tool.is_lost && (
               tool.needs_repair ? (
-                <ActionTile
-                  testID="action-fixed"
-                  onPress={markRepaired}
-                  icon="checkmark-done"
-                  iconColor={theme.colors.success}
-                  label="MARK FIXED"
-                />
+                <TouchableOpacity testID="menu-fixed" style={newStyles.menuRow} onPress={() => runMenuAction(markRepaired)}>
+                  <Ionicons name="checkmark-done" size={18} color={theme.colors.success} />
+                  <Text style={newStyles.menuRowText}>Mark fixed</Text>
+                </TouchableOpacity>
               ) : (
-                <ActionTile
-                  testID="action-broken"
-                  onPress={openRepair}
-                  icon="build-outline"
-                  iconColor={theme.colors.danger}
-                  label="MARK BROKEN"
-                />
+                <TouchableOpacity testID="menu-broken" style={newStyles.menuRow} onPress={() => runMenuAction(openRepair)}>
+                  <Ionicons name="build-outline" size={18} color={theme.colors.danger} />
+                  <Text style={newStyles.menuRowText}>Mark broken</Text>
+                </TouchableOpacity>
               )
             )}
 
-            {/* EXPORT PDF */}
-            <ActionTile
-              testID="action-export"
-              onPress={() => setShowExportPicker(true)}
-              icon="document-text-outline"
-              iconColor={theme.colors.accent}
-              label="EXPORT"
-            />
+            {!tool.is_sold && (
+              tool.is_lost ? (
+                <TouchableOpacity testID="menu-recovered" style={newStyles.menuRow} onPress={() => runMenuAction(doRecover)}>
+                  <Ionicons name="shield-checkmark-outline" size={18} color={theme.colors.success} />
+                  <Text style={newStyles.menuRowText}>Mark recovered</Text>
+                </TouchableOpacity>
+              ) : (
+                <TouchableOpacity testID="menu-stolen" style={newStyles.menuRow} onPress={() => runMenuAction(() => setShowLost(true))}>
+                  <Ionicons name="warning-outline" size={18} color={theme.colors.danger} />
+                  <Text style={newStyles.menuRowText}>Mark lost / stolen</Text>
+                </TouchableOpacity>
+              )
+            )}
 
-            {/* LIST FOR SALE / EDIT LISTING + MARK SOLD (contextual) */}
             {!tool.is_sold && !tool.is_lost && (
               tool.for_sale ? (
                 <>
-                  <ActionTile
-                    testID="action-edit-listing"
-                    onPress={() => openSaleModal()}
-                    icon="pricetag"
-                    iconColor={theme.colors.accent}
-                    label="EDIT LISTING"
-                  />
-                  <ActionTile
-                    testID="action-mark-sold"
-                    onPress={() => setShowMarkSold(true)}
-                    icon="checkmark-circle"
-                    iconColor={theme.colors.success}
-                    label="MARK SOLD"
-                  />
+                  <TouchableOpacity testID="menu-edit-listing" style={newStyles.menuRow} onPress={() => runMenuAction(() => openSaleModal())}>
+                    <Ionicons name="pricetag" size={18} color={theme.colors.accent} />
+                    <Text style={newStyles.menuRowText}>Edit sale listing</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity testID="menu-remove-listing" style={newStyles.menuRow} onPress={() => runMenuAction(doRemoveListing)}>
+                    <Ionicons name="pricetag-outline" size={18} color={theme.colors.textPrimary} />
+                    <Text style={newStyles.menuRowText}>Remove sale listing</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity testID="menu-mark-sold" style={newStyles.menuRow} onPress={() => runMenuAction(() => setShowMarkSold(true))}>
+                    <Ionicons name="checkmark-circle" size={18} color={theme.colors.success} />
+                    <Text style={newStyles.menuRowText}>Mark sold</Text>
+                  </TouchableOpacity>
                 </>
               ) : (
-                <ActionTile
-                  testID="action-list-sale"
-                  onPress={() => openSaleModal()}
-                  icon="pricetag-outline"
-                  iconColor={theme.colors.accent}
-                  label="LIST FOR SALE"
-                />
+                <TouchableOpacity testID="menu-list-sale" style={newStyles.menuRow} onPress={() => runMenuAction(() => openSaleModal())}>
+                  <Ionicons name="pricetag-outline" size={18} color={theme.colors.accent} />
+                  <Text style={newStyles.menuRowText}>List for sale</Text>
+                </TouchableOpacity>
               )
             )}
 
-            {/* DELETE — moved to top-right header icon. */}
+            <TouchableOpacity
+              testID="menu-export"
+              style={newStyles.menuRow}
+              onPress={() => runMenuAction(() => setShowExportPicker(true))}
+            >
+              <Ionicons name="document-text-outline" size={18} color={theme.colors.textPrimary} />
+              <Text style={newStyles.menuRowText}>Export options</Text>
+            </TouchableOpacity>
+
+            <View style={newStyles.menuDivider} />
+
+            <TouchableOpacity testID="menu-delete" style={newStyles.menuRow} onPress={() => runMenuAction(doDelete)}>
+              <Ionicons name="trash-outline" size={18} color={theme.colors.danger} />
+              <Text style={[newStyles.menuRowText, { color: theme.colors.danger }]}>Delete item</Text>
+            </TouchableOpacity>
           </View>
+        </Pressable>
+      </Modal>
 
-          {/* REPORT LOST OR STOLEN — moved below the action grid (under the
-              other buttons) per user request, all themes. */}
-          <View style={{ marginTop: 16, width: "100%", maxWidth: 420, alignSelf: "center" }}>
-            <ReportLostButton tool={tool} onChange={load} />
-          </View>
-
-          {/* TAGS row was moved into the grouped details box (Group 4)
-              above per the user's 2026-05-26 layout reorder. */}
-
-        </View>
-      </ScrollView>
+      {/* Lost / Stolen report modal — opened from the 3-dots menu. */}
+      <ReportLostModal
+        toolId={tool.id}
+        visible={showLost}
+        onClose={() => setShowLost(false)}
+        onSaved={() => {
+          setShowLost(false);
+          load();
+        }}
+      />
 
             <Modal visible={showCheckout} transparent animationType="slide">
         <KeyboardAvoidingView

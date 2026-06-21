@@ -727,7 +727,7 @@ export default function InventoryScreen() {
               styles.filterHalf,
               filter !== "all" && styles.locationFilterBtnActive,
             ]}
-            onPress={() => setShowStatusPicker(true)}
+            onPress={() => { setShowFilters(false); setShowStatusPicker(true); }}
             activeOpacity={0.7}
           >
             <Ionicons
@@ -755,7 +755,7 @@ export default function InventoryScreen() {
               styles.filterHalf,
               locationFilter && styles.locationFilterBtnActive,
             ]}
-            onPress={() => setShowLocationPicker(true)}
+            onPress={() => { setShowFilters(false); setShowLocationPicker(true); }}
             activeOpacity={0.7}
           >
             <Ionicons
@@ -798,7 +798,7 @@ export default function InventoryScreen() {
               styles.filterHalf,
               tagFilter.length > 0 && styles.locationFilterBtnActive,
             ]}
-            onPress={() => setShowTagPicker(true)}
+            onPress={() => { setShowFilters(false); setShowTagPicker(true); }}
             activeOpacity={0.7}
           >
             <Ionicons
@@ -839,7 +839,7 @@ export default function InventoryScreen() {
               styles.filterHalf,
               sortBy !== "date_desc" && styles.locationFilterBtnActive,
             ]}
-            onPress={() => setShowSortPicker(true)}
+            onPress={() => { setShowFilters(false); setShowSortPicker(true); }}
             activeOpacity={0.7}
           >
             <Ionicons
@@ -878,7 +878,7 @@ export default function InventoryScreen() {
               { flex: 1 },
               !!categoryFilter && styles.locationFilterBtnActive,
             ]}
-            onPress={() => setShowCategoryPicker(true)}
+            onPress={() => { setShowFilters(false); setShowCategoryPicker(true); }}
             activeOpacity={0.7}
           >
             <Ionicons
