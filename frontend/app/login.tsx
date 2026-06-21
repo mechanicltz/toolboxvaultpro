@@ -71,11 +71,18 @@ export default function LoginScreen() {
     Exo2_400Regular, Exo2_500Medium, Exo2_700Bold,
   });
   const skinsReady = useTbvSkinsReady();
-  const { metalStyle, industrialVariant, skin: loginSkin } = useSkin();
-  const isSteelLogin = metalStyle === "steel";
+  const { metalStyle, industrialVariant, skin: loginSkin, appearance } = useSkin();
+  const isPlainTheme = loginSkin === "plain";
+  // Login follows the user's theme. The Steel family AND the plain Light/Dark
+  // themes now show the brushed-silver look (Light = arctic/blue, Dark = orange),
+  // matching the in-app headers. Only Iron Forge keeps the dark iron nameplate.
+  const isSteelLogin = metalStyle === "steel" || isPlainTheme;
+  const headerVariant = isPlainTheme
+    ? (appearance === "light" ? "arctic" : "orange")
+    : industrialVariant;
   const steelPanel = useSteelPanelFrame();
-  const nameplateSrc = isSteelLogin ? HEADER_SRC_BY_COLOR[industrialVariant] : SKIN.nameplate;
-  const panelSrc = isSteelLogin ? SILVER_SRC_BY_COLOR[industrialVariant] : SKIN.panel;
+  const nameplateSrc = isSteelLogin ? HEADER_SRC_BY_COLOR[headerVariant] : SKIN.nameplate;
+  const panelSrc = isSteelLogin ? SILVER_SRC_BY_COLOR[headerVariant] : SKIN.panel;
 
   // Measured container size (post safe-area, post keyboard-avoid). This is the
   // REAL space we render into — identical logic on web preview and phone.
@@ -276,11 +283,6 @@ export default function LoginScreen() {
   return (
     <ImageBackground source={SKIN.bg} style={styles.bg} resizeMode="cover" fadeDuration={0}>
       <View style={styles.veil} />
-      <View style={{ position: "absolute", top: 38, left: 0, right: 0, zIndex: 999, alignItems: "center" }} pointerEvents="none">
-        <Text style={{ color: "#00FF66", fontSize: 12, fontWeight: "900", backgroundColor: "rgba(0,0,0,0.85)", paddingHorizontal: 8, paddingVertical: 3 }}>
-          DBG-v9 metal={String(metalStyle)} skin={String(loginSkin)} var={String(industrialVariant)}
-        </Text>
-      </View>
 
       <SafeAreaView style={{ flex: 1 }} edges={["top", "bottom"]}>
           <View
@@ -378,7 +380,7 @@ export default function LoginScreen() {
                 {isSteelLogin ? (
                   <View style={{ position: "absolute", top: 0, left: 0, width: panelW }}>
                     <TbvFrame
-                      source={steelPanel.source}
+                      source={panelSrc}
                       capInsets={steelPanel.capInsets}
                       frameScale={steelPanel.frameScale}
                       padX={0}

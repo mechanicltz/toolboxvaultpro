@@ -68,10 +68,14 @@ export default function ForgotPasswordScreen() {
   const [box, setBox] = useState({ w: win.width, h: win.height });
   const [measuredInnerH, setMeasuredInnerH] = useState(0);
   const skinsReady = useTbvSkinsReady();
-  const { metalStyle, industrialVariant } = useSkin();
-  const isSteel = metalStyle === "steel";
+  const { metalStyle, industrialVariant, skin, appearance } = useSkin();
+  const isPlainTheme = skin === "plain";
+  const isSteel = metalStyle === "steel" || isPlainTheme;
+  const headerVariant = isPlainTheme
+    ? (appearance === "light" ? "arctic" : "orange")
+    : industrialVariant;
   const steelPanel = useSteelPanelFrame();
-  const panelSrc = isSteel ? SILVER_SRC_BY_COLOR[industrialVariant] : SKIN.panel;
+  const panelSrc = isSteel ? SILVER_SRC_BY_COLOR[headerVariant] : SKIN.panel;
 
   const [step, setStep] = useState<Step>("request");
   const [email, setEmail] = useState("");
@@ -233,7 +237,7 @@ export default function ForgotPasswordScreen() {
                 {isSteel ? (
                   <View style={{ position: "absolute", top: 0, left: 0, width: panelW }}>
                     <TbvFrame
-                      source={steelPanel.source}
+                      source={panelSrc}
                       capInsets={steelPanel.capInsets}
                       frameScale={steelPanel.frameScale}
                       padX={0}
