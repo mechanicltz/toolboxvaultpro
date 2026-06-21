@@ -649,22 +649,28 @@ export default function LoginScreen() {
 // Tab button — width is panel-relative, passed in from parent
 // =====================================================================
 function TabButton({
-  label, icon, active, onPress, testID, activeSkin, inactiveSkin, width, kind, tint, c,
+  label, icon, active, onPress, testID, activeSkin, inactiveSkin, width, kind, tint, c, steelSrc,
 }: {
   label: string; icon?: any; active: boolean; onPress: () => void;
   testID?: string; activeSkin?: any; inactiveSkin?: any; width: number;
-  kind: "plain" | "steel" | "iron"; tint?: string; c?: any;
+  kind: "plain" | "steel" | "iron"; tint?: string; c?: any; steelSrc?: any;
 }) {
   const inactiveTextColor = kind === "plain" ? (c?.textSecondary ?? "#C8C8C8") : "#C8C8C8";
+  const steelTextColor = active ? "#FFFFFF" : "rgba(255,255,255,0.7)";
   const inner = (
     <View style={[styles.row, { gap: 5, paddingHorizontal: 6 }]}>
       {icon ? (
-        <Ionicons name={icon} size={13} color={active ? "#FFFFFF" : inactiveTextColor} />
+        <Ionicons
+          name={icon}
+          size={13}
+          color={kind === "steel" ? steelTextColor : active ? "#FFFFFF" : inactiveTextColor}
+        />
       ) : null}
       <Text
         style={[
           styles.tabText,
           active ? styles.tabTextActive : styles.tabTextInactive,
+          kind === "steel" && { color: steelTextColor },
           !active && kind === "plain" && { color: inactiveTextColor, textShadowColor: "transparent" },
         ]}
         numberOfLines={1}
@@ -696,11 +702,33 @@ function TabButton({
     );
   }
 
-  // Steel + Plain: a clean solid tab tinted to the active theme (NO orange art).
-  const activeBg = kind === "plain" ? (c?.accent ?? tint ?? "#1FC3E8") : (tint ?? "#1FC3E8");
-  const inactiveBg = kind === "plain" ? (c?.bgSecondary ?? "rgba(12,14,17,0.55)") : "rgba(12,14,17,0.55)";
-  const activeBorder = kind === "plain" ? (c?.accent ?? tint ?? "#1FC3E8") : (tint ?? "#1FC3E8");
-  const inactiveBorder = kind === "plain" ? (c?.border ?? "rgba(255,255,255,0.18)") : "rgba(255,255,255,0.18)";
+  // Steel: BOTH tabs use the same brushed-steel button art (so "Sign In" and
+  // "Create Account" match each other and the main button below); the selected
+  // one is full-strength, the other is dimmed.
+  if (kind === "steel") {
+    return (
+      <Pressable
+        onPress={onPress}
+        testID={testID}
+        style={({ pressed }) => [{ width, height: "100%", opacity: pressed ? 0.85 : 1 }]}
+      >
+        <ImageBackground
+          source={steelSrc}
+          style={[styles.center, !active && { opacity: 0.5 }]}
+          imageStyle={styles.fillImage}
+          resizeMode="stretch"
+        >
+          {inner}
+        </ImageBackground>
+      </Pressable>
+    );
+  }
+
+  // Plain: clean solid segmented tabs tinted to the theme accent.
+  const activeBg = c?.accent ?? tint ?? "#1FC3E8";
+  const inactiveBg = c?.bgSecondary ?? "rgba(12,14,17,0.55)";
+  const activeBorder = c?.accent ?? tint ?? "#1FC3E8";
+  const inactiveBorder = c?.border ?? "rgba(255,255,255,0.18)";
   return (
     <Pressable
       onPress={onPress}
