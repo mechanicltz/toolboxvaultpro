@@ -40,6 +40,7 @@ import { DealerLogo } from "../../src/components/DealerLogo";
 import { STOCK_LOGO_OPTIONS, isDefaultLogo, DEALER_LOGO_SLOT } from "../../src/dealerLogos";
 import { SKIN, CAP } from "../../src/tbv/skins";
 import { TbvFrame } from "../../src/tbv/components/TbvFrame";
+import { TbvListPanel } from "../../src/tbv/components/TbvListPanel";
 import { useIsSteel, useSteelPanelFrame } from "../../src/tbv/steel";
 import * as ImagePicker from "expo-image-picker";
 import * as ImageManipulator from "expo-image-manipulator";
@@ -217,9 +218,11 @@ export default function DealersScreen() {
       />
 
       {isIndustrial && gridCols === 1 ? (
-        // Skinned single-column: ALL dealers in ONE metal panel (rows + dividers).
-        <ScrollView contentContainerStyle={{ paddingBottom: 100 }}>
-          {dealers.length === 0 ? (
+        // Skinned single-column: ALL dealers in ONE fixed-height metal panel.
+        // The panel is capped to the screen; the rows scroll INSIDE it (matches
+        // the Inventory screen) instead of the panel stretching past the screen.
+        dealers.length === 0 ? (
+          <ScrollView contentContainerStyle={{ paddingBottom: 100 }}>
             <View style={styles.empty}>
               <Ionicons name="briefcase-outline" size={48} color={theme.colors.textMuted} />
               <Text style={styles.emptyTitle}>NO DEALERS</Text>
@@ -227,29 +230,37 @@ export default function DealersScreen() {
                 Add tool dealers (Matco, Snap-on, etc) and track agents you buy from.
               </Text>
             </View>
-          ) : (
-            <View style={{ paddingHorizontal: 16, paddingTop: 8 }}>
-              <TbvFrame source={winSrc} capInsets={winCap} frameScale={steelScale} padX={isSteel ? 18 : 22} padTop={isSteel ? 6 : 8} padBottom={isSteel ? 6 : 8}>
-                {dealers.map((item, idx) => {
-                  const { cardContent, isLocked } = dealerContent(item);
-                  const isLast = idx === dealers.length - 1;
-                  return (
-                    <TouchableOpacity
-                      key={item.id}
-                      testID={`dealer-card-${item.id}`}
-                      style={[styles.dealerSingleRow, isLast && { borderBottomWidth: 0 }]}
-                      onPress={() => router.push(`/dealer/${item.id}`)}
-                      activeOpacity={isLocked ? 1 : 0.8}
-                      disabled={isLocked}
-                    >
-                      {cardContent}
-                    </TouchableOpacity>
-                  );
-                })}
-              </TbvFrame>
-            </View>
-          )}
-        </ScrollView>
+          </ScrollView>
+        ) : (
+          <TbvListPanel
+            source={winSrc}
+            capInsets={winCap}
+            frameScale={steelScale}
+            style={styles.skinListPanel}
+            padX={isSteel ? 18 : 22}
+            padTop={isSteel ? 6 : 8}
+            padBottom={isSteel ? 6 : 8}
+          >
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 8 }}>
+              {dealers.map((item, idx) => {
+                const { cardContent, isLocked } = dealerContent(item);
+                const isLast = idx === dealers.length - 1;
+                return (
+                  <TouchableOpacity
+                    key={item.id}
+                    testID={`dealer-card-${item.id}`}
+                    style={[styles.dealerSingleRow, isLast && { borderBottomWidth: 0 }]}
+                    onPress={() => router.push(`/dealer/${item.id}`)}
+                    activeOpacity={isLocked ? 1 : 0.8}
+                    disabled={isLocked}
+                  >
+                    {cardContent}
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+          </TbvListPanel>
+        )
       ) : (
       <FlatList
         data={dealers}
@@ -506,6 +517,7 @@ export default function DealersScreen() {
 
 const styles = themedStyles((c) => ({
   container: { flex: 1, backgroundColor: c.canvas },
+  skinListPanel: { flex: 1, marginHorizontal: 16, marginTop: 8, marginBottom: 12 },
   actionsRow: {
     flexDirection: "row",
     justifyContent: "flex-end",

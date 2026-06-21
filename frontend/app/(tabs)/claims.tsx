@@ -31,6 +31,7 @@ import { IndustrialBanner } from "../../src/components/IndustrialBanner";
 import { AddFab } from "../../src/components/AddFab";
 import { SKIN, CAP } from "../../src/tbv/skins";
 import { TbvFrame } from "../../src/tbv/components/TbvFrame";
+import { TbvListPanel } from "../../src/tbv/components/TbvListPanel";
 import { useIsSteel, useSteelPanelFrame } from "../../src/tbv/steel";
 
 type Mode = "dealers" | "all-open" | "history";
@@ -395,6 +396,58 @@ export default function ClaimsScreen() {
         </View>
       )}
 
+      {isIndustrial && !searchActive && mode === "dealers" && (filteredDealers.length > 0 || (openByDealer["_unassigned"] || []).length > 0) ? (
+        // Dealers mode (skinned): ONE fixed-height metal panel; the dealer rows
+        // scroll INSIDE it (matches Inventory) instead of stretching the panel.
+        <TbvListPanel
+          source={winSrc}
+          capInsets={winCap}
+          frameScale={steelScale}
+          style={styles.skinListPanel}
+          padX={isSteel ? 18 : 30}
+          padTop={isSteel ? 6 : 10}
+          padBottom={isSteel ? 6 : 10}
+        >
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={{ paddingBottom: 8 }}
+            refreshControl={
+              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.colors.accent} />
+            }
+          >
+            {filteredDealers.map((d, idx) => {
+              const { opened, done } = dealerCounts(d);
+              const isLast =
+                idx === filteredDealers.length - 1 &&
+                (openByDealer["_unassigned"] || []).length === 0;
+              return (
+                <TouchableOpacity
+                  key={d.id}
+                  testID={`claim-dealer-${d.id}`}
+                  style={[styles.dealerListRow, isLast && { borderBottomWidth: 0 }]}
+                  onPress={() => router.push(`/dealer-claims/${d.id}`)}
+                  activeOpacity={0.7}
+                >
+                  {dealerRowInner(d, opened, done)}
+                </TouchableOpacity>
+              );
+            })}
+            {(openByDealer["_unassigned"] || []).length > 0 && (
+              <View style={[styles.dealerListRow, { borderBottomWidth: 0 }]}>
+                <View style={styles.dealerThumb}>
+                  <Ionicons name="alert-circle" size={20} color={theme.colors.danger} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.dealerName}>NO DEALER ASSIGNED</Text>
+                  <Text style={styles.dealerSub}>
+                    {(openByDealer["_unassigned"] || []).length} broken item{(openByDealer["_unassigned"] || []).length === 1 ? "" : "s"} need a dealer
+                  </Text>
+                </View>
+              </View>
+            )}
+          </ScrollView>
+        </TbvListPanel>
+      ) : (
       <ScrollView
         contentContainerStyle={{ padding: 16, paddingBottom: 100 }}
         refreshControl={
@@ -697,6 +750,7 @@ export default function ClaimsScreen() {
           </>
         )}
       </ScrollView>
+      )}
 
       <Modal
         visible={newClaimOpen}
@@ -794,6 +848,7 @@ function Stat({ label, value, color, flat }: { label: string; value: number; col
 
 const styles = themedStyles((c) => ({
   container: { flex: 1, backgroundColor: c.canvas },
+  skinListPanel: { flex: 1, marginHorizontal: 16, marginTop: 4, marginBottom: 12 },
   statRow: {
     flexDirection: "row",
     gap: 6,
