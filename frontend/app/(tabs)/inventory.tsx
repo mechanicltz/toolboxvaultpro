@@ -1962,7 +1962,7 @@ const styles = themedStyles((c) => ({
   // Divider + inset for the summary that lives INSIDE the search panel.
   searchSummaryInset: {
     marginTop: 10,
-    paddingTop: 10,
+    paddingTop: 20,
     borderTopWidth: 1,
     borderTopColor: c.borderSubtle,
   },
