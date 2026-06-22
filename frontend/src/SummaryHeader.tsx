@@ -131,8 +131,20 @@ const styles = themedStyles((c) => ({
   // box chrome (background, borders, rounded corners, margins, shadow).
   boxFramed: {
     backgroundColor: "transparent",
+    // theme.elevation.md injects a linear-gradient backgroundImage + 2px bevel
+    // borders on every side (web). Clear ALL of them so no sub-card/shadow is
+    // drawn behind the content when the parent already provides a metal panel.
+    backgroundImage: "none" as any,
     borderWidth: 0,
+    borderTopWidth: 0,
+    borderRightWidth: 0,
+    borderBottomWidth: 0,
     borderLeftWidth: 0,
+    borderColor: "transparent",
+    borderTopColor: "transparent",
+    borderRightColor: "transparent",
+    borderBottomColor: "transparent",
+    borderLeftColor: "transparent",
     borderRadius: 0,
     marginHorizontal: 0,
     marginBottom: 0,
