@@ -710,7 +710,7 @@ export default function InventoryScreen() {
                 style={styles.summaryHandleBtn}
                 activeOpacity={0.75}
               >
-                <Ionicons name="filter" size={14} color={theme.colors.textPrimary} />
+                <Ionicons name="filter" size={15} color={theme.colors.accent} />
               </TouchableOpacity>
             </View>
           </TbvFrame>
@@ -729,7 +729,7 @@ export default function InventoryScreen() {
                 style={styles.summaryHandleBtn}
                 activeOpacity={0.75}
               >
-                <Ionicons name="filter" size={14} color={theme.colors.textPrimary} />
+                <Ionicons name="filter" size={15} color={theme.colors.accent} />
               </TouchableOpacity>
             </View>
           </View>
@@ -1984,9 +1984,7 @@ const styles = themedStyles((c) => ({
   summaryHandleBtn: {
     width: 42, height: 22,
     alignItems: "center", justifyContent: "center",
-    borderRadius: 11,
-    backgroundColor: c.bgSecondary,
-    borderWidth: 1, borderColor: c.border,
+    backgroundColor: "transparent",
   },
   // Plain-theme expandable search container (column; grows to hold the summary).
   searchBoxCol: {
