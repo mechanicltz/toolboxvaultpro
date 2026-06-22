@@ -2138,7 +2138,9 @@ export default function ToolDetail() {
           <Text style={[newStyles.detailsValue, { textAlign: "left", fontSize: 12, marginBottom: 14 }]}>
             This item belongs to a bundle. Open the bundle to see every item grouped with it.
           </Text>
-          <SkinButton label="VIEW BUNDLE" icon="open-outline" onPress={() => router.push(`/bundle/${tool.bundle_id}`)} testID="bundle-view" />
+          <View style={newStyles.bundleBtnWrap}>
+            <SkinButton label="VIEW BUNDLE" icon="open-outline" onPress={() => router.push(`/bundle/${tool.bundle_id}`)} testID="bundle-view" />
+          </View>
           <TouchableOpacity style={[styles.btnGhost, { marginTop: 10 }]} onPress={async () => {
             try { await api.updateTool(tool.id, { bundle_id: null }); load(); } catch (e: any) { Alert.alert("Error", String(e?.message || e)); }
           }} testID="bundle-remove">
@@ -2156,7 +2158,9 @@ export default function ToolDetail() {
               Bundle related items (like a socket set) so they move and check out together.
             </Text>
           </View>
-          <SkinButton label="ADD TO A BUNDLE" icon="add-circle" onPress={openBundlePicker} testID="bundle-add" />
+          <View style={newStyles.bundleBtnWrap}>
+            <SkinButton label="ADD TO A BUNDLE" icon="add-circle" onPress={openBundlePicker} testID="bundle-add" />
+          </View>
         </View>
       )}
     </View>

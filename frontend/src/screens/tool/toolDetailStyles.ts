@@ -1736,6 +1736,9 @@ export const newStyles = themedStyles((c) => ({
   editPickValue: { flex: 1, color: c.textPrimary, fontSize: 11, fontWeight: "700" },
   // Flat group on skinned themes — content sits directly on the metal panel.
   panelGroupFlat: { backgroundColor: "transparent", paddingHorizontal: 2, paddingVertical: 2 },
+  // Bundle tab action buttons sit at ~65% width, centered, so they read as a
+  // compact call-to-action rather than a full-width bar.
+  bundleBtnWrap: { width: "65%", alignSelf: "center" },
   // Flattened claim/status card for skinned themes (red border, no shadow box).
   claimBoxFlat: {
     backgroundColor: "transparent",
