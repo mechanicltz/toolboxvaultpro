@@ -685,9 +685,9 @@ export default function InventoryScreen() {
 
       <View style={styles.searchRow}>
         {isIndustrial ? (
-          // Iron Forge: framed metal search bar with an invisible tap-link at the
-          // bottom edge. Tapping it reveals the detail summary as its OWN panel
-          // (just below) — matching the original look.
+          // Iron Forge: framed metal search bar. The detail summary lives INSIDE
+          // this same metal frame — tapping the invisible link at the bottom
+          // extends the panel downward to reveal the full summary (accordion).
           <TbvFrame
             source={plateSrc}
             capInsets={plateCap}
@@ -698,6 +698,11 @@ export default function InventoryScreen() {
             padBottom={isSteel ? 18 : 16}
           >
             <View style={styles.searchBoxInner}>{searchInner}</View>
+            {summaryOpen && agg && (
+              <View style={styles.searchSummaryInset}>
+                <SummaryHeader agg={agg} showPrices={prefs.show_prices} openClaims={openClaims} framed />
+              </View>
+            )}
             <View style={styles.searchAccordionLink} pointerEvents="box-none">
               <TouchableOpacity
                 testID="summary-accordion-toggle"
@@ -710,6 +715,11 @@ export default function InventoryScreen() {
         ) : (
           <View style={[styles.searchBoxCol, { flex: 1 }]}>
             <View style={styles.searchRowPlainInner}>{searchInner}</View>
+            {summaryOpen && agg && (
+              <View style={styles.searchSummaryInset}>
+                <SummaryHeader agg={agg} showPrices={prefs.show_prices} openClaims={openClaims} framed />
+              </View>
+            )}
             <View style={styles.searchAccordionLink} pointerEvents="box-none">
               <TouchableOpacity
                 testID="summary-accordion-toggle"
@@ -721,27 +731,6 @@ export default function InventoryScreen() {
           </View>
         )}
       </View>
-
-      {/* Detail summary — its OWN panel, revealed by the search-bar accordion
-          link. Same metal window frame as the original toggle-on view. */}
-      {summaryOpen && agg && (
-        isIndustrial ? (
-          <View style={styles.summaryFrameSkin}>
-            <TbvFrame
-              source={winSrc}
-              capInsets={winCap}
-              frameScale={steelScale}
-              padX={isSteel ? 22 : 30}
-              padTop={isSteel ? 18 : 22}
-              padBottom={isSteel ? 18 : 22}
-            >
-              <SummaryHeader agg={agg} showPrices={prefs.show_prices} openClaims={openClaims} framed />
-            </TbvFrame>
-          </View>
-        ) : (
-          <SummaryHeader agg={agg} showPrices={prefs.show_prices} openClaims={openClaims} />
-        )
-      )}
 
       <Modal
         visible={showFilters}

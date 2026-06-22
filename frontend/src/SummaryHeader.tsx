@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, ScrollView } from "react-native";
+import { View, Text, StyleSheet } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { theme } from "./theme";
 
@@ -33,6 +33,7 @@ export function SummaryHeader({
   const locs = breakdown(agg.location_breakdown);
   const cats = breakdown(agg.category_breakdown);
   const dealers = breakdown(agg.dealer_breakdown);
+  const hasGroups = locs.length > 0 || cats.length > 0 || dealers.length > 0;
 
   return (
     <View style={[styles.box, framed && styles.boxFramed]} testID="summary-header">
@@ -55,8 +56,8 @@ export function SummaryHeader({
           color={(openClaims ?? 0) > 0 ? theme.colors.danger : undefined}
         />
       </View>
-      {!compact && (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 8 }}>
+      {!compact && hasGroups && (
+        <View style={styles.groupsWrap}>
           {locs.length > 0 && (
             <Group icon="location" title="Locations" items={locs} />
           )}
@@ -66,7 +67,7 @@ export function SummaryHeader({
           {dealers.length > 0 && (
             <Group icon="briefcase" title="Dealers" items={dealers} />
           )}
-        </ScrollView>
+        </View>
       )}
     </View>
   );
@@ -150,8 +151,14 @@ const styles = themedStyles((c) => ({
     letterSpacing: 1,
     marginTop: 2,
   },
+  groupsWrap: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    marginTop: 10,
+    columnGap: 18,
+    rowGap: 12,
+  },
   group: {
-    marginRight: 18,
     minWidth: 100,
   },
   groupHead: {
