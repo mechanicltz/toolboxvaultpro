@@ -686,8 +686,8 @@ export default function InventoryScreen() {
       <View style={styles.searchRow}>
         {isIndustrial ? (
           // Iron Forge: framed metal search bar. The detail summary lives INSIDE
-          // this same metal frame — tapping the invisible link at the bottom
-          // extends the panel downward to reveal the full summary (accordion).
+          // this same metal frame — tapping the link at the bottom extends the
+          // panel downward to reveal the full summary (accordion).
           <TbvFrame
             source={plateSrc}
             capInsets={plateCap}
@@ -703,16 +703,6 @@ export default function InventoryScreen() {
                 <SummaryHeader agg={agg} showPrices={prefs.show_prices} openClaims={openClaims} framed />
               </View>
             )}
-            <View style={styles.searchAccordionLink} pointerEvents="box-none">
-              <TouchableOpacity
-                testID="summary-accordion-toggle"
-                onPress={() => setSummaryOpen((o) => !o)}
-                style={styles.summaryHandleBtn}
-                activeOpacity={0.75}
-              >
-                <Ionicons name="filter" size={15} color="#FFFFFF" />
-              </TouchableOpacity>
-            </View>
           </TbvFrame>
         ) : (
           <View style={[styles.searchBoxCol, { flex: 1 }]}>
@@ -722,18 +712,22 @@ export default function InventoryScreen() {
                 <SummaryHeader agg={agg} showPrices={prefs.show_prices} openClaims={openClaims} framed />
               </View>
             )}
-            <View style={styles.searchAccordionLink} pointerEvents="box-none">
-              <TouchableOpacity
-                testID="summary-accordion-toggle"
-                onPress={() => setSummaryOpen((o) => !o)}
-                style={styles.summaryHandleBtn}
-                activeOpacity={0.75}
-              >
-                <Ionicons name="filter" size={15} color="#FFFFFF" />
-              </TouchableOpacity>
-            </View>
           </View>
         )}
+
+        {/* Accordion handle (white 3-line filter icon) — sits just BELOW the
+            panel frame so it isn't clipped by the metal frame's edges. */}
+        <View style={styles.searchAccordionLink} pointerEvents="box-none">
+          <TouchableOpacity
+            testID="summary-accordion-toggle"
+            onPress={() => setSummaryOpen((o) => !o)}
+            hitSlop={{ top: 10, bottom: 10, left: 24, right: 24 }}
+            style={styles.summaryHandleBtn}
+            activeOpacity={0.75}
+          >
+            <Ionicons name="filter" size={15} color="#FFFFFF" />
+          </TouchableOpacity>
+        </View>
       </View>
 
       <Modal
@@ -1962,7 +1956,7 @@ const styles = themedStyles((c) => ({
     fontWeight: "700",
     letterSpacing: 0.5,
   },
-  searchRow: { paddingHorizontal: 12, marginTop: 14, marginBottom: 12, flexDirection: "row", alignItems: "center", gap: 8, position: "relative" },
+  searchRow: { paddingHorizontal: 12, marginTop: 14, marginBottom: 28, flexDirection: "row", alignItems: "center", gap: 8, position: "relative" },
   // Divider + inset for the summary that lives INSIDE the search panel.
   searchSummaryInset: {
     marginTop: 10,
@@ -1973,7 +1967,7 @@ const styles = themedStyles((c) => ({
   // Invisible tap-link anchored to the bottom edge of the search panel.
   searchAccordionLink: {
     position: "absolute",
-    left: 0, right: 0, bottom: 0,
+    left: 0, right: 0, bottom: -20,
     height: 22,
     alignItems: "center",
     justifyContent: "center",
