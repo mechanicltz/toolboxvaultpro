@@ -58,6 +58,7 @@ import { SKIN, CAP, TBV } from "../../src/tbv/skins";
 import { useIsSteel, useSteelPanelFrame } from "../../src/tbv/steel";
 import TbvFrame from "../../src/tbv/components/TbvFrame";
 import TbvListPanel from "../../src/tbv/components/TbvListPanel";
+import { SkinButton } from "../../src/components/SkinButton";
 
 import {
   pickContactNativeIOS,
@@ -149,9 +150,7 @@ export default function ToolDetail() {
     children: React.ReactNode;
   }) =>
     isIndustrial ? (
-      <TbvFrame source={winSrc} capInsets={winCap} frameScale={steelScale} padX={40} padTop={30} padBottom={32}>
-        {children}
-      </TbvFrame>
+      <View style={newStyles.claimBoxFlat}>{children}</View>
     ) : (
       <View style={plainStyle}>{children}</View>
     );
@@ -237,8 +236,10 @@ export default function ToolDetail() {
   // tab strip + ONE bounded content panel that scrolls internally (so the
   // page never stretches). `editing` flips the Details + Maintenance tabs
   // into form fields; a single Save button persists everything.
-  type DetailTab = "details" | "bundle" | "documents" | "maintenance" | "history";
+  type DetailTab = "details" | "bundle" | "documents" | "maintenance" | "warranty" | "history";
   const [activeTab, setActiveTab] = useState<DetailTab>("details");
+  const [historyView, setHistoryView] = useState<"checkout" | "claims">("checkout");
+  const [claimsList, setClaimsList] = useState<any[]>([]);
   const [editing, setEditing] = useState(false);
   const [savingEdit, setSavingEdit] = useState(false);
   const [form, setForm] = useState<any>(null);
@@ -1760,8 +1761,14 @@ export default function ToolDetail() {
     { key: "bundle", label: "Bundle", icon: "cube" },
     { key: "documents", label: "Documents", icon: "document-text" },
     { key: "maintenance", label: "Maintenance", icon: "build" },
+    { key: "warranty", label: "Warranty", icon: "shield-checkmark" },
     { key: "history", label: "History", icon: "time" },
   ];
+
+  // On skinned themes (Iron Forge / Steel) the content already lives inside ONE
+  // metal panel, so the inner gray "shadow box" cards are dropped — content
+  // renders flat. Plain Light/Dark keep the bordered cards.
+  const boxStyle = isIndustrial ? newStyles.panelGroupFlat : newStyles.detailsBox;
 
   // A read-only label+value row (returns JSX — not a component, so no remount)
   const vRow = (
@@ -1960,7 +1967,7 @@ export default function ToolDetail() {
     return (
       <View>
         {renderStatusBanners()}
-        <View style={newStyles.detailsBox}>
+        <View style={boxStyle}>
           <View style={[newStyles.detailsRow]}>
             <View style={newStyles.detailsLabelWrap}>
               <Ionicons name="barcode" size={13} color={theme.colors.accent} />
@@ -2000,7 +2007,7 @@ export default function ToolDetail() {
           )}
         </View>
         {tool.description && String(tool.description).trim() ? (
-          <View style={[newStyles.detailsBox, { marginTop: 12 }]}>
+          <View style={[boxStyle, { marginTop: 12 }]}>
             <View style={[newStyles.detailsLabelWrap, { marginBottom: 6 }]}>
               <Ionicons name="document-text-outline" size={13} color={theme.colors.accent} />
               <Text style={newStyles.detailsLabel}>DESCRIPTION / NOTES</Text>
@@ -2122,18 +2129,15 @@ export default function ToolDetail() {
   const renderBundle = () => (
     <View style={{ gap: 12 }}>
       {tool.bundle_id ? (
-        <View style={newStyles.detailsBox}>
+        <View style={boxStyle}>
           <View style={[newStyles.detailsLabelWrap, { marginBottom: 10 }]}>
             <Ionicons name="cube" size={16} color={theme.colors.accent} />
             <Text style={[newStyles.detailsLabel, { fontSize: 10 }]}>PART OF A SET / BUNDLE</Text>
           </View>
-          <Text style={[newStyles.detailsValue, { textAlign: "left", fontSize: 12, marginBottom: 12 }]}>
+          <Text style={[newStyles.detailsValue, { textAlign: "left", fontSize: 12, marginBottom: 14 }]}>
             This item belongs to a bundle. Open the bundle to see every item grouped with it.
           </Text>
-          <TouchableOpacity style={styles.btnPrimary} onPress={() => router.push(`/bundle/${tool.bundle_id}`)} testID="bundle-view">
-            <Ionicons name="open-outline" size={16} color="#000" />
-            <Text style={styles.btnPrimaryText}>VIEW BUNDLE</Text>
-          </TouchableOpacity>
+          <SkinButton label="VIEW BUNDLE" icon="open-outline" onPress={() => router.push(`/bundle/${tool.bundle_id}`)} testID="bundle-view" />
           <TouchableOpacity style={[styles.btnGhost, { marginTop: 10 }]} onPress={async () => {
             try { await api.updateTool(tool.id, { bundle_id: null }); load(); } catch (e: any) { Alert.alert("Error", String(e?.message || e)); }
           }} testID="bundle-remove">
@@ -2141,7 +2145,7 @@ export default function ToolDetail() {
           </TouchableOpacity>
         </View>
       ) : (
-        <View style={newStyles.detailsBox}>
+        <View style={boxStyle}>
           <View style={{ alignItems: "center", paddingVertical: 16, gap: 10 }}>
             <Ionicons name="cube-outline" size={40} color={theme.colors.textMuted} />
             <Text style={[newStyles.detailsValue, { textAlign: "center", fontSize: 12 }]}>
@@ -2151,10 +2155,7 @@ export default function ToolDetail() {
               Bundle related items (like a socket set) so they move and check out together.
             </Text>
           </View>
-          <TouchableOpacity style={styles.btnPrimary} onPress={openBundlePicker} testID="bundle-add">
-            <Ionicons name="add-circle" size={16} color="#000" />
-            <Text style={styles.btnPrimaryText}>ADD TO A BUNDLE</Text>
-          </TouchableOpacity>
+          <SkinButton label="ADD TO A BUNDLE" icon="add-circle" onPress={openBundlePicker} testID="bundle-add" />
         </View>
       )}
     </View>
@@ -2163,7 +2164,7 @@ export default function ToolDetail() {
   // ── DOCUMENTS TAB ───────────────────────────────────────────────────────
   const renderDocuments = () => (
     <View style={{ gap: 12 }}>
-      <View style={newStyles.detailsBox}>
+      <View style={boxStyle}>
         <View style={newStyles.attachHeader}>
           <Text style={newStyles.attachSectionLabel}>PHOTOS{photos.length > 0 ? ` (${photos.length})` : ""}</Text>
           <PillButton testID="add-photo-btn" label="ADD" icon="add-circle" variant="active" compact onPress={promptAddPhoto} />
@@ -2180,10 +2181,10 @@ export default function ToolDetail() {
           </ScrollView>
         )}
       </View>
-      <View style={newStyles.detailsBox}>
+      <View style={boxStyle}>
         <DocumentsSection tool={tool} onChange={load} />
       </View>
-      <View style={newStyles.detailsBox}>
+      <View style={boxStyle}>
         <ReceiptsSection receipts={tool.receipts} onAdd={promptAddReceipt} />
       </View>
     </View>
@@ -2192,11 +2193,17 @@ export default function ToolDetail() {
   // ── MAINTENANCE TAB ─────────────────────────────────────────────────────
   const renderMaintenance = () => (
     <View style={{ gap: 12 }}>
-      <View style={newStyles.detailsBox}>
+      <View style={boxStyle}>
         <MaintenanceSection tool={tool} onChange={load} />
       </View>
+    </View>
+  );
+
+  // ── WARRANTY TAB (its own thing) ─────────────────────────────────────────
+  const renderWarranty = () => (
+    <View style={{ gap: 12 }}>
       {editing && form ? (
-        <View style={newStyles.detailsBox}>
+        <View style={boxStyle}>
           <View style={[newStyles.editPickRow, { marginBottom: 4 }]}>
             <View style={newStyles.detailsLabelWrap}>
               <Ionicons name="shield-checkmark" size={14} color={theme.colors.accent} />
@@ -2218,37 +2225,77 @@ export default function ToolDetail() {
           )}
         </View>
       ) : (
-        <View style={newStyles.detailsBox}>
+        <View style={boxStyle}>
           <WarrantySection tool={tool} />
         </View>
       )}
     </View>
   );
 
-  // ── HISTORY TAB ─────────────────────────────────────────────────────────
-  const renderHistory = () => (
-    <View style={{ gap: 12 }}>
-      <View style={newStyles.detailsBox}>
-        <Text style={[newStyles.attachSectionLabel, { marginBottom: 12 }]}>VIEW HISTORY</Text>
-        <TouchableOpacity style={pickerStyles.choice} onPress={() => router.push(`/checkout-history/${tool.id}`)} testID="history-checkout">
-          <View style={pickerStyles.iconCircle}><Ionicons name="swap-horizontal" size={20} color="#000" /></View>
-          <View style={{ flex: 1 }}>
-            <Text style={pickerStyles.choiceTitle}>Checkout History</Text>
-            <Text style={pickerStyles.choiceSub}>Who borrowed this item and when</Text>
-          </View>
-          <Ionicons name="chevron-forward" size={18} color={theme.colors.textMuted} />
-        </TouchableOpacity>
-        <TouchableOpacity style={pickerStyles.choice} onPress={() => router.push(`/claims-history/${tool.id}`)} testID="history-claims">
-          <View style={pickerStyles.iconCircle}><Ionicons name="alert-circle" size={20} color="#000" /></View>
-          <View style={{ flex: 1 }}>
-            <Text style={pickerStyles.choiceTitle}>Claim History</Text>
-            <Text style={pickerStyles.choiceSub}>Repair claims and warranty issues</Text>
-          </View>
-          <Ionicons name="chevron-forward" size={18} color={theme.colors.textMuted} />
-        </TouchableOpacity>
+  // ── HISTORY TAB (inline, no new windows) ─────────────────────────────────
+  const switchHistory = (v: "checkout" | "claims") => {
+    setHistoryView(v);
+    if (v === "claims") {
+      api.listWarrantyClaims({ tool_id: tool.id }).then((r: any) => setClaimsList(Array.isArray(r) ? r : [])).catch(() => {});
+    }
+  };
+  const renderHistory = () => {
+    const checkouts = Array.isArray(tool.checkout_history) ? [...tool.checkout_history].reverse() : [];
+    return (
+      <View style={{ gap: 12 }}>
+        <View style={newStyles.histSeg}>
+          <TouchableOpacity style={[newStyles.histSegBtn, historyView === "checkout" && newStyles.histSegBtnActive]} onPress={() => switchHistory("checkout")} testID="history-seg-checkout" activeOpacity={0.8}>
+            <Ionicons name="swap-horizontal" size={15} color={historyView === "checkout" ? "#000" : theme.colors.accent} />
+            <Text style={[newStyles.histSegText, historyView === "checkout" && newStyles.histSegTextActive]}>CHECKOUTS</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={[newStyles.histSegBtn, historyView === "claims" && newStyles.histSegBtnActive]} onPress={() => switchHistory("claims")} testID="history-seg-claims" activeOpacity={0.8}>
+            <Ionicons name="alert-circle" size={15} color={historyView === "claims" ? "#000" : theme.colors.accent} />
+            <Text style={[newStyles.histSegText, historyView === "claims" && newStyles.histSegTextActive]}>CLAIMS</Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={boxStyle}>
+          {historyView === "checkout" ? (
+            checkouts.length === 0 ? (
+              <Text style={newStyles.attachEmpty}>No checkout history yet.</Text>
+            ) : (
+              checkouts.map((r: any, i: number) => {
+                const out = !r.checked_in_at;
+                const target = r.borrower_id ? `/borrower/${r.borrower_id}` : null;
+                const Wrap: any = target ? TouchableOpacity : View;
+                return (
+                  <Wrap key={i} style={newStyles.histItem} {...(target ? { onPress: () => router.push(target as any), activeOpacity: 0.7 } : {})} testID={`history-checkout-row-${i}`}>
+                    <View style={[newStyles.histDot, { backgroundColor: out ? theme.colors.warning : theme.colors.success }]} />
+                    <View style={{ flex: 1 }}>
+                      <Text style={newStyles.histItemTitle} numberOfLines={1}>{r.borrower_name || "Unknown"}</Text>
+                      <Text style={newStyles.histItemSub}>Out: {formatDateUS(r.checked_out_at)}{r.checked_in_at ? `  ·  In: ${formatDateUS(r.checked_in_at)}` : "  ·  Still out"}</Text>
+                    </View>
+                    {target && <Ionicons name="chevron-forward" size={16} color={theme.colors.textMuted} />}
+                  </Wrap>
+                );
+              })
+            )
+          ) : (
+            claimsList.length === 0 ? (
+              <Text style={newStyles.attachEmpty}>No claim history yet.</Text>
+            ) : (
+              claimsList.map((c: any, i: number) => (
+                <TouchableOpacity key={c.id || i} style={newStyles.histItem} onPress={() => c.id && router.push(`/claim/${c.id}`)} activeOpacity={0.7} testID={`history-claim-row-${i}`}>
+                  <View style={[newStyles.histDot, { backgroundColor: theme.colors.danger }]} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={newStyles.histItemTitle} numberOfLines={1}>{(c.claim_status || "broken").toUpperCase()}{c.repair_company ? ` · ${c.repair_company}` : ""}</Text>
+                    <Text style={newStyles.histItemSub}>{c.notified_at ? `Notified: ${formatDateUS(c.notified_at)}` : "Not reported"}{c.completed_at ? `  ·  Closed: ${formatDateUS(c.completed_at)}` : ""}</Text>
+                    {!!c.notes && <Text style={[newStyles.histItemSub, { marginTop: 2 }]} numberOfLines={2}>{c.notes}</Text>}
+                  </View>
+                  <Ionicons name="chevron-forward" size={16} color={theme.colors.textMuted} />
+                </TouchableOpacity>
+              ))
+            )
+          )}
+        </View>
       </View>
-    </View>
-  );
+    );
+  };
 
   const renderTabContent = () => {
     switch (activeTab) {
@@ -2256,6 +2303,7 @@ export default function ToolDetail() {
       case "bundle": return renderBundle();
       case "documents": return renderDocuments();
       case "maintenance": return renderMaintenance();
+      case "warranty": return renderWarranty();
       case "history": return renderHistory();
       default: return null;
     }
@@ -3476,32 +3524,19 @@ export default function ToolDetail() {
         </View>
       </Modal>
 
-      {/* ===== HISTORY CHOICE POPUP ===== */}
+      {/* ===== HISTORY CHOICE POPUP (matches 3-dot menu) ===== */}
       <Modal visible={showHistoryChoice} transparent animationType="fade" onRequestClose={() => setShowHistoryChoice(false)}>
-        <Pressable style={styles.modalBackdrop} onPress={() => setShowHistoryChoice(false)}>
-          <Pressable style={styles.modalCard} onPress={() => {}}>
-            <View style={styles.modalHeader}>
-              <Ionicons name="time" size={20} color={theme.colors.accent} />
-              <Text style={styles.modalTitle}>VIEW HISTORY</Text>
-              <TouchableOpacity onPress={() => setShowHistoryChoice(false)} hitSlop={10}>
-                <Ionicons name="close" size={22} color={theme.colors.textPrimary} />
-              </TouchableOpacity>
-            </View>
-            <TouchableOpacity style={pickerStyles.choice} testID="history-choice-checkout" onPress={() => { setShowHistoryChoice(false); router.push(`/checkout-history/${tool.id}`); }}>
-              <View style={pickerStyles.iconCircle}><Ionicons name="swap-horizontal" size={20} color="#000" /></View>
-              <View style={{ flex: 1 }}>
-                <Text style={pickerStyles.choiceTitle}>Checkout History</Text>
-                <Text style={pickerStyles.choiceSub}>Who borrowed this item and when</Text>
-              </View>
+        <Pressable style={newStyles.menuOverlay} onPress={() => setShowHistoryChoice(false)}>
+          <View style={newStyles.menuCard}>
+            <TouchableOpacity style={newStyles.menuRow} testID="history-choice-checkout" onPress={() => { switchHistory("checkout"); setShowHistoryChoice(false); }}>
+              <Ionicons name="swap-horizontal" size={18} color={theme.colors.textPrimary} />
+              <Text style={newStyles.menuRowText}>Checkout history</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={pickerStyles.choice} testID="history-choice-claims" onPress={() => { setShowHistoryChoice(false); router.push(`/claims-history/${tool.id}`); }}>
-              <View style={pickerStyles.iconCircle}><Ionicons name="alert-circle" size={20} color="#000" /></View>
-              <View style={{ flex: 1 }}>
-                <Text style={pickerStyles.choiceTitle}>Claim History</Text>
-                <Text style={pickerStyles.choiceSub}>Repair claims and warranty issues</Text>
-              </View>
+            <TouchableOpacity style={newStyles.menuRow} testID="history-choice-claims" onPress={() => { switchHistory("claims"); setShowHistoryChoice(false); }}>
+              <Ionicons name="alert-circle" size={18} color={theme.colors.textPrimary} />
+              <Text style={newStyles.menuRowText}>Claim history</Text>
             </TouchableOpacity>
-          </Pressable>
+          </View>
         </Pressable>
       </Modal>
 

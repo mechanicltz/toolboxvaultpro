@@ -1737,6 +1737,48 @@ export const newStyles = themedStyles((c) => ({
     gap: 8,
   },
   editPickValue: { flex: 1, color: c.textPrimary, fontSize: 11, fontWeight: "700" },
+  // Flat group on skinned themes — content sits directly on the metal panel.
+  panelGroupFlat: { backgroundColor: "transparent", paddingHorizontal: 2, paddingVertical: 2 },
+  // Flattened claim/status card for skinned themes (red border, no shadow box).
+  claimBoxFlat: {
+    backgroundColor: "transparent",
+    borderWidth: 1,
+    borderColor: c.danger,
+    borderRadius: 6,
+    paddingHorizontal: 12,
+    paddingTop: 12,
+    paddingBottom: 14,
+    marginBottom: 12,
+  },
+  // History tab segmented toggle
+  histSeg: { flexDirection: "row", gap: 8 },
+  histSegBtn: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingVertical: 9,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: c.border,
+    backgroundColor: c.bgSecondary,
+  },
+  histSegBtnActive: { backgroundColor: c.accent, borderColor: c.accent },
+  histSegText: { color: c.accent, fontSize: 11, fontWeight: "800", letterSpacing: 0.5 },
+  histSegTextActive: { color: "#000" },
+  histItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingVertical: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: c.border,
+  },
+  histDot: { width: 9, height: 9, borderRadius: 5 },
+  histItemTitle: { color: c.textPrimary, fontSize: 13, fontWeight: "800" },
+  histItemSub: { color: c.textMuted, fontSize: 11, fontWeight: "600", marginTop: 2 },
+
 
 }));
 

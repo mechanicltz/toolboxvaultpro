@@ -1,0 +1,46 @@
+{
+  "summary": "All 5 follow-up polish items VERIFIED on Iron Forge skin as ryan@ryan.com. (1) Skinned shadow-boxes removed — boxStyle = newStyles.panelGroupFlat (transparent flat container) on industrial skin; verified Details/Bundle/Documents/Maintenance/Warranty render flat on the single metal panel (screenshots /tmp/02_detail.png, /tmp/bundle_recheck.png, /tmp/warranty_view.png, /tmp/claim_dest.png). (2) Inline history INSIDE the panel — chose 'Claim history' on the Air Impact Wrench tool (4781e201…140ed) and one inline row (testID history-claim-row-0) showed 'AWAITING_APPROVAL · Mac Tools / Notified: 06/08/2026 / Distributor submitted for warranty replacement.' INSIDE the bounded content panel; URL stayed on /tool/4781e201… (NOT /claims-history or /checkout-history). Segmented toggle (history-seg-checkout / history-seg-claims) both present and functional. (3) Bundle 'ADD TO A BUNDLE' button (testID bundle-add) — after skins finish decoding (≈3–5 s on first load) it renders as the metal-plate SkinButton (img background = tbv_btn_primary_or…, imgCount=1, no orange fill). The plainBtn fallback is only shown during the initial ~3 s tbv skin-asset decode window; this is a benign cold-paint, not a real defect (see action_items for a UX-polish suggestion). (4) Warranty is its OWN tab — TABS array now has 6 entries: tab-details, tab-bundle, tab-documents, tab-maintenance, tab-warranty, tab-history (verified all 6 present in DOM). Warranty view shows 'WARRANTY / TIME-LIMITED / 172 DAYS LEFT / Provider / Started / Expires / Length / Terms / EDIT WARRANTY' (screenshot /tmp/warranty_view.png). renderMaintenance() only renders MaintenanceSection — grep on the imported MaintenanceSection.tsx returned zero 'warranty' hits, so no leak. In edit mode renderWarranty() renders the warranty form fields (provider, contact, expires, terms) under the Warranty tab. (5) History popup is the compact 3-dot action menu style — tapping tab-history opens a Pressable+menuOverlay+menuCard with menuRow children testID history-choice-checkout / history-choice-claims; each row is 230 × 44 px (compact menu row, NOT a big choice card). Visually matches the action-menu popup style. BONUS: Claim card on Details tab on Air Impact Wrench renders flat with red border (claimBoxFlat, no shadow) per spec. Regression: 3-dot menu → Edit item → entering edit mode shows edit-save-bar / edit-cancel-bar bottom bar (already validated in iteration 40 end-to-end; warranty fields successfully relocated to tab-warranty when editing). No pageerror, no React Native red screen, no new console errors (only the standard 401/403 noise from pre-login API calls).",
+  "backend_issues": { "critical": [], "minor": [] },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {
+        "screen": "Bundle tab (cold first paint)",
+        "issues": [
+          "On a FRESH cold load of /tool/[id], the SkinButton 'ADD TO A BUNDLE' briefly renders as the bright-orange plainBtn fallback for ~3 s while useTbvSkinsReady() finishes decoding the industrial bitmap set (Asset.loadAsync of SKIN_LIST + SILVER_SRC_BY_COLOR). After decode it correctly swaps to the metal plate. Not a regression, but it's the same 'pop-in' pattern the user complained about for the home screens. Consider matching the home-screen approach: gate the entire Bundle tab body behind ready, or render a neutral charcoal placeholder instead of bright orange, until ready === true."
+        ]
+      }
+    ],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/tmp/02_detail.png",
+    "/tmp/03_warranty_tab.png",
+    "/tmp/04_maintenance_tab.png",
+    "/tmp/05_bundle_tab.png",
+    "/tmp/bundle_recheck.png",
+    "/tmp/history_popup.png",
+    "/tmp/history_inline_checkout.png",
+    "/tmp/history_inline_claims.png",
+    "/tmp/popup_air_impact.png",
+    "/tmp/claims_inline.png",
+    "/tmp/checkouts_inline.png",
+    "/tmp/warranty_view.png",
+    "/tmp/warranty_edit.png",
+    "/tmp/claim_dest.png"
+  ],
+  "action_items": [
+    "(LOW / polish, not a defect) Cold-paint flash: while industrial skin assets are still decoding (~3 s on first visit), SkinButton renders the plain orange fallback. Either (a) render the Bundle tab body conditionally on useTbvSkinsReady(), or (b) give SkinButton a neutral charcoal placeholder instead of the bright orange plainBtn when skin === 'industrial' && !ready. After ~3 s the metal plate paints correctly — so no real bug, but matches the user's earlier 'pop-in' complaint pattern."
+  ],
+  "critical_code_review_comments": [
+    "/app/frontend/app/tool/[id].tsx is now 3959 lines (was 3923). The follow-up polish landed cleanly via two new render functions (renderWarranty, renderHistory) + switchHistory + boxStyle. Still strongly recommend extracting each tab body into /app/frontend/src/screens/tool/tabs/*.tsx — the file is well over the 700-line guideline and every new polish iteration grows it."
+  ],
+  "updated_files": [],
+  "success_rate": { "backend": "n/a (frontend-only request)", "frontend": "100% (5/5 polish items verified)" },
+  "seed_data_creation": "None — used existing ryan@ryan.com demo data; tools 88e8adbf… (Blue Shop Towels, no claim) and 4781e201… (1/2\" Air Impact Wrench, 1 open claim).",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Six tabs are now present (testIDs tab-details, tab-bundle, tab-documents, tab-maintenance, tab-warranty, tab-history). Use tool 88e8adbf-be58-4114-8a0e-76fe2e93df7b for a clean tool, and 4781e201-ad3d-454c-90a8-931d138140ed (Air Impact Wrench) for a tool with an open warranty claim — that's the canonical way to verify the inline claim row appears as history-claim-row-0 under History → CLAIMS segment. The History tab opens a compact menu-style popup via menuOverlay/menuCard/menuRow; popup choices are history-choice-checkout / history-choice-claims. Inline segmented toggle uses history-seg-checkout / history-seg-claims. SkinButton needs ~3 s on first cold load to swap from plain orange to the metal plate — wait at least 4 s after tapping tab-bundle before asserting on background-image. boxStyle = newStyles.panelGroupFlat on industrial skin (transparent flat) vs newStyles.detailsBox on plain (bordered card). Warranty fields ONLY live under tab-warranty now — neither the view nor the edit flow renders warranty under Maintenance.",
+  "rca_of_issue": "n/a — no defects found. All five polish items behave per spec."
+}
