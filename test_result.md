@@ -120,11 +120,11 @@ test_plan:
 tool_detail_tabbed_rebuild:
   - task: "Rebuild Item (Tool) Details page into tabbed layout with inline edit (v3.1.3)"
     implemented: true
-    working: "NA"
+    working: true
     file: "/app/frontend/app/tool/[id].tsx, /app/frontend/src/screens/tool/toolDetailStyles.ts"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
