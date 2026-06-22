@@ -57,6 +57,7 @@ import { PillButton } from "../../src/components/PillButton";
 import { SKIN, CAP, TBV } from "../../src/tbv/skins";
 import { useIsSteel, useSteelPanelFrame } from "../../src/tbv/steel";
 import TbvFrame from "../../src/tbv/components/TbvFrame";
+import TbvListPanel from "../../src/tbv/components/TbvListPanel";
 
 import {
   pickContactNativeIOS,
@@ -231,6 +232,30 @@ export default function ToolDetail() {
       api.listLocations().then(setAllLocations).catch(() => {});
     }
   }, [showLocationPicker]);
+  // ── Tabbed layout + inline edit (v3.1.3 rebuild) ───────────────────────
+  // The detail screen is now a fixed top panel + a horizontally scrolling
+  // tab strip + ONE bounded content panel that scrolls internally (so the
+  // page never stretches). `editing` flips the Details + Maintenance tabs
+  // into form fields; a single Save button persists everything.
+  type DetailTab = "details" | "bundle" | "documents" | "maintenance" | "history";
+  const [activeTab, setActiveTab] = useState<DetailTab>("details");
+  const [editing, setEditing] = useState(false);
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [form, setForm] = useState<any>(null);
+  const [showHistoryChoice, setShowHistoryChoice] = useState(false);
+  // Edit-mode relational pickers
+  const [showEditDealer, setShowEditDealer] = useState(false);
+  const [showEditCategory, setShowEditCategory] = useState(false);
+  const [showEditTags, setShowEditTags] = useState(false);
+  const [showEditLocation, setShowEditLocation] = useState(false);
+  const [allCategories, setAllCategories] = useState<any[]>([]);
+  const [allTags, setAllTags] = useState<any[]>([]);
+  const [newCatName, setNewCatName] = useState("");
+  const [newTagName, setNewTagName] = useState("");
+  // Bundle tab picker
+  const [showBundlePicker, setShowBundlePicker] = useState(false);
+  const [allBundles, setAllBundles] = useState<any[]>([]);
+
   type PosterFieldKey =
     | "photo"
     | "price"
@@ -1609,145 +1634,194 @@ export default function ToolDetail() {
     return w.has_warranty || w.coverage_type || w.type || w.expires_at ? 1 : 0;
   })();
 
-  const __body = (
-    <SafeAreaView style={[styles.container, isIndustrial && styles.containerSkin]} edges={["top"]}>
-      <IndustrialBanner
-        title={tool.name || "Untitled Tool"}
-        subtitle={tool.brand ? String(tool.brand) : "Item Details"}
-        onBack={() => router.back()}
-        rightSlot={
-          <TouchableOpacity
-            testID="tool-menu-btn"
-            onPress={() => setShowActionMenu(true)}
-            hitSlop={10}
-            style={newStyles.menuDotsBtn}
-            activeOpacity={0.7}
-          >
-            <Ionicons name="ellipsis-vertical" size={22} color={theme.colors.accent} />
-          </TouchableOpacity>
-        }
-      />
+  // ── Inline edit helpers ────────────────────────────────────────────────
+  const setF = (patch: any) => setForm((p: any) => ({ ...p, ...patch }));
+  const beginEdit = () => {
+    const t = tool;
+    const mns: string[] = (Array.isArray(t.model_numbers) && t.model_numbers.length)
+      ? t.model_numbers.filter(Boolean)
+      : (t.is_set
+          ? (Array.isArray(t.set_serials) ? t.set_serials.filter(Boolean) : [])
+          : (t.serial_number ? [String(t.serial_number)] : []));
+    const sns: string[] = Array.isArray(t.serial_numbers) ? t.serial_numbers.filter(Boolean) : [];
+    setForm({
+      brand: t.brand || "",
+      model_numbers: mns.length ? mns : [""],
+      serial_numbers: sns.length ? sns : [""],
+      cost: t.cost != null ? String(t.cost) : "",
+      msrp_price: t.msrp_price ? String(t.msrp_price) : "",
+      quantity: t.quantity != null ? String(t.quantity) : "1",
+      purchase_date: t.purchase_date || "",
+      description: t.description || "",
+      is_consumable: !!t.is_consumable,
+      consumable_info: { store_name: "", website: "", sku: "", notes: "", ...(t.consumable_info || {}) },
+      location_id: t.location_id || null,
+      location_name: t.location_name || "",
+      dealer_id: t.dealer_id || null,
+      dealer_name: t.dealer_name || "",
+      category_id: t.category_id || null,
+      category_name: t.category_name || "",
+      tag_ids: Array.isArray(t.tag_ids) ? [...t.tag_ids] : [],
+      tag_names: Array.isArray(t.tag_names) ? [...t.tag_names] : [],
+      has_warranty: !!t.warranty?.has_warranty,
+      warranty: {
+        provider: t.warranty?.provider || "",
+        contact: t.warranty?.contact || "",
+        terms: t.warranty?.terms || "",
+        coverage_type: t.warranty?.coverage_type || "months",
+        length_months: t.warranty?.length_months ? String(t.warranty.length_months) : "",
+        start_date: t.warranty?.start_date || "",
+        expiry_date: t.warranty?.expiry_date || "",
+      },
+    });
+    setActiveTab("details");
+    setEditing(true);
+    api.listLocations().then(setAllLocations).catch(() => {});
+    api.listCategories().then(setAllCategories).catch(() => {});
+    api.listTags().then(setAllTags).catch(() => {});
+  };
+  const cancelEdit = () => { setEditing(false); setForm(null); };
+  const saveEdit = async () => {
+    if (!form) return;
+    setSavingEdit(true);
+    const cleanModels = (form.model_numbers || []).map((s: string) => s.trim()).filter(Boolean);
+    const cleanSerials = (form.serial_numbers || []).map((s: string) => s.trim()).filter(Boolean);
+    const payload: any = {
+      brand: form.brand,
+      model_numbers: cleanModels,
+      serial_numbers: cleanSerials,
+      cost: parseFloat(form.cost) || 0,
+      msrp_price: parseFloat(form.msrp_price) || 0,
+      quantity: Math.max(1, parseInt(form.quantity, 10) || 1),
+      purchase_date: form.purchase_date,
+      description: form.description,
+      is_consumable: form.is_consumable,
+      consumable_info: form.is_consumable ? form.consumable_info : null,
+      location_id: form.location_id,
+      location_name: form.location_name,
+      dealer_id: form.dealer_id,
+      dealer_name: form.dealer_name,
+      category_id: form.category_id || null,
+      category_name: form.category_name || "",
+      tag_ids: form.tag_ids,
+      tag_names: form.tag_names,
+      warranty: form.has_warranty ? {
+        has_warranty: true,
+        provider: form.warranty.provider,
+        contact: form.warranty.contact,
+        terms: form.warranty.terms,
+        coverage_type: form.warranty.coverage_type || "months",
+        length_months: parseInt(form.warranty.length_months) || 0,
+        start_date: form.warranty.start_date,
+        expiry_date: form.warranty.expiry_date,
+      } : { has_warranty: false },
+    };
+    try {
+      await api.updateTool(tool.id, payload);
+      setEditing(false);
+      setForm(null);
+      await load();
+    } catch (e: any) {
+      if (!(e?.paymentRequired || e?.status === 402)) {
+        Alert.alert("Couldn't save", String(e?.detail || e?.message || e));
+      }
+    } finally {
+      setSavingEdit(false);
+    }
+  };
 
-      <ScrollView contentContainerStyle={{ paddingBottom: 40 }}>
-        <View style={newStyles.page}>
+  // Model / serial multi-value array helpers (edit mode)
+  const setArr = (key: "model_numbers" | "serial_numbers", idx: number, val: string) =>
+    setForm((p: any) => {
+      const arr = [...(p[key] || [])];
+      arr[idx] = val;
+      return { ...p, [key]: arr };
+    });
+  const addArrLine = (key: "model_numbers" | "serial_numbers") =>
+    setForm((p: any) => ({ ...p, [key]: [...(p[key] || []), ""] }));
+  const removeArrLine = (key: "model_numbers" | "serial_numbers", idx: number) =>
+    setForm((p: any) => {
+      const arr = (p[key] || []).filter((_: any, i: number) => i !== idx);
+      return { ...p, [key]: arr.length ? arr : [""] };
+    });
 
-          {/* PHOTO + STATUS/QTY/PRICE — in Iron Forge these live together in
-              the dealer "card" container; plain themes keep the photo + framed
-              stat box side-by-side. */}
-          {isIndustrial ? (
-            <TbvFrame source={winSrc} capInsets={winCap} frameScale={steelScale} padX={20} padTop={22} padBottom={24}>
-              <View style={newStyles.topUnifiedRow}>
-                <TouchableOpacity
-                  testID="photo-thumb"
-                  style={newStyles.topUnifiedPhoto}
-                  activeOpacity={photos.length ? 0.85 : 1}
-                  onPress={photos.length ? () => { setPhotoIdx(0); setIsImageViewerVisible(true); } : promptAddPhoto}
-                >
-                  {photos.length > 0 ? (
-                    <AppImage source={{ uri: photos[0] }} style={newStyles.photoImg} />
-                  ) : (
-                    <View style={newStyles.dealerPhotoEmpty}>
-                      <Ionicons name="camera" size={20} color={theme.colors.accent} />
-                      <Text style={newStyles.photoEmptyText}>ADD PHOTO</Text>
-                    </View>
-                  )}
-                </TouchableOpacity>
-                <View style={newStyles.topUnifiedRows}>
-                  <PillRow first label="STATUS" value={statusInfo.label} valueColor={statusInfo.color} />
-                  <PillRow
-                    label="QUANTITY"
-                    value={String(Math.max(1, Number(tool.quantity) || 1))}
-                    onPress={() => setShowQtyModal(true)}
-                  />
-                  <PillRow label="PRICE EACH" value={fmtMoney(tool.cost)} />
-                </View>
-              </View>
-            </TbvFrame>
-          ) : (
-            <View style={newStyles.photoRow}>
-              <TouchableOpacity
-                testID="photo-thumb"
-                style={newStyles.photoFrame}
-                activeOpacity={photos.length ? 0.85 : 1}
-                onPress={photos.length ? () => { setPhotoIdx(0); setIsImageViewerVisible(true); } : promptAddPhoto}
-              >
-                {photos.length > 0 ? (
-                  <AppImage source={{ uri: photos[0] }} style={newStyles.photoImg} />
-                ) : (
-                  <View style={newStyles.photoEmpty}>
-                    <Ionicons name="camera" size={22} color={theme.colors.accent} />
-                    <Text style={newStyles.photoEmptyText}>ADD PHOTO</Text>
-                  </View>
-                )}
-              </TouchableOpacity>
-              <ShadowBox style={newStyles.statShadowBox}>
-                <PillRow first label="STATUS" value={statusInfo.label} valueColor={statusInfo.color} />
-                <PillRow
-                  label="QUANTITY"
-                  value={String(Math.max(1, Number(tool.quantity) || 1))}
-                  onPress={() => setShowQtyModal(true)}
-                />
-                <PillRow label="PRICE EACH" value={fmtMoney(tool.cost)} />
-              </ShadowBox>
+  // Multi-value model/serial for read-only Details
+  const modelNumsView: string[] = (Array.isArray(tool.model_numbers) && tool.model_numbers.length)
+    ? tool.model_numbers.filter((s: string) => !!s)
+    : (tool.is_set
+        ? (Array.isArray(tool.set_serials) ? tool.set_serials.filter((s: string) => !!s) : [])
+        : (tool.serial_number ? [String(tool.serial_number)] : []));
+  const serialNumsView: string[] = Array.isArray(tool.serial_numbers)
+    ? tool.serial_numbers.filter((s: string) => !!s)
+    : [];
+
+  const TABS: { key: DetailTab; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
+    { key: "details", label: "Details", icon: "construct" },
+    { key: "bundle", label: "Bundle", icon: "cube" },
+    { key: "documents", label: "Documents", icon: "document-text" },
+    { key: "maintenance", label: "Maintenance", icon: "build" },
+    { key: "history", label: "History", icon: "time" },
+  ];
+
+  // A read-only label+value row (returns JSX — not a component, so no remount)
+  const vRow = (
+    label: string,
+    icon: keyof typeof Ionicons.glyphMap,
+    value: string,
+    onPress?: () => void,
+    isLast?: boolean,
+  ) => {
+    const Wrap: any = onPress ? TouchableOpacity : View;
+    return (
+      <Wrap
+        key={label}
+        style={[newStyles.detailsRow, isLast && newStyles.detailsRowLast]}
+        {...(onPress ? { onPress, activeOpacity: 0.6 } : {})}
+        testID={`details-row-${label.toLowerCase().replace(/\s+/g, "-")}`}
+      >
+        <View style={newStyles.detailsLabelWrap}>
+          <Ionicons name={icon} size={13} color={theme.colors.accent} />
+          <Text style={newStyles.detailsLabel}>{label}</Text>
+        </View>
+        <View style={newStyles.detailsValueWrap}>
+          <Text style={newStyles.detailsValue} numberOfLines={2}>{value}</Text>
+          {onPress && <Ionicons name="chevron-forward" size={14} color={theme.colors.textMuted} />}
+        </View>
+      </Wrap>
+    );
+  };
+
+  // An edit label above an input
+  const eLabel = (label: string, icon: keyof typeof Ionicons.glyphMap) => (
+    <View style={[newStyles.detailsLabelWrap, { marginBottom: 6, marginTop: 4 }]}>
+      <Ionicons name={icon} size={13} color={theme.colors.accent} />
+      <Text style={newStyles.detailsLabel}>{label}</Text>
+    </View>
+  );
+
+  // ── STATUS BANNERS (view mode, top of Details tab) ──────────────────────
+  const renderStatusBanners = () => (
+    <>
+      {tool.needs_repair && (
+        <CardShell plainStyle={newStyles.claimBox}>
+          <View style={newStyles.claimHead}>
+            <Ionicons name="build" size={18} color={theme.colors.danger} />
+            <View style={{ flex: 1 }}>
+              <Text style={newStyles.claimTitle} allowFontScaling={false} numberOfLines={1} adjustsFontSizeToFit>CLAIM INFORMATION</Text>
+              {!!tool.repair_info?.company_notified && (
+                <Text style={newStyles.claimSub} allowFontScaling={false} numberOfLines={1}>AT {String(tool.repair_info.company_notified).toUpperCase()}</Text>
+              )}
             </View>
-          )}
-
-          {/* CLAIM INFORMATION — converted to the "card within a card" style
-              (per user 2026-05-27, matching WarrantySection layout): outer
-              Description Card with flat header (icon + title + status badge),
-              inner inset card holding the claim data rows + action buttons.
-              Shown FIRST under the photo when the tool is broken/in-repair. */}
-          {tool.needs_repair && (
-            <CardShell plainStyle={newStyles.claimBox}>
-              {/* Flat header — icon + title + status badge */}
-              <View style={newStyles.claimHead}>
-                <Ionicons name="build" size={18} color={theme.colors.danger} />
-                <View style={{ flex: 1 }}>
-                  <Text
-                    style={newStyles.claimTitle}
-                    allowFontScaling={false}
-                    numberOfLines={1}
-                    adjustsFontSizeToFit
-                  >
-                    CLAIM INFORMATION
-                  </Text>
-                  {!!tool.repair_info?.company_notified && (
-                    <Text
-                      style={newStyles.claimSub}
-                      allowFontScaling={false}
-                      numberOfLines={1}
-                    >
-                      AT {String(tool.repair_info.company_notified).toUpperCase()}
-                    </Text>
-                  )}
-                </View>
-                <View style={[newStyles.claimBadge, { borderColor: theme.colors.danger, backgroundColor: theme.colors.danger + "15" }]}>
-                  <Text
-                    style={[newStyles.claimBadgeText, { color: theme.colors.danger }]}
-                    allowFontScaling={false}
-                    numberOfLines={1}
-                  >
-                    {(tool.repair_info?.repair_status || "Repair pending").toUpperCase()}
-                  </Text>
-                </View>
-              </View>
-              {/* Inset inner card — plain themes only. In skinned themes the
-                  rows + buttons render directly on the metal frame (no sub-card
-                  / shadow-box behind them). */}
-              {(() => {
-                const claimBody = (
-                  <>
-                {/*
-                  Only show "Notified" date when the user has explicitly
-                  notified the dealer — i.e. the repair_status is anything
-                  other than the default "Not Reported". Previously this
-                  block fired any time `notified_at` was set, which was
-                  auto-filled to today by the edit flow whenever the user
-                  toggled "Needs Repair" — confusing because the item was
-                  marked broken but no actual notification had been sent.
-                */}
-                {!!tool.repair_info?.notified_at &&
-                  !!tool.repair_info?.repair_status &&
+            <View style={[newStyles.claimBadge, { borderColor: theme.colors.danger, backgroundColor: theme.colors.danger + "15" }]}>
+              <Text style={[newStyles.claimBadgeText, { color: theme.colors.danger }]} allowFontScaling={false} numberOfLines={1}>
+                {(tool.repair_info?.repair_status || "Repair pending").toUpperCase()}
+              </Text>
+            </View>
+          </View>
+          {(() => {
+            const claimBody = (
+              <>
+                {!!tool.repair_info?.notified_at && !!tool.repair_info?.repair_status &&
                   String(tool.repair_info.repair_status).toLowerCase() !== "not reported" && (
                   <View style={newStyles.claimRow}>
                     <Text style={newStyles.claimRowLabel} allowFontScaling={false}>Notified</Text>
@@ -1772,681 +1846,532 @@ export default function ToolDetail() {
                     <Text style={newStyles.claimNotesText} allowFontScaling={false}>{tool.repair_info.notes}</Text>
                   </View>
                 )}
-                {/* Quick-contact + edit/fix action buttons */}
                 <View style={{ flexDirection: "row", gap: 8, marginTop: 12 }}>
-                  <TouchableOpacity
-                    style={[newStyles.claimActionBtn, { backgroundColor: theme.colors.accent, flex: 1 }]}
-                    onPress={() => notifyDealer(tool, "email")}
-                    testID="claim-email-dealer"
-                    activeOpacity={0.85}
-                  >
+                  <TouchableOpacity style={[newStyles.claimActionBtn, { backgroundColor: theme.colors.accent, flex: 1 }]} onPress={() => notifyDealer(tool, "email")} testID="claim-email-dealer" activeOpacity={0.85}>
                     <ContactIconImage type="mail" size={16} />
                     <Text style={[newStyles.claimActionText, { color: "#000" }]}>EMAIL</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[newStyles.claimActionBtn, { backgroundColor: theme.colors.accent, flex: 1 }]}
-                    onPress={() => notifyDealer(tool, "sms")}
-                    testID="claim-text-dealer"
-                    activeOpacity={0.85}
-                  >
+                  <TouchableOpacity style={[newStyles.claimActionBtn, { backgroundColor: theme.colors.accent, flex: 1 }]} onPress={() => notifyDealer(tool, "sms")} testID="claim-text-dealer" activeOpacity={0.85}>
                     <ContactIconImage type="text" size={16} />
                     <Text style={[newStyles.claimActionText, { color: "#000" }]}>TEXT</Text>
                   </TouchableOpacity>
                 </View>
                 <View style={{ flexDirection: "row", gap: 8, marginTop: 8 }}>
-                  <TouchableOpacity
-                    style={[newStyles.claimActionBtn, newStyles.claimActionBtnOutline, { flex: 1 }]}
-                    onPress={openRepair}
-                    testID="claim-edit"
-                    activeOpacity={0.85}
-                  >
+                  <TouchableOpacity style={[newStyles.claimActionBtn, newStyles.claimActionBtnOutline, { flex: 1 }]} onPress={openRepair} testID="claim-edit" activeOpacity={0.85}>
                     <Ionicons name="create-outline" size={11} color={theme.colors.danger} />
                     <Text style={[newStyles.claimActionText, { color: theme.colors.danger }]}>EDIT CLAIM</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[newStyles.claimActionBtn, { backgroundColor: theme.colors.success, flex: 1 }]}
-                    onPress={markRepaired}
-                    testID="claim-mark-fixed"
-                    activeOpacity={0.85}
-                  >
+                  <TouchableOpacity style={[newStyles.claimActionBtn, { backgroundColor: theme.colors.success, flex: 1 }]} onPress={markRepaired} testID="claim-mark-fixed" activeOpacity={0.85}>
                     <Ionicons name="checkmark-done" size={11} color="#000" />
                     <Text style={[newStyles.claimActionText, { color: "#000" }]}>MARK FIXED</Text>
                   </TouchableOpacity>
                 </View>
-                  </>
-                );
-                return isIndustrial ? (
-                  claimBody
-                ) : (
-                  <View style={newStyles.claimCard}>{claimBody}</View>
-                );
-              })()}
-            </CardShell>
-          )}
-
-          {/* CHECKED OUT — shown in the SAME slot as the claim card
-              (immediately under the photo, above the description) and styled
-              like the claim card but in soft yellow. Tap to jump to the
-              borrower's profile. Reads from `current_checkout` (where the
-              active record lives while is_checked_out=true). */}
-          {tool.is_checked_out && (() => {
-            const active = tool.current_checkout || (Array.isArray(tool.checkout_history)
-              ? [...tool.checkout_history].reverse().find((r: any) => !r?.checked_in_at)
-              : null);
-            if (!active) return null;
-            const target = active.borrower_id
-              ? `/borrower/${active.borrower_id}`
-              : null;
-            return (
-              <TouchableOpacity
-                testID="checked-out-pill"
-                style={newStyles.checkedOutCard}
-                activeOpacity={target ? 0.85 : 1}
-                onPress={target ? () => router.push(target as any) : undefined}
-              >
-                <View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 8 }}>
-                  <Ionicons name="person" size={18} color={theme.colors.accent} />
-                  <Text style={newStyles.checkedOutTitle}>CHECKED OUT</Text>
-                  {!!target && (
-                    <View style={{ flex: 1, alignItems: "flex-end" }}>
-                      <Ionicons name="chevron-forward" size={14} color={theme.colors.accent} />
-                    </View>
-                  )}
-                </View>
-                <View style={{ marginLeft: 28 }}>
-                  <Text style={newStyles.checkedOutLine}>
-                    By: {active.borrower_name || "Unknown"}
-                  </Text>
-                  <Text style={newStyles.checkedOutLine}>
-                    On: {formatDateUS(active.checked_out_at)}
-                  </Text>
-                  {/* Quick-action TEXT + CALL buttons. Visible only when we
-                      know the borrower's phone (lookup happens at checkout).
-                      The TEXT button pre-fills the user's reminder template
-                      (see composeBorrowSmsBody). These mirror the action
-                      buttons that appear on the overdue notification when
-                      the user taps it. */}
-                  {(() => {
-                    const phone = active.borrower_phone || "";
-                    if (!phone) return null;
-                    const tel = phone.replace(/[^0-9+]/g, "");
-                    const smsBody = composeBorrowSmsBody(
-                      tool.name || "tool",
-                      active.borrower_name || "there",
-                    );
-                    return (
-                      <View
-                        style={{
-                          flexDirection: "row",
-                          gap: 8,
-                          marginTop: 10,
-                        }}
-                      >
-                        <TouchableOpacity
-                          testID="checkedout-call"
-                          style={newStyles.qaBtn}
-                          onPress={(e: any) => {
-                            e?.stopPropagation?.();
-                            Linking.openURL(`tel:${tel}`);
-                          }}
-                          activeOpacity={0.7}
-                        >
-                          <ContactIconImage type="call" size={18} />
-                          <Text style={newStyles.qaBtnText}>CALL</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                          testID="checkedout-text"
-                          style={newStyles.qaBtn}
-                          onPress={(e: any) => {
-                            e?.stopPropagation?.();
-                            const sep = Platform.OS === "ios" ? "&" : "?";
-                            const url = `sms:${tel}${sep}body=${encodeURIComponent(smsBody)}`;
-                            Linking.openURL(url);
-                          }}
-                          activeOpacity={0.7}
-                        >
-                          <ContactIconImage type="text" size={18} />
-                          <Text style={newStyles.qaBtnText}>TEXT REMINDER</Text>
-                        </TouchableOpacity>
-                      </View>
-                    );
-                  })()}
-                </View>
-              </TouchableOpacity>
-            );
-          })()}
-
-          {/* DESCRIPTION/NOTES + TAGS are now rendered inside the grouped
-              details boxes below (Group 5 + Group 4 respectively). */}
-
-          {/* (CHECKED OUT card was moved to the top of this screen, above
-              the description — see block under the photo row.) */}
-
-          {/* DETAILS BOX — groups location, dealer, model number(s), brand,
-              purchased, category in one bordered card, styled identically
-              to the warranty card. Location and dealer rows are tappable
-              (chevron on right). */}
-          {(() => {
-            // Prefer the new multi-value arrays. Fall back through legacy
-            // shape (set_serials when is_set, otherwise the single
-            // serial_number string) for tools not yet migrated.
-            const modelNums: string[] = Array.isArray(tool.model_numbers) && tool.model_numbers.length
-              ? tool.model_numbers.filter((s: string) => !!s)
-              : (tool.is_set
-                  ? (Array.isArray(tool.set_serials)
-                      ? tool.set_serials.filter((s: string) => !!s)
-                      : [])
-                  : (tool.serial_number ? [String(tool.serial_number)] : []));
-            const serialNums: string[] = Array.isArray(tool.serial_numbers)
-              ? tool.serial_numbers.filter((s: string) => !!s)
-              : [];
-
-            // Helper to keep Ionicons name typed inline
-            type IconName = React.ComponentProps<typeof Ionicons>["name"];
-            type Row =
-              | { kind: "value"; label: string; icon?: IconName; value: string; onPress?: () => void }
-              | { kind: "models"; label: string; icon?: IconName; values: string[] }
-              | { kind: "expandable"; key: "gallery" | "documents" | "receipts" | "maintenance" | "warranty" | "consumable"; label: string; icon?: IconName; value: string }
-              | { kind: "description"; icon?: IconName; value: string };
-
-            // Helper renderer for a row label with optional leading icon.
-            // Used by ALL row kinds (value/models/expandable/description)
-            // so labels stay perfectly aligned across the description card.
-            const renderLabel = (label: string, icon?: IconName) => (
-              <View style={newStyles.detailsLabelWrap}>
-                {icon ? (
-                  <Ionicons
-                    name={icon}
-                    size={13}
-                    color={theme.colors.accent}
-                  />
-                ) : null}
-                <Text style={newStyles.detailsLabel}>{label}</Text>
-              </View>
-            );
-
-            // ---- GROUPED ROWS (per user 2026-05-26) ------------------------
-            // The Edit screen orders fields into 5 visual groups. The Detail
-            // screen mirrors that exact same ordering so the read-only +
-            // edit views feel coherent. Each group renders in its own
-            // detailsBox card with a top margin to provide visible
-            // section breaks. The Claims/History group is left at the
-            // bottom (user explicitly asked to leave the claims section
-            // where it currently sits).
-            const groupPrimary: Row[] = [];
-            const groupAttachments: Row[] = [];
-            const groupServices: Row[] = [];
-            const groupClassify: Row[] = [];
-            const groupDescription: Row[] = [];
-            const groupHistory: Row[] = [];
-
-            // Group 1: NAME (page title), PRICE (status pill), LOCATION,
-            // MODEL #s, SERIAL #s, DEALER, BRAND. NAME + PRICE are already
-            // shown at the top of the screen so we don't repeat them here.
-            groupPrimary.push({
-              kind: "value",
-              label: "LOCATION",
-              icon: "location",
-              value: tool.location_name || "No location",
-            });
-            groupPrimary.push({
-              kind: "models",
-              label: modelNums.length > 1 ? "MODEL NUMBERS" : "MODEL #",
-              icon: "barcode",
-              values: modelNums.length ? modelNums : ["—"],
-            });
-            groupPrimary.push({
-              kind: "models",
-              label: serialNums.length > 1 ? "SERIAL NUMBERS" : "SERIAL #",
-              icon: "key",
-              values: serialNums.length ? serialNums : ["—"],
-            });
-            groupPrimary.push({
-              kind: "value",
-              label: "DEALER",
-              icon: "business",
-              value: tool.dealer_name || "—",
-              onPress: tool.dealer_id
-                ? () => router.push(`/dealer/${tool.dealer_id}`)
-                : undefined,
-            });
-            groupPrimary.push({
-              kind: "value",
-              label: "BRAND",
-              icon: "ribbon",
-              value: tool.brand ? String(tool.brand) : "—",
-            });
-            if (tool.bundle_id) {
-              groupPrimary.push({
-                kind: "value",
-                label: "SET / BUNDLE",
-                icon: "cube",
-                value: "Part of a set · tap to view",
-                onPress: () => router.push(`/bundle/${tool.bundle_id}`),
-              });
-            }
-
-            // Group 2: PHOTOS, DOCUMENTS, RECEIPTS
-            groupAttachments.push({
-              kind: "expandable",
-              key: "gallery",
-              label: "PHOTOS",
-              icon: "images",
-              value: `${photos.length} photo${photos.length === 1 ? "" : "s"}`,
-            });
-            groupAttachments.push({
-              kind: "expandable",
-              key: "documents",
-              label: "DOCUMENTS",
-              icon: "document-text",
-              value: `${Array.isArray(tool.documents) ? tool.documents.length : 0} document${(Array.isArray(tool.documents) ? tool.documents.length : 0) === 1 ? "" : "s"}`,
-            });
-            groupAttachments.push({
-              kind: "expandable",
-              key: "receipts",
-              label: "RECEIPTS",
-              icon: "receipt",
-              value: `${Array.isArray(tool.receipts) ? tool.receipts.length : 0} receipt${(Array.isArray(tool.receipts) ? tool.receipts.length : 0) === 1 ? "" : "s"}`,
-            });
-
-            // Group 3: WARRANTY, MAINTENANCE, CONSUMABLE
-            groupServices.push({
-              kind: "expandable",
-              key: "warranty",
-              label: "WARRANTY",
-              icon: "shield-checkmark",
-              value: `${warrantyCount} record${warrantyCount === 1 ? "" : "s"}`,
-            });
-            groupServices.push({
-              kind: "expandable",
-              key: "maintenance",
-              label: "MAINTENANCE",
-              icon: "construct",
-              value: `${maintenanceCount} record${maintenanceCount === 1 ? "" : "s"}`,
-            });
-            groupServices.push({
-              kind: "expandable",
-              key: "consumable",
-              label: "CONSUMABLE",
-              icon: "flask",
-              value: tool.is_consumable ? "Yes" : "No",
-            });
-
-            // Group 4: CATEGORY, TAGS, PURCHASE DATE (+ MSRP if set)
-            groupClassify.push({
-              kind: "value",
-              label: "CATEGORY",
-              icon: "folder",
-              value: tool.category_name ? String(tool.category_name) : "—",
-            });
-            const tagSummary = Array.isArray(tool.tag_names) && tool.tag_names.length
-              ? tool.tag_names.join(", ")
-              : "—";
-            groupClassify.push({
-              kind: "value",
-              label: "TAGS",
-              icon: "pricetags",
-              value: tagSummary,
-            });
-            groupClassify.push({
-              kind: "value",
-              label: "PURCHASED",
-              icon: "calendar",
-              value: tool.purchase_date ? formatDateUS(tool.purchase_date) : "—",
-            });
-            if (tool.msrp_price && Number(tool.msrp_price) > 0) {
-              groupClassify.push({
-                kind: "value",
-                label: "MSRP",
-                icon: "cash",
-                value: `$${Number(tool.msrp_price).toFixed(2)}`,
-              });
-            }
-
-            // Group 5: DESCRIPTION / NOTES (long-form text, single row)
-            if (tool.description && String(tool.description).trim()) {
-              groupDescription.push({
-                kind: "description",
-                icon: "document-text-outline",
-                value: String(tool.description),
-              });
-            }
-
-            // History group — stays at the bottom of the page (CLAIMS
-            // section is intentionally left in place per user request).
-            const checkoutCount = Array.isArray(tool.checkout_history)
-              ? tool.checkout_history.length
-              : 0;
-            groupHistory.push({
-              kind: "value",
-              label: "CHECKOUT HISTORY",
-              icon: "swap-horizontal",
-              value: `${checkoutCount} entr${checkoutCount === 1 ? "y" : "ies"}`,
-              onPress: () => router.push(`/checkout-history/${tool.id}`),
-            });
-            groupHistory.push({
-              kind: "value",
-              label: "CLAIMS HISTORY",
-              icon: "alert-circle",
-              value: "View",
-              onPress: () => router.push(`/claims-history/${tool.id}`),
-            });
-
-            const renderGroup = (rows: Row[], boxKey: string) => (
-              <GroupCard key={boxKey} boxKey={boxKey}>
-                {rows.map((r, i) => {
-                  const isLast = i === rows.length - 1;
-                  if (r.kind === "description") {
-                    return (
-                      <View
-                        key={`desc-${i}`}
-                        style={[newStyles.detailsRow, isLast && newStyles.detailsRowLast, { flexDirection: "column", alignItems: "stretch", paddingVertical: 12, gap: 6 }]}
-                      >
-                        {renderLabel("DESCRIPTION / NOTES", r.icon)}
-                        <Text style={[newStyles.detailsValue, { textAlign: "left", fontSize: 11, fontWeight: "500", lineHeight: 16 }]}>
-                          {r.value}
-                        </Text>
-                      </View>
-                    );
-                  }
-                  if (r.kind === "models") {
-                    return (
-                      <View
-                        key={`m-${i}`}
-                        style={[newStyles.detailsRow, isLast && newStyles.detailsRowLast]}
-                      >
-                        {renderLabel(r.label, r.icon)}
-                        <View
-                          style={{
-                            flex: 1,
-                            alignItems: "flex-end",
-                            justifyContent: "center",
-                            gap: 2,
-                          }}
-                        >
-                          {r.values.map((s, j) => (
-                            <Text
-                              key={j}
-                              style={newStyles.detailsValue}
-                              numberOfLines={1}
-                            >
-                              {s}
-                            </Text>
-                          ))}
-                        </View>
-                      </View>
-                    );
-                  }
-                  if (r.kind === "expandable") {
-                    const isOpen = attachOpen === r.key;
-                    return (
-                      <View
-                        key={`e-${r.key}`}
-                        style={[
-                          isLast && !isOpen && newStyles.detailsRowLast,
-                        ]}
-                      >
-                        <TouchableOpacity
-                          style={[newStyles.detailsRow, !isOpen && isLast && newStyles.detailsRowLast]}
-                          activeOpacity={0.6}
-                          onPress={() => setAttachOpen(isOpen ? null : r.key)}
-                          testID={`details-row-${r.key}`}
-                        >
-                          {renderLabel(r.label, r.icon)}
-                          <View style={newStyles.detailsValueWrap}>
-                            <Text style={newStyles.detailsValue} numberOfLines={1}>
-                              {r.value}
-                            </Text>
-                            <Ionicons
-                              name={isOpen ? "chevron-down" : "chevron-forward"}
-                              size={14}
-                              color={theme.colors.textMuted}
-                            />
-                          </View>
-                        </TouchableOpacity>
-                        {isOpen && (
-                          <View style={[newStyles.detailsExpanded, isLast && newStyles.detailsRowLast]}>
-                            {r.key === "gallery" && (
-                              <ShadowBoxSubCard style={newStyles.nestedCard}>
-                                <View style={newStyles.attachHeader}>
-                                  <Text style={newStyles.attachSectionLabel}>
-                                    PHOTOS{photos.length > 0 ? ` (${photos.length})` : ""}
-                                  </Text>
-                                  <PillButton
-                                    testID="add-photo-btn"
-                                    label="ADD"
-                                    icon="add-circle"
-                                    variant="active"
-                                    compact
-                                    onPress={promptAddPhoto}
-                                  />
-                                </View>
-                                {photos.length === 0 ? (
-                                  <Text style={newStyles.attachEmpty}>
-                                    No photos yet. Add product shots, condition photos,
-                                    or reference images.
-                                  </Text>
-                                ) : (
-                                  <ScrollView
-                                    horizontal
-                                    showsHorizontalScrollIndicator={false}
-                                    contentContainerStyle={newStyles.galleryRow}
-                                  >
-                                    {photos.map((p: string, j: number) => (
-                                      <TouchableOpacity
-                                        key={j}
-                                        testID={`gallery-thumb-${j}`}
-                                        onPress={() => {
-                                          setPhotoIdx(j);
-                                          setIsImageViewerVisible(true);
-                                        }}
-                                        activeOpacity={0.85}
-                                      >
-                                        <AppImage source={{ uri: p }} style={newStyles.galleryThumb} />
-                                      </TouchableOpacity>
-                                    ))}
-                                  </ScrollView>
-                                )}
-                              </ShadowBoxSubCard>
-                            )}
-                            {r.key === "documents" && (
-                              <ShadowBoxSubCard style={newStyles.nestedCard}>
-                                <DocumentsSection tool={tool} onChange={load} />
-                              </ShadowBoxSubCard>
-                            )}
-                            {r.key === "receipts" && (
-                              <ShadowBoxSubCard style={newStyles.nestedCard}>
-                                <ReceiptsSection
-                                  receipts={tool.receipts}
-                                  onAdd={promptAddReceipt}
-                                />
-                              </ShadowBoxSubCard>
-                            )}
-                            {r.key === "maintenance" && (
-                              <ShadowBoxSubCard style={newStyles.nestedCard}>
-                                <MaintenanceSection tool={tool} onChange={load} />
-                              </ShadowBoxSubCard>
-                            )}
-                            {r.key === "warranty" && (
-                              <WarrantySection tool={tool} />
-                            )}
-                            {r.key === "consumable" && (
-                              <ShadowBoxSubCard style={newStyles.nestedCard}>
-                                <View style={newStyles.attachHeader}>
-                                  <Text style={newStyles.attachSectionLabel}>CONSUMABLE</Text>
-                                  <View style={[newStyles.consumableBadge, tool.is_consumable ? newStyles.consumableBadgeYes : newStyles.consumableBadgeNo]}>
-                                    <Text style={[newStyles.consumableBadgeText, tool.is_consumable ? { color: theme.colors.success } : { color: theme.colors.textMuted }]}>
-                                      {tool.is_consumable ? "YES" : "NO"}
-                                    </Text>
-                                  </View>
-                                </View>
-                                {tool.is_consumable ? (
-                                  <View style={{ paddingTop: 4, gap: 8 }}>
-                                    {!!tool.consumable_info?.store_name && (
-                                      <View style={newStyles.consRow}>
-                                        <Text style={newStyles.consLabel}>STORE</Text>
-                                        <Text style={newStyles.consValue} numberOfLines={1}>{tool.consumable_info.store_name}</Text>
-                                      </View>
-                                    )}
-                                    {!!tool.consumable_info?.website && (
-                                      <View style={newStyles.consRow}>
-                                        <Text style={newStyles.consLabel}>SITE</Text>
-                                        <Text style={newStyles.consValue} numberOfLines={1}>{tool.consumable_info.website}</Text>
-                                      </View>
-                                    )}
-                                    {!!tool.consumable_info?.sku && (
-                                      <View style={newStyles.consRow}>
-                                        <Text style={newStyles.consLabel}>SKU</Text>
-                                        <Text style={newStyles.consValue} numberOfLines={1}>{tool.consumable_info.sku}</Text>
-                                      </View>
-                                    )}
-                                    {!!tool.consumable_info?.notes && (
-                                      <Text style={[newStyles.consValue, { textAlign: "left", marginTop: 4 }]}>
-                                        {tool.consumable_info.notes}
-                                      </Text>
-                                    )}
-                                  </View>
-                                ) : (
-                                  <Text style={newStyles.attachEmpty}>
-                                    Not marked as consumable. Toggle on the edit screen
-                                    to track re-orderable items.
-                                  </Text>
-                                )}
-                              </ShadowBoxSubCard>
-                            )}
-                          </View>
-                        )}
-                      </View>
-                    );
-                  }
-                  const RowWrapper: any = r.onPress ? TouchableOpacity : View;
-                  const wrapperProps = r.onPress
-                    ? { onPress: r.onPress, activeOpacity: 0.6 }
-                    : {};
-                  return (
-                    <RowWrapper
-                      key={`r-${i}`}
-                      style={[newStyles.detailsRow, isLast && newStyles.detailsRowLast]}
-                      testID={`details-row-${r.label.toLowerCase().replace(/\s+/g, "-")}`}
-                      {...wrapperProps}
-                    >
-                      {renderLabel(r.label, r.icon)}
-                      <View style={newStyles.detailsValueWrap}>
-                        <Text style={newStyles.detailsValue} numberOfLines={1}>
-                          {r.value}
-                        </Text>
-                        {r.onPress && (
-                          <Ionicons
-                            name="chevron-forward"
-                            size={14}
-                            color={theme.colors.textMuted}
-                          />
-                        )}
-                      </View>
-                    </RowWrapper>
-                  );
-                })}
-              </GroupCard>
-            );
-
-            return (
-              <>
-                {renderGroup(groupPrimary, "primary")}
-                {renderGroup(groupAttachments, "attachments")}
-                {renderGroup(groupServices, "services")}
-                {renderGroup(groupClassify, "classify")}
-                {groupDescription.length > 0 && renderGroup(groupDescription, "description")}
-                {renderGroup(groupHistory, "history")}
               </>
             );
+            return isIndustrial ? claimBody : <View style={newStyles.claimCard}>{claimBody}</View>;
           })()}
+        </CardShell>
+      )}
 
-
-          {/* TAGS moved to the very bottom of the page — see below */}
-
-          {/* Quantity stepper is now opened via the QUANTITY pillbox in the
-              photo row above — see <showQtyModal> Modal below. */}
-
-          {/* Lost banner — only renders if tool.is_lost */}
-          <LostStatusBanner tool={tool} onChange={load} />
-
-          {/* CLAIM INFORMATION card was moved to the top of this screen
-              (immediately under the photo, above the description) per user
-              request — this block is intentionally not duplicated here. */}
-
-          {/* Sale listing detail (when for sale, shows the listing controls) */}
-          {tool.for_sale && !tool.is_sold && (
-            <View style={newStyles.saleCard}>
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-                <Ionicons name="pricetag" size={20} color="#000" />
-                <View style={{ flex: 1 }}>
-                  <Text style={newStyles.saleTitle}>LISTED  {fmtMoney(tool.sale_price)}</Text>
-                  {!!tool.sale_notes && (
-                    <Text style={newStyles.saleNotes}>{tool.sale_notes}</Text>
-                  )}
-                </View>
-              </View>
-              <View style={{ flexDirection: "row", gap: 8, marginTop: 12 }}>
-                <TouchableOpacity style={[newStyles.saleBtn, { backgroundColor: "#000" }]} onPress={() => openSaleModal()}>
-                  <Ionicons name="create-outline" size={12} color={theme.colors.accent} />
-                  <Text style={[newStyles.saleBtnText, { color: theme.colors.accent }]}>EDIT</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[newStyles.saleBtn, { backgroundColor: "#000" }]}
-                  onPress={() => setShowPosterBuilder(true)}
-                  testID="for-sale-poster-btn"
-                >
-                  <Ionicons name="megaphone" size={12} color={theme.colors.accent} />
-                  <Text style={[newStyles.saleBtnText, { color: theme.colors.accent }]}>POSTER</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[newStyles.saleBtn, { backgroundColor: "rgba(0,0,0,0.15)" }]}
-                  onPress={async () => {
-                    try {
-                      await api.updateTool(tool.id, { for_sale: false, sale_price: 0, sale_notes: "" });
-                      load();
-                    } catch (e: any) {
-                      Alert.alert("Error", String(e?.message || e));
-                    }
-                  }}
-                >
-                  <Ionicons name="close-circle" size={12} color="#000" />
-                  <Text style={[newStyles.saleBtnText, { color: "#000" }]}>UNLIST</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={[newStyles.saleBtn, { backgroundColor: theme.colors.success }]} onPress={() => setShowMarkSold(true)}>
-                  <Ionicons name="checkmark-circle" size={12} color="#fff" />
-                  <Text style={[newStyles.saleBtnText, { color: "#fff" }]}>SOLD</Text>
-                </TouchableOpacity>
-              </View>
+      {tool.is_checked_out && (() => {
+        const active = tool.current_checkout || (Array.isArray(tool.checkout_history)
+          ? [...tool.checkout_history].reverse().find((r: any) => !r?.checked_in_at)
+          : null);
+        if (!active) return null;
+        const target = active.borrower_id ? `/borrower/${active.borrower_id}` : null;
+        return (
+          <TouchableOpacity testID="checked-out-pill" style={newStyles.checkedOutCard} activeOpacity={target ? 0.85 : 1} onPress={target ? () => router.push(target as any) : undefined}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 8 }}>
+              <Ionicons name="person" size={18} color={theme.colors.accent} />
+              <Text style={newStyles.checkedOutTitle}>CHECKED OUT</Text>
+              {!!target && (<View style={{ flex: 1, alignItems: "flex-end" }}><Ionicons name="chevron-forward" size={14} color={theme.colors.accent} /></View>)}
             </View>
-          )}
-
-          {/* Sold summary (when sold, just shows it) */}
-          {tool.is_sold && (
-            <View style={[newStyles.saleCard, { backgroundColor: theme.colors.success }]}>
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-                <Ionicons name="checkmark-done-circle" size={22} color="#fff" />
-                <View style={{ flex: 1 }}>
-                  <Text style={[newStyles.saleTitle, { color: "#fff" }]}>
-                    SOLD {tool.sold_price ? fmtMoney(tool.sold_price) : ""}
-                  </Text>
-                  <Text style={[newStyles.saleNotes, { color: "#fff" }]}>
-                    {tool.sold_at ? formatDateUS(tool.sold_at) : ""}
-                    {tool.sold_to ? `  ·  ${tool.sold_to}` : ""}
-                  </Text>
-                </View>
-              </View>
+            <View style={{ marginLeft: 28 }}>
+              <Text style={newStyles.checkedOutLine}>By: {active.borrower_name || "Unknown"}</Text>
+              <Text style={newStyles.checkedOutLine}>On: {formatDateUS(active.checked_out_at)}</Text>
+              {(() => {
+                const phone = active.borrower_phone || "";
+                if (!phone) return null;
+                const tel = phone.replace(/[^0-9+]/g, "");
+                const smsBody = composeBorrowSmsBody(tool.name || "tool", active.borrower_name || "there");
+                return (
+                  <View style={{ flexDirection: "row", gap: 8, marginTop: 10 }}>
+                    <TouchableOpacity testID="checkedout-call" style={newStyles.qaBtn} onPress={(e: any) => { e?.stopPropagation?.(); Linking.openURL(`tel:${tel}`); }} activeOpacity={0.7}>
+                      <ContactIconImage type="call" size={18} />
+                      <Text style={newStyles.qaBtnText}>CALL</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity testID="checkedout-text" style={newStyles.qaBtn} onPress={(e: any) => { e?.stopPropagation?.(); const sep = Platform.OS === "ios" ? "&" : "?"; Linking.openURL(`sms:${tel}${sep}body=${encodeURIComponent(smsBody)}`); }} activeOpacity={0.7}>
+                      <ContactIconImage type="text" size={18} />
+                      <Text style={newStyles.qaBtnText}>TEXT REMINDER</Text>
+                    </TouchableOpacity>
+                  </View>
+                );
+              })()}
             </View>
-          )}
+          </TouchableOpacity>
+        );
+      })()}
 
-          {/* ATTACHMENTS / SERVICE / HISTORY were moved into the DetailsBox
-              card above (gallery, documents, receipts, maintenance, warranty
-              now collapse/expand inline; checkout & claims history tap to
-              navigate). */}
+      <LostStatusBanner tool={tool} onChange={load} />
 
-          {/* Item actions now live entirely in the top-right 3-dots menu. */}
+      {tool.for_sale && !tool.is_sold && (
+        <View style={newStyles.saleCard}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+            <Ionicons name="pricetag" size={20} color="#000" />
+            <View style={{ flex: 1 }}>
+              <Text style={newStyles.saleTitle}>LISTED  {fmtMoney(tool.sale_price)}</Text>
+              {!!tool.sale_notes && <Text style={newStyles.saleNotes}>{tool.sale_notes}</Text>}
+            </View>
+          </View>
+          <View style={{ flexDirection: "row", gap: 8, marginTop: 12 }}>
+            <TouchableOpacity style={[newStyles.saleBtn, { backgroundColor: "#000" }]} onPress={() => openSaleModal()}>
+              <Ionicons name="create-outline" size={12} color={theme.colors.accent} />
+              <Text style={[newStyles.saleBtnText, { color: theme.colors.accent }]}>EDIT</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[newStyles.saleBtn, { backgroundColor: "#000" }]} onPress={() => setShowPosterBuilder(true)} testID="for-sale-poster-btn">
+              <Ionicons name="megaphone" size={12} color={theme.colors.accent} />
+              <Text style={[newStyles.saleBtnText, { color: theme.colors.accent }]}>POSTER</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[newStyles.saleBtn, { backgroundColor: theme.colors.success }]} onPress={() => setShowMarkSold(true)}>
+              <Ionicons name="checkmark-circle" size={12} color="#fff" />
+              <Text style={[newStyles.saleBtnText, { color: "#fff" }]}>SOLD</Text>
+            </TouchableOpacity>
+          </View>
         </View>
-      </ScrollView>
+      )}
+
+      {tool.is_sold && (
+        <View style={[newStyles.saleCard, { backgroundColor: theme.colors.success }]}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+            <Ionicons name="checkmark-done-circle" size={22} color="#fff" />
+            <View style={{ flex: 1 }}>
+              <Text style={[newStyles.saleTitle, { color: "#fff" }]}>SOLD {tool.sold_price ? fmtMoney(tool.sold_price) : ""}</Text>
+              <Text style={[newStyles.saleNotes, { color: "#fff" }]}>{tool.sold_at ? formatDateUS(tool.sold_at) : ""}{tool.sold_to ? `  ·  ${tool.sold_to}` : ""}</Text>
+            </View>
+          </View>
+        </View>
+      )}
+    </>
+  );
+
+  // ── DETAILS TAB ─────────────────────────────────────────────────────────
+  const renderDetailsView = () => {
+    const tagSummary = Array.isArray(tool.tag_names) && tool.tag_names.length ? tool.tag_names.join(", ") : "—";
+    return (
+      <View>
+        {renderStatusBanners()}
+        <View style={newStyles.detailsBox}>
+          <View style={[newStyles.detailsRow]}>
+            <View style={newStyles.detailsLabelWrap}>
+              <Ionicons name="barcode" size={13} color={theme.colors.accent} />
+              <Text style={newStyles.detailsLabel}>{modelNumsView.length > 1 ? "MODEL NUMBERS" : "MODEL #"}</Text>
+            </View>
+            <View style={{ flex: 1, alignItems: "flex-end", gap: 2 }}>
+              {(modelNumsView.length ? modelNumsView : ["—"]).map((s, j) => (
+                <Text key={j} style={newStyles.detailsValue} numberOfLines={1}>{s}</Text>
+              ))}
+            </View>
+          </View>
+          <View style={[newStyles.detailsRow]}>
+            <View style={newStyles.detailsLabelWrap}>
+              <Ionicons name="key" size={13} color={theme.colors.accent} />
+              <Text style={newStyles.detailsLabel}>{serialNumsView.length > 1 ? "SERIAL NUMBERS" : "SERIAL #"}</Text>
+            </View>
+            <View style={{ flex: 1, alignItems: "flex-end", gap: 2 }}>
+              {(serialNumsView.length ? serialNumsView : ["—"]).map((s, j) => (
+                <Text key={j} style={newStyles.detailsValue} numberOfLines={1}>{s}</Text>
+              ))}
+            </View>
+          </View>
+          {vRow("DEALER", "business", tool.dealer_name || "—", tool.dealer_id ? () => router.push(`/dealer/${tool.dealer_id}`) : undefined)}
+          {vRow("BRAND", "ribbon", tool.brand ? String(tool.brand) : "—")}
+          {vRow("PURCHASED", "calendar", tool.purchase_date ? formatDateUS(tool.purchase_date) : "—")}
+          {vRow("CATEGORY", "folder", tool.category_name ? String(tool.category_name) : "—")}
+          {vRow("TAGS", "pricetags", tagSummary)}
+          {tool.msrp_price && Number(tool.msrp_price) > 0 ? vRow("MSRP", "cash", `$${Number(tool.msrp_price).toFixed(2)}`) : null}
+          {vRow("CONSUMABLE", "flask", tool.is_consumable ? "Yes" : "No", undefined, !(tool.is_consumable && tool.consumable_info))}
+          {tool.is_consumable && tool.consumable_info && (
+            <View style={{ paddingTop: 6, gap: 4 }}>
+              {!!tool.consumable_info.store_name && <Text style={newStyles.detailsValue}>Store: {tool.consumable_info.store_name}</Text>}
+              {!!tool.consumable_info.website && <Text style={newStyles.detailsValue}>Site: {tool.consumable_info.website}</Text>}
+              {!!tool.consumable_info.sku && <Text style={newStyles.detailsValue}>SKU: {tool.consumable_info.sku}</Text>}
+              {!!tool.consumable_info.notes && <Text style={[newStyles.detailsValue, { textAlign: "left" }]}>{tool.consumable_info.notes}</Text>}
+            </View>
+          )}
+        </View>
+        {tool.description && String(tool.description).trim() ? (
+          <View style={[newStyles.detailsBox, { marginTop: 12 }]}>
+            <View style={[newStyles.detailsLabelWrap, { marginBottom: 6 }]}>
+              <Ionicons name="document-text-outline" size={13} color={theme.colors.accent} />
+              <Text style={newStyles.detailsLabel}>DESCRIPTION / NOTES</Text>
+            </View>
+            <Text style={[newStyles.detailsValue, { textAlign: "left", fontSize: 11, fontWeight: "500", lineHeight: 16 }]}>{tool.description}</Text>
+          </View>
+        ) : null}
+      </View>
+    );
+  };
+
+  const renderDetailsEdit = () => {
+    if (!form) return null;
+    return (
+      <View style={{ gap: 4 }}>
+        {eLabel("BRAND", "ribbon")}
+        <TextInput style={styles.input} value={form.brand} onChangeText={(v) => setF({ brand: v })} placeholder="DeWalt" placeholderTextColor={theme.colors.textMuted} testID="edit-brand" />
+
+        {eLabel(form.model_numbers.length > 1 ? "MODEL NUMBERS" : "MODEL #", "barcode")}
+        {form.model_numbers.map((m: string, i: number) => (
+          <View key={`mn-${i}`} style={newStyles.editArrRow}>
+            <TextInput style={[styles.input, { flex: 1, marginBottom: 0 }]} value={m} onChangeText={(v) => setArr("model_numbers", i, v)} placeholder={`Model # ${i + 1}`} placeholderTextColor={theme.colors.textMuted} testID={`edit-model-${i}`} />
+            {form.model_numbers.length > 1 && (
+              <TouchableOpacity onPress={() => removeArrLine("model_numbers", i)} hitSlop={8} style={newStyles.editArrRemove}>
+                <Ionicons name="close-circle" size={22} color={theme.colors.danger} />
+              </TouchableOpacity>
+            )}
+          </View>
+        ))}
+        <TouchableOpacity onPress={() => addArrLine("model_numbers")} style={newStyles.editAddLine} testID="edit-add-model">
+          <Ionicons name="add-circle-outline" size={16} color={theme.colors.accent} />
+          <Text style={newStyles.editAddLineText}>ADD MODEL #</Text>
+        </TouchableOpacity>
+
+        {eLabel(form.serial_numbers.length > 1 ? "SERIAL NUMBERS" : "SERIAL #", "key")}
+        {form.serial_numbers.map((s: string, i: number) => (
+          <View key={`sn-${i}`} style={newStyles.editArrRow}>
+            <TextInput style={[styles.input, { flex: 1, marginBottom: 0 }]} value={s} onChangeText={(v) => setArr("serial_numbers", i, v)} placeholder={`Serial # ${i + 1}`} placeholderTextColor={theme.colors.textMuted} testID={`edit-serial-${i}`} />
+            {form.serial_numbers.length > 1 && (
+              <TouchableOpacity onPress={() => removeArrLine("serial_numbers", i)} hitSlop={8} style={newStyles.editArrRemove}>
+                <Ionicons name="close-circle" size={22} color={theme.colors.danger} />
+              </TouchableOpacity>
+            )}
+          </View>
+        ))}
+        <TouchableOpacity onPress={() => addArrLine("serial_numbers")} style={newStyles.editAddLine} testID="edit-add-serial">
+          <Ionicons name="add-circle-outline" size={16} color={theme.colors.accent} />
+          <Text style={newStyles.editAddLineText}>ADD SERIAL #</Text>
+        </TouchableOpacity>
+
+        <View style={{ flexDirection: "row", gap: 10 }}>
+          <View style={{ flex: 1 }}>
+            {eLabel("PRICE EACH", "cash")}
+            <TextInput style={styles.input} value={form.cost} onChangeText={(v) => setF({ cost: v })} placeholder="0.00" keyboardType="decimal-pad" placeholderTextColor={theme.colors.textMuted} testID="edit-cost" />
+          </View>
+          <View style={{ flex: 1 }}>
+            {eLabel("QUANTITY", "layers")}
+            <TextInput style={styles.input} value={form.quantity} onChangeText={(v) => setF({ quantity: v })} placeholder="1" keyboardType="number-pad" placeholderTextColor={theme.colors.textMuted} testID="edit-qty" />
+          </View>
+        </View>
+
+        {eLabel("MSRP (OPTIONAL)", "pricetag")}
+        <TextInput style={styles.input} value={form.msrp_price} onChangeText={(v) => setF({ msrp_price: v })} placeholder="0.00" keyboardType="decimal-pad" placeholderTextColor={theme.colors.textMuted} testID="edit-msrp" />
+
+        {eLabel("PURCHASED", "calendar")}
+        <DateField value={form.purchase_date} onChange={(iso) => setF({ purchase_date: iso })} placeholder="MM/DD/YYYY" />
+
+        {eLabel("LOCATION", "location")}
+        <TouchableOpacity style={newStyles.editPickRow} onPress={() => setShowEditLocation(true)} testID="edit-location">
+          <Text style={newStyles.editPickValue} numberOfLines={1}>{form.location_name || "No location"}</Text>
+          <Ionicons name="chevron-forward" size={16} color={theme.colors.textMuted} />
+        </TouchableOpacity>
+
+        {eLabel("DEALER", "business")}
+        <TouchableOpacity style={newStyles.editPickRow} onPress={() => setShowEditDealer(true)} testID="edit-dealer">
+          <Text style={newStyles.editPickValue} numberOfLines={1}>{form.dealer_name || "No dealer"}</Text>
+          <Ionicons name="chevron-forward" size={16} color={theme.colors.textMuted} />
+        </TouchableOpacity>
+
+        {eLabel("CATEGORY", "folder")}
+        <TouchableOpacity style={newStyles.editPickRow} onPress={() => setShowEditCategory(true)} testID="edit-category">
+          <Text style={newStyles.editPickValue} numberOfLines={1}>{form.category_name || "No category"}</Text>
+          <Ionicons name="chevron-forward" size={16} color={theme.colors.textMuted} />
+        </TouchableOpacity>
+
+        {eLabel("TAGS", "pricetags")}
+        <TouchableOpacity style={newStyles.editPickRow} onPress={() => setShowEditTags(true)} testID="edit-tags">
+          <Text style={newStyles.editPickValue} numberOfLines={1}>{form.tag_names?.length ? form.tag_names.join(", ") : "No tags"}</Text>
+          <Ionicons name="chevron-forward" size={16} color={theme.colors.textMuted} />
+        </TouchableOpacity>
+
+        <View style={[newStyles.editPickRow, { marginTop: 8 }]}>
+          <View style={newStyles.detailsLabelWrap}>
+            <Ionicons name="flask" size={13} color={theme.colors.accent} />
+            <Text style={newStyles.detailsLabel}>CONSUMABLE</Text>
+          </View>
+          <AppSwitch value={form.is_consumable} onValueChange={(v: boolean) => setF({ is_consumable: v })} />
+        </View>
+        {form.is_consumable && (
+          <View style={{ gap: 0, marginTop: 6 }}>
+            <TextInput style={styles.input} value={form.consumable_info.store_name} onChangeText={(v) => setF({ consumable_info: { ...form.consumable_info, store_name: v } })} placeholder="Store (Home Depot, Amazon...)" placeholderTextColor={theme.colors.textMuted} />
+            <TextInput style={styles.input} value={form.consumable_info.website} onChangeText={(v) => setF({ consumable_info: { ...form.consumable_info, website: v } })} placeholder="Website https://..." placeholderTextColor={theme.colors.textMuted} />
+            <TextInput style={styles.input} value={form.consumable_info.sku} onChangeText={(v) => setF({ consumable_info: { ...form.consumable_info, sku: v } })} placeholder="SKU" placeholderTextColor={theme.colors.textMuted} />
+            <TextInput style={[styles.input, { height: 70, textAlignVertical: "top" }]} value={form.consumable_info.notes} onChangeText={(v) => setF({ consumable_info: { ...form.consumable_info, notes: v } })} placeholder="Re-order notes..." placeholderTextColor={theme.colors.textMuted} multiline />
+          </View>
+        )}
+
+        {eLabel("DESCRIPTION / NOTES", "document-text-outline")}
+        <TextInput style={[styles.input, { height: 90, textAlignVertical: "top" }]} value={form.description} onChangeText={(v) => setF({ description: v })} placeholder="Detailed notes..." placeholderTextColor={theme.colors.textMuted} multiline testID="edit-description" />
+      </View>
+    );
+  };
+
+  // ── BUNDLE TAB ──────────────────────────────────────────────────────────
+  const openBundlePicker = () => {
+    api.listBundles().then((b: any) => setAllBundles(Array.isArray(b) ? b : [])).catch(() => {});
+    setShowBundlePicker(true);
+  };
+  const renderBundle = () => (
+    <View style={{ gap: 12 }}>
+      {tool.bundle_id ? (
+        <View style={newStyles.detailsBox}>
+          <View style={[newStyles.detailsLabelWrap, { marginBottom: 10 }]}>
+            <Ionicons name="cube" size={16} color={theme.colors.accent} />
+            <Text style={[newStyles.detailsLabel, { fontSize: 10 }]}>PART OF A SET / BUNDLE</Text>
+          </View>
+          <Text style={[newStyles.detailsValue, { textAlign: "left", fontSize: 12, marginBottom: 12 }]}>
+            This item belongs to a bundle. Open the bundle to see every item grouped with it.
+          </Text>
+          <TouchableOpacity style={styles.btnPrimary} onPress={() => router.push(`/bundle/${tool.bundle_id}`)} testID="bundle-view">
+            <Ionicons name="open-outline" size={16} color="#000" />
+            <Text style={styles.btnPrimaryText}>VIEW BUNDLE</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={[styles.btnGhost, { marginTop: 10 }]} onPress={async () => {
+            try { await api.updateTool(tool.id, { bundle_id: null }); load(); } catch (e: any) { Alert.alert("Error", String(e?.message || e)); }
+          }} testID="bundle-remove">
+            <Text style={styles.btnGhostText}>REMOVE FROM BUNDLE</Text>
+          </TouchableOpacity>
+        </View>
+      ) : (
+        <View style={newStyles.detailsBox}>
+          <View style={{ alignItems: "center", paddingVertical: 16, gap: 10 }}>
+            <Ionicons name="cube-outline" size={40} color={theme.colors.textMuted} />
+            <Text style={[newStyles.detailsValue, { textAlign: "center", fontSize: 12 }]}>
+              This item isn't part of a bundle yet.
+            </Text>
+            <Text style={[newStyles.detailsValue, { textAlign: "center", fontSize: 10, color: theme.colors.textMuted }]}>
+              Bundle related items (like a socket set) so they move and check out together.
+            </Text>
+          </View>
+          <TouchableOpacity style={styles.btnPrimary} onPress={openBundlePicker} testID="bundle-add">
+            <Ionicons name="add-circle" size={16} color="#000" />
+            <Text style={styles.btnPrimaryText}>ADD TO A BUNDLE</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+    </View>
+  );
+
+  // ── DOCUMENTS TAB ───────────────────────────────────────────────────────
+  const renderDocuments = () => (
+    <View style={{ gap: 12 }}>
+      <View style={newStyles.detailsBox}>
+        <View style={newStyles.attachHeader}>
+          <Text style={newStyles.attachSectionLabel}>PHOTOS{photos.length > 0 ? ` (${photos.length})` : ""}</Text>
+          <PillButton testID="add-photo-btn" label="ADD" icon="add-circle" variant="active" compact onPress={promptAddPhoto} />
+        </View>
+        {photos.length === 0 ? (
+          <Text style={newStyles.attachEmpty}>No photos yet. Add product shots, condition photos, or reference images.</Text>
+        ) : (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={newStyles.galleryRow}>
+            {photos.map((p: string, j: number) => (
+              <TouchableOpacity key={j} testID={`gallery-thumb-${j}`} onPress={() => { setPhotoIdx(j); setIsImageViewerVisible(true); }} activeOpacity={0.85}>
+                <AppImage source={{ uri: p }} style={newStyles.galleryThumb} />
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        )}
+      </View>
+      <View style={newStyles.detailsBox}>
+        <DocumentsSection tool={tool} onChange={load} />
+      </View>
+      <View style={newStyles.detailsBox}>
+        <ReceiptsSection receipts={tool.receipts} onAdd={promptAddReceipt} />
+      </View>
+    </View>
+  );
+
+  // ── MAINTENANCE TAB ─────────────────────────────────────────────────────
+  const renderMaintenance = () => (
+    <View style={{ gap: 12 }}>
+      <View style={newStyles.detailsBox}>
+        <MaintenanceSection tool={tool} onChange={load} />
+      </View>
+      {editing && form ? (
+        <View style={newStyles.detailsBox}>
+          <View style={[newStyles.editPickRow, { marginBottom: 4 }]}>
+            <View style={newStyles.detailsLabelWrap}>
+              <Ionicons name="shield-checkmark" size={14} color={theme.colors.accent} />
+              <Text style={newStyles.detailsLabel}>WARRANTY</Text>
+            </View>
+            <AppSwitch value={form.has_warranty} onValueChange={(v: boolean) => setF({ has_warranty: v })} />
+          </View>
+          {form.has_warranty && (
+            <View>
+              {eLabel("PROVIDER", "business")}
+              <TextInput style={styles.input} value={form.warranty.provider} onChangeText={(v) => setF({ warranty: { ...form.warranty, provider: v } })} placeholder="Manufacturer name" placeholderTextColor={theme.colors.textMuted} />
+              {eLabel("CONTACT", "call")}
+              <TextInput style={styles.input} value={form.warranty.contact} onChangeText={(v) => setF({ warranty: { ...form.warranty, contact: v } })} placeholder="800-555-1234" placeholderTextColor={theme.colors.textMuted} />
+              {eLabel("EXPIRES", "calendar")}
+              <DateField value={form.warranty.expiry_date} onChange={(iso) => setF({ warranty: { ...form.warranty, expiry_date: iso } })} placeholder="MM/DD/YYYY" />
+              {eLabel("TERMS", "document-text")}
+              <TextInput style={[styles.input, { height: 70, textAlignVertical: "top" }]} value={form.warranty.terms} onChangeText={(v) => setF({ warranty: { ...form.warranty, terms: v } })} placeholder="Coverage details..." placeholderTextColor={theme.colors.textMuted} multiline />
+            </View>
+          )}
+        </View>
+      ) : (
+        <View style={newStyles.detailsBox}>
+          <WarrantySection tool={tool} />
+        </View>
+      )}
+    </View>
+  );
+
+  // ── HISTORY TAB ─────────────────────────────────────────────────────────
+  const renderHistory = () => (
+    <View style={{ gap: 12 }}>
+      <View style={newStyles.detailsBox}>
+        <Text style={[newStyles.attachSectionLabel, { marginBottom: 12 }]}>VIEW HISTORY</Text>
+        <TouchableOpacity style={pickerStyles.choice} onPress={() => router.push(`/checkout-history/${tool.id}`)} testID="history-checkout">
+          <View style={pickerStyles.iconCircle}><Ionicons name="swap-horizontal" size={20} color="#000" /></View>
+          <View style={{ flex: 1 }}>
+            <Text style={pickerStyles.choiceTitle}>Checkout History</Text>
+            <Text style={pickerStyles.choiceSub}>Who borrowed this item and when</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color={theme.colors.textMuted} />
+        </TouchableOpacity>
+        <TouchableOpacity style={pickerStyles.choice} onPress={() => router.push(`/claims-history/${tool.id}`)} testID="history-claims">
+          <View style={pickerStyles.iconCircle}><Ionicons name="alert-circle" size={20} color="#000" /></View>
+          <View style={{ flex: 1 }}>
+            <Text style={pickerStyles.choiceTitle}>Claim History</Text>
+            <Text style={pickerStyles.choiceSub}>Repair claims and warranty issues</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color={theme.colors.textMuted} />
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+
+  const renderTabContent = () => {
+    switch (activeTab) {
+      case "details": return editing ? renderDetailsEdit() : renderDetailsView();
+      case "bundle": return renderBundle();
+      case "documents": return renderDocuments();
+      case "maintenance": return renderMaintenance();
+      case "history": return renderHistory();
+      default: return null;
+    }
+  };
+
+
+  const __body = (
+    <SafeAreaView style={[styles.container, isIndustrial && styles.containerSkin]} edges={["top"]}>
+      <IndustrialBanner
+        title={tool.name || "Untitled Tool"}
+        subtitle={tool.brand ? String(tool.brand) : "Item Details"}
+        onBack={() => router.back()}
+        rightSlot={
+          editing ? (
+            <TouchableOpacity testID="tool-edit-cancel" onPress={cancelEdit} hitSlop={10} style={newStyles.menuDotsBtn} activeOpacity={0.7}>
+              <Ionicons name="close" size={24} color={theme.colors.danger} />
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity testID="tool-menu-btn" onPress={() => setShowActionMenu(true)} hitSlop={10} style={newStyles.menuDotsBtn} activeOpacity={0.7}>
+              <Ionicons name="ellipsis-vertical" size={22} color={theme.colors.accent} />
+            </TouchableOpacity>
+          )
+        }
+      />
+
+      <View style={newStyles.detailColumn}>
+        {/* TOP PANEL — photo + status/qty/price + centered location */}
+        <View style={newStyles.topPanelWrap}>
+          {isIndustrial ? (
+            <TbvFrame source={winSrc} capInsets={winCap} frameScale={steelScale} padX={20} padTop={22} padBottom={20}>
+              <View style={newStyles.topUnifiedRow}>
+                <TouchableOpacity testID="photo-thumb" style={newStyles.topUnifiedPhoto} activeOpacity={photos.length ? 0.85 : 1} onPress={photos.length ? () => { setPhotoIdx(0); setIsImageViewerVisible(true); } : promptAddPhoto}>
+                  {photos.length > 0 ? <AppImage source={{ uri: photos[0] }} style={newStyles.photoImg} /> : (
+                    <View style={newStyles.dealerPhotoEmpty}><Ionicons name="camera" size={20} color={theme.colors.accent} /><Text style={newStyles.photoEmptyText}>ADD PHOTO</Text></View>
+                  )}
+                </TouchableOpacity>
+                <View style={newStyles.topUnifiedRows}>
+                  <PillRow first label="STATUS" value={statusInfo.label} valueColor={statusInfo.color} />
+                  <PillRow label="QUANTITY" value={String(Math.max(1, Number(tool.quantity) || 1))} onPress={() => setShowQtyModal(true)} />
+                  <PillRow label="PRICE EACH" value={fmtMoney(tool.cost)} />
+                </View>
+              </View>
+              <TouchableOpacity disabled={!editing} onPress={() => editing && setShowEditLocation(true)} style={newStyles.locCenterRow} activeOpacity={editing ? 0.7 : 1} testID="top-location">
+                <Ionicons name="location" size={14} color={theme.colors.accent} />
+                <Text style={newStyles.locCenterText} numberOfLines={1}>{(editing && form ? form.location_name : tool.location_name) || "No location"}</Text>
+                {editing && <Ionicons name="chevron-forward" size={13} color={theme.colors.textMuted} />}
+              </TouchableOpacity>
+            </TbvFrame>
+          ) : (
+            <View>
+              <View style={newStyles.photoRow}>
+                <TouchableOpacity testID="photo-thumb" style={newStyles.photoFrame} activeOpacity={photos.length ? 0.85 : 1} onPress={photos.length ? () => { setPhotoIdx(0); setIsImageViewerVisible(true); } : promptAddPhoto}>
+                  {photos.length > 0 ? <AppImage source={{ uri: photos[0] }} style={newStyles.photoImg} /> : (
+                    <View style={newStyles.photoEmpty}><Ionicons name="camera" size={22} color={theme.colors.accent} /><Text style={newStyles.photoEmptyText}>ADD PHOTO</Text></View>
+                  )}
+                </TouchableOpacity>
+                <ShadowBox style={newStyles.statShadowBox}>
+                  <PillRow first label="STATUS" value={statusInfo.label} valueColor={statusInfo.color} />
+                  <PillRow label="QUANTITY" value={String(Math.max(1, Number(tool.quantity) || 1))} onPress={() => setShowQtyModal(true)} />
+                  <PillRow label="PRICE EACH" value={fmtMoney(tool.cost)} />
+                </ShadowBox>
+              </View>
+              <TouchableOpacity disabled={!editing} onPress={() => editing && setShowEditLocation(true)} style={newStyles.locCenterRow} activeOpacity={editing ? 0.7 : 1} testID="top-location">
+                <Ionicons name="location" size={14} color={theme.colors.accent} />
+                <Text style={newStyles.locCenterText} numberOfLines={1}>{(editing && form ? form.location_name : tool.location_name) || "No location"}</Text>
+                {editing && <Ionicons name="chevron-forward" size={13} color={theme.colors.textMuted} />}
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
+
+        {/* TAB STRIP */}
+        <View style={newStyles.tabStripWrap}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={newStyles.tabStripContent}>
+            {TABS.map((t) => {
+              const active = activeTab === t.key;
+              return (
+                <TouchableOpacity key={t.key} testID={`tab-${t.key}`} style={[newStyles.tabBtn, active && newStyles.tabBtnActive]} activeOpacity={0.8}
+                  onPress={() => { setActiveTab(t.key); if (t.key === "history") setShowHistoryChoice(true); }}>
+                  <Ionicons name={t.icon} size={15} color={active ? "#000" : theme.colors.accent} />
+                  <Text style={[newStyles.tabBtnText, active && newStyles.tabBtnTextActive]}>{t.label}</Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        </View>
+
+        {/* CONTENT PANEL — fixed, scrolls inside */}
+        <View style={newStyles.contentPanelOuter}>
+          {isIndustrial ? (
+            <TbvListPanel source={winSrc} capInsets={winCap} frameScale={steelScale} padX={16} padTop={16} padBottom={12} style={{ flex: 1 }}>
+              <ScrollView contentContainerStyle={{ paddingBottom: editing ? 90 : 20 }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+                {renderTabContent()}
+              </ScrollView>
+            </TbvListPanel>
+          ) : (
+            <View style={newStyles.contentPanelPlain}>
+              <ScrollView contentContainerStyle={{ paddingBottom: editing ? 90 : 20 }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+                {renderTabContent()}
+              </ScrollView>
+            </View>
+          )}
+        </View>
+      </View>
+
+      {/* EDIT SAVE BAR */}
+      {editing && (
+        <View style={newStyles.editBar}>
+          <TouchableOpacity style={[styles.btnGhost, { flex: 1, marginTop: 0 }]} onPress={cancelEdit} testID="edit-cancel-bar">
+            <Text style={styles.btnGhostText}>CANCEL</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={[styles.btnPrimary, { flex: 1 }]} onPress={saveEdit} disabled={savingEdit} testID="edit-save-bar">
+            {savingEdit ? <ActivityIndicator color="#000" /> : (<><Ionicons name="checkmark" size={16} color="#000" /><Text style={styles.btnPrimaryText}>SAVE</Text></>)}
+          </TouchableOpacity>
+        </View>
+      )}
 
       {/* ===== CONTEXTUAL 3-DOTS ACTION MENU ===== */}
       <Modal
@@ -2460,7 +2385,7 @@ export default function ToolDetail() {
             <TouchableOpacity
               testID="menu-edit"
               style={newStyles.menuRow}
-              onPress={() => runMenuAction(() => router.push({ pathname: "/tool/edit", params: { id: tool.id } }))}
+              onPress={() => runMenuAction(beginEdit)}
             >
               <Ionicons name="create-outline" size={18} color={theme.colors.textPrimary} />
               <Text style={newStyles.menuRowText}>Edit item</Text>
@@ -3550,6 +3475,217 @@ export default function ToolDetail() {
           </View>
         </View>
       </Modal>
+
+      {/* ===== HISTORY CHOICE POPUP ===== */}
+      <Modal visible={showHistoryChoice} transparent animationType="fade" onRequestClose={() => setShowHistoryChoice(false)}>
+        <Pressable style={styles.modalBackdrop} onPress={() => setShowHistoryChoice(false)}>
+          <Pressable style={styles.modalCard} onPress={() => {}}>
+            <View style={styles.modalHeader}>
+              <Ionicons name="time" size={20} color={theme.colors.accent} />
+              <Text style={styles.modalTitle}>VIEW HISTORY</Text>
+              <TouchableOpacity onPress={() => setShowHistoryChoice(false)} hitSlop={10}>
+                <Ionicons name="close" size={22} color={theme.colors.textPrimary} />
+              </TouchableOpacity>
+            </View>
+            <TouchableOpacity style={pickerStyles.choice} testID="history-choice-checkout" onPress={() => { setShowHistoryChoice(false); router.push(`/checkout-history/${tool.id}`); }}>
+              <View style={pickerStyles.iconCircle}><Ionicons name="swap-horizontal" size={20} color="#000" /></View>
+              <View style={{ flex: 1 }}>
+                <Text style={pickerStyles.choiceTitle}>Checkout History</Text>
+                <Text style={pickerStyles.choiceSub}>Who borrowed this item and when</Text>
+              </View>
+            </TouchableOpacity>
+            <TouchableOpacity style={pickerStyles.choice} testID="history-choice-claims" onPress={() => { setShowHistoryChoice(false); router.push(`/claims-history/${tool.id}`); }}>
+              <View style={pickerStyles.iconCircle}><Ionicons name="alert-circle" size={20} color="#000" /></View>
+              <View style={{ flex: 1 }}>
+                <Text style={pickerStyles.choiceTitle}>Claim History</Text>
+                <Text style={pickerStyles.choiceSub}>Repair claims and warranty issues</Text>
+              </View>
+            </TouchableOpacity>
+          </Pressable>
+        </Pressable>
+      </Modal>
+
+      {/* ===== EDIT: LOCATION PICKER ===== */}
+      <Modal visible={showEditLocation} transparent animationType="slide" onRequestClose={() => setShowEditLocation(false)}>
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalCard}>
+            <View style={styles.modalHeader}>
+              <Ionicons name="location" size={20} color={theme.colors.accent} />
+              <Text style={styles.modalTitle}>SELECT LOCATION</Text>
+              <TouchableOpacity onPress={() => setShowEditLocation(false)} hitSlop={10}><Ionicons name="close" size={22} color={theme.colors.textPrimary} /></TouchableOpacity>
+            </View>
+            <ScrollView style={{ maxHeight: 380 }} keyboardShouldPersistTaps="handled">
+              <TouchableOpacity style={[styles.locInlineRow, !form?.location_id && styles.locInlineRowActive]} onPress={() => { setF({ location_id: null, location_name: "" }); setShowEditLocation(false); }}>
+                <Ionicons name="ban" size={16} color={!form?.location_id ? theme.colors.accent : theme.colors.textMuted} />
+                <Text style={[styles.locInlineText, !form?.location_id && styles.locInlineTextActive]}>No location (unassigned)</Text>
+                {!form?.location_id && <Ionicons name="checkmark" size={18} color={theme.colors.accent} />}
+              </TouchableOpacity>
+              {flattenLocationTree(buildLocationTree(allLocations)).map((n) => {
+                const active = n.id === form?.location_id;
+                return (
+                  <TouchableOpacity key={n.id} style={[styles.locInlineRow, active && styles.locInlineRowActive, { paddingLeft: 12 + (n.depth || 0) * 18 }]} onPress={() => { setF({ location_id: n.id, location_name: n.name }); setShowEditLocation(false); }}>
+                    <Ionicons name="location" size={15} color={active ? theme.colors.accent : theme.colors.textMuted} />
+                    <Text style={[styles.locInlineText, active && styles.locInlineTextActive]} numberOfLines={1}>{n.name}</Text>
+                    {active && <Ionicons name="checkmark" size={18} color={theme.colors.accent} />}
+                  </TouchableOpacity>
+                );
+              })}
+              {allLocations.length === 0 && <Text style={[styles.helper, { marginTop: 8 }]}>No locations yet. Add locations from Vault → Locations.</Text>}
+            </ScrollView>
+            <TouchableOpacity style={[styles.btnGhost, { marginTop: 14 }]} onPress={() => setShowEditLocation(false)}><Text style={styles.btnGhostText}>DONE</Text></TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* ===== EDIT: DEALER PICKER ===== */}
+      <Modal visible={showEditDealer} transparent animationType="slide" onRequestClose={() => setShowEditDealer(false)}>
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalCard}>
+            <View style={styles.modalHeader}>
+              <Ionicons name="business" size={20} color={theme.colors.accent} />
+              <Text style={styles.modalTitle}>SELECT DEALER</Text>
+              <TouchableOpacity onPress={() => setShowEditDealer(false)} hitSlop={10}><Ionicons name="close" size={22} color={theme.colors.textPrimary} /></TouchableOpacity>
+            </View>
+            <ScrollView style={{ maxHeight: 380 }} keyboardShouldPersistTaps="handled">
+              <TouchableOpacity style={[styles.locInlineRow, !form?.dealer_id && styles.locInlineRowActive]} onPress={() => { setF({ dealer_id: null, dealer_name: "" }); setShowEditDealer(false); }}>
+                <Ionicons name="ban" size={16} color={!form?.dealer_id ? theme.colors.accent : theme.colors.textMuted} />
+                <Text style={[styles.locInlineText, !form?.dealer_id && styles.locInlineTextActive]}>No dealer</Text>
+                {!form?.dealer_id && <Ionicons name="checkmark" size={18} color={theme.colors.accent} />}
+              </TouchableOpacity>
+              {dealers.map((d: any) => {
+                const active = d.id === form?.dealer_id;
+                return (
+                  <TouchableOpacity key={d.id} style={[styles.locInlineRow, active && styles.locInlineRowActive]} onPress={() => { setF({ dealer_id: d.id, dealer_name: d.name }); setShowEditDealer(false); }}>
+                    <Ionicons name="business" size={15} color={active ? theme.colors.accent : theme.colors.textMuted} />
+                    <Text style={[styles.locInlineText, active && styles.locInlineTextActive]} numberOfLines={1}>{d.name}</Text>
+                    {active && <Ionicons name="checkmark" size={18} color={theme.colors.accent} />}
+                  </TouchableOpacity>
+                );
+              })}
+              {dealers.length === 0 && <Text style={[styles.helper, { marginTop: 8 }]}>No dealers yet. Add dealers from the Dealers tab.</Text>}
+            </ScrollView>
+            <TouchableOpacity style={[styles.btnGhost, { marginTop: 14 }]} onPress={() => setShowEditDealer(false)}><Text style={styles.btnGhostText}>DONE</Text></TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* ===== EDIT: CATEGORY PICKER ===== */}
+      <Modal visible={showEditCategory} transparent animationType="slide" onRequestClose={() => setShowEditCategory(false)}>
+        <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={styles.modalBackdrop}>
+          <View style={styles.modalCard}>
+            <View style={styles.modalHeader}>
+              <Ionicons name="folder" size={20} color={theme.colors.accent} />
+              <Text style={styles.modalTitle}>SELECT CATEGORY</Text>
+              <TouchableOpacity onPress={() => setShowEditCategory(false)} hitSlop={10}><Ionicons name="close" size={22} color={theme.colors.textPrimary} /></TouchableOpacity>
+            </View>
+            <ScrollView style={{ maxHeight: 320 }} keyboardShouldPersistTaps="handled">
+              <TouchableOpacity style={[styles.locInlineRow, !form?.category_id && styles.locInlineRowActive]} onPress={() => { setF({ category_id: null, category_name: "" }); setShowEditCategory(false); }}>
+                <Ionicons name="ban" size={16} color={!form?.category_id ? theme.colors.accent : theme.colors.textMuted} />
+                <Text style={[styles.locInlineText, !form?.category_id && styles.locInlineTextActive]}>No category</Text>
+              </TouchableOpacity>
+              {allCategories.map((cat: any) => {
+                const active = cat.id === form?.category_id;
+                return (
+                  <TouchableOpacity key={cat.id} style={[styles.locInlineRow, active && styles.locInlineRowActive]} onPress={() => { setF({ category_id: cat.id, category_name: cat.name }); setShowEditCategory(false); }}>
+                    <Ionicons name="folder" size={15} color={active ? theme.colors.accent : theme.colors.textMuted} />
+                    <Text style={[styles.locInlineText, active && styles.locInlineTextActive]} numberOfLines={1}>{cat.name}</Text>
+                    {active && <Ionicons name="checkmark" size={18} color={theme.colors.accent} />}
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+            <View style={{ flexDirection: "row", gap: 8, marginTop: 10 }}>
+              <TextInput style={[styles.input, { flex: 1, marginBottom: 0 }]} value={newCatName} onChangeText={setNewCatName} placeholder="New category name" placeholderTextColor={theme.colors.textMuted} />
+              <TouchableOpacity style={[styles.btnPrimary, { paddingHorizontal: 16 }]} onPress={async () => {
+                const nm = newCatName.trim(); if (!nm) return;
+                try { const c = await api.createCategory({ name: nm }); setAllCategories((p) => [...p, c]); setF({ category_id: c.id, category_name: c.name }); setNewCatName(""); setShowEditCategory(false); }
+                catch (e: any) { Alert.alert("Error", String(e?.message || e)); }
+              }}>
+                <Text style={styles.btnPrimaryText}>ADD</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
+
+      {/* ===== EDIT: TAGS PICKER ===== */}
+      <Modal visible={showEditTags} transparent animationType="slide" onRequestClose={() => setShowEditTags(false)}>
+        <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={styles.modalBackdrop}>
+          <View style={styles.modalCard}>
+            <View style={styles.modalHeader}>
+              <Ionicons name="pricetags" size={20} color={theme.colors.accent} />
+              <Text style={styles.modalTitle}>SELECT TAGS</Text>
+              <TouchableOpacity onPress={() => setShowEditTags(false)} hitSlop={10}><Ionicons name="close" size={22} color={theme.colors.textPrimary} /></TouchableOpacity>
+            </View>
+            <ScrollView style={{ maxHeight: 320 }} keyboardShouldPersistTaps="handled">
+              {allTags.map((tg: any) => {
+                const active = (form?.tag_ids || []).includes(tg.id);
+                return (
+                  <TouchableOpacity key={tg.id} style={[styles.locInlineRow, active && styles.locInlineRowActive]} onPress={() => {
+                    setForm((p: any) => {
+                      const has = (p.tag_ids || []).includes(tg.id);
+                      const ids = has ? p.tag_ids.filter((x: string) => x !== tg.id) : [...(p.tag_ids || []), tg.id];
+                      const names = has ? p.tag_names.filter((_: any, i: number) => p.tag_ids[i] !== tg.id) : [...(p.tag_names || []), tg.name];
+                      return { ...p, tag_ids: ids, tag_names: names };
+                    });
+                  }}>
+                    <Ionicons name={active ? "checkbox" : "square-outline"} size={18} color={active ? theme.colors.accent : theme.colors.textMuted} />
+                    <Text style={[styles.locInlineText, active && styles.locInlineTextActive]} numberOfLines={1}>{tg.name}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+            <View style={{ flexDirection: "row", gap: 8, marginTop: 10 }}>
+              <TextInput style={[styles.input, { flex: 1, marginBottom: 0 }]} value={newTagName} onChangeText={setNewTagName} placeholder="New tag name" placeholderTextColor={theme.colors.textMuted} />
+              <TouchableOpacity style={[styles.btnPrimary, { paddingHorizontal: 16 }]} onPress={async () => {
+                const nm = newTagName.trim(); if (!nm) return;
+                try { const tg = await api.createTag({ name: nm }); setAllTags((p) => [...p, tg]); setForm((p: any) => ({ ...p, tag_ids: [...(p.tag_ids || []), tg.id], tag_names: [...(p.tag_names || []), tg.name] })); setNewTagName(""); }
+                catch (e: any) { Alert.alert("Error", String(e?.message || e)); }
+              }}>
+                <Text style={styles.btnPrimaryText}>ADD</Text>
+              </TouchableOpacity>
+            </View>
+            <TouchableOpacity style={[styles.btnGhost, { marginTop: 10 }]} onPress={() => setShowEditTags(false)}><Text style={styles.btnGhostText}>DONE</Text></TouchableOpacity>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
+
+      {/* ===== BUNDLE PICKER ===== */}
+      <Modal visible={showBundlePicker} transparent animationType="slide" onRequestClose={() => setShowBundlePicker(false)}>
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalCard}>
+            <View style={styles.modalHeader}>
+              <Ionicons name="cube" size={20} color={theme.colors.accent} />
+              <Text style={styles.modalTitle}>ADD TO BUNDLE</Text>
+              <TouchableOpacity onPress={() => setShowBundlePicker(false)} hitSlop={10}><Ionicons name="close" size={22} color={theme.colors.textPrimary} /></TouchableOpacity>
+            </View>
+            <ScrollView style={{ maxHeight: 360 }} keyboardShouldPersistTaps="handled">
+              {allBundles.length === 0 && <Text style={[styles.helper, { marginBottom: 10 }]}>No bundles yet. Create one below.</Text>}
+              {allBundles.map((b: any) => (
+                <TouchableOpacity key={b.id} style={styles.locInlineRow} onPress={async () => {
+                  try { await api.updateTool(tool.id, { bundle_id: b.id }); setShowBundlePicker(false); load(); }
+                  catch (e: any) { Alert.alert("Error", String(e?.message || e)); }
+                }}>
+                  <Ionicons name="cube" size={15} color={theme.colors.accent} />
+                  <Text style={styles.locInlineText} numberOfLines={1}>{b.name}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+            <TouchableOpacity style={[styles.btnPrimary, { marginTop: 12 }]} onPress={async () => {
+              try {
+                const b = await api.createBundle({ name: tool.name ? `${tool.name} set` : "New bundle" });
+                await api.updateTool(tool.id, { bundle_id: b.id });
+                setShowBundlePicker(false); load();
+              } catch (e: any) { Alert.alert("Error", String(e?.message || e)); }
+            }} testID="bundle-create-new">
+              <Ionicons name="add-circle" size={16} color="#000" />
+              <Text style={styles.btnPrimaryText}>CREATE NEW BUNDLE</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.btnGhost, { marginTop: 10 }]} onPress={() => setShowBundlePicker(false)}><Text style={styles.btnGhostText}>CANCEL</Text></TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
     </SafeAreaView>
   );
 

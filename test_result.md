@@ -117,6 +117,63 @@ test_plan:
   test_all: false
   test_priority: "high_first"
 
+tool_detail_tabbed_rebuild:
+  - task: "Rebuild Item (Tool) Details page into tabbed layout with inline edit (v3.1.3)"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/app/tool/[id].tsx, /app/frontend/src/screens/tool/toolDetailStyles.ts"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: >
+          Rebuilt /app/frontend/app/tool/[id].tsx from a single long ScrollView into a
+          FIXED top panel + horizontally scrolling TAB STRIP + ONE bounded content panel
+          (TbvListPanel in Iron Forge/Steel, bordered View in plain Light/Dark) that scrolls
+          INTERNALLY so the page never stretches.
+          LAYOUT:
+          (1) Top panel: photo + STATUS/QUANTITY/PRICE pills (unchanged), and a NEW centered
+              location row under the price with a map-pin icon and NO label (testID top-location).
+          (2) Tab strip: Details / Bundle / Documents / Maintenance / History, each with a small
+              Ionicon, horizontally scrollable (testIDs tab-details, tab-bundle, tab-documents,
+              tab-maintenance, tab-history). Active tab is accent-filled. Switching tabs only
+              swaps the content inside the bounded panel.
+          (3) Details tab (view): status banners (claim card if needs_repair, checked-out card,
+              lost banner, for-sale/sold cards) at top, then rows for MODEL #, SERIAL #, DEALER
+              (tap -> dealer), BRAND, PURCHASED, CATEGORY, TAGS, MSRP, CONSUMABLE (+info), and
+              DESCRIPTION/NOTES.
+          (4) Bundle tab: if bundle_id -> VIEW BUNDLE + REMOVE FROM BUNDLE; else ADD TO A BUNDLE
+              (opens bundle picker: pick existing or CREATE NEW BUNDLE). testIDs bundle-view,
+              bundle-remove, bundle-add, bundle-create-new.
+          (5) Documents tab: PHOTOS (gallery + ADD), DocumentsSection, ReceiptsSection.
+          (6) Maintenance tab: MaintenanceSection (view) + WarrantySection (view); in edit mode
+              shows inline warranty fields (toggle + provider/contact/expiry/terms).
+          (7) History tab: tapping the tab opens a popup to choose Checkout History or Claim
+              History (testIDs history-choice-checkout, history-choice-claims). Tab content also
+              shows the two choices as buttons (history-checkout, history-claims).
+          EDIT MODE (global): the 3-dots menu "Edit item" now flips on INLINE edit (beginEdit)
+          instead of routing to /tool/edit. A bottom CANCEL/SAVE bar appears (testIDs
+          edit-cancel-bar, edit-save-bar). In edit mode the Details tab renders form fields:
+          brand, model #s (multi add/remove), serial #s (multi add/remove), price, quantity,
+          MSRP, purchase date (DateField), location (picker), dealer (picker), category (picker
+          + add new), tags (multi picker + add new), consumable toggle + info, description. The
+          Maintenance tab adds inline warranty fields. Bundle & History remain view-only per
+          user. Save sends a partial PUT via api.updateTool and reloads. History/Bundle/Documents
+          sections self-manage (own save) as before.
+          STATE/PICKERS added; new styles (tab strip, content panel, edit bar, pickers) added to
+          toolDetailStyles.ts. Lint clean, app boots in Iron Forge.
+          PLEASE TEST (frontend, creds ryan@ryan.com / ryan1234, also admin
+          MechanicLTZ@gmail.com / Blue321!): open any item, verify (a) location centered under
+          price with pin, (b) horizontal tabs switch content inside the fixed panel without the
+          page stretching, (c) History tab opens the choice popup, (d) Documents/photos/receipts
+          still add, (e) Edit item -> change brand/model/serial/notes/category/tags/dealer/
+          location/purchase date -> SAVE persists and reflects after reload, (f) Bundle add/remove,
+          (g) all 3 theme families render (Iron Forge, Steel, plain Light/Dark) without crashing.
+        agent: "main"
+
+
 dealer_payment_schedules_v2:
   - task: "Restructure Dealer Payments — attach recurring schedule to Truck/Credit accounts (replaces separate Payment Accounts)"
     implemented: true
