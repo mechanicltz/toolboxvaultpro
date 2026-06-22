@@ -1,0 +1,41 @@
+{
+  "summary": "DIAGNOSTIC ONLY (no fixes applied). Logged in as ryan@ryan.com, opened Inventory, tapped summary-accordion-toggle, and dumped computed styles via page.evaluate. CONFIRMED root cause of the 'shadow box behind the summary' on skinned themes: the [data-testid=\"summary-header\"] element itself still paints (a) a dark linear-gradient background-image AND (b) a 2px white-22% top border + bevel borders, because theme.elevation.md (spread into styles.box at SummaryHeader.tsx:128) injects on web a backgroundImage + four individual border*Width props that the boxFramed override does NOT clear. Theme currently rendered is the dark IRON FORGE metal (industrial skin), NOT the brushed-silver Steel — the rivet/plate texture in the screenshot is the dark iron variant.",
+  "backend_issues": { "critical": [], "minor": [] },
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "SummaryHeader (boxFramed override)",
+        "issue": "On RN-Web, theme.elevation.md spread into styles.box still paints a backgroundImage gradient and 2px bevel border on the summary-header element even when framed=true. boxFramed only zeros backgroundColor, borderWidth (shorthand), borderLeftWidth, borderRadius, margins/padding and shadow* props — but does NOT clear backgroundImage and does NOT explicitly zero borderTopWidth/borderRightWidth/borderBottomWidth, so the gradient + 2px top border survive and visually read as a sub-card box.",
+        "testID": "summary-header",
+        "priority": "HIGH"
+      }
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {
+        "screen": "Inventory (industrial/Iron Forge skin)",
+        "issues": [
+          "Dark linear-gradient(145deg,#2a2a2a,#0b0b0b) rectangle (330x197px at x=30,y=274) is painted directly on the summary-header div, sitting on top of the metal panel — this IS the 'shadow box' the user reports."
+        ]
+      }
+    ],
+    "react_native_issues": []
+  },
+  "test_report_links": [],
+  "action_items": [
+    "Fix SummaryHeader.tsx boxFramed style: add `backgroundImage: 'none'` AND explicitly set `borderTopWidth: 0, borderRightWidth: 0, borderBottomWidth: 0` (not just `borderWidth: 0`, which doesn't reliably override individual border-*-width emitted by theme.elevation.md in RN-Web's StyleSheet→CSS conversion). Also set border*Color to 'transparent' for safety because theme.elevation.md sets bevelHighlight/bevelShadow per-side colors.",
+    "Preferred alternative: gate the `...(theme.elevation.md as object)` spread on `!framed` so the elevation isn't applied at all when framed.",
+    "Verify with the same DOM-dump diagnostic after the fix: backgroundImage MUST report 'none' and all border*Width MUST be 0px on [data-testid=\"summary-header\"]."
+  ],
+  "critical_code_review_comments": [
+    "src/SummaryHeader.tsx:128 — `...(theme.elevation.md as object)` spreads backgroundImage and individual borderTopWidth/Left/Bottom/Right:2 on web (see theme.ts:299-316). The override at lines 132-146 uses the shorthand `borderWidth: 0` which doesn't unset all four individual border widths on RN-Web, and the gradient is never cleared.",
+    "src/theme.ts:299-326 — elevation.md on web returns backgroundImage: linear-gradient(...). Any consumer that wants a flat variant must clear BOTH backgroundImage AND the four individual border-*-width properties, not just `borderWidth: 0`."
+  ],
+  "updated_files": [],
+  "success_rate": { "backend": "n/a (skipped per request)", "frontend": "diagnostic complete" },
+  "seed_data_creation": "None",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Re-run the DOM dump on [data-testid=\"summary-header\"] after the fix. The element MUST have: backgroundImage=='none', borderTopWidth==0px, borderRightWidth==0px, borderBottomWidth==0px, borderLeftWidth==0px, boxShadow=='none' (or rgba(0,0,0,0) 0 0 0 0), backgroundColor=='rgba(0,0,0,0)'. The level-1 ancestor (styles.searchSummaryInset) still has borderTopWidth:1px rgb(31,31,31) — that's the intentional thin divider above the summary; leave it alone.",
+  "rca_of_issue": "REPRODUCTION: Login ryan@ryan.com / ryan1234 → Inventory tab → tap [data-testid=summary-accordion-toggle] → observe a dark rectangular sub-card behind Items/Total/Out/Repair/Claims and the Locations/Categories/Dealers columns inside the metal plate. EMPIRICAL EVIDENCE (computed styles dumped live at 390x844 viewport): [data-testid=summary-header] itself reports → backgroundColor: rgba(0,0,0,0) ✓ (boxFramed worked HERE); BUT backgroundImage: linear-gradient(145deg, rgb(42,42,42), rgb(11,11,11)) ✗ (boxFramed never set backgroundImage:'none'); borderTopWidth: 2px ✗ (boxFramed used `borderWidth:0` shorthand which RN-Web does not reliably collapse onto the four individual border-*-width properties emitted by theme.elevation.md); borderTopColor: rgba(255,255,255,0.22) ✗ (= palette.bevelHighlight, theme.ts:114). Rectangle measures 330x197 at (30,274) — exact size/position of the visible 'shadow box'. ROOT CAUSE: theme.elevation.md (theme.ts:299-326) on web emits `{ backgroundImage: linear-gradient(...), borderTopWidth:2, borderRightWidth:2, borderBottomWidth:2, borderLeftWidth:2, borderTopColor: bevelHighlight, ... }`. SummaryHeader spreads this into `styles.box` and tries to override with `styles.boxFramed` which only clears `borderWidth` (shorthand) + `borderLeftWidth` + backgroundColor — leaving the gradient and three other border-*-width properties intact. MITIGATION: In src/SummaryHeader.tsx `boxFramed`, add `backgroundImage: 'none' as any`, `borderTopWidth: 0`, `borderRightWidth: 0`, `borderBottomWidth: 0`, `borderTopColor: 'transparent'`, `borderRightColor: 'transparent'`, `borderBottomColor: 'transparent'`, `borderLeftColor: 'transparent'`. Or preferred: only spread `theme.elevation.md` when `!framed`. THEME STATE NOTE: rendered metal is the dark IRON FORGE variant (gear/rivet plate, orange highlights), NOT the brushed-silver Steel — the rowGradTop/Bottom palette values (#2a2a2a / #0b0b0b) confirm Iron Forge. Same bug will affect Steel too because elevation.md is palette-independent in structure (it just pulls different colors from the active palette)."
+}
