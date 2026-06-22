@@ -4,6 +4,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useSkin, useColors } from "../themeContext";
 import { useTbvSkinsReady } from "../tbv/useTbvSkins";
 import { SKIN } from "../tbv/skins";
+import { TbvButton } from "./TbvButton";
 
 /**
  * Primary action button that matches the Dashboard "ADD ITEM" / "NEW CLAIM"
@@ -23,11 +24,18 @@ export const SkinButton = ({
   disabled?: boolean;
   testID?: string;
 }) => {
-  const { skin } = useSkin();
+  const { skin, metalStyle } = useSkin();
   const c = useColors();
   const ready = useTbvSkinsReady();
   const wantsSkin = skin !== "plain";
+  const isSteel = metalStyle === "steel";
   const skinned = wantsSkin && ready;
+
+  // Steel metal family uses the brushed-silver TbvButton art (matches the
+  // dashboard ADD ITEM / NEW CLAIM buttons on Steel), not the Iron Forge plate.
+  if (wantsSkin && isSteel) {
+    return <TbvButton label={label} onPress={onPress} disabled={disabled} testID={testID} />;
+  }
 
   // On skinned themes, while the metal-plate bitmaps are still decoding, show a
   // neutral dark placeholder instead of the bright accent button so it never
