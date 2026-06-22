@@ -262,6 +262,21 @@ function ShellNav() {
   // every screen's first paint already has the fonts available.
   const tbvFontsReady = useTbvFonts();
 
+  // Even after expo-font reports the families are loaded, iOS can render the
+  // FIRST text node that uses a freshly-registered custom font at a given size
+  // with fallback metrics for one frame (the symptom: the dashboard NET WORTH
+  // numbers look wrong on cold start, then correct themselves after navigating
+  // away and back). To prevent that, once fonts are ready we render an
+  // invisible "warmer" for one paint cycle — which forces the glyph atlas to
+  // build — and only THEN reveal the app.
+  const [fontsWarm, setFontsWarm] = useState(false);
+  useEffect(() => {
+    if (tbvFontsReady && !fontsWarm) {
+      const id = setTimeout(() => setFontsWarm(true), 50);
+      return () => clearTimeout(id);
+    }
+  }, [tbvFontsReady, fontsWarm]);
+
   // Register the 402 (payment required) interceptor exactly once.
   // When the backend rejects a write because the user hit the free
   // tier limit, we automatically navigate to the paywall.
@@ -307,10 +322,24 @@ function ShellNav() {
   // Hold the screen stack until the font stack is ready so no screen's first
   // paint uses a fallback system font. The boot intro overlay (in AuthGate)
   // covers this on cold start, so it's invisible to the user.
-  if (!tbvFontsReady) {
+  if (!tbvFontsReady || !fontsWarm) {
     return (
       <View style={{ flex: 1, backgroundColor: theme.colors.bg, alignItems: "center", justifyContent: "center" }}>
         <ActivityIndicator color={theme.colors.accent} />
+        {/* Invisible warmer: lays out every custom font (including the large
+            numeric sizes used by the dashboard stat tiles) so the glyph atlas
+            is built before any real screen paints. */}
+        {tbvFontsReady && (
+          <View style={{ position: "absolute", opacity: 0 }} pointerEvents="none" accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+            <RNText style={{ fontFamily: "BebasNeue_400Regular", fontSize: 40 }}>0123456789 $.,</RNText>
+            <RNText style={{ fontFamily: "BebasNeue_400Regular", fontSize: 14 }}>0123456789 $.,</RNText>
+            <RNText style={{ fontFamily: "Rajdhani_700Bold", fontSize: 24 }}>0123456789 $.,</RNText>
+            <RNText style={{ fontFamily: "Rajdhani_600SemiBold", fontSize: 18 }}>0123456789 $.,</RNText>
+            <RNText style={{ fontFamily: "Rajdhani_500Medium", fontSize: 14 }}>0123456789</RNText>
+            <RNText style={{ fontFamily: "Exo2_500Medium", fontSize: 12 }}>0123456789</RNText>
+            <RNText style={{ fontFamily: "Exo2_400Regular", fontSize: 11 }}>0123456789</RNText>
+          </View>
+        )}
       </View>
     );
   }

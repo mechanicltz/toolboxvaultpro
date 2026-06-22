@@ -236,7 +236,7 @@ export default function ToolDetail() {
   // tab strip + ONE bounded content panel that scrolls internally (so the
   // page never stretches). `editing` flips the Details + Maintenance tabs
   // into form fields; a single Save button persists everything.
-  type DetailTab = "details" | "bundle" | "documents" | "maintenance" | "warranty" | "history";
+  type DetailTab = "details" | "bundle" | "photos" | "documents" | "maintenance" | "warranty" | "history";
   const [activeTab, setActiveTab] = useState<DetailTab>("details");
   const [historyView, setHistoryView] = useState<"checkout" | "claims">("checkout");
   const [claimsList, setClaimsList] = useState<any[]>([]);
@@ -1759,6 +1759,7 @@ export default function ToolDetail() {
   const TABS: { key: DetailTab; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
     { key: "details", label: "Details", icon: "construct" },
     { key: "bundle", label: "Bundle", icon: "cube" },
+    { key: "photos", label: "Photos", icon: "images" },
     { key: "documents", label: "Documents", icon: "document-text" },
     { key: "maintenance", label: "Maintenance", icon: "build" },
     { key: "warranty", label: "Warranty", icon: "shield-checkmark" },
@@ -2161,8 +2162,8 @@ export default function ToolDetail() {
     </View>
   );
 
-  // ── DOCUMENTS TAB ───────────────────────────────────────────────────────
-  const renderDocuments = () => (
+  // ── PHOTOS TAB ──────────────────────────────────────────────────────────
+  const renderPhotos = () => (
     <View style={{ gap: 12 }}>
       <View style={boxStyle}>
         <View style={newStyles.attachHeader}>
@@ -2181,6 +2182,12 @@ export default function ToolDetail() {
           </ScrollView>
         )}
       </View>
+    </View>
+  );
+
+  // ── DOCUMENTS TAB ───────────────────────────────────────────────────────
+  const renderDocuments = () => (
+    <View style={{ gap: 12 }}>
       <View style={boxStyle}>
         <DocumentsSection tool={tool} onChange={load} />
       </View>
@@ -2301,6 +2308,7 @@ export default function ToolDetail() {
     switch (activeTab) {
       case "details": return editing ? renderDetailsEdit() : renderDetailsView();
       case "bundle": return renderBundle();
+      case "photos": return renderPhotos();
       case "documents": return renderDocuments();
       case "maintenance": return renderMaintenance();
       case "warranty": return renderWarranty();
@@ -2380,11 +2388,12 @@ export default function ToolDetail() {
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={newStyles.tabStripContent}>
             {TABS.map((t) => {
               const active = activeTab === t.key;
+              const tabColor = active ? theme.colors.accent : (isIndustrial ? "#FFFFFF" : theme.colors.textPrimary);
               return (
-                <TouchableOpacity key={t.key} testID={`tab-${t.key}`} style={[newStyles.tabBtn, active && newStyles.tabBtnActive]} activeOpacity={0.8}
+                <TouchableOpacity key={t.key} testID={`tab-${t.key}`} style={newStyles.tabBtn} activeOpacity={0.7}
                   onPress={() => { setActiveTab(t.key); if (t.key === "history") setShowHistoryChoice(true); }}>
-                  <Ionicons name={t.icon} size={15} color={active ? "#000" : theme.colors.accent} />
-                  <Text style={[newStyles.tabBtnText, active && newStyles.tabBtnTextActive]}>{t.label}</Text>
+                  <Ionicons name={t.icon} size={15} color={tabColor} />
+                  <Text style={[newStyles.tabBtnText, { color: tabColor }]}>{t.label}</Text>
                 </TouchableOpacity>
               );
             })}
