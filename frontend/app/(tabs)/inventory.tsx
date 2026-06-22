@@ -707,9 +707,11 @@ export default function InventoryScreen() {
               <TouchableOpacity
                 testID="summary-accordion-toggle"
                 onPress={() => setSummaryOpen((o) => !o)}
-                style={styles.searchAccordionHit}
-                activeOpacity={1}
-              />
+                style={styles.summaryHandleBtn}
+                activeOpacity={0.75}
+              >
+                <Ionicons name="filter" size={14} color={theme.colors.textPrimary} />
+              </TouchableOpacity>
             </View>
           </TbvFrame>
         ) : (
@@ -724,9 +726,11 @@ export default function InventoryScreen() {
               <TouchableOpacity
                 testID="summary-accordion-toggle"
                 onPress={() => setSummaryOpen((o) => !o)}
-                style={styles.searchAccordionHit}
-                activeOpacity={1}
-              />
+                style={styles.summaryHandleBtn}
+                activeOpacity={0.75}
+              >
+                <Ionicons name="filter" size={14} color={theme.colors.textPrimary} />
+              </TouchableOpacity>
             </View>
           </View>
         )}
@@ -1975,6 +1979,15 @@ const styles = themedStyles((c) => ({
     justifyContent: "center",
   },
   searchAccordionHit: { width: 140, height: 22, backgroundColor: "transparent" },
+  // Visible accordion button (filter "3-lines" icon) centered on the panel
+  // bottom, over the orange glow.
+  summaryHandleBtn: {
+    width: 42, height: 22,
+    alignItems: "center", justifyContent: "center",
+    borderRadius: 11,
+    backgroundColor: c.bgSecondary,
+    borderWidth: 1, borderColor: c.border,
+  },
   // Plain-theme expandable search container (column; grows to hold the summary).
   searchBoxCol: {
     backgroundColor: c.surfaceAlt,
