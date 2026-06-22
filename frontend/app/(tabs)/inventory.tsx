@@ -710,7 +710,7 @@ export default function InventoryScreen() {
                 style={styles.summaryHandleBtn}
                 activeOpacity={0.75}
               >
-                <Ionicons name="filter" size={15} color={theme.colors.accent} />
+                <Ionicons name="filter" size={15} color="#FFFFFF" />
               </TouchableOpacity>
             </View>
           </TbvFrame>
@@ -729,7 +729,7 @@ export default function InventoryScreen() {
                 style={styles.summaryHandleBtn}
                 activeOpacity={0.75}
               >
-                <Ionicons name="filter" size={15} color={theme.colors.accent} />
+                <Ionicons name="filter" size={15} color="#FFFFFF" />
               </TouchableOpacity>
             </View>
           </View>
