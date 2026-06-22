@@ -346,6 +346,20 @@ function ShellNav() {
 
   return (
     <View style={{ flex: 1 }}>
+      {/* PERMANENT invisible font warmer. Some dashboard sections (dealer
+          accounts, stat tiles) render only AFTER their API data arrives — a
+          moment after the screen first paints. On iOS the first text node that
+          uses a given font family+size can render with a fallback for one frame
+          and then stay wrong until a remount. Keeping this off-screen warmer
+          mounted for the whole session pre-registers every family at every size
+          the app uses, so those late sections never fall back. */}
+      <View style={{ position: "absolute", left: -9999, top: -9999, opacity: 0 }} pointerEvents="none" accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+        {["BebasNeue_400Regular", "Rajdhani_700Bold", "Rajdhani_600SemiBold", "Rajdhani_500Medium", "Exo2_700Bold", "Exo2_500Medium", "Exo2_400Regular"].map((fam) =>
+          [9, 10, 11, 12, 13, 14, 15, 16, 18, 20, 22, 24, 28, 32, 36, 40].map((sz) => (
+            <RNText key={`${fam}-${sz}`} style={{ fontFamily: fam, fontSize: sz }}>0123456789$.,ABC</RNText>
+          ))
+        )}
+      </View>
       {/* Global FULL-BLEED industrial backdrop — uses the exact same
           ImageBackground + resizeMode="cover" + veil as the skinned Home
           screen, at the OUTERMOST level, so the photo is scaled/contained
