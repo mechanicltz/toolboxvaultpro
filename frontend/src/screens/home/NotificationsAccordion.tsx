@@ -24,7 +24,7 @@ export type HomeNotif = {
   onPress?: () => void;
 };
 
-const ROW_H = 46;
+const ROW_H = 64;
 const AUTO_MS = 3000;
 
 /**
@@ -89,7 +89,7 @@ export function NotificationsAccordion({ notifications }: { notifications: HomeN
       </View>
       <View style={{ flex: 1 }}>
         <Text style={[styles.label, { color: c.accent }]} numberOfLines={1}>{item.label}</Text>
-        <Text style={[styles.text, { color: c.textPrimary }]} numberOfLines={1}>{item.text}</Text>
+        <Text style={[styles.text, { color: c.textPrimary }]} numberOfLines={2}>{item.text}</Text>
       </View>
       {!!item.onPress && <Ionicons name="chevron-forward" size={18} color={c.accent} />}
     </TouchableOpacity>
@@ -141,7 +141,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   label: { fontFamily: "BebasNeue_400Regular", fontSize: 12, letterSpacing: 1.4 },
-  text: { fontFamily: "Rajdhani_700Bold", fontSize: 13, marginTop: 2 },
+  text: { fontFamily: "Rajdhani_700Bold", fontSize: 13, lineHeight: 17, marginTop: 2 },
 });
 
 export default NotificationsAccordion;
