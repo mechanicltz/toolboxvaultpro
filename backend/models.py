@@ -317,6 +317,12 @@ class WarrantyClaim(BaseModel):
     tool_id: str
     tool_name: str = ""
     tool_photo: Optional[str] = None
+    # When the claim is for ONE inside item of a bundle, these capture which
+    # inside item it was (so history + dealer messages can name the sub-item).
+    inside_item_id: Optional[str] = None
+    inside_item_name: Optional[str] = ""
+    inside_item_model: Optional[str] = ""
+    bundle_model: Optional[str] = ""  # the parent bundle's model # (e.g. YELLOW333)
     broken_photo: Optional[str] = ""
     dealer_id: Optional[str] = None
     dealer_name: str = ""
@@ -417,6 +423,32 @@ class CheckoutRecord(BaseModel):
     notes: Optional[str] = ""
 
 
+# ---------- Inside (sub) items that live INSIDE a bundle ----------
+# These never appear in the main inventory list — they exist only within a
+# bundle (e.g. each socket inside a socket set). Lightweight by design:
+# just a name, an optional model #, an optional price and an optional photo.
+class InsideItem(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    name: str = ""
+    model: Optional[str] = ""
+    cost: Optional[float] = 0.0
+    photo: Optional[str] = ""  # single data-URI on input -> /api/files URL after offload
+
+
+class InsideItemCreate(BaseModel):
+    name: str = ""
+    model: Optional[str] = ""
+    cost: Optional[float] = 0.0
+    photo: Optional[str] = ""
+
+
+class InsideItemUpdate(BaseModel):
+    name: Optional[str] = None
+    model: Optional[str] = None
+    cost: Optional[float] = None
+    photo: Optional[str] = None
+
+
 class Tool(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     name: str
@@ -434,6 +466,14 @@ class Tool(BaseModel):
     is_set: bool = False
     set_serials: List[str] = []
     bundle_id: Optional[str] = None  # set when this item belongs to a Bundle/Set
+    # --- Bundle / Set fields ---
+    # is_bundle=True means THIS tool IS a bundle (a socket set). It then carries
+    # its own inside_items (the individual sockets). Normal items have is_bundle=False.
+    is_bundle: bool = False
+    inside_items: List[InsideItem] = []
+    # expansion_of points to a bundle tool's id when this normal inventory item
+    # was bought later as an add-on to that set (e.g. extra 16-19mm sockets).
+    expansion_of: Optional[str] = None
     cost: Optional[float] = 0.0
     # Manufacturer's Suggested Retail Price — informational, used as an
     # optional column on Insurance / Inventory / Lost-Stolen / Year End
@@ -492,6 +532,9 @@ class ToolCreate(BaseModel):
     is_set: bool = False
     set_serials: List[str] = []
     bundle_id: Optional[str] = None
+    is_bundle: bool = False
+    inside_items: Optional[List[InsideItem]] = None
+    expansion_of: Optional[str] = None
     cost: Optional[float] = 0.0
     msrp_price: Optional[float] = 0.0
     quantity: Optional[int] = 1
@@ -529,6 +572,9 @@ class ToolUpdate(BaseModel):
     is_set: Optional[bool] = None
     set_serials: Optional[List[str]] = None
     bundle_id: Optional[str] = None
+    is_bundle: Optional[bool] = None
+    inside_items: Optional[List[InsideItem]] = None
+    expansion_of: Optional[str] = None
     cost: Optional[float] = None
     msrp_price: Optional[float] = None
     quantity: Optional[int] = None

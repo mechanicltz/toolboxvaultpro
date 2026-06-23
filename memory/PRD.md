@@ -152,8 +152,35 @@ skinned screens black, a known artifact):
 
 
 
-## Product
-React Native/Expo (Expo Router) inventory app for tradespeople, with a FastAPI +
+## Bundle / Set REBUILD (2026-06 — Stage 1 of 6 DONE & backend-tested)
+User-driven full rework of bundles. NEW MODEL: a bundle is now a Tool with
+`is_bundle=True` carrying ALL normal item fields PLUS `inside_items` (embedded
+lightweight sub-items: id/name/model/cost/photo — NEVER listed in inventory)
+and linked `expansion_of` items (normal inventory tools bought later as add-ons,
+which DO stay in the inventory list). Models: `InsideItem(+Create/Update)` in
+models.py; Tool/ToolCreate/ToolUpdate gained `is_bundle`, `inside_items`,
+`expansion_of`; WarrantyClaim gained `inside_item_id/name/model` + `bundle_model`
+(for Stage 2). `build_tool_query` now searches `inside_items.name/model` (so
+searching a sub-item surfaces the parent bundle) + `is_bundle`/`expansion_of`
+filters. New endpoints in routes_bundles.py: POST/PUT/DELETE
+`/api/tools/{bid}/inside-items[/{id}]`, GET `/api/tools/{bid}/expansion-items`,
+POST/DELETE `/api/tools/{bid}/expansion/{tool_id}`, and NON-DESTRUCTIVE
+`POST /api/bundles/migrate-to-tools` (old `bundles` collection → bundle-tools
+reusing id; old child tools re-linked as expansion items, no data loss;
+idempotent). list_tools slims inside-item photos to thumbs. Inventory rows now
+show "SET / BUNDLE" badge (is_bundle) and "SET ADD-ON" badge (expansion_of).
+Backend test: /app/backend/test_stage1_bundles.py — ALL PASS.
+REMAINING STAGES: 2=claims/mark-broken (whole bundle vs one inside item; dealer
+msg must read "came in the set <bundleModel>, but the <sub> I broke is <itemModel>");
+3=bundle detail screen (manage inside items + expansion area w/ bundle+expansion
+sum + export with/without expansions); 4=Add=live-edit (Add Item/Bundle open the
+tabbed details layout blank, retire old add/edit + old bundle screens + old
+bundles collection); 5=inventory filter "bundles only"; 6=reports simplified
+(bundle at bundle price; detailed lists inside items w/o per-item pricing);
+LATER=HOWTO writeup. NOTE: migration already run on admin demo data, so the OLD
+"Sets & Bundles" screen may show 0 items until Stage 3/4 swaps those screens.
+
+
 MongoDB backend. Dynamic theming (Iron Forge industrial skin, Crimson, Arctic,
 Emerald, Plain Light/Dark) via `src/themeContext.tsx`. Core modules: Inventory,
 Dealers, Contacts/Borrowers, Insurance Claims, Warranty, Reports, Wishlist,

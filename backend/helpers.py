@@ -25,6 +25,8 @@ def build_tool_query(
     needs_repair: Optional[bool] = None,
     for_sale: Optional[bool] = None,
     is_sold: Optional[bool] = None,
+    is_bundle: Optional[bool] = None,
+    expansion_of: Optional[str] = None,
 ):
     query: Dict[str, Any] = {}
     if search:
@@ -44,6 +46,10 @@ def build_tool_query(
             {"dealer_name": rx},
             {"purchased_from_agent_name": rx},
             {"sold_to": rx},
+            # A search that matches an inside item's name or model should
+            # surface the PARENT bundle in results (inside items are embedded).
+            {"inside_items.name": rx},
+            {"inside_items.model": rx},
         ]
     if location_id:
         query["location_id"] = location_id
@@ -63,6 +69,10 @@ def build_tool_query(
         query["for_sale"] = for_sale
     if is_sold is not None:
         query["is_sold"] = is_sold
+    if is_bundle is not None:
+        query["is_bundle"] = True if is_bundle else {"$ne": True}
+    if expansion_of is not None:
+        query["expansion_of"] = expansion_of
     # By default, exclude sold items from regular tool listings unless
     # explicitly asked for them. They live in the "sold" archive instead.
     if is_sold is None:

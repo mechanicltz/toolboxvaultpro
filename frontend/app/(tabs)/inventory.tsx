@@ -1123,6 +1123,12 @@ export default function InventoryScreen() {
                       </Text>
                     </View>
                   )}
+                  {item.is_bundle && (
+                    <View style={styles.setBadge}>
+                      <Ionicons name="cube" size={10} color="#000" />
+                      <Text style={styles.setBadgeText}>SET / BUNDLE</Text>
+                    </View>
+                  )}
                   {/* Status pill removed — the small round IN/OUT dot on
                       the right of the row already conveys checked-out
                       state. Showing both was redundant. */}
@@ -1140,10 +1146,10 @@ export default function InventoryScreen() {
                       {item.dealer_name}
                     </Text>
                   )}
-                  {item.bundle_id && (
+                  {item.expansion_of && (
                     <View style={styles.bundleBadge}>
-                      <Ionicons name="cube" size={10} color={theme.colors.accent} />
-                      <Text style={styles.bundleBadgeText}>IN SET</Text>
+                      <Ionicons name="add-circle" size={10} color={theme.colors.accent} />
+                      <Text style={styles.bundleBadgeText}>SET ADD-ON</Text>
                     </View>
                   )}
                   <View style={styles.rowQtyPill}>

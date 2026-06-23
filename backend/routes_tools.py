@@ -139,6 +139,11 @@ def register_tools_routes(api_router: APIRouter) -> None:
         tool.photos = (await media.offload_list(user.id, tool.photos)) or []
         tool.receipts = (await media.offload_list(user.id, getattr(tool, "receipts", None))) or []
         tool.documents = (await media.offload_list(user.id, getattr(tool, "documents", None))) or []
+        # Offload inside-item photos (bundle sub-items) to GridFS too.
+        if tool.inside_items:
+            for s in tool.inside_items:
+                if getattr(s, "photo", None):
+                    s.photo = await media.offload_value(user.id, s.photo)
         await db.tools.insert_one(tool.dict())
         # If created already broken, also create a warranty claim mirror with broken_photo
         if tool.needs_repair:
@@ -691,6 +696,8 @@ def register_tools_routes(api_router: APIRouter) -> None:
         needs_repair: Optional[bool] = None,
         for_sale: Optional[bool] = None,
         is_sold: Optional[bool] = None,
+        is_bundle: Optional[bool] = None,
+        expansion_of: Optional[str] = None,
     ):
         """List tools — returns a slim payload for fast list rendering.
 
@@ -704,6 +711,7 @@ def register_tools_routes(api_router: APIRouter) -> None:
         query = build_tool_query(
             search, location_id, tag_id, category_id, dealer_id,
             checked_out, is_consumable, needs_repair, for_sale, is_sold,
+            is_bundle, expansion_of,
         )
         items = await db.tools.find(query, {"_id": 0}).sort("created_at", -1).to_list(5000)
         out: List[Tool] = []
@@ -713,6 +721,11 @@ def register_tools_routes(api_router: APIRouter) -> None:
             i["photos"] = [media.thumb_url(photos[0])] if photos else []
             i["documents"] = []
             i["receipts"] = []
+            # Slim inside items: keep name/model/cost + a thumb of the photo.
+            ins = i.get("inside_items") or []
+            for s in ins:
+                if isinstance(s, dict) and s.get("photo"):
+                    s["photo"] = media.thumb_url(s["photo"])
             out.append(Tool(**i))
         return out
 
@@ -746,6 +759,11 @@ def register_tools_routes(api_router: APIRouter) -> None:
         for _f in ("photos", "receipts", "documents"):
             if _f in updates:
                 updates[_f] = (await media.offload_list(_owner, updates[_f])) or []
+        # Offload inside-item photos when the bundle's sub-items are edited.
+        if "inside_items" in updates and updates["inside_items"]:
+            for s in updates["inside_items"]:
+                if isinstance(s, dict) and s.get("photo"):
+                    s["photo"] = await media.offload_value(_owner, s["photo"])
 
         # Keep legacy model/serial fields and new model_numbers/serial_numbers
         # arrays in sync — whichever shape the client sent, both get persisted.
