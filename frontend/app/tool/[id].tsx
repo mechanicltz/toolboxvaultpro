@@ -59,6 +59,7 @@ import { useIsSteel, useSteelPanelFrame } from "../../src/tbv/steel";
 import TbvFrame from "../../src/tbv/components/TbvFrame";
 import TbvListPanel from "../../src/tbv/components/TbvListPanel";
 import { SkinButton } from "../../src/components/SkinButton";
+import { BundleTab } from "../../src/screens/tool/BundleTab";
 
 import {
   pickContactNativeIOS,
@@ -69,7 +70,7 @@ import {
 } from "../../src/deviceContacts";
 
 export default function ToolDetail() {
-  const { id, startClaim } = useLocalSearchParams<{ id: string; startClaim?: string }>();
+  const { id, startClaim, startEdit } = useLocalSearchParams<{ id: string; startClaim?: string; startEdit?: string }>();
   const router = useRouter();
   const { skin } = useSkin();
   const isIndustrial = skin === "industrial";
@@ -196,6 +197,15 @@ export default function ToolDetail() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [startClaim, tool, dealers]);
+  // Auto-enter edit mode when arriving from the "Add" flow (/tool/[id]?startEdit=1)
+  const editAutoOpened = React.useRef(false);
+  useEffect(() => {
+    if (startEdit === "1" && tool && !editAutoOpened.current) {
+      editAutoOpened.current = true;
+      beginEdit();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [startEdit, tool]);
   const [showMarkSold, setShowMarkSold] = useState(false);
   const [showSoldDelete, setShowSoldDelete] = useState(false);
   const [showSaleListing, setShowSaleListing] = useState(false);
@@ -1798,7 +1808,9 @@ export default function ToolDetail() {
 
   const TABS: { key: DetailTab; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
     { key: "details", label: "Details", icon: "construct" },
-    { key: "bundle", label: "Bundle", icon: "cube" },
+    ...(tool?.is_bundle || tool?.expansion_of
+      ? [{ key: "bundle" as DetailTab, label: tool?.is_bundle ? "Set" : "Add-on", icon: "cube" as keyof typeof Ionicons.glyphMap }]
+      : []),
     { key: "photos", label: "Photos", icon: "images" },
     { key: "documents", label: "Documents", icon: "document-text" },
     { key: "maintenance", label: "Maintenance", icon: "build" },
@@ -2176,42 +2188,7 @@ export default function ToolDetail() {
     setShowBundlePicker(true);
   };
   const renderBundle = () => (
-    <View style={{ gap: 12 }}>
-      {tool.bundle_id ? (
-        <View style={boxStyle}>
-          <View style={[newStyles.detailsLabelWrap, { marginBottom: 10 }]}>
-            <Ionicons name="cube" size={16} color={theme.colors.accent} />
-            <Text style={[newStyles.detailsLabel, { fontSize: 10 }]}>PART OF A SET / BUNDLE</Text>
-          </View>
-          <Text style={[newStyles.detailsValue, { textAlign: "left", fontSize: 12, marginBottom: 14 }]}>
-            This item belongs to a bundle. Open the bundle to see every item grouped with it.
-          </Text>
-          <View style={newStyles.bundleBtnWrap}>
-            <SkinButton label="VIEW BUNDLE" icon="open-outline" onPress={() => router.push(`/bundle/${tool.bundle_id}`)} testID="bundle-view" />
-          </View>
-          <TouchableOpacity style={[styles.btnGhost, { marginTop: 10 }]} onPress={async () => {
-            try { await api.updateTool(tool.id, { bundle_id: null }); load(); } catch (e: any) { Alert.alert("Error", String(e?.message || e)); }
-          }} testID="bundle-remove">
-            <Text style={styles.btnGhostText}>REMOVE FROM BUNDLE</Text>
-          </TouchableOpacity>
-        </View>
-      ) : (
-        <View style={boxStyle}>
-          <View style={{ alignItems: "center", paddingVertical: 16, gap: 10 }}>
-            <Ionicons name="cube-outline" size={40} color={theme.colors.textMuted} />
-            <Text style={[newStyles.detailsValue, { textAlign: "center", fontSize: 12 }]}>
-              This item isn't part of a bundle yet.
-            </Text>
-            <Text style={[newStyles.detailsValue, { textAlign: "center", fontSize: 10, color: theme.colors.textMuted }]}>
-              Bundle related items (like a socket set) so they move and check out together.
-            </Text>
-          </View>
-          <View style={newStyles.bundleBtnWrap}>
-            <SkinButton label="ADD TO A BUNDLE" icon="add-circle" onPress={openBundlePicker} testID="bundle-add" />
-          </View>
-        </View>
-      )}
-    </View>
+    <BundleTab bundle={tool} onChanged={load} boxStyle={boxStyle} />
   );
 
   // ── PHOTOS TAB ──────────────────────────────────────────────────────────

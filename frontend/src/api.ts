@@ -854,6 +854,22 @@ export const api = {
   removeItemFromBundle: (bundleId: string, toolId: string) =>
     request<any>(`/bundles/${bundleId}/items/${toolId}`, { method: "DELETE" }),
 
+  // --- New bundle model (bundle = tool with is_bundle) ---
+  migrateBundlesToTools: () =>
+    request<any>(`/bundles/migrate-to-tools`, { method: "POST" }),
+  addInsideItem: (bundleId: string, data: any) =>
+    request<any>(`/tools/${bundleId}/inside-items`, { method: "POST", body: JSON.stringify(data) }),
+  updateInsideItem: (bundleId: string, itemId: string, data: any) =>
+    request<any>(`/tools/${bundleId}/inside-items/${itemId}`, { method: "PUT", body: JSON.stringify(data) }),
+  deleteInsideItem: (bundleId: string, itemId: string) =>
+    request<any>(`/tools/${bundleId}/inside-items/${itemId}`, { method: "DELETE" }),
+  listExpansionItems: (bundleId: string, opts?: { forceFresh?: boolean }) =>
+    request<any[]>(`/tools/${bundleId}/expansion-items`, opts as any),
+  linkExpansionItem: (bundleId: string, toolId: string) =>
+    request<any>(`/tools/${bundleId}/expansion/${toolId}`, { method: "POST" }),
+  unlinkExpansionItem: (bundleId: string, toolId: string) =>
+    request<any>(`/tools/${bundleId}/expansion/${toolId}`, { method: "DELETE" }),
+
   // Prefilled Demo System
   demoStatus: (opts?: { forceFresh?: boolean }) =>
     request<{ present: boolean; intro_seen: boolean }>(`/demo/status`, opts as any),

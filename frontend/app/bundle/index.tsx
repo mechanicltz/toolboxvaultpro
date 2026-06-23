@@ -1,7 +1,7 @@
 import { AppImage } from "../../src/components/AppImage";
 import { useState, useCallback, type ReactNode } from "react";
 import {
-  View, Text, ScrollView, TouchableOpacity, Image, ActivityIndicator, RefreshControl,
+  View, Text, ScrollView, TouchableOpacity, Image, ActivityIndicator, RefreshControl, Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -32,12 +32,24 @@ export default function BundlesList() {
 
   const load = useCallback(async () => {
     try {
-      const list = await api.listBundles({ forceFresh: true } as any);
+      // Bundles are now tools flagged is_bundle. Migrate any old-format bundles
+      // first (non-destructive, idempotent) so live users keep their data.
+      try { await api.migrateBundlesToTools(); } catch {}
+      const list = await api.listTools({ is_bundle: true }, { forceFresh: true } as any);
       setBundles(Array.isArray(list) ? list : []);
     } catch {
       setBundles([]);
     } finally { setLoading(false); setRefreshing(false); }
   }, []);
+
+  const createBundleAndOpen = async () => {
+    try {
+      const created = await api.createTool({ name: "New Set", is_bundle: true });
+      router.push(`/tool/${created.id}?startEdit=1` as any);
+    } catch (e: any) {
+      Alert.alert("Error", String(e?.message || e));
+    }
+  };
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
@@ -58,7 +70,7 @@ export default function BundlesList() {
       testID={`bundle-card-${b.id}`}
       style={[styles.row, idx === bundles.length - 1 && styles.rowLast]}
       activeOpacity={0.6}
-      onPress={() => router.push(`/bundle/${b.id}`)}
+      onPress={() => router.push(`/tool/${b.id}`)}
     >
       {b.photos?.[0] ? (
         <AppImage source={{ uri: b.photos[0] }} style={styles.thumb} />
@@ -70,11 +82,11 @@ export default function BundlesList() {
       <View style={styles.textWrap}>
         <Text style={styles.name} numberOfLines={1}>{b.name}</Text>
         <Text style={styles.sub} numberOfLines={1}>
-          {b.part_number ? `#${b.part_number}  ·  ` : ""}
-          {b.item_count || 0} item{(b.item_count || 0) === 1 ? "" : "s"}
+          {b.model_numbers?.[0] ? `#${b.model_numbers[0]}  ·  ` : ""}
+          {(b.inside_items?.length || 0)} item{(b.inside_items?.length || 0) === 1 ? "" : "s"}
         </Text>
       </View>
-      <Text style={styles.price}>${(Number(b.set_price) || 0).toFixed(2)}</Text>
+      <Text style={styles.price}>${(Number(b.cost) || 0).toFixed(2)}</Text>
       <Ionicons name="chevron-forward" size={14} color={theme.colors.textMuted} />
     </TouchableOpacity>
   ));
@@ -132,7 +144,7 @@ export default function BundlesList() {
           <ShadowBox testID="bundles-card" style={styles.detailsBox}>{bundleRows}</ShadowBox>
         </ScrollView>
       )}
-      <AddFab testID="add-bundle-fab" onPress={() => router.push("/bundle/edit")} />
+      <AddFab testID="add-bundle-fab" onPress={createBundleAndOpen} />
     </SafeAreaView>
   );
 }

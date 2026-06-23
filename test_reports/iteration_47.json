@@ -1,0 +1,53 @@
+{
+  "summary": "Full backend + frontend verification of the NEW bundle-as-tool feature (Stages 1, 2, 3) using the Pro account mechanicltz@gmail.com on the default STEEL/industrial skin. Backend: 8/8 pytest cases PASS in test_bundles_v3.py (create bundle tool, inside-items CRUD, search-by-inside-name/model surfaces parent, is_bundle filter, expansion link/unlink + inventory visibility, inside items NOT exposed as standalone tools, migration idempotent, claim mirror for inside-item-break carries inside_item_name/model + bundle_model, whole-set break has no inside fields). Frontend: end-to-end E2E PASS on real public URL. Verified: (1) Dashboard ADD ITEM (quick-add-item) opens AddChooser with add-choose-item and add-choose-bundle. (2) Tapping add-choose-bundle creates a new bundle-tool and routes to /tool/<id>?startEdit=1 — confirmed redirect + edit-mode form (edit-brand/edit-model-0/edit-serial-0/edit-cost/edit-qty + edit-save-bar). (3) After save, the detail page shows the 'Set' tab (testID tab-bundle) alongside Details/Photos/Documents/Maintenance/Warranty/History. (4) Set tab content (BundleTab) shows 'ITEMS IN THIS SET' + 'EXPANSION ITEMS' + 'COMBINED TOTAL' section. (5) add-inside-item-btn opens form with inside-name / inside-model / inside-cost → inside-save creates inside row with inside-edit-<id> and inside-del-<id>. (6) add-expansion-btn opens expansion-search picker listing picker-item-<id> rows; tapping one links it; expansion-unlink-<id> appears. Totals updated to Set price $0.00 + Expansion items $25.00 = COMBINED TOTAL $25.00. (7) Inventory list shows the SET / BUNDLE badge on bundle rows and the SET ADD-ON badge on expansion-of rows (visually confirmed in the ryan-style inventory listing). (8) tool-menu-btn opens action menu with menu-edit/move/checkout/broken/stolen/list-sale/export/delete; menu-broken on a bundle with inside items opens the 'WHAT BROKE?' sheet with both broken-whole-set and broken-inside-<id>. Choosing the inside item then opens the repair sheet with banner text 'Claim for inside item: UI_inside_pc (Model #: UI_INSIDE_MD)'. Backend claim mirror on PUT /api/tools/{bid} with repair_info.inside_item_* + needs_repair=true populates inside_item_name / inside_item_model / bundle_model on the warranty-claims row (verified in test_mark_broken_inside_item_creates_claim_with_mirror_fields). Whole-set break creates the claim with no inside-item fields (verified). Default skin = STEEL/industrial — all screens rendered in TbvFrame steel chrome.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": [
+      {"component": "Style props (Web)", "issue": "Console still spams 'textShadow*'/'shadow*'/'pointerEvents' deprecation warnings (pre-existing, unrelated to bundle work). Reference: any screen on web preview."}
+    ]
+  },
+  "verified_features": [
+    "Backend pytest 8/8 PASS (test_bundles_v3.py): create bundle-tool, inside CRUD, search-by-inside-name/model surfaces parent, is_bundle filter, expansion link/unlink + inventory visibility, inside items hidden from /tools list, migrate idempotent, claim mirror on inside-item break, whole-set break has no inside fields.",
+    "STAGE 1 UI: SET / BUNDLE and SET ADD-ON badges render in inventory list (steel skin).",
+    "STAGE 3 UI: Dashboard quick-add-item → AddChooser → add-choose-bundle creates /tool/<id>?startEdit=1 with edit form open.",
+    "STAGE 3 UI: tab-bundle ('Set' tab) renders with ITEMS IN THIS SET + EXPANSION ITEMS + COMBINED TOTAL (correct math).",
+    "STAGE 3 UI: add-inside-item-btn → inside-name/inside-model/inside-cost → inside-save persists; inside-edit-<id> and inside-del-<id> appear.",
+    "STAGE 3 UI: add-expansion-btn → expansion-search picker lists picker-item-<id> rows; selecting one links it (expansion-unlink-<id> shown).",
+    "STAGE 2 UI: tool-menu-btn → menu-broken on a bundle with inside items opens broken-whole-set + broken-inside-<id> chooser; selecting inside opens repair sheet with banner 'Claim for inside item: UI_inside_pc (Model #: UI_INSIDE_MD)' — exact wording confirmed.",
+    "Default skin verified STEEL/industrial via TbvFrame chrome on every screen."
+  ],
+  "test_report_links": [
+    "/app/backend/tests/test_bundles_v3.py",
+    "/app/test_reports/pytest/iter47_results.xml",
+    "/app/test_reports/screens/bundle_detail_edit.png",
+    "/app/test_reports/screens/set_tab.png",
+    "/app/test_reports/screens/inside_added.png",
+    "/app/test_reports/screens/exp_linked.png",
+    "/app/test_reports/screens/menu_open_v4.png",
+    "/app/test_reports/screens/what_broke_v3.png",
+    "/app/test_reports/screens/repair_sheet_v3.png"
+  ],
+  "action_items": [
+    "(carry-over from iter_46, NOT a bundle regression) The full-viewport intro <video> on the dashboard still swallows the FIRST tap on /tool/<id> too — the very first tap on tool-menu-btn was no-op until video was removed / a 2nd click was sent. Either give the video pointer-events:none after splash, or remove it from the DOM once the intro sequence finishes. Repro: load any route fresh → first programmatic click is intercepted by the <video> overlay (verified again).",
+    "(Optional) Address React Native Web style-prop deprecation warnings (textShadow*, shadow*, pointerEvents)."
+  ],
+  "critical_code_review_comments": [
+    "routes_bundles.py:_get_bundle_tool() correctly rejects (HTTP 400) attempts to add inside items / link expansion to a non-bundle tool — good guard.",
+    "routes_tools.py:852 references WarrantyClaim — import at top of file is in place (verified). An earlier reload log showed a NameError but the current process is clean.",
+    "BundleTab.tsx exposes all required testIDs (add-inside-item-btn, inside-name/model/cost, inside-save, inside-edit-<id>, inside-del-<id>, add-expansion-btn, expansion-search, picker-item-<id>, expansion-unlink-<id>). Touch targets look ≥44px via hitSlop on icon buttons.",
+    "app/tool/[id].tsx wires tab-bundle conditionally on tool.is_bundle || tool.expansion_of, with label 'Set' (bundle) or 'Add-on' (expansion item) — matches the spec.",
+    "AddChooser.tsx calls api.createTool({name:'New Set', is_bundle:true}) then router.push(/tool/<id>?startEdit=1) — confirmed in browser."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_bundles_v3.py (new pytest suite)"
+  ],
+  "success_rate": {"backend": "100% (8/8 pytest)", "frontend": "100% (all spec testIDs and flows verified)"},
+  "seed_data_creation": "Tests create and hard-delete TEST_-prefixed bundles via the API; UI test bundle b68d0bc5… also cleaned up. Persistent inventory unaffected.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Auth token is in localStorage under 'tt.auth.token' (parse as JSON: may be raw string or JSON string). Use Pro account mechanicltz@gmail.com / Blue321! to avoid 15-tool free limit. Dashboard intro <video> swallows the FIRST programmatic force=True coordinate click after every fresh route load — workaround: page.evaluate(\"() => document.querySelectorAll('video').forEach(v=>v.remove())\") OR use a direct .click() via JS dispatch (page.evaluate). Critical testIDs verified working: quick-add-item, add-choose-item, add-choose-bundle, add-bundle-fab, tab-bundle, add-inside-item-btn, inside-name, inside-model, inside-cost, inside-save, inside-edit-<id>, inside-del-<id>, add-expansion-btn, expansion-search, picker-item-<id>, expansion-unlink-<id>, tool-menu-btn, menu-broken, broken-whole-set, broken-inside-<id>. Default skin is steel (industrial). Backend pytest: pytest /app/backend/tests/test_bundles_v3.py -v.",
+  "rca_of_issue": "No bundle-feature bugs found. The only friction encountered (first-tap miss on tool-menu-btn) is the unchanged pre-existing dashboard intro-video overlay issue from iter_46 — RCA already documented there. All bundle/set functional requirements pass."
+}

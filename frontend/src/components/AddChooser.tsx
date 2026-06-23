@@ -1,9 +1,10 @@
 import React from "react";
-import { View, Text, TouchableOpacity, Modal } from "react-native";
+import { View, Text, TouchableOpacity, Modal, Alert } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { themedStyles } from "../themeContext";
 import { theme } from "../theme";
+import { api } from "../api";
 
 /**
  * AddChooser — bottom-sheet shown when the user taps the "+" Add button.
@@ -23,6 +24,16 @@ export function AddChooser({
     router.push(path as any);
   };
 
+  const addBundle = async () => {
+    onClose();
+    try {
+      const created = await api.createTool({ name: "New Set", is_bundle: true });
+      router.push(`/tool/${created.id}?startEdit=1` as any);
+    } catch (e: any) {
+      Alert.alert("Error", String(e?.message || e));
+    }
+  };
+
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <TouchableOpacity style={styles.bg} activeOpacity={1} onPress={onClose}>
@@ -40,7 +51,7 @@ export function AddChooser({
             <Ionicons name="chevron-forward" size={20} color={theme.colors.textMuted} />
           </TouchableOpacity>
 
-          <TouchableOpacity testID="add-choose-bundle" style={styles.option} onPress={() => go("/bundle/edit")}>
+          <TouchableOpacity testID="add-choose-bundle" style={styles.option} onPress={addBundle}>
             <View style={[styles.iconWrap, { backgroundColor: theme.colors.accent + "1F" }]}>
               <Ionicons name="cube" size={22} color={theme.colors.accent} />
             </View>
