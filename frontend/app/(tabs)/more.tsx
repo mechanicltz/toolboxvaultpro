@@ -899,34 +899,8 @@ export default function MoreScreen() {
               />
             }
           />
-          <SectionRow
-            icon="map"
-            title="Next dealer-route banner"
-            subtitle="Show the highlighted reminder at the top of the home screen"
-            rightSlot={
-              <AppSwitch
-                testID="toggle-dealer-route-banner"
-                value={prefs.show_dealer_route_reminder}
-                onValueChange={(v) => update({ show_dealer_route_reminder: v })}
-                trackColor={{ true: theme.colors.accent, false: theme.colors.border }}
-                thumbColor="#fff"
-              />
-            }
-          />
-          <SectionRow
-            icon="notifications"
-            title="Warranty Expiring Alerts"
-            subtitle="Banner on inventory tab"
-            rightSlot={
-              <AppSwitch
-                testID="toggle-warranty-alerts"
-                value={prefs.warranty_alerts}
-                onValueChange={(v) => update({ warranty_alerts: v })}
-                trackColor={{ true: theme.colors.accent, false: theme.colors.border }}
-                thumbColor="#fff"
-              />
-            }
-          />
+          {/* Dashboard route + warranty toggles removed — these alerts now live
+              in the always-on Notifications panel on the home screen. */}
           <SectionRow
             icon="film"
             title="Intro Video"

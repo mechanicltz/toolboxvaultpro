@@ -1,4 +1,4 @@
-import { useState, useCallback, ReactNode } from "react";
+import { useState, useCallback, useMemo, ReactNode } from "react";
 import {
   View,
   Text,
@@ -29,6 +29,7 @@ import { useSkin } from "../../src/themeContext";
 import { styles } from "../../src/screens/home/homeStyles";
 import { SummaryRow } from "../../src/screens/home/SummaryRow";
 import { DealerBalanceRow } from "../../src/screens/home/DealerBalanceRow";
+import { NotificationsAccordion, HomeNotif } from "../../src/screens/home/NotificationsAccordion";
 import { DealerLogo } from "../../src/components/DealerLogo";
 import { DEALER_LOGO_SLOT } from "../../src/dealerLogos";
 import { useDealerPaymentsDue } from "../../src/screens/home/useDealerPaymentsDue";
@@ -105,6 +106,9 @@ export default function HomeScreen() {
   const [claims, setClaims] = useState<any>(() =>
     getCached("claims_summary", { totals: { open: 0 } }),
   );
+  const [warAlerts, setWarAlerts] = useState<{ expiring: any[]; expired: any[] }>(() =>
+    getCached("home_war", { expiring: [], expired: [] }),
+  );
   const [refreshing, setRefreshing] = useState(false);
   const [showAddChooser, setShowAddChooser] = useState(false);
   /** Admin-only counts of free vs subscribed accounts. `null` for non-admins
@@ -167,13 +171,14 @@ export default function HomeScreen() {
       // tool counts/totals from /aggregate which returns counts only
       // (no full tool docs). Saves the biggest payload on home load.
       // The inventory tab still fetches tools itself when visited.
-      const [s, a, w, d, m, c] = await Promise.all([
+      const [s, a, w, d, m, c, wa] = await Promise.all([
         api.getStats(ff).catch(keep),
         api.aggregate({}, ff).catch(keep),
         api.listWishlist(undefined, ff).catch(keep),
         api.listDealers(ff).catch(keep),
         api.upcomingMaintenance(30, ff).catch(keep),
         api.warrantyClaimsSummary(ff).catch(keep),
+        api.warrantyAlerts(60).catch(keep),
       ]);
       if (s !== KEEP) setStats(setCached("home_stats", s));
       if (a !== KEEP) setAgg(setCached("home_agg", a));
@@ -181,6 +186,7 @@ export default function HomeScreen() {
       if (d !== KEEP) setDealers(setCached("dealers", d as any[]));
       if (m !== KEEP) setMnt(setCached("home_mnt", m));
       if (c !== KEEP) setClaims(setCached("claims_summary", c));
+      if (wa !== KEEP) setWarAlerts(setCached("home_war", wa as any));
       // Probe the admin-only user-stats endpoint. Non-admins get 403/401
       // and we silently leave userStats null → the badge stays hidden.
       try {
@@ -292,6 +298,64 @@ export default function HomeScreen() {
       dealers: sameDay.map((x) => x.dealer.name),
     };
   }
+
+  // Build the home Notifications feed: next dealer route + maintenance + warranty.
+  const homeNotifs = useMemo(() => {
+    const arr: HomeNotif[] = [];
+    if (nextRouteBanner) {
+      arr.push({
+        id: "route",
+        icon: "navigate",
+        label: "NEXT DEALER ROUTE",
+        text: `${nextRouteBanner.dealers.join(" & ")} · ${nextRouteBanner.dateStr}`,
+        onPress: () => router.push("/(tabs)/dealers"),
+      });
+    }
+    const overdue = Number(mnt?.overdue || 0);
+    const dueSoon = Number(mnt?.due_soon || 0);
+    if (overdue > 0) {
+      arr.push({
+        id: "mnt-overdue",
+        icon: "build",
+        label: "MAINTENANCE OVERDUE",
+        text: `${overdue} tool${overdue === 1 ? "" : "s"} overdue for service`,
+        color: theme.colors.danger,
+        onPress: () => router.push("/maintenance"),
+      });
+    }
+    if (dueSoon > 0) {
+      arr.push({
+        id: "mnt-soon",
+        icon: "build",
+        label: "MAINTENANCE DUE SOON",
+        text: `${dueSoon} tool${dueSoon === 1 ? "" : "s"} due within 30 days`,
+        color: theme.colors.warning,
+        onPress: () => router.push("/maintenance"),
+      });
+    }
+    (warAlerts?.expired || []).forEach((t: any) => {
+      arr.push({
+        id: `war-exp-${t.id}`,
+        icon: "shield",
+        label: "WARRANTY EXPIRED",
+        text: `${t.name}${t.warranty?.expiry_date ? ` · ${formatDateUS(t.warranty.expiry_date)}` : ""}`,
+        color: theme.colors.danger,
+        onPress: () => router.push(`/tool/${t.id}`),
+      });
+    });
+    (warAlerts?.expiring || []).forEach((t: any) => {
+      arr.push({
+        id: `war-soon-${t.id}`,
+        icon: "shield-checkmark",
+        label: "WARRANTY EXPIRING",
+        text: `${t.name}${t.warranty?.expiry_date ? ` · ${formatDateUS(t.warranty.expiry_date)}` : ""}`,
+        color: theme.colors.warning,
+        onPress: () => router.push(`/tool/${t.id}`),
+      });
+    });
+    return arr;
+  }, [nextRouteBanner, mnt, warAlerts, router]);
+
 
   const visible = prefs.home_rows;
   const order = prefs.home_row_order;
@@ -581,18 +645,7 @@ export default function HomeScreen() {
             </View>
           )}
 
-          {nextRouteBanner && prefs.show_dealer_route_reminder && (
-            <ShadowBox style={[styles.plainBanner, { marginBottom: 12 }]} onPress={() => router.push("/dealers")}>
-              <Ionicons name="map" size={22} color={theme.colors.accent} />
-              <View style={{ flex: 1, marginLeft: 12 }}>
-                <Text style={styles.plainBannerLabel}>NEXT DEALER ROUTE</Text>
-                <Text style={styles.plainBannerText}>
-                  {nextRouteBanner.dealers.join(" & ")} · {nextRouteBanner.dateStr}
-                </Text>
-              </View>
-              <Ionicons name="chevron-forward" size={18} color={theme.colors.textMuted} />
-            </ShadowBox>
-          )}
+          <NotificationsAccordion notifications={homeNotifs} />
 
           {/* UNIFIED DESCRIPTION CARD (restored from the 05-30 backup) — a
               single box containing every enabled row in the user's chosen
@@ -834,30 +887,7 @@ export default function HomeScreen() {
         )}
 
         {/* Next dealer route — skinned panel to match the theme */}
-        {nextRouteBanner && prefs.show_dealer_route_reminder && (
-          <TbvFrame
-            {...plateFrame}
-            style={styles.bannerLayout}
-          >
-            <TouchableOpacity
-              testID="next-route-banner"
-              style={styles.routeBanner}
-              onPress={() => router.push("/dealers")}
-              activeOpacity={0.85}
-            >
-              <View style={styles.routeIconWrap}>
-                <Ionicons name="map" size={22} color={theme.colors.accent} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.routeBannerLabel}>NEXT DEALER ROUTE</Text>
-                <Text style={styles.routeBannerText}>
-                  {nextRouteBanner.dealers.join(" & ")} · {nextRouteBanner.dateStr}
-                </Text>
-              </View>
-              <Ionicons name="chevron-forward" size={18} color={theme.colors.accent} />
-            </TouchableOpacity>
-          </TbvFrame>
-        )}
+        <NotificationsAccordion notifications={homeNotifs} />
 
         {/* UNIFIED HOME DESCRIPTION CARD — single warranty-card-style box
             containing every enabled row in the user's chosen order. The

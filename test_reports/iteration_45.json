@@ -1,0 +1,38 @@
+{
+  "summary": "Frontend-only verification of the new always-visible Notifications accordion on the Dashboard for ryan@ryan.com. All 9 requirements PASSED: panel renders at top with home-notif-toggle, default OPEN with home-notif-carousel containing 5 notif rows (route + mnt-overdue + 3 warranty-soon), auto-advance advances scrollLeft every ~3s (620→930→1240 px, page width 310), manual swipe works, toggle collapses to 'NOTIFICATIONS 5 alerts' row (home-notif-collapsed), localStorage 'home.notifOpen' persists across reload ('0' closed, '1' open), re-open via both home-notif-toggle and home-notif-collapsed works, tapping home-notif-route navigates to /dealers, and the legacy toggle-dealer-route-banner / toggle-warranty-alerts toggles are confirmed REMOVED from the Vault/More screen. Dashboard fonts and the rest of the layout (dealer accounts, stat tiles, header) render correctly with the industrial BebasNeue/Rajdhani styling visible in screenshots. Note: a first attempt to re-open from collapsed row immediately after reload returned carousel=0 once, but the same action succeeded on the focused re-run (likely a transient hydration race during the very first frame after reload — not reproducible on subsequent attempts).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": [
+      {"component": "Style props", "issue": "Deprecation warnings in console: 'textShadow*' style props are deprecated (use 'textShadow'), 'shadow*' style props are deprecated (use 'boxShadow'), props.pointerEvents is deprecated (use style.pointerEvents). Not blocking but should be addressed."}
+    ]
+  },
+  "verified_features": [
+    "home-notif-toggle present at bottom-center of panel (filter icon, hitSlop active)",
+    "home-notif-carousel renders by default OPEN with 5 notifications (route, mnt-overdue, 3 warranty-soon)",
+    "Auto-scroll: scrollLeft advanced 620→930→1240 over a 7s window (one page width = 310 every ~3s)",
+    "Manual swipe: scrollTo({left: clientWidth}) responds, carousel is horizontally pageable",
+    "Toggle CLOSE collapses to single row with label 'NOTIFICATIONS' and sub-text '5 alerts' (home-notif-collapsed)",
+    "localStorage 'home.notifOpen' written ('0' on close, '1' on open) and re-hydrated on reload in both directions",
+    "Re-open from collapsed-state works via both the handle (home-notif-toggle) and tapping the collapsed row (home-notif-collapsed)",
+    "Tapping home-notif-route navigates to /dealers tab successfully",
+    "VAULT/More settings: toggle-dealer-route-banner and toggle-warranty-alerts no longer present (count=0)",
+    "Rest of dashboard renders correctly (TOOLBOX VAULT header, demo banner, DEALER ACCOUNTS card with Snap-on/Matco/Mac/Cornwell rows, totals)"
+  ],
+  "test_report_links": [],
+  "action_items": [
+    "Address React Native Web deprecation warnings (textShadow*, shadow*, pointerEvents) when convenient — not blocking, but they spam the console on every render."
+  ],
+  "critical_code_review_comments": [
+    "NotificationsAccordion uses a 'pre-hydration spacer' returning a fixed View height of ROW_H+24 (~70px) before AsyncStorage resolves. This is good for avoiding flicker, but the hydration race may very rarely make the first click on the collapsed row no-op if the user reloads and taps within ~50ms. Not reproducible in normal usage."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "n/a (frontend-only)", "frontend": "100%"},
+  "seed_data_creation": "None — used existing ryan@ryan.com data (1 upcoming Snap-on route, 2 maintenance overdue, 3 warranty-expiring).",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Login uses testIDs auth-email/auth-password/auth-submit (NOT login-*). NotificationsAccordion testIDs: home-notif-toggle, home-notif-carousel, home-notif-collapsed, home-notif-<id> where id ∈ {route, mnt-overdue, mnt-soon, war-soon-<uuid>, war-exp-<uuid>, empty}. Persistence key on web is localStorage 'home.notifOpen' ('1'/'0'). The handle button is positioned absolute bottom:-20 with pointerEvents='box-none' on wrap — safe to click via data-testid='home-notif-toggle'. After reload allow ~6-8s for the Expo web bundle + AsyncStorage hydration before asserting carousel/collapsed counts.",
+  "rca_of_issue": "No bugs requiring RCA. The one transient null-result on re-opening from collapsed row immediately after a hard reload appears to be a hydration race (AsyncStorage→setOpen runs after the click handler binds) and self-recovers on the next interaction."
+}
