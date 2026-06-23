@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, useCallback } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   View,
   Text,
@@ -10,7 +10,6 @@ import {
   NativeScrollEvent,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useSkin, useColors } from "../../themeContext";
 import { useSteelPanelFrame } from "../../tbv/steel";
 import { SKIN, CAP } from "../../tbv/skins";
@@ -25,17 +24,13 @@ export type HomeNotif = {
   onPress?: () => void;
 };
 
-const STORAGE_KEY = "home.notifOpen";
-const ROW_H = 46; // matches the dealer-route panel content height
+const ROW_H = 46;
 const AUTO_MS = 3000;
 
 /**
- * Home "Notifications" panel — always visible, behaves like the inventory
- * search-bar accordion. Closed → shows a single "NOTIFICATIONS" row. Open →
- * a fixed-height area that auto-scrolls through alerts (next dealer route,
- * warranty & maintenance warnings) every 3s; the user can also swipe
- * forward/back. Open/closed state is remembered across app restarts (defaults
- * to OPEN). A 3-line handle at the bottom-center toggles it.
+ * Home alert strip — always visible, no open/close. Auto-scrolls (slides left)
+ * through the alerts every 3s; the user can also swipe forward/back. Content:
+ * next dealer route, warranty warnings, maintenance warnings.
  */
 export function NotificationsAccordion({ notifications }: { notifications: HomeNotif[] }) {
   const { skin, metalStyle } = useSkin();
@@ -47,45 +42,25 @@ export function NotificationsAccordion({ notifications }: { notifications: HomeN
     ? steelPanel
     : { source: SKIN.plate, capInsets: CAP.plate, padX: 30, padTop: 18, padBottom: 18 };
 
-  const [open, setOpen] = useState(true);
-  const [hydrated, setHydrated] = useState(false);
   const [width, setWidth] = useState(0);
   const idxRef = useRef(0);
   const scrollRef = useRef<ScrollView>(null);
-
-  // Restore open/closed (default OPEN).
-  useEffect(() => {
-    AsyncStorage.getItem(STORAGE_KEY)
-      .then((v) => {
-        if (v === "0") setOpen(false);
-        setHydrated(true);
-      })
-      .catch(() => setHydrated(true));
-  }, []);
-
-  const toggle = useCallback(() => {
-    setOpen((o) => {
-      const n = !o;
-      AsyncStorage.setItem(STORAGE_KEY, n ? "1" : "0").catch(() => {});
-      return n;
-    });
-  }, []);
 
   const data: HomeNotif[] = notifications.length
     ? notifications
     : [{ id: "empty", icon: "checkmark-done-circle", label: "ALL CLEAR", text: "No alerts right now" }];
   const count = data.length;
 
-  // Auto-advance every 3s when open and there's more than one alert.
+  // Auto-advance (slides left) every 3s when there's more than one alert.
   useEffect(() => {
-    if (!open || count <= 1 || width <= 0) return;
+    if (count <= 1 || width <= 0) return;
     const t = setInterval(() => {
       const next = (idxRef.current + 1) % count;
       idxRef.current = next;
       scrollRef.current?.scrollTo({ x: next * width, animated: true });
     }, AUTO_MS);
     return () => clearInterval(t);
-  }, [open, count, width]);
+  }, [count, width]);
 
   // Keep the index valid if the alert list shrinks.
   useEffect(() => {
@@ -97,8 +72,7 @@ export function NotificationsAccordion({ notifications }: { notifications: HomeN
 
   const onScrollEnd = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
     if (width <= 0) return;
-    const i = Math.round(e.nativeEvent.contentOffset.x / width);
-    idxRef.current = i;
+    idxRef.current = Math.round(e.nativeEvent.contentOffset.x / width);
   };
 
   const renderRow = (item: HomeNotif, fixedWidth?: number) => (
@@ -123,19 +97,7 @@ export function NotificationsAccordion({ notifications }: { notifications: HomeN
 
   const Inner = (
     <View onLayout={(e: LayoutChangeEvent) => setWidth(e.nativeEvent.layout.width)} style={{ height: ROW_H }}>
-      {!open ? (
-        <TouchableOpacity style={[styles.item, { height: ROW_H }]} activeOpacity={0.8} onPress={toggle} testID="home-notif-collapsed">
-          <View style={[styles.iconWrap, { borderColor: c.accent }]}>
-            <Ionicons name="notifications" size={20} color={c.accent} />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={[styles.label, { color: c.accent }]}>NOTIFICATIONS</Text>
-            <Text style={[styles.text, { color: c.textPrimary }]}>
-              {notifications.length} alert{notifications.length === 1 ? "" : "s"}
-            </Text>
-          </View>
-        </TouchableOpacity>
-      ) : width === 0 ? (
+      {width === 0 ? (
         renderRow(data[0])
       ) : (
         <ScrollView
@@ -154,8 +116,6 @@ export function NotificationsAccordion({ notifications }: { notifications: HomeN
     </View>
   );
 
-  if (!hydrated) return <View style={{ height: ROW_H + 24 }} />;
-
   return (
     <View style={styles.wrap}>
       {isSkinned ? (
@@ -163,25 +123,12 @@ export function NotificationsAccordion({ notifications }: { notifications: HomeN
       ) : (
         <View style={[styles.plainCard, { backgroundColor: c.bgSecondary, borderColor: c.border }]}>{Inner}</View>
       )}
-
-      {/* 3-line handle, bottom-center — same affordance as the inventory page.
-          Kept in normal flow (within the wrapper's bounds) so the tap reliably
-          registers on iOS/Android. */}
-      <TouchableOpacity
-        testID="home-notif-toggle"
-        onPress={toggle}
-        hitSlop={{ top: 12, bottom: 12, left: 28, right: 28 }}
-        style={styles.handleBtn}
-        activeOpacity={0.75}
-      >
-        <Ionicons name="filter" size={16} color="#FFFFFF" />
-      </TouchableOpacity>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  wrap: { position: "relative", marginBottom: 16 },
+  wrap: { marginBottom: 14 },
   plainCard: { borderWidth: 1, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 8 },
   item: { flexDirection: "row", alignItems: "center", gap: 12 },
   iconWrap: {
@@ -195,15 +142,6 @@ const styles = StyleSheet.create({
   },
   label: { fontFamily: "BebasNeue_400Regular", fontSize: 12, letterSpacing: 1.4 },
   text: { fontFamily: "Rajdhani_700Bold", fontSize: 13, marginTop: 2 },
-  handleBtn: {
-    alignSelf: "center",
-    width: 56,
-    height: 26,
-    marginTop: -4,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "transparent",
-  },
 });
 
 export default NotificationsAccordion;
