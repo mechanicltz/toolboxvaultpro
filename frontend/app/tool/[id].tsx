@@ -2326,7 +2326,7 @@ export default function ToolDetail() {
     <SafeAreaView style={[styles.container, isIndustrial && styles.containerSkin]} edges={["top"]}>
       <IndustrialBanner
         title={tool.name || "Untitled Tool"}
-        subtitle={tool.brand ? String(tool.brand) : "Item Details"}
+        subtitle={tool.location_name ? String(tool.location_name) : "No location"}
         onBack={() => router.back()}
         rightSlot={
           editing ? (
@@ -2358,11 +2358,6 @@ export default function ToolDetail() {
                   <PillRow label="PRICE EACH" value={fmtMoney(tool.cost)} />
                 </View>
               </View>
-              <TouchableOpacity disabled={!editing} onPress={() => editing && setShowEditLocation(true)} style={newStyles.locCenterRow} activeOpacity={editing ? 0.7 : 1} testID="top-location">
-                <Ionicons name="location" size={14} color={theme.colors.accent} />
-                <Text style={newStyles.locCenterText} numberOfLines={1}>{(editing && form ? form.location_name : tool.location_name) || "No location"}</Text>
-                {editing && <Ionicons name="chevron-forward" size={13} color={theme.colors.textMuted} />}
-              </TouchableOpacity>
             </View>
           ) : (
             <View>
@@ -2378,11 +2373,6 @@ export default function ToolDetail() {
                   <PillRow label="PRICE EACH" value={fmtMoney(tool.cost)} />
                 </ShadowBox>
               </View>
-              <TouchableOpacity disabled={!editing} onPress={() => editing && setShowEditLocation(true)} style={newStyles.locCenterRow} activeOpacity={editing ? 0.7 : 1} testID="top-location">
-                <Ionicons name="location" size={14} color={theme.colors.accent} />
-                <Text style={newStyles.locCenterText} numberOfLines={1}>{(editing && form ? form.location_name : tool.location_name) || "No location"}</Text>
-                {editing && <Ionicons name="chevron-forward" size={13} color={theme.colors.textMuted} />}
-              </TouchableOpacity>
             </View>
           )}
         </View>
