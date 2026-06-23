@@ -2345,7 +2345,7 @@ export default function ToolDetail() {
         {/* TOP PANEL — photo + status/qty/price + centered location */}
         <View style={newStyles.topPanelWrap}>
           {isIndustrial ? (
-            <TbvFrame source={winSrc} capInsets={winCap} frameScale={steelScale} padX={20} padTop={22} padBottom={20}>
+            <View style={newStyles.topUnframed}>
               <View style={newStyles.topUnifiedRow}>
                 <TouchableOpacity testID="photo-thumb" style={newStyles.topUnifiedPhoto} activeOpacity={photos.length ? 0.85 : 1} onPress={photos.length ? () => { setPhotoIdx(0); setIsImageViewerVisible(true); } : promptAddPhoto}>
                   {photos.length > 0 ? <AppImage source={{ uri: photos[0] }} style={newStyles.photoImg} /> : (
@@ -2363,7 +2363,7 @@ export default function ToolDetail() {
                 <Text style={newStyles.locCenterText} numberOfLines={1}>{(editing && form ? form.location_name : tool.location_name) || "No location"}</Text>
                 {editing && <Ionicons name="chevron-forward" size={13} color={theme.colors.textMuted} />}
               </TouchableOpacity>
-            </TbvFrame>
+            </View>
           ) : (
             <View>
               <View style={newStyles.photoRow}>

@@ -773,6 +773,13 @@ export const newStyles = themedStyles((c) => ({
     alignItems: "center",
     gap: 14,
   },
+  // Unframed top block (metal window frame removed per user request) — keeps
+  // the photo + status/qty/price + location, just no surrounding panel.
+  topUnframed: {
+    paddingHorizontal: 4,
+    paddingTop: 4,
+    paddingBottom: 6,
+  },
   topUnifiedPhoto: {
     width: 96,
     height: 96,
