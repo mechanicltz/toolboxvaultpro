@@ -669,20 +669,6 @@ export default function InventoryScreen() {
     >
       <IndustrialBanner title="INVENTORY" />
 
-      {prefs.warranty_alerts && warningCount > 0 && (
-        <TouchableOpacity
-          testID="warranty-banner"
-          style={styles.warrantyBanner}
-          onPress={() => router.push("/warranty")}
-        >
-          <Ionicons name="shield-checkmark" size={18} color={theme.colors.warning} />
-          <Text style={styles.warrantyText}>
-            {warningCount} warranty alert{warningCount > 1 ? "s" : ""} — tap to view
-          </Text>
-          <Ionicons name="chevron-forward" size={16} color={theme.colors.warning} />
-        </TouchableOpacity>
-      )}
-
       <View style={styles.searchRow}>
         {isIndustrial ? (
           // Iron Forge: framed metal search bar. The detail summary lives INSIDE
