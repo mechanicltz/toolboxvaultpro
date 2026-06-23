@@ -185,6 +185,28 @@ WarrantyClaim was not imported in routes_tools.py. Backend test:
 /app/backend/test_stage2_claims.py — ALL PASS. NOTE: full UI exercise of the
 chooser needs Stage 3/4 (no in-app way to create a bundle + inside items yet;
 only via API).
+## Bundle Stage 3 DONE & tested (2026-06) — iteration_47
+Bundle detail = the item-detail page (bundle is a tool). New component
+`/app/frontend/src/screens/tool/BundleTab.tsx` renders the "Set" tab (testID
+tab-bundle): manage inside items (add-inside-item-btn / inside-name/model/cost /
+optional photo / inside-save / inside-edit-<id> / inside-del-<id>) and expansion
+items (add-expansion-btn -> expansion-search picker picker-item-<id> -> link ->
+expansion-unlink-<id>) + totals (Set price + Expansion + COMBINED TOTAL). For an
+expansion add-on the tab shows "Add-on" with the parent set. Tab only shows when
+is_bundle || expansion_of. CREATION (folds into Stage 4): AddChooser
+"add-choose-bundle" and the Sets&Bundles list FAB (add-bundle-fab) now create a
+bundle-tool ("New Set") via POST /tools and open /tool/{id}?startEdit=1 (new
+startEdit param auto-enters edit mode via beginEdit). app/bundle/index.tsx now
+lists is_bundle tools (auto-runs migrate-to-tools), rows route to /tool/{id}.
+api.ts gained: migrateBundlesToTools, addInsideItem, updateInsideItem,
+deleteInsideItem, listExpansionItems, linkExpansionItem, unlinkExpansionItem.
+Tested: /app/backend/tests/test_bundles_v3.py 8/8 PASS + full frontend flow PASS.
+KNOWN PRE-EXISTING (not bundle-related): dashboard intro-video overlay swallows
+the first tap after a fresh route load (iter_46). STILL PENDING for bundles:
+Stage 4 (make Add ITEM also live-edit + retire old add/edit + old bundle screens
++ old bundles collection), Stage 5 (inventory "bundles only" filter), Stage 6
+(reports/export simplified; bundle export WITH/WITHOUT expansions — deferred from
+Stage 3), LATER HOWTO.
 REMAINING STAGES: 2=claims/mark-broken (whole bundle vs one inside item; dealer
 msg must read "came in the set <bundleModel>, but the <sub> I broke is <itemModel>");
 3=bundle detail screen (manage inside items + expansion area w/ bundle+expansion
