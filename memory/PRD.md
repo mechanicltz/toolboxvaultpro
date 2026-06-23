@@ -349,3 +349,8 @@ can explore every feature immediately. All demo records tagged `is_demo: true`
 ALWAYS talk to this user in PLAIN ENGLISH. No code words, no file names, no
 technical jargon, no error-message copy-paste. Explain everything like you would
 to a smart friend who does not code. Keep it short. This is non-negotiable.
+
+## RULE — ACTIVE THEME CONTEXT (user demand, 2026-06-23)
+Unless the user says otherwise, assume they are viewing the app through the
+DEFAULT **Steel** theme layout (skin !== "plain", metalStyle === "steel"). All
+bugs, changes, edits, and screenshots should target the Steel theme first.
