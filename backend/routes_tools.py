@@ -27,7 +27,7 @@ from auth import User
 from helpers import build_tool_query, _validate_photo_payload
 from routes_taxonomy import _ensure_brand_saved
 import media
-from models import now_iso, ToolCreate, ToolUpdate, Tool, Document, RepairInfo, Category, Location, Dealer, Tag
+from models import now_iso, ToolCreate, ToolUpdate, Tool, Document, RepairInfo, Category, Location, Dealer, Tag, WarrantyClaim
 
 logger = logging.getLogger("routes_tools")
 
@@ -845,10 +845,18 @@ def register_tools_routes(api_router: APIRouter) -> None:
             )
             if not existing_open:
                 ri = (new_doc.get("repair_info") or {})
+                _bundle_model = ""
+                if new_doc.get("is_bundle"):
+                    _mns = new_doc.get("model_numbers") or []
+                    _bundle_model = (_mns[0] if _mns else "") or new_doc.get("model") or ""
                 claim = WarrantyClaim(
                     tool_id=tool_id,
                     tool_name=new_doc.get("name", ""),
                     tool_photo=(new_doc.get("photos") or [None])[0],
+                    inside_item_id=ri.get("inside_item_id") or None,
+                    inside_item_name=ri.get("inside_item_name") or "",
+                    inside_item_model=ri.get("inside_item_model") or "",
+                    bundle_model=_bundle_model,
                     broken_photo=ri.get("broken_photo") or "",
                     dealer_id=new_doc.get("dealer_id"),
                     dealer_name=new_doc.get("dealer_name") or "",

@@ -330,7 +330,13 @@ export default function ToolDetail() {
     notes: "",
     broken_photo: "",
     repair_cost: "", // dollars user paid out of pocket; "" → 0
+    inside_item_id: "",
+    inside_item_name: "",
+    inside_item_model: "",
   });
+  // Bundle claim target chooser: when marking a bundle broken, ask whole-set
+  // vs one inside item before opening the repair form.
+  const [showBrokenTarget, setShowBrokenTarget] = useState(false);
 
   // Pick the photo of the broken/damaged item for a repair claim.
   // Supports BOTH "camera" (take a new photo right now) and "library"
@@ -645,14 +651,35 @@ export default function ToolDetail() {
         : (t.serial_number ? [String(t.serial_number)] : []);
       const _snsForEmail: string[] = Array.isArray(t.serial_numbers)
         ? t.serial_numbers.filter((s: any) => !!s) : [];
-      const lines = [
-        `Hello ${greetName}, I have a repair/warranty tool.`,
-        `Tool: ${t.name}`,
-        `Model Number${_mnsForEmail.length > 1 ? "s" : ""}: ${_mnsForEmail.length ? _mnsForEmail.join(", ") : "N/A"}`,
-        `Serial Number${_snsForEmail.length === 1 ? "" : "s"}: ${_snsForEmail.length ? _snsForEmail.join(", ") : "N/A"}`,
-        `Purchase date: ${formatDateUS(t.purchase_date) || "N/A"}`,
-      ];
-      const subject = `Repair / Warranty: ${t.name}`;
+      const _ri = t.repair_info || {};
+      const _isInsideClaim = t.is_bundle && (_ri.inside_item_model || _ri.inside_item_name);
+      let lines: string[];
+      let subject: string;
+      if (_isInsideClaim) {
+        // Claim is for ONE item inside a set/bundle — give the dealer both the
+        // set's identifier AND the specific broken item so they can source it.
+        const setModel = _mnsForEmail.length ? _mnsForEmail.join(", ") : "N/A";
+        const itemLabel = _ri.inside_item_name || "an item in the set";
+        const itemModel = _ri.inside_item_model || "N/A";
+        lines = [
+          `Hello ${greetName}, I have a repair/warranty request for an item from one of my sets.`,
+          `Set: ${t.name}`,
+          `Set model / part #: ${setModel}`,
+          `Item needing repair/replacement: ${itemLabel}`,
+          `Item model #: ${itemModel}`,
+          `Purchase date: ${formatDateUS(t.purchase_date) || "N/A"}`,
+        ];
+        subject = `Repair / Warranty: ${itemLabel} (from set ${t.name})`;
+      } else {
+        lines = [
+          `Hello ${greetName}, I have a repair/warranty tool.`,
+          `${t.is_bundle ? "Set" : "Tool"}: ${t.name}`,
+          `Model Number${_mnsForEmail.length > 1 ? "s" : ""}: ${_mnsForEmail.length ? _mnsForEmail.join(", ") : "N/A"}`,
+          `Serial Number${_snsForEmail.length === 1 ? "" : "s"}: ${_snsForEmail.length ? _snsForEmail.join(", ") : "N/A"}`,
+          `Purchase date: ${formatDateUS(t.purchase_date) || "N/A"}`,
+        ];
+        subject = `Repair / Warranty: ${t.name}`;
+      }
       const bodyText = lines.join("\n");
       const photoB64 = t.repair_info?.broken_photo || "";
 
@@ -744,7 +771,17 @@ export default function ToolDetail() {
     }
   };
 
-  const openRepair = () => {
+  // Entry point for "Mark broken" / claim edit. For a bundle with inside items
+  // we first ask WHICH thing broke (whole set vs one inside item).
+  const startRepairFlow = () => {
+    if (tool?.is_bundle && (tool?.inside_items?.length || 0) > 0 && !tool?.needs_repair) {
+      setShowBrokenTarget(true);
+      return;
+    }
+    openRepair();
+  };
+
+  const openRepair = (insideItem?: any) => {
     // Auto-fill the repair company from the tool's already-assigned dealer.
     // The repair always goes to the dealer the tool was bought from — this
     // shouldn't be a separate choice inside the repair flow.
@@ -776,6 +813,9 @@ export default function ToolDetail() {
       repair_cost: tool.repair_info?.repair_cost
         ? String(tool.repair_info.repair_cost)
         : "",
+      inside_item_id: insideItem?.id || tool.repair_info?.inside_item_id || "",
+      inside_item_name: insideItem?.name || tool.repair_info?.inside_item_name || "",
+      inside_item_model: insideItem?.model || tool.repair_info?.inside_item_model || "",
     });
     setShowRepair(true);
   };
@@ -1829,6 +1869,14 @@ export default function ToolDetail() {
           {(() => {
             const claimBody = (
               <>
+                {!!tool.repair_info?.inside_item_name && (
+                  <View style={[newStyles.claimRow, { alignItems: "flex-start" }]}>
+                    <Text style={newStyles.claimRowLabel} allowFontScaling={false}>Broken item</Text>
+                    <Text style={[newStyles.claimRowValue, { flex: 1, textAlign: "right" }]} allowFontScaling={false} numberOfLines={2}>
+                      {tool.repair_info.inside_item_name}{!!tool.repair_info.inside_item_model && ` (${tool.repair_info.inside_item_model})`}
+                    </Text>
+                  </View>
+                )}
                 {!!tool.repair_info?.notified_at && !!tool.repair_info?.repair_status &&
                   String(tool.repair_info.repair_status).toLowerCase() !== "not reported" && (
                   <View style={newStyles.claimRow}>
@@ -2472,7 +2520,7 @@ export default function ToolDetail() {
                   <Text style={newStyles.menuRowText}>Mark fixed</Text>
                 </TouchableOpacity>
               ) : (
-                <TouchableOpacity testID="menu-broken" style={newStyles.menuRow} onPress={() => runMenuAction(openRepair)}>
+                <TouchableOpacity testID="menu-broken" style={newStyles.menuRow} onPress={() => runMenuAction(startRepairFlow)}>
                   <Ionicons name="build-outline" size={18} color={theme.colors.danger} />
                   <Text style={newStyles.menuRowText}>Mark broken</Text>
                 </TouchableOpacity>
@@ -2692,6 +2740,56 @@ export default function ToolDetail() {
       </Modal>
 
       {/* Repair Modal — quick mark-broken / edit repair info */}
+      {/* Bundle: choose whether the whole set or one inside item is broken */}
+      <Modal visible={showBrokenTarget} transparent animationType="fade" onRequestClose={() => setShowBrokenTarget(false)}>
+        <View style={styles.modalBg}>
+          <View style={[styles.modalCard, { borderTopColor: theme.colors.danger, maxHeight: "80%" }]}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 6 }}>
+              <Ionicons name="build" size={22} color={theme.colors.danger} />
+              <Text style={styles.modalTitle}>WHAT BROKE?</Text>
+            </View>
+            <Text style={{ color: theme.colors.textMuted, fontSize: 13, marginBottom: 14 }}>
+              This is a set. Choose whether the whole set is affected, or one item inside it.
+            </Text>
+            <ScrollView style={{ maxHeight: 420 }} keyboardShouldPersistTaps="handled">
+              <TouchableOpacity
+                testID="broken-whole-set"
+                style={[styles.modalRow, { borderColor: theme.colors.border, borderWidth: 1, borderRadius: 10, padding: 14, marginBottom: 10 }]}
+                onPress={() => { setShowBrokenTarget(false); openRepair(); }}
+                activeOpacity={0.85}
+              >
+                <Ionicons name="cube" size={18} color={theme.colors.accent} />
+                <View style={{ flex: 1, marginLeft: 12 }}>
+                  <Text style={{ color: theme.colors.textPrimary, fontWeight: "800", fontSize: 15 }}>The whole set</Text>
+                  <Text style={{ color: theme.colors.textMuted, fontSize: 12 }} numberOfLines={1}>{tool.name}</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={16} color={theme.colors.textMuted} />
+              </TouchableOpacity>
+              {(tool.inside_items || []).map((it: any) => (
+                <TouchableOpacity
+                  key={it.id}
+                  testID={`broken-inside-${it.id}`}
+                  style={[styles.modalRow, { borderColor: theme.colors.border, borderWidth: 1, borderRadius: 10, padding: 14, marginBottom: 10 }]}
+                  onPress={() => { setShowBrokenTarget(false); openRepair(it); }}
+                  activeOpacity={0.85}
+                >
+                  <Ionicons name="ellipse-outline" size={18} color={theme.colors.accent} />
+                  <View style={{ flex: 1, marginLeft: 12 }}>
+                    <Text style={{ color: theme.colors.textPrimary, fontWeight: "800", fontSize: 15 }} numberOfLines={1}>{it.name || "Unnamed item"}</Text>
+                    {!!it.model && <Text style={{ color: theme.colors.textMuted, fontSize: 12 }} numberOfLines={1}>Model #: {it.model}</Text>}
+                  </View>
+                  <Ionicons name="chevron-forward" size={16} color={theme.colors.textMuted} />
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+            <TouchableOpacity style={[styles.btnGhost, { marginTop: 6 }]} onPress={() => setShowBrokenTarget(false)}>
+              <Text style={styles.btnGhostText}>CANCEL</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+
       <Modal visible={showRepair} transparent animationType="slide">
         <View style={styles.modalBg}>
           <View style={[styles.modalCard, { borderTopColor: theme.colors.danger, maxHeight: "90%" }]}>
@@ -2703,6 +2801,14 @@ export default function ToolDetail() {
             </View>
 
             <ScrollView style={{ maxHeight: 460 }} keyboardShouldPersistTaps="handled">
+              {!!repairForm.inside_item_name && (
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: theme.colors.surface, borderRadius: 8, padding: 10, marginBottom: 12, borderWidth: 1, borderColor: theme.colors.border }}>
+                  <Ionicons name="cube-outline" size={16} color={theme.colors.accent} />
+                  <Text style={{ color: theme.colors.textPrimary, fontSize: 13, flex: 1 }}>
+                    Claim for inside item: <Text style={{ fontWeight: "800" }}>{repairForm.inside_item_name}</Text>{!!repairForm.inside_item_model && `  (Model #: ${repairForm.inside_item_model})`}
+                  </Text>
+                </View>
+              )}
               <Text style={styles.repairLabel}>STATUS</Text>
               <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6, marginBottom: 10 }}>
                 {["Not Reported", "Reported", "In Repair", "Awaiting Parts", "Sent in for Repairs", "Repaired"].map((s) => (

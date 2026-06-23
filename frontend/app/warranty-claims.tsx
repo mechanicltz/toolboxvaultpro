@@ -657,7 +657,12 @@ function ClaimCard({
           </View>
         )}
         <View style={{ flex: 1 }}>
-          <Text style={styles.claimTitle} numberOfLines={1}>{claim.tool_name}</Text>
+          <Text style={styles.claimTitle} numberOfLines={1}>
+            {claim.inside_item_name ? `${claim.inside_item_name}${claim.inside_item_model ? ` (${claim.inside_item_model})` : ""}` : claim.tool_name}
+          </Text>
+          {!!claim.inside_item_name && (
+            <Text style={styles.claimMeta} numberOfLines={1}>in {claim.tool_name}</Text>
+          )}
           {!!claim.repair_company && (
             <Text style={styles.claimMeta} numberOfLines={1}>{claim.repair_company}</Text>
           )}

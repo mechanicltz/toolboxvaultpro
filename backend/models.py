@@ -306,6 +306,11 @@ class RepairInfo(BaseModel):
     # they paid for the repair / replacement out of pocket. Feeds into the
     # Repair Cost Report and Year End Report.
     repair_cost: Optional[float] = 0.0
+    # When the broken thing is ONE inside item of a bundle (not the whole set),
+    # these record which sub-item it was so claims + dealer messages name it.
+    inside_item_id: Optional[str] = ""
+    inside_item_name: Optional[str] = ""
+    inside_item_model: Optional[str] = ""
 
 
 # Warranty claim — long-lived record that survives "Mark Repaired"

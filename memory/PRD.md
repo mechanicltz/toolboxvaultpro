@@ -170,6 +170,21 @@ reusing id; old child tools re-linked as expansion items, no data loss;
 idempotent). list_tools slims inside-item photos to thumbs. Inventory rows now
 show "SET / BUNDLE" badge (is_bundle) and "SET ADD-ON" badge (expansion_of).
 Backend test: /app/backend/test_stage1_bundles.py — ALL PASS.
+## Bundle Stage 2 DONE & backend-tested (2026-06)
+Claims/mark-broken on a bundle: "Mark broken" on a bundle with inside items now
+opens a "WHAT BROKE?" chooser (whole set vs each inside item) — `startRepairFlow`
++ `showBrokenTarget` modal in app/tool/[id].tsx. Picking an inside item stuffs
+inside_item_id/name/model into repairForm -> repair_info; backend update_tool
+copies these + bundle_model (bundle's first model #) into the warranty_claims
+mirror. RepairInfo gained inside_item_id/name/model. Dealer email/SMS
+(notifyDealer) is now bundle-aware: inside-item claims send a professional msg
+naming BOTH the set's model/part # AND the broken sub-item's name+model. Claim
+shown on bundle detail card ("Broken item" row), in Claims tab + dealer
+warranty-claims list (shows "<item> (model)" + "in <set>"). FIXED latent bug:
+WarrantyClaim was not imported in routes_tools.py. Backend test:
+/app/backend/test_stage2_claims.py — ALL PASS. NOTE: full UI exercise of the
+chooser needs Stage 3/4 (no in-app way to create a bundle + inside items yet;
+only via API).
 REMAINING STAGES: 2=claims/mark-broken (whole bundle vs one inside item; dealer
 msg must read "came in the set <bundleModel>, but the <sub> I broke is <itemModel>");
 3=bundle detail screen (manage inside items + expansion area w/ bundle+expansion

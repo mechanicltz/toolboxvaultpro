@@ -242,7 +242,12 @@ export default function ClaimsScreen() {
         )}
       </View>
       <View style={{ flex: 1 }}>
-        <Text style={styles.itemName} numberOfLines={1}>{cl.tool_name || "Tool"}</Text>
+        <Text style={styles.itemName} numberOfLines={1}>
+          {cl.inside_item_name ? `${cl.inside_item_name}${cl.inside_item_model ? ` (${cl.inside_item_model})` : ""}` : (cl.tool_name || "Tool")}
+        </Text>
+        {!!cl.inside_item_name && (
+          <Text style={styles.notifiedLine} numberOfLines={1}>in {cl.tool_name}</Text>
+        )}
         <Text style={styles.notifiedLine} numberOfLines={1}>
           {cl.dealer_name || dealerName(cl.dealer_id) || "No dealer"}
           {cl.completed_at ? ` · ${fmtDate(cl.completed_at)}` : ""}
@@ -531,8 +536,11 @@ export default function ClaimsScreen() {
                   </View>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.itemName} numberOfLines={1}>
-                      {c.tool_name || "Tool"}
+                      {c.inside_item_name ? `${c.inside_item_name}${c.inside_item_model ? ` (${c.inside_item_model})` : ""}` : (c.tool_name || "Tool")}
                     </Text>
+                    {!!c.inside_item_name && (
+                      <Text style={styles.notifiedLine} numberOfLines={1}>in {c.tool_name}</Text>
+                    )}
                     <Text style={styles.notifiedLine} numberOfLines={1}>
                       {c.dealer_name || dealerName(c.dealer_id) || "No dealer"}
                       {c.completed_at ? ` · ${fmtDate(c.completed_at)}` : ""}
