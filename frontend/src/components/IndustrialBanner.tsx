@@ -138,7 +138,7 @@ export function IndustrialBanner({ title, subtitle, rightSlot, leftSlot, onBack,
           </View>
         ) : null}
         <View style={styles.titleCol}>
-          <Text style={[styles.title, { color: c.accent }]} numberOfLines={1} allowFontScaling={false}>
+          <Text style={[styles.title, { color: c.accent }]} numberOfLines={2} allowFontScaling={false}>
             {(title || "").toUpperCase()}
           </Text>
           {!!subtitle && (
@@ -203,7 +203,7 @@ const styles = StyleSheet.create({
   },
   titleCol: {
     alignItems: "center",
-    maxWidth: "66%",
+    maxWidth: "74%",
   },
   title: {
     color: ACCENT,
