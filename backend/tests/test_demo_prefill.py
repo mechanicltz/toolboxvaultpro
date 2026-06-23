@@ -18,7 +18,7 @@ import requests
 BASE_URL = os.environ.get("EXPO_PUBLIC_BACKEND_URL", "").rstrip("/")
 if not BASE_URL:
     # fallback to frontend .env value loaded by tests CI
-    BASE_URL = "https://login-stretch-layout.preview.emergentagent.com"
+    BASE_URL = "https://toolbox-vault-v3.preview.emergentagent.com"
 
 API = f"{BASE_URL}/api"
 PASSWORD = "Blue321!"

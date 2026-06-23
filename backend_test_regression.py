@@ -12,7 +12,7 @@ import sys
 import json
 import requests
 
-BASE = "https://asset-locator-12.preview.emergentagent.com/api"
+BASE = "https://toolbox-vault-v3.preview.emergentagent.com/api"
 
 PASS = 0
 FAIL = 0

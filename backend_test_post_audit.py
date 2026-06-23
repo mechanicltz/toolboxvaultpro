@@ -9,7 +9,7 @@ from typing import Any, Dict, Tuple
 
 import requests
 
-BASE = "https://asset-locator-12.preview.emergentagent.com/api"
+BASE = "https://toolbox-vault-v3.preview.emergentagent.com/api"
 SUBTEST_EMAIL = "subtest@example.com"
 SUBTEST_PW = "password123"
 

@@ -35,7 +35,7 @@ requests.get = lambda url, **kw: _req("GET", url, **kw)
 requests.post = lambda url, **kw: _req("POST", url, **kw)
 requests.delete = lambda url, **kw: _req("DELETE", url, **kw)
 
-BASE = "https://asset-locator-12.preview.emergentagent.com/api"
+BASE = "https://toolbox-vault-v3.preview.emergentagent.com/api"
 EMAIL = "subtest@example.com"
 PASSWORD = "password123"
 

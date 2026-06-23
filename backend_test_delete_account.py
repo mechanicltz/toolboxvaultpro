@@ -9,7 +9,7 @@ import json
 import uuid
 import requests
 
-BASE = os.environ.get("EXPO_PUBLIC_BACKEND_URL", "https://asset-locator-12.preview.emergentagent.com").rstrip("/") + "/api"
+BASE = os.environ.get("EXPO_PUBLIC_BACKEND_URL", "https://toolbox-vault-v3.preview.emergentagent.com").rstrip("/") + "/api"
 SUBTEST_EMAIL = "subtest@example.com"
 SUBTEST_PW = "password123"
 

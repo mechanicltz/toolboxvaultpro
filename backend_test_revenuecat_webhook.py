@@ -7,7 +7,7 @@ import sys
 import requests
 
 # Use the public preview backend URL from /app/frontend/.env (REACT_APP_BACKEND_URL / EXPO_PUBLIC_BACKEND_URL).
-BASE = os.environ.get("EXPO_PUBLIC_BACKEND_URL", "https://asset-locator-12.preview.emergentagent.com").rstrip("/")
+BASE = os.environ.get("EXPO_PUBLIC_BACKEND_URL", "https://toolbox-vault-v3.preview.emergentagent.com").rstrip("/")
 API = f"{BASE}/api"
 EMAIL = "subtest@example.com"
 PASSWORD = "password123"

@@ -14,7 +14,7 @@ import requests
 
 BASE = os.environ.get(
     "BACKEND_BASE",
-    "https://asset-locator-12.preview.emergentagent.com",
+    "https://toolbox-vault-v3.preview.emergentagent.com",
 ).rstrip("/")
 API = f"{BASE}/api"
 

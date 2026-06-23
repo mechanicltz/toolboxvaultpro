@@ -19,7 +19,7 @@ import pytest
 import requests
 
 BASE_URL = os.environ.get(
-    "EXPO_PUBLIC_BACKEND_URL", "https://asset-locator-12.preview.emergentagent.com"
+    "EXPO_PUBLIC_BACKEND_URL", "https://toolbox-vault-v3.preview.emergentagent.com"
 ).rstrip("/")
 API = f"{BASE_URL}/api"
 

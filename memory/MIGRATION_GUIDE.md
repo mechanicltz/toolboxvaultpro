@@ -28,12 +28,12 @@ Two files have been prepared for you. Download each by pasting the URL into your
 
 **Code archive:**
 ```
-https://asset-locator-12.preview.emergentagent.com/api/migration/toolbox-vault-code.tar.gz?token=LtFY0mK9hVsCC6_sYEJ6tAEQCm92knNREAjk36wufyU
+https://toolbox-vault-v3.preview.emergentagent.com/api/migration/toolbox-vault-code.tar.gz?token=LtFY0mK9hVsCC6_sYEJ6tAEQCm92knNREAjk36wufyU
 ```
 
 **Database dump:**
 ```
-https://asset-locator-12.preview.emergentagent.com/api/migration/mongo-dump.tar.gz?token=LtFY0mK9hVsCC6_sYEJ6tAEQCm92knNREAjk36wufyU
+https://toolbox-vault-v3.preview.emergentagent.com/api/migration/mongo-dump.tar.gz?token=LtFY0mK9hVsCC6_sYEJ6tAEQCm92knNREAjk36wufyU
 ```
 
 Save both to a folder on your computer (e.g., `~/Toolbox-Vault-Backup/`).

@@ -18,7 +18,7 @@ import os
 import sys
 import requests
 
-BASE = "https://asset-locator-12.preview.emergentagent.com/api"
+BASE = "https://toolbox-vault-v3.preview.emergentagent.com/api"
 EMAIL = "subtest@example.com"
 PASSWORD = "password123"
 

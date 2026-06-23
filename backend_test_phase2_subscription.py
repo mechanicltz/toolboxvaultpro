@@ -17,7 +17,7 @@ import uuid
 import json
 import requests
 
-BASE = "https://asset-locator-12.preview.emergentagent.com/api"
+BASE = "https://toolbox-vault-v3.preview.emergentagent.com/api"
 SUBTEST_EMAIL = "subtest@example.com"
 SUBTEST_PASSWORD = "password123"
 WEBHOOK_SECRET = "test-webhook-secret-12345"

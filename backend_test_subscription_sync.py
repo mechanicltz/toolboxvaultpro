@@ -16,7 +16,7 @@ import uuid
 import time
 import requests
 
-BASE = "https://asset-locator-12.preview.emergentagent.com/api"
+BASE = "https://toolbox-vault-v3.preview.emergentagent.com/api"
 
 SUBTEST_EMAIL = "subtest@example.com"
 SUBTEST_PASS = "password123"

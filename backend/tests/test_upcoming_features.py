@@ -18,7 +18,7 @@ import requests
 
 BASE_URL = (
     os.environ.get("EXPO_PUBLIC_BACKEND_URL")
-    or "https://login-stretch-layout.preview.emergentagent.com"
+    or "https://toolbox-vault-v3.preview.emergentagent.com"
 ).rstrip("/")
 
 ADMIN_EMAIL = "mechanicltz@gmail.com"

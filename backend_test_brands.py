@@ -13,7 +13,7 @@ import os
 import sys
 import requests
 
-BACKEND_URL = "https://asset-locator-12.preview.emergentagent.com"
+BACKEND_URL = "https://toolbox-vault-v3.preview.emergentagent.com"
 API = f"{BACKEND_URL}/api"
 EMAIL = "MechanicLTZ@gmail.com"
 PASSWORD = "Blue321!"

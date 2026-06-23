@@ -24,7 +24,7 @@ import pytest
 import requests
 from PIL import Image
 
-BASE_URL = os.environ.get("EXPO_PUBLIC_BACKEND_URL", "https://login-stretch-layout.preview.emergentagent.com").rstrip("/")
+BASE_URL = os.environ.get("EXPO_PUBLIC_BACKEND_URL", "https://toolbox-vault-v3.preview.emergentagent.com").rstrip("/")
 
 DEMO_EMAIL = "smoketest_1781392054@example.com"
 DEMO_PASSWORD = "Blue321!"

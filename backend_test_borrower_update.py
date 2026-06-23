@@ -14,7 +14,7 @@ import sys
 import requests
 
 # Use the public preview URL exactly as the frontend does
-BASE_URL = "https://asset-locator-12.preview.emergentagent.com"
+BASE_URL = "https://toolbox-vault-v3.preview.emergentagent.com"
 API = f"{BASE_URL}/api"
 
 results = []

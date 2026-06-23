@@ -24,7 +24,7 @@ from typing import Any, Dict, List, Optional
 
 import requests
 
-BASE = os.environ.get("BACKEND_URL", "https://asset-locator-12.preview.emergentagent.com").rstrip("/")
+BASE = os.environ.get("BACKEND_URL", "https://toolbox-vault-v3.preview.emergentagent.com").rstrip("/")
 API = f"{BASE}/api"
 
 ADMIN_EMAIL = "MechanicLTZ@gmail.com"

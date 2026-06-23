@@ -7,7 +7,7 @@ import sys
 import uuid
 import requests
 
-BACKEND_URL = "https://asset-locator-12.preview.emergentagent.com"
+BACKEND_URL = "https://toolbox-vault-v3.preview.emergentagent.com"
 API = f"{BACKEND_URL}/api"
 
 ADMIN_EMAIL = "MechanicLTZ@gmail.com"

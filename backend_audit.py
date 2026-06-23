@@ -24,7 +24,7 @@ from io import BytesIO
 import requests
 
 # ---------- Setup ----------
-BASE = os.environ.get("EXPO_PUBLIC_BACKEND_URL") or "https://asset-locator-12.preview.emergentagent.com"
+BASE = os.environ.get("EXPO_PUBLIC_BACKEND_URL") or "https://toolbox-vault-v3.preview.emergentagent.com"
 BASE = BASE.rstrip("/") + "/api"
 
 PRIMARY_EMAIL = "subtest@example.com"

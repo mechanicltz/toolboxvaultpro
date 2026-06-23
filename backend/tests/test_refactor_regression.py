@@ -26,7 +26,7 @@ import pytest
 import requests
 
 # --- Config -----------------------------------------------------------------
-BASE_URL = os.environ.get("EXPO_PUBLIC_BACKEND_URL") or "https://login-stretch-layout.preview.emergentagent.com"
+BASE_URL = os.environ.get("EXPO_PUBLIC_BACKEND_URL") or "https://toolbox-vault-v3.preview.emergentagent.com"
 BASE_URL = BASE_URL.rstrip("/")
 EMAIL = "ryan@ryan.com"
 PASSWORD = "ryan1234"
