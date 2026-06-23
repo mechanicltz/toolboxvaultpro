@@ -164,24 +164,24 @@ export function NotificationsAccordion({ notifications }: { notifications: HomeN
         <View style={[styles.plainCard, { backgroundColor: c.bgSecondary, borderColor: c.border }]}>{Inner}</View>
       )}
 
-      {/* 3-line handle, bottom-center — same affordance as the inventory page. */}
-      <View style={styles.handleWrap} pointerEvents="box-none">
-        <TouchableOpacity
-          testID="home-notif-toggle"
-          onPress={toggle}
-          hitSlop={{ top: 10, bottom: 10, left: 24, right: 24 }}
-          style={styles.handleBtn}
-          activeOpacity={0.75}
-        >
-          <Ionicons name="filter" size={15} color="#FFFFFF" />
-        </TouchableOpacity>
-      </View>
+      {/* 3-line handle, bottom-center — same affordance as the inventory page.
+          Kept in normal flow (within the wrapper's bounds) so the tap reliably
+          registers on iOS/Android. */}
+      <TouchableOpacity
+        testID="home-notif-toggle"
+        onPress={toggle}
+        hitSlop={{ top: 12, bottom: 12, left: 28, right: 28 }}
+        style={styles.handleBtn}
+        activeOpacity={0.75}
+      >
+        <Ionicons name="filter" size={16} color="#FFFFFF" />
+      </TouchableOpacity>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  wrap: { position: "relative", marginBottom: 26 },
+  wrap: { position: "relative", marginBottom: 16 },
   plainCard: { borderWidth: 1, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 8 },
   item: { flexDirection: "row", alignItems: "center", gap: 12 },
   iconWrap: {
@@ -195,16 +195,15 @@ const styles = StyleSheet.create({
   },
   label: { fontFamily: "BebasNeue_400Regular", fontSize: 12, letterSpacing: 1.4 },
   text: { fontFamily: "Rajdhani_700Bold", fontSize: 13, marginTop: 2 },
-  handleWrap: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    bottom: -20,
-    height: 22,
+  handleBtn: {
+    alignSelf: "center",
+    width: 56,
+    height: 26,
+    marginTop: -4,
     alignItems: "center",
     justifyContent: "center",
+    backgroundColor: "transparent",
   },
-  handleBtn: { width: 42, height: 22, alignItems: "center", justifyContent: "center", backgroundColor: "transparent" },
 });
 
 export default NotificationsAccordion;

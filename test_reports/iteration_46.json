@@ -1,0 +1,44 @@
+{
+  "summary": "Frontend-only re-verification of the two follow-up fixes on the Dashboard NotificationsAccordion for ryan@ryan.com (default skin=industrial/steel). RESULT: Both targeted fixes verified WORKING. (1) Vertical order PASS — Notifications panel ABOVE the ADD ITEM / NEW CLAIM action buttons: panel-top y=127.89, notif-toggle bottom y=223.89, ADD ITEM/NEW CLAIM top y=239.89 — confirmed in both layout measurement and the screenshot. (2) Handle (testID home-notif-toggle) now lives in normal flow within the wrapper and DOES toggle the panel both ways: open→home-notif-collapsed (single 'NOTIFICATIONS 5 alerts' row) and collapsed→home-notif-carousel; localStorage 'home.notifOpen' flips between '1' and '0' on each tap. Repeated 5 taps in a row all flipped correctly except the FIRST tap after every fresh page load — see RCA. Persistence verified: closing then reloading stays collapsed; opening then reloading stays open. No new console runtime errors introduced. Action buttons (quick-add-item, quick-new-claim) remain visible and tappable.\n\nSEPARATE pre-existing issue uncovered while testing: a full-viewport <video src='assets/videos/intro.mp4'> element with pointer-events:auto is layered above the entire dashboard on initial load, intercepting the FIRST click anywhere on the screen (verified via elementsFromPoint — VIDEO is element[0] before any click, disappears after first click). This causes the first tap on home-notif-toggle (and any other dashboard element) to be swallowed by the intro video instead of reaching the intended target. Not caused by this fix — pure web-preview regression separate from the Notifications work — but worth flagging.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "Dashboard intro video overlay",
+        "issue": "A full-viewport <video src='assets/videos/intro.mp4'> with pointer-events:auto sits above all dashboard content on initial load (375x667 at 0,0). It is the topmost element at every coordinate until the user clicks once, then it self-dismisses. Net effect: the FIRST tap on the dashboard after every fresh page load is swallowed by this video, so users see their first interaction do nothing. Confirmed by elementsFromPoint output and reproduced 100% (5/5 runs).",
+        "testID": "n/a (video has no testID)",
+        "priority": "MEDIUM"
+      }
+    ],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": [
+      {"component": "Style props (Web)", "issue": "Console still spammed with 'textShadow*'/'shadow*'/'pointerEvents' deprecation warnings (carried over from iter_45; not blocking)."}
+    ]
+  },
+  "verified_features": [
+    "Vertical order PASS: home-notif-toggle.bottom (223.89) is above quick-add-item.top / quick-new-claim.top (both 239.89) — Notifications panel renders ABOVE the two action buttons in the steel/industrial skinned branch.",
+    "Toggle handle (testID home-notif-toggle) is now in normal flow within the wrapper (matches code change: alignSelf 'center' + marginTop -4 in styles.handleBtn) and successfully toggles open↔closed both ways. localStorage 'home.notifOpen' flips between '1' and '0' on each tap.",
+    "Collapse → shows home-notif-collapsed single row labelled 'NOTIFICATIONS' with '5 alerts' subtext.",
+    "Re-open → shows home-notif-carousel with 5 notifications.",
+    "Persistence: closed → reload → still closed (verified collapsed=True, carousel=False); open → reload → still open (verified carousel=True).",
+    "quick-add-item and quick-new-claim buttons remain visible and reachable (they sit immediately below the notif panel, in their own row).",
+    "No new console runtime errors from the Notifications accordion (only the pre-existing RNW deprecation warnings and unrelated 401/403 from /admin/user-stats for a non-admin)."
+  ],
+  "test_report_links": [],
+  "action_items": [
+    "INVESTIGATE the full-viewport <video src='assets/videos/intro.mp4'> overlay on the dashboard. It captures the first click on the page after every fresh load (verified via document.elementsFromPoint — VIDEO is topmost element[0] until first click). Either (a) move it behind dashboard content with pointer-events:none, (b) ensure it is removed from the DOM once the splash sequence is done, or (c) conditionally render only on the splash/intro route. This is a SEPARATE bug from the Notifications fix but currently makes every user's first dashboard tap appear to do nothing — including the first tap on the new home-notif-toggle.",
+    "(Optional, carried over from iter_45) Address React Native Web style-prop deprecation warnings (textShadow*, shadow*, props.pointerEvents)."
+  ],
+  "critical_code_review_comments": [
+    "NotificationsAccordion.tsx looks clean. The fix is minimal and correct: handle moved out of position:absolute into the wrapper's normal flow (alignSelf:'center', marginTop:-4) inside styles.wrap (position:'relative', marginBottom:16). It now toggles reliably on native and web (verified web). Code review notes: hitSlop={28,28,12,12} keeps the touch target ≥44pt despite the visual 56x26. Auto-scroll cleanup logic unchanged and still correct.",
+    "index.tsx renders the NotificationsAccordion FIRST in both the plain branch (line 622) and the skinned branch (line 817), with the quick-action row immediately AFTER (lines 626-635 and 821-871). Order is consistent across both render branches."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "n/a (frontend-only)", "frontend": "Targeted fixes 100% verified; one pre-existing unrelated overlay bug noted."},
+  "seed_data_creation": "None — used existing ryan@ryan.com data (5 active notifications: 1 mnt-overdue + 1 mnt-soon + 3 warranty-expiring).",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "TestIDs: home-notif-toggle (3-line/filter handle), home-notif-carousel (open state), home-notif-collapsed (closed state, single row), quick-add-item, quick-new-claim. Persistence key on web is localStorage 'home.notifOpen' ('1'=open default, '0'=closed). DEFAULT skin for ryan@ryan.com is industrial+steel (renders via TbvFrame in the skinned branch of index.tsx ~line 817). IMPORTANT for click reliability in the web preview: there is a full-viewport intro <video> element that swallows the first click after every fresh load — workaround in tests is to either (a) do a throwaway click anywhere first, or (b) use page.evaluate(\"document.querySelector('[data-testid=\\\\\"home-notif-toggle\\\\\"]').click()\") which dispatches the click directly to the element and bypasses the overlay. Allow ~6-8s after each reload for AsyncStorage hydration before asserting toggle state.",
+  "rca_of_issue": "Test observation: After every page reload, the first playwright coordinate-based tap on home-notif-toggle (force=True) did not toggle the panel; the 2nd through 5th taps all toggled correctly (confirmed 5/5 runs, consistent). RCA via document.elementsFromPoint on the toggle's center: BEFORE first click the top element is a <video src='assets/videos/intro.mp4'> (375x667, pointer-events:auto, position:static, z-index:auto), and home-notif-toggle is element[5] in the stack — i.e. the entire dashboard is occluded by an invisible/transparent intro video. AFTER first mouse click anywhere, the VIDEO disappears from the elementsFromPoint stack, and home-notif-toggle moves to element[1] — i.e. the video self-dismisses on first user interaction. This explains why the second tap onward always works. Verified by alternative click strategies on a fresh reload: page.evaluate(... .click()) (direct element dispatch) toggles on the first try; page.click(... ) without force=True also works first try (Playwright's actionability waits/scrolls until VIDEO doesn't intercept). Only the coordinate-based force=True click is blocked. CONCLUSION: The Notifications fix is correct (handle is in normal flow, toggle handler fires every time it actually reaches the element). The first-tap miss is caused by an unrelated full-viewport intro <video> overlay on the dashboard that should either be removed from the DOM post-intro or given pointer-events:none."
+}

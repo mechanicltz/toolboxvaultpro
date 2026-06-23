@@ -619,6 +619,8 @@ export default function HomeScreen() {
             />
           }
         >
+          <NotificationsAccordion notifications={homeNotifs} />
+
           {/* #23 — Quick actions row: Add Item + New Claim. ShadowBox style
               for the plain (light/dark) themes. */}
           <View style={styles.quickRow}>
@@ -644,8 +646,6 @@ export default function HomeScreen() {
               />
             </View>
           )}
-
-          <NotificationsAccordion notifications={homeNotifs} />
 
           {/* UNIFIED DESCRIPTION CARD (restored from the 05-30 backup) — a
               single box containing every enabled row in the user's chosen
@@ -814,6 +814,8 @@ export default function HomeScreen() {
           />
         }
       >
+        <NotificationsAccordion notifications={homeNotifs} />
+
         {/* #23 — Quick actions row: Add Item + New Claim. Steel theme uses the
             brushed-metal TbvButton; all other themes use the skin's button plate. */}
         <View style={styles.quickRow}>
@@ -885,9 +887,6 @@ export default function HomeScreen() {
             />
           </View>
         )}
-
-        {/* Next dealer route — skinned panel to match the theme */}
-        <NotificationsAccordion notifications={homeNotifs} />
 
         {/* UNIFIED HOME DESCRIPTION CARD — single warranty-card-style box
             containing every enabled row in the user's chosen order. The
