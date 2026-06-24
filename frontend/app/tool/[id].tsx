@@ -2458,10 +2458,10 @@ export default function ToolDetail() {
       {/* EDIT SAVE BAR */}
       {editing && (
         <View style={newStyles.editBar}>
-          <TouchableOpacity style={[styles.btnGhost, { flex: 1, marginTop: 0, paddingVertical: 9 }]} onPress={cancelEdit} testID="edit-cancel-bar">
+          <TouchableOpacity style={[styles.btnGhost, { flex: 1, marginTop: 0, height: 38 }]} onPress={cancelEdit} testID="edit-cancel-bar">
             <Text style={styles.btnGhostText}>CANCEL</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={[styles.btnPrimary, { flex: 1, paddingVertical: 9 }]} onPress={saveEdit} disabled={savingEdit} testID="edit-save-bar">
+          <TouchableOpacity style={[styles.btnPrimary, { flex: 1, height: 38 }]} onPress={saveEdit} disabled={savingEdit} testID="edit-save-bar">
             {savingEdit ? <ActivityIndicator color="#000" /> : (<><Ionicons name="checkmark" size={16} color="#000" /><Text style={styles.btnPrimaryText}>SAVE</Text></>)}
           </TouchableOpacity>
         </View>
