@@ -487,6 +487,18 @@ can explore every feature immediately. All demo records tagged `is_demo: true`
 - `/api/auth/login` has a 5/min rate limit — space out automated logins.
 - pdf-viewer back button must NOT use dismissAll().
 
+## Status bar fix (2026-06) — ROOT CAUSE FOUND & FIXED
+The "device info (clock/battery) invisible on Steel theme" bug was actually the
+app RED-SCREENING on every load. Cause: the prior imperative fix used
+`React.useEffect` in ThemedStatusBar (app/_layout.tsx) but `React` was never
+imported as a default there (only named hooks were) -> "React is not defined"
+uncaught error on boot. Fix: use the already-imported `useEffect`. Also added a
+native launch default `androidStatusBar` (light-content / translucent /
+transparent bg) to app.json so Android shows light glyphs from frame 0. Runtime
+logic (skin==="industrial" -> barStyle "light") was already correct. Web preview
+can't show the native status bar — user must confirm white clock/battery on their
+own phone. Verified: app boots with NO red screen after fix.
+
 ## RULE — WRITTEN IN STONE (user demand, 2026-06-19)
 ALWAYS talk to this user in PLAIN ENGLISH. No code words, no file names, no
 technical jargon, no error-message copy-paste. Explain everything like you would

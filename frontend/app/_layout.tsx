@@ -424,7 +424,7 @@ function ThemedStatusBar() {
   // we force the style + un-hide whenever it should change. `translucent` +
   // transparent bg lets the dark app background show through on Android so the
   // light glyphs stay legible.
-  React.useEffect(() => {
+  useEffect(() => {
     setStatusBarHidden(false, "fade");
     setStatusBarStyle(barStyle, true);
   }, [barStyle]);
