@@ -43,7 +43,7 @@ export function WarrantySection({ tool }: { tool: any }) {
             icon="add-circle"
             variant="active"
             onPress={() =>
-              router.push({ pathname: "/tool/edit", params: { id: tool.id, focus: "warranty" } })
+              router.push(`/tool/${tool.id}?startEdit=1`)
             }
           />
         </View>

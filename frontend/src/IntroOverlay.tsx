@@ -13,7 +13,7 @@
 //   • Does NOT loop — fires `onDone` exactly once when playback finishes
 //     or after a 15s safety timeout.
 
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { StyleSheet, View, Pressable, Dimensions } from "react-native";
 import { useVideoPlayer, VideoView } from "expo-video";
 
@@ -21,6 +21,10 @@ const INTRO_VIDEO = require("../assets/videos/intro.mp4");
 
 export function IntroOverlay({ onDone }: { onDone: () => void }) {
   const doneRef = useRef(false);
+  // Once finished/skipped we immediately stop rendering the <video> and stop
+  // intercepting touches — on web the expo-video DOM node could otherwise
+  // linger for a frame and swallow the user's first tap on the next screen.
+  const [gone, setGone] = useState(false);
 
   const player = useVideoPlayer(INTRO_VIDEO, (p) => {
     p.loop = false;
@@ -32,6 +36,8 @@ export function IntroOverlay({ onDone }: { onDone: () => void }) {
   const finish = () => {
     if (doneRef.current) return;
     doneRef.current = true;
+    setGone(true);
+    try { player.pause(); } catch {}
     onDone();
   };
 
@@ -60,8 +66,10 @@ export function IntroOverlay({ onDone }: { onDone: () => void }) {
 
   const { width, height } = Dimensions.get("window");
 
+  if (gone) return null;
+
   return (
-    <View style={styles.root}>
+    <View style={styles.root} pointerEvents="auto">
       <Pressable
         style={styles.center}
         onPress={finish}

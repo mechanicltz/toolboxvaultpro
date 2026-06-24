@@ -24,11 +24,21 @@ export function AddChooser({
     router.push(path as any);
   };
 
+  const addItem = async () => {
+    onClose();
+    try {
+      const created = await api.createTool({ name: "New Item" });
+      router.push(`/tool/${created.id}?startEdit=1&startFresh=1` as any);
+    } catch (e: any) {
+      Alert.alert("Error", String(e?.message || e));
+    }
+  };
+
   const addBundle = async () => {
     onClose();
     try {
       const created = await api.createTool({ name: "New Set", is_bundle: true });
-      router.push(`/tool/${created.id}?startEdit=1` as any);
+      router.push(`/tool/${created.id}?startEdit=1&startFresh=1` as any);
     } catch (e: any) {
       Alert.alert("Error", String(e?.message || e));
     }
@@ -40,7 +50,7 @@ export function AddChooser({
         <View style={styles.sheet}>
           <Text style={styles.title}>WHAT DO YOU WANT TO ADD?</Text>
 
-          <TouchableOpacity testID="add-choose-item" style={styles.option} onPress={() => go("/tool/edit")}>
+          <TouchableOpacity testID="add-choose-item" style={styles.option} onPress={addItem}>
             <View style={[styles.iconWrap, { backgroundColor: theme.colors.accent + "1F" }]}>
               <Ionicons name="construct" size={22} color={theme.colors.accent} />
             </View>

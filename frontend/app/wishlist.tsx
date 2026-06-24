@@ -463,7 +463,7 @@ export default function WishlistScreen() {
       load();
       // Open in EDIT mode so they can add brand, serial, location, etc.
       // (not the read-only detail screen).
-      router.push(`/tool/edit?id=${tool.id}`);
+      router.push(`/tool/${tool.id}?startEdit=1`);
     } catch (e: any) {
       Alert.alert("Error", e.message || "Could not convert");
     }

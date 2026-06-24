@@ -45,7 +45,7 @@ export default function BundlesList() {
   const createBundleAndOpen = async () => {
     try {
       const created = await api.createTool({ name: "New Set", is_bundle: true });
-      router.push(`/tool/${created.id}?startEdit=1` as any);
+      router.push(`/tool/${created.id}?startEdit=1&startFresh=1` as any);
     } catch (e: any) {
       Alert.alert("Error", String(e?.message || e));
     }

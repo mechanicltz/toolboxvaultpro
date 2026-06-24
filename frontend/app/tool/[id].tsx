@@ -1,6 +1,6 @@
 import { compressToDataUri } from "../../src/lib/imageCompress";
 import { AppImage } from "../../src/components/AppImage";
-import React, { useState, useCallback, useEffect } from "react";
+import React, { useState, useCallback, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -70,7 +70,11 @@ import {
 } from "../../src/deviceContacts";
 
 export default function ToolDetail() {
-  const { id, startClaim, startEdit } = useLocalSearchParams<{ id: string; startClaim?: string; startEdit?: string }>();
+  const { id, startClaim, startEdit, startFresh } = useLocalSearchParams<{ id: string; startClaim?: string; startEdit?: string; startFresh?: string }>();
+  // True when we arrived from the "Add" flow on a brand-new blank record. If
+  // the user backs out without saving, we delete the empty record so the
+  // inventory doesn't fill up with abandoned "New Item" / "New Set" entries.
+  const freshUnsavedRef = useRef(startFresh === "1");
   const router = useRouter();
   const { skin } = useSkin();
   const isIndustrial = skin === "industrial";
@@ -1696,6 +1700,7 @@ export default function ToolDetail() {
           : (t.serial_number ? [String(t.serial_number)] : []));
     const sns: string[] = Array.isArray(t.serial_numbers) ? t.serial_numbers.filter(Boolean) : [];
     setForm({
+      name: t.name || "",
       brand: t.brand || "",
       model_numbers: mns.length ? mns : [""],
       serial_numbers: sns.length ? sns : [""],
@@ -1731,13 +1736,23 @@ export default function ToolDetail() {
     api.listCategories().then(setAllCategories).catch(() => {});
     api.listTags().then(setAllTags).catch(() => {});
   };
-  const cancelEdit = () => { setEditing(false); setForm(null); };
+  const cancelEdit = async () => {
+    // Backing out of a brand-new blank record (from the Add flow) discards it.
+    if (freshUnsavedRef.current) {
+      freshUnsavedRef.current = false;
+      try { await api.deleteTool(tool.id); } catch {}
+      router.back();
+      return;
+    }
+    setEditing(false); setForm(null);
+  };
   const saveEdit = async () => {
     if (!form) return;
     setSavingEdit(true);
     const cleanModels = (form.model_numbers || []).map((s: string) => s.trim()).filter(Boolean);
     const cleanSerials = (form.serial_numbers || []).map((s: string) => s.trim()).filter(Boolean);
     const payload: any = {
+      name: (form.name || "").trim(),
       brand: form.brand,
       model_numbers: cleanModels,
       serial_numbers: cleanSerials,
@@ -1769,6 +1784,7 @@ export default function ToolDetail() {
     };
     try {
       await api.updateTool(tool.id, payload);
+      freshUnsavedRef.current = false;
       setEditing(false);
       setForm(null);
       await load();
@@ -2084,6 +2100,9 @@ export default function ToolDetail() {
     if (!form) return null;
     return (
       <View style={{ gap: 4 }}>
+        {eLabel(form.is_bundle || tool.is_bundle ? "SET NAME" : "ITEM NAME", "pricetag")}
+        <TextInput style={styles.input} value={form.name} onChangeText={(v) => setF({ name: v })} placeholder={tool.is_bundle ? "e.g. Metric Socket Set" : "e.g. 1/2\" Impact Wrench"} placeholderTextColor={theme.colors.textMuted} testID="edit-name" />
+
         {eLabel("BRAND", "ribbon")}
         <TextInput style={styles.input} value={form.brand} onChangeText={(v) => setF({ brand: v })} placeholder="DeWalt" placeholderTextColor={theme.colors.textMuted} testID="edit-brand" />
 
