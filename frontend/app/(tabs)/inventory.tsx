@@ -675,7 +675,7 @@ export default function InventoryScreen() {
       style={[styles.container, isIndustrial && styles.containerSkinned]}
       edges={["top"]}
     >
-      <IndustrialBanner title="INVENTORY" />
+      <IndustrialBanner title="INVENTORY" onBack={() => (router.canGoBack() ? router.back() : router.replace("/(tabs)"))} backIcon="chevron-back" />
 
       <View style={styles.searchRow}>
         {isIndustrial ? (
