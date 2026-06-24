@@ -2614,12 +2614,12 @@ export default function ToolDetail() {
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={newStyles.tabStripContent}>
             {TABS.map((t) => {
               const active = activeTab === t.key;
-              const tabColor = active ? theme.colors.accent : (isIndustrial ? "#FFFFFF" : theme.colors.textPrimary);
+              const tabColor = active ? "#000" : (isIndustrial ? "#FFFFFF" : theme.colors.textPrimary);
               return (
-                <TouchableOpacity key={t.key} testID={`tab-${t.key}`} style={newStyles.tabBtn} activeOpacity={0.7}
+                <TouchableOpacity key={t.key} testID={`tab-${t.key}`} style={[newStyles.tabBtn, active && newStyles.tabBtnActive]} activeOpacity={0.7}
                   onPress={() => setActiveTab(t.key)}>
                   <Ionicons name={t.icon} size={15} color={tabColor} />
-                  <Text style={[newStyles.tabBtnText, { color: tabColor }]}>{t.label}</Text>
+                  <Text style={[newStyles.tabBtnText, active && newStyles.tabBtnTextActive]}>{t.label}</Text>
                 </TouchableOpacity>
               );
             })}

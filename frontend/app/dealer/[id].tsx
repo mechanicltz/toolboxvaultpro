@@ -72,6 +72,8 @@ export default function DealerDetail() {
   const [activeTab, setActiveTab] = useState<"company" | "agents" | "accounts">("company");
   const [agentForm, setAgentForm] = useState<any>(null);
   const [editForm, setEditForm] = useState<any>({});
+  const [routeEditOpen, setRouteEditOpen] = useState(false);
+  const [routeForm, setRouteForm] = useState<any>({});
 
   // Device contacts picker for agents
   const [showContactPicker, setShowContactPicker] = useState(false);
@@ -228,6 +230,27 @@ export default function DealerDetail() {
     }
   };
 
+  // Quick route editor — tapping the ROUTE readout in the hero opens this
+  // without going through the full Edit Dealer form.
+  const openRouteEditor = () => {
+    setRouteForm({
+      route_frequency: dealer.route_frequency || "N/A",
+      route_day_of_week: dealer.route_day_of_week || "",
+      route_anchor_date: dealer.route_anchor_date || "",
+    });
+    setRouteEditOpen(true);
+  };
+  const saveRoute = async () => {
+    setSavingEdit(true);
+    try {
+      await api.updateDealer(id!, routeForm);
+      setRouteEditOpen(false);
+      load();
+    } finally {
+      setSavingEdit(false);
+    }
+  };
+
   const addAgent = async () => {
     if (!agentForm?.name?.trim()) return;
     if (agentForm.id) {
@@ -362,24 +385,30 @@ export default function DealerDetail() {
       >
         <View style={styles.heroRow}>
           <DealerLogo logo={dealer.logo} size={DEALER_LOGO_SLOT.hero} />
-          <TouchableOpacity
-            style={styles.heroRight}
-            activeOpacity={0.7}
-            testID="dealer-purchased"
-            onPress={() => router.push(`/dealer/${id}/tools?name=${encodeURIComponent(dealer.name)}`)}
-          >
-            <Text style={styles.heroLabel}>PURCHASED</Text>
-            <Text style={styles.heroValue} numberOfLines={1}>
-              ${total.toFixed(2)} · {tools.length} item{tools.length === 1 ? "" : "s"}
-            </Text>
+          <View style={styles.heroRight}>
+            <TouchableOpacity
+              activeOpacity={0.7}
+              testID="dealer-purchased"
+              onPress={() => router.push(`/dealer/${id}/tools?name=${encodeURIComponent(dealer.name)}`)}
+            >
+              <Text style={styles.heroLabel}>TOTAL PURCHASED</Text>
+              <Text style={styles.heroValue} numberOfLines={1}>
+                ${total.toFixed(2)} · {tools.length} item{tools.length === 1 ? "" : "s"}
+              </Text>
+            </TouchableOpacity>
             <View style={styles.heroSep} />
-            <Text style={styles.heroLabel}>ROUTE · {routeLabel(dealer)}</Text>
-            {!!nextRouteText(dealer) ? (
-              <Text style={styles.heroNext} numberOfLines={1}>Next: {nextRouteText(dealer)}</Text>
-            ) : (
-              <Text style={styles.heroNextEmpty} numberOfLines={1}>No route set — edit to add</Text>
-            )}
-          </TouchableOpacity>
+            <TouchableOpacity activeOpacity={0.7} testID="dealer-route-edit" onPress={openRouteEditor}>
+              <View style={styles.heroRouteLabelRow}>
+                <Text style={styles.heroLabel}>ROUTE · {routeLabel(dealer)}</Text>
+                <Ionicons name="create-outline" size={12} color={theme.colors.accent} style={{ marginLeft: 5 }} />
+              </View>
+              {!!nextRouteText(dealer) ? (
+                <Text style={styles.heroNext} numberOfLines={1}>Next: {nextRouteText(dealer)}</Text>
+              ) : (
+                <Text style={styles.heroNextEmpty} numberOfLines={1}>Tap to set route</Text>
+              )}
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* TAB BAR */}
@@ -799,6 +828,99 @@ export default function DealerDetail() {
         </View>
       </Modal>
 
+      {/* Quick ROUTE editor — opened by tapping the ROUTE readout in the hero */}
+      <Modal visible={routeEditOpen} transparent animationType="slide" onRequestClose={() => setRouteEditOpen(false)}>
+        <View style={styles.modalBg}>
+          <ScrollView style={styles.modalCard} contentContainerStyle={{ paddingBottom: 28 }} keyboardShouldPersistTaps="handled">
+            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+              <Text style={[styles.modalTitle, { marginBottom: 0 }]}>EDIT ROUTE</Text>
+              <TouchableOpacity testID="route-modal-close" hitSlop={10} onPress={() => setRouteEditOpen(false)}>
+                <Ionicons name="close" size={22} color={theme.colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
+
+            <Text style={styles.editFieldLabel}>ROUTE FREQUENCY</Text>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{ flexDirection: "row", gap: 8, paddingVertical: 4, marginBottom: 8 }}
+            >
+              {ROUTE_FREQUENCIES.map((f) => {
+                const sel = (routeForm.route_frequency || "N/A") === f;
+                return (
+                  <TouchableOpacity
+                    key={f}
+                    testID={`route-freq-${f}`}
+                    onPress={() =>
+                      setRouteForm({
+                        ...routeForm,
+                        route_frequency: f,
+                        ...(f === "N/A" ? { route_day_of_week: "", route_anchor_date: "" } : {}),
+                        ...(f === "Monthly" ? { route_day_of_week: "" } : {}),
+                      })
+                    }
+                    style={[styles.editChip, sel && styles.editChipOn]}
+                  >
+                    <Text style={[styles.editChipText, sel && styles.editChipTextOn]}>{f.toUpperCase()}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+
+            {(routeForm.route_frequency === "Weekly" || routeForm.route_frequency === "Bi-weekly") && (
+              <>
+                <Text style={styles.editFieldLabel}>DAY OF WEEK</Text>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={{ flexDirection: "row", gap: 8, paddingVertical: 4, marginBottom: 8 }}
+                >
+                  {DAY_NAMES.map((d) => {
+                    const sel = routeForm.route_day_of_week === d;
+                    return (
+                      <TouchableOpacity
+                        key={d}
+                        testID={`route-day-${d}`}
+                        onPress={() => setRouteForm({ ...routeForm, route_day_of_week: d })}
+                        style={[styles.editChip, sel && styles.editChipOn]}
+                      >
+                        <Text style={[styles.editChipText, sel && styles.editChipTextOn]}>{d.slice(0, 3).toUpperCase()}</Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </ScrollView>
+              </>
+            )}
+
+            {(routeForm.route_frequency === "Bi-weekly" || routeForm.route_frequency === "Monthly") && (
+              <>
+                <Text style={styles.editFieldLabel}>
+                  {routeForm.route_frequency === "Monthly"
+                    ? "NEXT VISIT DATE (sets day of month)"
+                    : "NEXT VISIT DATE (sets which week)"}
+                </Text>
+                <DateField
+                  value={routeForm.route_anchor_date}
+                  onChange={(v) => setRouteForm({ ...routeForm, route_anchor_date: v || "" })}
+                  placeholder="Pick next visit date"
+                  testID="route-anchor-date"
+                />
+              </>
+            )}
+
+            <View style={{ flexDirection: "row", gap: 10, marginTop: 6 }}>
+              <TouchableOpacity style={styles.btnGhost} onPress={() => setRouteEditOpen(false)}>
+                <Text style={styles.btnGhostText}>CANCEL</Text>
+              </TouchableOpacity>
+              <TouchableOpacity testID="save-route-btn" style={styles.btn} onPress={saveRoute} disabled={savingEdit}>
+                <Text style={styles.btnText}>SAVE</Text>
+              </TouchableOpacity>
+            </View>
+          </ScrollView>
+        </View>
+      </Modal>
+
+
       {/* Add / edit agent modal */}
       <Modal visible={!!agentForm} transparent animationType="slide" onRequestClose={() => setAgentForm(null)}>
         <KeyboardAvoidingView
@@ -1063,6 +1185,7 @@ const styles = themedStyles((c) => ({
   heroRoute: { color: c.accent, fontSize: 11, fontWeight: "900", marginTop: 2, letterSpacing: 0.5 },
   heroNext: { color: c.textSecondary, fontSize: 9, fontWeight: "700", marginTop: 2 },
   heroNextEmpty: { color: c.textMuted, fontSize: 9, fontStyle: "italic", marginTop: 2 },
+  heroRouteLabelRow: { flexDirection: "row", alignItems: "center" },
   tabBar: { flexDirection: "row", marginHorizontal: 16, marginBottom: 12, borderRadius: 8, borderWidth: 1, borderColor: c.border, backgroundColor: c.bgSecondary, overflow: "hidden" },
   tab: { flex: 1, paddingVertical: 11, alignItems: "center", justifyContent: "center" },
   tabOn: { backgroundColor: c.accent },
