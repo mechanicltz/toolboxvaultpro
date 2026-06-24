@@ -496,3 +496,20 @@ to a smart friend who does not code. Keep it short. This is non-negotiable.
 Unless the user says otherwise, assume they are viewing the app through the
 DEFAULT **Steel** theme layout (skin !== "plain", metalStyle === "steel"). All
 bugs, changes, edits, and screenshots should target the Steel theme first.
+
+## UI fix batch 3 (2026-06) — iteration_53 VERIFIED
+- Add Dealer / Edit Dealer / New-Edit Agent(contact) modals got a top-right X
+  close button (testIDs add-dealer-close / edit-dealer-close / agent-modal-close)
+  + ScrollView contentContainerStyle paddingBottom:28 so bottom CREATE/SAVE/CANCEL
+  clear the screen edge. (dealers.tsx + dealer/[id].tsx). ALL 3 VERIFIED iter_53.
+- DEFAULT_DEALERS_SEED in server.py cleaned: each warranty/customer/tech contact
+  field now holds ONE tappable value (removed "phone · email", "(hours)", text).
+  Applies to NEW accounts only — EXISTING accounts keep old messy values (no
+  migration written yet; offer to add one updating existing default-dealer records
+  if user wants their own demo data fixed).
+- NOTE: Metro runs with CI=true (hot reload disabled) — MUST `sudo supervisorctl
+  restart expo` after frontend edits or changes won't reach the bundle.
+STILL TODO (user's list): global BACK button on EVERY page (audit which screens
+lack the IndustrialBanner back arrow); Stage 6 (reports/export simplified +
+bundle export WITH/WITHOUT expansions). Plus optional: migrate existing accounts'
+dealer contact fields to the cleaned single-contact format.
