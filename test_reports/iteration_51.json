@@ -1,0 +1,23 @@
+{
+  "summary": "Verified all 4 fixes in UI batch 2 on the PRO account (mechanicltz@gmail.com / Blue321!) at mobile viewport 390x844. (1) RECEIPTS no longer black: opened tool e659d60a (Injector seal installer kit) → Documents tab → both receipt thumbnails are real images loaded via AppImage from /api/files/<id> (naturalWidth/Height 1280x2783 and 1280x2369, complete=true). Tapping receipt-thumb-0 opens the fullscreen lightbox which renders the receipt at 1024x1536 (complete=true) — confirmed actual image content, NOT a black box. (2) TAB re-tap no-op: with a framenavigated counter, tapping tab-home twice while on Dashboard produced nav_count=0; navigating to Inventory produced nav_count=1, then re-tapping tab-inventory twice produced nav_count=0; switching back to tab-home produced nav_count=1. Re-tap correctly does nothing. (3) WEB document preview: tapping doc-open-43fa6f97... (30 Bin Rack DIY Plans 3-4-24.pdf) opened the in-app viewer modal — pdf.js rendered pages at 1108x856 inline (NOT auto-download). doc-viewer-close closes cleanly (testID disappears). (4) KeyboardProvider stability: app loads, login works, dashboard/inventory/tool-detail render, opening tool-menu-btn → menu-edit shows the EDIT form with 10 input fields and edit-save-bar / edit-cancel-bar both present; programmatically appended a character to the Item Name field and cancel-bar exited edit mode cleanly. No red screen, no JS pageerror, no fatal console errors (only the expected 401 retries from anonymous /api/files probes during auth bootstrap, which AppImage then re-fetches authenticated).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "DocumentsSection.tsx still imports the legacy Image from react-native at top (line 12) even though it now uses AppImage — the unused Image import should be removed.",
+    "tool/[id].tsx remains very large (>4000 lines); receipts/documents/edit-form/PDF flows would benefit from extraction (carried over from iter_50)."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "n/a", "frontend": "100%"},
+  "seed_data_creation": "None. Used existing PRO inventory item 'Injector seal installer kit' (id e659d60a-864b-4767-a869-e23a09fad3c4) which already has 2 receipts and 1 PDF document.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "On tool/[id], the RECEIPTS and DOCUMENTS sections live INSIDE the 'Documents' tab — click tab-documents (testID) first. Receipt thumbs use AppImage which loads /api/files/<id> via authenticated fetch+blob (web). Verify with `el.querySelector('img').naturalWidth > 0` to prove the image actually decoded; a black box would naturally have naturalWidth=0 or src starts with data:image/gif;base64,R0lGOD (1x1 placeholder). The active-tab no-op in BottomBar (line 152-159) is `if (t.chooser) setChooserOpen(t); else if (!active) router.push(...)` — measure via a framenavigated counter rather than URL diff because URL stays identical either way.",
+  "rca_of_issue": "Not applicable — this iteration only verified previously applied fixes. Receipts black-thumb fix: ReceiptsSection now uses AppImage (line 13 import + lines 101 & 152 usage) which handles authenticated /api/files URLs by fetching them with the Authorization header and converting to a blob URL. Tab no-op: BottomBar onPress guards `if (!active) router.push(...)`. Web doc preview unchanged; native preview-first refactor verified indirectly through the web modal path (testID doc-viewer-close)."
+}

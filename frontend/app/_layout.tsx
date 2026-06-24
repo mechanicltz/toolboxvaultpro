@@ -2,6 +2,7 @@ import { Stack, useRouter, useSegments } from "expo-router";
 import { ThemeProvider as NavThemeProvider, DefaultTheme as NavDefaultTheme } from "@react-navigation/native";
 import { StatusBar } from "expo-status-bar";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { KeyboardProvider } from "react-native-keyboard-controller";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import {
   View,
@@ -424,6 +425,7 @@ export default function RootLayout() {
           status bar / Dynamic Island / notch. (Symptom: "screens extend
           above my phone's clock so I can't tap back".) */}
       <SafeAreaProvider>
+        <KeyboardProvider>
         <ThemeProvider>
           <IndustrialThemeProvider>
             <ThemedStatusBar />
@@ -440,6 +442,7 @@ export default function RootLayout() {
             </AuthProvider>
           </IndustrialThemeProvider>
         </ThemeProvider>
+        </KeyboardProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );

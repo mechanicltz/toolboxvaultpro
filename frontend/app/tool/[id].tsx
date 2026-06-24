@@ -22,6 +22,7 @@ import { AppSwitch } from "../../src/components/AppSwitch";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter, useFocusEffect } from "expo-router";
+import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { useAppResume } from "../../src/appLifecycle";
 import * as ImagePicker from "expo-image-picker";
 import { theme } from "../../src/theme";
@@ -2441,15 +2442,15 @@ export default function ToolDetail() {
         <View style={newStyles.contentPanelOuter}>
           {isIndustrial ? (
             <TbvListPanel source={winSrc} capInsets={winCap} frameScale={steelScale} padX={16} padTop={16} padBottom={12} style={{ flex: 1 }}>
-              <ScrollView contentContainerStyle={{ paddingBottom: editing ? 90 : 20 }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+              <KeyboardAwareScrollView contentContainerStyle={{ paddingBottom: editing ? 90 : 20 }} bottomOffset={editing ? 120 : 0} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
                 {renderTabContent()}
-              </ScrollView>
+              </KeyboardAwareScrollView>
             </TbvListPanel>
           ) : (
             <View style={newStyles.contentPanelPlain}>
-              <ScrollView contentContainerStyle={{ paddingBottom: editing ? 90 : 20 }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+              <KeyboardAwareScrollView contentContainerStyle={{ paddingBottom: editing ? 90 : 20 }} bottomOffset={editing ? 120 : 0} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
                 {renderTabContent()}
-              </ScrollView>
+              </KeyboardAwareScrollView>
             </View>
           )}
         </View>

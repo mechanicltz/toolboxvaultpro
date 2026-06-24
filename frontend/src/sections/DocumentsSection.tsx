@@ -458,49 +458,32 @@ export function DocumentsSection({
       }
 
       // ====== NATIVE (iOS / Android) ======
-      const safeName = (doc.name || "document").replace(/[^a-zA-Z0-9._-]/g, "_");
-      const cacheDir = (FileSystem as any).cacheDirectory;
-      if (!cacheDir) {
-        setNativeError("Cache directory unavailable on this device.");
-        setViewerDoc(doc);
-        return;
-      }
-      const dest = `${cacheDir}${safeName}`;
-      try {
-        await FileSystem.writeAsStringAsync(dest, doc.data, {
-          encoding: FileSystem.EncodingType.Base64,
-        });
-      } catch (writeErr: any) {
-        setNativeError(`Could not write file: ${writeErr?.message || writeErr}`);
-        setViewerDoc(doc);
-        return;
-      }
-
-      const can = await Sharing.isAvailableAsync();
-      if (!can) {
-        setNativeError(
-          "Sharing/preview is not available on this device. The document was saved to app cache.",
-        );
-        setViewerDoc(doc);
-        return;
-      }
-
-      try {
-        await Sharing.shareAsync(dest, {
-          mimeType: doc.mime_type,
-          UTI:
-            (doc.mime_type || "").toLowerCase().includes("pdf")
-              ? "com.adobe.pdf"
-              : doc.mime_type,
-          dialogTitle: doc.name || "Document",
-        });
-      } catch (shareErr: any) {
-        setNativeError(`Open failed: ${shareErr?.message || shareErr}`);
-        setViewerDoc(doc);
-      }
+      // Preview FIRST — do NOT fire the share sheet immediately. Images render
+      // inline; other types show a preview card with an explicit OPEN button.
+      setViewerDoc(doc);
     } catch (e: any) {
       setNativeError(e?.message || "Could not open document");
       setViewerDoc(doc);
+    }
+  };
+
+  // Explicit "open in another app / share" — only when the user taps the
+  // button inside the native preview.
+  const shareNative = async (doc: any) => {
+    try {
+      const safeName = (doc.name || "document").replace(/[^a-zA-Z0-9._-]/g, "_");
+      const cacheDir = (FileSystem as any).cacheDirectory;
+      if (!cacheDir) { setNativeError("Cache directory unavailable on this device."); return; }
+      const dest = `${cacheDir}${safeName}`;
+      await FileSystem.writeAsStringAsync(dest, doc.data, { encoding: FileSystem.EncodingType.Base64 });
+      if (!(await Sharing.isAvailableAsync())) { setNativeError("Sharing is not available on this device."); return; }
+      await Sharing.shareAsync(dest, {
+        mimeType: doc.mime_type,
+        UTI: (doc.mime_type || "").toLowerCase().includes("pdf") ? "com.adobe.pdf" : doc.mime_type,
+        dialogTitle: doc.name || "Document",
+      });
+    } catch (e: any) {
+      setNativeError(`Open failed: ${e?.message || e}`);
     }
   };
 
@@ -527,12 +510,26 @@ export function DocumentsSection({
     }
 
     if (Platform.OS !== "web") {
-      // On native, opening the share sheet replaces this modal in practice.
-      // If we get here, show a placeholder.
+      // Native preview FIRST. Images render inline; other types show a card
+      // with an explicit OPEN/SHARE button (no auto share sheet).
+      if (mime.startsWith("image/")) {
+        return (
+          <AppImage
+            source={{ uri: `data:${viewerDoc.mime_type};base64,${viewerDoc.data}` }}
+            style={{ flex: 1, width: "100%", height: "100%" }}
+            resizeMode="contain"
+          />
+        );
+      }
       return (
         <View style={vstyles.errorWrap}>
-          <ActivityIndicator color={theme.colors.accent} size="large" />
-          <Text style={vstyles.errorMsg}>Opening...</Text>
+          <Ionicons name={mime.includes("pdf") ? "document-text" : "document"} size={48} color={theme.colors.accent} />
+          <Text style={vstyles.errorTitle}>{viewerDoc.name || "Document"}</Text>
+          <Text style={vstyles.errorMsg}>Tap below to open this file in your device's viewer.</Text>
+          <TouchableOpacity style={[vstyles.actionBtn, { marginTop: 18 }]} onPress={() => shareNative(viewerDoc)} testID="doc-open-native">
+            <Ionicons name="open-outline" size={16} color="#000" />
+            <Text style={vstyles.actionText}>OPEN / SHARE</Text>
+          </TouchableOpacity>
         </View>
       );
     }
@@ -560,8 +557,8 @@ export function DocumentsSection({
     );
   };
 
-  // Only show modal on web, OR on native when there's a nativeError to display
-  const showModal = !!viewerDoc && (Platform.OS === "web" || !!nativeError);
+  // Show the in-app preview modal whenever a doc is selected (web + native).
+  const showModal = !!viewerDoc;
 
   return (
     <View style={styles.section}>

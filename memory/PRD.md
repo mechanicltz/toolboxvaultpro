@@ -229,6 +229,30 @@ REMAINING: Stage 5 (inventory "bundles only" filter), Stage 6 (reports/export
 simplified + bundle export WITH/WITHOUT expansions), LATER HOWTO. Optional
 cleanup: delete unused app/tool/edit.tsx + app/bundle/edit.tsx + app/bundle/[id].tsx
 + old /api/bundles CRUD + bundles collection.
+## UI fix batch 2 (2026-06) — keyboard, tab-retap, receipts, doc preview, edit-btn
+- Edit-bar SAVE/CANCEL buttons: fixed height:48 was overriding padding → now
+  inline height:38 + editBar paddingTop 8/paddingBottom 12 (tool/[id].tsx +
+  toolDetailStyles.ts). VERIFIED iter (button height).
+- KEYBOARD covering edited field: wrapped root in <KeyboardProvider> (_layout.tsx)
+  and swapped the item edit/add ScrollView -> KeyboardAwareScrollView with
+  bottomOffset (editing?120:0) in tool/[id].tsx (react-native-keyboard-controller,
+  already in package.json). NOTE: real overlap behavior only fully testable on a
+  native build, not web.
+- TAB re-tap reload: BottomBar.tsx onPress now no-ops when already on that tab
+  (if (!active) router.push).
+- RECEIPT shows BLACK: ReceiptsSection.tsx used plain <Image> which can't load
+  authenticated /api/files GridFS URLs -> switched thumb + lightbox to <AppImage>
+  (removed unused Image import).
+- DOCUMENT preview-first (native): DocumentsSection.tsx openDoc no longer fires
+  Sharing.shareAsync immediately on native; it shows the in-app preview modal
+  (images render inline via data URI; pdf/other show a card + explicit
+  OPEN/SHARE button calling new shareNative()). showModal now true whenever a doc
+  is selected. Web preview unchanged. NOTE: native preview only testable on build.
+STILL TODO (next rounds): Warranty edit full setup (duration picker + start date
+default today); Add contact/dealer top-X cancel + off-screen save/cancel; global
+BACK button on every page; Dealer seed data 1-contact-per-field cleanup; Stage 6
+(reports/export simplified + bundle export WITH/WITHOUT expansions).
+
 ## Bundle Stage 5 + UI fix batch DONE & tested (2026-06) — iteration_49
 DONE this round (7 items): (1) Stage 5 inventory filter "SETS / BUNDLES"
 (inventory.tsx: Filter type, VALID_FILTERS, counts, STATUS_OPTIONS, client filter

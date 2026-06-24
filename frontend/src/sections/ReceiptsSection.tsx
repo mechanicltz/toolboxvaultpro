@@ -4,13 +4,13 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  Image,
   ScrollView,
   Modal,
   Dimensions,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { theme } from "../theme";
+import { AppImage } from "../components/AppImage";
 import { PillButton } from "../components/PillButton";
 
 import { themedStyles } from "../themeContext";
@@ -98,7 +98,7 @@ export function ReceiptsSection({ receipts, onAdd }: Props) {
             activeOpacity={0.85}
           >
             <View style={styles.thumbWrap}>
-              <Image source={{ uri }} style={styles.thumb} />
+              <AppImage source={{ uri }} style={styles.thumb} />
               <View style={styles.thumbBadge}>
                 <Ionicons name="receipt" size={10} color="#000" />
                 <Text style={styles.thumbBadgeText}>{i + 1}</Text>
@@ -149,7 +149,7 @@ export function ReceiptsSection({ receipts, onAdd }: Props) {
                 contentContainerStyle={styles.lightboxImageWrap}
                 centerContent
               >
-                <Image source={{ uri }} style={styles.lightboxImage} resizeMode="contain" />
+                <AppImage source={{ uri }} style={styles.lightboxImage} resizeMode="contain" />
               </ScrollView>
             ))}
           </ScrollView>

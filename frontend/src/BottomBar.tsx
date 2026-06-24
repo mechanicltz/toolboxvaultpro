@@ -152,7 +152,8 @@ export function BottomBar() {
                 onPress={() => {
                   if (t.chooser) {
                     setChooserOpen(t);
-                  } else {
+                  } else if (!active) {
+                    // Already on this tab → do nothing (no endless reloads).
                     router.push(t.route as never);
                   }
                 }}
