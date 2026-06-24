@@ -43,7 +43,7 @@ import { TbvFrame } from "../../src/tbv/components/TbvFrame";
 import { TbvListPanel } from "../../src/tbv/components/TbvListPanel";
 import { useIsSteel, useSteelPanelFrame } from "../../src/tbv/steel";
 
-type Filter = "all" | "available" | "out" | "consumables" | "lost" | "maintenance" | "for_sale";
+type Filter = "all" | "available" | "out" | "consumables" | "lost" | "maintenance" | "for_sale" | "bundles";
 
 // Iron Forge (industrial) wrapper for the Filter accordion: metal plate frame
 // (matches the search bar / item cards). Plain themes keep the ShadowBox.
@@ -93,7 +93,7 @@ export default function InventoryScreen() {
   const [agg, setAgg] = useState<any>(() => getCached("inv_agg", null));
   const [search, setSearch] = useState("");
   const [refreshing, setRefreshing] = useState(false);
-  const VALID_FILTERS: Filter[] = ["all", "available", "out", "consumables", "lost", "maintenance", "for_sale"];
+  const VALID_FILTERS: Filter[] = ["all", "available", "out", "consumables", "lost", "maintenance", "for_sale", "bundles"];
   const [filter, setFilter] = useState<Filter>(
     (incomingFilter && (VALID_FILTERS as string[]).includes(incomingFilter))
       ? (incomingFilter as Filter)
@@ -191,6 +191,7 @@ export default function InventoryScreen() {
       for_sale: 0,
       lost: 0,
       maintenance: 0,
+      bundles: 0,
     };
     // Location counts include descendants — picking "Garage" with sub-locations
     // "Top Drawer" and "Bottom Drawer" should show the SUM, not just direct.
@@ -225,6 +226,7 @@ export default function InventoryScreen() {
       if (t?.for_sale && !t?.is_sold) status.for_sale++;
       if (t?.lost_status?.is_lost) status.lost++;
       if (Array.isArray(t?.maintenance) && t.maintenance.length > 0) status.maintenance++;
+      if (t?.is_bundle) status.bundles++;
       if (Array.isArray(t?.tag_ids)) {
         for (const tid of t.tag_ids) tag[tid] = (tag[tid] || 0) + 1;
       }
@@ -275,6 +277,11 @@ export default function InventoryScreen() {
         k: "lost",
         label: `LOST / STOLEN (${filterCounts.status.lost})`,
         icon: "alert-circle" as const,
+      },
+      {
+        k: "bundles",
+        label: `SETS / BUNDLES (${filterCounts.status.bundles})`,
+        icon: "cube" as const,
       },
     ],
     [filterCounts],
@@ -476,6 +483,7 @@ export default function InventoryScreen() {
       out = out.filter(
         (x: any) => Array.isArray(x?.maintenance) && x.maintenance.length > 0,
       );
+    else if (filter === "bundles") out = out.filter((x: any) => x.is_bundle);
 
     // Location filter (selected location + all descendants)
     // Special sentinel "__none" → tools that have NO location assigned.

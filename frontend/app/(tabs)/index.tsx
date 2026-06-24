@@ -756,7 +756,7 @@ export default function HomeScreen() {
 
           <ReportBugBadge style={{ marginTop: 8 }} testID="feedback-banner" />
 
-          <Text style={styles.plainTip}>Pull to refresh · Customize under VAULT → CUSTOMIZE</Text>
+          <Text style={styles.plainTip}>Pull to refresh · Customize under VAULT → SETTINGS</Text>
         </ScrollView>
 
         {paymentTarget && (
@@ -1008,7 +1008,7 @@ export default function HomeScreen() {
         <ReportBugBadge style={{ marginTop: 8 }} testID="feedback-banner" />
 
         <Text style={styles.tip}>
-          Pull to refresh · Customize this list under VAULT → CUSTOMIZE
+          Pull to refresh · Customize this list under VAULT → SETTINGS
         </Text>
       </ScrollView>
 

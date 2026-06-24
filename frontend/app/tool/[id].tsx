@@ -257,7 +257,6 @@ export default function ToolDetail() {
   const [editing, setEditing] = useState(false);
   const [savingEdit, setSavingEdit] = useState(false);
   const [form, setForm] = useState<any>(null);
-  const [showHistoryChoice, setShowHistoryChoice] = useState(false);
   // Edit-mode relational pickers
   const [showEditDealer, setShowEditDealer] = useState(false);
   const [showEditCategory, setShowEditCategory] = useState(false);
@@ -2045,6 +2044,9 @@ export default function ToolDetail() {
       <View>
         {renderStatusBanners()}
         <View style={boxStyle}>
+          {vRow("PURCHASED", "calendar", tool.purchase_date ? formatDateUS(tool.purchase_date) : "—")}
+          {vRow("DEALER", "business", tool.dealer_name || "—", tool.dealer_id ? () => router.push(`/dealer/${tool.dealer_id}`) : undefined)}
+          {vRow("BRAND", "ribbon", tool.brand ? String(tool.brand) : "—")}
           <View style={[newStyles.detailsRow]}>
             <View style={newStyles.detailsLabelWrap}>
               <Ionicons name="barcode" size={13} color={theme.colors.accent} />
@@ -2067,9 +2069,6 @@ export default function ToolDetail() {
               ))}
             </View>
           </View>
-          {vRow("DEALER", "business", tool.dealer_name || "—", tool.dealer_id ? () => router.push(`/dealer/${tool.dealer_id}`) : undefined)}
-          {vRow("BRAND", "ribbon", tool.brand ? String(tool.brand) : "—")}
-          {vRow("PURCHASED", "calendar", tool.purchase_date ? formatDateUS(tool.purchase_date) : "—")}
           {vRow("CATEGORY", "folder", tool.category_name ? String(tool.category_name) : "—")}
           {vRow("TAGS", "pricetags", tagSummary)}
           {tool.msrp_price && Number(tool.msrp_price) > 0 ? vRow("MSRP", "cash", `$${Number(tool.msrp_price).toFixed(2)}`) : null}
@@ -2207,7 +2206,7 @@ export default function ToolDetail() {
     setShowBundlePicker(true);
   };
   const renderBundle = () => (
-    <BundleTab bundle={tool} onChanged={load} boxStyle={boxStyle} />
+    <BundleTab bundle={tool} onChanged={load} boxStyle={boxStyle} editing={editing} />
   );
 
   // ── PHOTOS TAB ──────────────────────────────────────────────────────────
@@ -2300,11 +2299,11 @@ export default function ToolDetail() {
       <View style={{ gap: 12 }}>
         <View style={newStyles.histSeg}>
           <TouchableOpacity style={[newStyles.histSegBtn, historyView === "checkout" && newStyles.histSegBtnActive]} onPress={() => switchHistory("checkout")} testID="history-seg-checkout" activeOpacity={0.8}>
-            <Ionicons name="swap-horizontal" size={15} color={historyView === "checkout" ? "#000" : theme.colors.accent} />
+            <Ionicons name="swap-horizontal" size={15} color={historyView === "checkout" ? theme.colors.accent : theme.colors.textMuted} />
             <Text style={[newStyles.histSegText, historyView === "checkout" && newStyles.histSegTextActive]}>CHECKOUTS</Text>
           </TouchableOpacity>
           <TouchableOpacity style={[newStyles.histSegBtn, historyView === "claims" && newStyles.histSegBtnActive]} onPress={() => switchHistory("claims")} testID="history-seg-claims" activeOpacity={0.8}>
-            <Ionicons name="alert-circle" size={15} color={historyView === "claims" ? "#000" : theme.colors.accent} />
+            <Ionicons name="alert-circle" size={15} color={historyView === "claims" ? theme.colors.accent : theme.colors.textMuted} />
             <Text style={[newStyles.histSegText, historyView === "claims" && newStyles.histSegTextActive]}>CLAIMS</Text>
           </TouchableOpacity>
         </View>
@@ -2429,7 +2428,7 @@ export default function ToolDetail() {
               const tabColor = active ? theme.colors.accent : (isIndustrial ? "#FFFFFF" : theme.colors.textPrimary);
               return (
                 <TouchableOpacity key={t.key} testID={`tab-${t.key}`} style={newStyles.tabBtn} activeOpacity={0.7}
-                  onPress={() => { setActiveTab(t.key); if (t.key === "history") setShowHistoryChoice(true); }}>
+                  onPress={() => setActiveTab(t.key)}>
                   <Ionicons name={t.icon} size={15} color={tabColor} />
                   <Text style={[newStyles.tabBtnText, { color: tabColor }]}>{t.label}</Text>
                 </TouchableOpacity>
@@ -2459,10 +2458,10 @@ export default function ToolDetail() {
       {/* EDIT SAVE BAR */}
       {editing && (
         <View style={newStyles.editBar}>
-          <TouchableOpacity style={[styles.btnGhost, { flex: 1, marginTop: 0 }]} onPress={cancelEdit} testID="edit-cancel-bar">
+          <TouchableOpacity style={[styles.btnGhost, { flex: 1, marginTop: 0, paddingVertical: 9 }]} onPress={cancelEdit} testID="edit-cancel-bar">
             <Text style={styles.btnGhostText}>CANCEL</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={[styles.btnPrimary, { flex: 1 }]} onPress={saveEdit} disabled={savingEdit} testID="edit-save-bar">
+          <TouchableOpacity style={[styles.btnPrimary, { flex: 1, paddingVertical: 9 }]} onPress={saveEdit} disabled={savingEdit} testID="edit-save-bar">
             {savingEdit ? <ActivityIndicator color="#000" /> : (<><Ionicons name="checkmark" size={16} color="#000" /><Text style={styles.btnPrimaryText}>SAVE</Text></>)}
           </TouchableOpacity>
         </View>
@@ -3627,22 +3626,6 @@ export default function ToolDetail() {
             </View>
           </View>
         </View>
-      </Modal>
-
-      {/* ===== HISTORY CHOICE POPUP (matches 3-dot menu) ===== */}
-      <Modal visible={showHistoryChoice} transparent animationType="fade" onRequestClose={() => setShowHistoryChoice(false)}>
-        <Pressable style={newStyles.menuOverlay} onPress={() => setShowHistoryChoice(false)}>
-          <View style={newStyles.menuCard}>
-            <TouchableOpacity style={newStyles.menuRow} testID="history-choice-checkout" onPress={() => { switchHistory("checkout"); setShowHistoryChoice(false); }}>
-              <Ionicons name="swap-horizontal" size={18} color={theme.colors.textPrimary} />
-              <Text style={newStyles.menuRowText}>Checkout history</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={newStyles.menuRow} testID="history-choice-claims" onPress={() => { switchHistory("claims"); setShowHistoryChoice(false); }}>
-              <Ionicons name="alert-circle" size={18} color={theme.colors.textPrimary} />
-              <Text style={newStyles.menuRowText}>Claim history</Text>
-            </TouchableOpacity>
-          </View>
-        </Pressable>
       </Modal>
 
       {/* ===== EDIT: LOCATION PICKER ===== */}

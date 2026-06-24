@@ -5,6 +5,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
+import { useRouter } from "expo-router";
 import { theme } from "../../theme";
 import { api } from "../../api";
 import { AppImage } from "../../components/AppImage";
@@ -26,10 +27,12 @@ export function BundleTab({
   bundle,
   onChanged,
   boxStyle,
+  editing = false,
 }: {
   bundle: any;
   onChanged: () => void;          // reload the parent tool
   boxStyle: any;
+  editing?: boolean;              // edit/delete controls only show in edit mode
 }) {
   const isBundle = !!bundle?.is_bundle;
   const insideItems: any[] = bundle?.inside_items || [];
@@ -172,7 +175,7 @@ export function BundleTab({
       <View style={boxStyle}>
         <View style={s.headerRow}>
           <Text style={s.sectionLabel}>ITEMS IN THIS SET{insideItems.length ? ` (${insideItems.length})` : ""}</Text>
-          <PillButton testID="add-inside-item-btn" label="ADD" icon="add-circle" variant="active" compact onPress={openAdd} />
+          {editing && <PillButton testID="add-inside-item-btn" label="ADD" icon="add-circle" variant="active" compact onPress={openAdd} />}
         </View>
         {insideItems.length === 0 ? (
           <Text style={s.empty}>No items yet. Add the individual pieces that come in this set (e.g. each socket).</Text>
@@ -188,12 +191,16 @@ export function BundleTab({
                   {it.model ? `#${it.model}` : "No model #"}{it.cost ? `  ·  ${money(it.cost)}` : ""}
                 </Text>
               </View>
-              <TouchableOpacity testID={`inside-edit-${it.id}`} onPress={() => openEdit(it)} hitSlop={8} style={s.iconBtn}>
-                <Ionicons name="pencil" size={16} color={theme.colors.accent} />
-              </TouchableOpacity>
-              <TouchableOpacity testID={`inside-del-${it.id}`} onPress={() => deleteInside(it)} hitSlop={8} style={s.iconBtn}>
-                <Ionicons name="trash" size={16} color={theme.colors.danger} />
-              </TouchableOpacity>
+              {editing && (
+                <>
+                  <TouchableOpacity testID={`inside-edit-${it.id}`} onPress={() => openEdit(it)} hitSlop={8} style={s.iconBtn}>
+                    <Ionicons name="pencil" size={16} color={theme.colors.accent} />
+                  </TouchableOpacity>
+                  <TouchableOpacity testID={`inside-del-${it.id}`} onPress={() => deleteInside(it)} hitSlop={8} style={s.iconBtn}>
+                    <Ionicons name="trash" size={16} color={theme.colors.danger} />
+                  </TouchableOpacity>
+                </>
+              )}
             </View>
           ))
         )}
@@ -203,7 +210,7 @@ export function BundleTab({
       <View style={boxStyle}>
         <View style={s.headerRow}>
           <Text style={s.sectionLabel}>EXPANSION ITEMS{expItems.length ? ` (${expItems.length})` : ""}</Text>
-          <PillButton testID="add-expansion-btn" label="ADD" icon="add-circle" variant="active" compact onPress={openPicker} />
+          {editing && <PillButton testID="add-expansion-btn" label="ADD" icon="add-circle" variant="active" compact onPress={openPicker} />}
         </View>
         <Text style={[s.empty, { marginBottom: expItems.length ? 6 : 0 }]}>
           Add-ons you bought later for this set. They stay in your inventory and show here too.
@@ -218,9 +225,11 @@ export function BundleTab({
                 <Text style={s.rowName} numberOfLines={1}>{it.name || "Unnamed"}</Text>
                 <Text style={s.rowSub} numberOfLines={1}>{it.cost ? money(it.cost) : "No price"}</Text>
               </View>
-              <TouchableOpacity testID={`expansion-unlink-${it.id}`} onPress={() => unlink(it)} hitSlop={8} style={s.iconBtn}>
-                <Ionicons name="close-circle" size={18} color={theme.colors.danger} />
-              </TouchableOpacity>
+              {editing && (
+                <TouchableOpacity testID={`expansion-unlink-${it.id}`} onPress={() => unlink(it)} hitSlop={8} style={s.iconBtn}>
+                  <Ionicons name="close-circle" size={18} color={theme.colors.danger} />
+                </TouchableOpacity>
+              )}
             </View>
           ))
         )}
@@ -304,6 +313,7 @@ export function BundleTab({
 
 // Small card shown on an EXPANSION item: which set it belongs to.
 function ExpansionParent({ expansionOf, boxStyle }: { expansionOf: string; boxStyle: any }) {
+  const router = useRouter();
   const [parent, setParent] = useState<any>(null);
   useEffect(() => {
     let alive = true;
@@ -314,9 +324,19 @@ function ExpansionParent({ expansionOf, boxStyle }: { expansionOf: string; boxSt
     <View style={{ gap: 12 }}>
       <View style={boxStyle}>
         <View style={s.headerRow}><Text style={s.sectionLabel}>ADD-ON TO A SET</Text></View>
-        <Text style={s.muted}>
-          This item is an expansion add-on for{parent ? ` "${parent.name}"` : " a set"}.
-        </Text>
+        <Text style={[s.muted, { textAlign: "left", marginBottom: 10 }]}>This item is an addon to a set:</Text>
+        <TouchableOpacity
+          testID="expansion-parent-link"
+          style={[s.row, { borderBottomWidth: 0 }]}
+          activeOpacity={0.7}
+          onPress={() => router.push(`/tool/${expansionOf}` as any)}
+        >
+          <View style={[s.thumb, s.thumbEmpty]}><Ionicons name="cube" size={16} color={theme.colors.accent} /></View>
+          <Text style={[s.rowName, { color: theme.colors.accent, flex: 1 }]} numberOfLines={1}>
+            {parent ? parent.name : "View set"}
+          </Text>
+          <Ionicons name="chevron-forward" size={16} color={theme.colors.accent} />
+        </TouchableOpacity>
       </View>
     </View>
   );
