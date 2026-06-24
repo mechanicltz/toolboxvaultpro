@@ -17,7 +17,7 @@ import React, { useEffect, useRef } from "react";
 import { StyleSheet, View, Pressable, Dimensions } from "react-native";
 import { useVideoPlayer, VideoView } from "expo-video";
 import { useRouter } from "expo-router";
-import { StatusBar } from "expo-status-bar";
+import { StatusBar, setStatusBarHidden } from "expo-status-bar";
 import { useAuth } from "../src/AuthContext";
 import { markAppActive } from "../src/idle";
 
@@ -55,6 +55,12 @@ export default function IntroScreen() {
     return () => sub.remove();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [player]);
+
+  // Ensure the status bar (clock/battery/signal) is restored when the intro
+  // unmounts — the intro hides it, and expo-status-bar does NOT auto-restore.
+  useEffect(() => {
+    return () => setStatusBarHidden(false, "fade");
+  }, []);
 
   // Belt-and-suspenders: poll every 250ms in case the playToEnd event
   // doesn't fire (occasionally happens on web). If we're within 50ms

@@ -1,6 +1,6 @@
 import { Stack, useRouter, useSegments } from "expo-router";
 import { ThemeProvider as NavThemeProvider, DefaultTheme as NavDefaultTheme } from "@react-navigation/native";
-import { StatusBar } from "expo-status-bar";
+import { StatusBar, setStatusBarStyle, setStatusBarHidden } from "expo-status-bar";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { KeyboardProvider } from "react-native-keyboard-controller";
 import { SafeAreaProvider } from "react-native-safe-area-context";
@@ -417,10 +417,18 @@ function ThemedStatusBar() {
   // The industrial/steel skin ALWAYS renders on a dark workshop palette
   // regardless of the light/dark mode preference, so the status-bar glyphs
   // (clock, battery, signal) must be light there. Only the plain skin follows
-  // the light/dark mode. Previously this read `mode` alone, so a user on
-  // "light" mode + steel skin got black icons on a dark bg = invisible.
-  const barStyle = skin === "industrial" ? "light" : mode === "light" ? "dark" : "light";
-  return <StatusBar style={barStyle} />;
+  // the light/dark mode.
+  const barStyle: "light" | "dark" = skin === "industrial" ? "light" : mode === "light" ? "dark" : "light";
+  // Apply imperatively too: the declarative <StatusBar> can be left in a stale
+  // state by the intro screen (which hides the bar) or by navigation races, so
+  // we force the style + un-hide whenever it should change. `translucent` +
+  // transparent bg lets the dark app background show through on Android so the
+  // light glyphs stay legible.
+  React.useEffect(() => {
+    setStatusBarHidden(false, "fade");
+    setStatusBarStyle(barStyle, true);
+  }, [barStyle]);
+  return <StatusBar style={barStyle} translucent backgroundColor="transparent" animated />;
 }
 
 export default function RootLayout() {
