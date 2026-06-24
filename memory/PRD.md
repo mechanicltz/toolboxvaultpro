@@ -252,6 +252,17 @@ STILL TODO (next rounds): Warranty edit full setup (duration picker + start date
 default today); Add contact/dealer top-X cancel + off-screen save/cancel; global
 BACK button on every page; Dealer seed data 1-contact-per-field cleanup; Stage 6
 (reports/export simplified + bundle export WITH/WITHOUT expansions).
+## VERIFIED iter_51/iter_52: receipt-black, tab-retap, web doc preview,
+## KeyboardProvider stability ALL PASS. Warranty full setup VERIFIED (iter_52):
+## WARRANTY LENGTH (number + MONTHS/YEARS toggle warranty-unit-*) + START DATE
+## (defaults to today on enable) added to renderWarranty() in tool/[id].tsx;
+## setWarrantyField()/computeWarrantyExpiry() auto-derive expiry; save persists.
+## NOTE: warranty edit lives on the WARRANTY tab, not Details.
+## REMAINING from user's big list: (a) Add contact/dealer needs top-X cancel +
+## save/cancel currently run off-screen at bottom; (b) global BACK button on every
+## page (back-stack to dashboard); (c) Dealer SEED data has multiple phones/emails
+## per single line -> must be 1 tappable contact per field; (d) Stage 6 reports/
+## export simplified + bundle export WITH/WITHOUT expansion items.
 
 ## Bundle Stage 5 + UI fix batch DONE & tested (2026-06) — iteration_49
 DONE this round (7 items): (1) Stage 5 inventory filter "SETS / BUNDLES"
