@@ -379,10 +379,6 @@ export default function DealerDetail() {
         }
       />
 
-      <ScrollView
-        style={{ backgroundColor: theme.colors.canvas }}
-        contentContainerStyle={{ paddingBottom: 100 }}
-      >
         <View style={styles.heroRow}>
           <DealerLogo logo={dealer.logo} size={DEALER_LOGO_SLOT.hero} />
           <View style={styles.heroRight}>
@@ -428,6 +424,15 @@ export default function DealerDetail() {
           ))}
         </View>
 
+        {/* CONTENT PANEL — fixed height, content scrolls inside; same panel
+            across all 3 tabs, only the inner content changes. */}
+        <View style={styles.contentPanelOuter}>
+        <ScrollView
+          style={{ flex: 1 }}
+          contentContainerStyle={{ paddingBottom: 28 }}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
         {activeTab === "company" && (
         <View>
         {/* COMPANY DETAILS */}
@@ -663,6 +668,7 @@ export default function DealerDetail() {
         </CardShell>
         )}
         </ScrollView>
+        </View>
 
       {/* Edit dealer modal */}
       <Modal visible={editing} transparent animationType="slide">
@@ -1198,6 +1204,7 @@ const styles = themedStyles((c) => ({
   tabOn: { backgroundColor: c.accent },
   tabText: { color: c.textSecondary, fontSize: 9, fontWeight: "900", letterSpacing: 0.5 },
   tabTextOn: { color: "#000" },
+  contentPanelOuter: { flex: 1 },
   agentColHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: c.border, paddingLeft: 14 },
   agentColName: { color: c.textMuted, fontSize: 8, fontWeight: "900", letterSpacing: 1.5 },
   agentColLoc: { color: c.textMuted, fontSize: 8, fontWeight: "900", letterSpacing: 1.5 },
