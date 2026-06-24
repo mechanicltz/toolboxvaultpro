@@ -37,6 +37,7 @@ import { ShadowBox, ShadowBoxSubCard } from "../../src/components/ShadowBox";
 import { SKIN, CAP } from "../../src/tbv/skins";
 import { useIsSteel, useSteelPanelFrame } from "../../src/tbv/steel";
 import { TbvFrame } from "../../src/tbv/components/TbvFrame";
+import TbvListPanel from "../../src/tbv/components/TbvListPanel";
 import { EmailLink } from "../../src/components/EmailLink";
 import { shareOrSaveAgent } from "../../src/utils/agentShare";
 import { ContactIconButton, ContactIconImage } from "../../src/components/ContactIcons";
@@ -65,6 +66,8 @@ export default function DealerDetail() {
   const plateSrc = isSteel ? steelPanel.source : SKIN.plate;
   const plateCap = isSteel ? steelPanel.capInsets : CAP.plate;
   const steelScale = isSteel ? steelPanel.frameScale : undefined;
+  const winSrc = isSteel ? steelPanel.source : SKIN.window;
+  const winCap = isSteel ? steelPanel.capInsets : CAP.window;
   const [dealer, setDealer] = useState<any>(null);
   const [tools, setTools] = useState<any[]>([]);
   const [editing, setEditing] = useState(false);
@@ -323,31 +326,37 @@ export default function DealerDetail() {
     children,
     testID,
     plainStyle,
-    thin,
   }: {
     children: React.ReactNode;
     testID?: string;
     plainStyle?: any;
     thin?: boolean;
-  }) =>
+  }) => (
+    // The dealer detail content now lives inside ONE shared skinned panel
+    // (ContentPanel below), so per-tab shells render as plain containers — no
+    // nested steel frames.
+    <View style={plainStyle} testID={testID}>
+      {children}
+    </View>
+  );
+
+  // Single skinned panel that holds the active tab's content (mirrors the item
+  // detail page: one steel window panel, scrollable content inside).
+  const ContentPanel = ({ children }: { children: React.ReactNode }) =>
     isIndustrial ? (
-      <View style={styles.cardSkinWrap}>
-        <TbvFrame
-          source={isSteel ? steelPanel.source : (thin ? SKIN.plate : SKIN.window)}
-          capInsets={isSteel ? steelPanel.capInsets : (thin ? CAP.plate : CAP.window)}
-          frameScale={steelScale}
-          padX={thin ? 28 : 40}
-          padTop={thin ? 14 : 30}
-          padBottom={thin ? 14 : 30}
-          testID={testID}
-        >
-          {children}
-        </TbvFrame>
-      </View>
-    ) : (
-      <ShadowBox testID={testID} style={plainStyle}>
+      <TbvListPanel
+        source={winSrc}
+        capInsets={winCap}
+        frameScale={steelScale}
+        padX={16}
+        padTop={16}
+        padBottom={12}
+        style={{ flex: 1 }}
+      >
         {children}
-      </ShadowBox>
+      </TbvListPanel>
+    ) : (
+      <View style={styles.contentPanelPlain}>{children}</View>
     );
 
   // Expanded agent business-card body. In a metal skin the floating ShadowBox
@@ -427,7 +436,7 @@ export default function DealerDetail() {
         {/* CONTENT PANEL — fixed height, content scrolls inside; same panel
             across all 3 tabs, only the inner content changes. */}
         <View style={styles.contentPanelOuter}>
-        <View style={styles.contentPanelPlain}>
+        <ContentPanel>
         <ScrollView
           style={{ flex: 1 }}
           contentContainerStyle={{ paddingBottom: 20 }}
@@ -669,7 +678,7 @@ export default function DealerDetail() {
         </CardShell>
         )}
         </ScrollView>
-        </View>
+        </ContentPanel>
         </View>
 
       {/* Edit dealer modal */}
