@@ -159,7 +159,7 @@ export default function BorrowersScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
-      <IndustrialBanner title="CONTACTS" subtitle="Borrowers & Checkouts" />
+      <IndustrialBanner title="CONTACTS" subtitle="Borrowers & Checkouts" onBack={() => (router.canGoBack() ? router.back() : router.replace("/(tabs)"))} backIcon="chevron-back" />
 
       <SectionList
         sections={sections}

@@ -677,6 +677,8 @@ export default function MoreScreen() {
             ? `FREE ${userStats.free} / SUB ${userStats.subscribed}`
             : user?.email || "Manage everything"
         }
+        onBack={() => (router.canGoBack() ? router.back() : router.replace("/(tabs)"))}
+        backIcon="chevron-back"
       />
       <ScrollView ref={scrollRef} contentContainerStyle={{ paddingBottom: 100, paddingTop: 8 }}>
         <SectionCard title="ROADMAP" testID="more-section-roadmap">

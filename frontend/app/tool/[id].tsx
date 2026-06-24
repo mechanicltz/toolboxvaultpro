@@ -878,17 +878,27 @@ export default function ToolDetail() {
 
   const handlePickStandard = async () => {
     setShowExportPicker(false);
+    // Bundles: let the user choose whether to append the linked expansion
+    // (add-on) items to the report. The set's own inside items are always
+    // listed (by name, no pricing) per the report spec.
+    let includeExpansions = false;
+    if (tool.is_bundle) {
+      includeExpansions = await confirm(
+        "Include expansion items?",
+        "Append this set's linked expansion items (add-ons) to the report, with their prices?",
+        "Yes, include",
+      );
+    }
     const hasReceipts = Array.isArray(tool.receipts) && tool.receipts.length > 0;
+    let includeReceipts = false;
     if (hasReceipts) {
-      const yes = await confirm(
+      includeReceipts = await confirm(
         "Include receipts?",
         `This item has ${tool.receipts.length} receipt${tool.receipts.length === 1 ? "" : "s"} attached. Append them to the report (each on its own page)?`,
         "Yes, include",
       );
-      await doExportPdf(yes);
-    } else {
-      await doExportPdf(false);
     }
+    await doExportPdf(includeReceipts, includeExpansions);
   };
 
   // Poster generator — produces a single-page "FOR SALE" flyer using the
@@ -1228,12 +1238,64 @@ export default function ToolDetail() {
     }
   };
 
-  const doExportPdf = async (includeReceipts: boolean) => {
+  const doExportPdf = async (includeReceipts: boolean, includeExpansions: boolean = false) => {
     const esc = (s: any) => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;");
     const fmtMoney = (v: any) => {
       const n = Number(v);
       return isFinite(n) ? `$${n.toFixed(2)}` : "—";
     };
+
+    // ---- Bundle/set content (per report spec) -----------------------------
+    // Inside items are ALWAYS listed by name (and model) but NEVER with their
+    // individual pricing. Expansion (add-on) items are appended only when the
+    // user opted in, and DO show their individual prices + a subtotal.
+    const insideItems: any[] = (tool.is_bundle && Array.isArray(tool.inside_items))
+      ? tool.inside_items : [];
+    let expansionItems: any[] = [];
+    if (tool.is_bundle && includeExpansions) {
+      try {
+        expansionItems = (await api.listExpansionItems(tool.id, { forceFresh: true } as any)) || [];
+      } catch {
+        expansionItems = [];
+      }
+    }
+    let bundleInsideHtml = "";
+    if (tool.is_bundle) {
+      const rowsH = insideItems.length
+        ? insideItems
+            .map((it: any) => {
+              const model = it.model
+                ? `&nbsp;&middot;&nbsp;<span style="color:#777;font-weight:normal">${esc(it.model)}</span>`
+                : "";
+              return `<tr><td>${esc(it.name) || "(unnamed)"}${model}</td></tr>`;
+            })
+            .join("")
+        : `<tr><td style="color:#777">No items added to this set yet.</td></tr>`;
+      bundleInsideHtml = `<table class="section-band"><tr><td>ITEMS IN THIS SET${
+        insideItems.length ? ` (${insideItems.length})` : ""
+      }</td></tr></table>
+        <table class="setlist">${rowsH}</table>`;
+    }
+    let bundleExpHtml = "";
+    if (tool.is_bundle && includeExpansions) {
+      if (expansionItems.length) {
+        const rowsH = expansionItems
+          .map((it: any) => {
+            const model = it.model || (it.model_numbers && it.model_numbers[0]) || "";
+            const modelHtml = model
+              ? `&nbsp;&middot;&nbsp;<span style="color:#777;font-weight:normal">${esc(model)}</span>`
+              : "";
+            return `<tr><td>${esc(it.name) || "(unnamed)"}${modelHtml}</td><td class="amt">${fmtMoney(it.cost)}</td></tr>`;
+          })
+          .join("");
+        const subtotal = expansionItems.reduce((s: number, i: any) => s + (Number(i.cost) || 0), 0);
+        bundleExpHtml = `<table class="section-band"><tr><td>EXPANSION ITEMS (ADD-ONS)</td></tr></table>
+          <table class="setlist">${rowsH}<tr class="subtot"><td>SUBTOTAL</td><td class="amt">${fmtMoney(subtotal)}</td></tr></table>`;
+      } else {
+        bundleExpHtml = `<table class="section-band"><tr><td>EXPANSION ITEMS (ADD-ONS)</td></tr></table>
+          <table class="setlist"><tr><td style="color:#777">No expansion items linked to this set.</td></tr></table>`;
+      }
+    }
 
     // Photos — compress and render up to 4 in a 2-up grid (xhtml2pdf-friendly).
     // Compression is critical to prevent iOS WKWebView print pipeline hangs
@@ -1320,7 +1382,7 @@ export default function ToolDetail() {
     if (tool.location_name) specPairs.push({ label: "Location", value: String(tool.location_name) });
     if (tool.purchase_date) specPairs.push({ label: "Purchased", value: formatDateUS(tool.purchase_date) });
     if (tool.dealer_name) specPairs.push({ label: "Dealer", value: String(tool.dealer_name) });
-    if (tool.cost != null) specPairs.push({ label: "Cost", value: fmtMoney(tool.cost) });
+    if (tool.cost != null) specPairs.push({ label: tool.is_bundle ? "Set Price" : "Cost", value: fmtMoney(tool.cost) });
     if (tool.msrp_price && Number(tool.msrp_price) > 0)
       specPairs.push({ label: "MSRP", value: fmtMoney(tool.msrp_price) });
     if (tool.quantity != null && Number(tool.quantity) > 1)
@@ -1497,6 +1559,21 @@ export default function ToolDetail() {
     border: 1.5pt solid #111111;
   }
 
+  /* ============ SET / BUNDLE CONTENT LIST ============ */
+  table.setlist { width: 100%; margin-bottom: 8pt; }
+  table.setlist td {
+    padding: 6pt 10pt;
+    border-bottom: 0.75pt solid #e8e8e8;
+    font-size: 10pt;
+    color: #222222;
+    font-weight: bold;
+  }
+  table.setlist td.amt { text-align: right; width: 22%; }
+  table.setlist tr.subtot td {
+    border-top: 1.5pt solid #111111;
+    color: #111111;
+  }
+
   /* ============ HISTORY TABLE ============ */
   table.history { width: 100%; }
   table.history th {
@@ -1555,7 +1632,7 @@ export default function ToolDetail() {
   <table class="brand-band">
     <tr>
       <td class="brand-mark">TOOLBOX VAULT</td>
-      <td class="brand-meta">ITEM REPORT &middot; ${new Date().toLocaleDateString()}</td>
+      <td class="brand-meta">${tool.is_bundle ? "SET REPORT" : "ITEM REPORT"} &middot; ${new Date().toLocaleDateString()}</td>
     </tr>
   </table>
 
@@ -1585,6 +1662,10 @@ export default function ToolDetail() {
          </tr></table>`
       : ""
   }
+
+  ${bundleInsideHtml}
+
+  ${bundleExpHtml}
 
   ${
     photosHtml
@@ -3156,13 +3237,15 @@ export default function ToolDetail() {
                 <Ionicons name="document-text" size={20} color={theme.colors.accent} />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={pickerStyles.choiceTitle}>Standard Report</Text>
+                <Text style={pickerStyles.choiceTitle}>{tool.is_bundle ? "Set Report" : "Standard Report"}</Text>
                 <Text style={pickerStyles.choiceSub}>
-                  Branded item report with specs, photos, history{
-                    Array.isArray(tool.receipts) && tool.receipts.length > 0
-                      ? ` and ${tool.receipts.length} receipt${tool.receipts.length === 1 ? "" : "s"}`
-                      : ""
-                  }.
+                  {tool.is_bundle
+                    ? "Set report with set price, items in the set (no individual prices) and an optional expansion-items list."
+                    : `Branded item report with specs, photos, history${
+                        Array.isArray(tool.receipts) && tool.receipts.length > 0
+                          ? ` and ${tool.receipts.length} receipt${tool.receipts.length === 1 ? "" : "s"}`
+                          : ""
+                      }.`}
                 </Text>
               </View>
               <Ionicons name="chevron-forward" size={20} color={theme.colors.textSecondary} />

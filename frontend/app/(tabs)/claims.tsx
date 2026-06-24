@@ -308,7 +308,7 @@ export default function ClaimsScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
-      <IndustrialBanner title="CLAIMS" subtitle="Broken Items by Dealer" />
+      <IndustrialBanner title="CLAIMS" subtitle="Broken Items by Dealer" onBack={() => (router.canGoBack() ? router.back() : router.replace("/(tabs)"))} backIcon="chevron-back" />
 
       {isIndustrial ? (
         <View style={styles.statRowSkinWrap}>

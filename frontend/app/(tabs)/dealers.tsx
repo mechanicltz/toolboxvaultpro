@@ -215,6 +215,8 @@ export default function DealersScreen() {
       <IndustrialBanner
         title="DEALERS"
         subtitle="Companies & Sales Agents"
+        onBack={() => (router.canGoBack() ? router.back() : router.replace("/(tabs)"))}
+        backIcon="chevron-back"
       />
 
       {isIndustrial && gridCols === 1 ? (
