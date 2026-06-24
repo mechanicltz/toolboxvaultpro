@@ -207,6 +207,28 @@ Stage 4 (make Add ITEM also live-edit + retire old add/edit + old bundle screens
 + old bundles collection), Stage 5 (inventory "bundles only" filter), Stage 6
 (reports/export simplified; bundle export WITH/WITHOUT expansions — deferred from
 Stage 3), LATER HOWTO.
+## Bundle Stage 4 + intro-tap fix DONE & tested (2026-06) — iteration_48
+ADD = LIVE-EDIT: "Add Item" (AddChooser add-choose-item) and "Add Set/Bundle"
+(add-choose-bundle + Sets list add-bundle-fab) now POST /tools to create a blank
+record ("New Item"/"New Set", is_bundle for sets) then navigate
+/tool/{id}?startEdit=1&startFresh=1. tool/[id] reads startEdit (auto beginEdit
+via editAutoOpened ref) + startFresh (freshUnsavedRef). NEW editable NAME field
+(testID edit-name) added to Details edit form; 'name' now included in saveEdit
+payload (was previously MISSING — names couldn't be edited at all before). On
+Cancel of a fresh unsaved record -> api.deleteTool + router.back (no orphan
+"New Item"/"New Set" rows). Old /tool/edit form retired (still registered but
+unreferenced); wishlist convert + WarrantySection edit buttons now route to
+/tool/{id}?startEdit=1. INTRO TAP FIX: src/IntroOverlay.tsx now sets local `gone`
+state + player.pause() on finish/skip so the expo-video <video> can't linger and
+swallow the first tap after a fresh route load. NOTE: testing_agent fixed a
+missing `useRef` in tool/[id].tsx React import (would red-screen Add flow) — now
+imported. Tested iteration_48: intro first-tap OK, Add Item/Set + discard-on-
+cancel + name persistence all PASS. Minor unverified (code path proven): add-
+bundle-fab real-tap nav + menu-edit/wishlist/warranty routing.
+REMAINING: Stage 5 (inventory "bundles only" filter), Stage 6 (reports/export
+simplified + bundle export WITH/WITHOUT expansions), LATER HOWTO. Optional
+cleanup: delete unused app/tool/edit.tsx + app/bundle/edit.tsx + app/bundle/[id].tsx
++ old /api/bundles CRUD + bundles collection.
 REMAINING STAGES: 2=claims/mark-broken (whole bundle vs one inside item; dealer
 msg must read "came in the set <bundleModel>, but the <sub> I broke is <itemModel>");
 3=bundle detail screen (manage inside items + expansion area w/ bundle+expansion
