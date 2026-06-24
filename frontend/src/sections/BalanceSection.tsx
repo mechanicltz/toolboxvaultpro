@@ -253,17 +253,45 @@ function BalanceCard({
   const idBase = label.replace(/\s/g, "-");
   const inner = (
     <>
-      <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-        <Text style={styles.balLabel}>{label}</Text>
-        <TouchableOpacity onPress={onHistory} testID={`open-report-${idBase}`} style={{ marginTop: 8 }}>
-          <Text style={styles.histLink}>OPEN REPORT ›</Text>
+      {/* Account header */}
+      <View style={styles.acctHeaderRow}>
+        <Text style={styles.acctHeaderText}>{label}</Text>
+        <TouchableOpacity onPress={onHistory} testID={`open-report-${idBase}`} hitSlop={8}>
+          <Text style={styles.histLink}>REPORT ›</Text>
         </TouchableOpacity>
       </View>
-      <Text style={[styles.balAmount, { color: owed ? theme.colors.danger : theme.colors.success }]}>
-        ${balance.toFixed(2)}
-      </Text>
-      <Text style={styles.balSub}>{owed ? "Outstanding balance" : "Paid up"}</Text>
-      <View style={{ flexDirection: "row", gap: 8, marginTop: 12 }}>
+
+      {/* Label / value rows */}
+      <View style={styles.acctRow}>
+        <Text style={styles.acctRowLabel}>Balance</Text>
+        <Text style={[styles.acctRowValueStrong, { color: owed ? theme.colors.danger : theme.colors.success }]}>
+          ${balance.toFixed(2)}
+        </Text>
+      </View>
+      <View style={[styles.acctRow, !hasSched && styles.acctRowLast]}>
+        <Text style={styles.acctRowLabel}>Status</Text>
+        <Text style={[styles.acctRowValue, { color: owed ? theme.colors.danger : theme.colors.success }]}>
+          {owed ? "Outstanding" : "Paid up"}
+        </Text>
+      </View>
+
+      {hasSched && (
+        <>
+          <View style={styles.acctRow}>
+            <Text style={styles.acctRowLabel}>Auto Payment</Text>
+            <Text style={styles.acctRowValue}>
+              ${Number(schedule?.amount || 0).toFixed(2)} · {freqLabel(schedule?.frequency)}
+            </Text>
+          </View>
+          <View style={[styles.acctRow, styles.acctRowLast]}>
+            <Text style={styles.acctRowLabel}>Next Due</Text>
+            <Text style={[styles.acctRowValue, { color: st?.color }]}>{st?.text}</Text>
+          </View>
+        </>
+      )}
+
+      {/* Actions */}
+      <View style={{ flexDirection: "row", gap: 8, marginTop: 14 }}>
         <PillButton
           testID={`adjust-${idBase}`}
           label="Adjust"
@@ -281,31 +309,16 @@ function BalanceCard({
           style={{ flex: 1, justifyContent: "center" }}
         />
       </View>
-
-      {/* ---- Recurring payment schedule summary (only when one exists) ---- */}
       {hasSched && (
-        <View style={styles.schedWrap}>
-          <View style={styles.schedHeaderRow}>
-            <View style={styles.schedBadge}>
-              <Ionicons name="repeat" size={11} color={theme.colors.accent} />
-              <Text style={styles.schedBadgeText}>AUTO SCHEDULE</Text>
-            </View>
-          </View>
-          <Text style={styles.schedAmount}>
-            ${Number(schedule?.amount || 0).toFixed(2)}{" "}
-            <Text style={styles.schedFreq}>· {freqLabel(schedule?.frequency)}</Text>
-          </Text>
-          <Text style={[styles.schedDue, { color: st?.color }]}>{st?.text}</Text>
-          <PillButton
-            testID={`mark-paid-${idBase}`}
-            label={busy ? "…" : "MARK PAYMENT PAID"}
-            icon="checkmark-circle"
-            variant={st?.due ? "active" : "default"}
-            onPress={onMarkPaid}
-            disabled={busy}
-            style={{ justifyContent: "center", marginTop: 10 }}
-          />
-        </View>
+        <PillButton
+          testID={`mark-paid-${idBase}`}
+          label={busy ? "…" : "MARK PAYMENT PAID"}
+          icon="checkmark-circle"
+          variant={st?.due ? "active" : "default"}
+          onPress={onMarkPaid}
+          disabled={busy}
+          style={{ justifyContent: "center", marginTop: 8 }}
+        />
       )}
     </>
   );
@@ -548,7 +561,29 @@ const styles = themedStyles((c) => ({
     borderRadius: theme.radii.md,
   },
   balLabel: { color: c.textPrimary, fontSize: 8, fontWeight: "900", letterSpacing: 2 },
-  histLink: { color: c.accent, fontSize: 7, fontWeight: "900", letterSpacing: 1 },
+  histLink: { color: c.accent, fontSize: 9, fontWeight: "900", letterSpacing: 1 },
+  acctHeaderRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingBottom: 8,
+    marginBottom: 4,
+    borderBottomWidth: 2,
+    borderBottomColor: c.accent,
+  },
+  acctHeaderText: { color: c.textPrimary, fontSize: 12, fontWeight: "900", letterSpacing: 1.5 },
+  acctRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 9,
+    borderBottomWidth: 1,
+    borderBottomColor: c.border,
+  },
+  acctRowLast: { borderBottomWidth: 0 },
+  acctRowLabel: { color: c.textSecondary, fontSize: 12, fontWeight: "600" },
+  acctRowValue: { color: c.textPrimary, fontSize: 13, fontWeight: "800", maxWidth: "60%", textAlign: "right" },
+  acctRowValueStrong: { fontSize: 18, fontWeight: "900" },
   balAmount: { fontSize: 21, fontWeight: "900", marginTop: 8 },
   balSub: { color: c.textMuted, fontSize: 8, marginTop: 2 },
   // schedule strip
