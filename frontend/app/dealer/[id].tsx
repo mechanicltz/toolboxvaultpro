@@ -427,9 +427,10 @@ export default function DealerDetail() {
         {/* CONTENT PANEL — fixed height, content scrolls inside; same panel
             across all 3 tabs, only the inner content changes. */}
         <View style={styles.contentPanelOuter}>
+        <View style={styles.contentPanelPlain}>
         <ScrollView
           style={{ flex: 1 }}
-          contentContainerStyle={{ paddingBottom: 28 }}
+          contentContainerStyle={{ paddingBottom: 20 }}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
@@ -668,6 +669,7 @@ export default function DealerDetail() {
         </CardShell>
         )}
         </ScrollView>
+        </View>
         </View>
 
       {/* Edit dealer modal */}
@@ -1204,7 +1206,16 @@ const styles = themedStyles((c) => ({
   tabOn: { backgroundColor: c.accent },
   tabText: { color: c.textSecondary, fontSize: 9, fontWeight: "900", letterSpacing: 0.5 },
   tabTextOn: { color: "#000" },
-  contentPanelOuter: { flex: 1 },
+  contentPanelOuter: { flex: 1, paddingHorizontal: 14, paddingTop: 6, paddingBottom: 14 },
+  contentPanelPlain: {
+    flex: 1,
+    backgroundColor: c.bgSecondary,
+    borderWidth: 1,
+    borderColor: c.border,
+    borderRadius: 10,
+    padding: 6,
+    ...(theme.elevation.md as object),
+  },
   agentColHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: c.border, paddingLeft: 14 },
   agentColName: { color: c.textMuted, fontSize: 8, fontWeight: "900", letterSpacing: 1.5 },
   agentColLoc: { color: c.textMuted, fontSize: 8, fontWeight: "900", letterSpacing: 1.5 },
@@ -1868,16 +1879,8 @@ const styles = themedStyles((c) => ({
 
   // ---------- DETAILS BOX (warranty-card style, mirrors tool detail) ----------
   detailsBox: {
-    backgroundColor: c.bgSecondary,
-    borderWidth: 1,
-    borderColor: c.border,
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    marginHorizontal: 16,
-    marginTop: 4,
-    marginBottom: 12,
-    ...(theme.elevation.md as object),
+    paddingHorizontal: 6,
+    paddingVertical: 2,
   },
   detailsRow: {
     flexDirection: "row",
@@ -1960,16 +1963,8 @@ const styles = themedStyles((c) => ({
   },
 
   companyCard: {
-    marginHorizontal: 16,
-    marginTop: 4,
-    marginBottom: 12,
-    paddingHorizontal: 8,
-    paddingVertical: 6,
-    backgroundColor: c.bgSecondary,
-    borderWidth: 1,
-    borderColor: c.border,
-    borderRadius: 8,
-    ...(theme.elevation.md as object),
+    paddingHorizontal: 4,
+    paddingVertical: 2,
   },
   companyDivider: {
     height: 1,
