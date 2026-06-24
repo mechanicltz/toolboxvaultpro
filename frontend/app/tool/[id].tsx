@@ -1,5 +1,5 @@
 import { compressToDataUri } from "../../src/lib/imageCompress";
-import { AppImage } from "../../src/components/AppImage";
+import { AppImage, resolveUri } from "../../src/components/AppImage";
 import React, { useState, useCallback, useEffect, useRef } from "react";
 import {
   View,
@@ -468,6 +468,33 @@ export default function ToolDetail() {
       { text: "Cancel", style: "cancel" },
     ]);
   };
+
+  // User report: there was no way to delete a photo or a receipt. Remove the
+  // item at `idx` from the relevant array and persist.
+  const deletePhoto = async (idx: number) => {
+    const ok = await confirm("Delete Photo", "Remove this photo from the item?", "Delete", true);
+    if (!ok) return;
+    try {
+      const next = (tool?.photos || []).filter((_: any, i: number) => i !== idx);
+      await api.updateTool(tool.id, { photos: next });
+      load();
+    } catch (e: any) {
+      Alert.alert("Error", e.message || "Could not delete photo");
+    }
+  };
+
+  const deleteReceipt = async (idx: number) => {
+    const ok = await confirm("Delete Receipt", "Remove this receipt from the item?", "Delete", true);
+    if (!ok) return;
+    try {
+      const next = (tool?.receipts || []).filter((_: any, i: number) => i !== idx);
+      await api.updateTool(tool.id, { receipts: next });
+      load();
+    } catch (e: any) {
+      Alert.alert("Error", e.message || "Could not delete receipt");
+    }
+  };
+
 
   const load = useCallback(async () => {
     if (!id) return;
@@ -2324,9 +2351,20 @@ export default function ToolDetail() {
         ) : (
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={newStyles.galleryRow}>
             {photos.map((p: string, j: number) => (
-              <TouchableOpacity key={j} testID={`gallery-thumb-${j}`} onPress={() => { setPhotoIdx(j); setIsImageViewerVisible(true); }} activeOpacity={0.85}>
-                <AppImage source={{ uri: p }} style={newStyles.galleryThumb} />
-              </TouchableOpacity>
+              <View key={j} style={{ position: "relative" }}>
+                <TouchableOpacity testID={`gallery-thumb-${j}`} onPress={() => { setPhotoIdx(j); setIsImageViewerVisible(true); }} activeOpacity={0.85}>
+                  <AppImage source={{ uri: p }} style={newStyles.galleryThumb} />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  testID={`gallery-delete-${j}`}
+                  style={newStyles.thumbDeleteBtn}
+                  onPress={() => deletePhoto(j)}
+                  hitSlop={8}
+                  activeOpacity={0.8}
+                >
+                  <Ionicons name="close" size={13} color="#fff" />
+                </TouchableOpacity>
+              </View>
             ))}
           </ScrollView>
         )}
@@ -2341,7 +2379,7 @@ export default function ToolDetail() {
         <DocumentsSection tool={tool} onChange={load} />
       </View>
       <View style={boxStyle}>
-        <ReceiptsSection receipts={tool.receipts} onAdd={promptAddReceipt} />
+        <ReceiptsSection receipts={tool.receipts} onAdd={promptAddReceipt} onDelete={deleteReceipt} />
       </View>
     </View>
   );
@@ -2404,7 +2442,7 @@ export default function ToolDetail() {
         </View>
       ) : (
         <View style={boxStyle}>
-          <WarrantySection tool={tool} />
+          <WarrantySection tool={tool} onEdit={beginEdit} />
         </View>
       )}
     </View>
@@ -2494,13 +2532,40 @@ export default function ToolDetail() {
       <IndustrialBanner
         title={tool.name || "Untitled Tool"}
         subtitle={tool.location_name ? String(tool.location_name) : "No location"}
-        onBack={() => router.back()}
-        rightSlot={
+        onBack={editing ? undefined : () => router.back()}
+        centerSlot={
           editing ? (
-            <TouchableOpacity testID="tool-edit-cancel" onPress={cancelEdit} hitSlop={10} style={newStyles.menuDotsBtn} activeOpacity={0.7}>
-              <Ionicons name="close" size={24} color={theme.colors.danger} />
-            </TouchableOpacity>
-          ) : (
+            <View style={newStyles.editTopBar}>
+              <TouchableOpacity
+                testID="edit-cancel-bar"
+                style={newStyles.editTopCancel}
+                onPress={cancelEdit}
+                activeOpacity={0.8}
+              >
+                <Ionicons name="close" size={15} color={theme.colors.danger} />
+                <Text style={newStyles.editTopCancelText}>CANCEL</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                testID="edit-save-bar"
+                style={newStyles.editTopSave}
+                onPress={saveEdit}
+                disabled={savingEdit}
+                activeOpacity={0.8}
+              >
+                {savingEdit ? (
+                  <ActivityIndicator color="#000" size="small" />
+                ) : (
+                  <>
+                    <Ionicons name="checkmark" size={16} color="#000" />
+                    <Text style={newStyles.editTopSaveText}>SAVE</Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            </View>
+          ) : undefined
+        }
+        rightSlot={
+          editing ? undefined : (
             <TouchableOpacity testID="tool-menu-btn" onPress={() => setShowActionMenu(true)} hitSlop={10} style={newStyles.menuDotsBtn} activeOpacity={0.7}>
               <Ionicons name="ellipsis-vertical" size={22} color={theme.colors.accent} />
             </TouchableOpacity>
@@ -2579,17 +2644,8 @@ export default function ToolDetail() {
         </View>
       </View>
 
-      {/* EDIT SAVE BAR */}
-      {editing && (
-        <View style={newStyles.editBar}>
-          <TouchableOpacity style={[styles.btnGhost, { flex: 1, marginTop: 0, height: 38 }]} onPress={cancelEdit} testID="edit-cancel-bar">
-            <Text style={styles.btnGhostText}>CANCEL</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={[styles.btnPrimary, { flex: 1, height: 38 }]} onPress={saveEdit} disabled={savingEdit} testID="edit-save-bar">
-            {savingEdit ? <ActivityIndicator color="#000" /> : (<><Ionicons name="checkmark" size={16} color="#000" /><Text style={styles.btnPrimaryText}>SAVE</Text></>)}
-          </TouchableOpacity>
-        </View>
-      )}
+      {/* EDIT SAVE BAR moved to the top header (centerSlot) in edit mode to
+          free up vertical screen space for the form fields. */}
 
       {/* ===== CONTEXTUAL 3-DOTS ACTION MENU ===== */}
       <Modal
@@ -3681,7 +3737,7 @@ export default function ToolDetail() {
 
       {/* ===== FULL-SCREEN PHOTO VIEWER (pinch-to-zoom, swipe to dismiss) ===== */}
       <PinchZoomImageViewer
-        images={(photos || []).map((p: string) => ({ uri: p }))}
+        images={(photos || []).map((p: string) => ({ uri: resolveUri(p) || p }))}
         imageIndex={photoIdx}
         visible={isImageViewerVisible}
         onRequestClose={() => setIsImageViewerVisible(false)}

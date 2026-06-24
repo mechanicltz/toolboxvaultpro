@@ -875,7 +875,6 @@ const styles = themedStyles((c) => ({
     paddingVertical: 14,
     alignItems: "center",
     borderRadius: 8,
-    ...(theme.elevation.md as object),
   },
   statBoxFlat: {
     backgroundColor: "transparent",

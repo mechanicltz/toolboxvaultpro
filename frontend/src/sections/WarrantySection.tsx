@@ -23,10 +23,14 @@ function daysUntil(dateStr?: string): number | null {
   return Math.floor((d.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
 }
 
-export function WarrantySection({ tool }: { tool: any }) {
+export function WarrantySection({ tool, onEdit }: { tool: any; onEdit?: () => void }) {
   const router = useRouter();
   const w = tool.warranty || {};
   const has = w.has_warranty;
+  const startEdit = () => {
+    if (onEdit) onEdit();
+    else router.push(`/tool/${tool.id}?startEdit=1`);
+  };
 
   if (!has) {
     return (
@@ -42,9 +46,7 @@ export function WarrantySection({ tool }: { tool: any }) {
             label="ADD WARRANTY INFORMATION"
             icon="add-circle"
             variant="active"
-            onPress={() =>
-              router.push(`/tool/${tool.id}?startEdit=1`)
-            }
+            onPress={startEdit}
           />
         </View>
       </View>
@@ -122,9 +124,7 @@ export function WarrantySection({ tool }: { tool: any }) {
         <TouchableOpacity
           testID="edit-warranty-link"
           style={styles.editLink}
-          onPress={() =>
-            router.push({ pathname: "/tool/edit", params: { id: tool.id, focus: "warranty" } })
-          }
+          onPress={startEdit}
         >
           <Ionicons name="create-outline" size={14} color={theme.colors.accent} />
           <Text style={styles.editLinkText}>EDIT WARRANTY</Text>

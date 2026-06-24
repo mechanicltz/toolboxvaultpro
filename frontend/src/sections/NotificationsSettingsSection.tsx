@@ -830,7 +830,6 @@ const styles = themedStyles((c) => ({
     borderRadius: 10,
     backgroundColor: c.surface,
     paddingHorizontal: 12,
-    ...(theme.elevation.md as object),
   },
   // Flattened version for metal themes so the group doesn't read as a
   // grey "box-in-box" inside the TbvFrame window.

@@ -53,11 +53,18 @@ type Props = {
   onBack?: () => void;
   /** Icon for the onBack button (default "arrow-back"). */
   backIcon?: keyof typeof Ionicons.glyphMap;
+  /**
+   * Optional full-width replacement for the title/subtitle row. When provided,
+   * the page name, back arrow and right/left slots are all hidden and this
+   * node is rendered across the label row instead (used by the tool/bundle
+   * edit mode to surface Cancel/Save at the very top, freeing screen room).
+   */
+  centerSlot?: React.ReactNode;
 };
 
 const ACCENT = "#F97316";
 
-export function IndustrialBanner({ title, subtitle, rightSlot, leftSlot, onBack, backIcon }: Props) {
+export function IndustrialBanner({ title, subtitle, rightSlot, leftSlot, onBack, backIcon, centerSlot }: Props) {
   const c = useColors();
   const { metalStyle, industrialVariant, skin, mode } = useSkin();
   // Steel theme swaps the dark iron nameplate for the brushed-silver "TOOLBOX
@@ -128,31 +135,37 @@ export function IndustrialBanner({ title, subtitle, rightSlot, leftSlot, onBack,
 
       {/* Label row: back (left) · PAGE NAME (center) · action (right). */}
       <View style={styles.labelRow}>
-        {leftSlot ? (
-          <View style={styles.leftSlot}>{leftSlot}</View>
-        ) : onBack ? (
-          <View style={styles.leftSlot}>
-            <TouchableOpacity onPress={onBack} hitSlop={10} testID="back-btn">
-              <Ionicons name={backIcon ?? "arrow-back"} size={22} color={c.accent} />
-            </TouchableOpacity>
-          </View>
-        ) : null}
-        <View style={styles.titleCol}>
-          <Text style={[styles.title, { color: c.accent }]} numberOfLines={2} allowFontScaling={false}>
-            {(title || "").toUpperCase()}
-          </Text>
-          {!!subtitle && (
-            <Text
-              style={[styles.subtitle, { color: c.textSecondary }]}
-              numberOfLines={1}
-              ellipsizeMode="tail"
-              allowFontScaling={false}
-            >
-              {subtitle}
-            </Text>
-          )}
-        </View>
-        {rightSlot ? <View style={styles.rightSlot}>{rightSlot}</View> : null}
+        {centerSlot ? (
+          <View style={styles.centerSlotWrap}>{centerSlot}</View>
+        ) : (
+          <>
+            {leftSlot ? (
+              <View style={styles.leftSlot}>{leftSlot}</View>
+            ) : onBack ? (
+              <View style={styles.leftSlot}>
+                <TouchableOpacity onPress={onBack} hitSlop={10} testID="back-btn">
+                  <Ionicons name={backIcon ?? "arrow-back"} size={22} color={c.accent} />
+                </TouchableOpacity>
+              </View>
+            ) : null}
+            <View style={styles.titleCol}>
+              <Text style={[styles.title, { color: c.accent }]} numberOfLines={2} allowFontScaling={false}>
+                {(title || "").toUpperCase()}
+              </Text>
+              {!!subtitle && (
+                <Text
+                  style={[styles.subtitle, { color: c.textSecondary }]}
+                  numberOfLines={1}
+                  ellipsizeMode="tail"
+                  allowFontScaling={false}
+                >
+                  {subtitle}
+                </Text>
+              )}
+            </View>
+            {rightSlot ? <View style={styles.rightSlot}>{rightSlot}</View> : null}
+          </>
+        )}
       </View>
     </View>
   );
@@ -200,6 +213,13 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "flex-end",
     maxWidth: "42%",
+  },
+  centerSlotWrap: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    paddingHorizontal: 14,
   },
   titleCol: {
     alignItems: "center",

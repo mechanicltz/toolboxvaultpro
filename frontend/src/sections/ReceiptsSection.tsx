@@ -23,6 +23,9 @@ interface Props {
    * tool detail page (user report #4).
    */
   onAdd?: () => void;
+  /** Optional delete callback. When provided, each receipt thumbnail shows a
+   *  small delete badge so users can remove an attached receipt. */
+  onDelete?: (index: number) => void;
 }
 
 const { width: SCREEN_W } = Dimensions.get("window");
@@ -34,7 +37,7 @@ const { width: SCREEN_W } = Dimensions.get("window");
  * receipt-scanner / "ADD RECEIPT" flow). Tapping any thumbnail opens a
  * fullscreen, horizontally-swipeable lightbox.
  */
-export function ReceiptsSection({ receipts, onAdd }: Props) {
+export function ReceiptsSection({ receipts, onAdd, onDelete }: Props) {
   const list = Array.isArray(receipts) ? receipts.filter(Boolean) : [];
   const [open, setOpen] = useState(false);
   const [idx, setIdx] = useState(0);
@@ -103,6 +106,17 @@ export function ReceiptsSection({ receipts, onAdd }: Props) {
                 <Ionicons name="receipt" size={10} color="#000" />
                 <Text style={styles.thumbBadgeText}>{i + 1}</Text>
               </View>
+              {onDelete && (
+                <TouchableOpacity
+                  testID={`receipt-delete-${i}`}
+                  style={styles.thumbDelete}
+                  onPress={() => onDelete(i)}
+                  hitSlop={8}
+                  activeOpacity={0.8}
+                >
+                  <Ionicons name="close" size={13} color="#fff" />
+                </TouchableOpacity>
+              )}
             </View>
           </TouchableOpacity>
         ))}
@@ -253,6 +267,19 @@ const styles = themedStyles((c) => ({
     color: "#000",
     fontSize: 8,
     fontWeight: "900",
+  },
+  thumbDelete: {
+    position: "absolute",
+    top: -6,
+    right: -6,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: c.danger,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1.5,
+    borderColor: c.bg,
   },
   addPill: {
     flexDirection: "row",

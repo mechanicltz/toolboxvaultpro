@@ -11,7 +11,7 @@ const BACKEND_URL = (process.env.EXPO_PUBLIC_BACKEND_URL ?? "").replace(/\/$/, "
  *   backend origin so it loads on native (iOS/Android), not just web.
  * - `data:` URIs and absolute http(s) URLs pass through unchanged.
  */
-function resolveUri(uri?: string): string | undefined {
+export function resolveUri(uri?: string): string | undefined {
   if (!uri) return uri;
   if (uri.startsWith("/")) return `${BACKEND_URL}${uri}`;
   return uri;

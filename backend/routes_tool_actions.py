@@ -198,6 +198,30 @@ def register_tool_action_routes(api_router: APIRouter) -> None:
         return Tool(**(await db.tools.find_one({"id": tool_id}, {"_id": 0})))
 
 
+    class RenameDocumentRequest(BaseModel):
+        name: str
+
+    @api_router.patch("/tools/{tool_id}/documents/{doc_id}", response_model=Tool)
+    async def rename_tool_document(tool_id: str, doc_id: str, payload: RenameDocumentRequest):
+        tool = await db.tools.find_one({"id": tool_id}, {"_id": 0})
+        if not tool:
+            raise HTTPException(404, "Tool not found")
+        new_name = (payload.name or "").strip()
+        if not new_name:
+            raise HTTPException(400, "Name required")
+        docs = tool.get("documents") or []
+        found = False
+        for d in docs:
+            if d.get("id") == doc_id:
+                d["name"] = new_name
+                found = True
+                break
+        if not found:
+            raise HTTPException(404, "Document not found")
+        await db.tools.update_one({"id": tool_id}, {"$set": {"documents": docs, "updated_at": now_iso()}})
+        return Tool(**(await db.tools.find_one({"id": tool_id}, {"_id": 0})))
+
+
     # Maintenance schedules/service-events -> routes_maintenance.py (god-file refactor B3).
     from routes_maintenance import register_maintenance_routes  # noqa: E402
     register_maintenance_routes(api_router)

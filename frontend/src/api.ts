@@ -958,6 +958,8 @@ export const api = {
     request<any>(`/tools/${toolId}/documents`, { method: "POST", body: JSON.stringify(data) }),
   deleteDocument: (toolId: string, docId: string) =>
     request<any>(`/tools/${toolId}/documents/${docId}`, { method: "DELETE" }),
+  renameDocument: (toolId: string, docId: string, name: string) =>
+    request<any>(`/tools/${toolId}/documents/${docId}`, { method: "PATCH", body: JSON.stringify({ name }) }),
 
   // Maintenance
   addMaintenance: (toolId: string, data: any) =>

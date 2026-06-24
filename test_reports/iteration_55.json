@@ -1,0 +1,49 @@
+{
+  "summary": "Backend + frontend regression for iter55. Backend: new pytest file tests/test_tool_documents.py (8 tests) covers POST add → PATCH rename → GET-refetch persistence → DELETE → DELETE-verify, plus 400 (empty name) + 404 (unknown doc / unknown tool) edge cases — 8/8 PASSED on the Pro account. Frontend: logged in to mechanicltz@gmail.com (Pro) by injecting JWT into AsyncStorage key 'tt.auth.token' (login button tap is flaky on web preview), then opened tool 'Injector seal installer kit' (e659d60a-…). Verified: kebab present (tool-menu-btn), Warranty tab → edit-warranty-link enters in-place edit on same screen (no navigation to /tool/edit) and renders edit-save-bar + edit-cancel-bar at the very top with the old bottom save bar absent; Photos tab gallery-delete-0 badge present; Documents tab add-document-btn / receipt-delete-0 / doc-rename-{id} all present; tapping doc-rename-{id} opens the rename modal with doc-rename-input + doc-rename-save + doc-rename-cancel all visible (see screenshot i55_e_renamemodal.png). more-bundles testID confirmed absent in (tabs)/more (grep + DOM query). Back-btn present on Dealers/Claims/Borrowers/More and absent on Dashboard (already confirmed in iteration_54). The Documents add-source prompt is implemented via React Native Alert.alert which on the web preview surfaces as a non-DOM browser alert (no crash, but text not readable via document.body.innerText); the testID add-document-btn fires the handler cleanly. Vault Notifications + Claims stat boxes no-drop-shadow checks are visual-only and were not deep-verified, but no shadow-related runtime errors appeared. Bundle 'Set Report' PDF export was previously verified passing in iteration_54.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {
+        "endpoint": "POST /api/tools/{tool_id}/documents",
+        "issue": "routes_tool_actions.py:180 calls str(uuid.uuid4()) but the 'uuid' module is not imported in that file (only 'from typing import ...' etc.). Dead code in practice because Document.id has a default_factory that always assigns a UUID before this line runs — however a malicious / unusual client POSTing {'id': ''} would crash with NameError. Recommend either `import uuid` at the top of routes_tool_actions.py or remove the redundant str(uuid.uuid4()) fallback."
+      }
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_tool_documents.py",
+    "/app/test_reports/pytest/iter55_results.xml",
+    "/app/test_reports/screens/i55_e_editmode.png",
+    "/app/test_reports/screens/i55_e_warr.png",
+    "/app/test_reports/screens/i55_e_renamemodal.png"
+  ],
+  "action_items": [
+    "(OPTIONAL — minor) Add `import uuid` to /app/backend/routes_tool_actions.py to remove the latent NameError on the str(uuid.uuid4()) fallback at line 180. Not user-reachable today but a future-proofing fix.",
+    "(NOT BLOCKING) /app/frontend/app/tool/[id].tsx is 4229 lines — split into smaller per-tab section files to honour the 700-line guideline (Photos / Receipts / Documents / Warranty sections already partially extracted under src/sections — finish the split for Edit form + Action menu).",
+    "(OBSERVATION) Vault Notifications group cards & Claims top-4 stat boxes shadow-removed status was not deep-verified visually in this run; main agent can self-spot-check via the screenshots in /app/test_reports/screens/i55_e_*.png or do a manual diff."
+  ],
+  "critical_code_review_comments": [
+    "routes_tool_actions.py:204-222 — rename_tool_document correctly: validates non-empty name (400), 404s on unknown tool/doc, mutates the doc in-place inside the documents array, persists with updated_at bump, returns the full Tool. Clean implementation.",
+    "tool/[id].tsx:2536-2566 — centerSlot in IndustrialBanner cleanly swaps title/subtitle for the CANCEL/SAVE buttons when editing=true; rightSlot (kebab) hidden during edit. Single-source-of-truth for editing state — good.",
+    "DocumentsSection.tsx:686 testID `doc-rename-${d.id}` is dynamic per-doc — matches spec. Rename modal uses standalone <Modal/> with testIDs doc-rename-input / doc-rename-save / doc-rename-cancel.",
+    "WarrantySection.tsx:45 add-warranty-link & WarrantySection.tsx:125 edit-warranty-link both call the same `onStartEdit` prop, which the parent (tool/[id].tsx) wires to setEditing(true) — confirmed staying on the same /tool/{id} screen (no router.push to /tool/edit).",
+    "more.tsx — grep for 'more-bundles' / 'Sets & Bundles' returns ZERO matches, confirming the ORGANIZATION section link removal."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_tool_documents.py (new — 8 pytest tests for document POST/PATCH/DELETE lifecycle)"
+  ],
+  "success_rate": {
+    "backend": "100% (8/8 — test_tool_documents.py)",
+    "frontend": "100% on testable items (tool detail open, kebab present, edit-mode bars present + bottom save bar absent, warranty in-place edit no-nav, gallery-delete-0, receipt-delete-0, add-document-btn, doc-rename-{id} + modal triplet, more-bundles absent, all main-tab back-btn + dashboard no-back-btn). Visual-only shadow checks on Vault Notifications + Claims stat boxes were not deep-verified."
+  },
+  "seed_data_creation": "One transient TEST_DOC_TOOL_<timestamp> tool created on mechanicltz Pro account inside test_tool_documents.py and auto-deleted via the module-scope fixture teardown (DELETE /api/tools/{id}).",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "1) Web-preview login button (auth-submit) is flaky in Playwright; inject the JWT directly via `localStorage.setItem('tt.auth.token', <token>)` after a curl/fetch POST to /api/auth/login — that bypass works 100%. 2) tool-card-* / tool-menu-btn TouchableOpacity buttons don't fire on plain `click()` — use the PointerEvent (pointerdown+pointerup+click) dispatch helper from this script. 3) React Native Alert.alert (e.g. 'Add to Documents' source picker, 'Include expansion items?' confirm) does NOT render its options into document.body.innerText on web — verify only via dialog event listener or just confirm the trigger button fires without JS crash.",
+  "rca_of_issue": "N/A — no live bugs found in the iter55 features. The only finding is a latent (un-reachable today) NameError in routes_tool_actions.py noted under backend_issues.minor."
+}

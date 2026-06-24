@@ -4,7 +4,7 @@ import {
   View,
   Text,
   TouchableOpacity,
-  StyleSheet,
+  TextInput,
   Alert,
   Platform,
   ActivityIndicator,
@@ -14,8 +14,10 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import * as DocumentPicker from "expo-document-picker";
+import * as ImagePicker from "expo-image-picker";
 import * as FileSystem from "expo-file-system/legacy";
 import * as Sharing from "expo-sharing";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { theme } from "../theme";
 import { api } from "../api";
 import { confirm } from "../confirm";
@@ -337,7 +339,78 @@ export function DocumentsSection({
   const [viewerDoc, setViewerDoc] = useState<any>(null);
   const [imageUri, setImageUri] = useState<string>("");
   const [nativeError, setNativeError] = useState<string>("");
+  const [renameDoc, setRenameDoc] = useState<any>(null);
+  const [renameValue, setRenameValue] = useState<string>("");
+  const insets = useSafeAreaInsets();
   const docs: any[] = tool?.documents || [];
+
+  // Add a photo (camera/library) as a DOCUMENT entry. Images are kept in the
+  // documents list (rendered as a row, never a thumbnail) per user request.
+  const addPhotoAsDocument = async (src: "camera" | "library") => {
+    try {
+      const perm =
+        src === "camera"
+          ? await ImagePicker.requestCameraPermissionsAsync()
+          : await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!perm.granted) {
+        Alert.alert("Permission needed", `Please grant ${src === "camera" ? "camera" : "photo library"} access.`);
+        return;
+      }
+      const opts: any = { quality: 0.7, allowsEditing: false, base64: true };
+      const res =
+        src === "camera"
+          ? await ImagePicker.launchCameraAsync(opts)
+          : await ImagePicker.launchImageLibraryAsync({ ...opts, mediaTypes: ImagePicker.MediaTypeOptions.Images });
+      if (res.canceled || !res.assets?.[0]) return;
+      const a = res.assets[0];
+      let base64 = a.base64 || "";
+      if (!base64 && a.uri) {
+        base64 = await FileSystem.readAsStringAsync(a.uri, { encoding: FileSystem.EncodingType.Base64 });
+      }
+      const bytes = Math.floor((base64.length * 3) / 4);
+      if (bytes > MAX_BYTES) {
+        Alert.alert("Too Large", "Photo must be under 5 MB.");
+        return;
+      }
+      const stamp = new Date().toISOString().slice(0, 16).replace("T", " ");
+      setBusy(true);
+      await api.addDocument(tool.id, {
+        name: a.fileName || `Photo ${stamp}.jpg`,
+        data: base64,
+        mime_type: a.mimeType || "image/jpeg",
+        size: bytes,
+      });
+      onChange();
+    } catch (e: any) {
+      Alert.alert("Upload Failed", e?.message || "Could not add photo");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  // Ask the user whether they're adding a photo or a document file.
+  const promptAddSource = () => {
+    Alert.alert("Add to Documents", "What would you like to add?", [
+      { text: "Take Photo", onPress: () => addPhotoAsDocument("camera") },
+      { text: "Choose Photo", onPress: () => addPhotoAsDocument("library") },
+      { text: "Document File", onPress: () => pickAndUpload() },
+      { text: "Cancel", style: "cancel" },
+    ]);
+  };
+
+  const submitRename = async () => {
+    const name = renameValue.trim();
+    if (!name || !renameDoc) { setRenameDoc(null); return; }
+    try {
+      await api.renameDocument(tool.id, renameDoc.id, name);
+      setRenameDoc(null);
+      setRenameValue("");
+      onChange();
+    } catch (e: any) {
+      Alert.alert("Error", e?.message || "Could not rename");
+    }
+  };
+
 
   const pickAndUpload = async () => {
     try {
@@ -524,7 +597,7 @@ export function DocumentsSection({
         <View style={vstyles.errorWrap}>
           <Ionicons name={mime.includes("pdf") ? "document-text" : "document"} size={48} color={theme.colors.accent} />
           <Text style={vstyles.errorTitle}>{viewerDoc.name || "Document"}</Text>
-          <Text style={vstyles.errorMsg}>Tap below to open this file in your device's viewer.</Text>
+          <Text style={vstyles.errorMsg}>Tap below to open this file in your device viewer.</Text>
           <TouchableOpacity style={[vstyles.actionBtn, { marginTop: 18 }]} onPress={() => shareNative(viewerDoc)} testID="doc-open-native">
             <Ionicons name="open-outline" size={16} color="#000" />
             <Text style={vstyles.actionText}>OPEN / SHARE</Text>
@@ -572,7 +645,7 @@ export function DocumentsSection({
           variant="active"
           compact
           disabled={busy}
-          onPress={pickAndUpload}
+          onPress={promptAddSource}
         />
       </View>
       {docs.length === 0 ? (
@@ -610,6 +683,14 @@ export function DocumentsSection({
                 </TouchableOpacity>
               )}
               <TouchableOpacity
+                testID={`doc-rename-${d.id}`}
+                onPress={() => { setRenameDoc(d); setRenameValue(d.name || ""); }}
+                hitSlop={10}
+                style={{ padding: 8 }}
+              >
+                <Ionicons name="create-outline" size={18} color={theme.colors.accent} />
+              </TouchableOpacity>
+              <TouchableOpacity
                 testID={`doc-delete-${d.id}`}
                 onPress={() => remove(d)}
                 hitSlop={10}
@@ -630,7 +711,7 @@ export function DocumentsSection({
         onRequestClose={closeViewer}
       >
         <View style={vstyles.overlay}>
-          <View style={vstyles.bar}>
+          <View style={[vstyles.bar, { paddingTop: insets.top + 10 }]}>
             <Ionicons name="document-text" size={18} color={theme.colors.accent} />
             <Text style={vstyles.title} numberOfLines={1}>
               {viewerDoc?.name || "Document"}
@@ -654,6 +735,33 @@ export function DocumentsSection({
             </TouchableOpacity>
           </View>
           <View style={vstyles.frameWrap}>{renderViewerBody()}</View>
+        </View>
+      </Modal>
+
+      {/* Rename document modal */}
+      <Modal visible={!!renameDoc} transparent animationType="fade" onRequestClose={() => setRenameDoc(null)}>
+        <View style={vstyles.renameOverlay}>
+          <View style={vstyles.renameCard}>
+            <Text style={vstyles.renameTitle}>RENAME</Text>
+            <TextInput
+              testID="doc-rename-input"
+              style={vstyles.renameInput}
+              value={renameValue}
+              onChangeText={setRenameValue}
+              placeholder="Document name"
+              placeholderTextColor={theme.colors.textMuted}
+              autoFocus
+              selectTextOnFocus
+            />
+            <View style={vstyles.renameBtnRow}>
+              <TouchableOpacity style={vstyles.renameCancel} onPress={() => setRenameDoc(null)} testID="doc-rename-cancel">
+                <Text style={vstyles.renameCancelText}>CANCEL</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={vstyles.renameSave} onPress={submitRename} testID="doc-rename-save">
+                <Text style={vstyles.renameSaveText}>SAVE</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
         </View>
       </Modal>
     </View>
@@ -724,6 +832,59 @@ const vstyles = themedStyles((c) => ({
     textAlign: "center",
     lineHeight: 14,
   },
+  renameOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.7)",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 24,
+  },
+  renameCard: {
+    width: "100%",
+    maxWidth: 360,
+    backgroundColor: c.surface,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: c.border,
+    padding: 18,
+    gap: 14,
+  },
+  renameTitle: {
+    color: c.textPrimary,
+    fontSize: 11,
+    fontWeight: "900",
+    letterSpacing: 2,
+  },
+  renameInput: {
+    backgroundColor: c.bgSecondary,
+    borderWidth: 1,
+    borderColor: c.border,
+    borderRadius: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    color: c.textPrimary,
+    fontSize: 13,
+  },
+  renameBtnRow: { flexDirection: "row", gap: 10 },
+  renameCancel: {
+    flex: 1,
+    height: 40,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: c.border,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  renameCancelText: { color: c.textSecondary, fontWeight: "900", fontSize: 10, letterSpacing: 1.5 },
+  renameSave: {
+    flex: 1,
+    height: 40,
+    borderRadius: 6,
+    backgroundColor: c.accent,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  renameSaveText: { color: "#000", fontWeight: "900", fontSize: 10, letterSpacing: 1.5 },
 }));
 
 const styles = themedStyles((c) => ({
@@ -778,8 +939,6 @@ const styles = themedStyles((c) => ({
     borderRadius: 4,
     marginBottom: 6,
     gap: 6,
-  
-    ...(theme.elevation.md as object),
   },
   docName: {
     color: c.textPrimary,

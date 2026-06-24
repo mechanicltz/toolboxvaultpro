@@ -11,6 +11,8 @@
  */
 import * as ImageManipulator from "expo-image-manipulator";
 
+const BACKEND_URL = (process.env.EXPO_PUBLIC_BACKEND_URL ?? "").replace(/\/$/, "");
+
 /**
  * Normalize a base64 / data-URI / file-URI / http(s) string into a value that
  * ImageManipulator.manipulateAsync can consume AND that can be safely embedded
@@ -27,6 +29,10 @@ export function ensureDataUri(src: string): string {
   const s = String(src).trim();
   if (!s) return s;
   if (s.startsWith("data:")) return s;
+  // GridFS media is stored as a relative `/api/files/{id}` URL. Prefix the
+  // backend origin so ImageManipulator/fetch can load it (otherwise it was
+  // mistaken for bare base64 → "blue ?" broken image in PDFs/posters).
+  if (s.startsWith("/")) return `${BACKEND_URL}${s}`;
   if (/^(file|https?|content|blob|ph):/i.test(s)) return s;
   // Bare base64 string — assume JPEG (the common case for our receipts).
   return `data:image/jpeg;base64,${s}`;
