@@ -9,7 +9,6 @@ import {
   Platform,
   ActivityIndicator,
   Modal,
-  Image,
   ScrollView,
   FlatList,
 } from "react-native";

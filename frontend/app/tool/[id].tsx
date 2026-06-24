@@ -1746,6 +1746,26 @@ export default function ToolDetail() {
     }
     setEditing(false); setForm(null);
   };
+
+  // --- Warranty helpers: pick a LENGTH + START DATE (defaults to today) and the
+  // expiry date is auto-derived (the old warranty setup the user expects). ---
+  const computeWarrantyExpiry = (startIso: string, months: number) => {
+    if (!startIso || !months) return "";
+    const d = new Date(startIso);
+    if (isNaN(d.getTime())) return "";
+    d.setMonth(d.getMonth() + months);
+    return d.toISOString();
+  };
+  const setWarrantyField = (patch: any) => {
+    setForm((f: any) => {
+      const w = { ...(f?.warranty || {}), ...patch };
+      if ("start_date" in patch || "length_months" in patch) {
+        const exp = computeWarrantyExpiry(w.start_date, parseInt(w.length_months) || 0);
+        if (exp) w.expiry_date = exp;
+      }
+      return { ...f, warranty: w };
+    });
+  };
   const saveEdit = async () => {
     if (!form) return;
     setSavingEdit(true);
@@ -2264,7 +2284,7 @@ export default function ToolDetail() {
               <Ionicons name="shield-checkmark" size={14} color={theme.colors.accent} />
               <Text style={newStyles.detailsLabel}>WARRANTY</Text>
             </View>
-            <AppSwitch value={form.has_warranty} onValueChange={(v: boolean) => setF({ has_warranty: v })} />
+            <AppSwitch value={form.has_warranty} onValueChange={(v: boolean) => { setF({ has_warranty: v }); if (v && !form.warranty?.start_date) setWarrantyField({ start_date: new Date().toISOString() }); }} />
           </View>
           {form.has_warranty && (
             <View>
@@ -2272,8 +2292,30 @@ export default function ToolDetail() {
               <TextInput style={styles.input} value={form.warranty.provider} onChangeText={(v) => setF({ warranty: { ...form.warranty, provider: v } })} placeholder="Manufacturer name" placeholderTextColor={theme.colors.textMuted} />
               {eLabel("CONTACT", "call")}
               <TextInput style={styles.input} value={form.warranty.contact} onChangeText={(v) => setF({ warranty: { ...form.warranty, contact: v } })} placeholder="800-555-1234" placeholderTextColor={theme.colors.textMuted} />
+              {eLabel("WARRANTY LENGTH", "time")}
+              <View style={{ flexDirection: "row", gap: 8, alignItems: "center" }}>
+                <TextInput
+                  style={[styles.input, { flex: 1 }]}
+                  value={(() => { const yrs = form.warranty.coverage_type === "years"; const m = parseInt(form.warranty.length_months) || 0; if (!m) return ""; return String(yrs ? Math.round(m / 12) : m); })()}
+                  onChangeText={(v) => { const num = parseInt(v.replace(/[^0-9]/g, "")) || 0; const months = form.warranty.coverage_type === "years" ? num * 12 : num; setWarrantyField({ length_months: months }); }}
+                  placeholder="e.g. 12"
+                  placeholderTextColor={theme.colors.textMuted}
+                  keyboardType="number-pad"
+                />
+                {["months", "years"].map((u) => {
+                  const active = (form.warranty.coverage_type || "months") === u;
+                  return (
+                    <TouchableOpacity key={u} testID={`warranty-unit-${u}`} onPress={() => setWarrantyField({ coverage_type: u })}
+                      style={{ paddingHorizontal: 14, paddingVertical: 10, borderRadius: 8, borderWidth: 1, borderColor: active ? theme.colors.accent : theme.colors.border, backgroundColor: active ? theme.colors.accent : "transparent" }}>
+                      <Text style={{ color: active ? "#000" : theme.colors.textMuted, fontWeight: "800", fontSize: 11 }}>{u.toUpperCase()}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+              {eLabel("START DATE", "calendar")}
+              <DateField value={form.warranty.start_date} onChange={(iso) => setWarrantyField({ start_date: iso })} placeholder="MM/DD/YYYY" />
               {eLabel("EXPIRES", "calendar")}
-              <DateField value={form.warranty.expiry_date} onChange={(iso) => setF({ warranty: { ...form.warranty, expiry_date: iso } })} placeholder="MM/DD/YYYY" />
+              <DateField value={form.warranty.expiry_date} onChange={(iso) => setWarrantyField({ expiry_date: iso })} placeholder="MM/DD/YYYY" />
               {eLabel("TERMS", "document-text")}
               <TextInput style={[styles.input, { height: 70, textAlignVertical: "top" }]} value={form.warranty.terms} onChangeText={(v) => setF({ warranty: { ...form.warranty, terms: v } })} placeholder="Coverage details..." placeholderTextColor={theme.colors.textMuted} multiline />
             </View>

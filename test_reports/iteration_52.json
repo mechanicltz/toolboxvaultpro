@@ -1,0 +1,23 @@
+{
+  "summary": "Verified the WARRANTY full-setup regression fix on PRO account (mechanicltz@gmail.com) at mobile viewport 390x844, default STEEL theme. Opened tool d412c05f-13e0-4f60-855f-c760214dda4d (Adjustable spanner wrench) → ellipsis menu → Edit item → Warranty tab. (1) Has Warranty switch OFF initially; toggling ON immediately auto-populated START DATE to today (06/24/2026) and rendered all required fields: PROVIDER (placeholder 'Manufacturer name'), CONTACT (placeholder '800-555-1234'), WARRANTY LENGTH (number input placeholder 'e.g. 12' + MONTHS/YEARS toggle with testIDs warranty-unit-months and warranty-unit-years), START DATE (DateField MM/DD/YYYY), EXPIRES (DateField MM/DD/YYYY), TERMS (multiline). (2) Auto-expiry math: with MONTHS selected (default) typed 12 → EXPIRES instantly became 06/24/2027 (start + 12 months). (3) Toggled to YEARS and typed 2 → length_months internally became 24 and EXPIRES became 06/24/2028 (start + 2 years). (4) Tapped edit-save-bar → PUT /api/tools/{id} succeeded; API verified persisted warranty: {has_warranty:true, length_months:24, coverage_type:'years', start_date:'2026-06-24T01:37:48.686Z', expiry_date:'2028-06-24T01:37:48.686Z'}. (5) Reopened Edit → Warranty tab and the switch is ON, length field shows '2', YEARS toggle is active, start date 06/24/2026 and expires 06/24/2028 persisted. No red screen, no JS pageerror. Steel theme banner/window frame renders correctly.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "tool/[id].tsx is still >4000 lines — the warranty edit block (lines 2277–2330) is fine in isolation, but the file as a whole continues to be a maintainability risk (called out in iter_50/51 already).",
+    "setWarrantyField helper (line 1759-1768) only re-derives expiry on patches that include start_date or length_months. Toggling coverage_type between months/years on its own does NOT re-derive (correctly, since length_months is the canonical underlying value), but the displayed LENGTH number is computed from length_months / 12 with Math.round — so e.g. 13 months viewed as YEARS shows '1' and on next keystroke re-coerces back to 12 months. Minor UX quirk only; not a regression."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "n/a", "frontend": "100%"},
+  "seed_data_creation": "None — used existing tool d412c05f-13e0-4f60-855f-c760214dda4d ('Adjustable spanner wrench') on the PRO account. Test left warranty set to {length_months:24, coverage_type:'years', start=2026-06-24, expiry=2028-06-24}; main agent can clear or ignore.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Login is rate-limited 5/min/IP. Reuse a session token instead of repeated UI logins. Token storage key is 'tt.auth.token' (NOT 'access_token' or 'toolbox_vault.access_token'); user cache key is 'tt.auth.user'. Set both in localStorage then reload to enter the app authenticated. The PRO action menu on tool detail must be opened via dispatchEvent (pointerdown/mousedown/pointerup/mouseup/click in sequence) on [data-testid=tool-menu-btn] — Playwright's .click() alone does NOT open it because RN-web uses pointer events. After opening, [data-testid=menu-edit] is a regular target. The warranty edit form lives on the WARRANTY tab (testID=tab-warranty), NOT the Details tab — the review_request said 'Details tab' but the actual rendering is in renderWarranty() (tool/[id].tsx line 2278). PATCH /api/tools/{id} returns 405; use PUT (api.updateTool sends PUT).",
+  "rca_of_issue": "Not applicable — this iteration verified the previously applied fix. Before: form state already carried length_months/start_date/coverage_type but the warranty edit block only rendered provider/contact/expiry/terms, so the user could not set length or start. After: setWarrantyField helper (1759) + computeWarrantyExpiry (1752) plus three new rendered fields in renderWarranty() (line 2295–2316: WARRANTY LENGTH input + months/years toggle, START DATE). The Has Warranty switch onValueChange (line 2287) defaults start_date to new Date().toISOString() when toggled ON. Save payload (line 1794–1803) sends length_months, start_date, coverage_type, expiry_date — all persisted correctly."
+}
