@@ -7,6 +7,7 @@ imports server (no cycle).
 
 import logging
 import asyncio
+import uuid
 from datetime import datetime, timezone, timedelta
 from typing import List, Dict, Any, Optional
 
