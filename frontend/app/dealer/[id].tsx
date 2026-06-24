@@ -517,6 +517,13 @@ export default function DealerDetail() {
               const isLast = idx === allAgents.length - 1;
               return (
                 <View key={a.id}>
+                  {idx === 1 && !!dealer.current_agent_id && (
+                    <View style={styles.agentSeparator}>
+                      <View style={styles.agentSeparatorLine} />
+                      <Text style={styles.agentSeparatorText}>OTHER AGENTS</Text>
+                      <View style={styles.agentSeparatorLine} />
+                    </View>
+                  )}
                   <TouchableOpacity
                     style={[styles.detailsRow, isLast && !isOpen && styles.detailsRowLast]}
                     activeOpacity={0.6}
@@ -1194,6 +1201,16 @@ const styles = themedStyles((c) => ({
   agentColHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: c.border, paddingLeft: 14 },
   agentColName: { color: c.textMuted, fontSize: 8, fontWeight: "900", letterSpacing: 1.5 },
   agentColLoc: { color: c.textMuted, fontSize: 8, fontWeight: "900", letterSpacing: 1.5 },
+  agentSeparator: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    paddingHorizontal: 14,
+    paddingTop: 14,
+    paddingBottom: 8,
+  },
+  agentSeparatorLine: { flex: 1, height: 1, backgroundColor: c.border },
+  agentSeparatorText: { color: c.textMuted, fontSize: 8, fontWeight: "900", letterSpacing: 1.5 },
   routeRow: {
     flexDirection: "row",
     alignItems: "center",
