@@ -1056,7 +1056,7 @@ const styles = themedStyles((c) => ({
   },
   heroBox: { alignItems: "center", paddingTop: 6, paddingBottom: 4 },
   heroRow: { flexDirection: "row", alignItems: "center", gap: 14, paddingHorizontal: 16, paddingTop: 10, paddingBottom: 12 },
-  heroRight: { flex: 1, alignItems: "flex-end" },
+  heroRight: { flex: 1, alignItems: "flex-start" },
   heroLabel: { color: c.textMuted, fontSize: 8, fontWeight: "900", letterSpacing: 1.5 },
   heroValue: { color: c.textPrimary, fontSize: 13, fontWeight: "900", marginTop: 2 },
   heroSep: { height: 1, alignSelf: "stretch", backgroundColor: c.borderSubtle, marginVertical: 8 },

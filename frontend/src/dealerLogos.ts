@@ -22,7 +22,7 @@ import { ImageSourcePropType } from "react-native";
 export const DEALER_LOGO_SLOT = {
   compact: 40, // dashboard "Dealer Accounts" rows + balance rows
   list: 54, // Dealers tab list rows
-  hero: 150, // Dealer detail header
+  hero: 110, // Dealer detail header
   picker: 56, // add / edit modal preview
 } as const;
 
