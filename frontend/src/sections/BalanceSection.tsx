@@ -56,9 +56,11 @@ function dueStatus(iso?: string): { text: string; color: string; due: boolean } 
 export function BalanceSection({
   dealer,
   onChange,
+  flat,
 }: {
   dealer: any;
   onChange: () => void;
+  flat?: boolean;
 }) {
   const router = useRouter();
   const { skin } = useSkin();
@@ -106,7 +108,35 @@ export function BalanceSection({
         interest rates or fees.
       </Text>
 
-      {isIndustrial ? (
+      {flat ? (
+        <View>
+          <BalanceCard
+            flat
+            label="CREDIT ACCOUNT"
+            balance={credit}
+            schedule={creditSched}
+            busy={busy}
+            onPay={() => setTarget({ account: "credit", type: "payment" })}
+            onCharge={() => setTarget({ account: "credit", type: "charge" })}
+            onHistory={openDealerReport}
+            onEditSchedule={() => setScheduleTarget("credit")}
+            onMarkPaid={() => creditSched && markPaid("credit", creditSched)}
+          />
+          <View style={styles.flatDivider} />
+          <BalanceCard
+            flat
+            label="TRUCK ACCOUNT"
+            balance={personal}
+            schedule={personalSched}
+            busy={busy}
+            onPay={() => setTarget({ account: "personal", type: "payment" })}
+            onCharge={() => setTarget({ account: "personal", type: "charge" })}
+            onHistory={openDealerReport}
+            onEditSchedule={() => setScheduleTarget("personal")}
+            onMarkPaid={() => personalSched && markPaid("personal", personalSched)}
+          />
+        </View>
+      ) : isIndustrial ? (
         <View style={styles.accountsBoxFlat}>
           <BalanceCard
             isIndustrial
@@ -201,6 +231,7 @@ function BalanceCard({
   onEditSchedule,
   onMarkPaid,
   isIndustrial,
+  flat,
 }: {
   label: string;
   balance: number;
@@ -212,6 +243,7 @@ function BalanceCard({
   onEditSchedule: () => void;
   onMarkPaid: () => void;
   isIndustrial?: boolean;
+  flat?: boolean;
 }) {
   const isSteel = useIsSteel();
   const steelPanel = useSteelPanelFrame();
@@ -277,6 +309,10 @@ function BalanceCard({
       )}
     </>
   );
+
+  if (flat) {
+    return <View testID={`account-card-${idBase}`}>{inner}</View>;
+  }
 
   if (isIndustrial) {
     return (
@@ -493,6 +529,11 @@ const styles = themedStyles((c) => ({
   accountsBoxFlat: {
     marginTop: 4,
     marginBottom: 4,
+  },
+  flatDivider: {
+    height: 1,
+    backgroundColor: c.border,
+    marginVertical: 14,
   },
   balCardSkinFrame: {
     marginHorizontal: 16,

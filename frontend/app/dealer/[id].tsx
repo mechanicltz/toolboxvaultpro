@@ -68,6 +68,8 @@ export default function DealerDetail() {
   const [dealer, setDealer] = useState<any>(null);
   const [tools, setTools] = useState<any[]>([]);
   const [editing, setEditing] = useState(false);
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [activeTab, setActiveTab] = useState<"company" | "agents" | "accounts">("company");
   const [agentForm, setAgentForm] = useState<any>(null);
   const [editForm, setEditForm] = useState<any>({});
 
@@ -215,10 +217,15 @@ export default function DealerDetail() {
   };
 
   const saveDealer = async () => {
-    await api.updateDealer(id!, editForm);
-    setEditing(false);
-    setEditForm({});
-    load();
+    setSavingEdit(true);
+    try {
+      await api.updateDealer(id!, editForm);
+      setEditing(false);
+      setEditForm({});
+      load();
+    } finally {
+      setSavingEdit(false);
+    }
   };
 
   const addAgent = async () => {
@@ -353,77 +360,48 @@ export default function DealerDetail() {
         style={{ backgroundColor: theme.colors.canvas }}
         contentContainerStyle={{ paddingBottom: 100 }}
       >
-        <View style={styles.heroBox}>
-          <DealerLogo logo={dealer.logo} size={DEALER_LOGO_SLOT.hero} style={{ marginBottom: 6 }} />
-          <Text style={styles.dealerName}>{dealer.name}</Text>
-        </View>
-
-        {/* Route info banner */}
-        {isIndustrial ? (
-          <View style={styles.cardSkinFrame}>
-            <TbvFrame
-              source={plateSrc}
-              capInsets={plateCap} frameScale={steelScale}
-              padX={28}
-              padTop={22}
-              padBottom={22}
-            >
-              <View style={styles.routeRowInner}>
-                <Ionicons name="map" size={18} color={theme.colors.accent} />
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.routeRowLabel}>ROUTE  ·  {routeLabel(dealer)}</Text>
-                  {!!nextRouteText(dealer) && (
-                    <Text style={styles.routeRowNext}>Next: {nextRouteText(dealer)}</Text>
-                  )}
-                  {!nextRouteText(dealer) && (
-                    <Text style={styles.routeRowEmpty}>No route configured — tap edit to add</Text>
-                  )}
-                </View>
-              </View>
-            </TbvFrame>
-          </View>
-        ) : (
-          <ShadowBox style={styles.routeRow}>
-            <Ionicons name="map" size={18} color={theme.colors.accent} />
-            <View style={{ flex: 1 }}>
-              <Text style={styles.routeRowLabel}>ROUTE  ·  {routeLabel(dealer)}</Text>
-              {!!nextRouteText(dealer) && (
-                <Text style={styles.routeRowNext}>Next: {nextRouteText(dealer)}</Text>
-              )}
-              {!nextRouteText(dealer) && (
-                <Text style={styles.routeRowEmpty}>No route configured — tap edit to add</Text>
-              )}
-            </View>
-          </ShadowBox>
-        )}
-
-
-        {/* COMPANY DETAILS */}
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionLabelStrong}>COMPANY DETAILS</Text>
-        </View>
-
-        {/* TOTAL PURCHASED — its own ShadowBox, directly under the heading and
-            above the company-details card. */}
-        <CardShell plainStyle={styles.detailsBox} testID="dealer-total-purchased" thin>
+        <View style={styles.heroRow}>
+          <DealerLogo logo={dealer.logo} size={DEALER_LOGO_SLOT.hero} />
           <TouchableOpacity
-            style={[styles.detailsRow, styles.detailsRowLast]}
-            activeOpacity={0.6}
-            testID="details-row-tools"
-            onPress={() =>
-              router.push(`/dealer/${id}/tools?name=${encodeURIComponent(dealer.name)}`)
-            }
+            style={styles.heroRight}
+            activeOpacity={0.7}
+            testID="dealer-purchased"
+            onPress={() => router.push(`/dealer/${id}/tools?name=${encodeURIComponent(dealer.name)}`)}
           >
-            <Text style={styles.detailsLabel}>TOTAL PURCHASED</Text>
-            <View style={styles.detailsValueWrap}>
-              <Text style={styles.detailsValue} numberOfLines={1}>
-                ${total.toFixed(2)} · {tools.length} item{tools.length === 1 ? "" : "s"}
-              </Text>
-              <Ionicons name="chevron-forward" size={14} color={theme.colors.textMuted} />
-            </View>
+            <Text style={styles.heroLabel}>PURCHASED</Text>
+            <Text style={styles.heroValue} numberOfLines={1}>
+              ${total.toFixed(2)} · {tools.length} item{tools.length === 1 ? "" : "s"}
+            </Text>
+            <View style={styles.heroSep} />
+            <Text style={styles.heroLabel}>ROUTE · {routeLabel(dealer)}</Text>
+            {!!nextRouteText(dealer) ? (
+              <Text style={styles.heroNext} numberOfLines={1}>Next: {nextRouteText(dealer)}</Text>
+            ) : (
+              <Text style={styles.heroNextEmpty} numberOfLines={1}>No route set — edit to add</Text>
+            )}
           </TouchableOpacity>
-        </CardShell>
+        </View>
 
+        {/* TAB BAR */}
+        <View style={styles.tabBar}>
+          {(["company", "agents", "accounts"] as const).map((k) => (
+            <TouchableOpacity
+              key={k}
+              testID={`dealer-tab-${k}`}
+              style={[styles.tab, activeTab === k && styles.tabOn]}
+              onPress={() => setActiveTab(k)}
+              activeOpacity={0.8}
+            >
+              <Text style={[styles.tabText, activeTab === k && styles.tabTextOn]} numberOfLines={1}>
+                {k === "company" ? "COMPANY" : k === "agents" ? `AGENTS (${allAgents.length})` : "ACCOUNTS"}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        {activeTab === "company" && (
+        <View>
+        {/* COMPANY DETAILS */}
         <CardShell plainStyle={styles.companyCard}>
           {!!dealer.phone && (
             <View style={styles.dealerContactPhoneRow}>
@@ -483,13 +461,18 @@ export default function DealerDetail() {
           )}
         </CardShell>
 
-        {/* AGENTS — its own titled ShadowBox. Current agent pinned to the top
+        {/* AGENTS — column-labelled list. Current agent pinned to the top
             (★ + orange); everyone else alphabetical by first name. Each agent
-            is an expandable row that opens a ShadowBox sub-card business card. */}
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionLabelStrong}>AGENTS ({allAgents.length})</Text>
+            is an expandable row that opens a sub-card business card. */}
         </View>
+        )}
+
+        {activeTab === "agents" && (
         <CardShell plainStyle={styles.detailsBox} testID="dealer-agents-box">
+          <View style={styles.agentColHeader}>
+            <Text style={styles.agentColName}>NAME</Text>
+            <Text style={styles.agentColLoc}>ROUTE LOCATION</Text>
+          </View>
             {allAgents.length === 0 && (
               <View style={[styles.detailsRow, styles.detailsRowLast]}>
                 <Text style={[styles.detailsValue, { color: theme.colors.textMuted, textAlign: "left", flex: 1, fontWeight: "500" }]}>
@@ -1833,6 +1816,126 @@ const styles = themedStyles((c) => ({
   },
   // Per-department contact row label/value (warranty / tech / customer support)
   deptRowLabel: {
+    color: c.textMuted,
+    fontSize: 7,
+    fontWeight: "800",
+    letterSpacing: 1.5,
+    marginBottom: 2,
+  },
+  deptRowValue: {
+    color: c.textPrimary,
+    fontSize: 11,
+    fontWeight: "600",
+  },
+  // Agent territory / location pill shown on the agent card
+  locationPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: c.bg,
+    borderWidth: 1,
+    borderColor: c.accent,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 999,
+    maxWidth: 200,
+  },
+  locationPillText: {
+    color: c.accent,
+    fontSize: 9,
+    fontWeight: "800",
+    letterSpacing: 0.5,
+  },
+  copyChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    borderWidth: 1,
+    borderColor: c.accent,
+    backgroundColor: "rgba(249, 115, 22, 0.10)",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 999,
+  },
+  copyChipText: {
+    color: c.accent,
+    fontSize: 8,
+    fontWeight: "900",
+    letterSpacing: 1,
+  },
+}));
+tRowLabel: {
+    color: c.textMuted,
+    fontSize: 7,
+    fontWeight: "800",
+    letterSpacing: 1.5,
+    marginBottom: 2,
+  },
+  deptRowValue: {
+    color: c.textPrimary,
+    fontSize: 11,
+    fontWeight: "600",
+  },
+  // Agent territory / location pill shown on the agent card
+  locationPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: c.bg,
+    borderWidth: 1,
+    borderColor: c.accent,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 999,
+    maxWidth: 200,
+  },
+  locationPillText: {
+    color: c.accent,
+    fontSize: 9,
+    fontWeight: "800",
+    letterSpacing: 0.5,
+  },
+  copyChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    borderWidth: 1,
+    borderColor: c.accent,
+    backgroundColor: "rgba(249, 115, 22, 0.10)",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 999,
+  },
+  copyChipText: {
+    color: c.accent,
+    fontSize: 8,
+    fontWeight: "900",
+    letterSpacing: 1,
+  },
+}));
+   fontSize: 9,
+    fontWeight: "800",
+    letterSpacing: 0.5,
+  },
+  copyChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    borderWidth: 1,
+    borderColor: c.accent,
+    backgroundColor: "rgba(249, 115, 22, 0.10)",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 999,
+  },
+  copyChipText: {
+    color: c.accent,
+    fontSize: 8,
+    fontWeight: "900",
+    letterSpacing: 1,
+  },
+}));
+tRowLabel: {
     color: c.textMuted,
     fontSize: 7,
     fontWeight: "800",
