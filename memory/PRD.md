@@ -229,6 +229,27 @@ REMAINING: Stage 5 (inventory "bundles only" filter), Stage 6 (reports/export
 simplified + bundle export WITH/WITHOUT expansions), LATER HOWTO. Optional
 cleanup: delete unused app/tool/edit.tsx + app/bundle/edit.tsx + app/bundle/[id].tsx
 + old /api/bundles CRUD + bundles collection.
+## Bundle Stage 5 + UI fix batch DONE & tested (2026-06) — iteration_49
+DONE this round (7 items): (1) Stage 5 inventory filter "SETS / BUNDLES"
+(inventory.tsx: Filter type, VALID_FILTERS, counts, STATUS_OPTIONS, client filter
+x.is_bundle). (2) BundleTab `editing` prop — add/edit/delete/unlink on Set tab
+only in edit mode. (3) Add-on tab reads "This item is an addon to a set:" + link
+(expansion-parent-link) to parent bundle. (4) Details reordered PURCHASED→DEALER→
+BRAND on top (dupes removed). (5) History popup REMOVED; CHECKOUTS/CLAIMS now
+plain-text toggle, active=accent (histSeg* styles). (6) Edit save/cancel buttons
+shrunk. (7) Dashboard footer "VAULT → CUSTOMIZE" → "VAULT → SETTINGS". iter_49:
+footer LIVE-confirmed; rest code-review-confirmed (live blocked by login 5/min
+rate-limit, env artifact).
+STILL TODO (next rounds, from user's list): Warranty edit full setup (duration
+picker + start date default today); keyboard covers edited field in live-edit/add
+(KeyboardAvoidingView); Add contact/dealer top-X cancel + save/cancel off-screen;
+global BACK button every page; receipt photo shows BLACK; tapping uploaded DOC
+should PREVIEW first (like report) before share/print; re-tapping CURRENT bottom
+tab reloads page (make no-op); Dealer seed data has multiple phones/emails per
+line (must be 1 tappable contact per field). PLUS Stage 6 (reports/export
+simplified + bundle export WITH/WITHOUT expansions). Minor: PDF builder pushes
+CATEGORY twice (~tool/[id].tsx:1317, cosmetic).
+
 REMAINING STAGES: 2=claims/mark-broken (whole bundle vs one inside item; dealer
 msg must read "came in the set <bundleModel>, but the <sub> I broke is <itemModel>");
 3=bundle detail screen (manage inside items + expansion area w/ bundle+expansion
