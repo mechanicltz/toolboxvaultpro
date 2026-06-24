@@ -28,7 +28,7 @@ import { initRevenueCat, identifyRevenueCatUser, getCurrentCustomerInfo, buildSy
 import { setPaymentRequiredHandler, api, abortAllInFlight } from "../src/api";
 import { shouldShowIntro, markAppActive, getIntroVideoEnabledAsync } from "../src/idle";
 import { IntroOverlay } from "../src/IntroOverlay";
-import { ThemeProvider, useColors, useThemeMode } from "../src/themeContext";
+import { ThemeProvider, useColors, useThemeMode, useSkin } from "../src/themeContext";
 import { IndustrialThemeProvider } from "../src/components/industrial";
 import { notifyAppResume } from "../src/appLifecycle";
 import { preloadTbvSkins } from "../src/tbv/useTbvSkins";
@@ -413,7 +413,14 @@ function ShellNav() {
 // text — used on light bg) at the moment the user toggles themes.
 function ThemedStatusBar() {
   const { mode } = useThemeMode();
-  return <StatusBar style={mode === "light" ? "dark" : "light"} />;
+  const { skin } = useSkin();
+  // The industrial/steel skin ALWAYS renders on a dark workshop palette
+  // regardless of the light/dark mode preference, so the status-bar glyphs
+  // (clock, battery, signal) must be light there. Only the plain skin follows
+  // the light/dark mode. Previously this read `mode` alone, so a user on
+  // "light" mode + steel skin got black icons on a dark bg = invisible.
+  const barStyle = skin === "industrial" ? "light" : mode === "light" ? "dark" : "light";
+  return <StatusBar style={barStyle} />;
 }
 
 export default function RootLayout() {
