@@ -17,6 +17,7 @@ import * as DocumentPicker from "expo-document-picker";
 import * as ImagePicker from "expo-image-picker";
 import * as FileSystem from "expo-file-system/legacy";
 import * as Sharing from "expo-sharing";
+import { WebView } from "react-native-webview";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { theme } from "../theme";
 import { api } from "../api";
@@ -339,6 +340,7 @@ export function DocumentsSection({
   const [viewerDoc, setViewerDoc] = useState<any>(null);
   const [imageUri, setImageUri] = useState<string>("");
   const [nativeError, setNativeError] = useState<string>("");
+  const [pdfUri, setPdfUri] = useState<string>("");
   const [renameDoc, setRenameDoc] = useState<any>(null);
   const [renameValue, setRenameValue] = useState<string>("");
   const insets = useSafeAreaInsets();
@@ -501,6 +503,7 @@ export function DocumentsSection({
       }
     }
     setImageUri("");
+    setPdfUri("");
     setViewerDoc(null);
   };
 
@@ -531,7 +534,22 @@ export function DocumentsSection({
 
       // ====== NATIVE (iOS / Android) ======
       // Preview FIRST — do NOT fire the share sheet immediately. Images render
-      // inline; other types show a preview card with an explicit OPEN button.
+      // inline; PDFs render inline in an in-app WebView (write to a cache file
+      // first so the WebView can load it via a file:// URI).
+      setPdfUri("");
+      if (!mime.startsWith("image/")) {
+        try {
+          const safeName = (doc.name || "document").replace(/[^a-zA-Z0-9._-]/g, "_");
+          const cacheDir = (FileSystem as any).cacheDirectory;
+          if (cacheDir && doc.data) {
+            const dest = `${cacheDir}${safeName}`;
+            await FileSystem.writeAsStringAsync(dest, doc.data, { encoding: FileSystem.EncodingType.Base64 });
+            setPdfUri(dest);
+          }
+        } catch {
+          /* fall back to the OPEN/SHARE card if the file can't be written */
+        }
+      }
       setViewerDoc(doc);
     } catch (e: any) {
       setNativeError(e?.message || "Could not open document");
@@ -591,6 +609,33 @@ export function DocumentsSection({
             style={{ flex: 1, width: "100%", height: "100%" }}
             resizeMode="contain"
           />
+        );
+      }
+      // PDF / other docs: render inline in an in-app WebView. iOS WKWebView
+      // renders PDFs natively from a file:// URI; the OPEN/SHARE button stays
+      // available below for any format the WebView can't display.
+      if (pdfUri) {
+        return (
+          <View style={{ flex: 1 }}>
+            <WebView
+              source={{ uri: pdfUri }}
+              style={{ flex: 1, backgroundColor: "#1a1a1a" }}
+              originWhitelist={["*"]}
+              allowFileAccess
+              allowFileAccessFromFileURLs
+              allowUniversalAccessFromFileURLs
+              startInLoadingState
+              renderLoading={() => (
+                <View style={[vstyles.errorWrap, { position: "absolute", left: 0, right: 0, top: 0, bottom: 0 }]}>
+                  <ActivityIndicator size="large" color={theme.colors.accent} />
+                </View>
+              )}
+            />
+            <TouchableOpacity style={vstyles.shareBar} onPress={() => shareNative(viewerDoc)} testID="doc-open-native">
+              <Ionicons name="open-outline" size={15} color={theme.colors.accent} />
+              <Text style={vstyles.shareBarText}>OPEN / SHARE</Text>
+            </TouchableOpacity>
+          </View>
         );
       }
       return (
@@ -799,6 +844,17 @@ const vstyles = themedStyles((c) => ({
     borderRadius: 6,
   },
   actionText: { color: "#000", fontWeight: "900", fontSize: 8, letterSpacing: 1 },
+  shareBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingVertical: 12,
+    backgroundColor: c.surface,
+    borderTopWidth: 1,
+    borderTopColor: c.border,
+  },
+  shareBarText: { color: c.accent, fontWeight: "900", fontSize: 11, letterSpacing: 1.5 },
   closeBtn: {
     width: 36,
     height: 36,

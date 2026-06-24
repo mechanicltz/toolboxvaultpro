@@ -14,6 +14,7 @@ import {
   ImageBackground,
 } from "react-native";
 import { Image as ExpoImage } from "expo-image";
+import { resolveUri } from "../../src/components/AppImage";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter, useFocusEffect, useLocalSearchParams } from "expo-router";
@@ -1098,7 +1099,7 @@ export default function InventoryScreen() {
               <View style={styles.thumb}>
                 {item.photos?.[0] ? (
                   <ExpoImage
-                    source={{ uri: item.photos[0] }}
+                    source={{ uri: resolveUri(item.photos[0]) }}
                     style={styles.thumbImg}
                     contentFit="cover"
                     cachePolicy="memory-disk"
