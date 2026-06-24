@@ -559,8 +559,6 @@ const styles = themedStyles((c) => ({
     borderRadius: 4,
     marginBottom: 8,
     gap: 8,
-  
-    ...(theme.elevation.md as object),
   },
   rowTitle: {
     color: c.textPrimary,

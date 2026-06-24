@@ -509,9 +509,9 @@ export function DocumentsSection({
 
   const openDoc = async (doc: any) => {
     setNativeError("");
+    const mime = (doc.mime_type || "").toLowerCase();
     try {
       if (Platform.OS === "web") {
-        const mime = (doc.mime_type || "").toLowerCase();
         if (mime.startsWith("image/")) {
           // Image: build blob URL for <Image>
           const bytes = base64ToBytes(doc.data);
