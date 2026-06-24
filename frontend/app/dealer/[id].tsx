@@ -619,13 +619,13 @@ export default function DealerDetail() {
               );
             })}
         </CardShell>
+        )}
 
-        {/* ACCOUNTS — its own titled section. Truck & credit accounts each
-            render as a floating ShadowBox sub-card (see BalanceSection). */}
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionLabelStrong}>ACCOUNTS</Text>
-        </View>
-        <BalanceSection dealer={dealer} onChange={load} />
+        {activeTab === "accounts" && (
+        <CardShell plainStyle={styles.detailsBox} testID="dealer-accounts-box">
+          <BalanceSection dealer={dealer} onChange={load} flat />
+        </CardShell>
+        )}
         </ScrollView>
 
       {/* Edit dealer modal */}
@@ -1055,6 +1055,22 @@ const styles = themedStyles((c) => ({
     paddingVertical: 12,
   },
   heroBox: { alignItems: "center", paddingTop: 6, paddingBottom: 4 },
+  heroRow: { flexDirection: "row", alignItems: "center", gap: 14, paddingHorizontal: 16, paddingTop: 10, paddingBottom: 12 },
+  heroRight: { flex: 1, alignItems: "flex-end" },
+  heroLabel: { color: c.textMuted, fontSize: 8, fontWeight: "900", letterSpacing: 1.5 },
+  heroValue: { color: c.textPrimary, fontSize: 13, fontWeight: "900", marginTop: 2 },
+  heroSep: { height: 1, alignSelf: "stretch", backgroundColor: c.borderSubtle, marginVertical: 8 },
+  heroRoute: { color: c.accent, fontSize: 11, fontWeight: "900", marginTop: 2, letterSpacing: 0.5 },
+  heroNext: { color: c.textSecondary, fontSize: 9, fontWeight: "700", marginTop: 2 },
+  heroNextEmpty: { color: c.textMuted, fontSize: 9, fontStyle: "italic", marginTop: 2 },
+  tabBar: { flexDirection: "row", marginHorizontal: 16, marginBottom: 12, borderRadius: 8, borderWidth: 1, borderColor: c.border, backgroundColor: c.bgSecondary, overflow: "hidden" },
+  tab: { flex: 1, paddingVertical: 11, alignItems: "center", justifyContent: "center" },
+  tabOn: { backgroundColor: c.accent },
+  tabText: { color: c.textSecondary, fontSize: 9, fontWeight: "900", letterSpacing: 0.5 },
+  tabTextOn: { color: "#000" },
+  agentColHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: c.border, paddingLeft: 14 },
+  agentColName: { color: c.textMuted, fontSize: 8, fontWeight: "900", letterSpacing: 1.5 },
+  agentColLoc: { color: c.textMuted, fontSize: 8, fontWeight: "900", letterSpacing: 1.5 },
   routeRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -1816,126 +1832,6 @@ const styles = themedStyles((c) => ({
   },
   // Per-department contact row label/value (warranty / tech / customer support)
   deptRowLabel: {
-    color: c.textMuted,
-    fontSize: 7,
-    fontWeight: "800",
-    letterSpacing: 1.5,
-    marginBottom: 2,
-  },
-  deptRowValue: {
-    color: c.textPrimary,
-    fontSize: 11,
-    fontWeight: "600",
-  },
-  // Agent territory / location pill shown on the agent card
-  locationPill: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    backgroundColor: c.bg,
-    borderWidth: 1,
-    borderColor: c.accent,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 999,
-    maxWidth: 200,
-  },
-  locationPillText: {
-    color: c.accent,
-    fontSize: 9,
-    fontWeight: "800",
-    letterSpacing: 0.5,
-  },
-  copyChip: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    borderWidth: 1,
-    borderColor: c.accent,
-    backgroundColor: "rgba(249, 115, 22, 0.10)",
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 999,
-  },
-  copyChipText: {
-    color: c.accent,
-    fontSize: 8,
-    fontWeight: "900",
-    letterSpacing: 1,
-  },
-}));
-tRowLabel: {
-    color: c.textMuted,
-    fontSize: 7,
-    fontWeight: "800",
-    letterSpacing: 1.5,
-    marginBottom: 2,
-  },
-  deptRowValue: {
-    color: c.textPrimary,
-    fontSize: 11,
-    fontWeight: "600",
-  },
-  // Agent territory / location pill shown on the agent card
-  locationPill: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    backgroundColor: c.bg,
-    borderWidth: 1,
-    borderColor: c.accent,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 999,
-    maxWidth: 200,
-  },
-  locationPillText: {
-    color: c.accent,
-    fontSize: 9,
-    fontWeight: "800",
-    letterSpacing: 0.5,
-  },
-  copyChip: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    borderWidth: 1,
-    borderColor: c.accent,
-    backgroundColor: "rgba(249, 115, 22, 0.10)",
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 999,
-  },
-  copyChipText: {
-    color: c.accent,
-    fontSize: 8,
-    fontWeight: "900",
-    letterSpacing: 1,
-  },
-}));
-   fontSize: 9,
-    fontWeight: "800",
-    letterSpacing: 0.5,
-  },
-  copyChip: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    borderWidth: 1,
-    borderColor: c.accent,
-    backgroundColor: "rgba(249, 115, 22, 0.10)",
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 999,
-  },
-  copyChipText: {
-    color: c.accent,
-    fontSize: 8,
-    fontWeight: "900",
-    letterSpacing: 1,
-  },
-}));
-tRowLabel: {
     color: c.textMuted,
     fontSize: 7,
     fontWeight: "800",
