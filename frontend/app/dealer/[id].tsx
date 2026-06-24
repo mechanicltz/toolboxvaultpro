@@ -54,6 +54,42 @@ import {
   PickedContact,
 } from "../../src/deviceContacts";
 
+// Single skinned panel that holds the active tab's content. Defined at module
+// scope (NOT inside the screen component) so its identity is stable across
+// renders — otherwise the steel panel image remounts on every tab tap and the
+// screen visibly flickers/reloads. Only the children change between tabs.
+function DealerContentPanel({
+  isIndustrial,
+  winSrc,
+  winCap,
+  steelScale,
+  plainStyle,
+  children,
+}: {
+  isIndustrial: boolean;
+  winSrc: any;
+  winCap: any;
+  steelScale: any;
+  plainStyle: any;
+  children: React.ReactNode;
+}) {
+  return isIndustrial ? (
+    <TbvListPanel
+      source={winSrc}
+      capInsets={winCap}
+      frameScale={steelScale}
+      padX={16}
+      padTop={16}
+      padBottom={12}
+      style={{ flex: 1 }}
+    >
+      {children}
+    </TbvListPanel>
+  ) : (
+    <View style={plainStyle}>{children}</View>
+  );
+}
+
 export default function DealerDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
@@ -340,25 +376,6 @@ export default function DealerDetail() {
     </View>
   );
 
-  // Single skinned panel that holds the active tab's content (mirrors the item
-  // detail page: one steel window panel, scrollable content inside).
-  const ContentPanel = ({ children }: { children: React.ReactNode }) =>
-    isIndustrial ? (
-      <TbvListPanel
-        source={winSrc}
-        capInsets={winCap}
-        frameScale={steelScale}
-        padX={16}
-        padTop={16}
-        padBottom={12}
-        style={{ flex: 1 }}
-      >
-        {children}
-      </TbvListPanel>
-    ) : (
-      <View style={styles.contentPanelPlain}>{children}</View>
-    );
-
   // Expanded agent business-card body. In a metal skin the floating ShadowBox
   // looks wrong sitting inside the frame, so render a flat plate (no shadow);
   // plain Light/Dark themes keep the floating sub-card.
@@ -436,7 +453,13 @@ export default function DealerDetail() {
         {/* CONTENT PANEL — fixed height, content scrolls inside; same panel
             across all 3 tabs, only the inner content changes. */}
         <View style={styles.contentPanelOuter}>
-        <ContentPanel>
+        <DealerContentPanel
+          isIndustrial={isIndustrial}
+          winSrc={winSrc}
+          winCap={winCap}
+          steelScale={steelScale}
+          plainStyle={styles.contentPanelPlain}
+        >
         <ScrollView
           style={{ flex: 1 }}
           contentContainerStyle={{ paddingBottom: 20 }}
@@ -678,7 +701,7 @@ export default function DealerDetail() {
         </CardShell>
         )}
         </ScrollView>
-        </ContentPanel>
+        </DealerContentPanel>
         </View>
 
       {/* Edit dealer modal */}
