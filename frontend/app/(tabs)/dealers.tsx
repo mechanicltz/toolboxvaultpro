@@ -342,8 +342,13 @@ export default function DealersScreen() {
           behavior={Platform.OS === "ios" ? "padding" : "height"}
           style={styles.modalBg}
         >
-          <ScrollView style={styles.modalCard} keyboardShouldPersistTaps="handled">
-            <Text style={styles.modalTitle}>NEW DEALER</Text>
+          <ScrollView style={styles.modalCard} contentContainerStyle={{ paddingBottom: 28 }} keyboardShouldPersistTaps="handled">
+            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+              <Text style={[styles.modalTitle, { marginBottom: 0 }]}>NEW DEALER</Text>
+              <TouchableOpacity testID="add-dealer-close" hitSlop={10} onPress={() => { setShowAdd(false); setForm({ name: "", logo: "default", phone: "", website: "", address: "", notes: "", warranty_contact: "", tech_support_contact: "", customer_support_contact: "", route_frequency: "N/A", route_day_of_week: "", route_anchor_date: "" }); }}>
+                <Ionicons name="close" size={24} color={theme.colors.textMuted} />
+              </TouchableOpacity>
+            </View>
 
             {/* Dealer logo — chosen at creation time (defaults to the app octagon) */}
             <Text style={styles.logoFieldLabel}>DEALER LOGO</Text>

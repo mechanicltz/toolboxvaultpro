@@ -648,8 +648,13 @@ export default function DealerDetail() {
       {/* Edit dealer modal */}
       <Modal visible={editing} transparent animationType="slide">
         <View style={styles.modalBg}>
-          <ScrollView style={styles.modalCard} keyboardShouldPersistTaps="handled">
-            <Text style={styles.modalTitle}>EDIT DEALER</Text>
+          <ScrollView style={styles.modalCard} contentContainerStyle={{ paddingBottom: 28 }} keyboardShouldPersistTaps="handled">
+            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+              <Text style={[styles.modalTitle, { marginBottom: 0 }]}>EDIT DEALER</Text>
+              <TouchableOpacity testID="edit-dealer-close" hitSlop={10} onPress={() => setEditing(false)}>
+                <Ionicons name="close" size={24} color={theme.colors.textMuted} />
+              </TouchableOpacity>
+            </View>
 
             {/* Dealer logo picker (#17) */}
             <Text style={styles.editFieldLabel}>DEALER LOGO</Text>
@@ -817,8 +822,13 @@ export default function DealerDetail() {
           behavior={Platform.OS === "ios" ? "padding" : "height"}
           style={styles.modalBg}
         >
-          <ScrollView style={styles.modalCard} keyboardShouldPersistTaps="handled">
-            <Text style={styles.modalTitle}>{agentForm?.id ? "EDIT AGENT" : "NEW AGENT"}</Text>
+          <ScrollView style={styles.modalCard} contentContainerStyle={{ paddingBottom: 28 }} keyboardShouldPersistTaps="handled">
+            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+              <Text style={[styles.modalTitle, { marginBottom: 0 }]}>{agentForm?.id ? "EDIT AGENT" : "NEW AGENT"}</Text>
+              <TouchableOpacity testID="agent-modal-close" hitSlop={10} onPress={() => setAgentForm(null)}>
+                <Ionicons name="close" size={24} color={theme.colors.textMuted} />
+              </TouchableOpacity>
+            </View>
             {canImportContacts && !agentForm?.id && (
               <TouchableOpacity
                 testID="import-agent-contact-btn"
