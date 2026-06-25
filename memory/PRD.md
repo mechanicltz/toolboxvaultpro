@@ -569,6 +569,20 @@ NOTIFIED, EXPECTED BACK, OPENED, REPAIR/REPLACEMENT COST, NOTES. Steel hooks
 (rules of hooks). Photo tap opens existing lightbox. Verified live on a real
 COMPLETED claim (Pro acct): all sections render, steel skin applied; lint clean.
 
+## PDF viewer screen made professional (2026-06 — DONE)
+app/pdf-viewer.tsx chrome was unpolished: chunky grey picture-frame bezel
+(#878d96 border + #2b2e33 padding, letter aspect), busy repeating metal-texture
+backdrop, raw download filename as the title, and a green ContactIcon share glyph.
+Redesigned to a modern document-viewer look: white "page" filling the area on a
+soft charcoal backdrop (#1F2227 / light #ECEEF2) with a subtle drop shadow
+(pdfShadow) and hairline border, rounded 14. Title now prettified via `prettyTitle`
+useMemo (strips .pdf/.csv ext + trailing timestamp + underscores -> "New test
+item"); used in header, share dialog, iframe, loader. Header & footer share icons
+unified to Ionicons share-outline (header=accent, footer=black on accent CTA).
+Removed Image+SKIN+ContactIconImage imports. Verified: title cleans correctly,
+SHARE/SAVE present, lint clean. (Skinned web screenshot captures black — preview
+artifact; confirm visually on device.)
+
 ## RULE — WRITTEN IN STONE (user demand, 2026-06-19)
 ALWAYS talk to this user in PLAIN ENGLISH. No code words, no file names, no
 technical jargon, no error-message copy-paste. Explain everything like you would

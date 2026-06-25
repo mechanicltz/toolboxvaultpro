@@ -19,7 +19,6 @@
 import React, { useMemo } from "react";
 import {
   ActivityIndicator,
-  Image,
   Platform,
   StyleSheet,
   Text,
@@ -31,10 +30,9 @@ import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { WebView } from "react-native-webview";
 import * as Sharing from "expo-sharing";
-import { ContactIconImage } from "../src/components/ContactIcons";
 import { theme } from "../src/theme";
 import { themedStyles, useSkin, useColors, useThemeMode } from "../src/themeContext";
-import { SKIN, TBV } from "../src/tbv/skins";
+import { TBV } from "../src/tbv/skins";
 
 export default function PdfViewerScreen(): React.ReactElement {
   const router = useRouter();
@@ -56,6 +54,15 @@ export default function PdfViewerScreen(): React.ReactElement {
 
   const isPdf = useMemo(() => mime.includes("pdf"), [mime]);
 
+  // Callers sometimes pass a raw download filename (e.g.
+  // "New_test_item-1782357005.pdf"). Show a clean, human title instead.
+  const prettyTitle = useMemo(() => {
+    let t = title.replace(/\.(pdf|csv|xlsx?)$/i, "");
+    t = t.replace(/[-_]\d{8,}.*$/, "");
+    t = t.replace(/[_]+/g, " ").trim();
+    return t || "Report";
+  }, [title]);
+
   const onShare = async () => {
     if (!uri) return;
     try {
@@ -63,7 +70,7 @@ export default function PdfViewerScreen(): React.ReactElement {
       if (!available) return;
       await Sharing.shareAsync(uri, {
         mimeType: mime,
-        dialogTitle: title,
+        dialogTitle: prettyTitle,
         UTI: isPdf ? "com.adobe.pdf" : undefined,
       });
     } catch {
@@ -120,29 +127,18 @@ export default function PdfViewerScreen(): React.ReactElement {
         >
           <Ionicons name="chevron-back" size={24} color={c.accent} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle} numberOfLines={1}>{title}</Text>
+        <Text style={styles.headerTitle} numberOfLines={1}>{prettyTitle}</Text>
         <TouchableOpacity
           testID="pdf-share-btn"
           onPress={onShare}
           style={styles.headerBtn}
           accessibilityLabel="Share"
         >
-          <ContactIconImage type="share" size={26} />
+          <Ionicons name="share-outline" size={22} color={c.accent} />
         </TouchableOpacity>
       </View>
 
       <View style={[styles.bgArea, isLight && styles.bgAreaLight]}>
-        {/* Metal texture only for non-light themes; light theme keeps a clean
-            white page background. */}
-        {!isLight && (
-          <Image
-            source={SKIN.bg}
-            resizeMode="repeat"
-            fadeDuration={0}
-            pointerEvents="none"
-            style={StyleSheet.absoluteFill}
-          />
-        )}
         {!uri ? (
           <View style={styles.empty}>
             <Ionicons name="document-text-outline" size={48} color={theme.colors.textMuted} />
@@ -153,10 +149,9 @@ export default function PdfViewerScreen(): React.ReactElement {
           </View>
         ) : (
           <View style={styles.pdfArea}>
-            {/* Beveled steel bezel framing the white document. Sized to a letter
-                page aspect ratio so a short report doesn't leave a giant black
-                void below it; longer reports scroll inside the WebView. */}
-            <View style={styles.pdfBezel}>
+            {/* Clean white "page" floating on a soft backdrop with a subtle
+                drop shadow — a modern document-viewer look (no clunky bezel). */}
+            <View style={styles.pdfShadow}>
               <View style={styles.pdfCard}>
                 {Platform.OS === "web" ? (
                   // @ts-ignore — iframe is fine in RN-Web context
@@ -169,7 +164,7 @@ export default function PdfViewerScreen(): React.ReactElement {
                       height: "100%",
                       backgroundColor: "#ffffff",
                     }}
-                    title={title}
+                    title={prettyTitle}
                   />
                 ) : (
                   <WebView
@@ -184,7 +179,7 @@ export default function PdfViewerScreen(): React.ReactElement {
                     renderLoading={() => (
                       <View style={styles.loader}>
                         <ActivityIndicator size="large" color={theme.colors.accent} />
-                        <Text style={styles.loaderText}>Loading {title}…</Text>
+                        <Text style={styles.loaderText}>Loading {prettyTitle}…</Text>
                       </View>
                     )}
                   />
@@ -204,7 +199,7 @@ export default function PdfViewerScreen(): React.ReactElement {
           onPress={onShare}
           activeOpacity={0.85}
         >
-          <ContactIconImage type="share" size={24} />
+          <Ionicons name="share-outline" size={20} color="#000" />
           <Text style={styles.shareBtnText}>SHARE / SAVE</Text>
         </TouchableOpacity>
       </View>
@@ -249,31 +244,32 @@ const styles = themedStyles((c) => ({
   },
   bgArea: {
     flex: 1,
-    backgroundColor: TBV.ink,
+    backgroundColor: "#1F2227",
   },
   bgAreaLight: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: "#ECEEF2",
   },
   pdfArea: {
     flex: 1,
-    position: "relative",
-    padding: 14,
-    justifyContent: "flex-start",
+    padding: 16,
   },
-  pdfBezel: {
-    width: "100%",
-    aspectRatio: 612 / 792,
-    borderRadius: 6,
-    borderWidth: 3,
-    borderColor: "#878d96",
-    backgroundColor: "#2b2e33",
-    padding: 3,
+  pdfShadow: {
+    flex: 1,
+    borderRadius: 14,
+    backgroundColor: "#ffffff",
+    shadowColor: "#000",
+    shadowOpacity: 0.4,
+    shadowRadius: 22,
+    shadowOffset: { width: 0, height: 12 },
+    elevation: 16,
   },
   pdfCard: {
     flex: 1,
     backgroundColor: "#ffffff",
-    borderRadius: 3,
+    borderRadius: 14,
     overflow: "hidden",
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: "rgba(0,0,0,0.10)",
   },
   empty: {
     flex: 1,
