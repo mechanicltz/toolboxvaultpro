@@ -4547,15 +4547,18 @@ backend:
 frontend:
   - task: "Report format chooser (PDF/CSV) respects Steel theme"
     implemented: true
-    working: "NA"
+    working: true
     file: "frontend/src/components/SkinPlate.tsx"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
         -working: "NA"
         -agent: "main"
         -comment: "SkinPlate now renders the brushed-silver (steel) frame via useIsSteel/useSteelPanelFrame when the Steel metal style is active, instead of always using the Iron Forge plate art. This fixes the report format chooser (Reports tab format step) and all other SkinPlate cards to match the active Steel skin."
+        -working: true
+        -agent: "testing"
+        -comment: "Verified (iteration_59): Steel theme loads silver_panel.png for all SkinPlate cards (Reports type rows + PDF/CSV chooser); Iron theme loads iron plate art (no regression). Selection state + onPress preserved. No crash."
 
 test_plan:
   current_focus:
