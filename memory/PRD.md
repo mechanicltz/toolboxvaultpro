@@ -599,6 +599,30 @@ white container fills full 390x844, blue CTA present, tab bar (DASHBOARD) absent
 title cleaned. (Headless screenshot shows black — cross-origin PDF iframe + global
 AppBackground don't paint in capture; real device renders the light chrome.)
 
+## Refactor pass: legacy Set removal + housekeeping + size cuts (2026-06 — DONE & tested)
+#1 LEGACY SET SYSTEM REMOVED. App now uses ONLY the new model (Set = tool with
+is_bundle + inside_items + expansion_of). Removed: legacy /api/bundles CRUD block
+in routes_bundles.py (7 endpoints, db.bundles); old api.ts methods (listBundles/
+get/create/update/deleteBundle/add/removeItemFromBundle); dead screens
+app/tool/edit.tsx (2067 lines!), app/bundle/edit.tsx, app/bundle/[id].tsx; dead
+src/ReportsFab.tsx (always returned null) + its _layout usage + 3 stale
+<Stack.Screen> entries (tool/edit, bundle/[id], bundle/edit). Removed the dead
+bundle-picker (showBundlePicker/openBundlePicker/Modal) from tool/[id].tsx. Kept
+migrate-to-tools (idempotent). Converted demo_seed.py to new model: "Master Socket
+Set" is now an is_bundle tool with 3 expansion_of items (no db.bundles insert).
+#2 HOUSEKEEPING: archived 41 root backend_test_*/gen_*/audit scripts -> tests/
+archive/; deleted .bak files; fixed all react/no-unescaped-entities lint errors
+(curly apostrophes/quotes); cleared metro cache.
+#3 SIZE: deleting tool/edit.tsx (-2067 lines) + bundle screens + picker is a real
+cut, BUT the big mega-files (tool/[id].tsx ~4180, inventory.tsx 2666, reports.py
+2740, server.py 1791) were NOT split into modules — deferred as a dedicated,
+separately-tested effort (too risky to do safely in one pass).
+VERIFIED: testing_agent 13/13 backend pytest pass (legacy endpoints 404, new Set
+CRUD + expansion link/unlink, migrate idempotent, inventory/insurance/year_end
+PDFs 200, fresh demo seed creates is_bundle Set + 3 expansion items) + frontend
+smoke (Sets list, Set tab, pdf-viewer no tab bar) + app boots clean after cache
+clear.
+
 ## RULE — WRITTEN IN STONE (user demand, 2026-06-19)
 ALWAYS talk to this user in PLAIN ENGLISH. No code words, no file names, no
 technical jargon, no error-message copy-paste. Explain everything like you would
