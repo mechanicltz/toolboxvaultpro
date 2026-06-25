@@ -22,25 +22,42 @@ def _uniq(p: str) -> str:
 
 
 class TestBundles:
-    def test_bundle_crud_lifecycle(self, api: requests.Session):
-        name = _uniq("bundle")
-        r = api.post(f"{BASE_URL}/api/bundles",
-                     json={"name": name, "set_price": 99.0, "part_number": "PN-1"})
+    """v3.2: a Set/Bundle is now a tool with is_bundle=True carrying inside_items.
+    The legacy /api/bundles CRUD (db.bundles collection) was removed."""
+
+    def test_set_tool_lifecycle(self, api: requests.Session):
+        name = _uniq("set")
+        # Create the Set as a tool with is_bundle=True.
+        r = api.post(f"{BASE_URL}/api/tools",
+                     json={"name": name, "is_bundle": True, "cost": 99.0,
+                           "part_number": "PN-1"})
         assert r.status_code == 200, r.text
-        bid = r.json()["id"]
+        tid = r.json()["id"]
+        assert r.json().get("is_bundle") is True
         try:
-            r = api.get(f"{BASE_URL}/api/bundles/{bid}")
+            # Add an inside item (no inventory presence; just embedded).
+            r = api.post(f"{BASE_URL}/api/tools/{tid}/inside-items",
+                         json={"name": "Inner Socket", "model": "S10", "cost": 9.0})
             assert r.status_code == 200, r.text
-            assert r.json()["set_price"] == pytest.approx(99.0)
-            r = api.put(f"{BASE_URL}/api/bundles/{bid}", json={"notes": "guard note"})
+            inside = r.json().get("inside_items") or []
+            assert len(inside) == 1 and inside[0]["name"] == "Inner Socket"
+            item_id = inside[0]["id"]
+
+            # Remove the inside item.
+            r = api.delete(f"{BASE_URL}/api/tools/{tid}/inside-items/{item_id}")
             assert r.status_code == 200, r.text
-            assert r.json()["notes"] == "guard note"
-            r = api.get(f"{BASE_URL}/api/bundles")
-            assert r.status_code == 200
-            assert any(x["id"] == bid for x in r.json())
+            assert len(r.json().get("inside_items") or []) == 0
         finally:
-            r = api.delete(f"{BASE_URL}/api/bundles/{bid}")
+            r = api.delete(f"{BASE_URL}/api/tools/{tid}")
             assert r.status_code == 200, r.text
+
+    def test_legacy_bundles_endpoints_removed(self, api: requests.Session):
+        # The old collection-backed CRUD must be gone (404/405), not 200.
+        r = api.post(f"{BASE_URL}/api/bundles",
+                     json={"name": "x", "set_price": 1.0})
+        assert r.status_code in (404, 405), f"legacy POST /bundles still live: {r.status_code}"
+        r = api.get(f"{BASE_URL}/api/bundles")
+        assert r.status_code in (404, 405), f"legacy GET /bundles still live: {r.status_code}"
 
 
 class TestWishlist:
