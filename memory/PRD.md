@@ -583,6 +583,22 @@ Removed Image+SKIN+ContactIconImage imports. Verified: title cleans correctly,
 SHARE/SAVE present, lint clean. (Skinned web screenshot captures black — preview
 artifact; confirm visually on device.)
 
+## Universal theme-independent report/PDF viewer (2026-06 — DONE)
+Per user: the PDF viewer looked bad, had black bands top (themed dark header) &
+bottom (the GLOBAL bottom tab bar showed through because pdf-viewer is a `card`
+route and BottomBar renders outside the Stack), and the status-bar glyphs weren't
+visible. Rebuilt app/pdf-viewer.tsx as a fixed LIGHT, theme-independent surface
+(local `UI` palette, plain StyleSheet — NO themedStyles/useColors): white
+header+footer, light-grey page area, dark back/share Ionicons, single blue
+(#2563EB) SHARE/SAVE CTA, SafeAreaView edges now include "bottom" (kills bottom
+black band). Forces dark status-bar glyphs while focused via useFocusEffect +
+setStatusBarStyle("dark"), restoring the user's themed style on blur. In
+app/_layout.tsx, `showShell` now also hides the global BottomBar + ReportsFab on
+"/pdf-viewer" (usePathname) so no tab bar bleeds onto the viewer. Verified via DOM:
+white container fills full 390x844, blue CTA present, tab bar (DASHBOARD) absent,
+title cleaned. (Headless screenshot shows black — cross-origin PDF iframe + global
+AppBackground don't paint in capture; real device renders the light chrome.)
+
 ## RULE — WRITTEN IN STONE (user demand, 2026-06-19)
 ALWAYS talk to this user in PLAIN ENGLISH. No code words, no file names, no
 technical jargon, no error-message copy-paste. Explain everything like you would

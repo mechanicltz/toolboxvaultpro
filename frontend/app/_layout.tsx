@@ -1,4 +1,4 @@
-import { Stack, useRouter, useSegments } from "expo-router";
+import { Stack, useRouter, useSegments, usePathname } from "expo-router";
 import { ThemeProvider as NavThemeProvider, DefaultTheme as NavDefaultTheme } from "@react-navigation/native";
 import { StatusBar, setStatusBarStyle, setStatusBarHidden } from "expo-status-bar";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
@@ -254,7 +254,10 @@ function ShellNav() {
   const { user } = useAuth();
   const router = useRouter();
   const c = useColors();
-  const showShell = !!user;
+  const pathname = usePathname();
+  // The PDF/report viewer is a full-screen, theme-independent surface — hide the
+  // global bottom tab bar + FAB so it doesn't leave a black band under the page.
+  const showShell = !!user && !(pathname || "").startsWith("/pdf-viewer");
   // Load the whole industrial font stack ONCE at the root and gate the screen
   // stack on it. Without this, the dashboard (the first screen) could mount on
   // a cold start before BebasNeue/Rajdhani were registered and paint with a

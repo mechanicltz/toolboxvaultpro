@@ -16,7 +16,7 @@
  *
  * Works on iOS, Android, and Web. Web falls back to <iframe>.
  */
-import React, { useMemo } from "react";
+import React, { useCallback, useMemo } from "react";
 import {
   ActivityIndicator,
   Platform,
@@ -26,20 +26,32 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Stack, useLocalSearchParams, useRouter } from "expo-router";
+import { Stack, useLocalSearchParams, useRouter, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { WebView } from "react-native-webview";
 import * as Sharing from "expo-sharing";
-import { theme } from "../src/theme";
-import { themedStyles, useSkin, useColors, useThemeMode } from "../src/themeContext";
-import { TBV } from "../src/tbv/skins";
+import { setStatusBarStyle } from "expo-status-bar";
+import { useSkin, useThemeMode } from "../src/themeContext";
+
+// Universal, theme-independent report viewer palette. EVERY user sees the exact
+// same clean "document viewer" chrome regardless of their app theme.
+const UI = {
+  pageBg: "#FFFFFF",
+  surface: "#FFFFFF",
+  backdrop: "#ECEEF2",
+  border: "#E2E5EA",
+  text: "#13161B",
+  muted: "#6B7280",
+  cta: "#2563EB",
+  ctaText: "#FFFFFF",
+};
 
 export default function PdfViewerScreen(): React.ReactElement {
   const router = useRouter();
-  useSkin(); // subscribe so the SKIN proxy re-resolves on theme/variant change
-  const c = useColors();
+  // Subscribe to theme so we can restore the user's status-bar style on exit.
+  const { skin } = useSkin();
   const { mode } = useThemeMode();
-  const isLight = mode === "light";
+
   const params = useLocalSearchParams<{
     uri?: string;
     title?: string;
@@ -63,6 +75,19 @@ export default function PdfViewerScreen(): React.ReactElement {
     return t || "Report";
   }, [title]);
 
+  // This is a LIGHT, theme-independent surface, so force dark status-bar glyphs
+  // (clock/battery) while it's focused, then restore the user's themed style.
+  useFocusEffect(
+    useCallback(() => {
+      setStatusBarStyle("dark", true);
+      return () => {
+        const themed =
+          skin === "industrial" ? "light" : mode === "light" ? "dark" : "light";
+        setStatusBarStyle(themed as any, true);
+      };
+    }, [skin, mode]),
+  );
+
   const onShare = async () => {
     if (!uri) return;
     try {
@@ -78,23 +103,7 @@ export default function PdfViewerScreen(): React.ReactElement {
     }
   };
 
-  // Robust back: previously the system's default header back button worked
-  // the FIRST time a PDF was viewed but broke on subsequent previews. The
-  // root cause is that every report tap calls `router.push("/pdf-viewer",
-  // ...)` (see /app/frontend/src/reportRunner.ts), which STACKS a fresh
-  // PDF screen on top of the previous one. On 2nd+ taps you have
-  // [reports → pdfA → pdfB] and the default back arrow can pop pdfB into
-  // pdfA (still rendered behind) — making it look like nothing happens.
-  //
-  // Fix: provide an explicit headerLeft that calls `router.back()`. If
-  // the previous route is ALSO a /pdf-viewer (which happens after
-  // multiple previews), keep popping until we land back on something
-  // else. This guarantees the X always returns to the reports tab.
-  const handleBack = React.useCallback(() => {
-    // Pop exactly ONE screen so we return to wherever the PDF was opened from
-    // (claim detail, reports list, etc.) — NOT all the way to a main tab.
-    // Only fall back to the reports tab when there's genuinely nothing to pop
-    // (e.g. the viewer was opened via a cold deep-link).
+  const handleBack = useCallback(() => {
     try {
       if ((router as any).canGoBack?.()) {
         router.back();
@@ -111,12 +120,10 @@ export default function PdfViewerScreen(): React.ReactElement {
   }, [router]);
 
   return (
-    <SafeAreaView style={[styles.container, isLight && styles.containerLight]} edges={["top", "left", "right"]}>
+    <SafeAreaView style={styles.container} edges={["top", "left", "right", "bottom"]}>
       <Stack.Screen options={{ headerShown: false }} />
 
-      {/* Custom themed header — replaces the native nav bar so the back/share
-          buttons + bar colour follow the active theme (no out-of-theme iOS
-          glass-button ovals). */}
+      {/* Clean, fixed light header — identical for every theme. */}
       <View style={styles.headerBar}>
         <TouchableOpacity
           testID="pdf-back-btn"
@@ -125,7 +132,7 @@ export default function PdfViewerScreen(): React.ReactElement {
           accessibilityLabel="Back"
           hitSlop={8}
         >
-          <Ionicons name="chevron-back" size={24} color={c.accent} />
+          <Ionicons name="chevron-back" size={24} color={UI.text} />
         </TouchableOpacity>
         <Text style={styles.headerTitle} numberOfLines={1}>{prettyTitle}</Text>
         <TouchableOpacity
@@ -133,65 +140,58 @@ export default function PdfViewerScreen(): React.ReactElement {
           onPress={onShare}
           style={styles.headerBtn}
           accessibilityLabel="Share"
+          hitSlop={8}
         >
-          <Ionicons name="share-outline" size={22} color={c.accent} />
+          <Ionicons name="share-outline" size={22} color={UI.text} />
         </TouchableOpacity>
       </View>
 
-      <View style={[styles.bgArea, isLight && styles.bgAreaLight]}>
+      <View style={styles.bgArea}>
         {!uri ? (
           <View style={styles.empty}>
-            <Ionicons name="document-text-outline" size={48} color={theme.colors.textMuted} />
+            <Ionicons name="document-text-outline" size={48} color={UI.muted} />
             <Text style={styles.emptyText}>No file to preview.</Text>
-            <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+            <TouchableOpacity onPress={handleBack} style={styles.backBtn}>
               <Text style={styles.backBtnText}>GO BACK</Text>
             </TouchableOpacity>
           </View>
         ) : (
-          <View style={styles.pdfArea}>
-            {/* Clean white "page" floating on a soft backdrop with a subtle
-                drop shadow — a modern document-viewer look (no clunky bezel). */}
-            <View style={styles.pdfShadow}>
-              <View style={styles.pdfCard}>
-                {Platform.OS === "web" ? (
-                  // @ts-ignore — iframe is fine in RN-Web context
-                  <iframe
-                    src={uri}
-                    style={{
-                      border: 0,
-                      flex: 1,
-                      width: "100%",
-                      height: "100%",
-                      backgroundColor: "#ffffff",
-                    }}
-                    title={prettyTitle}
-                  />
-                ) : (
-                  <WebView
-                    testID="pdf-webview"
-                    source={{ uri }}
-                    style={{ flex: 1, backgroundColor: "#ffffff" }}
-                    originWhitelist={["*"]}
-                    allowFileAccess
-                    allowFileAccessFromFileURLs
-                    allowUniversalAccessFromFileURLs
-                    startInLoadingState
-                    renderLoading={() => (
-                      <View style={styles.loader}>
-                        <ActivityIndicator size="large" color={theme.colors.accent} />
-                        <Text style={styles.loaderText}>Loading {prettyTitle}…</Text>
-                      </View>
-                    )}
-                  />
+          <View style={styles.pdfCard}>
+            {Platform.OS === "web" ? (
+              // @ts-ignore — iframe is fine in RN-Web context
+              <iframe
+                src={uri}
+                style={{
+                  border: 0,
+                  flex: 1,
+                  width: "100%",
+                  height: "100%",
+                  backgroundColor: "#ffffff",
+                }}
+                title={prettyTitle}
+              />
+            ) : (
+              <WebView
+                testID="pdf-webview"
+                source={{ uri }}
+                style={{ flex: 1, backgroundColor: "#ffffff" }}
+                originWhitelist={["*"]}
+                allowFileAccess
+                allowFileAccessFromFileURLs
+                allowUniversalAccessFromFileURLs
+                startInLoadingState
+                renderLoading={() => (
+                  <View style={styles.loader}>
+                    <ActivityIndicator size="large" color={UI.cta} />
+                    <Text style={styles.loaderText}>Loading {prettyTitle}…</Text>
+                  </View>
                 )}
-              </View>
-            </View>
+              />
+            )}
           </View>
         )}
       </View>
 
-      {/* Persistent SHARE button at the bottom as a backup affordance for
-          users who don't notice the header icon. */}
       <View style={styles.footer}>
         <TouchableOpacity
           testID="pdf-share-footer"
@@ -199,7 +199,7 @@ export default function PdfViewerScreen(): React.ReactElement {
           onPress={onShare}
           activeOpacity={0.85}
         >
-          <Ionicons name="share-outline" size={20} color="#000" />
+          <Ionicons name="share-outline" size={20} color={UI.ctaText} />
           <Text style={styles.shareBtnText}>SHARE / SAVE</Text>
         </TouchableOpacity>
       </View>
@@ -207,23 +207,20 @@ export default function PdfViewerScreen(): React.ReactElement {
   );
 }
 
-const styles = themedStyles((c) => ({
+const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: TBV.ink,
-  },
-  containerLight: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: UI.surface,
   },
   headerBar: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    paddingHorizontal: 10,
+    paddingHorizontal: 8,
     paddingVertical: 8,
-    backgroundColor: c.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: c.border,
+    backgroundColor: UI.surface,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: UI.border,
   },
   headerBtn: {
     width: 40,
@@ -231,45 +228,22 @@ const styles = themedStyles((c) => ({
     borderRadius: 20,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: c.bg,
-    borderWidth: 1,
-    borderColor: c.border,
+    backgroundColor: UI.backdrop,
   },
   headerTitle: {
     flex: 1,
     textAlign: "center",
-    color: c.textPrimary,
+    color: UI.text,
     fontWeight: "800",
-    fontSize: 15,
+    fontSize: 17,
   },
   bgArea: {
     flex: 1,
-    backgroundColor: "#1F2227",
-  },
-  bgAreaLight: {
-    backgroundColor: "#ECEEF2",
-  },
-  pdfArea: {
-    flex: 1,
-    padding: 16,
-  },
-  pdfShadow: {
-    flex: 1,
-    borderRadius: 14,
-    backgroundColor: "#ffffff",
-    shadowColor: "#000",
-    shadowOpacity: 0.4,
-    shadowRadius: 22,
-    shadowOffset: { width: 0, height: 12 },
-    elevation: 16,
+    backgroundColor: UI.backdrop,
   },
   pdfCard: {
     flex: 1,
     backgroundColor: "#ffffff",
-    borderRadius: 14,
-    overflow: "hidden",
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: "rgba(0,0,0,0.10)",
   },
   empty: {
     flex: 1,
@@ -279,7 +253,7 @@ const styles = themedStyles((c) => ({
     gap: 12,
   },
   emptyText: {
-    color: c.textMuted,
+    color: UI.muted,
     fontSize: 14,
   },
   backBtn: {
@@ -287,12 +261,12 @@ const styles = themedStyles((c) => ({
     paddingVertical: 10,
     borderRadius: 8,
     borderWidth: 2,
-    borderColor: c.accent,
+    borderColor: UI.cta,
     backgroundColor: "transparent",
     marginTop: 8,
   },
   backBtnText: {
-    color: c.accent,
+    color: UI.cta,
     fontWeight: "900",
     letterSpacing: 1,
   },
@@ -301,30 +275,33 @@ const styles = themedStyles((c) => ({
     alignItems: "center",
     justifyContent: "center",
     gap: 12,
+    backgroundColor: "#ffffff",
   },
   loaderText: {
-    color: c.textMuted,
+    color: UI.muted,
     fontSize: 13,
   },
   footer: {
-    padding: 14,
-    borderTopWidth: 1,
-    borderTopColor: c.border,
-    backgroundColor: c.bg,
+    paddingHorizontal: 14,
+    paddingTop: 10,
+    paddingBottom: 6,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: UI.border,
+    backgroundColor: UI.surface,
   },
   shareBtn: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
-    backgroundColor: c.accent,
-    paddingVertical: 14,
-    borderRadius: 10,
+    backgroundColor: UI.cta,
+    paddingVertical: 15,
+    borderRadius: 12,
   },
   shareBtnText: {
-    color: "#000",
+    color: UI.ctaText,
     fontWeight: "900",
-    fontSize: 14,
+    fontSize: 15,
     letterSpacing: 1,
   },
-}));
+});
