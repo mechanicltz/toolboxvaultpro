@@ -20,9 +20,11 @@ import { api } from "../../src/api";
 import { formatDateUS, formatDateTimeUS } from "../../src/dateUtil";
 import { formatPhonesInText } from "../../src/contactLinks";
 
-import { themedStyles } from "../../src/themeContext";
+import { themedStyles, useSkin } from "../../src/themeContext";
 import { IndustrialBanner } from "../../src/components/IndustrialBanner";
-import { SkinPlate } from "../../src/components/SkinPlate";
+import { SKIN, CAP } from "../../src/tbv/skins";
+import { useIsSteel, useSteelPanelFrame } from "../../src/tbv/steel";
+import TbvListPanel from "../../src/tbv/components/TbvListPanel";
 
 const STATUS_COLORS: Record<string, string> = {
   broken: theme.colors.danger,
@@ -69,6 +71,13 @@ export default function ClaimDetailScreen() {
   // _layout.tsx aborts them + calls notifyAppResume() so we re-load here.
   useAppResume(useCallback(() => { load(); }, [load]));
 
+  const { skin } = useSkin();
+  const isIndustrial = skin === "industrial";
+  const isSteel = useIsSteel();
+  const steelPanel = useSteelPanelFrame();
+  const steelScale = isSteel ? steelPanel.frameScale : undefined;
+  const winSrc = isSteel ? steelPanel.source : SKIN.window;
+  const winCap = isSteel ? steelPanel.capInsets : CAP.window;
 
   if (loading || !claim) {
     return (
@@ -103,113 +112,96 @@ export default function ClaimDetailScreen() {
         }}
       />
 
-      <ScrollView contentContainerStyle={{ padding: 18, paddingBottom: 100 }}>
-        <SkinPlate
-          style={styles.statusBannerOuter}
-          innerStyle={styles.statusBannerInner}
-          padTop={11}
-          padBottom={11}
-        >
-          <View style={[styles.statusDot, { backgroundColor: color }]} />
-          <Text style={[styles.statusText, { color }]}>{label}</Text>
-        </SkinPlate>
-
-        <SkinPlate
-          testID="claim-tool-link"
-          style={styles.toolCardOuter}
-          innerStyle={styles.toolCardInner}
-          onPress={() => claim.tool_id && router.push(`/tool/${claim.tool_id}`)}
+      {/* HERO — fixed: broken-part photo + Open/Closed/Status pills */}
+      <View style={styles.heroRow}>
+        <TouchableOpacity
+          testID="claim-photo"
+          activeOpacity={claim.broken_photo ? 0.85 : 1}
+          onPress={claim.broken_photo ? () => setLightbox(true) : undefined}
+          style={styles.heroPhoto}
         >
           {claim.broken_photo ? (
-            <AppImage source={{ uri: claim.broken_photo }} style={styles.toolPhoto} />
+            <AppImage source={{ uri: claim.broken_photo }} style={styles.heroPhotoImg} />
           ) : (
-            <View style={[styles.toolPhoto, styles.toolPhotoPh]}>
-              <Ionicons name="construct" size={32} color={theme.colors.textMuted} />
+            <View style={styles.heroPhotoPh}>
+              <Ionicons name="construct" size={30} color={theme.colors.textMuted} />
             </View>
           )}
-          <View style={{ flex: 1 }}>
-            <Text style={styles.toolName}>{claim.tool_name || "Tool"}</Text>
-            <Text style={styles.toolMeta}>Tap to open the tool</Text>
-          </View>
-          <Ionicons name="chevron-forward" size={18} color={theme.colors.textMuted} />
-        </SkinPlate>
+        </TouchableOpacity>
+        <View style={styles.heroRight}>
+          <PillRow first label="OPEN DATE" value={claim.created_at ? formatDateUS(claim.created_at) : "—"} />
+          <PillRow label="CLOSED DATE" value={claim.completed_at ? formatDateUS(claim.completed_at) : "—"} />
+          <PillRow label="STATUS" value={label} valueColor={color} />
+        </View>
+      </View>
 
-        <Section label="DEALER">
-          <Text style={styles.value}>
-            {claim.dealer_name || "(no dealer assigned)"}
-          </Text>
-          {!!claim.dealer_id && (
-            <TouchableOpacity
-              testID="claim-dealer-link"
-              onPress={() => router.push(`/dealer/${claim.dealer_id}`)}
+      {/* DETAILS — one fixed skinned panel; content scrolls inside */}
+      <View style={styles.contentPanelOuter}>
+        <ClaimPanel
+          isIndustrial={isIndustrial}
+          winSrc={winSrc}
+          winCap={winCap}
+          steelScale={steelScale}
+          plainStyle={styles.contentPanelPlain}
+        >
+          <ScrollView
+            style={{ flex: 1 }}
+            contentContainerStyle={{ paddingBottom: 24 }}
+            showsVerticalScrollIndicator={false}
+          >
+            <DetailRow
+              testID="claim-tool-link"
+              label="TOOL"
+              onPress={() => claim.tool_id && router.push(`/tool/${claim.tool_id}`)}
             >
-              <Text style={styles.linkText}>View dealer →</Text>
-            </TouchableOpacity>
-          )}
-        </Section>
+              {claim.tool_name || "Tool"}
+            </DetailRow>
 
-        {!!claim.repair_company && (
-          <Section label="REPAIR COMPANY">
-            <Text style={styles.value}>{claim.repair_company}</Text>
-          </Section>
-        )}
-        {!!claim.contact && (
-          <Section label="CONTACT">
-            <Text style={styles.value}>{formatPhonesInText(claim.contact)}</Text>
-          </Section>
-        )}
+            <DetailRow
+              testID="claim-dealer-link"
+              label="DEALER"
+              onPress={claim.dealer_id ? () => router.push(`/dealer/${claim.dealer_id}`) : undefined}
+            >
+              {claim.dealer_name || "(no dealer assigned)"}
+            </DetailRow>
 
-        <SkinPlate style={styles.dateGridOuter} innerStyle={styles.dateGrid} padTop={12} padBottom={12}>
-          {!!claim.notified_at && (
-            <View style={styles.dateBox}>
-              <Text style={styles.dateLabel}>NOTIFIED</Text>
-              <Text style={styles.dateValueHi}>{formatDateUS(claim.notified_at)}</Text>
-            </View>
-          )}
-          {!!claim.expected_completion && (
-            <View style={styles.dateBox}>
-              <Text style={styles.dateLabel}>EXPECTED BACK</Text>
-              <Text style={styles.dateValue}>{formatDateUS(claim.expected_completion)}</Text>
-            </View>
-          )}
-          {!!claim.completed_at && (
-            <View style={styles.dateBox}>
-              <Text style={styles.dateLabel}>CLOSED</Text>
-              <Text style={styles.dateValue}>{formatDateUS(claim.completed_at)}</Text>
-            </View>
-          )}
-          {!!claim.created_at && (
-            <View style={styles.dateBox}>
-              <Text style={styles.dateLabel}>OPENED</Text>
-              <Text style={styles.dateValue}>{formatDateTimeUS(claim.created_at)}</Text>
-            </View>
-          )}
-        </SkinPlate>
+            {!!claim.repair_company && (
+              <DetailRow label="REPAIR COMPANY">{claim.repair_company}</DetailRow>
+            )}
 
-        {!!claim.notes && (
-          <Section label="NOTES">
-            <Text style={styles.notes}>{claim.notes}</Text>
-          </Section>
-        )}
+            {!!claim.contact && (
+              <DetailRow label="CONTACT">
+                <Text style={styles.detValue}>{formatPhonesInText(claim.contact)}</Text>
+              </DetailRow>
+            )}
 
-        {/* Repair / replacement cost — shown when > 0. Helps the user verify
-            what they recorded and what will roll up into reports. */}
-        {!!claim.repair_cost && Number(claim.repair_cost) > 0 && (
-          <Section label="REPAIR / REPLACEMENT COST">
-            <Text style={[styles.notes, { fontSize: 18, lineHeight: 24, fontWeight: "700" }]}>
-              ${Number(claim.repair_cost).toFixed(2)}
-            </Text>
-          </Section>
-        )}
+            {!!claim.notified_at && (
+              <DetailRow label="NOTIFIED">{formatDateUS(claim.notified_at)}</DetailRow>
+            )}
 
-        {!!claim.broken_photo && (
-          <Section label="PHOTO OF BROKEN PART">
-            <TouchableOpacity testID="claim-photo" activeOpacity={0.9} onPress={() => setLightbox(true)}>
-              <AppImage source={{ uri: claim.broken_photo }} style={styles.photoLarge} />
-            </TouchableOpacity>
-          </Section>
-        )}
-      </ScrollView>
+            {!!claim.expected_completion && (
+              <DetailRow label="EXPECTED BACK">{formatDateUS(claim.expected_completion)}</DetailRow>
+            )}
+
+            {!!claim.created_at && (
+              <DetailRow label="OPENED">{formatDateTimeUS(claim.created_at)}</DetailRow>
+            )}
+
+            {!!claim.repair_cost && Number(claim.repair_cost) > 0 && (
+              <DetailRow label="REPAIR / REPLACEMENT COST">
+                <Text style={styles.detCost}>${Number(claim.repair_cost).toFixed(2)}</Text>
+              </DetailRow>
+            )}
+
+            {!!claim.notes && (
+              <View style={styles.notesBlock}>
+                <Text style={styles.detLabel}>NOTES</Text>
+                <Text style={styles.notesText}>{claim.notes}</Text>
+              </View>
+            )}
+          </ScrollView>
+        </ClaimPanel>
+      </View>
       <Modal visible={lightbox} transparent onRequestClose={() => setLightbox(false)}>
         <TouchableOpacity
           testID="claim-photo-close"
@@ -226,145 +218,117 @@ export default function ClaimDetailScreen() {
   );
 }
 
-function Section({ label, children }: { label: string; children: React.ReactNode }) {
+// ---- MODULE SCOPE (stable identity = no steel panel remount/flicker) ----
+function ClaimPanel({
+  isIndustrial, winSrc, winCap, steelScale, plainStyle, children,
+}: {
+  isIndustrial: boolean; winSrc: any; winCap: any; steelScale: any;
+  plainStyle: any; children: React.ReactNode;
+}) {
+  return isIndustrial ? (
+    <TbvListPanel
+      source={winSrc}
+      capInsets={winCap}
+      frameScale={steelScale}
+      padX={16}
+      padTop={16}
+      padBottom={12}
+      style={{ flex: 1 }}
+    >
+      {children}
+    </TbvListPanel>
+  ) : (
+    <View style={plainStyle}>{children}</View>
+  );
+}
+
+function PillRow({
+  label, value, valueColor, first,
+}: { label: string; value: string; valueColor?: string; first?: boolean }) {
   return (
-    <View style={styles.section}>
-      <Text style={styles.sectionLabel}>{label}</Text>
-      <SkinPlate padX={12} padTop={12} padBottom={12}>{children}</SkinPlate>
+    <View style={[styles.pillRowFlat, !first && styles.pillRowDivider]}>
+      <View style={{ flex: 1 }}>
+        <Text style={styles.pillRowLabel}>{label}</Text>
+      </View>
+      <Text
+        style={[styles.pillRowValueText, valueColor ? { color: valueColor } : null]}
+        numberOfLines={1}
+      >
+        {value || "—"}
+      </Text>
     </View>
+  );
+}
+
+function DetailRow({
+  label, children, onPress, testID,
+}: {
+  label: string; children: React.ReactNode; onPress?: () => void; testID?: string;
+}) {
+  const Wrap: any = onPress ? TouchableOpacity : View;
+  const isStr = typeof children === "string";
+  return (
+    <Wrap
+      testID={testID}
+      style={styles.detRow}
+      {...(onPress ? { activeOpacity: 0.7, onPress } : {})}
+    >
+      <Text style={styles.detLabel}>{label}</Text>
+      <View style={styles.detValueWrap}>
+        {isStr ? (
+          <Text
+            style={[styles.detValue, onPress && styles.detValueLink]}
+            numberOfLines={2}
+          >
+            {children}
+          </Text>
+        ) : (
+          children
+        )}
+        {!!onPress && (
+          <Ionicons
+            name="chevron-forward"
+            size={15}
+            color={theme.colors.textMuted}
+            style={{ marginLeft: 4 }}
+          />
+        )}
+      </View>
+    </Wrap>
   );
 }
 
 const styles = themedStyles((c) => ({
   container: { flex: 1, backgroundColor: c.canvas },
   loading: { flex: 1, alignItems: "center", justifyContent: "center" },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    gap: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: c.border,
-  },
-  title: {
-    color: c.textPrimary,
-    fontSize: 12,
-    fontWeight: "900",
-    letterSpacing: 2,
-  },
-  subtitle: {
-    color: c.accent,
-    fontSize: 7,
-    fontWeight: "700",
-    letterSpacing: 2,
-    marginTop: 2,
-  },
-  statusBannerOuter: {
-    marginBottom: 14,
-  },
-  statusBannerInner: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 10,
-  },
-  statusDot: { width: 12, height: 12, borderRadius: 6 },
-  statusText: { fontSize: 10, fontWeight: "900", letterSpacing: 1.5 },
-  toolCardOuter: {
-    marginBottom: 14,
-  },
-  toolCardInner: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-  },
-  toolPhoto: { width: 60, height: 60, borderRadius: 4 },
-  toolPhotoPh: {
-    backgroundColor: c.bg,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  toolName: {
-    color: c.textPrimary,
-    fontSize: 12,
-    fontWeight: "900",
-  },
-  toolMeta: {
-    color: c.textMuted,
-    fontSize: 8,
-    marginTop: 2,
-  },
-  section: { marginBottom: 14 },
-  sectionLabel: {
-    color: c.textMuted,
-    fontSize: 7,
-    fontWeight: "800",
-    letterSpacing: 1.5,
-    marginBottom: 5,
-  },
-  sectionBody: {
-    backgroundColor: c.bgSecondary,
-    borderWidth: 1,
-    borderColor: c.border,
-    borderRadius: 4,
-    padding: 12,
-  
-    ...(theme.elevation.md as object),
-  },
-  value: {
-    color: c.textPrimary,
-    fontSize: 10,
-    fontWeight: "700",
-  },
-  linkText: {
-    color: c.accent,
-    fontSize: 8,
-    fontWeight: "900",
-    letterSpacing: 1,
-    marginTop: 6,
-  },
-  dateGridOuter: {
-    marginBottom: 14,
-  },
-  dateGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    rowGap: 12,
-    columnGap: 8,
-  },
-  dateBox: {
-    flexBasis: "48%",
-  },
-  dateLabel: {
-    color: c.textMuted,
-    fontSize: 7,
-    fontWeight: "800",
-    letterSpacing: 1.5,
-  },
-  dateValue: {
-    color: c.textPrimary,
-    fontSize: 10,
-    fontWeight: "700",
-    marginTop: 4,
-  },
-  dateValueHi: {
-    color: c.accent,
-    fontSize: 10,
-    fontWeight: "900",
-    marginTop: 4,
-  },
-  notes: {
-    color: c.textPrimary,
-    fontSize: 10,
-    lineHeight: 14,
-  },
-  photoLarge: {
-    width: "100%",
-    height: 240,
-    borderRadius: 4,
-    backgroundColor: c.bg,
-  },
+
+  // HERO
+  heroRow: { flexDirection: "row", alignItems: "center", gap: 14, paddingHorizontal: 16, paddingTop: 10, paddingBottom: 12 },
+  heroPhoto: { width: 100, height: 100, borderRadius: 8, overflow: "hidden", backgroundColor: "#000", borderWidth: 1, borderColor: c.border },
+  heroPhotoImg: { width: "100%", height: "100%" },
+  heroPhotoPh: { flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: c.bgSecondary },
+  heroRight: { flex: 1 },
+
+  // PILL ROWS (top-right of hero)
+  pillRowFlat: { flexDirection: "row", alignItems: "center", paddingVertical: 9, gap: 10 },
+  pillRowDivider: { borderTopWidth: 1, borderTopColor: c.borderSubtle },
+  pillRowLabel: { color: c.textPrimary, fontWeight: "800", fontSize: 9.5, letterSpacing: 0.8 },
+  pillRowValueText: { color: c.textPrimary, fontWeight: "800", fontSize: 11, letterSpacing: 0.3, maxWidth: "62%", textAlign: "right" },
+
+  // CONTENT PANEL
+  contentPanelOuter: { flex: 1, paddingHorizontal: 14, paddingTop: 6, paddingBottom: 14 },
+  contentPanelPlain: { flex: 1, backgroundColor: c.bgSecondary, borderWidth: 1, borderColor: c.border, borderRadius: 10, padding: 14, ...(theme.elevation.md as object) },
+
+  // DETAIL ROWS
+  detRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: c.border, gap: 12 },
+  detLabel: { color: c.textSecondary, fontSize: 11, fontWeight: "700", letterSpacing: 0.6 },
+  detValueWrap: { flexDirection: "row", alignItems: "center", flexShrink: 1, justifyContent: "flex-end" },
+  detValue: { color: c.textPrimary, fontSize: 13, fontWeight: "800", textAlign: "right" },
+  detValueLink: { color: c.accent },
+  detCost: { color: c.textPrimary, fontSize: 17, fontWeight: "900" },
+  notesBlock: { paddingTop: 12 },
+  notesText: { color: c.textPrimary, fontSize: 13, lineHeight: 19, marginTop: 6 },
+
   lightboxBg: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.92)",

@@ -557,6 +557,18 @@ reach every field. Verified live: sheet opens via menu -> Mark broken and render
 all fields + CANCEL/MARK BROKEN; lint clean. Keyboard-lift itself is native-only
 (web shows no keyboard) — confirm feel on device.
 
+## Claim history detail page redesigned to Showroom layout (2026-06 — DONE & tested)
+app/claim/[id].tsx was using old SkinPlate cards (not steel-skinned, not showroom).
+Rebuilt to the showroom blueprint: IndustrialBanner + fixed HERO (broken-part
+photo left + top-right PillRows OPEN DATE / CLOSED DATE / STATUS[colored]) + ONE
+fixed skinned panel (module-scope ClaimPanel → TbvListPanel for steel / bordered
+View fallback) whose inner ScrollView holds clean label/value DetailRows: TOOL
+(→/tool, accent+chevron), DEALER (→/dealer), REPAIR COMPANY, CONTACT (phone links),
+NOTIFIED, EXPECTED BACK, OPENED, REPAIR/REPLACEMENT COST, NOTES. Steel hooks
+(useSkin/useIsSteel/useSteelPanelFrame) placed BEFORE the loading early-return
+(rules of hooks). Photo tap opens existing lightbox. Verified live on a real
+COMPLETED claim (Pro acct): all sections render, steel skin applied; lint clean.
+
 ## RULE — WRITTEN IN STONE (user demand, 2026-06-19)
 ALWAYS talk to this user in PLAIN ENGLISH. No code words, no file names, no
 technical jargon, no error-message copy-paste. Explain everything like you would
