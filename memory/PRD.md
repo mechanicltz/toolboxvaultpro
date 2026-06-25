@@ -536,6 +536,16 @@ Note: only "New Item"/"New Set" were literal stand-ins — all other Add flows
 already use empty fields + placeholders; quantity default "1" is a real default
 (kept, per user's "unless it was a set default value").
 
+## More room when adding/editing an item (2026-06 — DONE & tested)
+User: the fill-out area above the keyboard was too small. Fix in app/tool/[id].tsx:
+(1) while `editing`, the top hero panel (photo + STATUS/QUANTITY/PRICE pills) is
+HIDDEN so the form gets the full height under the tab strip; (2) the edit
+KeyboardAwareScrollView paddingBottom raised 90->340 and bottomOffset 120->140 so
+the focused field scrolls higher (toward centre) and even the last fields can be
+pulled up above the keyboard. Both theme branches updated (replace_all). Verified
+live (Pro acct): in edit mode "ADD PHOTO"/status pills are gone, form starts at
+ITEM NAME directly under the tabs; lint clean.
+
 ## RULE — WRITTEN IN STONE (user demand, 2026-06-19)
 ALWAYS talk to this user in PLAIN ENGLISH. No code words, no file names, no
 technical jargon, no error-message copy-paste. Explain everything like you would

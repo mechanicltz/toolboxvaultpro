@@ -2574,7 +2574,10 @@ export default function ToolDetail() {
       />
 
       <View style={newStyles.detailColumn}>
-        {/* TOP PANEL — photo + status/qty/price + centered location */}
+        {/* TOP PANEL — photo + status/qty/price. Hidden while editing so the
+            form gets the full height above the keyboard and any field can be
+            scrolled up into the centre of the visible area. */}
+        {!editing && (
         <View style={newStyles.topPanelWrap}>
           {isIndustrial ? (
             <View style={newStyles.topUnframed}>
@@ -2608,6 +2611,7 @@ export default function ToolDetail() {
             </View>
           )}
         </View>
+        )}
 
         {/* TAB STRIP */}
         <View style={newStyles.tabStripWrap}>
@@ -2630,13 +2634,13 @@ export default function ToolDetail() {
         <View style={newStyles.contentPanelOuter}>
           {isIndustrial ? (
             <TbvListPanel source={winSrc} capInsets={winCap} frameScale={steelScale} padX={16} padTop={16} padBottom={12} style={{ flex: 1 }}>
-              <KeyboardAwareScrollView contentContainerStyle={{ paddingBottom: editing ? 90 : 20 }} bottomOffset={editing ? 120 : 0} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+              <KeyboardAwareScrollView contentContainerStyle={{ paddingBottom: editing ? 340 : 20 }} bottomOffset={editing ? 140 : 0} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
                 {renderTabContent()}
               </KeyboardAwareScrollView>
             </TbvListPanel>
           ) : (
             <View style={newStyles.contentPanelPlain}>
-              <KeyboardAwareScrollView contentContainerStyle={{ paddingBottom: editing ? 90 : 20 }} bottomOffset={editing ? 120 : 0} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+              <KeyboardAwareScrollView contentContainerStyle={{ paddingBottom: editing ? 340 : 20 }} bottomOffset={editing ? 140 : 0} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
                 {renderTabContent()}
               </KeyboardAwareScrollView>
             </View>
