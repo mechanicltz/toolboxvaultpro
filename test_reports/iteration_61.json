@@ -1,0 +1,31 @@
+{
+  "summary": "All four dashboard color fixes verified LIVE on the skinned (Iron Forge / Steel) home for ryan@ryan.com. Seeded one dealer (Cornwell Tools) with a $250 personal-account charge + a personal-account schedule due tomorrow ($50) so the dealer row + payment sub-line both render. Live DOM computed-style probe confirms: (1) dealer $ balance = rgb(16,185,129) GREEN across ALL 4 dealer rows ($1285.50, $640.00, $410.25, $255.00); (2) payment-due sub-line = rgb(239,68,68) RED on '$150.00 overdue 8d' AND on '$50.00 due tomorrow' (the seeded one); (3) every notification HEADER label = rgb(239,68,68) RED (NEXT DEALER ROUTE, MAINTENANCE OVERDUE, WARRANTY EXPIRING x3); (4) NEXT DEALER ROUTE icon = rgb(255,106,0) = #FF6A00 ORANGE via inline ionicons style. Seeded test data was fully cleaned up — Cornwell personal_balance back to 0.00 and personal_schedule back to None.",
+  "backend_issues": { "critical": [], "minor": [] },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": [
+      {
+        "component": "react-native-web deprecation warnings (pre-existing, not introduced by this change)",
+        "issue": "Console still emits: 'textShadow*' / 'shadow*' style props are deprecated, props.pointerEvents is deprecated. Hygiene only — not blocking."
+      }
+    ]
+  },
+  "test_report_links": [
+    "/app/test_reports/test_dealer_colors_iter61.py"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "Both fixes from iteration_60 were applied correctly: homeStyles.ts:586 detailsDealerPaySub.color = c.danger, and app/(tabs)/index.tsx:953 has inline { color: theme.colors.success } on the dealer $ value Text.",
+    "Because theme.colors.success/danger are skin-independent constants (#10B981 / #EF4444 on the dark Industrial theme), the green/red holds across every appearance variant — no need for per-skin overrides.",
+    "Route-icon inline color '#FF6A00' at index.tsx:313 renders correctly as rgb(255,106,0) on the live ionicons glyph — also skin-proof."
+  ],
+  "updated_files": [],
+  "success_rate": { "backend": "N/A (skipped)", "frontend": "100% — 4/4 colour fixes verified live with seeded data" },
+  "seed_data_creation": "Seeded then CLEANED UP: dealer 1f7304f9 (Cornwell Tools) — added charge tx (personal, $250, note 'TEST_color_verification') and personal_schedule (amount $50, freq weekly, next_due_date tomorrow). After verification, schedule was DELETEd and the test transaction was DELETEd; dealer's personal_balance verified back to 0.00 and personal_schedule back to None.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Helper script at /app/test_reports/test_dealer_colors_iter61.py shows the exact endpoints used to seed (POST /api/dealers/{id}/transactions with {type:'charge', account:'personal', amount, note} + PUT /api/dealers/{id}/accounts/personal/schedule with {enabled:true, amount, frequency, next_due_date, remind_day_before, remind_day_of}) and clean up (DELETE on both). Login flow note: the React Native TouchableOpacity at testID='auth-submit' did NOT submit reliably via Playwright .click() or mouse.click() — no /api/auth/login network call was emitted (likely an RN web onPress handler that needs a real touch synthesis). Workaround: hit /api/auth/login directly from Python, then inject the JWT into localStorage with key 'tt.auth.token' before page.goto('/') — works perfectly for any authenticated UI test of ryan@ryan.com.",
+  "rca_of_issue": "Prior gap: in iteration_60 the dealer row & payment sub-line color fixes were verified only by code-read because ryan@ryan.com had no outstanding dealer balances and no scheduled payments, so the skinned dealer-accounts widget displayed 'No outstanding balances'. This iteration seeded the missing data via the dealer transactions + per-account-schedule endpoints, which made the row render and made paymentSubByDealer produce a sub-line, allowing live computed-style verification. The fixes themselves were already in place: detailsDealerPaySub.color = c.danger (homeStyles.ts:586) and inline {color: theme.colors.success} on the $ Text (index.tsx:953). Both now confirmed at runtime."
+}

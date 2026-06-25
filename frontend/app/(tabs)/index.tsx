@@ -950,7 +950,7 @@ export default function HomeScreen() {
                         </View>
                       </TouchableOpacity>
                       <View style={styles.detailsValueWrap}>
-                        <Text style={[styles.detailsValue, steelValueStyle, dTotal === 0 && styles.valueMuted]}>
+                        <Text style={[styles.detailsValue, steelValueStyle, { color: theme.colors.success }, dTotal === 0 && styles.valueMuted]}>
                           ${dTotal.toFixed(2)}
                         </Text>
                         <TouchableOpacity

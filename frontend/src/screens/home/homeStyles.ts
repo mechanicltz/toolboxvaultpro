@@ -583,7 +583,7 @@ export const styles = themedStyles((c) => ({
     marginTop: 2,
   },
   detailsDealerPaySub: {
-    color: c.accent,
+    color: c.danger,
     fontFamily: "Rajdhani_600SemiBold",
     fontSize: 11,
     letterSpacing: 0.3,
