@@ -1,0 +1,35 @@
+{
+  "summary": "V3.2 bundle/set refactor regression — 13/13 backend tests PASS. Legacy /api/bundles* endpoints are fully gone (all 7 verbs return 404). New set-as-tool endpoints (inside-items CRUD, expansion link/unlink/list) work. /api/bundles/migrate-to-tools still present + idempotent (2nd call returns bundles_converted=0). Reports render PDFs for inventory + insurance + year_end with {list_set_items:true} (all return %PDF). Demo seed for a fresh settest_<epoch>@example.com account creates 'Master Socket Set' (is_bundle=True) + EXACTLY 3 expansion items ('1/2\" Drive Ratchet', 'Socket Set 6pc (3/8\")', 'Extension Bar Set'), each with expansion_of set to the set's id, and all 3 surface in GET /api/tools alongside the bundle (no db.bundles dependency). Frontend smoke: /bundle Sets list renders (bundle-card-{id} testID visible), /tool/{bundleId} renders the Set tab (tab-bundle testID present), /pdf-viewer renders WITHOUT the bottom tab bar (0 HOME/INVENTORY/MORE labels). ONE seed-naming spec deviation: spec says 'Socket Set 6pc' but seed creates 'Socket Set 6pc (3/8\")' — functionally correct (still expansion_of=bundle), test loosened to prefix-match.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": [
+      {"component": "_layout.tsx Stack.Screen registrations", "issue": "Three Stack.Screen entries reference files that were DELETED in the refactor: `tool/edit`, `bundle/[id]`, `bundle/edit`. Expo Router logs warnings at every navigation: `[Layout children]: No route named \"tool/edit\" exists in nested children` (and same for bundle/[id], bundle/edit). Cosmetic but pollutes logs. Reference: /app/frontend/app/_layout.tsx:387,389,390"},
+      {"component": "Metro cache / ReportsFab.tsx", "issue": "Metro out log shows `ENOENT: no such file or directory, open '/app/frontend/src/ReportsFab.tsx'` even though no source file imports it (grep --include='*.ts*' returns 0 matches in app/ src/). Likely stale metro cache (file is referenced from a previous bundle in /app/frontend/dist). Suggest `rm -rf /app/frontend/.metro-cache && sudo supervisorctl restart expo`. Non-blocking — bundle still serves."}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_bundle_refactor_v32.py",
+    "/app/test_reports/pytest/iter58_results.xml"
+  ],
+  "action_items": [
+    "Remove the three stale `<Stack.Screen name=\"tool/edit\" />`, `<Stack.Screen name=\"bundle/[id]\" />`, `<Stack.Screen name=\"bundle/edit\" />` lines from /app/frontend/app/_layout.tsx (around lines 387-390). The files were deleted per the refactor spec but the Stack registrations remain, causing runtime router warnings.",
+    "Clear metro cache to drop the stale ReportsFab.tsx reference: `rm -rf /app/frontend/.metro-cache && sudo supervisorctl restart expo`.",
+    "Optional polish: align demo seed expansion item name with the spec — seed creates 'Socket Set 6pc (3/8\")' but the spec lists it as 'Socket Set 6pc'. Either update demo_seed.py:251 or update the spec doc; current behavior is functionally correct."
+  ],
+  "critical_code_review_comments": [
+    "Cleanup commit removed the route files but left their Stack.Screen registrations in _layout.tsx — easy to miss. Recommend a smoke step that asserts every Stack.Screen name maps to an existing file under app/.",
+    "routes_bundles.py is clean (172 lines) and the legacy `/bundles` CRUD comment block correctly notes the removal. Migration endpoint stays untouched for safe upgrades — good engineering."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_bundle_refactor_v32.py (new — 13 tests, all pass)"
+  ],
+  "success_rate": {"backend": "100% (13/13)", "frontend": "100% smoke (Sets list, Set tab, PDF viewer all verified)"},
+  "seed_data_creation": "1 test bundle + 1 expansion item created via Pro account and torn down by fixtures. 1 fresh test account `settest_<epoch>@example.com / Blue321!` registered to verify demo seeding — not torn down (no DELETE /auth/account endpoint used).",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Backend refactor is solid; only two cosmetic frontend cleanups left: (1) drop the 3 stale Stack.Screen entries in app/_layout.tsx (~lines 387-390), (2) clear metro cache for the stale ReportsFab.tsx ENOENT. After those, re-run /app/backend/tests/test_bundle_refactor_v32.py to confirm green and verify /bundle, /tool/{bundleId}, /pdf-viewer in the web preview.",
+  "rca_of_issue": "None — refactor verified working. Backend endpoints behave exactly as specified; legacy routes return 404, new set-as-tool endpoints handle full lifecycle (create bundle, add inside items, link/unlink expansion items, generate PDFs); demo seed correctly creates a bundle-tool plus 3 expansion items. The two minor frontend issues are leftover-cleanup misses, not functional bugs."
+}

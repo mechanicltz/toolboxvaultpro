@@ -176,18 +176,9 @@ async def seed_demo_data_for_user(real_db, user_id: str) -> Dict[str, int]:
     await real_db.borrowers.insert_many(borrowers)
     counters["borrowers"] = len(borrowers)
 
-    # --- Bundle / Set -------------------------------------------------------
+    # --- Set (v3.2 model: a Set is a tool with is_bundle=True; its socket
+    # items below link to it as expansion items) ----------------------------
     bundle_id = _uid()
-    bundle = {
-        "id": bundle_id, "owner_id": user_id, "is_demo": True,
-        "name": "Master Socket Set", "part_number": "SNP-MSS-40",
-        "set_price": 379.0,
-        "photos": [_tile("Master Socket Set", 1, "40-piece set")],
-        "notes": "3/8\" drive chrome set — ratchet, sockets & extensions.",
-        "created_at": _now(), "updated_at": _now(),
-    }
-    await real_db.bundles.insert_one(bundle)
-    counters["bundles"] = 1
 
     # --- 15 inventory items (covers every app feature) ----------------------
     sd, sm = dealer("Snap-on Tools")
@@ -234,13 +225,24 @@ async def seed_demo_data_for_user(real_db, user_id: str) -> Dict[str, int]:
         tools.append(t)
         return t
 
-    # 1-3: bundled socket set items
+    # Set container tool (is_bundle). Uses the pre-generated bundle_id so the
+    # three socket items below can link to it as expansion items.
+    add(base(
+        "Master Socket Set", id=bundle_id, is_bundle=True, part_number="SNP-MSS-40",
+        model_numbers=["SNP-MSS-40"], cost=379.0,
+        notes="3/8\" drive chrome set — ratchet, sockets & extensions.",
+        photos=[_tile("Master Socket Set", 1, "40-piece set")],
+        _cat=cat("Hand Tools"), _tags=tagset("Hand tools"), _dealer=(sd, sm),
+    ))
+    counters["bundles"] = 1
+
+    # 1-3: socket set items (linked to the set above as expansion items)
     t1 = add(base(
         "1/2\" Drive Ratchet", brand="Snap-on", model="F80",
         model_numbers=["F80"], serial_numbers=["SN-RT-10231"],
         description="72-tooth flank-drive sealed-head ratchet.",
         cost=165.0, msrp_price=189.0, purchase_date=_days_ago(420),
-        condition="Excellent", bundle_id=bundle_id,
+        condition="Excellent", expansion_of=bundle_id,
         _cat=cat("Hand Tools"), _tags=tagset("Hand tools"), _dealer=(sd, sm),
         warranty=_warranty("Snap-on Tools", lifetime=True, start=_days_ago(420)),
         photos=[_tile("Ratchet", 0)], receipts=[_tile("RECEIPT", 2, "Snap-on")],
@@ -249,7 +251,7 @@ async def seed_demo_data_for_user(real_db, user_id: str) -> Dict[str, int]:
         "Socket Set 6pc (3/8\")", brand="Snap-on", model="210FSET",
         model_numbers=["210FSET"], description="3/8\" drive shallow sockets, 6 pieces.",
         cost=149.0, msrp_price=170.0, purchase_date=_days_ago(420),
-        bundle_id=bundle_id, _cat=cat("Hand Tools"), _tags=tagset("Hand tools"),
+        expansion_of=bundle_id, _cat=cat("Hand Tools"), _tags=tagset("Hand tools"),
         _dealer=(sd, sm), warranty=_warranty("Snap-on Tools", lifetime=True),
         photos=[_tile("Socket Set", 4)],
     ))
@@ -257,7 +259,7 @@ async def seed_demo_data_for_user(real_db, user_id: str) -> Dict[str, int]:
         "Extension Bar Set", brand="Snap-on", model="TMX3A",
         model_numbers=["TMX3A"], description="3/8\" drive extension bars (3, 6, 11 in).",
         cost=65.0, msrp_price=78.0, purchase_date=_days_ago(420),
-        bundle_id=bundle_id, _cat=cat("Hand Tools"), _tags=tagset("Hand tools"),
+        expansion_of=bundle_id, _cat=cat("Hand Tools"), _tags=tagset("Hand tools"),
         _dealer=(sd, sm), warranty=_warranty("Snap-on Tools", lifetime=True),
         photos=[_tile("Extension Bars", 5)],
     ))

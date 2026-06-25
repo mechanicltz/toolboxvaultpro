@@ -521,7 +521,7 @@ export default function WarrantyClaimsScreen() {
           <View style={styles.modalCard}>
             <Text style={styles.modalTitle}>FILTER CLAIMS</Text>
             <Text style={styles.modalSub}>
-              Affects what's shown on screen and what's exported to PDF/CSV.
+              Affects what’s shown on screen and what’s exported to PDF/CSV.
             </Text>
 
             <Text style={styles.fLabel}>STATUS</Text>

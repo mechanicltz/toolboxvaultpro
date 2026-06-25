@@ -259,7 +259,7 @@ export default function LocationsTreeScreen() {
             <Ionicons name="location-outline" size={48} color={theme.colors.textMuted} />
             <Text style={styles.emptyTitle}>NO LOCATIONS</Text>
             <Text style={styles.emptyText}>
-              Add a top-level location like "Garage" or "Workshop", then nest sub-locations
+              Add a top-level location like “Garage” or “Workshop”, then nest sub-locations
               (toolboxes → drawers → boxes) inside.
             </Text>
             <TouchableOpacity
@@ -276,7 +276,7 @@ export default function LocationsTreeScreen() {
           </ShadowBox>
         )}
         <Text style={styles.tip}>
-          Tap a row's <Text style={{ color: theme.colors.accent }}>+</Text> to add a sub-location.
+          Tap a row’s <Text style={{ color: theme.colors.accent }}>+</Text> to add a sub-location.
           Locations can nest unlimited levels deep.
         </Text>
       </ScrollView>

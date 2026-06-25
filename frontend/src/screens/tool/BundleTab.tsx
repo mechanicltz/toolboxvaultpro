@@ -157,7 +157,7 @@ export function BundleTab({
           <View style={boxStyle}>
             <View style={{ alignItems: "center", paddingVertical: 16, gap: 8 }}>
               <Ionicons name="cube-outline" size={36} color={theme.colors.textMuted} />
-              <Text style={s.muted}>This item isn't part of a set.</Text>
+              <Text style={s.muted}>This item isn’t part of a set.</Text>
             </View>
           </View>
         </View>

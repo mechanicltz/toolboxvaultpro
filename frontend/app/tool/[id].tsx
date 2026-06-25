@@ -268,8 +268,6 @@ export default function ToolDetail() {
   const [newCatName, setNewCatName] = useState("");
   const [newTagName, setNewTagName] = useState("");
   // Bundle tab picker
-  const [showBundlePicker, setShowBundlePicker] = useState(false);
-  const [allBundles, setAllBundles] = useState<any[]>([]);
 
   type PosterFieldKey =
     | "photo"
@@ -2330,10 +2328,6 @@ export default function ToolDetail() {
   };
 
   // ── BUNDLE TAB ──────────────────────────────────────────────────────────
-  const openBundlePicker = () => {
-    api.listBundles().then((b: any) => setAllBundles(Array.isArray(b) ? b : [])).catch(() => {});
-    setShowBundlePicker(true);
-  };
   const renderBundle = () => (
     <BundleTab bundle={tool} onChanged={load} boxStyle={boxStyle} editing={editing} />
   );
@@ -3960,42 +3954,6 @@ export default function ToolDetail() {
             <TouchableOpacity style={[styles.btnGhost, { marginTop: 10 }]} onPress={() => setShowEditTags(false)}><Text style={styles.btnGhostText}>DONE</Text></TouchableOpacity>
           </View>
         </KeyboardAvoidingView>
-      </Modal>
-
-      {/* ===== BUNDLE PICKER ===== */}
-      <Modal visible={showBundlePicker} transparent animationType="slide" onRequestClose={() => setShowBundlePicker(false)}>
-        <View style={styles.modalBackdrop}>
-          <View style={styles.modalCard}>
-            <View style={styles.modalHeader}>
-              <Ionicons name="cube" size={20} color={theme.colors.accent} />
-              <Text style={styles.modalTitle}>ADD TO BUNDLE</Text>
-              <TouchableOpacity onPress={() => setShowBundlePicker(false)} hitSlop={10}><Ionicons name="close" size={22} color={theme.colors.textPrimary} /></TouchableOpacity>
-            </View>
-            <ScrollView style={{ maxHeight: 360 }} keyboardShouldPersistTaps="handled">
-              {allBundles.length === 0 && <Text style={[styles.helper, { marginBottom: 10 }]}>No bundles yet. Create one below.</Text>}
-              {allBundles.map((b: any) => (
-                <TouchableOpacity key={b.id} style={styles.locInlineRow} onPress={async () => {
-                  try { await api.updateTool(tool.id, { bundle_id: b.id }); setShowBundlePicker(false); load(); }
-                  catch (e: any) { Alert.alert("Error", String(e?.message || e)); }
-                }}>
-                  <Ionicons name="cube" size={15} color={theme.colors.accent} />
-                  <Text style={styles.locInlineText} numberOfLines={1}>{b.name}</Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-            <TouchableOpacity style={[styles.btnPrimary, { marginTop: 12 }]} onPress={async () => {
-              try {
-                const b = await api.createBundle({ name: tool.name ? `${tool.name} set` : "New bundle" });
-                await api.updateTool(tool.id, { bundle_id: b.id });
-                setShowBundlePicker(false); load();
-              } catch (e: any) { Alert.alert("Error", String(e?.message || e)); }
-            }} testID="bundle-create-new">
-              <Ionicons name="add-circle" size={16} color="#000" />
-              <Text style={styles.btnPrimaryText}>CREATE NEW BUNDLE</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={[styles.btnGhost, { marginTop: 10 }]} onPress={() => setShowBundlePicker(false)}><Text style={styles.btnGhostText}>CANCEL</Text></TouchableOpacity>
-          </View>
-        </View>
       </Modal>
 
     </SafeAreaView>

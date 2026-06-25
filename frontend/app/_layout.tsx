@@ -16,7 +16,6 @@ import {
 import { useEffect, useRef, useState } from "react";
 import { AuroraBackground } from "../src/Aurora";
 import { BottomBar } from "../src/BottomBar";
-import { ReportsFab } from "../src/ReportsFab";
 import { ReviewPrompt } from "../src/ReviewPrompt";
 import { AuthProvider, useAuth } from "../src/AuthContext";
 import { BiometricLockGate } from "../src/BiometricLockGate";
@@ -403,7 +402,6 @@ function ShellNav() {
           </Stack>
           </NavThemeProvider>
         </ResponsiveContainer>
-        {showShell && <ReportsFab />}
       </View>
       {showShell && <BottomBar />}
       {showShell && <ReviewPrompt />}

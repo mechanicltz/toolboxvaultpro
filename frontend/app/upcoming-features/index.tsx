@@ -102,7 +102,7 @@ export default function UpcomingFeaturesScreen() {
                 <Ionicons name="rocket-outline" size={30} color={c.accent} />
                 <Text style={styles.emptyTitle}>No updates scheduled yet</Text>
                 <Text style={styles.emptyText}>
-                  Check back soon — we're always working on new tools and fixes.
+                  Check back soon — we’re always working on new tools and fixes.
                 </Text>
               </View>
             </SkinnedCard>
