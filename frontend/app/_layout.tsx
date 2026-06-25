@@ -322,25 +322,26 @@ function ShellNav() {
     return () => { cancelled = true; };
   }, [user]);
 
-  // Hold the screen stack until the font stack is ready so no screen's first
-  // paint uses a fallback system font. The boot intro overlay (in AuthGate)
-  // covers this on cold start, so it's invisible to the user.
+  // Hold the screen stack until the font stack is ready AND its glyph atlas has
+  // been fully rasterized, so no screen's first paint uses a fallback system
+  // font (the dashboard stat values / headers were flashing thin-then-correct).
+  // The boot intro overlay (in AuthGate) covers this on cold start.
   if (!tbvFontsReady || !fontsWarm) {
     return (
       <View style={{ flex: 1, backgroundColor: theme.colors.bg, alignItems: "center", justifyContent: "center" }}>
         <ActivityIndicator color={theme.colors.accent} />
-        {/* Invisible warmer: lays out every custom font (including the large
-            numeric sizes used by the dashboard stat tiles) so the glyph atlas
-            is built before any real screen paints. */}
+        {/* Invisible warmer rasterized ON-SCREEN (opacity 0, NOT off-screen) so
+            iOS actually builds the glyph atlas for EVERY family at EVERY size the
+            app uses before any real screen paints. Off-screen (-9999) warmers can
+            be culled and never rasterize, which is why the first dashboard paint
+            still fell back. */}
         {tbvFontsReady && (
           <View style={{ position: "absolute", opacity: 0 }} pointerEvents="none" accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
-            <RNText style={{ fontFamily: "BebasNeue_400Regular", fontSize: 40 }}>0123456789 $.,</RNText>
-            <RNText style={{ fontFamily: "BebasNeue_400Regular", fontSize: 14 }}>0123456789 $.,</RNText>
-            <RNText style={{ fontFamily: "Rajdhani_700Bold", fontSize: 24 }}>0123456789 $.,</RNText>
-            <RNText style={{ fontFamily: "Rajdhani_600SemiBold", fontSize: 18 }}>0123456789 $.,</RNText>
-            <RNText style={{ fontFamily: "Rajdhani_500Medium", fontSize: 14 }}>0123456789</RNText>
-            <RNText style={{ fontFamily: "Exo2_500Medium", fontSize: 12 }}>0123456789</RNText>
-            <RNText style={{ fontFamily: "Exo2_400Regular", fontSize: 11 }}>0123456789</RNText>
+            {["BebasNeue_400Regular", "Rajdhani_700Bold", "Rajdhani_600SemiBold", "Rajdhani_500Medium", "Exo2_700Bold", "Exo2_500Medium", "Exo2_400Regular"].map((fam) =>
+              [9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 20, 22, 24, 28, 32, 36, 40].map((sz) => (
+                <RNText key={`warm-${fam}-${sz}`} style={{ fontFamily: fam, fontSize: sz, fontWeight: "800" }}>0123456789$.,ABCabc</RNText>
+              ))
+            )}
           </View>
         )}
       </View>

@@ -31,9 +31,8 @@ export function SummaryHeader({
     return entries;
   };
   const locs = breakdown(agg.location_breakdown);
-  const cats = breakdown(agg.category_breakdown);
   const dealers = breakdown(agg.dealer_breakdown);
-  const hasGroups = locs.length > 0 || cats.length > 0 || dealers.length > 0;
+  const hasGroups = locs.length > 0 || dealers.length > 0;
 
   return (
     <View style={[styles.box, framed && styles.boxFramed]} testID="summary-header">
@@ -60,9 +59,6 @@ export function SummaryHeader({
         <View style={styles.groupsWrap}>
           {locs.length > 0 && (
             <Group icon="location" title="Locations" items={locs} />
-          )}
-          {cats.length > 0 && (
-            <Group icon="folder" title="Categories" items={cats} />
           )}
           {dealers.length > 0 && (
             <Group icon="briefcase" title="Dealers" items={dealers} />

@@ -623,6 +623,19 @@ PDFs 200, fresh demo seed creates is_bundle Set + 3 expansion items) + frontend
 smoke (Sets list, Set tab, pdf-viewer no tab bar) + app boots clean after cache
 clear.
 
+## Dashboard thin-font-on-cold-load + remove Categories from summary (2026-06)
+(1) FONT FLASH: on the very first dashboard paint the TBV-font text (stat values/
+headers) briefly rendered with the thinner SYSTEM fallback, correcting only on
+remount. Cause: the glyph atlas wasn't fully rasterized before first paint — the
+PERMANENT warmer sits off-screen at -9999 (iOS can cull it). Fix in _layout.tsx:
+during the boot gate (which is on-screen at opacity 0, so it DOES rasterize) we
+now render the FULL family×size grid (BebasNeue/Rajdhani 700/600/500/Exo2
+700/500/400 × sizes 9..40) so the complete atlas is built before any screen
+paints. (iOS-only first-paint issue; verify on device.)
+(2) Removed the "Categories" group from src/SummaryHeader.tsx breakdown (kept
+Locations + Dealers). Verified live: expanded inventory summary shows only
+Locations + Dealers; Categories gone.
+
 ## RULE — WRITTEN IN STONE (user demand, 2026-06-19)
 ALWAYS talk to this user in PLAIN ENGLISH. No code words, no file names, no
 technical jargon, no error-message copy-paste. Explain everything like you would
