@@ -1,0 +1,47 @@
+{
+  "summary": "Dashboard colour-fix verification on the Industrial/skinned Home (Iron Forge / Steel — the default path for ryan@ryan.com). Live DOM inspection confirms the NotificationsAccordion label colour is RED (rgb(239,68,68) = #EF4444 via theme.colors.danger) — fix (c) works. Code review confirms fix (d) — the NEXT DEALER ROUTE notif has inline color '#FF6A00' so its icon will be orange when rendered (route notif not currently rendered for ryan because no upcoming dealer routes — fallback ALL CLEAR notif is shown instead, which also correctly renders the label in RED). HOWEVER fixes (a) and (b) are INCOMPLETE: they were applied only to the PLAIN-mode render block, not to the skinned (industrial/steel) block that ryan@ryan.com actually sees. The skinned dealer rows still use orange for the payment-due sub-line and silver/grey for the $ balance. Ryan currently has no outstanding dealer balances, so live visual capture of dealer rows is not possible from this account, but the styles + JSX paths leave no doubt.",
+  "backend_issues": { "critical": [], "minor": [] },
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "DealerBalanceRow (skinned/industrial path, app/(tabs)/index.tsx:953)",
+        "issue": "Dealer $ balance value is NOT green in the skinned (Iron Forge / Steel) home. The fix added inline color theme.colors.success only to the PLAIN-mode block at app/(tabs)/index.tsx line ~721. The skinned render block at line 953 still uses just `[styles.detailsValue, steelValueStyle, dTotal === 0 && styles.valueMuted]`, where styles.detailsValue.color = TBV.steel (silver) and STEEL_VALUE in steel mode is also silver — NEVER green. Needs the same inline `{ color: theme.colors.success }` (or `dTotal === 0 ? styles.valueMuted : { color: theme.colors.success }`) applied here.",
+        "testID": "home-dealer-<id> / home-dealers-widget",
+        "priority": "HIGH"
+      },
+      {
+        "component": "homeStyles.detailsDealerPaySub (src/screens/home/homeStyles.ts:585-591)",
+        "issue": "Payment-due sub-line under each dealer name in the skinned/industrial home is still ORANGE (color: c.accent), not RED. Only the plain-mode style `pdDealerPaySub` (line 579-584) was switched to c.danger. The skinned block at index.tsx line 946 uses `styles.detailsDealerPaySub` which remains c.accent. Change `detailsDealerPaySub.color` from `c.accent` to `c.danger` so the red colour holds across every theme/skin.",
+        "testID": "home-dealer-<id>",
+        "priority": "HIGH"
+      }
+    ],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": [
+      {
+        "component": "react-native-web deprecation warnings",
+        "issue": "Console emits: 'textShadow*' style props are deprecated (use textShadow), 'shadow*' style props are deprecated (use boxShadow), and props.pointerEvents is deprecated (use style.pointerEvents). Pre-existing — not introduced by this change, but noted for hygiene."
+      }
+    ]
+  },
+  "test_report_links": [],
+  "action_items": [
+    "Update src/screens/home/homeStyles.ts: change `detailsDealerPaySub.color` from `c.accent` to `c.danger` so the dealer payment-due sub-text renders RED in the skinned (Iron Forge / Steel) home, matching the plain-mode pdDealerPaySub.",
+    "Update app/(tabs)/index.tsx around line 953: add inline `{ color: theme.colors.success }` to the dealer $ balance Text in the skinned dealer-accounts widget — currently only the plain-mode block (~line 721) has this override.",
+    "After both fixes, retest with a seeded dealer balance + a scheduled-payment sub-line so live computed colours can be verified for non-empty rows (ryan@ryan.com currently has none).",
+    "If practical, switch ryan's appearance to a non-orange Steel variant (Arctic / Emerald / Pink) and re-verify — the inline `theme.colors.success` (green) and `theme.colors.danger` (red) constants are theme-skin-independent so they should hold."
+  ],
+  "critical_code_review_comments": [
+    "The color-fix was only applied to one of two parallel render branches in app/(tabs)/index.tsx (plain-mode vs skinned). Whenever a dashboard widget has both render paths, ANY visual change must be applied to BOTH or the fix only ships to a subset of users.",
+    "Consider extracting the dealer-row Text styles into shared inline overrides driven by theme constants (success/danger) rather than maintaining two sibling stylesheets (pdDealerPaySub vs detailsDealerPaySub) — it eliminates this class of half-applied-fix regression.",
+    "NotificationsAccordion correctly hard-codes c.danger for the label, so the fix (c) is theme-proof. Route icon hard-codes '#FF6A00', also theme-proof — good."
+  ],
+  "updated_files": [],
+  "success_rate": { "backend": "N/A (skipped)", "frontend": "50% — 2/4 fixes verified, 2/4 still broken on the skinned home path" },
+  "seed_data_creation": "None.",
+  "retest_needed": true,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "ryan@ryan.com has NO outstanding dealer balances and NO upcoming dealer routes, so the dealer-accounts widget shows 'No outstanding balances' and the notifications carousel shows the ALL CLEAR fallback notif (testID home-notif-empty). Live colour proof: ALL CLEAR label = rgb(239,68,68) = RED (good — proves NotificationsAccordion label colour fix works for ALL notifs including NEXT DEALER ROUTE / MAINTENANCE OVERDUE). Empty-notif icon = rgb(255,106,0) = orange (this is c.accent fallback, NOT proof of the route-icon #FF6A00 fix — but code review at index.tsx:313 confirms the route notif passes color:'#FF6A00' which is theme-independent). To verify dealer rows live you'll need either to (a) seed a credit_balance/personal_balance on one of ryan's dealers + a scheduled payment, or (b) log into an account that already has both (mechanicltz@gmail.com / Blue321! may or may not have dealers — check). Both still-broken bugs are isolated to two single-line edits: homeStyles.ts:586 (c.accent→c.danger) and index.tsx:953 (add inline color: theme.colors.success).",
+  "rca_of_issue": "The user-facing dashboard has two parallel render trees in app/(tabs)/index.tsx — a PLAIN-mode block (used when skin === 'plain', ~line 612-781) and a SKINNED block (Iron Forge / Steel, line 795-end). Each block has its own style references: pdDealerPaySub vs detailsDealerPaySub for the payment sub-line, and an inline colour for the $ value in plain but no inline colour in skinned. The main agent applied fixes (a) and (b) only to the plain-mode block / pdDealerPaySub. Because ryan@ryan.com (and any user keeping the default Industrial appearance) renders through the skinned branch, the dealer $ stays silver/grey and the payment sub-line stays orange. Mitigation: apply the same two inline overrides to the skinned branch (one-line each), then retest with seeded balances."
+}

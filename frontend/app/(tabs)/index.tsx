@@ -308,6 +308,9 @@ export default function HomeScreen() {
         icon: "navigate",
         label: "NEXT DEALER ROUTE",
         text: `${nextRouteBanner.dealers.join(" & ")} · ${nextRouteBanner.dateStr}`,
+        // Fixed brand orange so the route icon stays orange regardless of the
+        // active theme/colour variant (matches the standard accent icons).
+        color: "#FF6A00",
         onPress: () => router.push("/(tabs)/dealers"),
       });
     }
@@ -715,6 +718,7 @@ export default function HomeScreen() {
                                 <Text
                                   style={[
                                     styles.pdValue,
+                                    { color: theme.colors.success },
                                     dTotal === 0 && { color: theme.colors.textMuted },
                                   ]}
                                 >

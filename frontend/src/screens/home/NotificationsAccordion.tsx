@@ -88,7 +88,7 @@ export function NotificationsAccordion({ notifications }: { notifications: HomeN
         <Ionicons name={item.icon} size={20} color={item.color || c.accent} />
       </View>
       <View style={{ flex: 1 }}>
-        <Text style={[styles.label, { color: c.accent }]} numberOfLines={1}>{item.label}</Text>
+        <Text style={[styles.label, { color: c.danger }]} numberOfLines={1}>{item.label}</Text>
         <Text style={[styles.text, { color: c.textPrimary }]} numberOfLines={2}>{item.text}</Text>
       </View>
       {!!item.onPress && <Ionicons name="chevron-forward" size={18} color={c.accent} />}

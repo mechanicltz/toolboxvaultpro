@@ -577,7 +577,7 @@ export const styles = themedStyles((c) => ({
     fontWeight: "700",
   },
   pdDealerPaySub: {
-    color: c.accent,
+    color: c.danger,
     fontSize: 10,
     fontWeight: "700",
     marginTop: 2,
