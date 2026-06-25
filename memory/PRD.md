@@ -546,6 +546,17 @@ pulled up above the keyboard. Both theme branches updated (replace_all). Verifie
 live (Pro acct): in edit mode "ADD PHOTO"/status pills are gone, form starts at
 ITEM NAME directly under the tabs; lint clean.
 
+## Mark-broken sheet covered by keyboard (2026-06 — DONE & tested)
+The "Mark as broken / Edit repair info" modal (app/tool/[id].tsx, showRepair) is a
+bottom-anchored sheet (modalBg justifyContent flex-end) with text inputs (Contact,
+Cost, Notes) and had NO keyboard avoidance, so the keyboard covered it. Fix: wrap
+its modalBg in <KeyboardAvoidingView behavior={ios?"padding":undefined}> (Platform
+& KeyboardAvoidingView already imported), mirroring the working PaymentModal
+pattern, so the sheet lifts above the keyboard; inner ScrollView still lets you
+reach every field. Verified live: sheet opens via menu -> Mark broken and renders
+all fields + CANCEL/MARK BROKEN; lint clean. Keyboard-lift itself is native-only
+(web shows no keyboard) — confirm feel on device.
+
 ## RULE — WRITTEN IN STONE (user demand, 2026-06-19)
 ALWAYS talk to this user in PLAIN ENGLISH. No code words, no file names, no
 technical jargon, no error-message copy-paste. Explain everything like you would

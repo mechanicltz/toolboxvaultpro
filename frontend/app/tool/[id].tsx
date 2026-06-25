@@ -2970,7 +2970,10 @@ export default function ToolDetail() {
 
 
       <Modal visible={showRepair} transparent animationType="slide">
-        <View style={styles.modalBg}>
+        <KeyboardAvoidingView
+          style={styles.modalBg}
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+        >
           <View style={[styles.modalCard, { borderTopColor: theme.colors.danger, maxHeight: "90%" }]}>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 12 }}>
               <Ionicons name="build" size={22} color={theme.colors.danger} />
@@ -3246,7 +3249,7 @@ export default function ToolDetail() {
               </TouchableOpacity>
             </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
 
       {/* PDF Export Type Picker Modal — works on web AND native (replaces Alert.alert) */}
