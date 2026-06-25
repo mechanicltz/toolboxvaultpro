@@ -506,6 +506,24 @@ own phone. Verified: app boots with NO red screen after fix.
 - Dealer detail "edit-in-place / live edit" conversion: user is intentionally
   KEEPING the dealer editing the way it is now. CLOSED — do not implement.
 
+## All company-wide reports now use the NEW set model (2026-06 — DONE & tested)
+Reworked backend reports.py so Inventory, Insurance and Year-End reports use the
+v3.2 set model (a bundle IS a tool with is_bundle + embedded inside_items; set
+price = the tool's own cost; expansion add-ons are separate tools). Removed the
+old `db.bundles`/`bundle_id` dual-sum engine (`_load_bundles_map`, `_bundle_sums`,
+`_bundle_value_stats`, `_group_rows_by_bundle`, `SET_PRICING_OPTION`). New:
+`_normalise_tool_row` now carries is_bundle/inside_items/expansion_of; helper
+`_append_set_items(rows, list_items)` renders each set as ONE row priced at its
+set price and, when the new toggle `list_set_items` (SET_DETAILS_OPTION, default
+ON) is set, lists the inside items by name+model beneath the set name with NO
+individual prices. Totals are a plain sum of row costs (set counted once at set
+price; inside items have no inventory presence so never double-count; expansion
+items are real separate rows). Verified: unit test + live PDFs (inventory/
+insurance/year_end all HTTP 200) + end-to-end with a real owner-scoped bundle
+(set row shows "(SET)" + 2 inside items w/o prices, total correct, no leaked
+rows). Frontend wizard auto-renders the new toggle (toggle type already supported).
+This matches the per-set export already built into tool/[id].tsx (Stage 6).
+
 ## RULE — WRITTEN IN STONE (user demand, 2026-06-19)
 ALWAYS talk to this user in PLAIN ENGLISH. No code words, no file names, no
 technical jargon, no error-message copy-paste. Explain everything like you would
