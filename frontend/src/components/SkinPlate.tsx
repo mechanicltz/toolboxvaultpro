@@ -21,6 +21,7 @@ import { themedStyles, useSkin } from "../themeContext";
 import { theme } from "../theme";
 import { SKIN, CAP } from "../tbv/skins";
 import { TbvFrame } from "../tbv/components/TbvFrame";
+import { useIsSteel, useSteelPanelFrame } from "../tbv/steel";
 
 type Props = {
   children: ReactNode;
@@ -52,6 +53,8 @@ export function SkinPlate({
 }: Props) {
   const { skin } = useSkin();
   const isIndustrial = skin === "industrial";
+  const isSteel = useIsSteel();
+  const steelFrame = useSteelPanelFrame();
   const Wrap: any = onPress || onLongPress ? TouchableOpacity : View;
   const wrapProps =
     onPress || onLongPress
@@ -59,6 +62,28 @@ export function SkinPlate({
       : {};
 
   if (isIndustrial) {
+    // STEEL family — render the brushed-silver frame (recolored per variant)
+    // so cards match the rest of the Steel skin instead of the iron art.
+    if (isSteel) {
+      const px = Math.max(padX ?? steelFrame.padX, steelFrame.padX);
+      const pt = Math.max(padTop ?? steelFrame.padTop, steelFrame.padTop);
+      const pb = Math.max(padBottom ?? steelFrame.padBottom, steelFrame.padBottom);
+      return (
+        <Wrap testID={testID} style={style} {...wrapProps}>
+          <TbvFrame
+            source={steelFrame.source}
+            capInsets={steelFrame.capInsets}
+            frameScale={steelFrame.frameScale}
+            padX={px}
+            padTop={pt}
+            padBottom={pb}
+          >
+            <View style={innerStyle}>{children}</View>
+          </TbvFrame>
+        </Wrap>
+      );
+    }
+
     const source = frame === "window" ? SKIN.window : SKIN.plate;
     const cap = frame === "window" ? CAP.window : CAP.plate;
     // Content MUST clear the metal rails. The plate frame has 46px L/R rails +

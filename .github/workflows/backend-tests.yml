@@ -69,6 +69,13 @@ jobs:
             -d '{"email":"ryan@ryan.com","password":"ryan1234","name":"Ryan"}' \
             -o /dev/null -w "register HTTP %{http_code}\n" || true
 
+      - name: Grant the test user Pro (lifetime) so tool-creation tests pass
+        working-directory: backend
+        # Registration seeds 15 demo tools = the FREE-tier limit, so the
+        # tool-creation guard tests would 402. Tool-creation tests run against
+        # a Pro account — flip this disposable CI user to lifetime Pro.
+        run: python tests/ci_grant_pro.py ryan@ryan.com
+
       - name: Run guard test suites
         working-directory: backend
         run: |

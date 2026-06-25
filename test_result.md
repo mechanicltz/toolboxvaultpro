@@ -4544,8 +4544,22 @@ backend:
             All 125 numbered checks PASS. NO critical bugs, NO 5xx errors,
             NO schema mismatches, NO data-leak vulnerabilities, NO
             owner-scope bypasses. The backend is READY FOR LAUNCH.
+frontend:
+  - task: "Report format chooser (PDF/CSV) respects Steel theme"
+    implemented: true
+    working: "NA"
+    file: "frontend/src/components/SkinPlate.tsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+        -working: "NA"
+        -agent: "main"
+        -comment: "SkinPlate now renders the brushed-silver (steel) frame via useIsSteel/useSteelPanelFrame when the Steel metal style is active, instead of always using the Iron Forge plate art. This fixes the report format chooser (Reports tab format step) and all other SkinPlate cards to match the active Steel skin."
+
 test_plan:
-  current_focus: []
+  current_focus:
+    - "Report format chooser (PDF/CSV) respects Steel theme"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"

@@ -600,6 +600,48 @@ async def admin_migrate_model_serial(user: User = Depends(get_current_user)):
     return {"total_tools": total, "migrated": touched}
 
 
+@api_router.post("/admin/refresh-dealer-contacts")
+async def admin_refresh_dealer_contacts(user: User = Depends(get_current_user)):
+    """One-shot cleanup of pre-existing STOCK dealer contact data.
+
+    New accounts get clean, single-value, tappable contact fields straight
+    from DEFAULT_DEALERS_SEED. Accounts created before that seed was cleaned
+    up still carry the old verbose strings (e.g. "1-800-MAC-TOOLS (622-8665)
+    — select technical / product support option"). This endpoint rewrites the
+    company-contact fields of every dealer whose name matches a stock default
+    dealer to the clean seed values, so existing users get the same clean
+    links. Only the 6 contact fields are touched — balances, agents,
+    transactions, schedules and any custom dealers are left untouched.
+    Idempotent (skips dealers already matching the clean values). Admin only.
+    """
+    _require_admin_for_seed(user)
+    # Build a case-insensitive name -> clean contact-fields map from the seed.
+    CONTACT_KEYS = (
+        "phone", "website", "address",
+        "warranty_contact", "customer_support_contact", "tech_support_contact",
+    )
+    seed_by_name = {
+        d["name"].strip().lower(): {k: d.get(k, "") for k in CONTACT_KEYS}
+        for d in DEFAULT_DEALERS_SEED
+    }
+    total = 0
+    touched = 0
+    cursor = real_db.dealers.find({}, {"_id": 0})
+    async for d in cursor:
+        total += 1
+        clean = seed_by_name.get(str(d.get("name", "")).strip().lower())
+        if not clean:
+            continue  # not a stock dealer — leave the user's custom dealer alone
+        # Only write fields that actually differ, so the op is idempotent.
+        diff = {k: v for k, v in clean.items() if str(d.get(k, "") or "") != str(v or "")}
+        if not diff:
+            continue
+        await real_db.dealers.update_one({"id": d["id"]}, {"$set": diff})
+        touched += 1
+    return {"total_dealers": total, "refreshed": touched}
+
+
+
 
 @auth_router.post("/register", response_model=AuthResponse)
 async def register(payload: RegisterRequest, request: Request):
