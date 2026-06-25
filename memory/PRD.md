@@ -499,6 +499,13 @@ logic (skin==="industrial" -> barStyle "light") was already correct. Web preview
 can't show the native status bar — user must confirm white clock/battery on their
 own phone. Verified: app boots with NO red screen after fix.
 
+## User decisions (2026-06) — CLOSED, do not revisit
+- "Stuck Agents tab" on dealer pages: user confirms it is NOT broken on their
+  device. The iter_57 web-preview failure was a test-harness artifact only.
+  CLOSED — do not chase.
+- Dealer detail "edit-in-place / live edit" conversion: user is intentionally
+  KEEPING the dealer editing the way it is now. CLOSED — do not implement.
+
 ## RULE — WRITTEN IN STONE (user demand, 2026-06-19)
 ALWAYS talk to this user in PLAIN ENGLISH. No code words, no file names, no
 technical jargon, no error-message copy-paste. Explain everything like you would
