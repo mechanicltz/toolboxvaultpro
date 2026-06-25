@@ -524,6 +524,18 @@ insurance/year_end all HTTP 200) + end-to-end with a real owner-scoped bundle
 rows). Frontend wizard auto-renders the new toggle (toggle type already supported).
 This matches the per-set export already built into tool/[id].tsx (Stage 6).
 
+## Add-item Name placeholder fix (2026-06 — DONE & tested)
+The Add flow created a tool named "New Item" / "New Set" and the edit form showed
+that literal text in the Name field (looked like a hint but was a real value that
+didn't clear on tap). Fix in app/tool/[id].tsx: `beginEdit` now starts a fresh
+record's name EMPTY (`freshUnsavedRef.current ? "" : t.name`) so the greyed
+placeholder shows instead; `saveEdit` falls back to "New Item"/"New Set" only if
+the user saves it blank (never wipes an existing item's name). Verified live (Pro
+acct): new item's edit-name value = "" with placeholder "e.g. 1/2\" Impact Wrench".
+Note: only "New Item"/"New Set" were literal stand-ins — all other Add flows
+already use empty fields + placeholders; quantity default "1" is a real default
+(kept, per user's "unless it was a set default value").
+
 ## RULE — WRITTEN IN STONE (user demand, 2026-06-19)
 ALWAYS talk to this user in PLAIN ENGLISH. No code words, no file names, no
 technical jargon, no error-message copy-paste. Explain everything like you would

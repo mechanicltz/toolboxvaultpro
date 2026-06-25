@@ -1808,7 +1808,7 @@ export default function ToolDetail() {
           : (t.serial_number ? [String(t.serial_number)] : []));
     const sns: string[] = Array.isArray(t.serial_numbers) ? t.serial_numbers.filter(Boolean) : [];
     setForm({
-      name: t.name || "",
+      name: freshUnsavedRef.current ? "" : (t.name || ""),
       brand: t.brand || "",
       model_numbers: mns.length ? mns : [""],
       serial_numbers: sns.length ? sns : [""],
@@ -1880,7 +1880,7 @@ export default function ToolDetail() {
     const cleanModels = (form.model_numbers || []).map((s: string) => s.trim()).filter(Boolean);
     const cleanSerials = (form.serial_numbers || []).map((s: string) => s.trim()).filter(Boolean);
     const payload: any = {
-      name: (form.name || "").trim(),
+      name: (form.name || "").trim() || (freshUnsavedRef.current ? (tool.is_bundle ? "New Set" : "New Item") : (tool.name || "")),
       brand: form.brand,
       model_numbers: cleanModels,
       serial_numbers: cleanSerials,
