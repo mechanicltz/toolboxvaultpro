@@ -10,7 +10,9 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
+  ScrollView,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { theme } from "../theme";
 import { api } from "../api";
@@ -39,6 +41,7 @@ export function PaymentModal({
   const [note, setNote] = useState("");
   const [date, setDate] = useState(today);
   const [busy, setBusy] = useState(false);
+  const insets = useSafeAreaInsets();
 
   React.useEffect(() => {
     if (visible) {
@@ -90,7 +93,16 @@ export function PaymentModal({
         style={{ flex: 1 }}
       >
         <View style={styles.bg}>
-          <View style={styles.card}>
+          <ScrollView
+            style={{ flex: 1 }}
+            contentContainerStyle={[
+              styles.scrollContent,
+              { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 16 },
+            ]}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+          >
+            <View style={styles.card}>
             <Text style={styles.title}>{dealer.name}</Text>
             <Text style={styles.subtitle}>{accountLabel}</Text>
             <View style={styles.balRow}>
@@ -194,6 +206,7 @@ export function PaymentModal({
               </TouchableOpacity>
             </View>
           </View>
+          </ScrollView>
         </View>
       </KeyboardAvoidingView>
     </Modal>
@@ -201,7 +214,8 @@ export function PaymentModal({
 }
 
 const styles = themedStyles((c) => ({
-  bg: { flex: 1, backgroundColor: "rgba(0,0,0,0.7)", justifyContent: "center", padding: 20 },
+  bg: { flex: 1, backgroundColor: "rgba(0,0,0,0.7)" },
+  scrollContent: { flexGrow: 1, justifyContent: "center", paddingHorizontal: 20 },
   card: {
     backgroundColor: c.bgSecondary,
     padding: 22,
