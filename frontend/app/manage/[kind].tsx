@@ -17,8 +17,11 @@ import { theme } from "../../src/theme";
 import { api } from "../../src/api";
 import { confirm } from "../../src/confirm";
 
-import { themedStyles } from "../../src/themeContext";
+import { themedStyles, useSkin } from "../../src/themeContext";
 import { IndustrialBanner } from "../../src/components/IndustrialBanner";
+import { TbvListPanel } from "../../src/tbv/components/TbvListPanel";
+import { useIsSteel, useSteelPanelFrame } from "../../src/tbv/steel";
+import { SKIN, CAP } from "../../src/tbv/skins";
 
 type Kind = "categories" | "tags" | "locations";
 
@@ -31,6 +34,13 @@ const TITLES: Record<Kind, string> = {
 export default function ManageScreen() {
   const { kind } = useLocalSearchParams<{ kind: Kind }>();
   const router = useRouter();
+  const { skin } = useSkin();
+  const isIndustrial = skin === "industrial";
+  const isSteel = useIsSteel();
+  const steelPanel = useSteelPanelFrame();
+  const winSrc = isSteel ? steelPanel.source : SKIN.window;
+  const winCap = isSteel ? steelPanel.capInsets : CAP.window;
+  const steelScale = isSteel ? steelPanel.frameScale : undefined;
   const k = (kind || "categories") as Kind;
   const [items, setItems] = useState<any[]>([]);
   const [loaded, setLoaded] = useState(false);
@@ -124,86 +134,97 @@ export default function ManageScreen() {
           <Ionicons name="add" size={22} color="#000" />
         </TouchableOpacity>
       </View>
-      <ScrollView contentContainerStyle={{ paddingBottom: 60 }} keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets>
-        {!loaded ? (
-          <View style={{ paddingVertical: 40, alignItems: "center" }}>
-            <ActivityIndicator color={theme.colors.accent} />
-          </View>
-        ) : items.length === 0 ? (
-          <Text style={styles.empty}>None yet. Add one above.</Text>
-        ) : (
-          items.map((i) => {
-            const isEditing = editId === i.id;
-            return (
-              <View key={i.id} style={styles.row}>
-                <Ionicons
-                  name={k === "categories" ? "folder" : k === "tags" ? "pricetag" : "location"}
-                  size={18}
-                  color={theme.colors.accent}
-                />
-                {isEditing ? (
-                  <TextInput
-                    testID={`edit-input-${i.id}`}
-                    value={editValue}
-                    onChangeText={setEditValue}
-                    style={styles.editInput}
-                    autoFocus
-                    onSubmitEditing={() => saveEdit(i.id)}
-                  />
-                ) : (
-                  <TouchableOpacity
-                    testID={`row-${i.id}`}
-                    style={{ flex: 1 }}
-                    onPress={() => startEdit(i)}
-                    activeOpacity={0.7}
-                  >
-                    <Text style={styles.rowText}>{i.name}</Text>
-                  </TouchableOpacity>
-                )}
-                {isEditing ? (
-                  <>
-                    <TouchableOpacity
-                      testID={`save-${i.id}`}
-                      onPress={() => saveEdit(i.id)}
-                      hitSlop={8}
-                      style={styles.iconAction}
-                    >
-                      <Ionicons name="checkmark" size={20} color={theme.colors.success} />
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      testID={`cancel-${i.id}`}
-                      onPress={cancelEdit}
-                      hitSlop={8}
-                      style={styles.iconAction}
-                    >
-                      <Ionicons name="close" size={20} color={theme.colors.textMuted} />
-                    </TouchableOpacity>
-                  </>
-                ) : (
-                  <>
-                    <TouchableOpacity
-                      testID={`edit-${i.id}`}
-                      onPress={() => startEdit(i)}
-                      hitSlop={8}
-                      style={styles.iconAction}
-                    >
-                      <Ionicons name="create-outline" size={18} color={theme.colors.accent} />
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      testID={`del-${i.id}`}
-                      onPress={() => remove(i.id, i.name)}
-                      hitSlop={8}
-                      style={styles.iconAction}
-                    >
-                      <Ionicons name="trash-outline" size={18} color={theme.colors.danger} />
-                    </TouchableOpacity>
-                  </>
-                )}
+      {(() => {
+        const listInner = (
+          <ScrollView contentContainerStyle={{ padding: isIndustrial ? 0 : 16, paddingBottom: 60 }} keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets showsVerticalScrollIndicator={false}>
+            {!loaded ? (
+              <View style={{ paddingVertical: 40, alignItems: "center" }}>
+                <ActivityIndicator color={theme.colors.accent} />
               </View>
-            );
-          })
-        )}
-      </ScrollView>
+            ) : items.length === 0 ? (
+              <Text style={styles.empty}>None yet. Add one above.</Text>
+            ) : (
+              items.map((i, idx) => {
+                const isEditing = editId === i.id;
+                return (
+                  <View key={i.id} style={[styles.row, idx < items.length - 1 && styles.rowDivider]}>
+                    <Ionicons
+                      name={k === "categories" ? "folder" : k === "tags" ? "pricetag" : "location"}
+                      size={18}
+                      color={theme.colors.accent}
+                    />
+                    {isEditing ? (
+                      <TextInput
+                        testID={`edit-input-${i.id}`}
+                        value={editValue}
+                        onChangeText={setEditValue}
+                        style={styles.editInput}
+                        autoFocus
+                        onSubmitEditing={() => saveEdit(i.id)}
+                      />
+                    ) : (
+                      <TouchableOpacity
+                        testID={`row-${i.id}`}
+                        style={{ flex: 1 }}
+                        onPress={() => startEdit(i)}
+                        activeOpacity={0.7}
+                      >
+                        <Text style={styles.rowText}>{i.name}</Text>
+                      </TouchableOpacity>
+                    )}
+                    {isEditing ? (
+                      <>
+                        <TouchableOpacity
+                          testID={`save-${i.id}`}
+                          onPress={() => saveEdit(i.id)}
+                          hitSlop={8}
+                          style={styles.iconAction}
+                        >
+                          <Ionicons name="checkmark" size={20} color={theme.colors.success} />
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          testID={`cancel-${i.id}`}
+                          onPress={cancelEdit}
+                          hitSlop={8}
+                          style={styles.iconAction}
+                        >
+                          <Ionicons name="close" size={20} color={theme.colors.textMuted} />
+                        </TouchableOpacity>
+                      </>
+                    ) : (
+                      <>
+                        <TouchableOpacity
+                          testID={`edit-${i.id}`}
+                          onPress={() => startEdit(i)}
+                          hitSlop={8}
+                          style={styles.iconAction}
+                        >
+                          <Ionicons name="create-outline" size={18} color={theme.colors.accent} />
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          testID={`del-${i.id}`}
+                          onPress={() => remove(i.id, i.name)}
+                          hitSlop={8}
+                          style={styles.iconAction}
+                        >
+                          <Ionicons name="trash-outline" size={18} color={theme.colors.danger} />
+                        </TouchableOpacity>
+                      </>
+                    )}
+                  </View>
+                );
+              })
+            )}
+          </ScrollView>
+        );
+        return isIndustrial ? (
+          <TbvListPanel source={winSrc} capInsets={winCap} frameScale={steelScale} style={styles.listPanel} padX={28} padTop={18} padBottom={14}>
+            {listInner}
+          </TbvListPanel>
+        ) : (
+          <View style={styles.listPanelPlain}>{listInner}</View>
+        );
+      })()}
     </SafeAreaView>
   );
 }
@@ -242,19 +263,17 @@ const styles = themedStyles((c) => ({
     borderRadius: theme.radii.md,
     ...(theme.elevation.accent as object),
   },
+  listPanel: { flex: 1, marginHorizontal: 12, marginTop: 4, marginBottom: 8 },
+  listPanelPlain: { flex: 1 },
+  rowDivider: {
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: c.border,
+  },
   row: {
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
-    backgroundColor: c.bgSecondary,
-    borderWidth: 1,
-    borderColor: c.border,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    marginHorizontal: 16,
-    marginBottom: 8,
-    borderRadius: theme.radii.md,
-    ...(theme.elevation.md as object),
+    paddingVertical: 14,
   },
   rowText: { color: c.textPrimary, fontSize: 11, fontWeight: "600" },
   editInput: {

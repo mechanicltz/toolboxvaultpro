@@ -17,9 +17,12 @@ import { theme } from "../src/theme";
 import { api } from "../src/api";
 import { formatDateUS } from "../src/dateUtil";
 
-import { themedStyles } from "../src/themeContext";
+import { themedStyles, useSkin } from "../src/themeContext";
 import { IndustrialBanner } from "../src/components/IndustrialBanner";
 import { SkinPlate } from "../src/components/SkinPlate";
+import { TbvListPanel } from "../src/tbv/components/TbvListPanel";
+import { useIsSteel, useSteelPanelFrame } from "../src/tbv/steel";
+import { SKIN, CAP } from "../src/tbv/skins";
 
 function daysUntil(iso: string): number {
   if (!iso) return 9999;
@@ -30,6 +33,13 @@ function daysUntil(iso: string): number {
 
 export default function MaintenanceScreen() {
   const router = useRouter();
+  const { skin } = useSkin();
+  const isIndustrial = skin === "industrial";
+  const isSteel = useIsSteel();
+  const steelPanel = useSteelPanelFrame();
+  const winSrc = isSteel ? steelPanel.source : SKIN.window;
+  const winCap = isSteel ? steelPanel.capInsets : CAP.window;
+  const steelScale = isSteel ? steelPanel.frameScale : undefined;
   const [data, setData] = useState<{ items: any[]; overdue: number; due_soon: number; total: number }>({
     items: [],
     overdue: 0,
@@ -112,74 +122,94 @@ export default function MaintenanceScreen() {
         ))}
       </View>
 
-      <ScrollView
-        contentContainerStyle={{ padding: 16, paddingBottom: 60 }}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.colors.accent} />
-        }
-      >
-        {data.items.length === 0 ? (
-          <View style={styles.empty}>
-            <Ionicons name="construct-outline" size={48} color={theme.colors.textMuted} />
-            <Text style={styles.emptyTitle}>NO MAINTENANCE DUE</Text>
-            <Text style={styles.emptyText}>
-              Schedules due within {horizon} days will appear here.
-              {"\n"}Add one from any tool&apos;s detail screen.
-            </Text>
-          </View>
-        ) : (
-          data.items.map((it: any) => {
-            const days = daysUntil(it.next_due_date);
-            const isOverdue = it.is_overdue;
-            const isUrgent = !isOverdue && days <= 30;
-            return (
-              <SkinPlate
-                key={`${it.tool_id}-${it.schedule_id}`}
-                testID={`mnt-${it.schedule_id}`}
-                style={styles.itemCard}
-                innerStyle={styles.itemRow}
-                onPress={() => router.push(`/tool/${it.tool_id}`)}
-              >
-                <View style={styles.thumb}>
-                  {it.tool_photo ? (
-                    <AppImage source={{ uri: it.tool_photo }} style={styles.thumbImg} />
-                  ) : (
-                    <Ionicons name="construct" size={24} color={theme.colors.accent} />
-                  )}
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.itemTool} numberOfLines={1}>
-                    {it.tool_name}
-                  </Text>
-                  <Text style={styles.itemType}>
-                    {it.type}  ·  every {it.interval_months} mo
-                  </Text>
-                  <Text style={styles.itemDate}>
-                    Next due: {formatDateUS(it.next_due_date)}
-                    {it.last_done_date ? `  ·  Last: ${formatDateUS(it.last_done_date)}` : ""}
-                  </Text>
-                </View>
-                <View
-                  style={[
-                    styles.daysBadge,
-                    isOverdue && { backgroundColor: theme.colors.danger },
-                    isUrgent && !isOverdue && { backgroundColor: theme.colors.accent },
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.daysText,
-                      (isOverdue || isUrgent) && { color: isOverdue ? "#fff" : "#000" },
-                    ]}
+      {(() => {
+        const listInner = (
+          <ScrollView
+            contentContainerStyle={{ padding: isIndustrial ? 0 : 16, paddingBottom: 60 }}
+            showsVerticalScrollIndicator={false}
+            refreshControl={
+              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.colors.accent} />
+            }
+          >
+            {data.items.length === 0 ? (
+              <View style={styles.empty}>
+                <Ionicons name="construct-outline" size={48} color={theme.colors.textMuted} />
+                <Text style={styles.emptyTitle}>NO MAINTENANCE DUE</Text>
+                <Text style={styles.emptyText}>
+                  Schedules due within {horizon} days will appear here.
+                  {"\n"}Add one from any tool&apos;s detail screen.
+                </Text>
+              </View>
+            ) : (
+              data.items.map((it: any, idx: number) => {
+                const days = daysUntil(it.next_due_date);
+                const isOverdue = it.is_overdue;
+                const isUrgent = !isOverdue && days <= 30;
+                return (
+                  <TouchableOpacity
+                    key={`${it.tool_id}-${it.schedule_id}`}
+                    testID={`mnt-${it.schedule_id}`}
+                    style={[styles.itemRow, idx < data.items.length - 1 && styles.rowDivider]}
+                    onPress={() => router.push(`/tool/${it.tool_id}`)}
+                    activeOpacity={0.7}
                   >
-                    {isOverdue ? `${Math.abs(days)}D OVERDUE` : `${days}D`}
-                  </Text>
-                </View>
-              </SkinPlate>
-            );
-          })
-        )}
-      </ScrollView>
+                    <View style={styles.thumb}>
+                      {it.tool_photo ? (
+                        <AppImage source={{ uri: it.tool_photo }} style={styles.thumbImg} />
+                      ) : (
+                        <Ionicons name="construct" size={24} color={theme.colors.accent} />
+                      )}
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.itemTool} numberOfLines={1}>
+                        {it.tool_name}
+                      </Text>
+                      <Text style={styles.itemType}>
+                        {it.type}  ·  every {it.interval_months} mo
+                      </Text>
+                      <Text style={styles.itemDate}>
+                        Next due: {formatDateUS(it.next_due_date)}
+                        {it.last_done_date ? `  ·  Last: ${formatDateUS(it.last_done_date)}` : ""}
+                      </Text>
+                    </View>
+                    <View
+                      style={[
+                        styles.daysBadge,
+                        isOverdue && { backgroundColor: theme.colors.danger },
+                        isUrgent && !isOverdue && { backgroundColor: theme.colors.accent },
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.daysText,
+                          (isOverdue || isUrgent) && { color: isOverdue ? "#fff" : "#000" },
+                        ]}
+                      >
+                        {isOverdue ? `${Math.abs(days)}D OVERDUE` : `${days}D`}
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+                );
+              })
+            )}
+          </ScrollView>
+        );
+        return isIndustrial ? (
+          <TbvListPanel
+            source={winSrc}
+            capInsets={winCap}
+            frameScale={steelScale}
+            style={styles.listPanel}
+            padX={28}
+            padTop={20}
+            padBottom={14}
+          >
+            {listInner}
+          </TbvListPanel>
+        ) : (
+          <View style={styles.listPanelPlain}>{listInner}</View>
+        );
+      })()}
     </SafeAreaView>
   );
 }
@@ -228,10 +258,17 @@ const styles = themedStyles((c) => ({
     marginBottom: 10,
     marginHorizontal: 12,
   },
+  listPanel: { flex: 1, marginHorizontal: 12, marginTop: 4, marginBottom: 8 },
+  listPanelPlain: { flex: 1 },
+  rowDivider: {
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: c.border,
+  },
   itemRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
+    paddingVertical: 12,
   },
   thumb: {
     width: 50,

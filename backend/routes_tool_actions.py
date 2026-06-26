@@ -58,7 +58,10 @@ def register_tool_action_routes(api_router: APIRouter) -> None:
             from datetime import datetime as _dt
             sold_at = _dt.utcnow().strftime("%Y-%m-%d")
 
-        # Partial sale: decrement quantity only — don't mark sold.
+        # Partial sale: decrement the live tool's quantity AND create a
+        # separate "sold" split record for the units that were sold, so they
+        # still appear in Sale History (previously the sold units were just
+        # subtracted and vanished from history).
         if sold_qty < current_qty:
             await db.tools.update_one(
                 {"id": tool_id},
@@ -67,6 +70,25 @@ def register_tool_action_routes(api_router: APIRouter) -> None:
                     "updated_at": now_iso(),
                 }},
             )
+            sold_split = dict(doc)
+            sold_split.pop("_id", None)
+            sold_split["id"] = str(uuid.uuid4())
+            sold_split["quantity"] = sold_qty
+            sold_split["is_sold"] = True
+            sold_split["sold_at"] = sold_at
+            sold_split["sold_price"] = float(payload.sold_price or 0.0)
+            sold_split["sold_to"] = (payload.sold_to or "").strip()
+            sold_split["sold_notes"] = (payload.sold_notes or "").strip()
+            sold_split["for_sale"] = False
+            # The sold copy is a standalone history record — it carries no
+            # active checkout state.
+            sold_split["is_checked_out"] = False
+            sold_split["current_checkout"] = None
+            sold_split["checkout_history"] = []
+            sold_split["created_at"] = now_iso()
+            sold_split["updated_at"] = now_iso()
+            await db.tools.insert_one(dict(sold_split))
+            # Return the live (remaining-in-inventory) tool, as before.
             new_doc = await db.tools.find_one({"id": tool_id}, {"_id": 0})
             return Tool(**new_doc)
 

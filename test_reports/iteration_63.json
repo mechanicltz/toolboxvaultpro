@@ -1,0 +1,39 @@
+{
+  "summary": "Iteration 63 — verified all 7 fixes in the review_request. Backend bug #1 (partial-sale must keep a sold-split history record) confirmed via 2 new pytest cases against the live backend on Pro account mechanicltz@gmail.com — both PASS. UI items #2–#7 verified via code review + headless DOM probe (ryan@ryan.com). All Pro-account test data was DELETEd in fixture teardown.",
+  "backend_issues": { "critical": [], "minor": [] },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": [
+      { "component": "react-native-web deprecation warnings (pre-existing)", "issue": "shadow*/textShadow* style props deprecated, props.pointerEvents deprecated — hygiene only, not introduced by this change." }
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_partial_sale_history_iter63.py",
+    "/app/test_reports/pytest/iter63_results.xml"
+  ],
+  "action_items": [
+    "(Cleanup, optional) Inventory.tsx still defines unused styles `rowQtyPill` + `rowQtyPillText` at lines 2007–2019 even though the badge is no longer rendered. Safe to delete — dead style only."
+  ],
+  "critical_code_review_comments": [
+    "#1 routes_tool_actions.py:65–90: partial-sale branch correctly decrements live tool quantity AND inserts a NEW sold-split tool (new uuid, is_sold=True, for_sale=False, quantity=sold_qty, no checkout state) — sold record is independent and persists after the live tool's for_sale flag is later cleared. Confirmed by test_partial_sale_creates_sold_split_record.",
+    "#1 full-sale path (sold_qty >= current_qty) unchanged — marks the existing tool sold in place, no duplicate created. Confirmed by test_full_sale_still_marks_in_place.",
+    "#2 for-sale.tsx:463 styles.cardImg width:64 height:64 borderRadius:8 — thumbnail is now small/square. Headless DOM probe found 64×64 images in the card area.",
+    "#2 for-sale.tsx:290 FlatList contentContainerStyle paddingTop:16 plus statPlate marginBottom:4 (line 449) provides ~20px gap below the LISTED/ASKING-TOTAL summary so the first card no longer overlaps it.",
+    "#3 claim/[id].tsx:160–164: when `claim.inside_item_name` is set, a DetailRow testID='claim-inside-item' with label='BROKEN ITEM' renders directly under the TOOL row, appending ' · Model #: <model>' when present. Matches request.",
+    "#4 inventory.tsx: no JSX reference to rowQtyPill anywhere in the file — the '×N' badge is fully removed from row rendering. Headless DOM probe over the inventory route found ZERO '×N'-shaped text nodes.",
+    "#5 maintenance.tsx:125–212: a single `TbvListPanel` (industrial) or `View` (plain) wraps a single ScrollView containing all items mapped inline with `idx < items.length - 1 && rowDivider` — exactly one skinned panel per page.",
+    "#6 manage/[kind].tsx:139–223 and locations.tsx:285–309 follow the same pattern — one ScrollView inside one TbvListPanel (or one plain View). Per-row shadow boxes are gone; rows are separated by `rowDivider`. Add/edit/delete UI still wired via the row's testIDs.",
+    "#7 wishlist.tsx:585–596: single `wish-menu-<id>` TouchableOpacity with `ellipsis-vertical` icon; itemMenu (line 449–460) opens Alert with Share/Edit/Delete actions. No `wish-share-`/`wish-edit-`/`wish-delete-` testIDs exist anywhere in the file (only `wish-bought-`, `wish-convert-`, `wish-open-` remain). No description TextInput in the edit Modal (lines 717–870) — only name, url, model, photos, price, priority, dealer, notes. Card body (lines 597–643) shows name, model, url, price, dealer, notes — no description. The `description` field is still kept as an empty string in the payload for backend compatibility, which is fine."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_partial_sale_history_iter63.py (new pytest)"
+  ],
+  "success_rate": { "backend": "100% — 2/2 pytest passed", "frontend": "100% — 6/6 UI items verified (code review + DOM probe)" },
+  "seed_data_creation": "Pro account (mechanicltz@gmail.com): test_partial_sale_creates_sold_split_record created `TEST_iter63_<hex>_drill` (qty=2, for_sale=true, sale_price=80) → marked 1-of-2 sold (creates sold-split with sold_to='TEST_buyer', sold_notes='TEST_iter63_<hex>_split') → unset for_sale on live tool. test_full_sale_still_marks_in_place created `TEST_iter63_<hex>_fullsale`. BOTH tests' fixtures DELETED every created tool (live + split) in the finally block — verified via backend.out.log showing DELETE /api/tools/<id> 200 for each id. ryan@ryan.com untouched.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "GET /api/tools defaults to is_sold={$ne:true} (helpers.py:78) — to see sold-split records you MUST pass ?is_sold=true. ToolCreate does NOT accept for_sale/sale_price/sale_listed_at; flip them via PUT /api/tools/{id} after create. There is no PATCH on /tools/{id} — only PUT (PATCH returns 405). Pro login endpoint (/api/auth/login) is rate-limited 5/min/IP just like ryan's — cache the token if you re-run. Wishlist API path is /api/wishlist (not /api/wish-items). ryan@ryan.com has 0 wishlist items, so DOM-level menu-button count for wish-menu-* will be 0 there — to UI-verify the ellipsis menu, either seed an item or use the Pro account's existing wishlist if any.",
+  "rca_of_issue": "Bug RCA — Before the fix, mark_tool_sold's partial branch likely just decremented `quantity` without persisting any sold-history record, so the sold units disappeared from Vault → Sale History. The fix (routes_tool_actions.py:65–90) clones the original doc, gives it a fresh uuid + sold/for_sale flags, and inserts it as a SEPARATE tools-collection record. The live tool's quantity is decremented in place. Mitigation/verification: pytest test_partial_sale_creates_sold_split_record asserts (a) live tool qty drops 2→1, (b) a NEW tool record with same name + is_sold=true + quantity=1 + sold_to='TEST_buyer' exists in GET /api/tools?is_sold=true, (c) the split record survives even after the live tool's for_sale flag is later cleared. All three assertions pass."
+}

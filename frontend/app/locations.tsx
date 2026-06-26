@@ -22,12 +22,21 @@ import { confirm } from "../src/confirm";
 import { buildLocationTree, LocationNode } from "../src/locationTree";
 import { IndustrialBanner } from "../src/components/IndustrialBanner";
 import { PillButton } from "../src/components/PillButton";
-import { ShadowBox } from "../src/components/ShadowBox";
+import { TbvListPanel } from "../src/tbv/components/TbvListPanel";
+import { useIsSteel, useSteelPanelFrame } from "../src/tbv/steel";
+import { SKIN, CAP } from "../src/tbv/skins";
 
-import { themedStyles } from "../src/themeContext";
+import { themedStyles, useSkin } from "../src/themeContext";
 
 export default function LocationsTreeScreen() {
   const router = useRouter();
+  const { skin } = useSkin();
+  const isIndustrial = skin === "industrial";
+  const isSteel = useIsSteel();
+  const steelPanel = useSteelPanelFrame();
+  const winSrc = isSteel ? steelPanel.source : SKIN.window;
+  const winCap = isSteel ? steelPanel.capInsets : CAP.window;
+  const steelScale = isSteel ? steelPanel.frameScale : undefined;
   // When the user opens this screen from a tool detail page, the source
   // route includes `?highlight=<location_id>` so we can visually point
   // at the location currently assigned to that tool. Lives only for the
@@ -249,12 +258,12 @@ export default function LocationsTreeScreen() {
           onPress={() => setAdding({ parentId: null, parentName: "" })}
         />
       </View>
-      <ScrollView contentContainerStyle={{ paddingBottom: 60 }}>
-        {!loaded ? (
-          <View style={styles.empty}>
-            <ActivityIndicator color={theme.colors.accent} />
-          </View>
-        ) : nodes.length === 0 ? (
+      {!loaded ? (
+        <View style={styles.empty}>
+          <ActivityIndicator color={theme.colors.accent} />
+        </View>
+      ) : nodes.length === 0 ? (
+        <ScrollView contentContainerStyle={{ paddingBottom: 60 }}>
           <View style={styles.empty}>
             <Ionicons name="location-outline" size={48} color={theme.colors.textMuted} />
             <Text style={styles.emptyTitle}>NO LOCATIONS</Text>
@@ -270,16 +279,40 @@ export default function LocationsTreeScreen() {
               <Text style={styles.btnText}>ADD LOCATION</Text>
             </TouchableOpacity>
           </View>
-        ) : (
-          <ShadowBox style={styles.treeCard}>
-            {nodes.map(renderNode)}
-          </ShadowBox>
-        )}
-        <Text style={styles.tip}>
-          Tap a row’s <Text style={{ color: theme.colors.accent }}>+</Text> to add a sub-location.
-          Locations can nest unlimited levels deep.
-        </Text>
-      </ScrollView>
+        </ScrollView>
+      ) : (
+        <>
+          {(() => {
+            const tree = (
+              <ScrollView
+                contentContainerStyle={{ padding: isIndustrial ? 0 : 8, paddingBottom: 20 }}
+                showsVerticalScrollIndicator={false}
+              >
+                {nodes.map(renderNode)}
+              </ScrollView>
+            );
+            return isIndustrial ? (
+              <TbvListPanel
+                source={winSrc}
+                capInsets={winCap}
+                frameScale={steelScale}
+                style={styles.listPanel}
+                padX={24}
+                padTop={14}
+                padBottom={12}
+              >
+                {tree}
+              </TbvListPanel>
+            ) : (
+              <View style={styles.listPanelPlain}>{tree}</View>
+            );
+          })()}
+          <Text style={styles.tip}>
+            Tap a row’s <Text style={{ color: theme.colors.accent }}>+</Text> to add a sub-location.
+            Locations can nest unlimited levels deep.
+          </Text>
+        </>
+      )}
 
       <Modal visible={!!adding} transparent animationType="slide" onRequestClose={() => setAdding(null)}>
         <KeyboardAvoidingView
@@ -444,6 +477,8 @@ const styles = themedStyles((c) => ({
     paddingHorizontal: 8,
     paddingVertical: 2,
   },
+  listPanel: { flex: 1, marginHorizontal: 12, marginTop: 4 },
+  listPanelPlain: { flex: 1, marginHorizontal: 8 },
   actionsRow: {
     flexDirection: "row",
     justifyContent: "flex-end",

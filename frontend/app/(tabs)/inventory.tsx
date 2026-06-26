@@ -1161,9 +1161,6 @@ export default function InventoryScreen() {
                       <Text style={styles.bundleBadgeText}>SET ADD-ON</Text>
                     </View>
                   )}
-                  <View style={styles.rowQtyPill}>
-                    <Text style={styles.rowQtyPillText}>×{Math.max(1, Number(item.quantity) || 1)}</Text>
-                  </View>
                 </View>
               </View>
               {!selectMode && (

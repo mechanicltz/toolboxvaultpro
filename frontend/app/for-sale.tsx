@@ -287,7 +287,7 @@ export default function ForSaleScreen() {
           renderItem={renderCard}
           numColumns={numColumns}
           columnWrapperStyle={numColumns > 1 ? { gap: 12, paddingHorizontal: 16 } : undefined}
-          contentContainerStyle={{ paddingHorizontal: numColumns > 1 ? 0 : 16, paddingBottom: 30, gap: 12 }}
+          contentContainerStyle={{ paddingHorizontal: numColumns > 1 ? 0 : 16, paddingTop: 16, paddingBottom: 30, gap: 12 }}
           onRefresh={() => { setRefreshing(true); load(); }}
           refreshing={refreshing}
         />
@@ -460,7 +460,7 @@ const styles = themedStyles((c) => ({
   cardInner: {
     flexDirection: "row",
   },
-  cardImg: { width: 120, height: 120, backgroundColor: c.bg },
+  cardImg: { width: 64, height: 64, borderRadius: 8, alignSelf: "center", backgroundColor: c.bg },
   cardBody: { flex: 1, padding: 10 },
   cardName: { color: c.textPrimary, fontWeight: "900", fontSize: 10 },
   cardSub: { color: c.textSecondary, fontSize: 8, marginTop: 2 },

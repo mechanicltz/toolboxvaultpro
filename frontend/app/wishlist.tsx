@@ -444,6 +444,22 @@ export default function WishlistScreen() {
     );
   };
 
+  // Single 3-dot (···) per-item menu replacing the old share/edit/delete
+  // icon row. Uses Alert buttons (expo-go has no native ActionSheet).
+  const itemMenu = (it: any) => {
+    Alert.alert(
+      it.name,
+      undefined,
+      [
+        { text: "Share", onPress: () => shareSheet(it) },
+        { text: "Edit", onPress: () => setEditing({ ...it, price: it.price ? String(it.price) : "" }) },
+        { text: "Delete", style: "destructive", onPress: () => remove(it) },
+        { text: "Cancel", style: "cancel" },
+      ],
+      { cancelable: true }
+    );
+  };
+
   // Convert a wish into a real Tool. When the user invoked this via
   // the "Mark Purchased" flow (above) we already showed a confirm,
   // so skip the second one. Otherwise still confirm first.
@@ -566,33 +582,16 @@ export default function WishlistScreen() {
               padBottom={14}
               onPress={selectMode ? () => toggleSelected(item.id) : undefined}
             >
-              {/* Top-right manage toolbar: share / edit / delete */}
+              {/* Top-right 3-dot menu (share / edit / delete) */}
               <View style={styles.cardTopActions}>
                 <TouchableOpacity
-                  testID={`wish-share-${item.id}`}
+                  testID={`wish-menu-${item.id}`}
                   style={styles.cardIconBtn}
-                  onPress={() => shareSheet(item)}
+                  onPress={() => itemMenu(item)}
                   disabled={selectMode}
                   hitSlop={6}
                 >
-                  <ContactIconImage type="share" size={20} />
-                </TouchableOpacity>
-                <TouchableOpacity
-                  testID={`wish-edit-${item.id}`}
-                  style={styles.cardIconBtn}
-                  onPress={() => setEditing({ ...item, price: item.price ? String(item.price) : "" })}
-                  disabled={selectMode}
-                  hitSlop={6}
-                >
-                  <Ionicons name="create-outline" size={18} color={theme.colors.textPrimary} />
-                </TouchableOpacity>
-                <TouchableOpacity
-                  testID={`wish-delete-${item.id}`}
-                  style={[styles.cardIconBtn, { borderColor: theme.colors.danger }]}
-                  onPress={() => remove(item)}
-                  hitSlop={6}
-                >
-                  <Ionicons name="trash-outline" size={18} color={theme.colors.danger} />
+                  <Ionicons name="ellipsis-vertical" size={18} color={theme.colors.textPrimary} />
                 </TouchableOpacity>
               </View>
               <View style={styles.cardHead}>
@@ -633,7 +632,6 @@ export default function WishlistScreen() {
                   </Text>
                 </TouchableOpacity>
               )}
-              {!!item.description && <Text style={styles.itemDesc}>{item.description}</Text>}
               <View style={styles.metaRow}>
                 {!!item.price && (
                   <Text style={styles.priceText}>${item.price.toFixed(2)}</Text>
@@ -791,17 +789,6 @@ export default function WishlistScreen() {
                 <Text style={styles.photoAddBtnText}>ADD PHOTO</Text>
               </TouchableOpacity>
             )}
-            <Text style={styles.label}>DESCRIPTION</Text>
-            <TextInput
-              testID="wish-desc"
-              placeholder="Why you want it / specs"
-              placeholderTextColor={theme.colors.textMuted}
-              style={[styles.input, { height: 70, textAlignVertical: "top" }]}
-              value={editing?.description || ""}
-              onChangeText={(v) => setEditing({ ...editing, description: v })}
-              multiline
-            />
-
             <View style={{ flexDirection: "row", gap: 10 }}>
               <View style={{ flex: 1 }}>
                 <Text style={styles.label}>PRICE</Text>
