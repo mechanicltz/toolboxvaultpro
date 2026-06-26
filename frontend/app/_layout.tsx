@@ -12,6 +12,7 @@ import {
   AppState,
   AppStateStatus,
   InteractionManager,
+  BackHandler,
 } from "react-native";
 import { useEffect, useRef, useState } from "react";
 import { AuroraBackground } from "../src/Aurora";
@@ -321,6 +322,36 @@ function ShellNav() {
     })();
     return () => { cancelled = true; };
   }, [user]);
+
+  // ── Global Android back-button policy ────────────────────────────────
+  // Requirement: normal one-screen-at-a-time back on every SUB-page (default
+  // behaviour, untouched). But once the user reaches one of the bottom-menu
+  // MAIN pages, pressing back jumps straight to the Dashboard; and pressing
+  // back on the Dashboard exits the app (so you can't keep walking back
+  // through the whole history once you're "home"). iOS has no hardware back,
+  // so this listener is a no-op there.
+  useEffect(() => {
+    if (!user) return;
+    const HOME = (p: string) => p === "/" || p === "/index" || p === "";
+    const MAIN_TABS = ["/inventory", "/dealers", "/borrowers", "/claims", "/more"];
+    const onBack = () => {
+      const p = pathname || "/";
+      if (HOME(p)) {
+        // On the Dashboard → exit the app (don't pop back through history).
+        BackHandler.exitApp();
+        return true;
+      }
+      if (MAIN_TABS.includes(p)) {
+        // On a main menu page → go straight home to the Dashboard.
+        router.replace("/");
+        return true;
+      }
+      // Any sub-page → let the navigator pop one screen (normal back).
+      return false;
+    };
+    const sub = BackHandler.addEventListener("hardwareBackPress", onBack);
+    return () => sub.remove();
+  }, [user, pathname, router]);
 
   // Hold the screen stack until the font stack is ready AND its glyph atlas has
   // been fully rasterized, so no screen's first paint uses a fallback system

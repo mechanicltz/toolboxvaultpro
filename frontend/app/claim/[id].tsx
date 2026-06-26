@@ -159,7 +159,7 @@ export default function ClaimDetailScreen() {
 
             {!!claim.inside_item_name && (
               <DetailRow testID="claim-inside-item" label="BROKEN ITEM">
-                {claim.inside_item_name}{claim.inside_item_model ? `  ·  Model #: ${claim.inside_item_model}` : ""}
+                {`${claim.inside_item_name}${claim.inside_item_model ? `  ·  Model #: ${claim.inside_item_model}` : ""}`}
               </DetailRow>
             )}
 
