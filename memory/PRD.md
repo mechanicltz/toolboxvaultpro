@@ -662,3 +662,7 @@ STILL TODO (user's list): global BACK button on EVERY page (audit which screens
 lack the IndustrialBanner back arrow); Stage 6 (reports/export simplified +
 bundle export WITH/WITHOUT expansions). Plus optional: migrate existing accounts'
 dealer contact fields to the cleaned single-contact format.
+
+## Backlog update (2026-06)
+- DROPPED from backlog per user: the Bundles "HOWTO" guide/writeup (all earlier
+  "LATER HOWTO" references are now cancelled — not planned).
