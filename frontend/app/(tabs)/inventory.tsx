@@ -2011,7 +2011,8 @@ const styles = themedStyles((c) => ({
     paddingHorizontal: 7,
     paddingVertical: 2,
     borderRadius: 6,
-    backgroundColor: c.accent,
+    // Fixed yellow regardless of the active theme/skin (user request).
+    backgroundColor: "#FFD400",
   },
   rowQtyPillText: {
     color: "#000",

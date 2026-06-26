@@ -722,26 +722,24 @@ export default function ToolDetail() {
       const bodyText = lines.join("\n");
       const photoB64 = t.repair_info?.broken_photo || "";
 
-      // Helper: write the base64 broken-photo to a temp file so it can be
-      // passed to MailComposer / Sharing as a file:// URI.
-      const photoFileUri = await (async () => {
-        if (!photoB64) return null;
-        try {
-          const FileSystem = await import("expo-file-system");
-          // Strip "data:image/jpeg;base64," prefix if present.
-          const stripped = photoB64.replace(/^data:image\/[a-zA-Z]+;base64,/, "");
-          const path = `${FileSystem.cacheDirectory}claim-${t.id}.jpg`;
-          await FileSystem.writeAsStringAsync(path, stripped, {
-            encoding: FileSystem.EncodingType.Base64,
-          });
-          return path;
-        } catch (_e) {
-          return null;
-        }
-      })();
-
       if (mode === "email") {
-        // Use expo-mail-composer — supports attachments natively on iOS/Android.
+        // Email supports attachments natively — write the broken-item photo to
+        // a temp file and attach it. (The file write only happens on the email
+        // path so the SMS path stays a simple, crash-free Linking.openURL.)
+        let photoFileUri: string | null = null;
+        if (photoB64) {
+          try {
+            const FileSystem = await import("expo-file-system");
+            const stripped = photoB64.replace(/^data:image\/[a-zA-Z]+;base64,/, "");
+            const path = `${FileSystem.cacheDirectory}claim-${t.id}.jpg`;
+            await FileSystem.writeAsStringAsync(path, stripped, {
+              encoding: FileSystem.EncodingType.Base64,
+            });
+            photoFileUri = path;
+          } catch (_e) {
+            photoFileUri = null;
+          }
+        }
         const MailComposer = await import("expo-mail-composer");
         const available = await MailComposer.isAvailableAsync();
         if (available) {
@@ -765,29 +763,14 @@ export default function ToolDetail() {
           }
         }
       } else {
-        // SMS path. iOS/Android SMS URLs can't attach images directly. If we
-        // have a photo, route through the share sheet (Sharing.shareAsync)
-        // which lets the user pick Messages and pre-fills the photo + text.
-        // Without a photo, just open the SMS draft URL as before.
-        if (photoFileUri) {
-          const Sharing = await import("expo-sharing");
-          if (await Sharing.isAvailableAsync()) {
-            await Sharing.shareAsync(photoFileUri, {
-              mimeType: "image/jpeg",
-              dialogTitle: bodyText, // shown on some platforms
-              UTI: "public.jpeg",
-            });
-          } else {
-            const url = `sms:${phone}?body=${encodeURIComponent(bodyText)}`;
-            await Linking.openURL(url);
-          }
+        // SMS path — text only. Text messages can't attach photos, and the old
+        // FileSystem-write + Sharing.shareAsync handoff was crashing Expo Go.
+        // This now mirrors the simple, reliable dealer "Text" button.
+        const url = `sms:${phone}?body=${encodeURIComponent(bodyText)}`;
+        if (Platform.OS === "web") {
+          (globalThis as any).window.location.href = url;
         } else {
-          const url = `sms:${phone}?body=${encodeURIComponent(bodyText)}`;
-          if (Platform.OS === "web") {
-            (globalThis as any).window.location.href = url;
-          } else {
-            await Linking.openURL(url);
-          }
+          await Linking.openURL(url);
         }
       }
 
@@ -1810,7 +1793,7 @@ export default function ToolDetail() {
       brand: t.brand || "",
       model_numbers: mns.length ? mns : [""],
       serial_numbers: sns.length ? sns : [""],
-      cost: t.cost != null ? String(t.cost) : "",
+      cost: (t.cost != null && Number(t.cost) !== 0) ? String(t.cost) : "",
       msrp_price: t.msrp_price ? String(t.msrp_price) : "",
       quantity: t.quantity != null ? String(t.quantity) : "1",
       purchase_date: t.purchase_date || "",
@@ -2493,7 +2476,7 @@ export default function ToolDetail() {
                 <TouchableOpacity key={c.id || i} style={newStyles.histItem} onPress={() => c.id && router.push(`/claim/${c.id}`)} activeOpacity={0.7} testID={`history-claim-row-${i}`}>
                   <View style={[newStyles.histDot, { backgroundColor: theme.colors.danger }]} />
                   <View style={{ flex: 1 }}>
-                    <Text style={newStyles.histItemTitle} numberOfLines={1}>{(c.claim_status || "broken").toUpperCase()}{c.repair_company ? ` · ${c.repair_company}` : ""}</Text>
+                    <Text style={newStyles.histItemTitle} numberOfLines={1}>{(c.claim_status || "broken").toUpperCase()}{c.inside_item_name ? ` · ${c.inside_item_name}` : ""}{c.repair_company ? ` · ${c.repair_company}` : ""}</Text>
                     <Text style={newStyles.histItemSub}>{c.notified_at ? `Notified: ${formatDateUS(c.notified_at)}` : "Not reported"}{c.completed_at ? `  ·  Closed: ${formatDateUS(c.completed_at)}` : ""}</Text>
                     {!!c.notes && <Text style={[newStyles.histItemSub, { marginTop: 2 }]} numberOfLines={2}>{c.notes}</Text>}
                   </View>

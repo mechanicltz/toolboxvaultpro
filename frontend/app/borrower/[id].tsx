@@ -9,7 +9,7 @@ import { useAppResume } from "../../src/appLifecycle";
 import { theme } from "../../src/theme";
 import { api } from "../../src/api";
 import { confirm } from "../../src/confirm";
-import { formatDateTime } from "../../src/dt";
+import { formatDate } from "../../src/dt";
 import { parseContacts, openPhone, openSms } from "../../src/contactLinks";
 import { ContactIconButton, ContactIconImage } from "../../src/components/ContactIcons";
 import { EmailLink } from "../../src/components/EmailLink";
@@ -306,7 +306,7 @@ export default function BorrowerHistory() {
               >
                 <View style={{ flex: 1 }}>
                   <Text style={styles.rowName}>{c.tool_name}</Text>
-                  <Text style={styles.rowMeta}>Out since {formatDateTime(c.checked_out_at)}</Text>
+                  <Text style={styles.rowMeta}>Out since {formatDate(c.checked_out_at)}</Text>
                   {!!c.notes && <Text style={styles.rowNotes}>{c.notes}</Text>}
                 </View>
                 <Ionicons name="chevron-forward" size={18} color={theme.colors.textMuted} />
@@ -337,7 +337,7 @@ export default function BorrowerHistory() {
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={styles.rowName}>{t.tool_name}</Text>
-                <Text style={styles.rowMeta}>Last out {formatDateTime(t.last_checked_out_at)}</Text>
+                <Text style={styles.rowMeta}>Last out {formatDate(t.last_checked_out_at)}</Text>
               </View>
               <View style={styles.countPill}>
                 <Text style={styles.countNum}>{t.checkout_count}</Text>

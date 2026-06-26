@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from "react";
 import {
   View, Text, TouchableOpacity, TextInput, Modal, ScrollView,
-  ActivityIndicator, Alert, StyleSheet, Platform,
+  ActivityIndicator, Alert, StyleSheet, Platform, KeyboardAvoidingView,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
@@ -244,8 +244,12 @@ export function BundleTab({
 
       {/* ADD / EDIT INSIDE ITEM MODAL */}
       <Modal visible={showForm} transparent animationType="slide" onRequestClose={() => setShowForm(false)}>
-        <View style={s.modalBg}>
-          <View style={s.modalCard}>
+        <KeyboardAvoidingView
+          style={{ flex: 1 }}
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+        >
+          <View style={s.modalBg}>
+            <View style={s.modalCard}>
             <Text style={s.modalTitle}>{form.id ? "EDIT ITEM" : "ADD ITEM TO SET"}</Text>
             <ScrollView keyboardShouldPersistTaps="handled" style={{ maxHeight: 420 }}>
               <TouchableOpacity style={s.photoPick} onPress={promptInsidePhoto} testID="inside-photo-pick" activeOpacity={0.8}>
@@ -269,8 +273,9 @@ export function BundleTab({
                 {saving ? <ActivityIndicator color="#000" /> : <Text style={s.btnPrimaryText}>{form.id ? "SAVE" : "ADD"}</Text>}
               </TouchableOpacity>
             </View>
+            </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
 
       {/* EXPANSION PICKER MODAL */}

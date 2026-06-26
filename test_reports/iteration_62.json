@@ -1,0 +1,31 @@
+{
+  "summary": "Iteration 62 — verified all 6 UI-testable items from the review_request. (1) Dashboard DEALER ACCOUNTS: dealer $ balance text rendered in NORMAL steel = rgb(232,232,232) NOT green; adjust '$' chip border + chip text rendered GREEN = rgb(16,185,129). (2) Inventory rowQtyPill backgroundColor = rgb(255,212,0) = #FFD400 YELLOW across all visible '×N' badges (verified 5 rows). (3) New item edit-cost field value=='' (empty string) with placeholder '0.00' on a freshly-API-created tool (cost=0). (7) Bundle 'TEST_iter62_bundle' with inside item 'test1' marked broken — warranty_claims API returned inside_item_name='test1', claim_status='broken', repair_company='AcmeRepair'; combined with the line in app/tool/[id].tsx:2479 that concatenates these into the histItemTitle, the rendered text WILL read 'BROKEN · test1 · AcmeRepair' (UI selector did not auto-load the claims-segment in headless mode but data + code path are both correct). (8) Code review of checkout-history/[id].tsx:113,117 and borrower/[id].tsx:309,340 confirms BOTH screens import formatDate (not formatDateTime); formatDate in src/dt.ts:28 returns ONLY MM/DD/YYYY with no time component. (#4 keyboard-avoidance, #5 SMS handoff, #6 email handoff were OUT OF SCOPE per request.) All seeded test data (dealer charge tx, qty bump, checkout, bundle, inside item, warranty claim, new item) was CLEANED UP — ryan's Cornwell Tools personal_balance back to 0.00, the qty-bumped tool restored to quantity=1 and checked in, both Pro-account test tools DELETEd.",
+  "backend_issues": { "critical": [], "minor": [] },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": [
+      { "component": "react-native-web deprecation warnings (pre-existing)", "issue": "Console still emits 'shadow*' / 'textShadow*' style props deprecated, props.pointerEvents deprecated. Hygiene only — not introduced by this change." }
+    ]
+  },
+  "test_report_links": [
+    "/app/test_reports/test_ui_changes_iter62.py",
+    "/app/test_reports/test_dealer_colors_iter61.py"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "#1 fix correctly applied in two places: src/screens/home/homeStyles.ts:296,300 (dealerAdjustChip borderColor + dealerAdjustChipText color both = c.success); and app/(tabs)/index.tsx:952 had the prior inline {color: theme.colors.success} REMOVED from the dealer $ Text so it now falls back to steel/normal — matches request.",
+    "#2 inventory.tsx:2015 rowQtyPill.backgroundColor hard-coded '#FFD400' (theme-skin-independent) — verified at runtime.",
+    "#3 tool/[id].tsx:1796 cost init: `(t.cost != null && Number(t.cost) !== 0) ? String(t.cost) : ''` — confirmed empty value on a cost=0 tool.",
+    "#7 tool/[id].tsx:2479 histItemTitle now appends `c.inside_item_name`; backend (routes_tools.py:857 and :847) sets inside_item_name on the warranty_claim from repair_info — round-trip verified via API GET /api/warranty-claims.",
+    "#8 checkout-history/[id].tsx:17,113,117 and borrower/[id].tsx:12,309,340 all use formatDate (date-only)."
+  ],
+  "updated_files": [],
+  "success_rate": { "backend": "N/A (skipped per request)", "frontend": "100% — 6/6 UI items verified (4 via live DOM inspection, 2 via combined code + API data verification)" },
+  "seed_data_creation": "Seeded then CLEANED UP: (a) dealer Cornwell Tools personal charge tx $250 note 'TEST_iter62_color' — deleted via DELETE /api/dealers/{id}/transactions/{tx_id}; (b) ryan tool TEST_tool_41474d quantity bumped 1→2 then restored to 1; (c) that tool checked out + checked back in for #8 source data; (d) Pro-account (mechanicltz) bundle TEST_iter62_bundle with inside item 'test1' marked broken — DELETEd including its warranty_claim (claim id fc0b6048…); (e) Pro-account TEST_iter62_newitem — DELETEd. Final ryan dealer personal_balance verified back to 0.00.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Login workaround still required for ryan@ryan.com: the TouchableOpacity at testID='auth-submit' does NOT submit reliably from Playwright clicks. Workaround: POST /api/auth/login from Python, then `await page.evaluate(\"localStorage.setItem('tt.auth.token', '<token>')\")` before page.goto('/'). Note /api/auth/login is rate-limited 5/min/IP — cache tokens or pace test runs. The HISTORY tab on the tool detail page is part of a horizontally-scrollable segmented control (Details | Set | Photos | Documents | Maintenance | Warranty | History) — in a 390px viewport History is OFF-SCREEN to the right and a get_by_text('History').click() doesn't reliably switch the panel; you'll likely need to scroll the segmented row horizontally or use a more specific testID. Dealer transactions live at dd['transactions'] (top-level array), NOT inside `accounts.personal.transactions` — older helper paths return None. POST /api/dealers/{id}/transactions response returns the dealer object (not the new tx) — to get the tx_id, re-GET the dealer and pick the latest tx that matches your TEST_ note.",
+  "rca_of_issue": "N/A — this iteration was a verification pass for 6 already-implemented changes. All 6 changes are in place and behave as specified. The two items (#7 #8) that were not directly observable in headless DOM were independently confirmed by reading the source rendering code + querying the data layer (warranty_claims API for #7, dt.ts formatter for #8), both of which leave zero ambiguity about the runtime output."
+}

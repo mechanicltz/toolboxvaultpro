@@ -14,7 +14,7 @@ import { useLocalSearchParams, useRouter, useFocusEffect } from "expo-router";
 import { useAppResume } from "../../src/appLifecycle";
 import { theme } from "../../src/theme";
 import { api } from "../../src/api";
-import { formatDateTime } from "../../src/dt";
+import { formatDate } from "../../src/dt";
 
 import { themedStyles, useSkin } from "../../src/themeContext";
 import { IndustrialBanner } from "../../src/components/IndustrialBanner";
@@ -110,11 +110,11 @@ export default function CheckoutHistoryPage() {
                 </View>
                 <Text style={styles.line}>
                   <Text style={styles.label}>Out: </Text>
-                  {formatDateTime(h.checked_out_at)}
+                  {formatDate(h.checked_out_at)}
                 </Text>
                 <Text style={styles.line}>
                   <Text style={styles.label}>In:  </Text>
-                  {h.checked_in_at ? formatDateTime(h.checked_in_at) : "— currently out"}
+                  {h.checked_in_at ? formatDate(h.checked_in_at) : "— currently out"}
                 </Text>
                 {!!h.notes && <Text style={styles.notes}>{h.notes}</Text>}
               </>

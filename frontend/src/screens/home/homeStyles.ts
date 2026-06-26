@@ -293,11 +293,11 @@ export const styles = themedStyles((c) => ({
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1.5,
-    borderColor: c.accent,
+    borderColor: c.success,
     borderRadius: 5,
   },
   dealerAdjustChipText: {
-    color: c.accent,
+    color: c.success,
     fontFamily: "BebasNeue_400Regular",
     fontSize: 15,
     letterSpacing: 0,
