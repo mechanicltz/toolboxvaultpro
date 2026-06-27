@@ -141,6 +141,28 @@ class ClaimNote(BaseModel):
     created_at: str = Field(default_factory=_now)
 
 
+class ClaimContact(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    name: str
+    role: Optional[str] = ""
+    phone: Optional[str] = ""
+    email: Optional[str] = ""
+    address: Optional[str] = ""
+    note: Optional[str] = ""
+    created_at: str = Field(default_factory=_now)
+
+
+class ClaimTask(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    text: str
+    due_date: Optional[str] = ""          # ISO date or ""
+    done: bool = False
+    done_at: Optional[str] = ""
+    source: str = "user"                  # "default" | "user" | "note"
+    notify: bool = True                   # deadline reminder desired
+    created_at: str = Field(default_factory=_now)
+
+
 class TimelineEntry(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     type: str               # Created / Status / Evidence / Note / Report / Email / Items
@@ -182,6 +204,8 @@ class InsuranceClaim(BaseModel):
     paid_value: Optional[float] = 0.0
     items: List[ClaimItem] = []
     notes: List[ClaimNote] = []
+    contacts: List[ClaimContact] = []
+    tasks: List[ClaimTask] = []
     timeline: List[TimelineEntry] = []
     status_history: List[StatusChange] = []
     archived: bool = False
@@ -267,6 +291,54 @@ class NoteCreate(BaseModel):
     text: str
     category: str = "General"
     author: Optional[str] = ""
+    create_task: bool = False
+    task_due_date: Optional[str] = ""
+
+
+class ContactCreate(BaseModel):
+    name: str
+    role: Optional[str] = ""
+    phone: Optional[str] = ""
+    email: Optional[str] = ""
+    address: Optional[str] = ""
+    note: Optional[str] = ""
+
+
+class ContactPatch(BaseModel):
+    name: Optional[str] = None
+    role: Optional[str] = None
+    phone: Optional[str] = None
+    email: Optional[str] = None
+    address: Optional[str] = None
+    note: Optional[str] = None
+
+
+class TaskCreate(BaseModel):
+    text: str
+    due_date: Optional[str] = ""
+    notify: bool = True
+
+
+class TaskPatch(BaseModel):
+    text: Optional[str] = None
+    due_date: Optional[str] = None
+    done: Optional[bool] = None
+    notify: Optional[bool] = None
+
+
+class DocumentCreate(BaseModel):
+    filename: str
+    mime: str
+    data_b64: str
+    label: Optional[str] = ""
+    note: Optional[str] = ""
+    date: Optional[str] = ""
+
+
+class DocumentPatch(BaseModel):
+    label: Optional[str] = None
+    note: Optional[str] = None
+    date: Optional[str] = None
 
 
 class EvidenceCreate(BaseModel):
@@ -385,20 +457,91 @@ def _compute_financials(resolved: List[Dict[str, Any]], claim: Dict[str, Any]) -
     limit = _num(claim.get("coverage_limit"))
     if limit > 0:
         net = min(net, limit)
+    approved = _num(claim.get("approved_value"))
+    paid = _num(claim.get("paid_value"))
+    depreciation = _num(claim.get("depreciation"))
+    rcv = round(total_replacement + extras, 2)          # Replacement Cost Value
+    acv = round(max(rcv - depreciation, 0), 2)          # Actual Cash Value
     return {
         "item_count": len(resolved),
         "total_quantity": sum(r["quantity"] for r in resolved),
         "total_purchase": round(total_purchase, 2),
         "total_replacement": round(total_replacement, 2),
+        "replacement_difference": round(total_replacement - total_purchase, 2),
         "total_claimed": round(total_claimed, 2),
+        "approved_value": round(approved, 2),
+        "paid_value": round(paid, 2),
+        "outstanding_balance": round(max(approved - paid, 0), 2),
         "sales_tax": _num(claim.get("sales_tax")),
         "shipping_costs": _num(claim.get("shipping_costs")),
         "labor_costs": _num(claim.get("labor_costs")),
         "repair_costs": _num(claim.get("repair_costs")),
-        "depreciation": _num(claim.get("depreciation")),
+        "depreciation": depreciation,
+        "recoverable_depreciation": depreciation,
+        "actual_cash_value": acv,
+        "replacement_cost_value": rcv,
         "deductible": _num(claim.get("deductible")),
         "coverage_limit": limit,
         "net_claimed": round(max(net, 0), 2),
+        "net_expected_payment": round(max(net, 0), 2),
+    }
+
+
+# ---------------------------------------------------------------------------
+# Claim progress (7-step pipeline) + task list
+# ---------------------------------------------------------------------------
+
+# Prepopulated task list seeded on every new claim (the in-app steps a user
+# follows to be ready to submit a package). source="default".
+DEFAULT_TASKS: List[str] = [
+    "Add your insurance company & policy info",
+    "Enter the claim number from your insurer",
+    "Attach the destroyed/damaged inventory items",
+    "Add photos & evidence of the damage",
+    "Review each item's details (serial, model, price, purchase date)",
+    "Generate the claim report package",
+    "Submit the claim to your insurer",
+]
+
+
+def _seed_default_tasks() -> List[Dict[str, Any]]:
+    return [ClaimTask(text=t, source="default", notify=False).dict() for t in DEFAULT_TASKS]
+
+
+def _compute_progress(claim: Dict[str, Any], resolved: List[Dict[str, Any]],
+                      has_report: bool) -> Dict[str, Any]:
+    ins = claim.get("insurance") or {}
+    has_photos = any((r.get("photos") or []) for r in resolved)
+    submitted = claim.get("status") in {"Submitted", "Under Review", "More Information Needed",
+                                        "Approved", "Partially Approved", "Paid", "Closed", "Denied"}
+    steps = [
+        {"key": "created", "label": "Claim Created", "done": True},
+        {"key": "insurer", "label": "Insurance Company Added", "done": bool(ins.get("company"))},
+        {"key": "number", "label": "Claim Number Entered", "done": bool(claim.get("claim_number"))},
+        {"key": "inventory", "label": "Inventory Attached", "done": len(resolved) > 0},
+        {"key": "photos", "label": "Photos Added", "done": has_photos},
+        {"key": "report", "label": "Generate Report", "done": bool(has_report)},
+        {"key": "submit", "label": "Submit Claim", "done": bool(submitted)},
+    ]
+    steps_done = sum(1 for s in steps if s["done"])
+    steps_total = len(steps)
+    tasks = claim.get("tasks") or []
+    tasks_done = sum(1 for t in tasks if t.get("done"))
+    tasks_total = len(tasks)
+    # Blend BOTH the 7 fixed steps and the task list into the overall %.
+    if tasks_total:
+        percent = round((steps_done + tasks_done) / (steps_total + tasks_total) * 100)
+    else:
+        percent = round(steps_done / steps_total * 100)
+    return {
+        "steps": steps,
+        "steps_done": steps_done,
+        "steps_total": steps_total,
+        "steps_percent": round(steps_done / steps_total * 100),
+        "tasks_total": tasks_total,
+        "tasks_done": tasks_done,
+        "tasks_percent": round(tasks_done / tasks_total * 100) if tasks_total else 0,
+        "percent": percent,
     }
 
 
@@ -913,6 +1056,7 @@ def make_insurance_claims_router(api_router: APIRouter, get_db, get_current_user
         if data.get("insurance") is None:
             data["insurance"] = InsuranceInfo().dict()
         claim = InsuranceClaim(**data)
+        claim.tasks = [ClaimTask(**t) for t in _seed_default_tasks()]
         claim.timeline.append(_tl("Created", f"Claim created — {claim.title}"))
         claim.status_history.append(StatusChange(status=claim.status))
         await db.insurance_claims.insert_one(claim.dict())
@@ -924,8 +1068,25 @@ def make_insurance_claims_router(api_router: APIRouter, get_db, get_current_user
         db = get_db()
         claim = await _get_claim(db, claim_id)
         resolved = await _resolve_claim_items(db, claim)
+        docs = await db.claim_documents.find({"claim_id": claim_id}, {"_id": 0, "data_b64": 0}).to_list(2000)
+        ev = await db.claim_evidence.find({"claim_id": claim_id}, {"_id": 0, "data_b64": 0}).to_list(2000)
+        reports = await db.claim_reports.find({"claim_id": claim_id}, {"_id": 0, "pdf_b64": 0}).to_list(2000)
+        has_report = len(reports) > 0
         claim["_resolved_items"] = resolved
+        claim["_documents"] = docs
         claim["_financials"] = _compute_financials(resolved, claim)
+        claim["_progress"] = _compute_progress(claim, resolved, has_report)
+        claim["_counts"] = {
+            "items": len(resolved),
+            "notes": len(claim.get("notes") or []),
+            "contacts": len(claim.get("contacts") or []),
+            "tasks": len(claim.get("tasks") or []),
+            "tasks_open": sum(1 for t in (claim.get("tasks") or []) if not t.get("done")),
+            "evidence": len(ev),
+            "documents": len(docs),
+            "reports": len(reports),
+            "timeline": len(claim.get("timeline") or []),
+        }
         return claim
 
     # ---- update ----
@@ -1049,6 +1210,11 @@ def make_insurance_claims_router(api_router: APIRouter, get_db, get_current_user
         claim.setdefault("notes", []).append(note.dict())
         claim.setdefault("timeline", []).append(
             _tl("Note", f"{payload.category} note added").dict())
+        if payload.create_task:
+            task = ClaimTask(text=payload.text, due_date=payload.task_due_date or "", source="note")
+            claim.setdefault("tasks", []).append(task.dict())
+            claim.setdefault("timeline", []).append(
+                _tl("Task", "Task created from note").dict())
         await _save(db, claim)
         return note
 
@@ -1105,6 +1271,136 @@ def make_insurance_claims_router(api_router: APIRouter, get_db, get_current_user
     async def delete_evidence(claim_id: str, ev_id: str):
         db = get_db()
         await db.claim_evidence.delete_one({"claim_id": claim_id, "id": ev_id})
+        return {"ok": True}
+
+    # ---- tasks ----
+    @api_router.post("/insurance-claims/{claim_id}/tasks")
+    async def add_task(claim_id: str, payload: TaskCreate):
+        db = get_db()
+        claim = await _get_claim(db, claim_id)
+        task = ClaimTask(text=payload.text, due_date=payload.due_date or "",
+                         notify=payload.notify, source="user")
+        claim.setdefault("tasks", []).append(task.dict())
+        claim.setdefault("timeline", []).append(_tl("Task", f"Task added: {payload.text[:60]}").dict())
+        await _save(db, claim)
+        return task
+
+    @api_router.patch("/insurance-claims/{claim_id}/tasks/{task_id}")
+    async def patch_task(claim_id: str, task_id: str, payload: TaskPatch):
+        db = get_db()
+        claim = await _get_claim(db, claim_id)
+        updates = payload.dict(exclude_unset=True)
+        found = False
+        for t in claim.get("tasks") or []:
+            if t["id"] == task_id:
+                if "done" in updates:
+                    t["done_at"] = _now() if updates["done"] else ""
+                t.update(updates)
+                found = True
+                break
+        if not found:
+            raise HTTPException(404, "Task not found")
+        await _save(db, claim)
+        return {"ok": True}
+
+    @api_router.delete("/insurance-claims/{claim_id}/tasks/{task_id}")
+    async def delete_task(claim_id: str, task_id: str):
+        db = get_db()
+        claim = await _get_claim(db, claim_id)
+        claim["tasks"] = [t for t in (claim.get("tasks") or []) if t["id"] != task_id]
+        await _save(db, claim)
+        return {"ok": True}
+
+    # ---- contacts ----
+    @api_router.post("/insurance-claims/{claim_id}/contacts")
+    async def add_contact(claim_id: str, payload: ContactCreate):
+        db = get_db()
+        claim = await _get_claim(db, claim_id)
+        contact = ClaimContact(**payload.dict())
+        claim.setdefault("contacts", []).append(contact.dict())
+        claim.setdefault("timeline", []).append(
+            _tl("Contact", f"Contact added: {payload.name}").dict())
+        await _save(db, claim)
+        return contact
+
+    @api_router.patch("/insurance-claims/{claim_id}/contacts/{contact_id}")
+    async def patch_contact(claim_id: str, contact_id: str, payload: ContactPatch):
+        db = get_db()
+        claim = await _get_claim(db, claim_id)
+        updates = payload.dict(exclude_unset=True)
+        found = False
+        for ct in claim.get("contacts") or []:
+            if ct["id"] == contact_id:
+                ct.update(updates)
+                found = True
+                break
+        if not found:
+            raise HTTPException(404, "Contact not found")
+        await _save(db, claim)
+        return {"ok": True}
+
+    @api_router.delete("/insurance-claims/{claim_id}/contacts/{contact_id}")
+    async def delete_contact(claim_id: str, contact_id: str):
+        db = get_db()
+        claim = await _get_claim(db, claim_id)
+        claim["contacts"] = [ct for ct in (claim.get("contacts") or []) if ct["id"] != contact_id]
+        await _save(db, claim)
+        return {"ok": True}
+
+    # ---- documents (separate collection, like evidence) ----
+    @api_router.post("/insurance-claims/{claim_id}/documents")
+    async def add_document(claim_id: str, payload: DocumentCreate):
+        db = get_db()
+        await _get_claim(db, claim_id)
+        doc = {
+            "id": str(uuid.uuid4()),
+            "claim_id": claim_id,
+            "filename": payload.filename,
+            "mime": payload.mime,
+            "label": payload.label or "",
+            "note": payload.note or "",
+            "date": payload.date or "",
+            "data_b64": payload.data_b64,
+            "size": len(payload.data_b64 or ""),
+            "created_at": _now(),
+        }
+        await db.claim_documents.insert_one(doc)
+        claim = await _get_claim(db, claim_id)
+        claim.setdefault("timeline", []).append(
+            _tl("Document", f"Document uploaded: {payload.label or payload.filename}").dict())
+        await _save(db, claim)
+        doc.pop("data_b64", None)
+        doc.pop("_id", None)
+        return doc
+
+    @api_router.get("/insurance-claims/{claim_id}/documents")
+    async def list_documents(claim_id: str):
+        db = get_db()
+        await _get_claim(db, claim_id)
+        docs = await db.claim_documents.find({"claim_id": claim_id}, {"_id": 0, "data_b64": 0}).to_list(2000)
+        return docs
+
+    @api_router.get("/insurance-claims/{claim_id}/documents/{doc_id}")
+    async def get_document(claim_id: str, doc_id: str):
+        db = get_db()
+        doc = await db.claim_documents.find_one({"claim_id": claim_id, "id": doc_id}, {"_id": 0})
+        if not doc:
+            raise HTTPException(404, "Document not found")
+        return doc
+
+    @api_router.patch("/insurance-claims/{claim_id}/documents/{doc_id}")
+    async def patch_document(claim_id: str, doc_id: str, payload: DocumentPatch):
+        db = get_db()
+        updates = payload.dict(exclude_unset=True)
+        if updates:
+            await db.claim_documents.update_one(
+                {"claim_id": claim_id, "id": doc_id}, {"$set": updates})
+        return {"ok": True}
+
+    @api_router.delete("/insurance-claims/{claim_id}/documents/{doc_id}")
+    async def delete_document(claim_id: str, doc_id: str):
+        db = get_db()
+        await db.claim_documents.delete_one({"claim_id": claim_id, "id": doc_id})
         return {"ok": True}
 
     # ---- duplicate ----
