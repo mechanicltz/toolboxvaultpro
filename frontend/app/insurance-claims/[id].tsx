@@ -589,10 +589,12 @@ export default function ClaimDetail() {
           <Fact label="PAYOUT" value={money(fin.paid_value)} />
         </View>
       </View>
-      <TouchableOpacity style={styles.tasksLink} onPress={() => setTaskListOpen(true)}>
+      <TouchableOpacity testID="icd-tasks-link" style={styles.tasksLink} onPress={() => setTaskListOpen(true)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }} activeOpacity={0.7}>
         <Ionicons name="checkbox-outline" size={16} color={c.accent} />
         <Text style={styles.tasksLinkText}>Tasks to Complete</Text>
         {openTasks > 0 ? <View style={styles.tasksBadge}><Text style={styles.tasksBadgeText}>{openTasks}</Text></View> : <Ionicons name="checkmark-done" size={16} color={c.success} />}
+        <View style={{ flex: 1 }} />
+        <Ionicons name="chevron-forward" size={16} color={c.textMuted} />
       </TouchableOpacity>
 
       {/* Horizontal tab bar */}

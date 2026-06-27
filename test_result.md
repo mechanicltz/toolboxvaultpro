@@ -4593,3 +4593,21 @@ agent_communication:
         • All test data cleaned up at end via DELETE /auth/account.
 
         No code changes were made during this audit. Backend is launch-ready.
+
+  - task: "Insurance Claim DETAIL — Showroom redesign (P2b-P2g)"
+    implemented: true
+    working: true
+    file: "/app/frontend/app/insurance-claims/[id].tsx"
+    stuck_count: 0
+    priority: "high"
+    status_history:
+      - working: true
+        agent: "main"
+        comment: "Full rewrite of claim detail to Showroom layout: IndustrialBanner title + glossy ProgressPill (7 steps+tasks blended %) + 2-col header facts + 'Tasks to Complete' link + horizontal tab bar w/ badges (Details/Financials/Contacts/Evidence/Documents/Notes/Claimed Items/Reports/Insurance Info/Timeline) + ONE static skinned panel + constant in-panel global search + context-aware FAB. Added tasks/contacts/documents API methods + lazy default-task seeding for legacy claims. Photo/report viewing (prev P1 bug) now works."
+      - working: true
+        agent: "testing"
+        comment: "Iteration 65: full e2e pass on ryan@ryan.com, 0 pageerrors. All tabs, search, FAB, contacts/notes/task-from-note modals, evidence viewer, reports verified. Only issue: Tasks-to-Complete link tap didn't fire (small touch target) — main agent fixed via larger target + hitSlop + testID icd-tasks-link."
+
+test_plan:
+  current_focus:
+    - "Insurance Claim DETAIL Showroom redesign — DONE; next: expo-notifications task reminders (P2h)"
