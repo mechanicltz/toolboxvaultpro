@@ -90,4 +90,28 @@ export const insuranceApi = {
   listReports: (id: string) => req<any[]>(`/insurance-claims/${id}/reports`),
   emailReport: (id: string, reportId: string, data: any) =>
     req<any>(`/insurance-claims/${id}/reports/${reportId}/email`, "POST", data),
+
+  // ---- tasks ----
+  addTask: (id: string, data: any) => req<any>(`/insurance-claims/${id}/tasks`, "POST", data),
+  patchTask: (id: string, taskId: string, data: any) =>
+    req<any>(`/insurance-claims/${id}/tasks/${taskId}`, "PATCH", data),
+  deleteTask: (id: string, taskId: string) =>
+    req<any>(`/insurance-claims/${id}/tasks/${taskId}`, "DELETE"),
+
+  // ---- contacts ----
+  addContact: (id: string, data: any) => req<any>(`/insurance-claims/${id}/contacts`, "POST", data),
+  patchContact: (id: string, contactId: string, data: any) =>
+    req<any>(`/insurance-claims/${id}/contacts/${contactId}`, "PATCH", data),
+  deleteContact: (id: string, contactId: string) =>
+    req<any>(`/insurance-claims/${id}/contacts/${contactId}`, "DELETE"),
+
+  // ---- documents (separate from evidence) ----
+  addDocument: (id: string, data: any) => req<any>(`/insurance-claims/${id}/documents`, "POST", data),
+  listDocuments: (id: string) => req<any[]>(`/insurance-claims/${id}/documents`),
+  getDocument: (id: string, docId: string) =>
+    req<any>(`/insurance-claims/${id}/documents/${docId}`),
+  patchDocument: (id: string, docId: string, data: any) =>
+    req<any>(`/insurance-claims/${id}/documents/${docId}`, "PATCH", data),
+  deleteDocument: (id: string, docId: string) =>
+    req<any>(`/insurance-claims/${id}/documents/${docId}`, "DELETE"),
 };

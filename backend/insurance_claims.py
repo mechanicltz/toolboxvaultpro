@@ -1067,6 +1067,11 @@ def make_insurance_claims_router(api_router: APIRouter, get_db, get_current_user
     async def get_claim(claim_id: str):
         db = get_db()
         claim = await _get_claim(db, claim_id)
+        # Legacy claims created before task-seeding have no task list — every
+        # claim must have one (spec). Backfill the default tasks once, lazily.
+        if not claim.get("tasks"):
+            claim["tasks"] = _seed_default_tasks()
+            await _save(db, claim)
         resolved = await _resolve_claim_items(db, claim)
         docs = await db.claim_documents.find({"claim_id": claim_id}, {"_id": 0, "data_b64": 0}).to_list(2000)
         ev = await db.claim_evidence.find({"claim_id": claim_id}, {"_id": 0, "data_b64": 0}).to_list(2000)
