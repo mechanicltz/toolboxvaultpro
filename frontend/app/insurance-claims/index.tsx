@@ -88,6 +88,26 @@ export default function InsuranceClaimsDashboard() {
       : t === "success" ? c.success : t === "danger" ? c.danger : c.warning;
   };
 
+  // Soonest incomplete task deadline → "overdue" / "due soon" pill.
+  const taskDeadline = (claim: any): { label: string; color: string } | null => {
+    const tasks = claim?.tasks || [];
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const soon = new Date(today); soon.setDate(soon.getDate() + 3); // within 3 days
+    let best: Date | null = null;
+    for (const t of tasks) {
+      if (t.done || !t.due_date) continue;
+      const head = String(t.due_date).slice(0, 10);
+      const [y, m, d] = head.split("-").map(Number);
+      if (!y || !m || !d) continue;
+      const due = new Date(y, m - 1, d); due.setHours(0, 0, 0, 0);
+      if (!best || due < best) best = due;
+    }
+    if (!best) return null;
+    if (best < today) return { label: "Overdue", color: c.danger };
+    if (best <= soon) return { label: "Due soon", color: c.warning };
+    return null;
+  };
+
   const openClaims = activeList.filter((cl) => OPEN_STATUSES.has(cl.status));
   const closedClaims = activeList.filter((cl) => CLOSED_STATUSES.has(cl.status));
 
@@ -190,6 +210,15 @@ export default function InsuranceClaimsDashboard() {
               <View style={[styles.badge, { backgroundColor: tint(claim.status) + "22", borderColor: tint(claim.status) }]}>
                 <Text style={[styles.badgeText, { color: tint(claim.status) }]}>{claim.status}</Text>
               </View>
+              {(() => {
+                const dl = taskDeadline(claim);
+                return dl ? (
+                  <View style={[styles.deadlinePill, { backgroundColor: dl.color + "22", borderColor: dl.color }]} testID={`ic-deadline-${claim.id}`}>
+                    <Ionicons name={dl.label === "Overdue" ? "alert-circle" : "time"} size={10} color={dl.color} />
+                    <Text style={[styles.deadlineText, { color: dl.color }]}>{dl.label}</Text>
+                  </View>
+                ) : null;
+              })()}
               <Ionicons name="chevron-forward" size={16} color={c.textMuted} style={{ marginTop: 6 }} />
             </View>
           </TouchableOpacity>
@@ -324,6 +353,8 @@ const styles = themedStyles((c) => ({
   claimMeta: { color: c.textMuted, fontSize: 11, fontWeight: "600", marginTop: 2 },
   badge: { borderWidth: 1, borderRadius: 10, paddingHorizontal: 8, paddingVertical: 3 },
   badgeText: { fontSize: 10, fontWeight: "900", letterSpacing: 0.3 },
+  deadlinePill: { flexDirection: "row", alignItems: "center", gap: 3, borderWidth: 1, borderRadius: 8, paddingHorizontal: 6, paddingVertical: 2, marginTop: 5 },
+  deadlineText: { fontSize: 9, fontWeight: "900", letterSpacing: 0.2 },
 
   // Empty
   emptyWrap: { alignItems: "center", paddingVertical: 40 },

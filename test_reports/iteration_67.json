@@ -1,0 +1,39 @@
+{
+  "summary": "Iteration 67 — verified the new 'Due soon' / 'Overdue' deadline pill on the Insurance Claims dashboard (/insurance-claims/index.tsx) for ryan@ryan.com on the Expo web preview at 390x844. Used the existing closed claim 'Truck Break-In — Stolen Tools' (id 74f1e3f0-8e08-4f82-bdde-d3d389153293, status 'Paid' → Closed tab) and the leftover TEST_AutoTask task (id b5c43f6a-ea67-4c07-956f-3de4f83364cc). Test mutates task.due_date via PATCH /api/insurance-claims/{id}/tasks/{taskId} between cases and re-reads the dashboard. All six scenarios PASS: (1) due_date = tomorrow (2026-06-28) → ic-deadline-<claimId> renders inner_text 'Due soon' with border-color rgb(245,158,11) (amber/warning, matches code at index.tsx:107). (2) due_date = yesterday (2026-06-26) → pill renders 'Overdue' with border-color rgb(239,68,68) (red/danger, matches code at index.tsx:106). (3) Precedence — added a 2nd task with tomorrow alongside the yesterday one and confirmed the pill is still 'Overdue' (soonest incomplete wins, overdue beats due-soon as designed at index.tsx:96-108). (4) done=true on the only dated task → pill is removed (element count 0); the claim card itself + status badge remain rendered. (5) Tabs Summary/Open/Closed/Archived (testIDs ic-tab-summary/open/closed/archived) are all clickable and switch views (had to use DOM .click() — same RN-web TouchableOpacity vs Playwright force-click quirk flagged in iter 65/66, NOT a real user bug). (6) Card tap (ic-claim-<id>) navigates to /insurance-claims/<id>. No console pageerrors. Backend not tested per request (frontend only). Cleanup performed — TEST task is back to due_date='' and done=false (its pre-test state), the temporary 2nd task added in scenario 2b was deleted after use. No other test data was created or left behind.",
+  "backend_issues": { "critical": [], "minor": [] },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": [
+      {
+        "component": "ic-tab-* / ic-claim-<id> (TouchableOpacity on web)",
+        "issue": "Pre-existing (same as iter 65/66): Playwright page.click(force=True) does NOT fire onPress on RN-web TouchableOpacity reliably; only a raw DOM .click() does. Worked around in this test via page.evaluate(\"document.querySelector(...).click()\"). Not a user-facing defect — real touch / mouse works — but flagged again because it keeps biting automated regression tests. Suggest converting these list rows/tabs to Pressable or wiring an explicit web onClick handler. Reference: /app/frontend/app/insurance-claims/index.tsx:192-225 (claim rows) and :255-275 (tabs)."
+      },
+      {
+        "component": "expo-notifications (web) + RN-web style props",
+        "issue": "Recurring console noise on every load (pre-existing, app-wide, not introduced by this diff): '[expo-notifications] Listening to push token changes is not yet fully supported on web…', 'shadow* style props are deprecated. Use boxShadow', 'textShadow* style props are deprecated. Use textShadow', 'props.pointerEvents is deprecated (use style.pointerEvents)'. None blocks functionality. Worth a hygiene sweep later."
+      }
+    ]
+  },
+  "test_report_links": [
+    "/app/test_reports/iteration_67.json",
+    "/app/test_reports/iter67_test.py"
+  ],
+  "action_items": [
+    "None required — the feature works as specified. OPTIONAL hygiene: (a) replace TouchableOpacity with Pressable on dashboard rows/tabs so automated web tests can use force-click without the DOM-click workaround; (b) suppress the shadow*/textShadow*/pointerEvents deprecation warnings app-wide."
+  ],
+  "critical_code_review_comments": [
+    "/app/frontend/app/insurance-claims/index.tsx:92-109 — taskDeadline() logic is correct and matches the spec: skips done or due_date-less tasks, parses YYYY-MM-DD safely (defends against bad strings via the !y || !m || !d guard), and resolves to Overdue (before today) / Due soon (today..today+3) / null. Date comparison uses local midnight which is the right semantic for a deadline UI. LGTM.",
+    "/app/frontend/app/insurance-claims/index.tsx:213-221 — pill renders inside the card's right column under the status badge with testID ic-deadline-<claimId>, an icon that swaps between 'alert-circle' (overdue) and 'time' (due soon), and color-coded background+border via tint+'22'. Style at :356-357 (deadlinePill / deadlineText) — small (9pt), tight padding, doesn't disturb the existing layout. LGTM.",
+    "Performance note (minor): taskDeadline() is recomputed for every row on every render; for the foreseeable claim counts (single-digit per user) this is fine. If lists grow large, consider memoizing per-claim with useMemo keyed on claim.tasks identity.",
+    "Edge case (no regression here, just noting): the rule is 'best <= soon' where soon = today + 3 days. So a deadline exactly 3 days out shows 'Due soon'; 4 days out shows nothing. That matches the spec ('within the next 3 days')."
+  ],
+  "updated_files": [],
+  "success_rate": { "backend": "n/a (skipped per request)", "frontend": "100% — all six spec scenarios + the overdue/due-soon precedence sub-scenario passed; pill text + border color + element-count + navigation all verified." },
+  "seed_data_creation": "None left behind. Mutated only the pre-existing TEST_AutoTask task (id b5c43f6a-...) on claim 74f1e3f0-..., and restored it to due_date='' / done=false at the end. Temporarily added a 2nd task for the precedence test and deleted it before cleanup.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Same as iter 66: login rate-limited 5/min — cache or seed the token in localStorage under key 'tt.auth.token'. For automated clicks on insurance-claims dashboard rows/tabs use page.evaluate(\"document.querySelector('[data-testid=...]').click()\") instead of page.click(..., force=True) — RN-web TouchableOpacity does not respond to Playwright's synthetic pointer events. Truck Break-In claim has status 'Paid' so it lives under the Closed tab. The existing TEST_AutoTask task (b5c43f6a-...) is a reliable handle for due-date scenarios — patch its due_date via PATCH /api/insurance-claims/<claimId>/tasks/<taskId> with payload {due_date:'YYYY-MM-DD'} and then page.reload() to re-fetch the dashboard.",
+  "rca_of_issue": "n/a — no functional bug found. Feature implementation matches the spec exactly."
+}
