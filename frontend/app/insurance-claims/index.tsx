@@ -234,7 +234,6 @@ export default function InsuranceClaimsDashboard() {
               activeOpacity={0.8}
               style={[styles.tabBtn, on && styles.tabBtnOn]}
             >
-              <Ionicons name={t.icon} size={16} color={on ? c.accent : c.textMuted} />
               <Text style={[styles.tabLabel, on && styles.tabLabelOn]} numberOfLines={1}>{t.label}</Text>
               {t.key !== "summary" && (
                 <View style={[styles.tabCount, on && { backgroundColor: c.accent }]}>
