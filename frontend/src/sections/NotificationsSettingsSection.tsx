@@ -54,6 +54,10 @@ import {
   rescheduleAllBorrowReminders,
   cancelAllBorrowReminders,
 } from "../borrowReminders";
+import {
+  rescheduleClaimTaskRemindersNow,
+  cancelClaimTaskReminders,
+} from "../claimTaskReminders";
 
 type Props = {
   prefs: Prefs;
@@ -143,6 +147,7 @@ export default function NotificationsSettingsSection({ prefs, update }: Props) {
   const steelPanel = useSteelPanelFrame();
   const [timePickerOpen, setTimePickerOpen] = useState(false);
   const [paymentTimePickerOpen, setPaymentTimePickerOpen] = useState(false);
+  const [claimTaskTimePickerOpen, setClaimTaskTimePickerOpen] = useState(false);
   const [borrowPeriodPickerOpen, setBorrowPeriodPickerOpen] = useState(false);
   const [customDaysInput, setCustomDaysInput] = useState("");
 
@@ -225,12 +230,16 @@ export default function NotificationsSettingsSection({ prefs, update }: Props) {
       if (prefs.payment_notifications_enabled) {
         reschedulePaymentRemindersNow().catch(() => {});
       }
+      if (prefs.claim_task_notifications_enabled) {
+        rescheduleClaimTaskRemindersNow().catch(() => {});
+      }
     } else {
       await update({ notifications_master_enabled: false });
       // Master off => silence everything (keep the per-type prefs as-is).
       await cancelDealerNotifications();
       await cancelAllBorrowReminders();
       await cancelPaymentReminders();
+      await cancelClaimTaskReminders();
     }
   };
 
@@ -345,6 +354,30 @@ export default function NotificationsSettingsSection({ prefs, update }: Props) {
     await update({ payment_notify_day_before: v });
     if (prefs.payment_notifications_enabled) {
       reschedulePaymentRemindersNow().catch(() => {});
+    }
+  };
+
+  // ---- Claim task deadline reminders ----
+  const handleClaimTaskToggle = async (v: boolean) => {
+    await update({ claim_task_notifications_enabled: v });
+    if (v) {
+      rescheduleClaimTaskRemindersNow().catch(() => {});
+    } else {
+      await cancelClaimTaskReminders();
+    }
+  };
+
+  const applyClaimTaskTime = async (h: number, m: number) => {
+    await update({ claim_task_notification_hour: h, claim_task_notification_minute: m });
+    if (prefs.claim_task_notifications_enabled) {
+      rescheduleClaimTaskRemindersNow().catch(() => {});
+    }
+  };
+
+  const handleClaimTaskDayBeforeToggle = async (v: boolean) => {
+    await update({ claim_task_notify_day_before: v });
+    if (prefs.claim_task_notifications_enabled) {
+      rescheduleClaimTaskRemindersNow().catch(() => {});
     }
   };
 
@@ -546,6 +579,63 @@ export default function NotificationsSettingsSection({ prefs, update }: Props) {
                 </>
               )}
             </View>
+
+            {/* ===== Claim task deadline reminders ===== */}
+            <View style={[styles.notifGroup, isIndustrial && styles.notifGroupFlat]}>
+              <SectionRow
+                icon="clipboard"
+                title="Claim task deadlines"
+                subtitle="Remind me before insurance-claim tasks are due"
+                testID="notif-claimtask-toggle-row"
+                isLast={!prefs.claim_task_notifications_enabled}
+                rightSlot={
+                  <AppSwitch
+                    testID="toggle-claimtask-notifications"
+                    value={prefs.claim_task_notifications_enabled}
+                    onValueChange={handleClaimTaskToggle}
+                    trackColor={{ true: theme.colors.accent, false: theme.colors.border }}
+                    thumbColor="#fff"
+                    style={styles.miniSwitch}
+                  />
+                }
+              />
+              {prefs.claim_task_notifications_enabled && (
+                <>
+                  <SectionRow
+                    icon="time"
+                    title="Reminder time"
+                    subtitle="When to send claim task reminders"
+                    testID="notif-claimtask-time-row"
+                    indent
+                    onPress={() => setClaimTaskTimePickerOpen(true)}
+                    rightSlot={
+                      <Text style={styles.timeValue}>
+                        {formatHourMinute(
+                          prefs.claim_task_notification_hour,
+                          prefs.claim_task_notification_minute,
+                        )}
+                      </Text>
+                    }
+                  />
+                  <SectionRow
+                    icon="calendar"
+                    title="Also remind day before"
+                    subtitle="Heads-up the day before a task is due"
+                    indent
+                    isLast
+                    rightSlot={
+                      <AppSwitch
+                        value={prefs.claim_task_notify_day_before}
+                        onValueChange={handleClaimTaskDayBeforeToggle}
+                        trackColor={{ true: theme.colors.accent, false: theme.colors.border }}
+                        thumbColor="#fff"
+                        style={styles.miniSwitch}
+                      />
+                    }
+                  />
+                </>
+              )}
+            </View>
           </>
         )}
 
@@ -716,6 +806,68 @@ export default function NotificationsSettingsSection({ prefs, update }: Props) {
               onChange={async (_event, selected) => {
                 if (selected) {
                   await applyPaymentTime(selected.getHours(), selected.getMinutes());
+                }
+              }}
+            />
+          </View>
+        </Modal>
+      )}
+
+      {/* ===== Claim task reminder time picker ===== */}
+      {Platform.OS === "android" && claimTaskTimePickerOpen && (
+        <DateTimePicker
+          value={(() => {
+            const d = new Date();
+            d.setHours(prefs.claim_task_notification_hour, prefs.claim_task_notification_minute, 0, 0);
+            return d;
+          })()}
+          mode="time"
+          is24Hour={false}
+          display="default"
+          onChange={async (event, selected) => {
+            setClaimTaskTimePickerOpen(false);
+            if (event.type === "set" && selected) {
+              await applyClaimTaskTime(selected.getHours(), selected.getMinutes());
+            }
+          }}
+        />
+      )}
+      {Platform.OS === "ios" && (
+        <Modal
+          visible={claimTaskTimePickerOpen}
+          transparent
+          animationType="slide"
+          onRequestClose={() => setClaimTaskTimePickerOpen(false)}
+        >
+          <TouchableOpacity
+            style={styles.timeModalBackdrop}
+            activeOpacity={1}
+            onPress={() => setClaimTaskTimePickerOpen(false)}
+          />
+          <View style={styles.timeModalSheet}>
+            <View style={styles.timeModalHeader}>
+              <TouchableOpacity onPress={() => setClaimTaskTimePickerOpen(false)}>
+                <Text style={styles.timeModalCancel}>Cancel</Text>
+              </TouchableOpacity>
+              <Text style={styles.timeModalTitle}>Claim Task Reminder Time</Text>
+              <TouchableOpacity onPress={() => setClaimTaskTimePickerOpen(false)}>
+                <Text style={styles.timeModalDone}>Done</Text>
+              </TouchableOpacity>
+            </View>
+            <DateTimePicker
+              value={(() => {
+                const d = new Date();
+                d.setHours(prefs.claim_task_notification_hour, prefs.claim_task_notification_minute, 0, 0);
+                return d;
+              })()}
+              mode="time"
+              is24Hour={false}
+              display="spinner"
+              themeVariant="dark"
+              textColor="#FFFFFF"
+              onChange={async (_event, selected) => {
+                if (selected) {
+                  await applyClaimTaskTime(selected.getHours(), selected.getMinutes());
                 }
               }}
             />

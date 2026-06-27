@@ -56,6 +56,13 @@ export type Prefs = {
   payment_notification_hour: number; // 0-23
   payment_notification_minute: number; // 0-59
   payment_notify_day_before: boolean;
+  // Insurance-claim task deadline reminders. When a claim task has a due date
+  // and its per-task `notify` flag is on, the app schedules a local reminder
+  // on the due date (and optionally the day before) at the chosen time.
+  claim_task_notifications_enabled: boolean;
+  claim_task_notification_hour: number; // 0-23
+  claim_task_notification_minute: number; // 0-59
+  claim_task_notify_day_before: boolean;
   // Master gate for ALL notifications. When OFF, the entire notifications
   // accordion is collapsed and nothing is scheduled. When toggled ON the app
   // requests native notification permission. Individual type toggles
@@ -113,6 +120,10 @@ const DEFAULTS: Prefs = {
   payment_notification_hour: 7,
   payment_notification_minute: 0,
   payment_notify_day_before: true,
+  claim_task_notifications_enabled: true,
+  claim_task_notification_hour: 9,
+  claim_task_notification_minute: 0,
+  claim_task_notify_day_before: true,
   notifications_master_enabled: false,
 };
 
@@ -174,7 +185,8 @@ export const loadPrefs = async (): Promise<Prefs> => {
           : !!(
               parsed.dealer_notifications_enabled ||
               parsed.borrow_reminders_enabled ||
-              parsed.payment_notifications_enabled
+              parsed.payment_notifications_enabled ||
+              parsed.claim_task_notifications_enabled
             ),
     };
   } catch {

@@ -21,6 +21,7 @@ import { SKIN, CAP } from "../../src/tbv/skins";
 import { SkinButton } from "../../src/components/SkinButton";
 import { insuranceApi, ClaimSpec } from "../../src/insuranceApi";
 import { renderAndViewClaimReport, viewStoredClaimReport, shareStoredClaimReport, renderClaimReportOnly, openDataUriFile } from "../../src/insuranceReport";
+import { rescheduleClaimTaskRemindersNow } from "../../src/claimTaskReminders";
 
 const money = (n: number) => "$" + (Number(n) || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const fmtDate = (s?: string) => { if (!s) return ""; const d = new Date(s); return isNaN(+d) ? s : d.toLocaleString(); };
@@ -127,6 +128,8 @@ export default function ClaimDetail() {
         insuranceApi.listDocuments(id), insuranceApi.listReports(id),
       ]);
       setClaim(cl); setEvidence(ev); setDocuments(docs); setReports(rep);
+      // Keep claim-task deadline reminders in sync (no-op on web/when disabled).
+      rescheduleClaimTaskRemindersNow().catch(() => {});
     } catch (e: any) {
       Alert.alert("Error", e?.message || "Could not load claim.");
     } finally { setLoading(false); }
