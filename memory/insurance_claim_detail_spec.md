@@ -112,3 +112,20 @@ Opens localized popup: add new contact / note / evidence photo / document / etc.
    (Details/Financials/Insurance/Timeline) → P2d (Contacts/Notes+task-from-note/Tasks)
    → P2e (Evidence/Documents uploads) → P2f (Claimed Items + warnings) → P2g (Reports
    versioning) → P2h (notifications + Vault toggle).
+
+## ✅ DECISIONS CONFIRMED BY USER (locked)
+1. Progress %% = **BOTH**: the bar reflects the 7 fixed steps AND the task-list
+   completion. Implementation note: keep the 7-step pipeline as the visible "Claim
+   Progress" checklist driving the bar, AND factor task-list completion in. Suggested:
+   show the 7-step bar prominently; blend task completion into the % (e.g. steps and
+   tasks combined), or show two readouts — clarify exact blend at build time but the
+   user wants both represented.
+2. Notifications = **YES**, build with expo-notifications (local scheduled reminders on
+   task deadlines) + on/off toggle in Vault → Notifications. Only fires on real
+   build/device (not Expo Go/web) — user accepts this. Treat as an INTEGRATION → call
+   integration_expert for expo-notifications scheduling best practices before building.
+3. Documents vs Evidence = **SEPARATE** collections/sections. Evidence already exists;
+   Documents is new.
+4. Build order = **CONFIRMED** as proposed (P2a backend → P2b shell → tab waves →
+   reports versioning → notifications).
+
