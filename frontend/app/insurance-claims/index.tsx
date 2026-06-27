@@ -7,20 +7,26 @@ import {
   TouchableOpacity,
   RefreshControl,
   ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter, useFocusEffect } from "expo-router";
-import { themedStyles, useColors } from "../../src/themeContext";
-import { SkinPlate } from "../../src/components/SkinPlate";
+import { themedStyles, useColors, useSkin } from "../../src/themeContext";
 import { IndustrialBanner } from "../../src/components/IndustrialBanner";
 import { AddFab } from "../../src/components/AddFab";
+import { TbvListPanel } from "../../src/tbv/components/TbvListPanel";
+import { useIsSteel, useSteelPanelFrame } from "../../src/tbv/steel";
+import { SKIN, CAP } from "../../src/tbv/skins";
 import { insuranceApi, ClaimSummary } from "../../src/insuranceApi";
 
 const money = (n: number) =>
   "$" + (Number(n) || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+// Mirror the backend status buckets (insurance_claims.py).
+const OPEN_STATUSES = new Set([
+  "Draft", "Submitted", "Under Review", "More Information Needed", "Reopened", "Partially Approved",
+]);
+const CLOSED_STATUSES = new Set(["Approved", "Denied", "Paid", "Closed"]);
 
 const STATUS_TINT: Record<string, "muted" | "accent" | "success" | "danger" | "warning"> = {
   Draft: "muted", Submitted: "accent", "Under Review": "accent",
@@ -28,32 +34,51 @@ const STATUS_TINT: Record<string, "muted" | "accent" | "success" | "danger" | "w
   Denied: "danger", Paid: "success", Closed: "muted", Reopened: "accent",
 };
 
+type ViewKey = "summary" | "open" | "closed" | "archived";
+
+const TABS: { key: ViewKey; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
+  { key: "summary", label: "Summary", icon: "stats-chart" },
+  { key: "open", label: "Open", icon: "folder-open" },
+  { key: "closed", label: "Closed", icon: "checkmark-done" },
+  { key: "archived", label: "Archived", icon: "archive" },
+];
+
 export default function InsuranceClaimsDashboard() {
   const router = useRouter();
   const c = useColors();
+  const { skin } = useSkin();
+  const isIndustrial = skin === "industrial";
+  const isSteel = useIsSteel();
+  const steelPanel = useSteelPanelFrame();
+  const winSrc = isSteel ? steelPanel.source : SKIN.window;
+  const winCap = isSteel ? steelPanel.capInsets : CAP.window;
+  const steelScale = isSteel ? steelPanel.frameScale : undefined;
+
+  const [view, setView] = useState<ViewKey>("summary");
   const [summary, setSummary] = useState<ClaimSummary | null>(null);
-  const [claims, setClaims] = useState<any[]>([]);
+  const [activeList, setActiveList] = useState<any[]>([]);
+  const [archivedList, setArchivedList] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [q, setQ] = useState("");
-  const [statusFilter, setStatusFilter] = useState("");
-  const [archived, setArchived] = useState(false);
 
   const load = useCallback(async () => {
     try {
-      const [s, list] = await Promise.all([
+      const [s, active, arch] = await Promise.all([
         insuranceApi.summary(),
-        insuranceApi.list({ q, status: statusFilter, archived }),
+        insuranceApi.list({ archived: false }),
+        insuranceApi.list({ archived: true }),
       ]);
       setSummary(s);
-      setClaims(list);
-    } catch (e) {
-      // soft fail — keep prior data
+      setActiveList(Array.isArray(active) ? active : []);
+      setArchivedList(Array.isArray(arch) ? arch : []);
+    } catch {
+      /* soft fail — keep prior data */
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [q, statusFilter, archived]);
+  }, []);
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
@@ -63,128 +88,182 @@ export default function InsuranceClaimsDashboard() {
       : t === "success" ? c.success : t === "danger" ? c.danger : c.warning;
   };
 
-  const cards = summary ? [
-    { label: "Total Claims", value: String(summary.total_claims), color: c.textPrimary },
-    { label: "Open Claims", value: String(summary.open_claims), color: c.accent },
-    { label: "Closed Claims", value: String(summary.closed_claims), color: c.textMuted },
-    { label: "Total Claimed", value: money(summary.total_claimed_value), color: c.textPrimary },
-    { label: "Total Approved", value: money(summary.total_approved_value), color: c.success },
-    { label: "Total Paid", value: money(summary.total_paid_value), color: c.success },
+  const openClaims = activeList.filter((cl) => OPEN_STATUSES.has(cl.status));
+  const closedClaims = activeList.filter((cl) => CLOSED_STATUSES.has(cl.status));
+
+  const counts = {
+    summary: 0,
+    open: openClaims.length,
+    closed: closedClaims.length,
+    archived: archivedList.length,
+  };
+
+  const baseList = view === "open" ? openClaims : view === "closed" ? closedClaims : archivedList;
+  const ql = q.trim().toLowerCase();
+  const visible = ql
+    ? baseList.filter((cl) =>
+        [cl.title, cl.claim_number, cl.claim_type, cl.insurance?.company, cl.insurance?.agent_name]
+          .some((f) => (f || "").toString().toLowerCase().includes(ql)))
+    : baseList;
+
+  const statRows = summary ? [
+    { label: "Total Claims", value: String(summary.total_claims), color: c.textPrimary, icon: "documents" as const },
+    { label: "Open Claims", value: String(summary.open_claims), color: c.accent, icon: "folder-open" as const },
+    { label: "Closed Claims", value: String(summary.closed_claims), color: c.textMuted, icon: "checkmark-done" as const },
+    { label: "Archived Claims", value: String(archivedList.length), color: c.textMuted, icon: "archive" as const },
+    { label: "Total Claimed", value: money(summary.total_claimed_value), color: c.textPrimary, icon: "cash" as const },
+    { label: "Total Approved", value: money(summary.total_approved_value), color: c.success, icon: "shield-checkmark" as const },
+    { label: "Total Paid", value: money(summary.total_paid_value), color: c.success, icon: "wallet" as const },
   ] : [];
+
+  const renderSummary = () => (
+    <View>
+      {statRows.map((row) => (
+        <View key={row.label} style={styles.statRow} testID={`ic-stat-${row.label}`}>
+          <View style={styles.statIcon}>
+            <Ionicons name={row.icon} size={16} color={c.accent} />
+          </View>
+          <Text style={styles.statRowLabel} numberOfLines={1}>{row.label.toUpperCase()}</Text>
+          <View style={{ flex: 1 }} />
+          <Text style={[styles.statRowValue, { color: row.color }]} numberOfLines={1}>{row.value}</Text>
+        </View>
+      ))}
+    </View>
+  );
+
+  const renderEmpty = (msg: string) => (
+    <View style={styles.emptyWrap}>
+      <Ionicons name="shield-checkmark-outline" size={40} color={c.textMuted} />
+      <Text style={styles.emptyTitle}>{msg}</Text>
+      {view !== "archived" && (
+        <TouchableOpacity testID="ic-empty-new" onPress={() => router.push("/insurance-claims/new" as any)} style={styles.primaryBtn}>
+          <Ionicons name="add" size={18} color={c.textOnAccent} />
+          <Text style={styles.primaryBtnText}>Create New Claim</Text>
+        </TouchableOpacity>
+      )}
+    </View>
+  );
+
+  const renderList = () => (
+    <View>
+      {/* Inline search for list views */}
+      <View style={styles.searchRow}>
+        <Ionicons name="search" size={16} color={c.textMuted} style={{ marginRight: 8 }} />
+        <TextInput
+          testID="ic-search"
+          value={q}
+          onChangeText={setQ}
+          placeholder="Search title, #, company…"
+          placeholderTextColor={c.textMuted}
+          style={styles.searchInput}
+          returnKeyType="search"
+        />
+        {q ? (
+          <TouchableOpacity onPress={() => setQ("")} hitSlop={8}>
+            <Ionicons name="close-circle" size={16} color={c.textMuted} />
+          </TouchableOpacity>
+        ) : null}
+      </View>
+
+      {visible.length === 0 ? (
+        renderEmpty(ql ? "No claims match your search." : `No ${view} claims yet.`)
+      ) : (
+        visible.map((claim, i) => (
+          <TouchableOpacity
+            key={claim.id}
+            testID={`ic-claim-${claim.id}`}
+            onPress={() => router.push(`/insurance-claims/${claim.id}` as any)}
+            activeOpacity={0.7}
+            style={[styles.claimRow, i === visible.length - 1 && styles.claimRowLast]}
+          >
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <Text style={styles.claimTitle} numberOfLines={1}>{claim.title}</Text>
+              <Text style={styles.claimMeta} numberOfLines={1}>
+                {claim.claim_type}{claim.claim_number ? ` · #${claim.claim_number}` : ""}
+                {claim.insurance?.company ? ` · ${claim.insurance.company}` : ""}
+              </Text>
+              <Text style={styles.claimMeta} numberOfLines={1}>
+                {(claim._item_count || 0)} item(s) · {money(claim._total_claimed || 0)} claimed
+              </Text>
+            </View>
+            <View style={{ alignItems: "flex-end", flexShrink: 0 }}>
+              <View style={[styles.badge, { backgroundColor: tint(claim.status) + "22", borderColor: tint(claim.status) }]}>
+                <Text style={[styles.badgeText, { color: tint(claim.status) }]}>{claim.status}</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={16} color={c.textMuted} style={{ marginTop: 6 }} />
+            </View>
+          </TouchableOpacity>
+        ))
+      )}
+    </View>
+  );
+
+  const panelContent = (
+    <ScrollView
+      style={{ flex: 1 }}
+      contentContainerStyle={{ paddingBottom: 24 }}
+      showsVerticalScrollIndicator={false}
+      keyboardShouldPersistTaps="handled"
+      refreshControl={
+        <RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }} tintColor={c.accent} />
+      }
+    >
+      {loading && !summary ? (
+        <ActivityIndicator color={c.accent} style={{ marginTop: 40 }} />
+      ) : view === "summary" ? (
+        renderSummary()
+      ) : (
+        renderList()
+      )}
+    </ScrollView>
+  );
 
   return (
     <SafeAreaView style={styles.safe} edges={["top"]}>
       <IndustrialBanner title="INSURANCE CLAIMS" onBack={() => router.back()} />
 
-      <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1 }}>
-        <ScrollView
-          contentContainerStyle={{ padding: 16, paddingBottom: 48 }}
-          keyboardShouldPersistTaps="handled"
-          automaticallyAdjustKeyboardInsets
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }} tintColor={c.accent} />}
-        >
-          {/* Summary — single skinned panel, one stat per row */}
-          {cards.length > 0 && (
-            <SkinPlate style={{ marginBottom: 14 }} frame="window" padX={16} padTop={10} padBottom={10} testID="ic-summary-panel">
-              {cards.map((card) => (
-                <View key={card.label} style={styles.statRow} testID={`ic-stat-${card.label}`}>
-                  <View style={styles.rowTick} />
-                  <Text style={styles.statRowLabel} numberOfLines={1}>{card.label.toUpperCase()}</Text>
-                  <View style={{ flex: 1 }} />
-                  <Text style={[styles.statRowValue, { color: card.color }]} numberOfLines={1}>{card.value}</Text>
-                </View>
-              ))}
-            </SkinPlate>
-          )}
-
-          {/* Search */}
-          <View style={styles.searchRow}>
-            <Ionicons name="search" size={18} color={c.textMuted} style={{ marginRight: 8 }} />
-            <TextInput
-              testID="ic-search"
-              value={q}
-              onChangeText={setQ}
-              onSubmitEditing={load}
-              placeholder="Search by title, #, company, agent…"
-              placeholderTextColor={c.textMuted}
-              style={styles.searchInput}
-              returnKeyType="search"
-            />
-            {q ? (
-              <TouchableOpacity onPress={() => { setQ(""); setTimeout(load, 0); }}>
-                <Ionicons name="close-circle" size={18} color={c.textMuted} />
-              </TouchableOpacity>
-            ) : null}
-          </View>
-
-          {/* Filter chips */}
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipsRow} contentContainerStyle={{ gap: 8 }}>
-            {["", "Draft", "Submitted", "Under Review", "Approved", "Paid", "Denied", "Closed"].map((s) => (
-              <TouchableOpacity
-                key={s || "all"}
-                testID={`ic-filter-${s || "all"}`}
-                onPress={() => { setStatusFilter(s); setTimeout(load, 0); }}
-                style={[styles.chip, statusFilter === s && { backgroundColor: c.accent, borderColor: c.accent }]}
-              >
-                <Text style={[styles.chipText, statusFilter === s && { color: c.textOnAccent }]}>{s || "All"}</Text>
-              </TouchableOpacity>
-            ))}
+      {/* 4 selector buttons */}
+      <View style={styles.tabsRow}>
+        {TABS.map((t) => {
+          const on = view === t.key;
+          return (
             <TouchableOpacity
-              testID="ic-filter-archived"
-              onPress={() => { setArchived((a) => !a); setTimeout(load, 0); }}
-              style={[styles.chip, archived && { backgroundColor: c.textMuted, borderColor: c.textMuted }]}
+              key={t.key}
+              testID={`ic-tab-${t.key}`}
+              onPress={() => { setQ(""); setView(t.key); }}
+              activeOpacity={0.8}
+              style={[styles.tabBtn, on && styles.tabBtnOn]}
             >
-              <Text style={[styles.chipText, archived && { color: c.textOnAccent }]}>Archived</Text>
+              <Ionicons name={t.icon} size={16} color={on ? c.accent : c.textMuted} />
+              <Text style={[styles.tabLabel, on && styles.tabLabelOn]} numberOfLines={1}>{t.label}</Text>
+              {t.key !== "summary" && (
+                <View style={[styles.tabCount, on && { backgroundColor: c.accent }]}>
+                  <Text style={[styles.tabCountText, on && { color: c.textOnAccent }]}>{counts[t.key]}</Text>
+                </View>
+              )}
             </TouchableOpacity>
-          </ScrollView>
+          );
+        })}
+      </View>
 
-          {/* Claims list */}
-          {loading ? (
-            <ActivityIndicator color={c.accent} style={{ marginTop: 40 }} />
-          ) : claims.length === 0 ? (
-            <SkinPlate style={{ marginTop: 12 }} padX={20} padTop={28} padBottom={28} frame="window">
-              <View style={{ alignItems: "center" }}>
-                <Ionicons name="shield-checkmark-outline" size={40} color={c.textMuted} />
-                <Text style={styles.emptyTitle}>No claims yet</Text>
-                <Text style={styles.emptySub}>Document a loss and generate a professional insurance report.</Text>
-                <TouchableOpacity testID="ic-empty-new" onPress={() => router.push("/insurance-claims/new" as any)} style={styles.primaryBtn}>
-                  <Ionicons name="add" size={18} color={c.textOnAccent} />
-                  <Text style={styles.primaryBtnText}>Create New Claim</Text>
-                </TouchableOpacity>
-              </View>
-            </SkinPlate>
-          ) : (
-            <SkinPlate style={{ marginTop: 12 }} frame="window" padX={16} padTop={8} padBottom={8} testID="ic-claims-list">
-              {claims.map((claim, i) => (
-                <TouchableOpacity
-                  key={claim.id}
-                  testID={`ic-claim-${claim.id}`}
-                  onPress={() => router.push(`/insurance-claims/${claim.id}` as any)}
-                  activeOpacity={0.7}
-                  style={[styles.claimRow, i === claims.length - 1 && styles.claimRowLast]}
-                >
-                  <View style={{ flex: 1, minWidth: 0 }}>
-                    <Text style={styles.claimTitle} numberOfLines={1}>{claim.title}</Text>
-                    <Text style={styles.claimMeta} numberOfLines={1}>
-                      {claim.claim_type}{claim.claim_number ? ` · #${claim.claim_number}` : ""}
-                      {(claim.insurance?.company) ? ` · ${claim.insurance.company}` : ""}
-                    </Text>
-                    <Text style={styles.claimMeta} numberOfLines={1}>
-                      {claim._item_count || 0} item(s) · {money(claim._total_claimed || 0)} claimed
-                    </Text>
-                  </View>
-                  <View style={{ alignItems: "flex-end", flexShrink: 0 }}>
-                    <View style={[styles.badge, { backgroundColor: tint(claim.status) + "22", borderColor: tint(claim.status) }]}>
-                      <Text style={[styles.badgeText, { color: tint(claim.status) }]}>{claim.status}</Text>
-                    </View>
-                    <Ionicons name="chevron-forward" size={16} color={c.textMuted} style={{ marginTop: 6 }} />
-                  </View>
-                </TouchableOpacity>
-              ))}
-            </SkinPlate>
-          )}
-        </ScrollView>
-      </KeyboardAvoidingView>
+      {/* One static panel; content scrolls inside (showroom layout). */}
+      <View style={styles.panelOuter}>
+        {isIndustrial ? (
+          <TbvListPanel
+            source={winSrc}
+            capInsets={winCap}
+            frameScale={steelScale}
+            style={{ flex: 1 }}
+            padX={isSteel ? 18 : 30}
+            padTop={isSteel ? 10 : 14}
+            padBottom={isSteel ? 8 : 12}
+          >
+            {panelContent}
+          </TbvListPanel>
+        ) : (
+          <View style={styles.panelPlain}>{panelContent}</View>
+        )}
+      </View>
 
       <AddFab testID="ic-new-fab" onPress={() => router.push("/insurance-claims/new" as any)} />
     </SafeAreaView>
@@ -193,54 +272,63 @@ export default function InsuranceClaimsDashboard() {
 
 const styles = themedStyles((c) => ({
   safe: { flex: 1, backgroundColor: c.bg },
-  header: {
-    flexDirection: "row", alignItems: "center", justifyContent: "space-between",
-    paddingHorizontal: 8, paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: c.borderSubtle,
+
+  tabsRow: { flexDirection: "row", gap: 6, paddingHorizontal: 14, paddingTop: 10, paddingBottom: 8 },
+  tabBtn: {
+    flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 4,
+    paddingVertical: 9, paddingHorizontal: 4, borderRadius: 10,
+    borderWidth: 1, borderColor: c.border, backgroundColor: c.surface,
   },
-  iconBtn: { padding: 8, minWidth: 40, alignItems: "center" },
-  headerTitle: { color: c.textPrimary, fontSize: 18, fontWeight: "800", letterSpacing: 0.3 },
-  cardGrid: { flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", gap: 0 },
+  tabBtnOn: { borderColor: c.accent, borderWidth: 2, backgroundColor: "transparent" },
+  tabLabel: { color: c.textSecondary, fontSize: 10, fontWeight: "800", letterSpacing: 0.3 },
+  tabLabelOn: { color: c.accent },
+  tabCount: {
+    minWidth: 18, paddingHorizontal: 5, paddingVertical: 1, borderRadius: 9,
+    backgroundColor: c.textMuted, alignItems: "center",
+  },
+  tabCountText: { color: c.textOnAccent, fontSize: 9, fontWeight: "900" },
+
+  panelOuter: { flex: 1, paddingHorizontal: 14, paddingTop: 2, paddingBottom: 14 },
+  panelPlain: {
+    flex: 1, backgroundColor: c.bgSecondary, borderWidth: 1, borderColor: c.border,
+    borderRadius: 10, paddingHorizontal: 14, paddingTop: 12, paddingBottom: 6,
+  },
+
+  // Summary stat rows
   statRow: {
     flexDirection: "row", alignItems: "center",
-    paddingVertical: 8, paddingHorizontal: 12, marginVertical: 2, borderRadius: 6,
-    backgroundColor: "rgba(0,0,0,0.5)",
-    borderWidth: 1,
-    borderTopColor: "rgba(0,0,0,0.85)",
-    borderLeftColor: "rgba(0,0,0,0.7)",
-    borderRightColor: "rgba(255,255,255,0.07)",
-    borderBottomColor: "rgba(255,255,255,0.11)",
+    paddingVertical: 11, paddingHorizontal: 4,
+    borderBottomWidth: 1, borderBottomColor: c.borderSubtle,
   },
-  rowTick: { width: 3, height: 16, borderRadius: 1.5, backgroundColor: c.accent, marginRight: 10 },
-  statRowLabel: { color: c.textMuted, fontFamily: "BebasNeue_400Regular", fontSize: 14, letterSpacing: 1.2 },
-  statRowValue: {
-    fontFamily: "BebasNeue_400Regular", fontSize: 14, letterSpacing: 1.2, color: c.textPrimary,
-    textAlign: "right",
-    backgroundColor: "rgba(0,0,0,0.34)", borderColor: "rgba(0,0,0,0.55)", borderWidth: 1,
-    borderRadius: 4, paddingHorizontal: 8, paddingVertical: 2, overflow: "hidden",
+  statIcon: {
+    width: 28, height: 28, borderRadius: 6, alignItems: "center", justifyContent: "center",
+    backgroundColor: "rgba(0,0,0,0.25)", marginRight: 10,
   },
+  statRowLabel: { color: c.textSecondary, fontWeight: "800", fontSize: 11, letterSpacing: 0.8 },
+  statRowValue: { fontWeight: "900", fontSize: 16, textAlign: "right", color: c.textPrimary },
+
+  // Search
   searchRow: {
     flexDirection: "row", alignItems: "center", backgroundColor: c.surface,
     borderWidth: 1, borderColor: c.border, borderRadius: 10, paddingHorizontal: 12,
-    height: 44, marginTop: 4, marginBottom: 10,
+    height: 42, marginBottom: 10,
   },
-  searchInput: { flex: 1, color: c.textPrimary, fontSize: 15 },
-  chipsRow: { marginBottom: 6 },
-  chip: {
-    paddingHorizontal: 14, paddingVertical: 7, borderRadius: 16, borderWidth: 1,
-    borderColor: c.border, backgroundColor: c.surface,
-  },
-  chipText: { color: c.textSecondary, fontSize: 12, fontWeight: "700" },
+  searchInput: { flex: 1, color: c.textPrimary, fontSize: 14 },
+
+  // Claim rows
   claimRow: {
     flexDirection: "row", alignItems: "center", gap: 10,
-    paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: c.borderSubtle,
+    paddingVertical: 11, borderBottomWidth: 1, borderBottomColor: c.borderSubtle,
   },
   claimRowLast: { borderBottomWidth: 0 },
   claimTitle: { color: c.textPrimary, fontSize: 14, fontWeight: "800", letterSpacing: 0.2 },
   claimMeta: { color: c.textMuted, fontSize: 11, fontWeight: "600", marginTop: 2 },
   badge: { borderWidth: 1, borderRadius: 10, paddingHorizontal: 8, paddingVertical: 3 },
-  badgeText: { fontSize: 10, fontWeight: "900", color: "#FFFFFF", letterSpacing: 0.3 },
-  emptyTitle: { color: c.textPrimary, fontSize: 18, fontWeight: "800", marginTop: 12 },
-  emptySub: { color: c.textMuted, fontSize: 13, textAlign: "center", marginTop: 6, lineHeight: 18 },
+  badgeText: { fontSize: 10, fontWeight: "900", letterSpacing: 0.3 },
+
+  // Empty
+  emptyWrap: { alignItems: "center", paddingVertical: 40 },
+  emptyTitle: { color: c.textPrimary, fontSize: 15, fontWeight: "800", marginTop: 12, textAlign: "center" },
   primaryBtn: {
     flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: c.accent,
     paddingHorizontal: 18, paddingVertical: 11, borderRadius: 24, marginTop: 16,
