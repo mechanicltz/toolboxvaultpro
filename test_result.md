@@ -4611,3 +4611,21 @@ agent_communication:
 test_plan:
   current_focus:
     - "Insurance Claim DETAIL Showroom redesign — DONE; next: expo-notifications task reminders (P2h)"
+
+  - task: "Claim task deadline reminders (expo-notifications) + Vault Notifications toggle (P2h)"
+    implemented: true
+    working: true
+    file: "/app/frontend/src/claimTaskReminders.ts, /app/frontend/src/sections/NotificationsSettingsSection.tsx, /app/frontend/src/prefs.ts"
+    stuck_count: 0
+    priority: "high"
+    status_history:
+      - working: true
+        agent: "main"
+        comment: "Added local-notification scheduler for claim task deadlines (day-of + optional day-before at chosen time), mirroring dealer/payment reminder pattern. New 'Claim task deadlines' group in More→NOTIFICATIONS with master-gated toggle, time picker, day-before toggle. prefs extended (claim_task_notifications_enabled/hour/minute/notify_day_before). Reschedules on claim load + settings changes. Local notifs only fire on a real device build, not web/Expo Go."
+      - working: true
+        agent: "testing"
+        comment: "Iteration 66: settings UI + toggles + task-with-deadline data flow all PASS, no regression to other notification groups. Notification firing not testable on web (expected)."
+
+agent_communication:
+    - agent: "main"
+      message: "Insurance Claims Phase 2 fully complete: claim detail Showroom redesign (all 10 tabs, progress pill, search, FAB, warnings, report versioning) + claim-task deadline local notifications with Vault toggle. expo-notifications was already integrated app-wide; claim reminders reuse that proven pattern. Notification FIRING requires a real iOS/Android build."
