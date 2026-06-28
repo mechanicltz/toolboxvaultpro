@@ -1165,7 +1165,7 @@ const styles = themedStyles((c) => ({
   factCol: { flex: 1, gap: 6 },
   fact: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 3 },
   factLabel: { color: c.textMuted, fontSize: 9, fontWeight: "900", letterSpacing: 0.8 },
-  factValue: { color: c.textPrimary, fontSize: 12, fontWeight: "800", maxWidth: "58%", textAlign: "right" },
+  factValue: { color: c.textPrimary, fontSize: 12, fontWeight: "500", maxWidth: "58%", textAlign: "right" },
   factValueAccent: { color: c.accent },
   tasksLink: { flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 16, paddingVertical: 8 },
   tasksLinkText: { color: c.accent, fontWeight: "800", fontSize: 13 },
