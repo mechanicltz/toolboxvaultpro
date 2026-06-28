@@ -174,12 +174,6 @@ export default function ClaimDetail() {
 
   const openTasks = tasks.filter((t: any) => !t.done).length;
 
-  // Date submitted (first status_history "Submitted")
-  const dateSubmitted = useMemo(() => {
-    const h = (claim?.status_history || []).find((s: any) => s.status === "Submitted");
-    return h?.created_at;
-  }, [claim]);
-
   // Warnings on claimed items
   const itemWarnings = useMemo(() => {
     const out: { item: any; issues: string[] }[] = [];
@@ -615,32 +609,26 @@ export default function ClaimDetail() {
     <SafeAreaView style={styles.safe} edges={["top"]}>
       <IndustrialBannerHeader title={claim.title} onBack={() => router.back()} onMore={moreMenu} />
 
-      {/* Progress bar */}
+      {/* Claim status (centered) above the bar */}
       <View style={styles.progressWrap}>
-        <Text style={styles.progressLabel}>CLAIM PROGRESS</Text>
-        <ProgressPill percent={progress.percent} />
+        <TouchableOpacity onPress={() => setStatusOpen(true)} style={styles.statusTop} hitSlop={8} activeOpacity={0.7}>
+          <Text style={styles.statusTopText}>{claim.status}</Text>
+        </TouchableOpacity>
+        <ProgressPill percent={progress.percent} label="Claim Progress" />
+        <TouchableOpacity testID="icd-tasks-link" style={styles.tasksLink} onPress={() => setTab("tasks")} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }} activeOpacity={0.7}>
+          <Ionicons name="checkbox-outline" size={16} color={c.accent} />
+          <Text style={styles.tasksLinkText}>Tasks to Complete</Text>
+          {openTasks > 0 ? <View style={styles.tasksBadge}><Text style={styles.tasksBadgeText}>{openTasks}</Text></View> : <Ionicons name="checkmark-done" size={16} color={c.success} />}
+        </TouchableOpacity>
       </View>
 
-      {/* 2-column header facts */}
-      <View style={styles.factsGrid}>
-        <View style={styles.factCol}>
-          <Fact label="STATUS" value={claim.status} onPress={() => setStatusOpen(true)} accent />
-          <Fact label="DATE" value={fmtDay(claim.created_at)} />
-          <Fact label="SUBMITTED" value={fmtDay(dateSubmitted)} />
-        </View>
-        <View style={styles.factCol}>
-          <Fact label="CLAIMED" value={money(fin.total_claimed)} />
-          <Fact label="DEDUCTIBLE" value={money(fin.deductible)} />
-          <Fact label="PAYOUT" value={money(fin.paid_value)} />
-        </View>
+      {/* Single-column header facts */}
+      <View style={styles.factsCol}>
+        <Fact label="DATE" value={fmtDay(claim.created_at)} />
+        <Fact label="CLAIMED" value={money(fin.total_claimed)} />
+        <Fact label="DEDUCTIBLE" value={money(fin.deductible)} />
+        <Fact label="PAYOUT" value={money(fin.paid_value)} />
       </View>
-      <TouchableOpacity testID="icd-tasks-link" style={styles.tasksLink} onPress={() => setTab("tasks")} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }} activeOpacity={0.7}>
-        <Ionicons name="checkbox-outline" size={16} color={c.accent} />
-        <Text style={styles.tasksLinkText}>Tasks to Complete</Text>
-        {openTasks > 0 ? <View style={styles.tasksBadge}><Text style={styles.tasksBadgeText}>{openTasks}</Text></View> : <Ionicons name="checkmark-done" size={16} color={c.success} />}
-        <View style={{ flex: 1 }} />
-        <Ionicons name="chevron-forward" size={16} color={c.textMuted} />
-      </TouchableOpacity>
 
       {/* Horizontal tab bar */}
       <View>
@@ -1159,6 +1147,9 @@ const styles = themedStyles((c) => ({
 
   progressWrap: { paddingHorizontal: 18, paddingTop: 2, paddingBottom: 6 },
   progressLabel: { color: c.textMuted, fontSize: 10, fontWeight: "900", letterSpacing: 0.8, marginBottom: 2 },
+  statusTop: { alignSelf: "center", marginBottom: 6, paddingVertical: 2, paddingHorizontal: 10 },
+  statusTopText: { color: c.accent, fontSize: 16, fontWeight: "900", letterSpacing: 0.5, textAlign: "center" },
+  factsCol: { paddingHorizontal: 16, paddingTop: 4, gap: 4 },
 
   // header facts
   factsGrid: { flexDirection: "row", paddingHorizontal: 14, gap: 12 },
@@ -1167,7 +1158,7 @@ const styles = themedStyles((c) => ({
   factLabel: { color: c.textMuted, fontSize: 9, fontWeight: "900", letterSpacing: 0.8 },
   factValue: { color: c.textPrimary, fontSize: 12, fontWeight: "500", maxWidth: "58%", textAlign: "right" },
   factValueAccent: { color: c.accent },
-  tasksLink: { flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 16, paddingVertical: 8 },
+  tasksLink: { flexDirection: "row", alignItems: "center", gap: 8, alignSelf: "flex-end", paddingVertical: 6, marginTop: 4 },
   tasksLinkText: { color: c.accent, fontWeight: "800", fontSize: 13 },
   tasksBadge: { minWidth: 18, paddingHorizontal: 5, borderRadius: 9, backgroundColor: c.accent, alignItems: "center" },
   tasksBadgeText: { color: c.textOnAccent, fontSize: 10, fontWeight: "900" },

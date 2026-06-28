@@ -8,7 +8,7 @@ import { View, Text, Animated, StyleSheet } from "react-native";
  */
 const FILL_COLOR = "#22C55E"; // green — distinct from the orange/pink theme accent
 
-export function ProgressPill({ percent }: { percent: number }) {
+export function ProgressPill({ percent, label }: { percent: number; label?: string }) {
   const pct = Math.max(0, Math.min(100, Math.round(percent || 0)));
   const anim = useRef(new Animated.Value(0)).current;
 
@@ -27,9 +27,9 @@ export function ProgressPill({ percent }: { percent: number }) {
         <Animated.View style={[styles.fill, { width: fillWidth, backgroundColor: FILL_COLOR }]}>
           <View style={styles.gloss} />
         </Animated.View>
-        {/* Percent label sits on the bar itself, centered. */}
+        {/* Label + percent sit on the bar itself, centered. */}
         <View style={styles.labelLayer} pointerEvents="none">
-          <Text style={styles.label}>{pct}%</Text>
+          <Text style={styles.label}>{label ? `${label}  ` : ""}{pct}%</Text>
         </View>
       </View>
     </View>
