@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet } from "react-native";
+import { View, Text, TouchableOpacity } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { theme } from "./theme";
 
@@ -10,6 +10,9 @@ export function SummaryHeader({
   compact,
   openClaims,
   framed,
+  onHealthCheck,
+  onEditList,
+  healthActive,
 }: {
   agg: any;
   showPrices: boolean;
@@ -21,18 +24,14 @@ export function SummaryHeader({
   /** When true, the component drops its own card chrome (bg/border/margins)
    *  because it's being wrapped in a metal <TbvFrame/> by the parent screen. */
   framed?: boolean;
+  /** Tapping "Inventory Health Check" filters the list to items missing info. */
+  onHealthCheck?: () => void;
+  /** Tapping "Edit List" enters multi-select / bulk-action mode. */
+  onEditList?: () => void;
+  /** Highlights the health-check button while its filter is active. */
+  healthActive?: boolean;
 }) {
   if (!agg) return null;
-  const breakdown = (obj: Record<string, number>) => {
-    const entries = Object.entries(obj || {})
-      .filter(([k]) => k && k !== "—")
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 5);
-    return entries;
-  };
-  const locs = breakdown(agg.location_breakdown);
-  const dealers = breakdown(agg.dealer_breakdown);
-  const hasGroups = locs.length > 0 || dealers.length > 0;
 
   return (
     <View style={[styles.box, framed && styles.boxFramed]} testID="summary-header">
@@ -55,13 +54,35 @@ export function SummaryHeader({
           color={(openClaims ?? 0) > 0 ? theme.colors.danger : undefined}
         />
       </View>
-      {!compact && hasGroups && (
-        <View style={styles.groupsWrap}>
-          {locs.length > 0 && (
-            <Group icon="location" title="Locations" items={locs} />
+      {!compact && (onHealthCheck || onEditList) && (
+        <View style={styles.actionsRow}>
+          {onHealthCheck && (
+            <TouchableOpacity
+              style={[styles.actionBtn, healthActive && styles.actionBtnActive]}
+              onPress={onHealthCheck}
+              testID="summary-health-check"
+              activeOpacity={0.8}
+            >
+              <Ionicons
+                name="medkit-outline"
+                size={14}
+                color={healthActive ? theme.colors.bg : theme.colors.accent}
+              />
+              <Text style={[styles.actionBtnText, healthActive && styles.actionBtnTextActive]}>
+                {healthActive ? "Health Check: On" : "Inventory Health Check"}
+              </Text>
+            </TouchableOpacity>
           )}
-          {dealers.length > 0 && (
-            <Group icon="briefcase" title="Dealers" items={dealers} />
+          {onEditList && (
+            <TouchableOpacity
+              style={styles.actionBtn}
+              onPress={onEditList}
+              testID="summary-edit-list"
+              activeOpacity={0.8}
+            >
+              <Ionicons name="checkbox-outline" size={14} color={theme.colors.accent} />
+              <Text style={styles.actionBtnText}>Edit List</Text>
+            </TouchableOpacity>
           )}
         </View>
       )}
@@ -81,30 +102,6 @@ function Stat({ label, value, color }: { label: string; value: string; color?: s
         {value}
       </Text>
       <Text style={styles.statLabel} numberOfLines={1}>{label}</Text>
-    </View>
-  );
-}
-
-function Group({
-  title,
-  icon,
-  items,
-}: {
-  title: string;
-  icon: any;
-  items: [string, number][];
-}) {
-  return (
-    <View style={styles.group}>
-      <View style={styles.groupHead}>
-        <Ionicons name={icon} size={12} color={theme.colors.accent} />
-        <Text style={styles.groupTitle}>{title}</Text>
-      </View>
-      {items.map(([k, v]) => (
-        <Text key={k} style={styles.groupItem} numberOfLines={1}>
-          {k} <Text style={styles.groupCount}>· {v}</Text>
-        </Text>
-      ))}
     </View>
   );
 }
@@ -162,28 +159,33 @@ const styles = themedStyles((c) => ({
     letterSpacing: 1,
     marginTop: 2,
   },
-  groupsWrap: {
+  actionsRow: {
     flexDirection: "row",
     flexWrap: "wrap",
-    marginTop: 10,
-    columnGap: 18,
-    rowGap: 12,
+    marginTop: 12,
+    gap: 8,
   },
-  group: {
-    minWidth: 100,
-  },
-  groupHead: {
+  actionBtn: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
-    marginBottom: 4,
+    gap: 6,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: theme.radii.md,
+    borderWidth: 1,
+    borderColor: c.accent,
+    backgroundColor: "transparent",
   },
-  groupTitle: {
+  actionBtnActive: {
+    backgroundColor: c.accent,
+  },
+  actionBtnText: {
     color: c.accent,
-    fontSize: 7,
+    fontSize: 11,
     fontWeight: "800",
-    letterSpacing: 1,
+    letterSpacing: 0.3,
   },
-  groupItem: { color: c.textPrimary, fontSize: 8, marginVertical: 1 },
-  groupCount: { color: c.textMuted, fontWeight: "700" },
+  actionBtnTextActive: {
+    color: c.bg,
+  },
 }));

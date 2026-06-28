@@ -71,6 +71,20 @@ const FilterAccordionWrap = ({
     <ShadowBox style={styles.filterAccordion}>{children}</ShadowBox>
   );
 
+// Inventory health check predicate — an item is "missing important info" when
+// it has no model/serial number, no photo, or no purchase date.
+function itemMissingInfo(t: any): boolean {
+  const hasModelOrSerial =
+    (Array.isArray(t?.model_numbers) && t.model_numbers.length > 0) ||
+    (Array.isArray(t?.serial_numbers) && t.serial_numbers.length > 0) ||
+    !!(t?.model && String(t.model).trim()) ||
+    !!(t?.serial_number && String(t.serial_number).trim());
+  const hasPhoto = Array.isArray(t?.photos) && t.photos.length > 0;
+  const hasPurchaseDate = !!(t?.purchase_date && String(t.purchase_date).trim());
+  return !hasModelOrSerial || !hasPhoto || !hasPurchaseDate;
+}
+
+
 export default function InventoryScreen() {
   const router = useRouter();
   const { prefs } = usePrefs();
@@ -139,6 +153,10 @@ export default function InventoryScreen() {
   const [showLocationPicker, setShowLocationPicker] = useState(false);
   const [showAddChooser, setShowAddChooser] = useState(false);
 
+  // Inventory health check — when on, list shows only items missing important
+  // info (no model/serial, no photo, or no purchase date).
+  const [healthFilter, setHealthFilter] = useState(false);
+
   // Tag filter (multi-select)
   const [tagFilter, setTagFilter] = useState<string[]>([]);
   const [showTagPicker, setShowTagPicker] = useState(false);
@@ -173,7 +191,8 @@ export default function InventoryScreen() {
     (filter !== "all" ? 1 : 0) +
     (locationFilter ? 1 : 0) +
     (tagFilter.length > 0 ? 1 : 0) +
-    (categoryFilter ? 1 : 0);
+    (categoryFilter ? 1 : 0) +
+    (healthFilter ? 1 : 0);
 
   // ---------------------------------------------------------------------------
   // Filter COUNTS — how many tools would match each picker option if it were
@@ -540,6 +559,11 @@ export default function InventoryScreen() {
       }
     }
 
+    // Inventory health check filter — only items missing important info.
+    if (healthFilter) {
+      out = out.filter((x: any) => itemMissingInfo(x));
+    }
+
     // Sort
     const _toTime = (s: any): number => {
       if (!s) return 0;
@@ -596,7 +620,7 @@ export default function InventoryScreen() {
         break;
     }
     return sorted;
-  }, [tools, filter, locationFilter, tagFilter, categoryFilter, sortBy, allLocations]);
+  }, [tools, filter, locationFilter, tagFilter, categoryFilter, sortBy, allLocations, healthFilter]);
 
   // Stable references — prevents FlatList from treating the callbacks as new
   // every render, which would force every visible row to remount and re-decode
@@ -637,6 +661,7 @@ export default function InventoryScreen() {
     setLocationFilter(null);
     setTagFilter([]);
     setCategoryFilter(null);
+    setHealthFilter(false);
     setSortBy("date_desc");
   };
 
@@ -695,7 +720,10 @@ export default function InventoryScreen() {
             <View style={styles.searchBoxInner}>{searchInner}</View>
             {summaryOpen && agg && (
               <View style={styles.searchSummaryInset}>
-                <SummaryHeader agg={agg} showPrices={prefs.show_prices} openClaims={openClaims} framed />
+                <SummaryHeader agg={agg} showPrices={prefs.show_prices} openClaims={openClaims} framed
+                  onHealthCheck={() => { setHealthFilter((v) => !v); setSummaryOpen(false); }}
+                  onEditList={() => { setSelectMode(true); setSummaryOpen(false); }}
+                  healthActive={healthFilter} />
               </View>
             )}
           </TbvFrame>
@@ -704,7 +732,10 @@ export default function InventoryScreen() {
             <View style={styles.searchRowPlainInner}>{searchInner}</View>
             {summaryOpen && agg && (
               <View style={styles.searchSummaryInset}>
-                <SummaryHeader agg={agg} showPrices={prefs.show_prices} openClaims={openClaims} framed />
+                <SummaryHeader agg={agg} showPrices={prefs.show_prices} openClaims={openClaims} framed
+                  onHealthCheck={() => { setHealthFilter((v) => !v); setSummaryOpen(false); }}
+                  onEditList={() => { setSelectMode(true); setSummaryOpen(false); }}
+                  healthActive={healthFilter} />
               </View>
             )}
           </View>

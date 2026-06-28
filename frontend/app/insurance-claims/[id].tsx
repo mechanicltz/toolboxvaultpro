@@ -64,13 +64,6 @@ const TL_ICON: Record<string, keyof typeof Ionicons.glyphMap> = {
   Document: "document-attach", Contact: "person-add", Task: "checkbox",
 };
 
-// Note category → left-stripe color (matches the home list's colored stripe).
-const NOTE_COLORS: Record<string, string> = {
-  General: "#64748B", Insurance: "#2F5D8A", "Agent Communication": "#7C3AED",
-  "Adjuster Communication": "#0EA5E9", "Internal Notes": "#F59E0B", "Follow-Up": "#22C55E",
-};
-const noteColor = (cat: string) => NOTE_COLORS[cat] || "#64748B";
-
 // ---- module-scope showroom panel (never remounts) ----
 function ShowroomPanel({ isIndustrial, winSrc, winCap, steelScale, isSteel, plainStyle, children }: any) {
   return isIndustrial ? (
@@ -430,7 +423,7 @@ export default function ClaimDetail() {
         {sorted.length === 0 ? <Empty text="No notes yet." /> :
           sorted.map((n) => (
             <View key={n.id} style={styles.noteRowWrap}>
-              <View style={[styles.noteStripe, { backgroundColor: noteColor(n.category) }]} />
+              <View style={styles.noteStripe} />
               <View style={styles.noteBody}>
                 <Text style={styles.noteMeta}>{n.category} · {fmtDate(n.created_at)}</Text>
                 <Text style={styles.noteText}>{n.text}</Text>
@@ -1208,7 +1201,7 @@ const styles = themedStyles((c) => ({
   noteMeta: { color: c.textMuted, fontSize: 11, fontWeight: "700" },
   noteText: { color: c.textPrimary, fontSize: 13, marginTop: 2 },
   noteRowWrap: { flexDirection: "row", alignItems: "stretch", paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: c.borderSubtle },
-  noteStripe: { width: 4, borderRadius: 2, marginRight: 10 },
+  noteStripe: { width: 3, borderRadius: 2, marginRight: 10, backgroundColor: c.accent },
   noteBody: { flex: 1 },
   docSrcRow: { flexDirection: "row", gap: 10 },
   docSrcBtn: { flex: 1, alignItems: "center", justifyContent: "center", gap: 4, paddingVertical: 14, borderRadius: 10, borderWidth: 1.4, borderStyle: "dashed", borderColor: c.accent, backgroundColor: c.surface },

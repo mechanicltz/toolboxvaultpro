@@ -991,6 +991,13 @@ const styles = themedStyles((c) => ({
     paddingHorizontal: 0,
     shadowOpacity: 0,
     elevation: 0,
+    // Flat (metal) themes lose the card chrome, so draw a top divider to keep
+    // each notification section visually separated from the one above it.
+    borderTopWidth: 1,
+    borderTopColor: c.border,
+    borderRadius: 0,
+    marginTop: 0,
+    paddingTop: 4,
   },
   sectionCard: {
     backgroundColor: c.bgSecondary,
@@ -1010,7 +1017,10 @@ const styles = themedStyles((c) => ({
     borderBottomColor: c.borderSubtle,
   },
   sectionRowIndent: {
-    paddingLeft: 12,
+    paddingLeft: 44,
+    marginLeft: 8,
+    borderLeftWidth: 2,
+    borderLeftColor: c.accent,
   },
   miniSwitch: {
     transform: [{ scale: 0.78 }],
