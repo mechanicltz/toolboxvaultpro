@@ -1055,8 +1055,6 @@ function AttachModal({ visible, onClose, id, attached, onDone }: any) {
               </View>
             </TouchableOpacity>
           ))}
-      <View style={{ height: 10 }} />
-      <ICButton label={`Add ${sel.size || ""} Selected`} icon="add" onPress={add} disabled={sel.size === 0} />
     </ICModal>
   );
 }
