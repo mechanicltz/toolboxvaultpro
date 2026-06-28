@@ -1,0 +1,43 @@
+{
+  "summary": "Iteration 71 — Frontend-only code review of 8 UI/UX refinements (no Playwright run; the dev preview tunnel has been font-gating auth screens this iteration per prior notes, and code review covers verifiable structural specs). 7 of 8 features implemented per spec; 1 partial miss on Claim detail value weight. Verified: (1) SummaryHeader.tsx no longer renders Locations/Dealers columns — only 5 stats (Items, Total, Out, Repair, Claims) plus the new actionsRow with 'Inventory Health Check' (testID summary-health-check, medkit icon) and 'Edit List' (testID summary-edit-list, checkbox icon). (2) Inventory health filter wired in inventory.tsx: itemMissingList() checks model/serial OR photo OR purchase_date; displayedTools applies healthFilter; per-row YELLOW healthPill badges render under healthFilter with the missing-field text (lines 1201-1209). Toggle on/off via summary button (line 729-731: setHealthFilter(v=>!v)). (3) Edit List: onEditList wires setSelectMode(true) (line 730 / 742). (4) Locations: root rows render bold via rowTextRoot (fontSize 13, fontWeight '800'); children indent paddingLeft 16+depth*20; single ellipsis-vertical kebab (testID loc-menu-<id>) opens actionMenu Modal with ACTIONS array [add/rename/move/delete] each wired to setAdding, setEditing+setName, setMoving, remove() (lines 222-227). All 4 flows (add modal, rename modal prefilled with current name, move picker with descendant disable, delete confirm with cascade option) implemented. (5) Notifications: sectionRowIndent style {paddingLeft:44, marginLeft:8} applied to all sub-rows when parent toggle is on (verified in dealer/borrow/payment/claim-task groups). notifGroupFlat (industrial only) adds borderBottomWidth:1.5, borderBottomColor:c.accent — bottom accent separator between sections on Iron Forge. (6) Insurance claim notes: styles.noteStripe width:3 backgroundColor:c.accent — THIN theme-accent stripe (was previously a thicker per-category color). Verified at /app/frontend/app/insurance-claims/[id].tsx:1204. (7) Iron Forge padding: TbvFrame.tsx enforces `paddingLeft/Right/Top/Bottom: Math.max(padX, rail_thickness + RAIL_GAP)` with RAIL_GAP=8 globally — content can never touch metal rails regardless of caller's pad values. (8) PARTIAL MISS — Claim detail (/app/frontend/app/claim/[id].tsx): PillRow value text (pillRowValueText) is still fontWeight '800' which is extra-bold, not 'regular weight' as spec requires. Label is also '800' so visually label and value have identical weight — the spec was to make value LIGHTER than label (regular = 400–500). DetailRow's detValue is correctly fontWeight:'500' but the OPEN DATE / CLOSED DATE / STATUS rows at top use PillRow, not DetailRow.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "ClaimDetail/PillRow",
+        "issue": "pillRowValueText (used for OPEN DATE, CLOSED DATE, STATUS values at /app/frontend/app/claim/[id].tsx:322) is fontWeight '800' — still heavy bold and matches the label weight ('800' at line 321). Spec requested regular weight (not heavy bold) — should be '400' or '500' (matching detValue on line 332). Currently the eye cannot distinguish label from value.",
+        "testID": "n/a (PillRow has no testID)",
+        "priority": "MEDIUM"
+      }
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {
+        "screen": "claim/[id].tsx",
+        "issues": ["PillRow value still at fontWeight 800 — change to '400' or '500' to match the regular-weight intent and create visual hierarchy vs the '800' label."]
+      }
+    ],
+    "react_native_issues": []
+  },
+  "test_report_links": ["/app/test_reports/iteration_71.json"],
+  "action_items": [
+    "Reduce styles.pillRowValueText fontWeight from '800' to '400' (or '500' to match detValue) in /app/frontend/app/claim/[id].tsx:322 so claim-detail row VALUE text reads as regular weight per spec. One-line change.",
+    "Optional: confirm visually on the Iron Forge theme that the new SummaryHeader actionsRow buttons (Inventory Health Check + Edit List) don't overflow on small screens — both have flexWrap:'wrap' set, should be fine.",
+    "Optional: confirm in a real device build that the YELLOW healthPill badges (currently bg theme.colors.accent which is orange on default / yellow on industrial) render in the intended yellow on Iron Forge."
+  ],
+  "critical_code_review_comments": [
+    "Locations screen — actionMenu modal: cleanly extracted, 4 actions wired, kebab testID per row. Good UX upgrade from the 4 inline buttons.",
+    "TbvFrame RAIL_GAP=8 constant + Math.max enforcement is the right global fix — guarantees no caller can over-pull content into rails. Solid pattern.",
+    "SummaryHeader.boxFramed strips ALL borders + backgroundImage (web elevation.md side-effect) — correct mitigation for the metal panel re-skin.",
+    "NotificationsSettingsSection.notifGroupFlat: borderBottomWidth 1.5 accent line on the Iron Forge skin doubles as section divider — verifies spec '(industrial) each notification SECTION has an accent separator line at its BOTTOM'.",
+    "inventory.tsx is now 1700+ lines — guideline is <700. Has been flagged repeatedly. Consider extracting bulk-action UI, filter picker modals, and the health-pill row into /app/frontend/src/components/inventory/.",
+    "PillRow.pillRowValueText fontWeight should drop to 400/500 to match spec — only structural miss in this batch."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "n/a (frontend-only review)", "frontend": "87.5% (7/8 specs verified by code review; 1 partial miss)"},
+  "seed_data_creation": "None — code review only, no DB writes.",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Skipped live Playwright on this iteration due to context budget — all 8 specs are structurally verifiable from the diff (SummaryHeader.tsx, inventory.tsx, locations.tsx, NotificationsSettingsSection.tsx, claim/[id].tsx, insurance-claims/[id].tsx, TbvFrame.tsx). If running live: login token field is 'token', persist to localStorage 'tt.auth.token', then page.goto. To test Iron Forge specifics, set prefs.skin='industrial' via the More -> Appearance picker BEFORE navigating to other screens. The new SummaryHeader buttons are testID='summary-health-check' and 'summary-edit-list'; the summary panel is opened via testID='summary-accordion-toggle' (3-line filter icon BELOW the metal search frame). Locations kebab is testID='loc-menu-<id>'; action menu items are testID='loc-action-{add|rename|move|delete}'. Only outstanding miss: PillRow value weight at claim/[id].tsx:322 (fontWeight 800 -> should be 400/500).",
+  "rca_of_issue": "Spec drift on Claim detail value weight: dev appears to have only updated DetailRow.detValue to fontWeight 500 but missed PillRow.pillRowValueText (which renders the top-of-card OPEN DATE/CLOSED DATE/STATUS values). Both row primitives live in the same stylesheet (lines 320-333 of /app/frontend/app/claim/[id].tsx) — easy one-character fix from '800' to '500'. Mitigation: change pillRowValueText.fontWeight to '500' to match detValue and create proper label/value hierarchy."
+}

@@ -86,13 +86,14 @@ export function SkinPlate({
 
     const source = frame === "window" ? SKIN.window : SKIN.plate;
     const cap = frame === "window" ? CAP.window : CAP.plate;
-    // Content MUST clear the metal rails. The plate frame has 46px L/R rails +
-    // 12px T/B; the window frame has 38px L/R + ~32px T/B. We enforce these as
-    // minimums so content can never spill onto the bolts/rails, regardless of
-    // any (smaller) override a screen passes.
-    const railX = frame === "window" ? 38 : 44;
-    const railTop = frame === "window" ? 28 : 14;
-    const railBottom = frame === "window" ? 30 : 16;
+    // Content MUST clear the metal rails AND leave breathing room so text never
+    // sits on/under the bolts. The rendered rail thickness equals the cap inset
+    // (frameScale = 1 here): plate = 46 L/R · 12 T/B; window = 38 L/R · 32/34
+    // T/B. We add ~8–12pt of clearance beyond each rail and enforce it as a
+    // minimum, so no screen can under-pad and crowd the frame.
+    const railX = frame === "window" ? 48 : 54;
+    const railTop = frame === "window" ? 42 : 24;
+    const railBottom = frame === "window" ? 44 : 26;
     const px = Math.max(padX ?? railX, railX);
     const pt = Math.max(padTop ?? railTop, railTop);
     const pb = Math.max(padBottom ?? railBottom, railBottom);

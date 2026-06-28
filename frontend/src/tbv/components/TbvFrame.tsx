@@ -43,6 +43,12 @@ import {
   ImageSourcePropType,
 } from "react-native";
 
+/** Minimum breathing room (points) between the inner content and the rendered
+ *  metal rail, enforced on every side regardless of the pad props a screen
+ *  passes. Stops text from sitting on/under the bolts on thick iron frames,
+ *  while staying a no-op for the thin steel frames whose pads already exceed it. */
+const RAIL_GAP = 8;
+
 export interface TbvFrameProps {
   /** A trimmed frame PNG (e.g. SKIN.window, SKIN.plate). */
   source: ImageSourcePropType;
@@ -225,9 +231,10 @@ export function TbvFrame({
           if (Math.abs(nh - h) > 0.5) setH(nh);
         }}
         style={{
-          paddingHorizontal: padX,
-          paddingTop: padTop,
-          paddingBottom: padBottom,
+          paddingLeft: Math.max(padX, rl + RAIL_GAP),
+          paddingRight: Math.max(padX, rr + RAIL_GAP),
+          paddingTop: Math.max(padTop, rt + RAIL_GAP),
+          paddingBottom: Math.max(padBottom, rb + RAIL_GAP),
         }}
       >
         {children}

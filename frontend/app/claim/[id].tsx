@@ -329,7 +329,7 @@ const styles = themedStyles((c) => ({
   detRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: c.border, gap: 12 },
   detLabel: { color: c.textSecondary, fontSize: 11, fontWeight: "700", letterSpacing: 0.6 },
   detValueWrap: { flexDirection: "row", alignItems: "center", flexShrink: 1, justifyContent: "flex-end" },
-  detValue: { color: c.textPrimary, fontSize: 13, fontWeight: "800", textAlign: "right" },
+  detValue: { color: c.textPrimary, fontSize: 13, fontWeight: "500", textAlign: "right" },
   detValueLink: { color: c.accent },
   detCost: { color: c.textPrimary, fontSize: 17, fontWeight: "900" },
   notesBlock: { paddingTop: 12 },

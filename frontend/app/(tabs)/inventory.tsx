@@ -71,17 +71,22 @@ const FilterAccordionWrap = ({
     <ShadowBox style={styles.filterAccordion}>{children}</ShadowBox>
   );
 
-// Inventory health check predicate — an item is "missing important info" when
-// it has no model/serial number, no photo, or no purchase date.
-function itemMissingInfo(t: any): boolean {
+// Inventory health check — returns the list of important fields missing from a
+// tool (model/serial, photo, purchase date). Empty list = item is complete.
+function itemMissingList(t: any): string[] {
+  const out: string[] = [];
   const hasModelOrSerial =
     (Array.isArray(t?.model_numbers) && t.model_numbers.length > 0) ||
     (Array.isArray(t?.serial_numbers) && t.serial_numbers.length > 0) ||
     !!(t?.model && String(t.model).trim()) ||
     !!(t?.serial_number && String(t.serial_number).trim());
-  const hasPhoto = Array.isArray(t?.photos) && t.photos.length > 0;
-  const hasPurchaseDate = !!(t?.purchase_date && String(t.purchase_date).trim());
-  return !hasModelOrSerial || !hasPhoto || !hasPurchaseDate;
+  if (!hasModelOrSerial) out.push("No model/serial");
+  if (!(Array.isArray(t?.photos) && t.photos.length > 0)) out.push("No photo");
+  if (!(t?.purchase_date && String(t.purchase_date).trim())) out.push("No purchase date");
+  return out;
+}
+function itemMissingInfo(t: any): boolean {
+  return itemMissingList(t).length > 0;
 }
 
 
@@ -1193,6 +1198,16 @@ export default function InventoryScreen() {
                     </View>
                   )}
                 </View>
+                {healthFilter && (
+                  <View style={styles.healthPills}>
+                    {itemMissingList(item).map((m) => (
+                      <View key={m} style={styles.healthPill}>
+                        <Ionicons name="warning" size={9} color="#000" />
+                        <Text style={styles.healthPillText}>{m}</Text>
+                      </View>
+                    ))}
+                  </View>
+                )}
               </View>
               {!selectMode && (
                 <View style={styles.rowRight}>
@@ -2034,6 +2049,27 @@ const styles = themedStyles((c) => ({
     gap: 8,
     marginTop: 4,
     flexWrap: "wrap",
+  },
+  healthPills: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 5,
+    marginTop: 5,
+  },
+  healthPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 3,
+    backgroundColor: theme.colors.warning,
+    borderRadius: 4,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  healthPillText: {
+    color: "#000",
+    fontSize: 8,
+    fontWeight: "800",
+    letterSpacing: 0.2,
   },
   rowQtyPill: {
     paddingHorizontal: 7,

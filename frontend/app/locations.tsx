@@ -2,7 +2,6 @@ import { useCallback, useState } from "react";
 import {
   View,
   Text,
-  StyleSheet,
   ScrollView,
   TextInput,
   TouchableOpacity,
@@ -48,6 +47,7 @@ export default function LocationsTreeScreen() {
   const [adding, setAdding] = useState<{ parentId: string | null; parentName: string } | null>(null);
   const [editing, setEditing] = useState<{ id: string; currentName: string } | null>(null);
   const [moving, setMoving] = useState<LocationNode | null>(null);
+  const [actionMenu, setActionMenu] = useState<LocationNode | null>(null);
   const [name, setName] = useState("");
 
   const load = useCallback(async () => {
@@ -171,76 +171,60 @@ export default function LocationsTreeScreen() {
   const renderNode = (n: LocationNode) => {
     const isOpen = expanded.has(n.id);
     const isHighlighted = highlight === n.id;
+    const isRoot = n.depth === 0;
+    const hasChildren = n.children.length > 0;
     return (
       <View key={n.id}>
         <View
           style={[
             styles.row,
-            { paddingLeft: 16 + n.depth * 18 },
-            isHighlighted && {
-              backgroundColor: theme.colors.accent + "33", // 20% accent
-              borderLeftWidth: 3,
-              borderLeftColor: theme.colors.accent,
-            },
+            isRoot ? styles.rowRoot : { paddingLeft: 16 + n.depth * 20 },
+            !isRoot && styles.rowChild,
+            isHighlighted && styles.rowHighlighted,
           ]}
         >
-          {n.children.length > 0 ? (
-            <TouchableOpacity testID={`expand-${n.id}`} onPress={() => toggle(n.id)} hitSlop={6}>
+          {hasChildren ? (
+            <TouchableOpacity testID={`expand-${n.id}`} onPress={() => toggle(n.id)} hitSlop={8}>
               <Ionicons
                 name={isOpen ? "chevron-down" : "chevron-forward"}
                 size={18}
-                color={theme.colors.textSecondary}
+                color={isRoot ? theme.colors.accent : theme.colors.textSecondary}
               />
             </TouchableOpacity>
           ) : (
             <View style={{ width: 18 }} />
           )}
           <Ionicons
-            name={n.children.length > 0 ? "folder" : "location"}
-            size={16}
-            color={theme.colors.accent}
+            name={hasChildren ? (isOpen ? "folder-open" : "folder") : "cube-outline"}
+            size={isRoot ? 18 : 15}
+            color={isRoot ? theme.colors.accent : theme.colors.textSecondary}
           />
-          <Text style={styles.rowText}>{n.name}</Text>
-          {n.children.length > 0 && (
+          <Text style={[styles.rowText, isRoot && styles.rowTextRoot]} numberOfLines={1}>
+            {n.name}
+          </Text>
+          {hasChildren && (
             <Text style={styles.countBadge}>{n.children.length}</Text>
           )}
           <TouchableOpacity
-            testID={`addchild-${n.id}`}
-            onPress={() => setAdding({ parentId: n.id, parentName: n.path })}
-            hitSlop={6}
-            style={styles.iconBtn}
+            testID={`loc-menu-${n.id}`}
+            onPress={() => setActionMenu(n)}
+            hitSlop={8}
+            style={styles.kebabBtn}
           >
-            <Ionicons name="add" size={18} color={theme.colors.accent} />
-          </TouchableOpacity>
-          <TouchableOpacity
-            testID={`edit-loc-${n.id}`}
-            onPress={() => { setEditing({ id: n.id, currentName: n.name }); setName(n.name); }}
-            hitSlop={6}
-            style={styles.iconBtn}
-          >
-            <Ionicons name="pencil" size={16} color={theme.colors.textSecondary} />
-          </TouchableOpacity>
-          <TouchableOpacity
-            testID={`move-loc-${n.id}`}
-            onPress={() => setMoving(n)}
-            hitSlop={6}
-            style={styles.iconBtn}
-          >
-            <Ionicons name="move" size={16} color={theme.colors.textSecondary} />
-          </TouchableOpacity>
-          <TouchableOpacity
-            testID={`del-loc-${n.id}`}
-            onPress={() => remove(n)}
-            hitSlop={6}
-            style={styles.iconBtn}
-          >
-            <Ionicons name="close" size={18} color={theme.colors.danger} />
+            <Ionicons name="ellipsis-vertical" size={18} color={theme.colors.textSecondary} />
           </TouchableOpacity>
         </View>
         {isOpen && n.children.map(renderNode)}
       </View>
     );
   };
+
+  const ACTIONS: { key: string; label: string; icon: keyof typeof Ionicons.glyphMap; danger?: boolean; run: (n: LocationNode) => void }[] = [
+    { key: "add", label: "Add sub-location", icon: "add-circle-outline", run: (n) => setAdding({ parentId: n.id, parentName: n.path }) },
+    { key: "rename", label: "Rename", icon: "pencil-outline", run: (n) => { setEditing({ id: n.id, currentName: n.name }); setName(n.name); } },
+    { key: "move", label: "Move to…", icon: "swap-horizontal-outline", run: (n) => setMoving(n) },
+    { key: "delete", label: "Delete", icon: "trash-outline", danger: true, run: (n) => remove(n) },
+  ];
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
@@ -308,8 +292,8 @@ export default function LocationsTreeScreen() {
             );
           })()}
           <Text style={styles.tip}>
-            Tap a row’s <Text style={{ color: theme.colors.accent }}>+</Text> to add a sub-location.
-            Locations can nest unlimited levels deep.
+            Tap the <Text style={{ color: theme.colors.accent }}>⋮</Text> menu on any location to add a
+            sub-location, rename, move, or delete it. Locations nest unlimited levels deep.
           </Text>
         </>
       )}
@@ -465,6 +449,29 @@ export default function LocationsTreeScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* Per-row action menu (replaces the 4 inline buttons) */}
+      <Modal visible={!!actionMenu} transparent animationType="fade" onRequestClose={() => setActionMenu(null)}>
+        <TouchableOpacity style={styles.menuBackdrop} activeOpacity={1} onPress={() => setActionMenu(null)}>
+          <View style={styles.menuCard}>
+            <Text style={styles.menuTitle} numberOfLines={1}>{actionMenu?.name}</Text>
+            {actionMenu?.path && actionMenu.path !== actionMenu.name ? (
+              <Text style={styles.menuPath} numberOfLines={1}>{actionMenu.path}</Text>
+            ) : null}
+            {ACTIONS.map((a) => (
+              <TouchableOpacity
+                key={a.key}
+                testID={`loc-action-${a.key}`}
+                style={styles.menuItem}
+                onPress={() => { const n = actionMenu!; setActionMenu(null); a.run(n); }}
+              >
+                <Ionicons name={a.icon} size={18} color={a.danger ? theme.colors.danger : theme.colors.accent} />
+                <Text style={[styles.menuItemText, a.danger && { color: theme.colors.danger }]}>{a.label}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -515,11 +522,27 @@ const styles = themedStyles((c) => ({
     alignItems: "center",
     gap: 8,
     paddingVertical: 12,
-    paddingRight: 12,
+    paddingRight: 8,
     borderBottomColor: c.borderSubtle,
     borderBottomWidth: 1,
   },
+  rowRoot: {
+    paddingLeft: 14,
+    backgroundColor: c.surface,
+    borderBottomColor: c.border,
+    marginTop: 8,
+    borderRadius: 6,
+  },
+  rowChild: {
+    backgroundColor: "transparent",
+  },
+  rowHighlighted: {
+    backgroundColor: c.accent + "33",
+    borderLeftWidth: 3,
+    borderLeftColor: c.accent,
+  },
   rowText: { color: c.textPrimary, fontSize: 11, flex: 1 },
+  rowTextRoot: { fontSize: 13, fontWeight: "800", letterSpacing: 0.3 },
   countBadge: {
     color: c.textMuted,
     fontSize: 8,
@@ -529,15 +552,53 @@ const styles = themedStyles((c) => ({
     backgroundColor: c.surface,
     borderRadius: 2,
   },
-  iconBtn: {
-    width: 32,
-    height: 32,
+  kebabBtn: {
+    width: 36,
+    height: 36,
     alignItems: "center",
     justifyContent: "center",
+  },
+  // ---- per-row action menu ----
+  menuBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.6)",
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 32,
+  },
+  menuCard: {
+    width: "100%",
+    maxWidth: 320,
+    backgroundColor: c.bgSecondary,
+    borderRadius: 10,
     borderWidth: 1,
     borderColor: c.border,
-    borderRadius: 4,
+    paddingVertical: 8,
+    paddingHorizontal: 4,
   },
+  menuTitle: {
+    color: c.textPrimary,
+    fontSize: 13,
+    fontWeight: "900",
+    letterSpacing: 0.5,
+    paddingHorizontal: 14,
+    paddingTop: 8,
+  },
+  menuPath: {
+    color: c.textMuted,
+    fontSize: 10,
+    paddingHorizontal: 14,
+    paddingBottom: 8,
+    marginTop: 2,
+  },
+  menuItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 14,
+  },
+  menuItemText: { color: c.textPrimary, fontSize: 13, fontWeight: "600" },
   empty: { alignItems: "center", paddingVertical: 60, paddingHorizontal: 40 },
   emptyTitle: {
     color: c.textPrimary,
