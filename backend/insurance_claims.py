@@ -55,6 +55,8 @@ from reports import (
     _para,
     _styles,
     HEADER_HEX,
+    INK_HEX,
+    TINT_HEX,
 )
 
 import email_sender
@@ -495,18 +497,42 @@ def _compute_financials(resolved: List[Dict[str, Any]], claim: Dict[str, Any]) -
 # Prepopulated task list seeded on every new claim (the in-app steps a user
 # follows to be ready to submit a package). source="default".
 DEFAULT_TASKS: List[str] = [
-    "Add your insurance company & policy info",
-    "Enter the claim number from your insurer",
-    "Attach the destroyed/damaged inventory items",
-    "Add photos & evidence of the damage",
-    "Review each item's details (serial, model, price, purchase date)",
-    "Generate the claim report package",
-    "Submit the claim to your insurer",
+    "Create new claim",
+    "Add description",
+    "Add evidence",
+    "Add financial information",
+    "Add items",
+    "Add documents",
+    "Add insurance information",
+    "Generate reports",
 ]
 
 
 def _seed_default_tasks() -> List[Dict[str, Any]]:
     return [ClaimTask(text=t, source="default", notify=False).dict() for t in DEFAULT_TASKS]
+
+
+def _reconcile_default_tasks(claim: Dict[str, Any]) -> bool:
+    """Ensure every claim carries the full set of predefined default tasks (in
+    order), preserving user-added custom tasks. Returns True if changed."""
+    existing = claim.get("tasks") or []
+    custom = [t for t in existing if t.get("source") != "default"]
+    by_text = {t.get("text"): t for t in existing if t.get("source") == "default"}
+    new_defaults: List[Dict[str, Any]] = []
+    for text in DEFAULT_TASKS:
+        if text in by_text:
+            new_defaults.append(by_text[text])
+        else:
+            new_defaults.append(ClaimTask(text=text, source="default", notify=False).dict())
+    rebuilt = new_defaults + custom
+    # Detect change (by ordered text+source signature).
+    sig_old = [(t.get("text"), t.get("source")) for t in existing]
+    sig_new = [(t.get("text"), t.get("source")) for t in rebuilt]
+    if sig_old != sig_new:
+        claim["tasks"] = rebuilt
+        return True
+    claim["tasks"] = rebuilt
+    return False
 
 
 def _compute_progress(claim: Dict[str, Any], resolved: List[Dict[str, Any]],
@@ -555,29 +581,21 @@ def _auto_complete_default_tasks(claim: Dict[str, Any], resolved: List[Dict[str,
     ins = claim.get("insurance") or {}
     img_evidence = any((e.get("mime") or "").startswith("image") for e in evidence)
     has_photos = any((r.get("photos") or []) for r in resolved) or img_evidence
-    submitted = claim.get("status") in {"Submitted", "Under Review", "More Information Needed",
-                                        "Approved", "Partially Approved", "Paid", "Closed", "Denied"}
-
-    def items_reviewed() -> bool:
-        if not resolved:
-            return False
-        for r in resolved:
-            if not (r.get("serials") or r.get("models")):
-                return False
-            if not (r.get("line_purchase") or r.get("cost")):
-                return False
-            if not r.get("purchase_date"):
-                return False
-        return True
+    has_financial = bool(
+        claim.get("deductible") or claim.get("coverage_limit") or claim.get("sales_tax")
+        or claim.get("approved_value") or claim.get("paid_value")
+        or claim.get("shipping_costs") or claim.get("labor_costs") or claim.get("repair_costs")
+    ) or any((r.get("line_claimed") or 0) > 0 for r in resolved)
 
     auto = {
-        DEFAULT_TASKS[0]: bool(ins.get("company")),
-        DEFAULT_TASKS[1]: bool(claim.get("claim_number")),
-        DEFAULT_TASKS[2]: len(resolved) > 0,
-        DEFAULT_TASKS[3]: has_photos,
-        DEFAULT_TASKS[4]: items_reviewed(),
-        DEFAULT_TASKS[5]: bool(has_report),
-        DEFAULT_TASKS[6]: bool(submitted),
+        "Create new claim": True,
+        "Add description": bool(claim.get("description") or claim.get("incident_notes")),
+        "Add evidence": has_photos,
+        "Add financial information": has_financial,
+        "Add items": len(resolved) > 0,
+        "Add documents": len(claim.get("documents") or []) > 0,
+        "Add insurance information": bool(ins.get("company") or ins.get("policy_number")),
+        "Generate reports": bool(has_report),
     }
     changed = False
     for t in claim.get("tasks") or []:
@@ -707,11 +725,14 @@ def _items_table(resolved: List[Dict[str, Any]], st: Dict[str, ParagraphStyle],
             return fmt_money(r["line_claimed"])
         return ""
 
-    # Header row
-    header_cells = [_para("#", st["th"]), _para("Item", st["th"])]
+    # Header row — dark text on a light tint so it reads as ONE clean header
+    # under the section title bar (avoids two stacked dark bars).
+    th_d = ParagraphStyle("ins_th_d", parent=st["th"], textColor=colors.HexColor(INK_HEX))
+    th_dr = ParagraphStyle("ins_th_dr", parent=st["th_right"], textColor=colors.HexColor(INK_HEX))
+    header_cells = [_para("#", th_d), _para("Item", th_d)]
     for col in sel:
         label, _, align = ITEM_COL_DEFS[col]
-        header_cells.append(_para(label, st["th_right"] if align == "right" else st["th"]))
+        header_cells.append(_para(label, th_dr if align == "right" else th_d))
     data = [header_cells]
 
     for idx, r in enumerate(resolved, 1):
@@ -744,10 +765,11 @@ def _items_table(resolved: List[Dict[str, Any]], st: Dict[str, ParagraphStyle],
     t = Table(data, colWidths=col_widths, repeatRows=1)
     t.setStyle(TableStyle([
         ("VALIGN", (0, 0), (-1, -1), "TOP"),
-        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor(HEADER_HEX)),
+        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor(TINT_HEX)),
         ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
         ("TOPPADDING", (0, 0), (-1, -1), 4),
         ("LINEBELOW", (0, 0), (-1, -1), 0.3, colors.HexColor("#dddddd")),
+        ("LINEBELOW", (0, 0), (-1, 0), 1, colors.HexColor(ACCENT)),
         ("LINEABOVE", (0, -1), (-1, -1), 1, colors.HexColor(ACCENT)),
         ("ROWBACKGROUNDS", (0, 1), (-1, -2), [colors.white, colors.HexColor("#f7f9fc")]),
     ]))
@@ -1107,10 +1129,9 @@ def make_insurance_claims_router(api_router: APIRouter, get_db, get_current_user
     async def get_claim(claim_id: str):
         db = get_db()
         claim = await _get_claim(db, claim_id)
-        # Legacy claims created before task-seeding have no task list — every
-        # claim must have one (spec). Backfill the default tasks once, lazily.
-        if not claim.get("tasks"):
-            claim["tasks"] = _seed_default_tasks()
+        # Every claim carries the full predefined task checklist (in order),
+        # preserving any custom tasks the user added.
+        if _reconcile_default_tasks(claim):
             await _save(db, claim)
         resolved = await _resolve_claim_items(db, claim)
         docs = await db.claim_documents.find({"claim_id": claim_id}, {"_id": 0, "data_b64": 0}).to_list(2000)

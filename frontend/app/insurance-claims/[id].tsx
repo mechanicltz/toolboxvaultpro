@@ -18,7 +18,6 @@ import { AddFab } from "../../src/components/AddFab";
 import { TbvListPanel } from "../../src/tbv/components/TbvListPanel";
 import { useIsSteel, useSteelPanelFrame } from "../../src/tbv/steel";
 import { SKIN, CAP } from "../../src/tbv/skins";
-import { SkinButton } from "../../src/components/SkinButton";
 import { insuranceApi, ClaimSpec } from "../../src/insuranceApi";
 import { renderAndViewClaimReport, viewStoredClaimReport, shareStoredClaimReport, renderClaimReportOnly, openDataUriFile } from "../../src/insuranceReport";
 import { rescheduleClaimTaskRemindersNow } from "../../src/claimTaskReminders";
@@ -121,9 +120,6 @@ export default function ClaimDetail() {
   const [editItem, setEditItem] = useState<any>(null);
   const [warningsOpen, setWarningsOpen] = useState(false);
   const [selReport, setSelReport] = useState<any>(null);
-  const [oneTapBusy, setOneTapBusy] = useState(false);
-  const [oneTapColsOpen, setOneTapColsOpen] = useState(false);
-  const [oneTapCols, setOneTapCols] = useState<string[]>(ONE_TAP_DEFAULT_COLS);
   const [evThumbs, setEvThumbs] = useState<Record<string, string>>({});
   const [viewEv, setViewEv] = useState<any | null>(null);
   const [addMenuOpen, setAddMenuOpen] = useState(false);
@@ -173,6 +169,12 @@ export default function ClaimDetail() {
   const timeline = claim?.timeline || [];
 
   const openTasks = tasks.filter((t: any) => !t.done).length;
+  const STATUS_COLORS: Record<string, string> = {
+    "Draft": c.textSecondary, "Submitted": c.accent, "Under Review": c.warning,
+    "More Information Needed": c.warning, "Approved": c.success, "Partially Approved": c.success,
+    "Paid": c.success, "Denied": c.danger, "Closed": c.textSecondary,
+  };
+  const statusColor = STATUS_COLORS[claim.status] || c.accent;
 
   // Warnings on claimed items
   const itemWarnings = useMemo(() => {
@@ -228,26 +230,6 @@ export default function ClaimDetail() {
       { text: "Delete", style: "destructive", onPress: confirmDelete },
       { text: "Cancel", style: "cancel" },
     ]);
-  };
-
-  const oneTapEmailInsurer = async (chosenCols: string[]) => {
-    setOneTapColsOpen(false); setOneTapBusy(true);
-    try {
-      await renderClaimReportOnly(id, { kind: "detailed", ...TOGGLES.reduce((a, [k]) => ({ ...a, [k]: true }), {}), item_columns: chosenCols.length ? chosenCols : ONE_TAP_DEFAULT_COLS });
-      const list = await insuranceApi.listReports(id);
-      const latest = list[0];
-      if (!latest) throw new Error("Report was generated but could not be located.");
-      await load();
-      const recipientName = ins.agent_name || ins.adjuster_name || "";
-      const claimNo = claim.claim_number ? ` (Claim #${claim.claim_number})` : "";
-      const subject = `Insurance Claim — ${claim.title}${claimNo}`;
-      const body = `Hello${recipientName ? ` ${recipientName}` : ""},\n\n` +
-        `Please find attached the detailed insurance claim report for "${claim.title}".\n\n` +
-        `Policy #: ${ins.policy_number || "—"}\nClaim #: ${claim.claim_number || "—"}\n` +
-        `Claim Type: ${claim.claim_type || "—"}\nDate of Loss: ${claim.date_of_loss || "—"}\n` +
-        `Net Claimed: ${money(fin.net_claimed || 0)}\n\nPlease let me know if any additional documentation is needed.\n\nThank you.`;
-      setSelReport(latest); setEmailPrefill({ subject, body }); setEmailOpen(true);
-    } catch (e: any) { Alert.alert("Could not prepare email", e?.message || ""); } finally { setOneTapBusy(false); }
   };
 
   const addPhoto = async () => {
@@ -513,7 +495,6 @@ export default function ClaimDetail() {
           <Ionicons name="flash-outline" size={18} color={c.accent} /><Text style={styles.reportOptText}>Quick Report</Text>
         </TouchableOpacity>
       </View>
-      <SkinButton label={oneTapBusy ? "Preparing report…" : "Email Report to Insurer"} icon="mail" onPress={() => { setOneTapCols(ONE_TAP_DEFAULT_COLS); setOneTapColsOpen(true); }} disabled={oneTapBusy} />
       <Text style={[styles.muted, { marginTop: 6, marginBottom: 10 }]}>History — each report is permanently saved as a new version (never overwritten).</Text>
       {reports.length === 0 ? <Empty text="No reports yet." /> :
         reports.map((r) => (
@@ -615,7 +596,7 @@ export default function ClaimDetail() {
         <View style={styles.belowBarRow}>
           <TouchableOpacity onPress={() => setStatusOpen(true)} style={styles.statusInline} hitSlop={8} activeOpacity={0.7}>
             <Text style={styles.statusInlineLabel}>Status: </Text>
-            <Text style={styles.statusInlineValue}>{claim.status}</Text>
+            <Text style={[styles.statusInlineValue, { color: statusColor }]}>{claim.status}</Text>
           </TouchableOpacity>
           <TouchableOpacity testID="icd-tasks-link" style={styles.tasksLink} onPress={() => setTab("tasks")} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }} activeOpacity={0.7}>
             <Ionicons name="checkbox-outline" size={16} color={c.accent} />
@@ -657,7 +638,7 @@ export default function ClaimDetail() {
             <TextInput value={search} onChangeText={setSearch} placeholder="Search this claim…" placeholderTextColor={c.textMuted} style={styles.searchInput} />
             {search ? <TouchableOpacity onPress={() => setSearch("")} hitSlop={8}><Ionicons name="close-circle" size={16} color={c.textMuted} /></TouchableOpacity> : null}
           </View>
-          <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 24 }} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled"
+          <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 110 }} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled"
             refreshControl={<RefreshControl refreshing={false} onRefresh={load} tintColor={c.accent} />}>
             {ql ? (
               searchResults.length === 0 ? <Empty text={`No matches for "${search}".`} /> :
@@ -703,22 +684,6 @@ export default function ClaimDetail() {
               <Ionicons name="chevron-forward" size={16} color={c.textMuted} />
             </TouchableOpacity>
           ))}
-      </ICModal>
-
-      {/* One-tap email column chooser */}
-      <ICModal visible={oneTapColsOpen} onClose={() => setOneTapColsOpen(false)} title="Email Report — Choose Columns">
-        <Text style={styles.muted}>Pick which item details appear (Item name is always shown):</Text>
-        {ITEM_COLUMNS.map(([k, label]) => {
-          const on = oneTapCols.includes(k);
-          return (
-            <TouchableOpacity key={k} style={styles.toggleRow} onPress={() => setOneTapCols((cur) => cur.includes(k) ? cur.filter((x) => x !== k) : [...cur, k])}>
-              <Text style={styles.itemName}>{label}</Text>
-              <Ionicons name={on ? "checkbox" : "square-outline"} size={20} color={on ? c.accent : c.textMuted} />
-            </TouchableOpacity>
-          );
-        })}
-        <View style={{ height: 12 }} />
-        <ICButton label={oneTapBusy ? "Generating…" : "Generate & Email"} icon="mail" onPress={() => oneTapEmailInsurer(oneTapCols)} disabled={oneTapBusy} />
       </ICModal>
 
       {/* Add menu (FAB on tabs without a single obvious action) */}
@@ -1072,7 +1037,7 @@ function ReportModal({ visible, onClose, id, onDone }: any) {
   const [opts, setOpts] = useState<any>({});
   const [cols, setCols] = useState<string[]>(DEFAULT_ITEM_COLUMNS);
   const [busy, setBusy] = useState(false);
-  useEffect(() => { if (visible) { setKind("detailed"); setOpts({}); setCols(DEFAULT_ITEM_COLUMNS); } }, [visible]);
+  useEffect(() => { if (visible) { setKind("detailed"); setOpts({ include_timeline: false }); setCols(DEFAULT_ITEM_COLUMNS); } }, [visible]);
   const val = (k: string) => opts[k] !== false;
   const toggleCol = (k: string) => setCols((cur) => cur.includes(k) ? cur.filter((x) => x !== k) : [...cur, k]);
   const generate = async () => {
@@ -1162,8 +1127,8 @@ const styles = themedStyles((c) => ({
   factsGrid: { flexDirection: "row", paddingHorizontal: 14, gap: 12 },
   factCol: { flex: 1, gap: 6 },
   fact: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 3 },
-  factLabel: { color: c.textMuted, fontSize: 9, fontWeight: "900", letterSpacing: 0.8 },
-  factValue: { color: c.textPrimary, fontSize: 12, fontWeight: "500", maxWidth: "58%", textAlign: "right" },
+  factLabel: { color: c.textMuted, fontSize: 12, fontWeight: "700", letterSpacing: 0.3 },
+  factValue: { color: c.textPrimary, fontSize: 13, fontWeight: "500", maxWidth: "58%", textAlign: "right" },
   factValueAccent: { color: c.accent },
   tasksLink: { flexDirection: "row", alignItems: "center", gap: 8, alignSelf: "flex-end", paddingVertical: 6, marginTop: 4 },
   tasksLinkText: { color: c.accent, fontWeight: "800", fontSize: 13 },
