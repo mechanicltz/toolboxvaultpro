@@ -583,11 +583,11 @@ export default function ClaimDetail() {
       <View style={styles.factsGrid}>
         <View style={styles.factCol}>
           <Fact label="STATUS" value={claim.status} onPress={() => setStatusOpen(true)} accent />
-          <Fact label="DATE OPENED" value={fmtDay(claim.created_at)} />
-          <Fact label="DATE SUBMITTED" value={fmtDay(dateSubmitted)} />
+          <Fact label="DATE" value={fmtDay(claim.created_at)} />
+          <Fact label="SUBMITTED" value={fmtDay(dateSubmitted)} />
         </View>
         <View style={styles.factCol}>
-          <Fact label="CLAIM AMOUNT" value={money(fin.total_claimed)} />
+          <Fact label="CLAIMED" value={money(fin.total_claimed)} />
           <Fact label="DEDUCTIBLE" value={money(fin.deductible)} />
           <Fact label="PAYOUT" value={money(fin.paid_value)} />
         </View>

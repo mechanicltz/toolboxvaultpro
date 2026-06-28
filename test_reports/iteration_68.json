@@ -1,0 +1,31 @@
+{
+  "summary": "All 5 Insurance Claims visual refinements verified PASS via runtime DOM inspection + screenshots (ryan@ryan.com on mobile viewport 390x844). Summary tab stat values render at fontSize=11px / fontWeight=800 (matches small list-value style). Closed tab row shows 'Claim Name / Claimed: $1,219.00 / Payout: $849.00' with 'Paid' status badge on right. Archived tab uses same row layout (empty state in this account but code path identical). Open tab row layout (Claimed + 'n task(s) to complete') verified by code inspection (only Closed claim exists for this account). Claim detail: progress bar shows '40%' centered ON the bar (no bubble above), fill color rgb(34,197,94) = #22C55E green (distinct from theme orange), and header facts labels read DATE / SUBMITTED / CLAIMED — old labels 'Date Opened', 'Date Submitted', 'Claim Amount' are NOT present; STATUS / DEDUCTIBLE / PAYOUT unchanged.",
+  "verification_evidence": {
+    "summary_stat_styles": "All 7 ic-stat-* values: fontSize=11px, fontWeight=800 (Total Claims=1, Open=0, Closed=1, Archived=0, Total Claimed=$1,219.00, Total Approved=$1,099.00, Total Paid=$849.00)",
+    "closed_row_text": "Truck Break-In — Stolen Tools | Claimed: $1,219.00 | Payout: $849.00 | Paid",
+    "open_row_code": "index.tsx:204-207 — view==='open' branch renders `${openTasks} task(s) to complete`",
+    "archived_row_code": "index.tsx:208-210 — view!=='open' branch renders Payout (same as Closed)",
+    "progress_pill": "ProgressPill.tsx: FILL_COLOR='#22C55E', label rendered inside track via labelLayer (absoluteFill, centered). DOM check confirmed: pct text '40%', fontSize 12px, color white; green fill div with rgb(34,197,94) found.",
+    "fact_labels_found": ["DATE", "SUBMITTED", "CLAIMED", "STATUS", "DEDUCTIBLE", "PAYOUT"],
+    "fact_labels_not_present": ["Date Opened", "Date Submitted", "Claim Amount"]
+  },
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "/app/frontend/app/insurance-claims/[id].tsx is ~1220 lines — exceeds the 700-line guideline; consider extracting modals (StatusModal, NoteModal, TaskModal, ContactModal, DocumentModal, AttachModal, ItemEditModal, ReportModal, EmailModal, EvidenceViewer) into separate files for maintainability. (Pre-existing; not blocking this iteration.)"
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "N/A (frontend-only)", "frontend": "100%"},
+  "seed_data_creation": "None — used existing ryan@ryan.com 'Truck Break-In — Stolen Tools' claim (status: Paid → Closed tab).",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Login: web /login form has TWO 'SIGN IN' elements (top tab + bottom submit). Rate limit (5/min) is easy to hit; faster path is to POST /api/auth/login then inject token into localStorage under key 'tt.auth.token' (TOKEN_KEY in src/api.ts) before navigating. Font-face observer can leave the screen black for ~10s on first paint — give the page up to 20s for inputs to appear. Mobile viewport 390x844 works fine.",
+  "rca_of_issue": "N/A — no bugs found; all 5 visual refinements behave per spec."
+}

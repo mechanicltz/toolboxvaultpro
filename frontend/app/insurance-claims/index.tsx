@@ -188,7 +188,9 @@ export default function InsuranceClaimsDashboard() {
       {visible.length === 0 ? (
         renderEmpty(ql ? "No claims match your search." : `No ${view} claims yet.`)
       ) : (
-        visible.map((claim, i) => (
+        visible.map((claim, i) => {
+          const openTasks = (claim.tasks || []).filter((t: any) => !t.done).length;
+          return (
           <TouchableOpacity
             key={claim.id}
             testID={`ic-claim-${claim.id}`}
@@ -198,13 +200,14 @@ export default function InsuranceClaimsDashboard() {
           >
             <View style={{ flex: 1, minWidth: 0 }}>
               <Text style={styles.claimTitle} numberOfLines={1}>{claim.title}</Text>
-              <Text style={styles.claimMeta} numberOfLines={1}>
-                {claim.claim_type}{claim.claim_number ? ` · #${claim.claim_number}` : ""}
-                {claim.insurance?.company ? ` · ${claim.insurance.company}` : ""}
-              </Text>
-              <Text style={styles.claimMeta} numberOfLines={1}>
-                {(claim._item_count || 0)} item(s) · {money(claim._total_claimed || 0)} claimed
-              </Text>
+              <Text style={styles.claimMeta} numberOfLines={1}>Claimed: {money(claim._total_claimed || 0)}</Text>
+              {view === "open" ? (
+                <Text style={styles.claimMeta} numberOfLines={1}>
+                  {openTasks} task{openTasks === 1 ? "" : "s"} to complete
+                </Text>
+              ) : (
+                <Text style={styles.claimMeta} numberOfLines={1}>Payout: {money(claim.paid_value || 0)}</Text>
+              )}
             </View>
             <View style={{ alignItems: "flex-end", flexShrink: 0 }}>
               <View style={[styles.badge, { backgroundColor: tint(claim.status) + "22", borderColor: tint(claim.status) }]}>
@@ -222,7 +225,8 @@ export default function InsuranceClaimsDashboard() {
               <Ionicons name="chevron-forward" size={16} color={c.textMuted} style={{ marginTop: 6 }} />
             </View>
           </TouchableOpacity>
-        ))
+          );
+        })
       )}
     </View>
   );
@@ -333,7 +337,7 @@ const styles = themedStyles((c) => ({
     backgroundColor: "rgba(0,0,0,0.25)", marginRight: 10,
   },
   statRowLabel: { color: c.textSecondary, fontWeight: "800", fontSize: 11, letterSpacing: 0.8 },
-  statRowValue: { fontWeight: "900", fontSize: 16, textAlign: "right", color: c.textPrimary },
+  statRowValue: { fontWeight: "800", fontSize: 11, letterSpacing: 0.3, textAlign: "right", color: c.textPrimary },
 
   // Search
   searchRow: {
