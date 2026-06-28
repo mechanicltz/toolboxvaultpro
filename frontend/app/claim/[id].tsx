@@ -319,7 +319,7 @@ const styles = themedStyles((c) => ({
   pillRowFlat: { flexDirection: "row", alignItems: "center", paddingVertical: 9, gap: 10 },
   pillRowDivider: { borderTopWidth: 1, borderTopColor: c.borderSubtle },
   pillRowLabel: { color: c.textPrimary, fontWeight: "800", fontSize: 9.5, letterSpacing: 0.8 },
-  pillRowValueText: { color: c.textPrimary, fontWeight: "800", fontSize: 11, letterSpacing: 0.3, maxWidth: "62%", textAlign: "right" },
+  pillRowValueText: { color: c.textPrimary, fontWeight: "500", fontSize: 11, letterSpacing: 0.3, maxWidth: "62%", textAlign: "right" },
 
   // CONTENT PANEL
   contentPanelOuter: { flex: 1, paddingHorizontal: 14, paddingTop: 6, paddingBottom: 14 },
