@@ -1,0 +1,43 @@
+{
+  "summary": "Iteration 69 — all 6 Insurance Claims refinements verified PASS via backend pytest (6/6) + UI runtime DOM inspection on the Truck Break-In claim (ryan@ryan.com, 390x844). Backend: GET /api/insurance-claims/{id} now seeds + auto-completes the 7 default tasks based on claim data; user PATCH cannot override an auto-derived done flag (re-asserted on next read). User tasks add/patch/delete still work and live alongside the 7 defaults. POST /api/insurance-claims/{id}/reports/render returns 200 + application/pdf for both 'quick' and 'detailed' kinds (PDF restyle did not break generation; persisted record retrievable via /reports/{report_id}). Frontend: (1) Tab bar order is Details → Tasks (7) → Financials → Contacts → Evidence → Documents → Notes → Claimed Items → Reports → Insurance Info → Timeline (Tasks immediately after Details ✓). Tasks tab shows the 7 predefined steps, each labeled 'Auto step', all checked green for this fully-paid claim. (2) Progress bar: 'CLAIM PROGRESS' label above; percent '100%' rendered centered ON the green bar (white text, 12px); fill color rgb(34,197,94) confirmed in DOM. (3) Documents → '+ Add' → Add Document modal renders three source buttons: File, Photo, Camera (screenshot confirms layout). (4) Notes rows show colored vertical stripe on left edge — DOM scan found stripe divs with width=4px and category colors (rgb(100,116,139) for General). (5) Attach Inventory modal now has a STICKY FOOTER at the bottom of the modal panel with ghost-style 'Cancel' on the left and orange 'Add 0' on the right, both always visible while the item list scrolls (screenshot confirms). (6) Reports tab renders Create New + Quick Report buttons + version history; backend render endpoint validated via pytest. 'Tasks to Complete' link (testID icd-tasks-link) below the header now switches to the Tasks tab as required (no popup).",
+  "verification_evidence": {
+    "tab_bar_order": ["Details", "Tasks (7)", "Financials", "Contacts (0)", "Evidence (1)", "Documents (0)", "Notes (2)", "Claimed Items (2)", "Reports (3)", "Insurance Info", "Timeline (13)"],
+    "tasks_tab": "7 rows rendered, each subtext 'Auto step', all checkboxes shown checked; '+ Add' link present at section head.",
+    "progress_bar": "CLAIM PROGRESS label above; '100%' text centered (white, 12px) inside bar; fill rgb(34,197,94).",
+    "documents_modal_buttons": ["File", "Photo", "Camera"],
+    "notes_stripes": "2 stripe divs detected (width=4px) with color rgb(100,116,139) (NOTE_COLORS['General']=#64748B). Stripe rendering works for the existing notes; code path identical for other categories per ICKit and [id].tsx:455-459.",
+    "attach_footer": "Sticky footer renders Cancel (ghost) + 'Add 0' (orange) — visible at bottom of modal while the item list scrolls above. Implemented via ICModal `footer` prop (ICKit.tsx:149 + insurance-claims/[id].tsx:1031-1036).",
+    "reports_tab": "Renders Create New + Quick Report CTAs + existing v1/v2/v3 history; backend pytest renders both quick & detailed PDFs (200 OK, %PDF- magic header, size ~5-26KB, persisted record retrievable).",
+    "tasks_to_complete_link": "testID icd-tasks-link click triggers setTab('tasks'); confirmed DOM body innerText flips to 'TASKS (7)…Auto step…'."
+  },
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": [
+      {
+        "component": "Pre-existing console noise (not regressed)",
+        "issue": "shadow*/textShadow* style props deprecated, props.pointerEvents deprecated, expo-notifications web stub. None blocks functionality. Same as iter 65-68."
+      }
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_ic_iter69.py",
+    "/app/test_reports/pytest/iter69_results.xml",
+    "/app/test_reports/iteration_69.json"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "/app/frontend/app/insurance-claims/[id].tsx is 1285 lines — exceeds the 700-line guideline. Modals (TaskModal, DocumentModal, AttachModal, ReportModal, ItemEditModal, NoteModal, ContactModal, EvidenceViewer, EmailModal, StatusModal) are all in-file and could be extracted to /app/frontend/src/components/insurance/. Pre-existing finding from iter 68; not blocking this iteration.",
+    "AttachModal (/app/frontend/app/insurance-claims/[id].tsx:1058-1060) still renders a legacy inline `ICButton label='Add N Selected'` BELOW the item list (after `<View style={{height: 10}} />`), in addition to the new sticky footer button. The legacy button is harmless (it triggers the same `add()` handler) but is now redundant and creates two visible Add buttons (one in scrollable content, one in sticky footer). Consider removing the inline one for clarity. Not a blocker — both work.",
+    "Backend: _auto_complete_default_tasks runs on EVERY GET /api/insurance-claims/{id} and saves the claim if anything changed (server.py:_save). This is correct semantics but means a read can trigger a write — fine for the current claim counts, but worth a note if the endpoint ever needs to be cacheable/idempotent. (Pre-existing pattern from iter 64-66, just flagging.)"
+  ],
+  "updated_files": [],
+  "seed_data_creation": "Backend test created and immediately deleted one user task ('TEST_iter69 task') on the Truck Break-In claim, and patched/restored a default-task done flag (auto-derived so no real state change). Backend test 'test_render_detailed_pdf_returns_pdf' added one persisted claim_report row (v4) — this is intentional history and matches user behaviour of pressing Generate; cannot delete via API (history is immutable per module docstring at insurance_claims.py:17). Frontend testing did not create any data (only viewed tabs and opened/closed modals without saving). No leftover TEST data on the claim.",
+  "success_rate": {"backend": "100% (6/6 pytest)", "frontend": "100% (6/6 spec items verified)"},
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Login via browser fetch (not urllib from python container — that gets 403). Best path: page.goto root, then page.evaluate fetch('/api/auth/login') and stash token under localStorage 'tt.auth.token'. The FontFaceObserver test rectangle '0123456789$.,ABC' permanently stays in DOM under the rendered UI — innerText.slice() picks it up first; filter for real text like 'CLAIM PROGRESS' / 'TRUCK' to detect ready state. Tabs/buttons on the claim detail respond to native .click() via DOM (RN-web TouchableOpacity Playwright quirk from iter 65/66 still applies). The Truck Break-In claim 74f1e3f0-8e08-4f82-bdde-d3d389153293 is the canonical fixture — it has insurance info, claim_number, 2 items, 1 evidence, 2 notes, 3 historical reports, status=Paid, so its 7 default tasks all auto-complete to done=true.",
+  "rca_of_issue": "n/a — no functional bug found. All 6 refinements implemented per spec."
+}

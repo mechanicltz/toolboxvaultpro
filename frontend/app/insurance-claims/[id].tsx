@@ -42,10 +42,11 @@ async function uriToDataUri(uri: string, mime: string): Promise<string> {
 }
 
 // Tab definitions (order per spec). icon shown when needed.
-type TabKey = "details" | "financials" | "contacts" | "evidence" | "documents"
+type TabKey = "details" | "tasks" | "financials" | "contacts" | "evidence" | "documents"
   | "notes" | "items" | "reports" | "insurance" | "timeline";
 const TAB_DEFS: { key: TabKey; label: string; countKey?: string }[] = [
   { key: "details", label: "Details" },
+  { key: "tasks", label: "Tasks", countKey: "tasks" },
   { key: "financials", label: "Financials" },
   { key: "contacts", label: "Contacts", countKey: "contacts" },
   { key: "evidence", label: "Evidence", countKey: "evidence" },
@@ -63,6 +64,13 @@ const TL_ICON: Record<string, keyof typeof Ionicons.glyphMap> = {
   Report: "document-text", Email: "mail", Items: "cube", Evidence: "camera",
   Document: "document-attach", Contact: "person-add", Task: "checkbox",
 };
+
+// Note category → left-stripe color (matches the home list's colored stripe).
+const NOTE_COLORS: Record<string, string> = {
+  General: "#64748B", Insurance: "#2F5D8A", "Agent Communication": "#7C3AED",
+  "Adjuster Communication": "#0EA5E9", "Internal Notes": "#F59E0B", "Follow-Up": "#22C55E",
+};
+const noteColor = (cat: string) => NOTE_COLORS[cat] || "#64748B";
 
 // ---- module-scope showroom panel (never remounts) ----
 function ShowroomPanel({ isIndustrial, winSrc, winCap, steelScale, isSteel, plainStyle, children }: any) {
@@ -107,7 +115,6 @@ export default function ClaimDetail() {
   const [attachOpen, setAttachOpen] = useState(false);
   const [taskOpen, setTaskOpen] = useState(false);
   const [editTask, setEditTask] = useState<any>(null);
-  const [taskListOpen, setTaskListOpen] = useState(false);
   const [contactOpen, setContactOpen] = useState(false);
   const [editContact, setEditContact] = useState<any>(null);
   const [docOpen, setDocOpen] = useState(false);
@@ -276,6 +283,7 @@ export default function ClaimDetail() {
   // FAB context action by active tab.
   const fabAction = () => {
     switch (tab) {
+      case "tasks": setEditTask(null); setTaskOpen(true); break;
       case "contacts": setEditContact(null); setContactOpen(true); break;
       case "notes": setNoteOpen(true); break;
       case "documents": setDocOpen(true); break;
@@ -445,10 +453,13 @@ export default function ClaimDetail() {
         <SectionHead title={`NOTES (${notes.length})`} right={<AddLink onPress={() => setNoteOpen(true)} />} />
         {sorted.length === 0 ? <Empty text="No notes yet." /> :
           sorted.map((n) => (
-            <View key={n.id} style={styles.noteRow}>
-              <Text style={styles.noteMeta}>{n.category} · {fmtDate(n.created_at)}</Text>
-              <Text style={styles.noteText}>{n.text}</Text>
-              <TouchableOpacity onPress={async () => { await insuranceApi.deleteNote(id, n.id); load(); }} style={{ position: "absolute", right: 0, top: 6 }}>
+            <View key={n.id} style={styles.noteRowWrap}>
+              <View style={[styles.noteStripe, { backgroundColor: noteColor(n.category) }]} />
+              <View style={styles.noteBody}>
+                <Text style={styles.noteMeta}>{n.category} · {fmtDate(n.created_at)}</Text>
+                <Text style={styles.noteText}>{n.text}</Text>
+              </View>
+              <TouchableOpacity onPress={async () => { await insuranceApi.deleteNote(id, n.id); load(); }} hitSlop={8} style={{ paddingLeft: 6 }}>
                 <Ionicons name="close" size={16} color={c.textMuted} />
               </TouchableOpacity>
             </View>
@@ -553,9 +564,39 @@ export default function ClaimDetail() {
     </View>
   );
 
+  const renderTasks = () => (
+    <View>
+      <SectionHead title={`TASKS (${tasks.length})`} right={<AddLink onPress={() => { setEditTask(null); setTaskOpen(true); }} />} />
+      <Text style={[styles.muted, { marginBottom: 8 }]}>Predefined steps check off automatically as you complete the claim. Add your own tasks anytime — completed tasks stay listed with a green check.</Text>
+      {tasks.length === 0 ? <Empty text="No tasks." /> :
+        tasks.map((t: any) => {
+          const isDefault = t.source === "default";
+          return (
+            <View key={t.id} style={styles.taskRow}>
+              <TouchableOpacity disabled={isDefault} onPress={async () => { await insuranceApi.patchTask(id, t.id, { done: !t.done }); load(); }} hitSlop={8}>
+                <Ionicons name={t.done ? "checkbox" : "square-outline"} size={22} color={t.done ? c.success : c.textMuted} />
+              </TouchableOpacity>
+              <TouchableOpacity style={{ flex: 1 }} disabled={isDefault} onPress={() => setEditTask(t)} activeOpacity={isDefault ? 1 : 0.6}>
+                <Text style={[styles.taskText, t.done && styles.taskDone]}>{t.text}</Text>
+                <Text style={styles.muted}>
+                  {isDefault ? "Auto step" : (t.due_date ? `Due ${fmtDay(t.due_date)}` : "No deadline")}
+                </Text>
+              </TouchableOpacity>
+              {!isDefault ? (
+                <TouchableOpacity onPress={async () => { await insuranceApi.deleteTask(id, t.id); load(); }} hitSlop={8}>
+                  <Ionicons name="trash-outline" size={18} color={c.danger} />
+                </TouchableOpacity>
+              ) : null}
+            </View>
+          );
+        })}
+    </View>
+  );
+
   const tabContent = () => {
     switch (tab) {
       case "details": return renderDetails();
+      case "tasks": return renderTasks();
       case "financials": return renderFinancials();
       case "contacts": return renderContacts();
       case "evidence": return renderEvidence();
@@ -576,6 +617,7 @@ export default function ClaimDetail() {
 
       {/* Progress bar */}
       <View style={styles.progressWrap}>
+        <Text style={styles.progressLabel}>CLAIM PROGRESS</Text>
         <ProgressPill percent={progress.percent} />
       </View>
 
@@ -592,7 +634,7 @@ export default function ClaimDetail() {
           <Fact label="PAYOUT" value={money(fin.paid_value)} />
         </View>
       </View>
-      <TouchableOpacity testID="icd-tasks-link" style={styles.tasksLink} onPress={() => setTaskListOpen(true)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }} activeOpacity={0.7}>
+      <TouchableOpacity testID="icd-tasks-link" style={styles.tasksLink} onPress={() => setTab("tasks")} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }} activeOpacity={0.7}>
         <Ionicons name="checkbox-outline" size={16} color={c.accent} />
         <Text style={styles.tasksLinkText}>Tasks to Complete</Text>
         {openTasks > 0 ? <View style={styles.tasksBadge}><Text style={styles.tasksBadgeText}>{openTasks}</Text></View> : <Ionicons name="checkmark-done" size={16} color={c.success} />}
@@ -654,28 +696,7 @@ export default function ClaimDetail() {
       <EmailModal visible={emailOpen} onClose={() => { setEmailOpen(false); setEmailPrefill(null); }} id={id} ins={ins} report={selReport} prefill={emailPrefill} onDone={() => { setEmailOpen(false); setEmailPrefill(null); load(); }} />
       <EvidenceViewer ev={viewEv} onClose={() => setViewEv(null)} />
 
-      {/* Task list sheet */}
-      <ICModal visible={taskListOpen} onClose={() => setTaskListOpen(false)} title="Tasks to Complete">
-        <ICButton label="Add Task" icon="add" onPress={() => { setTaskListOpen(false); setTaskOpen(true); }} />
-        <View style={{ height: 12 }} />
-        {tasks.length === 0 ? <Empty text="No tasks." /> :
-          tasks.map((t: any) => (
-            <View key={t.id} style={styles.taskRow}>
-              <TouchableOpacity onPress={async () => { await insuranceApi.patchTask(id, t.id, { done: !t.done }); load(); }} hitSlop={8}>
-                <Ionicons name={t.done ? "checkbox" : "square-outline"} size={22} color={t.done ? c.success : c.textMuted} />
-              </TouchableOpacity>
-              <TouchableOpacity style={{ flex: 1 }} onPress={() => { setTaskListOpen(false); setEditTask(t); }}>
-                <Text style={[styles.taskText, t.done && styles.taskDone]}>{t.text}</Text>
-                <Text style={styles.muted}>{t.due_date ? `Due ${fmtDay(t.due_date)}` : "No deadline"}{t.source === "default" ? " · step" : ""}</Text>
-              </TouchableOpacity>
-              {t.source !== "default" ? (
-                <TouchableOpacity onPress={async () => { await insuranceApi.deleteTask(id, t.id); load(); }} hitSlop={8}>
-                  <Ionicons name="trash-outline" size={18} color={c.danger} />
-                </TouchableOpacity>
-              ) : null}
-            </View>
-          ))}
-      </ICModal>
+      {/* Task list now lives in the Tasks tab */}
 
       {/* Warnings sheet */}
       <ICModal visible={warningsOpen} onClose={() => setWarningsOpen(false)} title="Item Warnings">
@@ -915,6 +936,24 @@ function DocumentModal({ visible, onClose, id, onDone }: any) {
     const a = res.assets[0];
     setPicked(a); if (!label) setLabel(a.name || "");
   };
+  const pickPhoto = async () => {
+    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!perm.granted) { Alert.alert("Permission needed", "Allow photo access to attach a photo."); return; }
+    const res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 0.7 });
+    if (res.canceled || !res.assets?.length) return;
+    const a = res.assets[0];
+    setPicked({ uri: a.uri, name: a.fileName || `photo-${Date.now()}.jpg`, mimeType: a.mimeType || "image/jpeg" });
+    if (!label) setLabel(a.fileName || "Photo");
+  };
+  const takeDocPhoto = async () => {
+    const perm = await ImagePicker.requestCameraPermissionsAsync();
+    if (!perm.granted) { Alert.alert("Permission needed", "Allow camera access to capture a photo."); return; }
+    const res = await ImagePicker.launchCameraAsync({ quality: 0.7 });
+    if (res.canceled || !res.assets?.length) return;
+    const a = res.assets[0];
+    setPicked({ uri: a.uri, name: `photo-${Date.now()}.jpg`, mimeType: "image/jpeg" });
+    if (!label) setLabel("Photo");
+  };
   const save = async () => {
     if (!picked) { Alert.alert("Pick a file first"); return; }
     setBusy(true);
@@ -927,10 +966,23 @@ function DocumentModal({ visible, onClose, id, onDone }: any) {
   };
   return (
     <ICModal visible={visible} onClose={onClose} title="Add Document">
-      <TouchableOpacity style={styles.pickBtn} onPress={pick}>
-        <Ionicons name="cloud-upload-outline" size={20} color={c.accent} />
-        <Text style={styles.pickText} numberOfLines={1}>{picked ? (picked.name || "Selected file") : "Choose a file (PDF, image, spreadsheet…)"}</Text>
-      </TouchableOpacity>
+      <View style={styles.docSrcRow}>
+        <TouchableOpacity style={styles.docSrcBtn} onPress={pick}>
+          <Ionicons name="document-outline" size={20} color={c.accent} /><Text style={styles.docSrcText}>File</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.docSrcBtn} onPress={pickPhoto}>
+          <Ionicons name="image-outline" size={20} color={c.accent} /><Text style={styles.docSrcText}>Photo</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.docSrcBtn} onPress={takeDocPhoto}>
+          <Ionicons name="camera-outline" size={20} color={c.accent} /><Text style={styles.docSrcText}>Camera</Text>
+        </TouchableOpacity>
+      </View>
+      {picked ? (
+        <View style={styles.pickedRow}>
+          <Ionicons name="checkmark-circle" size={16} color={c.success} />
+          <Text style={styles.pickText} numberOfLines={1}>{picked.name || "Selected file"}</Text>
+        </View>
+      ) : null}
       <View style={{ height: 12 }} />
       <ICField label="Label" value={label} onChangeText={setLabel} placeholder="e.g. Police Report" />
       <ICDateField label="Date (optional)" value={date} onChange={setDate} />
@@ -976,7 +1028,12 @@ function AttachModal({ visible, onClose, id, attached, onDone }: any) {
   const toggle = (tid: string) => setSel((s) => { const n = new Set(s); n.has(tid) ? n.delete(tid) : n.add(tid); return n; });
   const add = async () => { if (sel.size === 0) return; await insuranceApi.attachItems(id, Array.from(sel)); onDone(); };
   return (
-    <ICModal visible={visible} onClose={onClose} title="Attach Inventory">
+    <ICModal visible={visible} onClose={onClose} title="Attach Inventory" footer={
+      <>
+        <View style={{ flex: 1 }}><ICButton label="Cancel" variant="ghost" onPress={onClose} /></View>
+        <View style={{ flex: 1 }}><ICButton label={`Add ${sel.size || ""}`.trim()} icon="add" onPress={add} disabled={sel.size === 0} /></View>
+      </>
+    }>
       <View style={styles.searchRowModal}>
         <Ionicons name="search" size={16} color={c.textMuted} style={{ marginRight: 6 }} />
         <TextInput value={q} onChangeText={setQ} placeholder="Search items…" placeholderTextColor={c.textMuted} style={{ flex: 1, color: c.textPrimary }} />
@@ -1103,6 +1160,7 @@ const styles = themedStyles((c) => ({
   muted: { color: c.textSecondary, fontSize: 12 },
 
   progressWrap: { paddingHorizontal: 18, paddingTop: 2, paddingBottom: 6 },
+  progressLabel: { color: c.textMuted, fontSize: 10, fontWeight: "900", letterSpacing: 0.8, marginBottom: 2 },
 
   // header facts
   factsGrid: { flexDirection: "row", paddingHorizontal: 14, gap: 12 },
@@ -1188,6 +1246,13 @@ const styles = themedStyles((c) => ({
   noteRow: { paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: c.borderSubtle, paddingRight: 20 },
   noteMeta: { color: c.textMuted, fontSize: 11, fontWeight: "700" },
   noteText: { color: c.textPrimary, fontSize: 13, marginTop: 2 },
+  noteRowWrap: { flexDirection: "row", alignItems: "stretch", paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: c.borderSubtle },
+  noteStripe: { width: 4, borderRadius: 2, marginRight: 10 },
+  noteBody: { flex: 1 },
+  docSrcRow: { flexDirection: "row", gap: 10 },
+  docSrcBtn: { flex: 1, alignItems: "center", justifyContent: "center", gap: 4, paddingVertical: 14, borderRadius: 10, borderWidth: 1.4, borderStyle: "dashed", borderColor: c.accent, backgroundColor: c.surface },
+  docSrcText: { color: c.accent, fontSize: 12, fontWeight: "800" },
+  pickedRow: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 10 },
 
   // tasks
   taskRow: { flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 11, borderBottomWidth: 1, borderBottomColor: c.borderSubtle },

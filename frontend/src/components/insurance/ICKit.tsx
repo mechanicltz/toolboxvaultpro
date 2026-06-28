@@ -126,8 +126,8 @@ export const ICDateField = ({ label, value, onChange, placeholder, testID }: {
   );
 };
 
-export const ICModal = ({ visible, onClose, title, children }: {
-  visible: boolean; onClose: () => void; title: string; children: ReactNode;
+export const ICModal = ({ visible, onClose, title, children, footer }: {
+  visible: boolean; onClose: () => void; title: string; children: ReactNode; footer?: ReactNode;
 }) => {
   const s = styles;
   return (
@@ -142,9 +142,11 @@ export const ICModal = ({ visible, onClose, title, children }: {
             keyboardShouldPersistTaps="handled"
             contentContainerStyle={{ paddingBottom: 8 }}
             showsVerticalScrollIndicator={false}
+            style={footer ? { flexGrow: 0 } : undefined}
           >
             {children}
           </ScrollView>
+          {footer ? <View style={s.sheetFooter}>{footer}</View> : null}
         </View>
       </KeyboardAvoidingView>
     </Modal>
@@ -169,6 +171,7 @@ const styles = themedStyles((c) => ({
   },
   sheetHead: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 12 },
   sheetTitle: { color: c.textPrimary, fontSize: 17, fontWeight: "800" },
+  sheetFooter: { paddingTop: 10, borderTopWidth: 1, borderTopColor: c.borderSubtle, flexDirection: "row", gap: 10 },
   optRow: {
     flexDirection: "row", alignItems: "center", justifyContent: "space-between",
     paddingVertical: 13, paddingHorizontal: 10, borderRadius: 8,

@@ -54,6 +54,7 @@ from reports import (
     _hr,
     _para,
     _styles,
+    HEADER_HEX,
 )
 
 import email_sender
@@ -82,7 +83,7 @@ EVIDENCE_KINDS = ["Disaster Photo", "Damage Photo", "Police Report",
                   "Insurance Document", "Inspection Report", "Repair Estimate",
                   "Document", "Other"]
 
-ACCENT = "#1F3A5F"  # professional slate-navy for insurance docs
+ACCENT = "#2F5D8A"  # steel-blue — matches all other Toolbox Vault reports
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -545,6 +546,49 @@ def _compute_progress(claim: Dict[str, Any], resolved: List[Dict[str, Any]],
     }
 
 
+def _auto_complete_default_tasks(claim: Dict[str, Any], resolved: List[Dict[str, Any]],
+                                 evidence: List[Dict[str, Any]], has_report: bool) -> bool:
+    """Default (predefined) tasks behave like an ACTIVE checklist: their done
+    status is derived from the claim's actual data, so e.g. the 'Add insurance
+    info' task auto-checks once a company is entered. Custom user tasks keep
+    their manual done state. Returns True if any default task changed."""
+    ins = claim.get("insurance") or {}
+    img_evidence = any((e.get("mime") or "").startswith("image") for e in evidence)
+    has_photos = any((r.get("photos") or []) for r in resolved) or img_evidence
+    submitted = claim.get("status") in {"Submitted", "Under Review", "More Information Needed",
+                                        "Approved", "Partially Approved", "Paid", "Closed", "Denied"}
+
+    def items_reviewed() -> bool:
+        if not resolved:
+            return False
+        for r in resolved:
+            if not (r.get("serials") or r.get("models")):
+                return False
+            if not (r.get("line_purchase") or r.get("cost")):
+                return False
+            if not r.get("purchase_date"):
+                return False
+        return True
+
+    auto = {
+        DEFAULT_TASKS[0]: bool(ins.get("company")),
+        DEFAULT_TASKS[1]: bool(claim.get("claim_number")),
+        DEFAULT_TASKS[2]: len(resolved) > 0,
+        DEFAULT_TASKS[3]: has_photos,
+        DEFAULT_TASKS[4]: items_reviewed(),
+        DEFAULT_TASKS[5]: bool(has_report),
+        DEFAULT_TASKS[6]: bool(submitted),
+    }
+    changed = False
+    for t in claim.get("tasks") or []:
+        if t.get("source") == "default" and t.get("text") in auto:
+            nv = bool(auto[t["text"]])
+            if t.get("done") != nv:
+                t["done"] = nv
+                changed = True
+    return changed
+
+
 # ---------------------------------------------------------------------------
 # PDF rendering
 # ---------------------------------------------------------------------------
@@ -568,8 +612,13 @@ def _footer_factory(claim: Dict[str, Any], version: int):
     return _painter
 
 
-def _kv_table(pairs: List[tuple], st: Dict[str, ParagraphStyle]) -> Table:
-    """Two-column label/value grid. pairs = [(label, value), ...]."""
+def _kv_table(pairs: List[tuple], st: Dict[str, ParagraphStyle],
+              width: Optional[float] = None) -> Table:
+    """Two-column label/value grid. pairs = [(label, value), ...].
+    `width` is the total table width (defaults to full content width); pass a
+    narrower width when nesting side-by-side so values wrap instead of
+    overflowing into the neighbouring column."""
+    w = width if width is not None else PAGE_W
     rows = []
     for label, value in pairs:
         if value in (None, "", 0, 0.0):
@@ -578,7 +627,7 @@ def _kv_table(pairs: List[tuple], st: Dict[str, ParagraphStyle]) -> Table:
                      _para(esc(str(value)), st["spec_v"])])
     if not rows:
         rows = [[_para("—", st["spec_l"]), _para("", st["spec_v"])]]
-    t = Table(rows, colWidths=[PAGE_W * 0.28, PAGE_W * 0.72])
+    t = Table(rows, colWidths=[w * 0.30, w * 0.70])
     t.setStyle(TableStyle([
         ("VALIGN", (0, 0), (-1, -1), "TOP"),
         ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
@@ -695,7 +744,7 @@ def _items_table(resolved: List[Dict[str, Any]], st: Dict[str, ParagraphStyle],
     t = Table(data, colWidths=col_widths, repeatRows=1)
     t.setStyle(TableStyle([
         ("VALIGN", (0, 0), (-1, -1), "TOP"),
-        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#3A3A3A")),
+        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor(HEADER_HEX)),
         ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
         ("TOPPADDING", (0, 0), (-1, -1), 4),
         ("LINEBELOW", (0, 0), (-1, -1), 0.3, colors.HexColor("#dddddd")),
@@ -790,16 +839,6 @@ def build_claim_pdf(claim: Dict[str, Any], resolved: List[Dict[str, Any]],
                     evidence: List[Dict[str, Any]], opts: ReportOptions,
                     version: int) -> bytes:
     st = _styles(ACCENT)
-    # Readability fix: section + table headers were navy text (`accent`) on a
-    # near-black (#111) bar — unreadable. Override to a dark-grey bar with WHITE
-    # text for the insurance reports only (other report types are untouched).
-    HEADER_BAR = "#3A3A3A"
-    st["section"] = ParagraphStyle("ins_section", parent=st["section"],
-                                   textColor=colors.white,
-                                   backColor=colors.HexColor(HEADER_BAR))
-    st["th"] = ParagraphStyle("ins_th", parent=st["th"], textColor=colors.white)
-    st["th_right"] = ParagraphStyle("ins_th_right", parent=st["th_right"],
-                                    textColor=colors.white)
     detailed = opts.kind == "detailed"
     ins = claim.get("insurance") or {}
     story: List[Any] = []
@@ -834,7 +873,8 @@ def build_claim_pdf(claim: Dict[str, Any], resolved: List[Dict[str, Any]],
         ("Date Discovered", fmt_date_us(claim.get("date_discovered")) if claim.get("date_discovered") else ""),
         ("Loss Location", claim.get("loss_location")),
     ]
-    hdr = Table([[_kv_table(claimant_pairs, st), _kv_table(claim_meta, st)]],
+    hdr = Table([[_kv_table(claimant_pairs, st, width=PAGE_W * 0.5 - 12),
+                  _kv_table(claim_meta, st, width=PAGE_W * 0.5 - 12)]],
                 colWidths=[PAGE_W * 0.5, PAGE_W * 0.5])
     hdr.setStyle(TableStyle([("VALIGN", (0, 0), (-1, -1), "TOP"),
                              ("LEFTPADDING", (1, 0), (1, 0), 12)]))
@@ -1077,6 +1117,9 @@ def make_insurance_claims_router(api_router: APIRouter, get_db, get_current_user
         ev = await db.claim_evidence.find({"claim_id": claim_id}, {"_id": 0, "data_b64": 0}).to_list(2000)
         reports = await db.claim_reports.find({"claim_id": claim_id}, {"_id": 0, "pdf_b64": 0}).to_list(2000)
         has_report = len(reports) > 0
+        # Active checklist: auto-derive default-task completion from claim data.
+        if _auto_complete_default_tasks(claim, resolved, ev, has_report):
+            await _save(db, claim)
         claim["_resolved_items"] = resolved
         claim["_documents"] = docs
         claim["_financials"] = _compute_financials(resolved, claim)
