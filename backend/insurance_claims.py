@@ -560,6 +560,19 @@ def _compute_progress(claim: Dict[str, Any], resolved: List[Dict[str, Any]],
         percent = round((steps_done + tasks_done) / (steps_total + tasks_total) * 100)
     else:
         percent = round(steps_done / steps_total * 100)
+    # Cap below 100% while attached items still have unresolved warnings, unless
+    # the claim has reached a final outcome status.
+    def _item_has_warnings(r: Dict[str, Any]) -> bool:
+        return (
+            not (r.get("serials") or [])
+            or not (r.get("models") or [])
+            or not (_num(r.get("cost")) > 0 or _num(r.get("line_purchase")) > 0)
+            or not r.get("purchase_date")
+        )
+    has_item_warnings = any(_item_has_warnings(r) for r in resolved)
+    is_final = claim.get("status") in {"Approved", "Denied", "Partially Approved", "Paid", "Closed"}
+    if percent >= 100 and has_item_warnings and not is_final:
+        percent = 99
     return {
         "steps": steps,
         "steps_done": steps_done,
@@ -1050,6 +1063,10 @@ def make_insurance_claims_router(api_router: APIRouter, get_db, get_current_user
         total = len(claims)
         open_n = sum(1 for c in claims if c.get("status") in OPEN_STATUSES)
         closed_n = sum(1 for c in claims if c.get("status") in CLOSED_STATUSES)
+        denied_n = sum(1 for c in claims if c.get("status") == "Denied")
+        open_tasks_n = sum(
+            1 for c in claims for t in (c.get("tasks") or []) if not t.get("done")
+        )
         claimed_val = 0.0
         approved_val = sum(_num(c.get("approved_value")) for c in claims)
         paid_val = sum(_num(c.get("paid_value")) for c in claims)
@@ -1061,6 +1078,8 @@ def make_insurance_claims_router(api_router: APIRouter, get_db, get_current_user
             "total_claims": total,
             "open_claims": open_n,
             "closed_claims": closed_n,
+            "denied_claims": denied_n,
+            "open_tasks": open_tasks_n,
             "total_claimed_value": round(claimed_val, 2),
             "total_approved_value": round(approved_val, 2),
             "total_paid_value": round(paid_val, 2),

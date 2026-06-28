@@ -174,7 +174,7 @@ export default function ClaimDetail() {
     "More Information Needed": c.warning, "Approved": c.success, "Partially Approved": c.success,
     "Paid": c.success, "Denied": c.danger, "Closed": c.textSecondary,
   };
-  const statusColor = STATUS_COLORS[claim.status] || c.accent;
+  const statusColor = STATUS_COLORS[claim?.status] || c.accent;
 
   // Warnings on claimed items
   const itemWarnings = useMemo(() => {
@@ -292,8 +292,8 @@ export default function ClaimDetail() {
       <DetailRow label="Incident Address" value={claim.loss_location} />
       <DetailRow label="Police Report #" value={claim.police_report_number} />
       <DetailRow label="Police Case #" value={claim.case_number} />
-      {claim.description ? (<><Text style={styles.subLabel}>DESCRIPTION</Text><Text style={styles.bodyText}>{claim.description}</Text></>) : null}
-      {claim.incident_notes ? (<><Text style={styles.subLabel}>INCIDENT NOTES</Text><Text style={styles.bodyText}>{claim.incident_notes}</Text></>) : null}
+      {claim.description ? (<><SectionHead title="DESCRIPTION" /><Text style={styles.bodyText}>{claim.description}</Text></>) : null}
+      {claim.incident_notes ? (<><View style={{ height: 14 }} /><SectionHead title="INCIDENT NOTES" /><Text style={styles.bodyText}>{claim.incident_notes}</Text></>) : null}
     </View>
   );
 
@@ -1119,8 +1119,8 @@ const styles = themedStyles((c) => ({
   statusTopText: { color: c.accent, fontSize: 16, fontWeight: "900", letterSpacing: 0.5, textAlign: "center" },
   belowBarRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: 6 },
   statusInline: { flexDirection: "row", alignItems: "center" },
-  statusInlineLabel: { color: c.textMuted, fontSize: 12, fontWeight: "700" },
-  statusInlineValue: { color: c.textPrimary, fontSize: 12, fontWeight: "500" },
+  statusInlineLabel: { color: c.textMuted, fontSize: 13, fontWeight: "800" },
+  statusInlineValue: { color: c.textPrimary, fontSize: 13, fontWeight: "800" },
   factsCol: { paddingHorizontal: 16, paddingTop: 4, gap: 4 },
 
   // header facts

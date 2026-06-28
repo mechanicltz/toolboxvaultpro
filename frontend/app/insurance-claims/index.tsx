@@ -130,6 +130,8 @@ export default function InsuranceClaimsDashboard() {
     { label: "Total Claims", value: String(summary.total_claims), color: c.textPrimary, icon: "documents" as const },
     { label: "Open Claims", value: String(summary.open_claims), color: c.accent, icon: "folder-open" as const },
     { label: "Closed Claims", value: String(summary.closed_claims), color: c.textMuted, icon: "checkmark-done" as const },
+    { label: "Denied Claims", value: String(summary.denied_claims), color: c.danger, icon: "close-circle" as const },
+    { label: "Tasks to Complete", value: String(summary.open_tasks), color: summary.open_tasks > 0 ? c.warning : c.success, icon: "checkbox" as const },
     { label: "Archived Claims", value: String(archivedList.length), color: c.textMuted, icon: "archive" as const },
     { label: "Total Claimed", value: money(summary.total_claimed_value), color: c.textPrimary, icon: "cash" as const },
     { label: "Total Approved", value: money(summary.total_approved_value), color: c.success, icon: "shield-checkmark" as const },

@@ -44,6 +44,8 @@ export interface ClaimSummary {
   total_claims: number;
   open_claims: number;
   closed_claims: number;
+  denied_claims: number;
+  open_tasks: number;
   total_claimed_value: number;
   total_approved_value: number;
   total_paid_value: number;
