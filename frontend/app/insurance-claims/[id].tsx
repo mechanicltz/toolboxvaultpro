@@ -609,17 +609,20 @@ export default function ClaimDetail() {
     <SafeAreaView style={styles.safe} edges={["top"]}>
       <IndustrialBannerHeader title={claim.title} onBack={() => router.back()} onMore={moreMenu} />
 
-      {/* Claim status (centered) above the bar */}
+      {/* Progress bar with "Claim Progress" + % inside */}
       <View style={styles.progressWrap}>
-        <TouchableOpacity onPress={() => setStatusOpen(true)} style={styles.statusTop} hitSlop={8} activeOpacity={0.7}>
-          <Text style={styles.statusTopText}>{claim.status}</Text>
-        </TouchableOpacity>
         <ProgressPill percent={progress.percent} label="Claim Progress" />
-        <TouchableOpacity testID="icd-tasks-link" style={styles.tasksLink} onPress={() => setTab("tasks")} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }} activeOpacity={0.7}>
-          <Ionicons name="checkbox-outline" size={16} color={c.accent} />
-          <Text style={styles.tasksLinkText}>Tasks to Complete</Text>
-          {openTasks > 0 ? <View style={styles.tasksBadge}><Text style={styles.tasksBadgeText}>{openTasks}</Text></View> : <Ionicons name="checkmark-done" size={16} color={c.success} />}
-        </TouchableOpacity>
+        <View style={styles.belowBarRow}>
+          <TouchableOpacity onPress={() => setStatusOpen(true)} style={styles.statusInline} hitSlop={8} activeOpacity={0.7}>
+            <Text style={styles.statusInlineLabel}>Status: </Text>
+            <Text style={styles.statusInlineValue}>{claim.status}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity testID="icd-tasks-link" style={styles.tasksLink} onPress={() => setTab("tasks")} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }} activeOpacity={0.7}>
+            <Ionicons name="checkbox-outline" size={16} color={c.accent} />
+            <Text style={styles.tasksLinkText}>Tasks to Complete</Text>
+            {openTasks > 0 ? <View style={styles.tasksBadge}><Text style={styles.tasksBadgeText}>{openTasks}</Text></View> : <Ionicons name="checkmark-done" size={16} color={c.success} />}
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Single-column header facts */}
@@ -1149,6 +1152,10 @@ const styles = themedStyles((c) => ({
   progressLabel: { color: c.textMuted, fontSize: 10, fontWeight: "900", letterSpacing: 0.8, marginBottom: 2 },
   statusTop: { alignSelf: "center", marginBottom: 6, paddingVertical: 2, paddingHorizontal: 10 },
   statusTopText: { color: c.accent, fontSize: 16, fontWeight: "900", letterSpacing: 0.5, textAlign: "center" },
+  belowBarRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: 6 },
+  statusInline: { flexDirection: "row", alignItems: "center" },
+  statusInlineLabel: { color: c.textMuted, fontSize: 12, fontWeight: "700" },
+  statusInlineValue: { color: c.textPrimary, fontSize: 12, fontWeight: "500" },
   factsCol: { paddingHorizontal: 16, paddingTop: 4, gap: 4 },
 
   // header facts
