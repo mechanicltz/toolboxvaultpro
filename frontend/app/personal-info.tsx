@@ -158,7 +158,7 @@ export default function PersonalInfoScreen() {
           </View>
 
           {/* ONE static skinned panel — content driven by the toggle + edit mode */}
-          <SkinPlate style={styles.panel} padX={14} padTop={10} padBottom={10}>
+          <SkinPlate frame="window" style={styles.panel} padX={14} padTop={10} padBottom={10}>
             {section === "personal" ? (
               editing ? (
                 <>
