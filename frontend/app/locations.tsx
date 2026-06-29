@@ -521,7 +521,7 @@ const styles = themedStyles((c) => ({
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    paddingVertical: 12,
+    paddingVertical: 7,
     paddingRight: 8,
     borderBottomColor: c.borderSubtle,
     borderBottomWidth: 1,
@@ -529,7 +529,7 @@ const styles = themedStyles((c) => ({
   rowRoot: {
     paddingLeft: 14,
     borderBottomColor: c.accent,
-    marginTop: 10,
+    marginTop: 4,
   },
   rowChild: {
     backgroundColor: "transparent",
