@@ -40,7 +40,7 @@ export function SummaryHeader({
         {showPrices && (
           <Stat
             label="Total"
-            value={`$${(agg.total_value ?? 0).toFixed(2)}`}
+            value={fmtMoney(agg.total_value ?? 0)}
             color={theme.colors.accent}
           />
         )}
@@ -69,7 +69,7 @@ export function SummaryHeader({
                 color={healthActive ? theme.colors.bg : theme.colors.accent}
               />
               <Text style={[styles.actionBtnText, healthActive && styles.actionBtnTextActive]}>
-                {healthActive ? "Health Check: On" : "Inventory Health Check"}
+                {healthActive ? "Health Check: On" : "Health Check"}
               </Text>
             </TouchableOpacity>
           )}
@@ -88,6 +88,15 @@ export function SummaryHeader({
       )}
     </View>
   );
+}
+
+function fmtMoney(n: number): string {
+  const v = n || 0;
+  if (v >= 1_000_000) return `$${(v / 1_000_000).toFixed(1)}M`;
+  if (v >= 100_000) return `$${Math.round(v / 1000)}k`;
+  if (v >= 10_000) return `$${(v / 1000).toFixed(1)}k`;
+  if (v >= 1000) return `$${(v / 1000).toFixed(2)}k`;
+  return `$${Math.round(v)}`;
 }
 
 function Stat({ label, value, color }: { label: string; value: string; color?: string }) {
