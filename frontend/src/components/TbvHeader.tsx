@@ -22,6 +22,10 @@ import {
 import { APP_VERSION_LABEL } from "../version";
 import { useSkin } from "../themeContext";
 
+// Plain + Light theme wordmark (transparent, trimmed). Aspect = 1536 / 570.
+const LIGHT_LOGO_SRC = require("../../assets/light-header-logo.png");
+const LIGHT_LOGO_ASPECT = 1536 / 570;
+
 export function TbvHeader({
   style,
   showVersion = true,
@@ -33,9 +37,35 @@ export function TbvHeader({
 }) {
   const [w, setW] = useState(0);
   const h = w > 0 ? w / HEADER_ASPECT : 0;
-  const { industrialVariant } = useSkin();
+  const { skin, mode, industrialVariant } = useSkin();
   const src = HEADER_SRC_BY_COLOR[industrialVariant] ?? HEADER_SRC_BY_COLOR.orange;
   const vaultColor = HEADER_VAULT_COLOR_BY_COLOR[industrialVariant] ?? HEADER_VAULT_ORANGE;
+
+  // Plain + Light theme: use the trimmed transparent "TOOLBOX VAULT" wordmark
+  // image instead of the metal nameplate art used by every other skin.
+  const useLightLogo = skin === "plain" && mode === "light";
+  if (useLightLogo) {
+    const lh = w > 0 ? w / LIGHT_LOGO_ASPECT : 0;
+    return (
+      <View
+        style={[{ width: "100%", alignItems: "center" }, style]}
+        testID={testID}
+        onLayout={(e) => {
+          const nw = e.nativeEvent.layout.width;
+          if (Math.abs(nw - w) > 0.5) setW(nw);
+        }}
+      >
+        {w > 0 ? (
+          <Image
+            source={LIGHT_LOGO_SRC}
+            style={{ width: w, height: lh }}
+            resizeMode="contain"
+            fadeDuration={0}
+          />
+        ) : null}
+      </View>
+    );
+  }
 
   return (
     <View
