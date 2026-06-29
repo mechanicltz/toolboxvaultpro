@@ -91,9 +91,9 @@ export function SkinPlate({
     // (frameScale = 1 here): plate = 46 L/R · 12 T/B; window = 38 L/R · 32/34
     // T/B. We add ~8–12pt of clearance beyond each rail and enforce it as a
     // minimum, so no screen can under-pad and crowd the frame.
-    const railX = frame === "window" ? 48 : 54;
-    const railTop = frame === "window" ? 42 : 24;
-    const railBottom = frame === "window" ? 44 : 26;
+    const railX = frame === "window" ? 38 : 44;
+    const railTop = frame === "window" ? 28 : 14;
+    const railBottom = frame === "window" ? 30 : 16;
     const px = Math.max(padX ?? railX, railX);
     const pt = Math.max(padTop ?? railTop, railTop);
     const pb = Math.max(padBottom ?? railBottom, railBottom);

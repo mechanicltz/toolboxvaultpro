@@ -115,6 +115,15 @@ export function TbvListPanel({
   const sMidW = SW - cl - cr;
   const sMidH = SH - ct - cb;
 
+  // Thick iron frames (frameScale undefined / >= 1) have heavy rails; enforce a
+  // minimum content inset so list rows clear the metal border (matches the
+  // dashboard's window-frame padding). No-op for thin Steel frames (scale < 1),
+  // whose callers already pass adequate padding.
+  const thick = frameScale === undefined || frameScale >= 1;
+  const floorX = thick ? 28 : 0;
+  const floorTop = thick ? 22 : 0;
+  const floorBottom = thick ? 16 : 0;
+
   return (
     <View
       style={[{ overflow: "hidden" }, style]}
@@ -148,7 +157,7 @@ export function TbvListPanel({
         />
       )}
 
-      <View style={{ flex: 1, paddingHorizontal: padX, paddingTop: padTop, paddingBottom: padBottom }}>
+      <View style={{ flex: 1, paddingHorizontal: Math.max(padX, floorX), paddingTop: Math.max(padTop, floorTop), paddingBottom: Math.max(padBottom, floorBottom) }}>
         {children}
       </View>
     </View>

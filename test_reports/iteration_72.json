@@ -1,0 +1,31 @@
+{
+  "summary": "Iteration 72 — Frontend-only Playwright + visual review of the redesigned Personal Info page (single-panel toggle) + Locations no-regression sweep. ALL 7 functional checks PASS. Verified live against the preview tunnel (ryan@ryan.com / ryan1234, token-stored login). Notable Playwright quirk: page.click() / page.mouse.click() do NOT trigger React Native Web TouchableOpacity onPress because RNW listens on pointerdown — must dispatch a PointerEvent(pointerdown)+pointerup+click. With that, all interactions work. Visual screenshots confirm: (a) Personal Details shows ONE skinned panel with two segmented buttons 'PERSONAL INFO' / 'INSURANCE INFO' at top — separate CONTACT/ADDRESS/INSURANCE cards are GONE. (b) Default state shows personal info read-only (TYPE, COMPANY NAME, PHONE, EMAIL, STREET, APT, CITY, STATE, ZIP, COUNTRY). (c) Tapping INSURANCE INFO swaps the same panel to show Insurance Co. / Policy # / Notes only. (d) Tapping EDIT INFORMATION switches that panel to editable fields for the active section: personal section → pi-name + pi-is-company + address/phone fields; insurance section → pi-ins-co + pi-policy + pi-notes ONLY (no personal fields leak in). (e) SAVE persists to the backend (verified by GET /api/personal-profile returning the test value 'TESTCO_<ts>'). (f) CANCEL discards and returns to read-only. (g) Locations screen: parent rows BOLD with orange accent border, children indented, single ⋯ ellipsis-vertical kebab per row, action modal opens with Add sub-location / Rename / Move to… / Delete; rows have NO black filled backgrounds (rowChild backgroundColor 'transparent', verified visually on Iron Forge metal panel). Dashboard loads cleanly. The font-gate preview issue is real (multiple screenshots came back fully black during transitions, fonts only finalized after a 10–12s wait) but does not impact functionality.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/test_reports/iteration_72.json"
+  ],
+  "action_items": [
+    "(Optional) Document in CONTRIBUTING/test docs that future Playwright tests against RNW TouchableOpacity must dispatch PointerEvent('pointerdown')+pointerup+click — page.click() alone is silently ignored by RNW's responder system. This bit the prior agents too.",
+    "(Carry-over from iter 71, not re-verified here) PillRow.pillRowValueText in /app/frontend/app/claim/[id].tsx still fontWeight '800'; spec asks 400/500. Out of scope this iteration but still open."
+  ],
+  "critical_code_review_comments": [
+    "personal-info.tsx single-panel rewrite is clean: one SkinPlate, one `section` toggle, one `editing` toggle, four render branches (personal/view, personal/edit, insurance/view, insurance/edit). Field/InfoRow factories keep the JSX terse.",
+    "save() correctly forces email = user.email (centralized login email) before PUT — matches existing #32 invariant.",
+    "Cancel calls load() which re-fetches the profile AND resets `editing` based on whether name is set — but does NOT reset `section`. That is correct (verified: after editing on Insurance, cancelling, the panel remains on Insurance). Good UX continuity.",
+    "Locations rowChild has backgroundColor:'transparent' (line 535) and rowText/rowTextRoot weights are correct ('800' for roots). The black-background regression has been removed.",
+    "TbvListPanel iron-only floor (padX>=28, padTop>=22, padBottom>=16) only applies when frameScale undefined/>=1 (line 122-125). Steel frames untouched — surgical fix, no dashboard over-padding."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "n/a (frontend-only)", "frontend": "100% (7/7 functional checks PASS)"},
+  "seed_data_creation": "Briefly mutated city + insurance_company on ryan@ryan.com's profile during save-persistence tests; both restored to original values (Houston / 'Acme Mutual Insurance') after each.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "1) Login: POST /api/auth/login with ryan@ryan.com/ryan1234, response field is 'token' (and 'user'). Store under localStorage keys 'tt.auth.token', 'token' (the API helper reads 'token'). 2) Font-gate: the preview tunnel intermittently strips webfonts; after page.goto('/personal-info') wait at least 10–12s before asserting body.innerText. 3) RNW TouchableOpacity tap helper (REQUIRED): dispatch PointerEvent('pointerdown')+PointerEvent('pointerup')+MouseEvent('click') on the element — page.click()/mouse.click() WILL silently no-op on RNW responder elements. Pattern: ```await page.evaluate(`(()=>{const el=document.querySelector(sel);const r=el.getBoundingClientRect();const o={bubbles:true,cancelable:true,clientX:r.x+r.width/2,clientY:r.y+r.height/2,pointerType:'mouse',pointerId:1,isPrimary:true,button:0};el.dispatchEvent(new PointerEvent('pointerdown',o));el.dispatchEvent(new PointerEvent('pointerup',o));el.dispatchEvent(new MouseEvent('click',o));})()`)```. 4) Personal Info testIDs: pi-seg-personal, pi-seg-insurance, pi-edit, pi-save, pi-cancel, pi-name, pi-address, pi-city, pi-state, pi-zip, pi-country, pi-phone, pi-is-company, pi-ins-co, pi-policy, pi-notes, pi-edit-change-email. 5) Locations testIDs: add-root-btn, loc-menu-<id>, loc-action-{add|rename|move|delete}, new-loc-input, save-loc-btn, edit-loc-input, save-rename-btn, move-to-root, move-to-<id>, expand-<id>.",
+  "rca_of_issue": "No app-side issue found this iteration — all 4 PI flows + locations no-regression sweep pass. The transient '/api/personal-profile returns 401' console errors at app boot are pre-auth fetches (the layout fires public endpoints during font-gate before the bearer token is attached) and resolve once the token mounts; they do not impact UX."
+}

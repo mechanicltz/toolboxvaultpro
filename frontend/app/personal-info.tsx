@@ -1,8 +1,7 @@
-import { useEffect, useState, useCallback } from "react";
+import { useState, useCallback } from "react";
 import {
   View,
   Text,
-  StyleSheet,
   ScrollView,
   TouchableOpacity,
   TextInput,
@@ -65,6 +64,8 @@ export default function PersonalInfoScreen() {
   const [saving, setSaving] = useState(false);
   // #16: default to a READ-ONLY view. Tapping EDIT switches to the form.
   const [editing, setEditing] = useState(false);
+  // Single-panel section toggle: "personal" vs "insurance" info.
+  const [section, setSection] = useState<"personal" | "insurance">("personal");
 
   const load = useCallback(async () => {
     try {
@@ -139,201 +140,111 @@ export default function PersonalInfoScreen() {
           contentContainerStyle={{ padding: 18, paddingBottom: 140 }}
           keyboardShouldPersistTaps="handled"
         >
-          {!editing && (
-            <>
-              <SkinPlate style={styles.viewCard} padX={12} padTop={4} padBottom={4}>
-                <InfoRow
-                  label="Type"
-                  value={form.is_company ? "Company Entity" : "Individual"}
-                />
-                <InfoRow
-                  label={form.is_company ? "Company Name" : "Full Name"}
-                  value={form.name}
-                  last
-                />
-              </SkinPlate>
+          {/* Two-button segmented toggle — switches the single panel's content */}
+          <View style={styles.segRow}>
+            {(["personal", "insurance"] as const).map((s) => (
+              <TouchableOpacity
+                key={s}
+                testID={`pi-seg-${s}`}
+                style={[styles.segBtn, section === s && styles.segBtnActive]}
+                onPress={() => setSection(s)}
+                activeOpacity={0.85}
+              >
+                <Text style={[styles.segText, section === s && styles.segTextActive]}>
+                  {s === "personal" ? "PERSONAL INFO" : "INSURANCE INFO"}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
 
-              <Text style={styles.viewSection}>CONTACT</Text>
-              <SkinPlate style={styles.viewCard} padX={12} padTop={4} padBottom={4}>
-                <InfoRow
-                  label="Phone"
-                  value={form.phone ? formatPhone(form.phone) : ""}
-                />
-                <InfoRow label="Email" value={user?.email || form.email} last />
-              </SkinPlate>
+          {/* ONE static skinned panel — content driven by the toggle + edit mode */}
+          <SkinPlate style={styles.panel} padX={14} padTop={10} padBottom={10}>
+            {section === "personal" ? (
+              editing ? (
+                <>
+                  <View style={styles.toggleRow}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.toggleLabel}>
+                        {form.is_company ? "COMPANY ENTITY" : "INDIVIDUAL"}
+                      </Text>
+                      <Text style={styles.toggleHint}>
+                        Toggle if this profile is for a business / company instead of a person.
+                      </Text>
+                    </View>
+                    <AppSwitch
+                      testID="pi-is-company"
+                      value={form.is_company}
+                      onValueChange={(v) => update("is_company", v)}
+                      trackColor={{ false: theme.colors.surface, true: theme.colors.accent }}
+                      thumbColor="#fff"
+                    />
+                  </View>
 
-
-              <Text style={styles.viewSection}>ADDRESS</Text>
-              <SkinPlate style={styles.viewCard} padX={12} padTop={4} padBottom={4}>
-                <InfoRow label="Street" value={form.address} />
-                {!!form.address2 && (
-                  <InfoRow label="Apt / Suite" value={form.address2} />
-                )}
-                <InfoRow label="City" value={form.city} />
-                <InfoRow label="State" value={form.state} />
-                <InfoRow label="Zip / Postal" value={form.zip_code} />
-                <InfoRow label="Country" value={form.country} last />
-              </SkinPlate>
-
-              <Text style={styles.viewSection}>INSURANCE</Text>
-              <SkinPlate style={styles.viewCard} padX={12} padTop={4} padBottom={4}>
+                  <Field label={form.is_company ? "Company Name" : "Full Name"} value={form.name} onChange={(v) => update("name", v)} testID="pi-name" required />
+                  <Field label="Street Address" value={form.address} onChange={(v) => update("address", v)} testID="pi-address" placeholder="123 Main St" />
+                  <Field label="Apt / Suite (optional)" value={form.address2} onChange={(v) => update("address2", v)} testID="pi-address2" placeholder="Unit 4B" />
+                  <View style={{ flexDirection: "row", gap: 10 }}>
+                    <View style={{ flex: 2 }}>
+                      <Field label="City" value={form.city} onChange={(v) => update("city", v)} testID="pi-city" />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Field label="State" value={form.state} onChange={(v) => update("state", v)} testID="pi-state" placeholder="CA" />
+                    </View>
+                  </View>
+                  <View style={{ flexDirection: "row", gap: 10 }}>
+                    <View style={{ flex: 1 }}>
+                      <Field label="Zip / Postal Code" value={form.zip_code} onChange={(v) => update("zip_code", v)} testID="pi-zip" keyboardType="numbers-and-punctuation" />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Field label="Country" value={form.country} onChange={(v) => update("country", v)} testID="pi-country" placeholder="USA" />
+                    </View>
+                  </View>
+                  <Field
+                    label="Phone"
+                    value={formatPhone(form.phone)}
+                    onChange={(v) => update("phone", String(v || "").replace(/\D/g, "").slice(0, 10))}
+                    testID="pi-phone"
+                    keyboardType="phone-pad"
+                    placeholder="555-555-5555"
+                  />
+                  <Text style={styles.lockedLabel}>EMAIL (LOGIN)</Text>
+                  <View style={styles.lockedRow}>
+                    <Text style={styles.lockedEmail} numberOfLines={1}>{user?.email || form.email || "—"}</Text>
+                    <Ionicons name="lock-closed" size={14} color={theme.colors.textMuted} />
+                  </View>
+                  <TouchableOpacity testID="pi-edit-change-email" onPress={() => router.push("/change-email")} style={styles.changeEmailInline} activeOpacity={0.8}>
+                    <Text style={styles.changeEmailInlineText}>Change Login Email</Text>
+                    <Ionicons name="chevron-forward" size={14} color={theme.colors.accent} />
+                  </TouchableOpacity>
+                </>
+              ) : (
+                <>
+                  <InfoRow label="Type" value={form.is_company ? "Company Entity" : "Individual"} />
+                  <InfoRow label={form.is_company ? "Company Name" : "Full Name"} value={form.name} />
+                  <InfoRow label="Phone" value={form.phone ? formatPhone(form.phone) : ""} />
+                  <InfoRow label="Email" value={user?.email || form.email} />
+                  <InfoRow label="Street" value={form.address} />
+                  {!!form.address2 && <InfoRow label="Apt / Suite" value={form.address2} />}
+                  <InfoRow label="City" value={form.city} />
+                  <InfoRow label="State" value={form.state} />
+                  <InfoRow label="Zip / Postal" value={form.zip_code} />
+                  <InfoRow label="Country" value={form.country} last />
+                </>
+              )
+            ) : editing ? (
+              <>
+                <Field label="Insurance Company" value={form.insurance_company} onChange={(v) => update("insurance_company", v)} testID="pi-ins-co" placeholder="State Farm" />
+                <Field label="Policy Number" value={form.policy_number} onChange={(v) => update("policy_number", v)} testID="pi-policy" placeholder="ABC-12345" />
+                <Field label="Notes" value={form.notes} onChange={(v) => update("notes", v)} testID="pi-notes" multiline placeholder="Anything extra to include on reports..." />
+              </>
+            ) : (
+              <>
                 <InfoRow label="Insurance Co." value={form.insurance_company} />
                 <InfoRow label="Policy #" value={form.policy_number} />
                 <InfoRow label="Notes" value={form.notes} last />
-              </SkinPlate>
-            </>
-          )}
-
-          {editing && (
-          <>
-          <View style={styles.toggleRow}>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.toggleLabel}>
-                {form.is_company ? "COMPANY ENTITY" : "INDIVIDUAL"}
-              </Text>
-              <Text style={styles.toggleHint}>
-                Toggle if this profile is for a business / company instead of a
-                person.
-              </Text>
-            </View>
-            <AppSwitch
-              testID="pi-is-company"
-              value={form.is_company}
-              onValueChange={(v) => update("is_company", v)}
-              trackColor={{
-                false: theme.colors.surface,
-                true: theme.colors.accent,
-              }}
-              thumbColor="#fff"
-            />
-          </View>
-
-          <Field
-            label={form.is_company ? "Company Name" : "Full Name"}
-            value={form.name}
-            onChange={(v) => update("name", v)}
-            testID="pi-name"
-            required
-          />
-
-          <Field
-            label="Street Address"
-            value={form.address}
-            onChange={(v) => update("address", v)}
-            testID="pi-address"
-            placeholder="123 Main St"
-          />
-
-          <Field
-            label="Apt / Suite (optional)"
-            value={form.address2}
-            onChange={(v) => update("address2", v)}
-            testID="pi-address2"
-            placeholder="Unit 4B"
-          />
-
-          <View style={{ flexDirection: "row", gap: 10 }}>
-            <View style={{ flex: 2 }}>
-              <Field
-                label="City"
-                value={form.city}
-                onChange={(v) => update("city", v)}
-                testID="pi-city"
-              />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Field
-                label="State"
-                value={form.state}
-                onChange={(v) => update("state", v)}
-                testID="pi-state"
-                placeholder="CA"
-              />
-            </View>
-          </View>
-
-          <View style={{ flexDirection: "row", gap: 10 }}>
-            <View style={{ flex: 1 }}>
-              <Field
-                label="Zip / Postal Code"
-                value={form.zip_code}
-                onChange={(v) => update("zip_code", v)}
-                testID="pi-zip"
-                keyboardType="numbers-and-punctuation"
-              />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Field
-                label="Country"
-                value={form.country}
-                onChange={(v) => update("country", v)}
-                testID="pi-country"
-                placeholder="USA"
-              />
-            </View>
-          </View>
-
-          <Field
-            label="Phone"
-            value={formatPhone(form.phone)}
-            onChange={(v) => {
-              // Keep only digits (max 10) so the stored value is canonical.
-              const digits = String(v || "").replace(/\D/g, "").slice(0, 10);
-              update("phone", digits);
-            }}
-            testID="pi-phone"
-            keyboardType="phone-pad"
-            placeholder="555-555-5555"
-          />
-
-          {/* #32 — Email is locked to the account login. It can only be
-              changed through the secure Change Login Email flow. */}
-          <Text style={styles.lockedLabel}>EMAIL (LOGIN)</Text>
-          <View style={styles.lockedRow}>
-            <Text style={styles.lockedEmail} numberOfLines={1}>
-              {user?.email || form.email || "—"}
-            </Text>
-            <Ionicons name="lock-closed" size={14} color={theme.colors.textMuted} />
-          </View>
-          <TouchableOpacity
-            testID="pi-edit-change-email"
-            onPress={() => router.push("/change-email")}
-            style={styles.changeEmailInline}
-            activeOpacity={0.8}
-          >
-            <Text style={styles.changeEmailInlineText}>Change Login Email</Text>
-            <Ionicons name="chevron-forward" size={14} color={theme.colors.accent} />
-          </TouchableOpacity>
-
-          <View style={styles.divider} />
-          <Text style={styles.sectionTitle}>INSURANCE (OPTIONAL)</Text>
-
-          <Field
-            label="Insurance Company"
-            value={form.insurance_company}
-            onChange={(v) => update("insurance_company", v)}
-            testID="pi-ins-co"
-            placeholder="State Farm"
-          />
-
-          <Field
-            label="Policy Number"
-            value={form.policy_number}
-            onChange={(v) => update("policy_number", v)}
-            testID="pi-policy"
-            placeholder="ABC-12345"
-          />
-
-          <Field
-            label="Notes"
-            value={form.notes}
-            onChange={(v) => update("notes", v)}
-            testID="pi-notes"
-            multiline
-            placeholder="Anything extra to include on reports..."
-          />
-          </>
-          )}
+              </>
+            )}
+          </SkinPlate>
         </ScrollView>
       </KeyboardAvoidingView>
 
@@ -464,6 +375,36 @@ const styles = themedStyles((c) => ({
   viewCard: {
     marginTop: 6,
     marginBottom: 2,
+  },
+  segRow: {
+    flexDirection: "row",
+    gap: 8,
+    marginBottom: 14,
+  },
+  segBtn: {
+    flex: 1,
+    paddingVertical: 11,
+    borderRadius: theme.radii?.md ?? 8,
+    borderWidth: 1,
+    borderColor: c.border,
+    alignItems: "center",
+    backgroundColor: c.bgSecondary,
+  },
+  segBtnActive: {
+    backgroundColor: c.accent,
+    borderColor: c.accent,
+  },
+  segText: {
+    color: c.textSecondary,
+    fontSize: 10,
+    fontWeight: "900",
+    letterSpacing: 1,
+  },
+  segTextActive: {
+    color: "#000",
+  },
+  panel: {
+    marginTop: 2,
   },
   viewSection: {
     color: c.accent,
