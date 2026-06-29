@@ -756,7 +756,10 @@ export default function InventoryScreen() {
             style={styles.summaryHandleBtn}
             activeOpacity={0.75}
           >
-            <Ionicons name="filter" size={15} color="#FFFFFF" />
+            <Ionicons name="filter" size={15} color={isIndustrial ? "#FFFFFF" : theme.colors.accent} />
+            {!isIndustrial && (
+              <Ionicons name={summaryOpen ? "chevron-up" : "chevron-down"} size={14} color={theme.colors.accent} />
+            )}
           </TouchableOpacity>
         </View>
       </View>
@@ -2020,9 +2023,12 @@ const styles = themedStyles((c) => ({
   // Visible accordion button (filter "3-lines" icon) centered on the panel
   // bottom, over the orange glow.
   summaryHandleBtn: {
-    width: 42, height: 22,
+    minWidth: 42, height: 22,
+    flexDirection: "row",
+    gap: 3,
     alignItems: "center", justifyContent: "center",
     backgroundColor: "transparent",
+    paddingHorizontal: 8,
   },
   // Plain-theme expandable search container (column; grows to hold the summary).
   searchBoxCol: {

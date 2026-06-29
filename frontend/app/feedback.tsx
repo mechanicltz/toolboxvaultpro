@@ -208,6 +208,19 @@ export default function FeedbackScreen() {
             as soon as possible.
           </Text>
 
+          <TouchableOpacity
+            testID="feedback-check-known-bugs"
+            style={styles.knownBugsLink}
+            onPress={() => router.push("/upcoming-features")}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="search-outline" size={16} color={theme.colors.accent} />
+            <Text style={styles.knownBugsText}>
+              Check known bugs — see if it&apos;s already reported
+            </Text>
+            <Ionicons name="chevron-forward" size={16} color={theme.colors.accent} />
+          </TouchableOpacity>
+
           {/* Name */}
           <Text style={styles.label}>NAME</Text>
           <TextInput
@@ -428,6 +441,23 @@ const styles = themedStyles((c) => ({
     fontSize: 10,
     lineHeight: 14,
     marginBottom: 18,
+  },
+  knownBugsLink: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingVertical: 11,
+    paddingHorizontal: 12,
+    borderWidth: 1,
+    borderColor: c.accent,
+    borderRadius: theme.radii.md,
+    marginBottom: 18,
+  },
+  knownBugsText: {
+    color: c.accent,
+    fontSize: 11,
+    fontWeight: "800",
+    flex: 1,
   },
   label: {
     color: c.accent,

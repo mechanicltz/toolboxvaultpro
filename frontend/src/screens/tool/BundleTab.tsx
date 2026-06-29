@@ -7,6 +7,7 @@ import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
 import { theme } from "../../theme";
+import { themedStyles } from "../../themeContext";
 import { api } from "../../api";
 import { AppImage } from "../../components/AppImage";
 import { PillButton } from "../../components/PillButton";
@@ -347,40 +348,40 @@ function ExpansionParent({ expansionOf, boxStyle }: { expansionOf: string; boxSt
   );
 }
 
-const s = StyleSheet.create({
+const s = themedStyles((c) => ({
   headerRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 10 },
-  sectionLabel: { color: theme.colors.textPrimary, fontSize: 11, fontWeight: "900", letterSpacing: 1.5 },
-  empty: { color: theme.colors.textMuted, fontSize: 12, lineHeight: 18 },
-  muted: { color: theme.colors.textSecondary, fontSize: 12, textAlign: "center" },
-  row: { flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 8, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: theme.colors.border },
-  rowName: { color: theme.colors.textPrimary, fontSize: 13, fontWeight: "700" },
-  rowSub: { color: theme.colors.textMuted, fontSize: 11, marginTop: 2 },
+  sectionLabel: { color: c.textPrimary, fontSize: 11, fontWeight: "900", letterSpacing: 1.5 },
+  empty: { color: c.textMuted, fontSize: 12, lineHeight: 18 },
+  muted: { color: c.textSecondary, fontSize: 12, textAlign: "center" },
+  row: { flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 8, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: c.border },
+  rowName: { color: c.textPrimary, fontSize: 13, fontWeight: "700" },
+  rowSub: { color: c.textMuted, fontSize: 11, marginTop: 2 },
   thumb: { width: 38, height: 38, borderRadius: 6 },
-  thumbEmpty: { backgroundColor: theme.colors.surfaceAlt, borderWidth: 1, borderColor: theme.colors.border, alignItems: "center", justifyContent: "center" },
+  thumbEmpty: { backgroundColor: c.surfaceAlt, borderWidth: 1, borderColor: c.border, alignItems: "center", justifyContent: "center" },
   iconBtn: { padding: 6 },
-  totalsWrap: { marginTop: 12, borderTopWidth: 1, borderTopColor: theme.colors.border, paddingTop: 10, gap: 6 },
+  totalsWrap: { marginTop: 12, borderTopWidth: 1, borderTopColor: c.border, paddingTop: 10, gap: 6 },
   totalRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  totalLabel: { color: theme.colors.textMuted, fontSize: 12 },
-  totalVal: { color: theme.colors.textPrimary, fontSize: 12, fontWeight: "700" },
-  totalRowGrand: { marginTop: 4, borderTopWidth: 1, borderTopColor: theme.colors.border, paddingTop: 8 },
-  totalLabelGrand: { color: theme.colors.textPrimary, fontSize: 12, fontWeight: "900", letterSpacing: 1 },
-  totalValGrand: { color: theme.colors.accent, fontSize: 15, fontWeight: "900" },
+  totalLabel: { color: c.textMuted, fontSize: 12 },
+  totalVal: { color: c.textPrimary, fontSize: 12, fontWeight: "700" },
+  totalRowGrand: { marginTop: 4, borderTopWidth: 1, borderTopColor: c.border, paddingTop: 8 },
+  totalLabelGrand: { color: c.textPrimary, fontSize: 12, fontWeight: "900", letterSpacing: 1 },
+  totalValGrand: { color: c.accent, fontSize: 15, fontWeight: "900" },
   // modal
   modalBg: { flex: 1, backgroundColor: "rgba(0,0,0,0.7)", justifyContent: "flex-end" },
-  modalCard: { backgroundColor: theme.colors.surface, borderTopLeftRadius: 18, borderTopRightRadius: 18, padding: 18, paddingBottom: Platform.OS === "ios" ? 32 : 18 },
-  modalTitle: { color: theme.colors.textPrimary, fontSize: 14, fontWeight: "900", letterSpacing: 1.5, marginBottom: 14 },
-  fieldLabel: { color: theme.colors.textMuted, fontSize: 10, fontWeight: "800", letterSpacing: 1, marginTop: 12, marginBottom: 6 },
-  input: { backgroundColor: theme.colors.surfaceAlt, borderWidth: 1, borderColor: theme.colors.border, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10, color: theme.colors.textPrimary, fontSize: 14 },
+  modalCard: { backgroundColor: c.surface, borderTopLeftRadius: 18, borderTopRightRadius: 18, padding: 18, paddingBottom: Platform.OS === "ios" ? 32 : 18 },
+  modalTitle: { color: c.textPrimary, fontSize: 14, fontWeight: "900", letterSpacing: 1.5, marginBottom: 14 },
+  fieldLabel: { color: c.textMuted, fontSize: 10, fontWeight: "800", letterSpacing: 1, marginTop: 12, marginBottom: 6 },
+  input: { backgroundColor: c.surfaceAlt, borderWidth: 1, borderColor: c.border, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10, color: c.textPrimary, fontSize: 14 },
   photoPick: { alignSelf: "center", marginBottom: 4 },
   photoPickImg: { width: 90, height: 90, borderRadius: 10 },
-  photoPickEmpty: { width: 110, height: 90, borderRadius: 10, borderWidth: 1, borderColor: theme.colors.border, backgroundColor: theme.colors.surfaceAlt, alignItems: "center", justifyContent: "center", gap: 4 },
-  photoPickText: { color: theme.colors.textMuted, fontSize: 9, fontWeight: "700", letterSpacing: 0.5 },
-  searchWrap: { flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: theme.colors.surfaceAlt, borderWidth: 1, borderColor: theme.colors.border, borderRadius: 8, paddingHorizontal: 12, marginBottom: 10 },
-  searchInput: { flex: 1, color: theme.colors.textPrimary, fontSize: 14, paddingVertical: 10 },
-  btnGhost: { flex: 1, alignItems: "center", justifyContent: "center", paddingVertical: 12, borderRadius: 8, borderWidth: 1, borderColor: theme.colors.border },
-  btnGhostText: { color: theme.colors.textPrimary, fontWeight: "800", fontSize: 13, letterSpacing: 1 },
-  btnPrimary: { flex: 1, alignItems: "center", justifyContent: "center", paddingVertical: 12, borderRadius: 8, backgroundColor: theme.colors.accent },
+  photoPickEmpty: { width: 110, height: 90, borderRadius: 10, borderWidth: 1, borderColor: c.border, backgroundColor: c.surfaceAlt, alignItems: "center", justifyContent: "center", gap: 4 },
+  photoPickText: { color: c.textMuted, fontSize: 9, fontWeight: "700", letterSpacing: 0.5 },
+  searchWrap: { flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: c.surfaceAlt, borderWidth: 1, borderColor: c.border, borderRadius: 8, paddingHorizontal: 12, marginBottom: 10 },
+  searchInput: { flex: 1, color: c.textPrimary, fontSize: 14, paddingVertical: 10 },
+  btnGhost: { flex: 1, alignItems: "center", justifyContent: "center", paddingVertical: 12, borderRadius: 8, borderWidth: 1, borderColor: c.border },
+  btnGhostText: { color: c.textPrimary, fontWeight: "800", fontSize: 13, letterSpacing: 1 },
+  btnPrimary: { flex: 1, alignItems: "center", justifyContent: "center", paddingVertical: 12, borderRadius: 8, backgroundColor: c.accent },
   btnPrimaryText: { color: "#000", fontWeight: "900", fontSize: 13, letterSpacing: 1 },
-});
+}));
 
 export default BundleTab;

@@ -194,7 +194,7 @@ export default function ClaimDetailScreen() {
             )}
 
             {!!claim.repair_cost && Number(claim.repair_cost) > 0 && (
-              <DetailRow label="REPAIR / REPLACEMENT COST">
+              <DetailRow label="REPAIR COST">
                 <Text style={styles.detCost}>${Number(claim.repair_cost).toFixed(2)}</Text>
               </DetailRow>
             )}
@@ -331,7 +331,7 @@ const styles = themedStyles((c) => ({
   detValueWrap: { flexDirection: "row", alignItems: "center", flexShrink: 1, justifyContent: "flex-end" },
   detValue: { color: c.textPrimary, fontSize: 13, fontWeight: "500", textAlign: "right" },
   detValueLink: { color: c.accent },
-  detCost: { color: c.textPrimary, fontSize: 17, fontWeight: "900" },
+  detCost: { color: c.danger, fontSize: 15, fontWeight: "500" },
   notesBlock: { paddingTop: 12 },
   notesText: { color: c.textPrimary, fontSize: 13, lineHeight: 19, marginTop: 6 },
 
