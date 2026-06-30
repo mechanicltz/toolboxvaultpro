@@ -2,7 +2,7 @@ import urllib.request, os
 from PIL import Image
 import numpy as np
 
-URL = "https://customer-assets.emergentagent.com/job_a0121ba9-37c3-4fd2-b731-5b968eacf685/artifacts/5aifdk40_light%20header.png"
+URL = "https://customer-assets.emergentagent.com/job_a0121ba9-37c3-4fd2-b731-5b968eacf685/artifacts/3s10ddqx_light%20header.png"
 OUT = "/app/frontend/assets/light-header-logo.png"
 os.makedirs(os.path.dirname(OUT), exist_ok=True)
 
