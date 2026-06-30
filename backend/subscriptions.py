@@ -56,10 +56,7 @@ def active_tools_query(owner_id: str) -> dict:
     """
     return {
         "owner_id": owner_id,
-        # Set/bundle containers (is_bundle) are "Sets", not regular tools, and
-        # don't consume a free-tier slot.
-        "is_bundle": {"$ne": True},
-        # not sold (missing field counts as not-sold)
+        # not sold (missing field counts as not-sold) — sold items are archived
         "is_sold": {"$ne": True},
         # not lost/stolen — lost_status is a dict when lost, None/absent otherwise
         "$and": [

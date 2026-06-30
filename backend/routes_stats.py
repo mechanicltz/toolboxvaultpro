@@ -165,7 +165,7 @@ def register_stats_routes(api_router: APIRouter) -> None:
 
         tools_facet_pipeline = [
             {"$facet": {
-                "total":         [{"$match": {"is_bundle": {"$ne": True}}}, {"$count": "n"}],
+                "total":         [{"$match": {"is_sold": {"$ne": True}}}, {"$count": "n"}],
                 "checked_out":   [{"$match": {"is_checked_out": True}}, {"$count": "n"}],
                 "consumables":   [{"$match": {"is_consumable": True}}, {"$count": "n"}],
                 "needs_repair":  [{"$match": {"needs_repair": True}}, {"$count": "n"}],
