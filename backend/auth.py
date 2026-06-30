@@ -11,7 +11,7 @@ from __future__ import annotations
 import os
 import uuid
 from datetime import datetime, timezone, timedelta
-from typing import Optional, List
+from typing import Optional
 
 import bcrypt
 import jwt

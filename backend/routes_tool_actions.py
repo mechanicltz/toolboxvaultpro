@@ -6,21 +6,17 @@ imports server (no cycle).
 """
 
 import logging
-import asyncio
 import uuid
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timezone
 from typing import List, Dict, Any, Optional
 
-from pydantic import BaseModel, Field
-from fastapi import APIRouter, HTTPException, Depends, Query
+from pydantic import BaseModel
+from fastapi import APIRouter, HTTPException
 
-from core import db, real_db, get_current_user, current_user_id_var
-from auth import User
-from helpers import build_tool_query, _validate_photo_payload
-import media
+from core import db
 from models import (
     now_iso, Tool, Document, CheckoutRequest, CheckoutRecord,
-    ReportLostRequest, LostStatus, RepairInfo,
+    ReportLostRequest, LostStatus,
 )
 
 logger = logging.getLogger("routes_tool_actions")

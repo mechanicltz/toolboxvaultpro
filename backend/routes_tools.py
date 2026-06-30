@@ -13,21 +13,19 @@ defined locally inside register_tools_routes(), and FastAPI must see the real
 class objects (not lazy string annotations) to treat them as request bodies.
 """
 
-import io
-import csv
 import logging
-from datetime import datetime, timezone, timedelta
+from datetime import datetime
 from typing import List, Dict, Any, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 from fastapi import APIRouter, HTTPException, Depends
 
-from core import db, real_db, get_current_user, current_user_id_var
+from core import db, real_db, get_current_user
 from auth import User
 from helpers import build_tool_query, _validate_photo_payload
 from routes_taxonomy import _ensure_brand_saved
 import media
-from models import now_iso, ToolCreate, ToolUpdate, Tool, Document, RepairInfo, Category, Location, Dealer, Tag, WarrantyClaim
+from models import now_iso, ToolCreate, ToolUpdate, Tool, RepairInfo, Category, Location, Dealer, Tag, WarrantyClaim
 
 logger = logging.getLogger("routes_tools")
 

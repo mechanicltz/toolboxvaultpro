@@ -7,24 +7,16 @@ module never imports server (no cycle).
 from __future__ import annotations
 
 import logging
-import asyncio
 from datetime import datetime, timezone, timedelta
 from typing import List, Dict, Any, Optional
 
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException
 
-from core import db, real_db, get_current_user, current_user_id_var
-import media
-import time
-from auth import User
-from helpers import _validate_photo_payload
+from core import db
 from models import (
     now_iso, Tool,
     MaintenanceSchedule, MaintenanceScheduleCreate, MaintenanceScheduleUpdate,
     ServiceEvent, ServiceEventCreate,
-    Bundle, BundleCreate, BundleUpdate,
-    WarrantyClaim, WarrantyClaimUpdate,
-    WishlistItem, WishlistItemCreate, WishlistItemUpdate,
 )
 
 logger = logging.getLogger("routes_maintenance")

@@ -29,13 +29,11 @@ from fastapi.responses import Response
 from pydantic import BaseModel, Field
 
 from reportlab.lib import colors
-from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
+from reportlab.lib.enums import TA_CENTER
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib.units import inch
 from reportlab.platypus import (
-    Image as RLImage,
-    KeepTogether,
     PageBreak,
     Paragraph,
     SimpleDocTemplate,
@@ -54,7 +52,6 @@ from reports import (
     _hr,
     _para,
     _styles,
-    HEADER_HEX,
     INK_HEX,
     TINT_HEX,
 )

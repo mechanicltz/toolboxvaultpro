@@ -326,9 +326,9 @@ class TestDemoAccountPhotoCoverage:
         assert found["gridfs"] > 0, f"inventory: expected gridfs urls, got {found}"
 
     def test_bundles_list(self, demo_token):
-        found, status = self._scan(demo_token, "/api/bundles")
-        # status 200 only — bundles may be empty on demo
-        assert status == 200, f"/api/bundles {status}"
+        # v3.2: sets/bundles live in the tools collection (is_bundle=true).
+        found, status = self._scan(demo_token, "/api/tools?is_bundle=true")
+        assert status == 200, f"/api/tools?is_bundle=true {status}"
         # base64 photos in bundles would indicate a missed migration; allow 0
         # (do not fail if 0 gridfs because bundles list may not include photos)
         assert found["base64"] == 0, f"bundles list returned base64 photos: {found}"

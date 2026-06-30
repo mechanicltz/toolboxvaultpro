@@ -19,7 +19,6 @@ from __future__ import annotations
 
 import asyncio
 import base64
-import gzip
 import io
 import json
 import logging
@@ -28,7 +27,7 @@ from datetime import datetime, timezone, timedelta
 from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Response
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 
 logger = logging.getLogger(__name__)

@@ -8,19 +8,12 @@ imports server (no cycle).
 import logging
 import asyncio
 from datetime import datetime, timezone, timedelta
-from typing import List, Dict, Any, Optional
+from typing import Optional
 
-from pydantic import BaseModel, Field
-from fastapi import APIRouter, HTTPException, Depends, Query
+from fastapi import APIRouter
 
-from core import db, real_db, get_current_user, current_user_id_var
-from auth import User
-from helpers import build_tool_query, _validate_photo_payload
-import media
-from models import (
-    now_iso, Tool, Document, CheckoutRequest, ReportLostRequest, LostStatus,
-    RepairInfo,
-)
+from core import db
+from helpers import build_tool_query
 
 logger = logging.getLogger("routes_stats")
 

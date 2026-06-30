@@ -45,11 +45,10 @@ import string
 import tarfile
 import zipfile
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
 import pyzipper
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
-from fastapi.responses import JSONResponse
 
 import backups  # reuse BACKUP_COLLECTIONS, _create_backup_doc, _human_size
 

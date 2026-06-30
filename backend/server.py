@@ -1,26 +1,19 @@
 from fastapi import FastAPI, APIRouter, HTTPException, Request, Depends
 from fastapi.responses import JSONResponse
-from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
-from motor.motor_asyncio import AsyncIOMotorClient
 import os
-import asyncio
-import time
 import logging
 from pathlib import Path
 from pydantic import BaseModel, Field
 from typing import List, Optional, Dict, Any
 import uuid
-import json
 import re
-from contextvars import ContextVar
 from datetime import datetime, timezone, timedelta
 
 from auth import (
     User,
     UserPublic,
     RegisterRequest,
-    LoginRequest,
     AuthResponse,
     hash_password,
     verify_password,
