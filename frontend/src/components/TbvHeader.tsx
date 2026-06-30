@@ -30,12 +30,10 @@ export function TbvHeader({
   style,
   showVersion = true,
   testID,
-  badgeCount = 0,
 }: {
   style?: StyleProp<ViewStyle>;
   showVersion?: boolean;
   testID?: string;
-  badgeCount?: number;
 }) {
   const [w, setW] = useState(0);
   const h = w > 0 ? w / HEADER_ASPECT : 0;
@@ -70,13 +68,6 @@ export function TbvHeader({
             {APP_VERSION_LABEL}
           </Text>
         ) : null}
-        {badgeCount > 0 ? (
-          <View style={styles.badgeDot} testID="tbv-header-badge">
-            <Text style={styles.badgeText} allowFontScaling={false}>
-              {badgeCount > 9 ? "9+" : badgeCount}
-            </Text>
-          </View>
-        ) : null}
       </View>
     );
   }
@@ -110,13 +101,6 @@ export function TbvHeader({
               {APP_VERSION_LABEL}
             </Text>
           ) : null}
-          {badgeCount > 0 ? (
-          <View style={styles.badgeDot} testID="tbv-header-badge">
-            <Text style={styles.badgeText} allowFontScaling={false}>
-              {badgeCount > 9 ? "9+" : badgeCount}
-            </Text>
-          </View>
-        ) : null}
         </View>
       ) : null}
     </View>
@@ -131,21 +115,6 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     letterSpacing: 0.3,
   },
-  badgeDot: {
-    position: "absolute",
-    top: 2,
-    right: 8,
-    minWidth: 18,
-    height: 18,
-    paddingHorizontal: 4,
-    borderRadius: 9,
-    backgroundColor: "#FF3B30",
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 2,
-    borderColor: "#FFFFFF",
-  },
-  badgeText: { color: "#fff", fontSize: 10, fontWeight: "900", lineHeight: 12 },
   lightVersion: {
     marginTop: 2,
     color: "#475569",

@@ -41,8 +41,7 @@ import { DemoBanner } from "../../src/components/DemoBanner";
 import { IndustrialBanner } from "../../src/components/IndustrialBanner";
 import { AddChooser } from "../../src/components/AddChooser";
 import { useSteelPanelFrame, STEEL_ROW, STEEL_ROW_LAST, STEEL_VALUE, STEEL_HEADER_WRAP } from "../../src/tbv/steel";
-import { TbvHeader } from "../../src/components/TbvHeader";
-import { useUpcomingBadge } from "../../src/upcomingBadge";import { TbvButton } from "../../src/components/TbvButton";
+import { TbvHeader } from "../../src/components/TbvHeader";import { TbvButton } from "../../src/components/TbvButton";
 import { useSubscriptionChange } from "../../src/subscriptionEvents";
 import { useAppResume } from "../../src/appLifecycle";
 
@@ -70,7 +69,6 @@ export default function HomeScreen() {
   const router = useRouter();
   const { prefs } = usePrefs();
   const { skin, metalStyle, appearance } = useSkin();
-  const upcomingNew = useUpcomingBadge();
   // Steel theme: dashboard swaps to the brushed-metal header, buttons & panels.
   const isSteel = metalStyle === "steel";
   // Plain + Light theme renders the transparent TOOLBOX VAULT wordmark header.
@@ -615,7 +613,7 @@ export default function HomeScreen() {
     return (
       <SafeAreaView style={styles.plainSafe} edges={["top"]}>
         {isPlainLight ? (
-          <TbvHeader testID="tbv-header" badgeCount={upcomingNew} />
+          <TbvHeader testID="tbv-header" />
         ) : (
           <IndustrialBanner title="DASHBOARD" />
         )}
@@ -806,10 +804,10 @@ export default function HomeScreen() {
         {/* Unified nameplate header. Steel theme swaps in the brushed-metal
             TOOLBOX VAULT nameplate; all other themes keep the standard banner. */}
         {isPlainLight ? (
-          <TbvHeader testID="tbv-header" badgeCount={upcomingNew} />
+          <TbvHeader testID="tbv-header" />
         ) : isSteel ? (
           <View style={STEEL_HEADER_WRAP}>
-            <TbvHeader testID="tbv-header" badgeCount={upcomingNew} />
+            <TbvHeader testID="tbv-header" />
           </View>
         ) : (
           <IndustrialBanner title="DASHBOARD" />
