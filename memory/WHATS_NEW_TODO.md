@@ -1,4 +1,11 @@
-# TODO before public launch — "What's New" popup
+# DONE — "What's New" popup (v3.1.5)
+
+Implemented in src/components/WhatsNewModal.tsx, mounted on the dashboard
+(both plain + industrial branches). One-time, version-stamped flag
+`tbv_whatsnew_seen_${APP_VERSION}` in AsyncStorage. Shows once on first launch
+after update, dismiss → never again. No reopen entry point (per user). Themed
+across all skins. 13 curated items. Version bumped to 3.1.5 (iOS build 29,
+Android versionCode 215). Steel is now the default theme for new users.
 
 Build a **"What's New" popup/modal** that shows to users on first launch after an
 update. It should list, as simple bullet points, everything that has changed /

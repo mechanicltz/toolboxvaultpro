@@ -38,6 +38,7 @@ import { ShadowBox, ShadowBoxSubCard } from "../../src/components/ShadowBox";
 import ReportBugBadge from "../../src/components/ReportBugBadge";
 import DriveAlertBanner from "../../src/components/DriveAlertBanner";
 import { DemoBanner } from "../../src/components/DemoBanner";
+import { WhatsNewModal } from "../../src/components/WhatsNewModal";
 import { IndustrialBanner } from "../../src/components/IndustrialBanner";
 import { AddChooser } from "../../src/components/AddChooser";
 import { useSteelPanelFrame, STEEL_ROW, STEEL_ROW_LAST, STEEL_VALUE, STEEL_HEADER_WRAP } from "../../src/tbv/steel";
@@ -629,6 +630,7 @@ export default function HomeScreen() {
 
           <DriveAlertBanner />
           <DemoBanner />
+          <WhatsNewModal />
           {prefs.home_logo_mode === "custom" && prefs.home_logo_data && (
             <View style={styles.logoWrap}>
               <Image
@@ -812,6 +814,7 @@ export default function HomeScreen() {
         <NotificationsAccordion notifications={homeNotifs} />
 
         <DemoBanner />
+        <WhatsNewModal />
 
         {/* HOME LOGO — purely decorative, sits at the very top of the
             content scroll. Hidden by default; only renders when the user
