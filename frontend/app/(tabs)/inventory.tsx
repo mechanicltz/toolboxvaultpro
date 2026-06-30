@@ -97,6 +97,7 @@ export default function InventoryScreen() {
   const { gridCols, isPhone } = useResponsive();
   const { skin } = useSkin();
   const isIndustrial = skin === "industrial";
+  const isPlain = skin === "plain";
   const isSteel = useIsSteel();
   const steelPanel = useSteelPanelFrame();
   // When Steel is active, every industrial metal frame swaps to brushed silver.
@@ -1000,13 +1001,17 @@ export default function InventoryScreen() {
       {(() => {
         const listEl = (
       <FlatList
-        style={isIndustrial ? styles.listFlexed : undefined}
+        style={(isIndustrial || (isPlain && gridCols === 1)) ? styles.listFlexed : undefined}
         data={displayedTools}
         keyExtractor={keyExtractor}
         key={`grid-${gridCols}`}
         numColumns={gridCols}
         columnWrapperStyle={gridCols > 1 ? { gap: 12, paddingHorizontal: 16 } : undefined}
-        ItemSeparatorComponent={isIndustrial && gridCols === 1 ? () => <View style={styles.rowSkinDivider} /> : undefined}
+        ItemSeparatorComponent={
+          gridCols === 1
+            ? () => <View style={isIndustrial ? styles.rowSkinDivider : (isPlain ? styles.rowPlainDivider : undefined)} />
+            : undefined
+        }
         contentContainerStyle={{ paddingBottom: selectMode ? 240 : 120, paddingTop: gridCols > 1 ? 0 : 0 }}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.colors.accent} />
@@ -1273,6 +1278,22 @@ export default function InventoryScreen() {
             );
           }
 
+          if (isPlain && gridCols === 1) {
+            // Plain single-column: flat rows inside ONE big ShadowBox
+            // (wrapper below); divider between rows via ItemSeparator.
+            return (
+              <TouchableOpacity
+                testID={`tool-card-${item.id}`}
+                style={[styles.rowPlainFlat, isSelected && styles.rowSkinPlainSelected]}
+                onPress={onCardPress}
+                onLongPress={onCardLongPress}
+                activeOpacity={0.7}
+              >
+                <View style={styles.rowSkinInner}>{cardContent}</View>
+              </TouchableOpacity>
+            );
+          }
+
           return (
             <ShadowBox
               testID={`tool-card-${item.id}`}
@@ -1309,6 +1330,8 @@ export default function InventoryScreen() {
           >
             {listEl}
           </TbvListPanel>
+        ) : (isPlain && gridCols === 1) ? (
+          <ShadowBox style={styles.invListBox}>{listEl}</ShadowBox>
         ) : (
           listEl
         );
@@ -2225,6 +2248,28 @@ const styles = themedStyles((c) => ({
     marginBottom: 8,
   },
   listFlexed: { flex: 1 },
+  // Plain themes — Stage 3 parity with Iron Forge: the WHOLE list lives inside
+  // ONE static ShadowBox; rows render flat with a thin divider between them
+  // (ItemSeparator). `invListBox` insets the box from screen edges + fills the
+  // remaining height so the list scrolls inside it.
+  invListBox: {
+    flex: 1,
+    marginHorizontal: 12,
+    marginTop: 6,
+    marginBottom: 8,
+    paddingHorizontal: 6,
+    paddingTop: 4,
+    paddingBottom: 0,
+  },
+  rowPlainFlat: {
+    paddingVertical: 14,
+    paddingHorizontal: 6,
+  },
+  rowPlainDivider: {
+    height: 1,
+    marginHorizontal: 6,
+    backgroundColor: c.borderSubtle,
+  },
   rowSkinPlain: {
     paddingVertical: 14,
     paddingHorizontal: 4,

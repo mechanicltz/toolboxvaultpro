@@ -2350,16 +2350,25 @@ export default function ToolDetail() {
   );
 
   // ── DOCUMENTS TAB ───────────────────────────────────────────────────────
-  const renderDocuments = () => (
-    <View style={{ gap: 12 }}>
+  // Plain themes: Documents + Receipts share ONE big static box, separated by
+  // a single divider (per user). Steel/Iron keep their two framed panels.
+  const renderDocuments = () =>
+    isIndustrial ? (
+      <View style={{ gap: 12 }}>
+        <View style={boxStyle}>
+          <DocumentsSection tool={tool} onChange={load} />
+        </View>
+        <View style={boxStyle}>
+          <ReceiptsSection receipts={tool.receipts} onAdd={promptAddReceipt} onDelete={deleteReceipt} />
+        </View>
+      </View>
+    ) : (
       <View style={boxStyle}>
         <DocumentsSection tool={tool} onChange={load} />
-      </View>
-      <View style={boxStyle}>
+        <View style={newStyles.tabSectionDivider} />
         <ReceiptsSection receipts={tool.receipts} onAdd={promptAddReceipt} onDelete={deleteReceipt} />
       </View>
-    </View>
-  );
+    );
 
   // ── MAINTENANCE TAB ─────────────────────────────────────────────────────
   const renderMaintenance = () => (

@@ -26,7 +26,7 @@ import { formatPhone } from "../../src/contactLinks";
 
 import { themedStyles, useSkin } from "../../src/themeContext";
 import { BevelCard } from "../../src/components/BevelCard";
-import { ShadowBox, ShadowBoxSubCard } from "../../src/components/ShadowBox";
+import { ShadowBox } from "../../src/components/ShadowBox";
 import { IndustrialBanner } from "../../src/components/IndustrialBanner";
 import { AddFab } from "../../src/components/AddFab";
 import { SKIN, CAP } from "../../src/tbv/skins";
@@ -597,7 +597,6 @@ export default function ClaimsScreen() {
             </View>
           ) : (
             <ShadowBox style={{ marginBottom: 16 }}>
-              <ShadowBoxSubCard>
               {filteredDealers.map((d, idx) => {
                 const { opened, done } = dealerCounts(d);
                 const isLast =
@@ -628,7 +627,6 @@ export default function ClaimsScreen() {
                   </View>
                 </View>
               )}
-              </ShadowBoxSubCard>
             </ShadowBox>
           )
         ) : mode === "history" ? (
@@ -684,15 +682,16 @@ export default function ClaimsScreen() {
                   const db = new Date(b.completed_at || b.archived_at || b.updated_at || b.created_at || 0).getTime();
                   return db - da;
                 })
-                .map((cl: any) => (
-                <ShadowBoxSubCard
+                .map((cl: any, idx: number, arr: any[]) => (
+                <TouchableOpacity
                   key={`hist-${cl.id}`}
                   testID={`history-claim-${cl.id}`}
-                  style={styles.itemRow}
+                  style={[styles.itemRowFlat, idx === arr.length - 1 && styles.itemRowFlatLast]}
                   onPress={() => router.push(`/claim/${cl.id}`)}
+                  activeOpacity={0.7}
                 >
                   {claimItemInner(cl)}
-                </ShadowBoxSubCard>
+                </TouchableOpacity>
               ))}
             </ShadowBox>
           )
@@ -741,15 +740,16 @@ export default function ClaimsScreen() {
                         <Text style={styles.groupCountText}>{group.items.length}</Text>
                       </View>
                     </View>
-                    {group.items.map((t: any) => (
-                      <ShadowBoxSubCard
+                    {group.items.map((t: any, idx: number) => (
+                      <TouchableOpacity
                         key={t.id}
                         testID={`open-tool-${t.id}`}
-                        style={styles.itemRow}
+                        style={[styles.itemRowFlat, idx === group.items.length - 1 && styles.itemRowFlatLast]}
                         onPress={() => router.push(`/tool/${t.id}`)}
+                        activeOpacity={0.7}
                       >
                         {openItemInner(t)}
-                      </ShadowBoxSubCard>
+                      </TouchableOpacity>
                     ))}
                   </ShadowBox>
                 )
@@ -1104,6 +1104,17 @@ const styles = themedStyles((c) => ({
     marginBottom: 8,
     ...(theme.elevation.md as object),
   },
+  // Plain themes: flattened row (no sub-card) inside the big ShadowBox,
+  // separated by a thin divider instead of a floating card.
+  itemRowFlat: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: c.borderSubtle,
+  },
+  itemRowFlatLast: { borderBottomWidth: 0, paddingBottom: 2 },
   // ===== Skinned (industrial) panels =====
   rowSkinWrap: { marginBottom: 12 },
   rowSkinInner: { flexDirection: "row", alignItems: "center", gap: 10 },

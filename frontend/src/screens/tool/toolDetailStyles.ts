@@ -911,6 +911,13 @@ export const newStyles = themedStyles((c) => ({
   
     ...(theme.elevation.md as object),
   },
+  // Single divider used to separate two flattened sections inside ONE box
+  // (e.g. Documents | Receipts on the Documents tab — plain themes).
+  tabSectionDivider: {
+    height: 1,
+    backgroundColor: c.border,
+    marginVertical: 14,
+  },
   detailsRow: {
     flexDirection: "row",
     justifyContent: "space-between",
