@@ -1946,7 +1946,7 @@ export default function ToolDetail() {
   // On skinned themes (Iron Forge / Steel) the content already lives inside ONE
   // metal panel, so the inner gray "shadow box" cards are dropped — content
   // renders flat. Plain Light/Dark keep the bordered cards.
-  const boxStyle = isIndustrial ? newStyles.panelGroupFlat : newStyles.detailsBox;
+  const boxStyle = isIndustrial ? newStyles.panelGroupFlat : newStyles.detailsBoxFlat;
 
   // A read-only label+value row (returns JSX — not a component, so no remount)
   const vRow = (

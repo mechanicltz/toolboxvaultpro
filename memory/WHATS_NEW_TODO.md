@@ -31,15 +31,18 @@ REMAINING: (all DONE — batch complete, verified by testing iter77)
 2. [DONE] Inventory list: items inside ONE static scrollable ShadowBox
    (styles.invListBox, gated isPlain && gridCols===1), flat rows + dividers,
    bottom padding clears the + add FAB. Steel/Iron untouched.
-3. [DONE] Inventory detail tabs: sub-cards (card-within-a-card) removed from ALL
-   tabs on Plain themes — flat rows/content + dividers inside the one big box.
-   - DocumentsSection.docRow -> docRowFlat (divider rows); Documents+Receipts in
-     ONE box w/ tabSectionDivider.
-   - MaintenanceSection.row -> rowFlat (divider rows).
-   - WarrantySection.card/emptyCard -> cardFlat (flat in big box).
-   - Details/Photos/History already flat. Each gated on skin === "plain" via
-     useSkin(); Steel/Iron keep bordered cards (untouched).
-   - EXCEPTION (kept): Sets/Bundle tab expansion item cards unchanged.
+3. [DONE] Inventory detail tabs: ALL inner sub-cards removed on Plain themes.
+   ROOT FIX: `boxStyle` for plain switched from `detailsBox` (bordered white
+   inner card w/ elevation) -> `detailsBoxFlat` (transparent). Now every tab's
+   content sits DIRECTLY inside the big outer ShadowBox (contentPanelPlain) —
+   no box-in-box. Covers Details, Photos, Documents, Maintenance, Warranty,
+   History. Inner item rows also flattened (docRowFlat/rowFlat/cardFlat) so
+   items are divider-separated.
+   - EXCEPTION kept: Sets/Bundle expansion items render via BundleTab's local
+     `s.row` card (independent of boxStyle) — untouched.
+   - Steel/Iron use panelGroupFlat (unchanged).
+   - NOTE: a stale Metro cache initially masked these changes; required a
+     cache-clear rebuild. Users on-device must reload the app to pick it up.
 4. [DONE] Dealer list: plain box layout.
 5. [DONE] Warranty Claims tabs: Open claims / Dealers / History → flat rows with
    dividers (styles.itemRowFlat) inside the big ShadowBox, no per-item sub-cards.
