@@ -13,8 +13,9 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter, useFocusEffect } from "expo-router";
 import { api, UpcomingRelease, UpcomingFeatureStatus } from "../../src/api";
-import { themedStyles, useColors } from "../../src/themeContext";
+import { themedStyles, useColors, useSkin } from "../../src/themeContext";
 import { SkinnedCard } from "../../src/components/SkinnedCard";
+import { ShadowBox } from "../../src/components/ShadowBox";
 import { IndustrialBanner } from "../../src/components/IndustrialBanner";
 import ReportBugBadge from "../../src/components/ReportBugBadge";
 import { markUpcomingSeen } from "../../src/upcomingBadge";
@@ -46,6 +47,7 @@ const STATUS_META: Record<
 export default function UpcomingFeaturesScreen() {
   const router = useRouter();
   const c = useColors();
+  const { skin } = useSkin();
   const [releases, setReleases] = useState<UpcomingRelease[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -73,6 +75,15 @@ export default function UpcomingFeaturesScreen() {
   const statusColor = (key: "muted" | "warning" | "success") =>
     key === "success" ? c.success : key === "warning" ? c.warning : c.textMuted;
 
+  // Plain themes use a clean ShadowBox; Steel/Iron keep the skinned card.
+  const isPlain = skin === "plain";
+  const Card = ({ children, style, padding = 14 }: { children?: any; style?: any; padding?: number }) =>
+    isPlain ? (
+      <ShadowBox style={[{ paddingHorizontal: padding, paddingVertical: padding }, style]}>{children}</ShadowBox>
+    ) : (
+      <SkinnedCard style={style} padding={padding}>{children}</SkinnedCard>
+    );
+
   return (
     <SafeAreaView style={styles.safe} edges={["top"]}>
       <IndustrialBanner
@@ -99,7 +110,7 @@ export default function UpcomingFeaturesScreen() {
           }
         >
           {releases.length === 0 ? (
-            <SkinnedCard style={styles.emptyWrap} padding={22}>
+            <Card style={styles.emptyWrap} padding={22}>
               <View style={styles.emptyInner}>
                 <Ionicons name="rocket-outline" size={30} color={c.accent} />
                 <Text style={styles.emptyTitle}>No updates scheduled yet</Text>
@@ -107,10 +118,10 @@ export default function UpcomingFeaturesScreen() {
                   Check back soon — we’re always working on new tools and fixes.
                 </Text>
               </View>
-            </SkinnedCard>
+          </Card>
           ) : (
             releases.map((rel) => (
-              <SkinnedCard key={rel.id} style={styles.card}>
+              <Card key={rel.id} style={styles.card}>
                 <View style={styles.cardHeader}>
                   <Ionicons name="calendar" size={18} color={c.accent} />
                   <View style={{ flex: 1 }}>
@@ -145,7 +156,7 @@ export default function UpcomingFeaturesScreen() {
                     );
                   })
                 )}
-              </SkinnedCard>
+            </Card>
             ))
           )}
 
