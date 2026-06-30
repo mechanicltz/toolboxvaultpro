@@ -132,6 +132,62 @@ def thumb_url(value: Optional[str]) -> Optional[str]:
     return f"/api/files/{m.group('id')}/thumb"
 
 
+async def read_full_bytes(value: Optional[str]):
+    """Return (raw_bytes, content_type) for a `/api/files/{id}` URL (or bare
+    24-hex id), reading the FULL-resolution file from GridFS. (None, None) if
+    the value isn't a GridFS reference or can't be read."""
+    if not value or not isinstance(value, str):
+        return None, None
+    m = _FILE_URL_RE.match(value)
+    if m:
+        fid = m.group("id")
+    elif re.fullmatch(r"[a-fA-F0-9]{24}", value):
+        fid = value
+    else:
+        return None, None
+    bucket = _require_bucket()
+    try:
+        grid_out = await bucket.open_download_stream(ObjectId(fid))
+        ct = (grid_out.metadata or {}).get("content_type") or "image/jpeg"
+        chunks = []
+        while True:
+            c = await grid_out.readchunk()
+            if not c:
+                break
+            chunks.append(c)
+        return b"".join(chunks), ct
+    except Exception:
+        return None, None
+
+
+async def to_data_uri(value: Optional[str]) -> Optional[str]:
+    """Resolve a `/api/files/{id}` reference to a base64 `data:` URI. Pass other
+    values (already-data-URI, empty, external) through unchanged."""
+    raw, ct = await read_full_bytes(value)
+    if raw is None:
+        return value
+    import base64
+    return f"data:{ct};base64,{base64.b64encode(raw).decode()}"
+
+
+async def resolve_media(obj):
+    """Recursively walk a dict/list/str structure and replace every stored
+    `/api/files/{id}` media reference with an inline base64 `data:` URI.
+
+    Used by the PDF report engines, which embed images synchronously and only
+    understand base64 — without this, GridFS-backed photos render blank or
+    corrupt. Mutates dicts in place and returns the (possibly new) object."""
+    if isinstance(obj, dict):
+        for k, v in list(obj.items()):
+            obj[k] = await resolve_media(v)
+        return obj
+    if isinstance(obj, list):
+        return [await resolve_media(v) for v in obj]
+    if isinstance(obj, str) and _FILE_URL_RE.match(obj):
+        return await to_data_uri(obj)
+    return obj
+
+
 async def delete_value(value: Optional[str]) -> None:
     """Best-effort delete of a stored media URL's full + thumbnail files."""
     if not value or not isinstance(value, str):

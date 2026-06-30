@@ -2754,6 +2754,11 @@ def make_reports_router(api_router: APIRouter, get_db, get_current_user) -> None
             )
 
         try:
+            # Resolve GridFS-backed photo URLs (/api/files/{id}) to inline
+            # base64 so the synchronous PDF engine can embed them. Without this,
+            # migrated photos render blank/corrupt.
+            import media
+            await media.resolve_media(result)
             pdf_bytes = render_pdf(spec, cols, result)
         except Exception as e:  # surface useful error to client
             raise HTTPException(500, f"PDF generation failed: {e}")

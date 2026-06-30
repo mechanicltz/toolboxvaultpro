@@ -1545,6 +1545,13 @@ def make_insurance_claims_router(api_router: APIRouter, get_db, get_current_user
             evidence = await db.claim_evidence.find({"claim_id": claim_id}, {"_id": 0}).to_list(500)
         prev = await db.claim_reports.find({"claim_id": claim_id}, {"version": 1, "_id": 0}).to_list(1000)
         version = (max([p.get("version", 0) for p in prev], default=0)) + 1
+        # Resolve GridFS-backed photo/receipt URLs to inline base64 so the
+        # synchronous PDF builder can embed them (otherwise images are blank
+        # or "corrupt" in the generated claim report).
+        import media
+        resolved = await media.resolve_media(resolved)
+        evidence = await media.resolve_media(evidence)
+        claim = await media.resolve_media(claim)
         pdf = build_claim_pdf(claim, resolved, fin, profile, evidence, opts, version)
         b64 = base64.b64encode(pdf).decode()
         rec = {

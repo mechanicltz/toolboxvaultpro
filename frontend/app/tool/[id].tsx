@@ -1856,7 +1856,12 @@ export default function ToolDetail() {
   const setWarrantyField = (patch: any) => {
     setForm((f: any) => {
       const w = { ...(f?.warranty || {}), ...patch };
-      if ("start_date" in patch || "length_months" in patch) {
+      if (w.coverage_type === "lifetime") {
+        // Lifetime never expires — clear length & expiry so the backend
+        // warranty-expiry alerts skip it.
+        w.length_months = 0;
+        w.expiry_date = "";
+      } else if ("start_date" in patch || "length_months" in patch) {
         const exp = computeWarrantyExpiry(w.start_date, parseInt(w.length_months) || 0);
         if (exp) w.expiry_date = exp;
       }
@@ -2406,16 +2411,8 @@ export default function ToolDetail() {
               {eLabel("CONTACT", "call")}
               <TextInput style={styles.input} value={form.warranty.contact} onChangeText={(v) => setF({ warranty: { ...form.warranty, contact: v } })} placeholder="800-555-1234" placeholderTextColor={theme.colors.textMuted} />
               {eLabel("WARRANTY LENGTH", "time")}
-              <View style={{ flexDirection: "row", gap: 8, alignItems: "center" }}>
-                <TextInput
-                  style={[styles.input, { flex: 1 }]}
-                  value={(() => { const yrs = form.warranty.coverage_type === "years"; const m = parseInt(form.warranty.length_months) || 0; if (!m) return ""; return String(yrs ? Math.round(m / 12) : m); })()}
-                  onChangeText={(v) => { const num = parseInt(v.replace(/[^0-9]/g, "")) || 0; const months = form.warranty.coverage_type === "years" ? num * 12 : num; setWarrantyField({ length_months: months }); }}
-                  placeholder="e.g. 12"
-                  placeholderTextColor={theme.colors.textMuted}
-                  keyboardType="number-pad"
-                />
-                {["months", "years"].map((u) => {
+              <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}>
+                {["months", "years", "lifetime"].map((u) => {
                   const active = (form.warranty.coverage_type || "months") === u;
                   return (
                     <TouchableOpacity key={u} testID={`warranty-unit-${u}`} onPress={() => setWarrantyField({ coverage_type: u })}
@@ -2425,10 +2422,36 @@ export default function ToolDetail() {
                   );
                 })}
               </View>
-              {eLabel("START DATE", "calendar")}
-              <DateField value={form.warranty.start_date} onChange={(iso) => setWarrantyField({ start_date: iso })} placeholder="MM/DD/YYYY" />
-              {eLabel("EXPIRES", "calendar")}
-              <DateField value={form.warranty.expiry_date} onChange={(iso) => setWarrantyField({ expiry_date: iso })} placeholder="MM/DD/YYYY" />
+              {form.warranty.coverage_type === "lifetime" ? (
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 10 }}>
+                  <Ionicons name="infinite" size={16} color={theme.colors.accent} />
+                  <Text style={{ color: theme.colors.textSecondary, fontSize: 12, fontWeight: "700" }}>
+                    Covered for life — no expiration date.
+                  </Text>
+                </View>
+              ) : (
+                <View style={{ flexDirection: "row", gap: 8, alignItems: "center", marginTop: 8 }}>
+                  <TextInput
+                    style={[styles.input, { flex: 1, marginTop: 0 }]}
+                    value={(() => { const yrs = form.warranty.coverage_type === "years"; const m = parseInt(form.warranty.length_months) || 0; if (!m) return ""; return String(yrs ? Math.round(m / 12) : m); })()}
+                    onChangeText={(v) => { const num = parseInt(v.replace(/[^0-9]/g, "")) || 0; const months = form.warranty.coverage_type === "years" ? num * 12 : num; setWarrantyField({ length_months: months }); }}
+                    placeholder={form.warranty.coverage_type === "years" ? "e.g. 1" : "e.g. 12"}
+                    placeholderTextColor={theme.colors.textMuted}
+                    keyboardType="number-pad"
+                  />
+                  <Text style={{ color: theme.colors.textMuted, fontWeight: "800", fontSize: 11 }}>
+                    {(form.warranty.coverage_type || "months") === "years" ? "YEARS" : "MONTHS"}
+                  </Text>
+                </View>
+              )}
+              {form.warranty.coverage_type !== "lifetime" && (
+                <>
+                  {eLabel("START DATE", "calendar")}
+                  <DateField value={form.warranty.start_date} onChange={(iso) => setWarrantyField({ start_date: iso })} placeholder="MM/DD/YYYY" />
+                  {eLabel("EXPIRES", "calendar")}
+                  <DateField value={form.warranty.expiry_date} onChange={(iso) => setWarrantyField({ expiry_date: iso })} placeholder="MM/DD/YYYY" />
+                </>
+              )}
               {eLabel("TERMS", "document-text")}
               <TextInput style={[styles.input, { height: 70, textAlignVertical: "top" }]} value={form.warranty.terms} onChangeText={(v) => setF({ warranty: { ...form.warranty, terms: v } })} placeholder="Coverage details..." placeholderTextColor={theme.colors.textMuted} multiline />
             </View>
