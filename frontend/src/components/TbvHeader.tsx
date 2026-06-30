@@ -37,13 +37,13 @@ export function TbvHeader({
 }) {
   const [w, setW] = useState(0);
   const h = w > 0 ? w / HEADER_ASPECT : 0;
-  const { skin, mode, industrialVariant } = useSkin();
+  const { skin, appearance, industrialVariant } = useSkin();
   const src = HEADER_SRC_BY_COLOR[industrialVariant] ?? HEADER_SRC_BY_COLOR.orange;
   const vaultColor = HEADER_VAULT_COLOR_BY_COLOR[industrialVariant] ?? HEADER_VAULT_ORANGE;
 
   // Plain + Light theme: use the trimmed transparent "TOOLBOX VAULT" wordmark
   // image instead of the metal nameplate art used by every other skin.
-  const useLightLogo = skin === "plain" && mode === "light";
+  const useLightLogo = skin === "plain" && appearance === "light";
   if (useLightLogo) {
     const lh = w > 0 ? w / LIGHT_LOGO_ASPECT : 0;
     return (
