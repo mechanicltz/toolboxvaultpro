@@ -615,7 +615,7 @@ export default function HomeScreen() {
     return (
       <SafeAreaView style={styles.plainSafe} edges={["top"]}>
         {isPlainLight ? (
-          <TbvHeader testID="tbv-header" showVersion={false} badgeCount={upcomingNew} />
+          <TbvHeader testID="tbv-header" badgeCount={upcomingNew} />
         ) : (
           <IndustrialBanner title="DASHBOARD" />
         )}

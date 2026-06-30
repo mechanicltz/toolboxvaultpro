@@ -65,6 +65,11 @@ export function TbvHeader({
             fadeDuration={0}
           />
         ) : null}
+        {showVersion && w > 0 ? (
+          <Text style={styles.lightVersion} allowFontScaling={false}>
+            {APP_VERSION_LABEL}
+          </Text>
+        ) : null}
         {badgeCount > 0 ? (
           <View style={styles.badgeDot} testID="tbv-header-badge">
             <Text style={styles.badgeText} allowFontScaling={false}>
@@ -141,6 +146,14 @@ const styles = StyleSheet.create({
     borderColor: "#FFFFFF",
   },
   badgeText: { color: "#fff", fontSize: 10, fontWeight: "900", lineHeight: 12 },
+  lightVersion: {
+    marginTop: 2,
+    color: "#475569",
+    fontSize: 11,
+    fontWeight: "800",
+    letterSpacing: 0.5,
+    textAlign: "center",
+  },
 });
 
 export default TbvHeader;
