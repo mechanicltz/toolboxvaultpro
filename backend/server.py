@@ -190,6 +190,48 @@ async def demo_clear(payload: DemoClearRequest, user: User = Depends(get_current
     return {"ok": True, "mode": payload.mode, "removed": removed}
 
 
+# ---------- Data Management: bulk remove + install preloaded ----------
+_DM_REMOVE_MAP = {
+    "dealers": ["dealers"],
+    "contacts": ["borrowers"],
+    "claims": ["warranty_claims"],
+    "insurance_claims": ["insurance_claims", "claim_evidence"],
+    "inventory_items": ["tools", "bundles"],
+    "wish_list": ["wishlist"],
+    "locations": ["locations"],
+    "tags": ["tags"],
+    "categories": ["categories"],
+    "personal_information": ["personal_profile"],
+}
+_DM_INSTALL_TYPES = {"categories", "tags", "dealers", "locations"}
+
+
+class DataMgmtRequest(BaseModel):
+    items: List[str] = []
+
+
+@api_router.post("/data-management/remove")
+async def data_management_remove(payload: DataMgmtRequest, user: User = Depends(get_current_user)):
+    """Bulk-delete the selected owner-scoped data categories."""
+    removed: Dict[str, int] = {}
+    for key in payload.items or []:
+        for coll in _DM_REMOVE_MAP.get(key, []):
+            res = await real_db[coll].delete_many({"owner_id": user.id})
+            removed[coll] = res.deleted_count
+    return {"ok": True, "removed": removed}
+
+
+@api_router.post("/data-management/install-preloaded")
+async def data_management_install(payload: DataMgmtRequest, user: User = Depends(get_current_user)):
+    """Install the standard starter content (the same data new accounts get)
+    for only the selected types: categories / tags / dealers / locations."""
+    only = {k for k in (payload.items or []) if k in _DM_INSTALL_TYPES}
+    if not only:
+        return {"ok": True, "installed": {}}
+    installed = await seed_default_content_for_user(user.id, only=only)
+    return {"ok": True, "installed": installed}
+
+
 
 # Per-tool actions (sale/checkout/documents/theft/bulk) -> routes_tool_actions.py (god-file refactor B3).
 from routes_tool_actions import register_tool_action_routes  # noqa: E402
@@ -386,13 +428,18 @@ DEFAULT_LOCATIONS_SEED: List[Dict[str, Any]] = [
 ]
 
 
-async def seed_default_content_for_user(user_id: str) -> Dict[str, int]:
+async def seed_default_content_for_user(user_id: str, only: "Optional[set]" = None) -> Dict[str, int]:
     """Insert the default dealers, tags and categories for *user_id*.
 
     Idempotent — same-named records (case-insensitive for tags / categories,
     exact match for dealer names) are skipped. Returns a small counters
     dict for logging.
+
+    When *only* is given (a set of "dealers"/"tags"/"categories"/"locations"),
+    only those content types are seeded; otherwise all are seeded.
     """
+    def _want(k: str) -> bool:
+        return only is None or k in only
     counters = {"dealers": 0, "tags": 0, "categories": 0, "locations": 0}
 
     # --- Dealers ---
@@ -402,7 +449,7 @@ async def seed_default_content_for_user(user_id: str) -> Dict[str, int]:
     # not `user_id`. Setting only `user_id` makes the seed records
     # invisible to the rest of the API, which is exactly the bug new
     # users hit ("0 dealers / tags / categories").
-    for d in DEFAULT_DEALERS_SEED:
+    for d in (DEFAULT_DEALERS_SEED if _want("dealers") else []):
         # Skip if a dealer with this name already exists for the user.
         existing = await real_db.dealers.find_one(
             {"owner_id": user_id, "name": d["name"]}, {"_id": 0, "id": 1}
@@ -426,7 +473,7 @@ async def seed_default_content_for_user(user_id: str) -> Dict[str, int]:
         counters["dealers"] += 1
 
     # --- Tags ---
-    for tag_name in DEFAULT_TAGS_SEED:
+    for tag_name in (DEFAULT_TAGS_SEED if _want("tags") else []):
         existing = await real_db.tags.find_one(
             {"owner_id": user_id, "name": {"$regex": f"^{re.escape(tag_name)}$", "$options": "i"}},
             {"_id": 0, "id": 1},
@@ -440,7 +487,7 @@ async def seed_default_content_for_user(user_id: str) -> Dict[str, int]:
         counters["tags"] += 1
 
     # --- Categories ---
-    for cat_name in DEFAULT_CATEGORIES_SEED:
+    for cat_name in (DEFAULT_CATEGORIES_SEED if _want("categories") else []):
         existing = await real_db.categories.find_one(
             {"owner_id": user_id, "name": {"$regex": f"^{re.escape(cat_name)}$", "$options": "i"}},
             {"_id": 0, "id": 1},
@@ -454,7 +501,7 @@ async def seed_default_content_for_user(user_id: str) -> Dict[str, int]:
         counters["categories"] += 1
 
     # --- Locations (parent toolbox → starter drawer) ---
-    for loc in DEFAULT_LOCATIONS_SEED:
+    for loc in (DEFAULT_LOCATIONS_SEED if _want("locations") else []):
         parent_name = loc["name"]
         existing_parent = await real_db.locations.find_one(
             {"owner_id": user_id, "name": {"$regex": f"^{re.escape(parent_name)}$", "$options": "i"}},
