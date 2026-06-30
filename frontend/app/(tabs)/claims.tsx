@@ -452,6 +452,123 @@ export default function ClaimsScreen() {
             )}
           </ScrollView>
         </TbvListPanel>
+      ) : !isIndustrial && !searchActive ? (
+        // Plain themes: ONE static ShadowBox; Open / Dealers / History content
+        // scrolls INSIDE it (matches Inventory + item-details pages).
+        <ShadowBox style={styles.plainListBox}>
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={{ paddingBottom: 16 }}
+            refreshControl={
+              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.colors.accent} />
+            }
+          >
+            {mode === "dealers" ? (
+              filteredDealers.length === 0 && (openByDealer["_unassigned"] || []).length === 0 ? (
+                <Text style={styles.empty}>No dealers yet.</Text>
+              ) : (
+                <>
+                  {filteredDealers.map((d, idx) => {
+                    const { opened, done } = dealerCounts(d);
+                    const isLast =
+                      idx === filteredDealers.length - 1 &&
+                      (openByDealer["_unassigned"] || []).length === 0;
+                    return (
+                      <TouchableOpacity
+                        key={d.id}
+                        testID={`claim-dealer-${d.id}`}
+                        style={[styles.dealerListRow, isLast && { borderBottomWidth: 0 }]}
+                        onPress={() => router.push(`/dealer-claims/${d.id}`)}
+                        activeOpacity={0.7}
+                      >
+                        {dealerRowInner(d, opened, done)}
+                      </TouchableOpacity>
+                    );
+                  })}
+                  {(openByDealer["_unassigned"] || []).length > 0 && (
+                    <View style={[styles.dealerListRow, { borderBottomWidth: 0 }]}>
+                      <View style={styles.dealerThumb}>
+                        <Ionicons name="alert-circle" size={20} color={theme.colors.danger} />
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.dealerName}>NO DEALER ASSIGNED</Text>
+                        <Text style={styles.dealerSub}>
+                          {(openByDealer["_unassigned"] || []).length} broken item{(openByDealer["_unassigned"] || []).length === 1 ? "" : "s"} need a dealer
+                        </Text>
+                      </View>
+                    </View>
+                  )}
+                </>
+              )
+            ) : mode === "history" ? (
+              archivedClaims.length === 0 ? (
+                <View style={{ alignItems: "center", padding: 40 }}>
+                  <Ionicons name="archive" size={48} color={theme.colors.textMuted} />
+                  <Text style={[styles.empty, { textAlign: "center", marginTop: 12 }]}>
+                    No history claims yet.
+                  </Text>
+                </View>
+              ) : (
+                <>
+                  <View style={styles.groupHeader}>
+                    <Ionicons name="archive" size={14} color={theme.colors.success} />
+                    <Text style={styles.groupTitle}>HISTORY</Text>
+                    <View style={styles.groupCount}>
+                      <Text style={styles.groupCountText}>{archivedClaims.length}</Text>
+                    </View>
+                  </View>
+                  {[...archivedClaims]
+                    .sort((a: any, b: any) => {
+                      const da = new Date(a.completed_at || a.archived_at || a.updated_at || a.created_at || 0).getTime();
+                      const db = new Date(b.completed_at || b.archived_at || b.updated_at || b.created_at || 0).getTime();
+                      return db - da;
+                    })
+                    .map((cl: any, idx: number, arr: any[]) => (
+                      <TouchableOpacity
+                        key={`hist-${cl.id}`}
+                        testID={`history-claim-${cl.id}`}
+                        style={[styles.itemRowFlat, idx === arr.length - 1 && styles.itemRowFlatLast]}
+                        onPress={() => router.push(`/claim/${cl.id}`)}
+                        activeOpacity={0.7}
+                      >
+                        {claimItemInner(cl)}
+                      </TouchableOpacity>
+                    ))}
+                </>
+              )
+            ) : openTools.length === 0 ? (
+              <View style={{ alignItems: "center", padding: 40 }}>
+                <Ionicons name="checkmark-circle" size={48} color={theme.colors.success} />
+                <Text style={[styles.empty, { textAlign: "center", marginTop: 12 }]}>
+                  Nothing broken right now. 🎉
+                </Text>
+              </View>
+            ) : (
+              openGroups.map((group, gIdx) => (
+                <View key={group.d.id} style={gIdx > 0 ? { marginTop: 18 } : undefined}>
+                  <View style={styles.groupHeader}>
+                    <Ionicons name="briefcase" size={14} color={theme.colors.accent} />
+                    <Text style={styles.groupTitle}>{group.d.name}</Text>
+                    <View style={styles.groupCount}>
+                      <Text style={styles.groupCountText}>{group.items.length}</Text>
+                    </View>
+                  </View>
+                  {group.items.map((t: any, idx: number) => (
+                    <TouchableOpacity
+                      key={t.id}
+                      testID={`open-tool-${t.id}`}
+                      style={[styles.itemRowFlat, idx === group.items.length - 1 && styles.itemRowFlatLast]}
+                      onPress={() => router.push(`/tool/${t.id}`)}
+                      activeOpacity={0.7}
+                    >
+                      {openItemInner(t)}
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              ))
+            )}
+          </ScrollView>
+        </ShadowBox>
       ) : (
       <ScrollView
         contentContainerStyle={{ padding: 16, paddingBottom: 100 }}
@@ -857,6 +974,17 @@ function Stat({ label, value, color, flat }: { label: string; value: number; col
 const styles = themedStyles((c) => ({
   container: { flex: 1, backgroundColor: c.canvas },
   skinListPanel: { flex: 1, marginHorizontal: 16, marginTop: 4, marginBottom: 12 },
+  // Plain themes: ONE static box that fills the remaining height; Open/Dealers/
+  // History content scrolls INSIDE it (matches Inventory + item-details).
+  plainListBox: {
+    flex: 1,
+    marginHorizontal: 12,
+    marginTop: 4,
+    marginBottom: 12,
+    paddingHorizontal: 8,
+    paddingTop: 6,
+    paddingBottom: 0,
+  },
   statRow: {
     flexDirection: "row",
     gap: 6,

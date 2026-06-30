@@ -44,9 +44,12 @@ REMAINING: (all DONE — batch complete, verified by testing iter77)
    - NOTE: a stale Metro cache initially masked these changes; required a
      cache-clear rebuild. Users on-device must reload the app to pick it up.
 4. [DONE] Dealer list: plain box layout.
-5. [DONE] Warranty Claims tabs: Open claims / Dealers / History → flat rows with
-   dividers (styles.itemRowFlat) inside the big ShadowBox, no per-item sub-cards.
-   ShadowBoxSubCard import removed from claims.tsx. Steel/Iron untouched.
+5. [DONE] Warranty Claims tabs: Open / Dealers / History each render inside ONE
+   static ShadowBox (styles.plainListBox, flex:1) with content scrolling INSIDE
+   it — matching Inventory + item-details. New plain branch gated on
+   `!isIndustrial && !searchActive`; rows flat (itemRowFlat/dealerListRow) with
+   dividers, no per-group/per-item sub-cards. Search view + Steel/Iron untouched.
+   Verified plain-light (DIAG: single box radius 8 + shadow, no inner cards).
 6. [DONE] Upcoming Features page: ShadowBox for Plain, SkinnedCard for Steel/Iron.
 7. [DONE] Insurance Claims compacting + Status/Tasks row alignment.
 
