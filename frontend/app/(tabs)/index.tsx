@@ -41,7 +41,8 @@ import { DemoBanner } from "../../src/components/DemoBanner";
 import { IndustrialBanner } from "../../src/components/IndustrialBanner";
 import { AddChooser } from "../../src/components/AddChooser";
 import { useSteelPanelFrame, STEEL_ROW, STEEL_ROW_LAST, STEEL_VALUE, STEEL_HEADER_WRAP } from "../../src/tbv/steel";
-import { TbvHeader } from "../../src/components/TbvHeader";import { TbvButton } from "../../src/components/TbvButton";
+import { TbvHeader } from "../../src/components/TbvHeader";
+import { TbvButton } from "../../src/components/TbvButton";
 import { useSubscriptionChange } from "../../src/subscriptionEvents";
 import { useAppResume } from "../../src/appLifecycle";
 
