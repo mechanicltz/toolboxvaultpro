@@ -613,7 +613,11 @@ export default function HomeScreen() {
   if (skin === "plain") {
     return (
       <SafeAreaView style={styles.plainSafe} edges={["top"]}>
-        <IndustrialBanner title="DASHBOARD" />
+        {isPlainLight ? (
+          <TbvHeader testID="tbv-header" showVersion={false} />
+        ) : (
+          <IndustrialBanner title="DASHBOARD" />
+        )}
         <ScrollView
           contentContainerStyle={styles.plainContent}
           refreshControl={

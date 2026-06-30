@@ -1,0 +1,45 @@
+{
+  "summary": "Reproduced the user-reported bug: on plain Light theme the dashboard rendered the metal/steel nameplate (IndustrialBanner) instead of the transparent TOOLBOX VAULT wordmark image. Root cause: app/(tabs)/index.tsx has an early `if (skin === 'plain') return (...)` block (line ~613) that always rendered <IndustrialBanner title='DASHBOARD'/> — the `isPlainLight ? <TbvHeader/> : ...` check at line ~803 was in the dead code path after the plain return, so TbvHeader was NEVER mounted on plain Light. Applied a minimal patch in index.tsx so the plain branch renders <TbvHeader testID='tbv-header' showVersion={false}/> when isPlainLight, otherwise IndustrialBanner. Verified after expo restart: tbv-header is now in DOM on Light, screenshot shows the transparent wordmark, and the [TBVHEADER_DEBUG] console.warn fires with the exact expected values.",
+  "rca_of_issue": "File /app/frontend/app/(tabs)/index.tsx contained two header-selection blocks. The first (inside `if (skin === 'plain')`) hard-coded <IndustrialBanner title='DASHBOARD'/> and unconditionally returned. The second (the industrial branch below) had the correct `isPlainLight ? <TbvHeader/> : isSteel ? ... : <IndustrialBanner/>` ladder, but that branch was unreachable for plain skins. Hence on appearance='light' (which sets skin='plain', appearance='light') the user saw the metal nameplate and the debug warn never fired (TbvHeader unmounted). Fix: replaced the static IndustrialBanner inside the plain branch with the same isPlainLight conditional.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "HomeScreen plain branch (app/(tabs)/index.tsx)",
+        "issue": "Early `if (skin === 'plain')` return rendered <IndustrialBanner title='DASHBOARD'/> for BOTH plain-light and plain-dark, ignoring the intended TbvHeader logo image swap on Light. Fixed in place.",
+        "testID": "tbv-header",
+        "priority": "HIGH"
+      }
+    ],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "captured_debug_logs": {
+    "light_theme": "[warning] [TBVHEADER_DEBUG] {\"skin\":\"plain\",\"appearance\":\"light\",\"useLightLogo\":true}  (fired 5+ times after switching to Light + landing on dashboard)",
+    "steel_theme": "[warning] [TBVHEADER_DEBUG] {\"skin\":\"industrial\",\"appearance\":\"steel\",\"useLightLogo\":false}  (fired 5+ times on Steel dashboard)",
+    "before_fix": "On plain Light theme: 0 [TBVHEADER_DEBUG] logs captured (TbvHeader was never mounted because IndustrialBanner was rendered in its place)."
+  },
+  "verification_screenshots": [
+    "/tmp/home_light.png (BEFORE fix — Light skin but metal nameplate header)",
+    "/tmp/light_verified.png (AFTER fix — transparent TOOLBOX VAULT wordmark visible on Light)",
+    "/tmp/steel_after_restart.png (Steel theme — metal nameplate still rendered correctly, no regression)"
+  ],
+  "updated_files": [
+    "/app/frontend/app/(tabs)/index.tsx (replaced static <IndustrialBanner/> inside `if (skin === 'plain')` with `isPlainLight ? <TbvHeader testID='tbv-header' showVersion={false}/> : <IndustrialBanner title='DASHBOARD'/>`)"
+  ],
+  "action_items": [
+    "REVIEW the fix in /app/frontend/app/(tabs)/index.tsx ~lines 613-617 — the plain branch now mounts TbvHeader on Light. Passed showVersion={false} because the version label is positioned for the metal nameplate's bottom-right inset; if you want the version stamp on the light wordmark, add separate positioning in TbvHeader's useLightLogo branch.",
+    "OPTIONAL: remove the dead-code `isPlainLight ? <TbvHeader/>...` branch in the industrial code path below (it's now unreachable since plain skins return early). Keeping it doesn't hurt but is misleading.",
+    "OPTIONAL: remove the console.warn [TBVHEADER_DEBUG] from src/components/TbvHeader.tsx now that the issue is verified."
+  ],
+  "critical_code_review_comments": [
+    "Two parallel header-selection ladders in HomeScreen led to silent divergence. Consider extracting a single `renderHomeHeader()` helper used by both the plain and industrial returns so the conditions can't drift."
+  ],
+  "test_report_links": [],
+  "success_rate": {"backend": "n/a (frontend only)", "frontend": "100% — bug reproduced, root cause identified, fix applied and verified visually + via captured debug logs"},
+  "seed_data_creation": "None",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "After restart, expo persists the last selected theme in AsyncStorage. Use [data-testid=tab-more] then [data-testid=theme-family-plain] (expand) then [data-testid=appearance-light] to switch to plain Light. Console.warn is captured as type 'warning' by Playwright."
+}

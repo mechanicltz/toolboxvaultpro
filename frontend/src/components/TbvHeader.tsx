@@ -44,6 +44,9 @@ export function TbvHeader({
   // Plain + Light theme: use the trimmed transparent "TOOLBOX VAULT" wordmark
   // image instead of the metal nameplate art used by every other skin.
   const useLightLogo = skin === "plain" && appearance === "light";
+  if (typeof console !== "undefined") {
+    console.warn("[TBVHEADER_DEBUG]", JSON.stringify({ skin, appearance, useLightLogo }));
+  }
   if (useLightLogo) {
     const lh = w > 0 ? w / LIGHT_LOGO_ASPECT : 0;
     return (
