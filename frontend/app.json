@@ -14,7 +14,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "app.emergent.assetlocator128c92565d",
-      "buildNumber": "28",
+      "buildNumber": "29",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
         "NSCameraUsageDescription": "Take photos of your tools",
@@ -26,7 +26,7 @@
     },
     "android": {
       "package": "app.emergent.assetlocator128c92565d",
-      "versionCode": 214,
+      "versionCode": 215,
       "edgeToEdgeEnabled": false,
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
