@@ -963,7 +963,7 @@ export const newStyles = themedStyles((c) => ({
   // Plain themes: DESCRIPTION / NOTES rendered as a bold section header
   // (not the tiny 8px micro-label) on the item details page.
   descHeaderPlain: {
-    color: c.textPrimary,
+    color: c.accent,
     fontSize: 14,
     fontWeight: "800",
     letterSpacing: 0.5,
