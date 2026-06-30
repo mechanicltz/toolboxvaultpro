@@ -26,21 +26,23 @@ DONE:
 - Login page (all themes): header wordmark on top, logo icon below; Plain themes
   now show a clean themed wordmark instead of the steel nameplate. (login.tsx)
 
-REMAINING:
-1. NEW-badge bug (all themes): Upcoming Features "new" label stays after viewing.
-2. Inventory list: items inside ONE static, scrollable ShadowBox (not skinned
-   panel), padded so bottom items clear the + add button.
-3. Inventory detail tabs: Overview/Photos/Documents/Maintenance/Warranty → remove
-   inner ShadowBoxSubCard, put content directly in the big static ShadowBox.
-   Documents+Receipts: divider between them. History: no per-item sub-cards,
-   divider between items.
-4. Dealer list: plain box layout (no shadow box).
-5. Warranty Claims tabs: Open claims (dividers), Claims-dealers, Claims-history
-   (dividers) → content in big ShadowBox, no sub-cards.
-6. Upcoming Features page: replace "weird box" (SkinnedCard) with ShadowBox.
-7. Insurance Claims: list dashboard more compact + remove grey box behind each
-   item's left icon. Detail dashboard: Status & Tasks on the same aligned row
-   (all themes).
+REMAINING: (all DONE — batch complete, verified by testing iter77)
+1. [DONE] NEW-badge bug: Upcoming Features "new" label clears after viewing.
+2. [DONE] Inventory list: items inside ONE static scrollable ShadowBox
+   (styles.invListBox, gated isPlain && gridCols===1), flat rows + dividers,
+   bottom padding clears the + add FAB. Steel/Iron untouched.
+3. [DONE] Inventory detail tabs: Documents+Receipts now share ONE box with a
+   single divider (newStyles.tabSectionDivider) on Plain themes; History already
+   flat-with-dividers; Maintenance/Warranty single box. Steel/Iron untouched.
+4. [DONE] Dealer list: plain box layout.
+5. [DONE] Warranty Claims tabs: Open claims / Dealers / History → flat rows with
+   dividers (styles.itemRowFlat) inside the big ShadowBox, no per-item sub-cards.
+   ShadowBoxSubCard import removed from claims.tsx. Steel/Iron untouched.
+6. [DONE] Upcoming Features page: ShadowBox for Plain, SkinnedCard for Steel/Iron.
+7. [DONE] Insurance Claims compacting + Status/Tasks row alignment.
+
+NOTE: NO shared components (ShadowBoxSubCard etc.) were edited — only the
+individual screens, to avoid the prior dashboard-dealer regression.
 
 Static ShadowBox = use the `ShadowBox` component (src/components/ShadowBox.tsx),
 fixed height, list scrolls inside it. NOT the skinned TbvFrame/SkinPlate panel.
