@@ -337,8 +337,8 @@ export function useSkin() {
       skin: "industrial" as SkinMode,
       setSkin: async (_s: SkinMode) => {},
       industrialVariant: "orange" as IndustrialVariant,
-      metalStyle: "iron" as MetalStyle,
-      appearance: "industrial" as AppearanceOption,
+      metalStyle: "steel" as MetalStyle,
+      appearance: "steel" as AppearanceOption,
       setAppearance: async (_o: AppearanceOption) => {},
     };
   }
