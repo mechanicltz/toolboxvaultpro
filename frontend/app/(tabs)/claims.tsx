@@ -452,6 +452,109 @@ export default function ClaimsScreen() {
             )}
           </ScrollView>
         </TbvListPanel>
+      ) : isIndustrial && !searchActive && mode === "all-open" ? (
+        // Open claims (skinned): ONE static metal panel; the dealer groups + their
+        // claims scroll INSIDE it. Each claim is indented under its dealer heading.
+        <TbvListPanel
+          source={winSrc}
+          capInsets={winCap}
+          frameScale={steelScale}
+          style={styles.skinListPanel}
+          padX={isSteel ? 18 : 30}
+          padTop={isSteel ? 6 : 10}
+          padBottom={isSteel ? 6 : 10}
+        >
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={{ paddingBottom: 8 }}
+            refreshControl={
+              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.colors.accent} />
+            }
+          >
+            {openTools.length === 0 ? (
+              <View style={{ alignItems: "center", padding: 40 }}>
+                <Ionicons name="checkmark-circle" size={48} color={theme.colors.success} />
+                <Text style={[styles.empty, { textAlign: "center", marginTop: 12 }]}>Nothing broken right now. 🎉</Text>
+              </View>
+            ) : (
+              openGroups.map((group, gIdx) => (
+                <View key={group.d.id} style={gIdx > 0 ? { marginTop: 18 } : undefined}>
+                  <View style={styles.groupHeader}>
+                    <Ionicons name="briefcase" size={14} color={theme.colors.accent} />
+                    <Text style={styles.groupTitle}>{group.d.name}</Text>
+                    <View style={styles.groupCount}>
+                      <Text style={styles.groupCountText}>{group.items.length}</Text>
+                    </View>
+                  </View>
+                  {group.items.map((t: any, idx: number) => (
+                    <TouchableOpacity
+                      key={t.id}
+                      testID={`open-tool-${t.id}`}
+                      style={[styles.openItemFlat, styles.openItemIndent, idx === group.items.length - 1 && styles.openItemFlatLast]}
+                      onPress={() => router.push(`/tool/${t.id}`)}
+                      activeOpacity={0.7}
+                    >
+                      {openItemInner(t)}
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              ))
+            )}
+          </ScrollView>
+        </TbvListPanel>
+      ) : isIndustrial && !searchActive && mode === "history" ? (
+        // History (skinned): ONE static metal panel; the history list scrolls inside.
+        <TbvListPanel
+          source={winSrc}
+          capInsets={winCap}
+          frameScale={steelScale}
+          style={styles.skinListPanel}
+          padX={isSteel ? 18 : 30}
+          padTop={isSteel ? 6 : 10}
+          padBottom={isSteel ? 6 : 10}
+        >
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={{ paddingBottom: 8 }}
+            refreshControl={
+              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.colors.accent} />
+            }
+          >
+            {archivedClaims.length === 0 ? (
+              <View style={{ alignItems: "center", padding: 40 }}>
+                <Ionicons name="archive" size={48} color={theme.colors.textMuted} />
+                <Text style={[styles.empty, { textAlign: "center", marginTop: 12 }]}>No history claims yet.</Text>
+              </View>
+            ) : (
+              <>
+                <View style={styles.groupHeader}>
+                  <Ionicons name="archive" size={14} color={theme.colors.success} />
+                  <Text style={styles.groupTitle}>HISTORY</Text>
+                  <View style={styles.groupCount}>
+                    <Text style={styles.groupCountText}>{archivedClaims.length}</Text>
+                  </View>
+                </View>
+                {[...archivedClaims]
+                  .sort((a: any, b: any) => {
+                    const da = new Date(a.completed_at || a.archived_at || a.updated_at || a.created_at || 0).getTime();
+                    const db = new Date(b.completed_at || b.archived_at || b.updated_at || b.created_at || 0).getTime();
+                    return db - da;
+                  })
+                  .map((cl: any, idx: number, arr: any[]) => (
+                    <TouchableOpacity
+                      key={`hist-${cl.id}`}
+                      testID={`history-claim-${cl.id}`}
+                      style={[styles.itemRowFlat, idx === arr.length - 1 && styles.itemRowFlatLast]}
+                      onPress={() => router.push(`/claim/${cl.id}`)}
+                      activeOpacity={0.7}
+                    >
+                      {claimItemInner(cl)}
+                    </TouchableOpacity>
+                  ))}
+              </>
+            )}
+          </ScrollView>
+        </TbvListPanel>
       ) : !isIndustrial && !searchActive ? (
         // Plain themes: ONE static ShadowBox; Open / Dealers / History content
         // scrolls INSIDE it (matches Inventory + item-details pages).
@@ -557,7 +660,7 @@ export default function ClaimsScreen() {
                     <TouchableOpacity
                       key={t.id}
                       testID={`open-tool-${t.id}`}
-                      style={[styles.itemRowFlat, idx === group.items.length - 1 && styles.itemRowFlatLast]}
+                      style={[styles.itemRowFlat, styles.openItemIndent, idx === group.items.length - 1 && styles.itemRowFlatLast]}
                       onPress={() => router.push(`/tool/${t.id}`)}
                       activeOpacity={0.7}
                     >
@@ -1256,6 +1359,8 @@ const styles = themedStyles((c) => ({
     borderBottomColor: "rgba(255,255,255,0.10)",
   },
   openItemFlatLast: { borderBottomWidth: 0, paddingBottom: 2 },
+  // Indents each open claim under its dealer heading (all themes).
+  openItemIndent: { paddingLeft: 18 },
   itemThumb: {
     width: 38,
     height: 38,
