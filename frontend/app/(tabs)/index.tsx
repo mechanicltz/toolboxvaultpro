@@ -69,9 +69,11 @@ import { Anton_400Regular } from "@expo-google-fonts/anton";
 export default function HomeScreen() {
   const router = useRouter();
   const { prefs } = usePrefs();
-  const { skin, metalStyle } = useSkin();
+  const { skin, metalStyle, appearance } = useSkin();
   // Steel theme: dashboard swaps to the brushed-metal header, buttons & panels.
   const isSteel = metalStyle === "steel";
+  // Plain + Light theme renders the transparent TOOLBOX VAULT wordmark header.
+  const isPlainLight = skin === "plain" && appearance === "light";
   // Brushed-silver panel art for the active Steel colour (orange/pink/arctic/emerald).
   const steelPanel = useSteelPanelFrame();
   // Frame art for dashboard panels — silver when Steel is active, otherwise the
@@ -798,7 +800,9 @@ export default function HomeScreen() {
       <SafeAreaView style={styles.container} edges={["top"]}>
         {/* Unified nameplate header. Steel theme swaps in the brushed-metal
             TOOLBOX VAULT nameplate; all other themes keep the standard banner. */}
-        {isSteel ? (
+        {isPlainLight ? (
+          <TbvHeader testID="tbv-header" />
+        ) : isSteel ? (
           <View style={STEEL_HEADER_WRAP}>
             <TbvHeader testID="tbv-header" />
           </View>
