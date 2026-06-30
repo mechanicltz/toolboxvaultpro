@@ -1140,14 +1140,13 @@ export default function ToolDetail() {
     padding-bottom: 6pt;
   }
 
-  /* === FOOTER (inlined into the red contact box) === */
-  .footer-inline {
-    text-align: center;
-    color: #ffcccc;
-    font-size: 6.5pt;
-    letter-spacing: 2pt;
-    padding-top: 6pt;
-  }
+  /* === FOOTER (centered wordmark on the white page area) === */
+  table.poster-footer { width: 100%; margin-top: 14pt; }
+  table.poster-footer td { border: 0; vertical-align: middle; }
+  td.pf-side { color: #888888; font-size: 7pt; letter-spacing: 2pt; }
+  td.pf-l { width: 50%; text-align: right; }
+  td.pf-r { width: 50%; text-align: left; }
+  td.pf-logo { text-align: center; white-space: nowrap; }
 </style>
 </head>
 <body>
@@ -1222,10 +1221,16 @@ export default function ToolDetail() {
                })
                .join("")}
            </table>
-           <div class="footer-inline">LISTED VIA TOOLBOX VAULT &nbsp;&middot;&nbsp; ${new Date().toLocaleDateString()}</div>
          </td></tr></table>`
-      : `<div class="footer-inline" style="color:#888; padding-top: 14pt;">LISTED VIA TOOLBOX VAULT &nbsp;&middot;&nbsp; ${new Date().toLocaleDateString()}</div>`
+      : ""
   }
+
+  <!-- Brand footer: centered wordmark on the white page area (always legible). -->
+  <table class="poster-footer"><tr>
+    <td class="pf-side pf-l">LISTED VIA&nbsp;&nbsp;</td>
+    <td class="pf-logo"><img src="${PRINT_LOGO_DATA_URI}" style="height:16px; vertical-align:middle;"/></td>
+    <td class="pf-side pf-r">&nbsp;&nbsp;&middot;&nbsp;&nbsp;${new Date().toLocaleDateString()}</td>
+  </tr></table>
 
 </body>
 </html>`;
