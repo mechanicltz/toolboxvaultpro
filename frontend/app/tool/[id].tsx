@@ -2195,8 +2195,8 @@ export default function ToolDetail() {
         {tool.description && String(tool.description).trim() ? (
           <View style={[boxStyle, { marginTop: 12 }]}>
             <View style={[newStyles.detailsLabelWrap, { marginBottom: 6 }]}>
-              <Ionicons name="document-text-outline" size={13} color={theme.colors.accent} />
-              <Text style={newStyles.detailsLabel}>DESCRIPTION / NOTES</Text>
+              <Ionicons name="document-text-outline" size={isIndustrial ? 13 : 16} color={theme.colors.accent} />
+              <Text style={isIndustrial ? newStyles.detailsLabel : newStyles.descHeaderPlain}>DESCRIPTION / NOTES</Text>
             </View>
             <Text style={[newStyles.detailsValue, { textAlign: "left", fontSize: 11, fontWeight: "500", lineHeight: 16 }]}>{tool.description}</Text>
           </View>

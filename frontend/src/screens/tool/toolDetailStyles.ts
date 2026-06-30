@@ -960,6 +960,14 @@ export const newStyles = themedStyles((c) => ({
     maxWidth: "70%",
     justifyContent: "flex-end",
   },
+  // Plain themes: DESCRIPTION / NOTES rendered as a bold section header
+  // (not the tiny 8px micro-label) on the item details page.
+  descHeaderPlain: {
+    color: c.textPrimary,
+    fontSize: 14,
+    fontWeight: "800",
+    letterSpacing: 0.5,
+  },
   detailsValue: {
     color: c.textPrimary,
     fontSize: 10,
