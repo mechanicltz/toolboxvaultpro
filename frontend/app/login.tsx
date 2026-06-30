@@ -331,44 +331,61 @@ export default function LoginScreen() {
             >
               {/* ===================== HEADER ===================== */}
               <View style={[styles.block, { width: WORK_W, marginBottom: headerGap * 0.3 }]}>
-                <Image
-                  source={SKIN.masterLogo}
-                  style={{ width: logoW, height: logoH }}
-                  resizeMode="contain"
-                />
-                <View style={{ width: nameplateW, height: nameplateH, marginTop: headerGap * 0.08 }}>
-                  <Image
-                    source={nameplateSrc}
-                    style={{ width: nameplateW, height: nameplateH }}
-                    resizeMode="contain"
-                  />
-                  {/* Version — centered over the small plate near the bottom of
-                      the nameplate art, matching the in-app IndustrialBanner. */}
-                  <View
-                    pointerEvents="none"
-                    style={{
-                      position: "absolute",
-                      left: 0,
-                      right: 0,
-                      top: nameplateH * 0.735,
-                      height: nameplateH * 0.19,
-                      alignItems: "center",
-                      justifyContent: "center",
-                    }}
-                  >
+                {/* Header wordmark on TOP. Plain themes use a clean themed
+                    wordmark (no steel plate); Steel/Iron keep the metal art. */}
+                {isPlain ? (
+                  <View style={{ alignItems: "center" }}>
                     <Text
-                      style={{
-                        color: TINT,
-                        fontSize: Math.round(nameplateH * 0.13),
-                        fontWeight: "800",
-                        letterSpacing: 1,
-                      }}
+                      style={{ fontFamily: "BebasNeue_400Regular", fontSize: clamp(WORK_W * 0.135, 34, 54), letterSpacing: 3, color: c.textPrimary }}
                       allowFontScaling={false}
                     >
+                      TOOLBOX VAULT
+                    </Text>
+                    <Text style={{ color: c.accent, fontSize: 12, fontWeight: "800", letterSpacing: 1, marginTop: 2 }} allowFontScaling={false}>
                       {APP_VERSION_LABEL}
                     </Text>
                   </View>
-                </View>
+                ) : (
+                  <View style={{ width: nameplateW, height: nameplateH }}>
+                    <Image
+                      source={nameplateSrc}
+                      style={{ width: nameplateW, height: nameplateH }}
+                      resizeMode="contain"
+                    />
+                    {/* Version — centered over the small plate near the bottom of
+                        the nameplate art, matching the in-app IndustrialBanner. */}
+                    <View
+                      pointerEvents="none"
+                      style={{
+                        position: "absolute",
+                        left: 0,
+                        right: 0,
+                        top: nameplateH * 0.735,
+                        height: nameplateH * 0.19,
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}
+                    >
+                      <Text
+                        style={{
+                          color: TINT,
+                          fontSize: Math.round(nameplateH * 0.13),
+                          fontWeight: "800",
+                          letterSpacing: 1,
+                        }}
+                        allowFontScaling={false}
+                      >
+                        {APP_VERSION_LABEL}
+                      </Text>
+                    </View>
+                  </View>
+                )}
+                {/* Logo icon BELOW the wordmark */}
+                <Image
+                  source={SKIN.masterLogo}
+                  style={{ width: logoW, height: logoH, marginTop: headerGap * 0.14 }}
+                  resizeMode="contain"
+                />
                 <Text
                   style={[styles.tagline, { fontSize: tagFont, maxWidth: WORK_W * 0.96, marginTop: headerGap * 0.06 }, isPlain && { color: c.textSecondary }]}
                   numberOfLines={1}
