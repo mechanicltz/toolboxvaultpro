@@ -86,23 +86,32 @@ async def attach_user_to_context(request: Request, call_next):
         # snappy. Errors here are swallowed so they never break a
         # request — pessimistic mode = no filter (PRO behaviour).
         try:
-            from subscriptions import is_pro as _is_pro
+            from subscriptions import is_pro as _is_pro, active_tools_query
             if not await _is_pro(real_db, uid):
-                # Count first; if <= 15, no filter needed.
-                cnt = await real_db.tools.count_documents({"owner_id": uid})
-                if cnt > 15:
-                    # Keep the 15 most useful tools visible. Prioritize ACTIVE
-                    # (non-sold) inventory, newest first — sold tools live in a
-                    # separate archive and are excluded from the main list, so
-                    # they should not consume a visible slot ahead of a tool the
-                    # user would actually see. Sorting by (is_sold ASC,
-                    # created_at DESC) puts non-sold/newest first.
-                    cursor = real_db.tools.find(
-                        {"owner_id": uid},
-                        {"id": 1, "_id": 0},
-                    ).sort([("is_sold", 1), ("created_at", -1)]).limit(15)
-                    ids = {doc["id"] async for doc in cursor if "id" in doc}
-                    visible_var = free_visible_tool_ids_var.set(ids)
+                # Only ACTIVE tools (non-sold, non-lost) consume a free-tier
+                # slot — sold/lost live in archives and must stay visible. So
+                # the cap triggers on the ACTIVE count, and when it does we
+                # keep the 15 newest active tools PLUS every archived tool
+                # visible (hide only the active overflow). This matches
+                # enforce_tool_limit + the GET /api/subscription hidden count.
+                active_q = active_tools_query(uid)
+                active_ids = [
+                    doc["id"]
+                    async for doc in real_db.tools.find(
+                        active_q, {"id": 1, "_id": 0}
+                    ).sort([("created_at", -1)])
+                    if "id" in doc
+                ]
+                if len(active_ids) > 15:
+                    hidden_ids = set(active_ids[15:])
+                    all_ids = {
+                        doc["id"]
+                        async for doc in real_db.tools.find(
+                            {"owner_id": uid}, {"id": 1, "_id": 0}
+                        )
+                        if "id" in doc
+                    }
+                    visible_var = free_visible_tool_ids_var.set(all_ids - hidden_ids)
         except Exception:
             pass
         return await call_next(request)

@@ -41,6 +41,33 @@ if TYPE_CHECKING:  # pragma: no cover
 FREE_TOOL_LIMIT = 15
 PRO_ENTITLEMENT_ID = "pro"
 
+
+def active_tools_query(owner_id: str) -> dict:
+    """
+    Mongo filter matching a user's ACTIVE inventory — i.e. tools that count
+    toward the free-tier limit and the free-tier visibility cap.
+
+    Sold AND lost/stolen tools are EXCLUDED: they live in their own archives,
+    are hidden from the default Inventory listing, and so must NOT consume a
+    free-tier slot or trigger the "N hidden tools" paywall banner. Keeping this
+    in one place guarantees the create-limit (`enforce_tool_limit`), the
+    per-request visibility cap (server.py middleware) and the
+    `hidden_tool_count` reported by GET /api/subscription all agree.
+    """
+    return {
+        "owner_id": owner_id,
+        # Set/bundle containers (is_bundle) are "Sets", not regular tools, and
+        # don't consume a free-tier slot.
+        "is_bundle": {"$ne": True},
+        # not sold (missing field counts as not-sold)
+        "is_sold": {"$ne": True},
+        # not lost/stolen — lost_status is a dict when lost, None/absent otherwise
+        "$and": [
+            {"$or": [{"lost_status": None}, {"lost_status": {"$exists": False}}]},
+            {"$or": [{"is_lost": {"$ne": True}}, {"is_lost": {"$exists": False}}]},
+        ],
+    }
+
 # Loaded lazily so import doesn't blow up if env hasn't been configured
 def _env(key: str, default: str = "") -> str:
     v = os.environ.get(key, "").strip()
@@ -193,19 +220,8 @@ async def enforce_tool_limit(db, user_id: str, *, additional: int = 1) -> None:
     """
     if await is_pro(db, user_id):
         return
-    # Active tools only — excludes sold + lost.
-    current = await db.tools.count_documents({
-        "owner_id": user_id,
-        "$and": [
-            {"$or": [{"is_sold": {"$ne": True}}, {"is_sold": {"$exists": False}}]},
-            {"$or": [
-                {"lost_status": None},
-                {"lost_status": {"$exists": False}},
-                # Some legacy docs use is_lost boolean
-                {"is_lost": {"$ne": True}},
-            ]},
-        ],
-    })
+    # Active tools only — excludes sold + lost (see active_tools_query).
+    current = await db.tools.count_documents(active_tools_query(user_id))
     if (current + additional) > FREE_TOOL_LIMIT:
         raise HTTPException(
             status_code=402,
@@ -334,8 +350,12 @@ def make_router(db, get_current_user) -> APIRouter:
         # otherwise narrows queries to 15.
         try:
             total_owned = await db.tools.count_documents({"owner_id": uid})
+            # Active = non-sold, non-lost. Only these consume a free-tier slot
+            # and can be hidden behind the paywall — sold/lost live in archives.
+            active_owned = await db.tools.count_documents(active_tools_query(uid))
         except Exception:
             total_owned = 0
+            active_owned = 0
         active = _is_active(sub)
         return {
             **sub.dict(),
@@ -345,8 +365,8 @@ def make_router(db, get_current_user) -> APIRouter:
             # Convenience: how many tools are HIDDEN behind the paywall right
             # now. > 0 means the client should render the upgrade banner.
             "hidden_tool_count": (
-                max(0, total_owned - FREE_TOOL_LIMIT)
-                if not active and total_owned > FREE_TOOL_LIMIT
+                max(0, active_owned - FREE_TOOL_LIMIT)
+                if not active and active_owned > FREE_TOOL_LIMIT
                 else 0
             ),
         }
@@ -632,6 +652,7 @@ def make_router(db, get_current_user) -> APIRouter:
 __all__ = [
     "FREE_TOOL_LIMIT",
     "PRO_ENTITLEMENT_ID",
+    "active_tools_query",
     "SubscriptionState",
     "PromoCode",
     "RedeemPromoBody",

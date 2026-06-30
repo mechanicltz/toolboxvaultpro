@@ -721,8 +721,22 @@ async def clear_demo_data_for_user(real_db, user_id: str,
     reset the demo enrichments on the default dealers."""
     removed: Dict[str, int] = {}
     for coll in _DEMO_COLLECTIONS:
-        res = await real_db[coll].delete_many({"owner_id": user_id, "is_demo": True})
-        removed[coll] = res.deleted_count
+        base_q = {"owner_id": user_id, "is_demo": True}
+        if coll == "tools":
+            # In the v3.2 model a Set is a tool with is_bundle=True. Report
+            # those under "bundles" so the count matches the user's mental
+            # model (15 tools + 1 Set, not 16 tools).
+            bundles_n = await real_db.tools.count_documents({**base_q, "is_bundle": True})
+            res = await real_db.tools.delete_many(base_q)
+            removed["tools"] = res.deleted_count - bundles_n
+            removed["bundles"] = removed.get("bundles", 0) + bundles_n
+        elif coll == "bundles":
+            # Legacy separate collection (pre-v3.2). Fold any stragglers in.
+            res = await real_db.bundles.delete_many(base_q)
+            removed["bundles"] = removed.get("bundles", 0) + res.deleted_count
+        else:
+            res = await real_db[coll].delete_many(base_q)
+            removed[coll] = res.deleted_count
 
     if keep_taxonomy:
         # Reset any dealer we enriched back to a clean state.
