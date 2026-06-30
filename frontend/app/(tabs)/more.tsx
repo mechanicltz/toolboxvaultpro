@@ -32,7 +32,6 @@ import { usePrefs, HOME_ROW_LABELS, HomeRowKey } from "../../src/prefs";
 import { api } from "../../src/api";
 import { useAuth } from "../../src/AuthContext";
 import {
-  demoStyles,
   homeRowsModalStyles,
   pwStyles,
   styles,
@@ -334,8 +333,6 @@ export default function MoreScreen() {
   // Prefilled Demo System — show the "Delete Prefilled Information" row only
   // while seeded demo data is still present on the account.
   const [demoPresent, setDemoPresent] = useState(false);
-  const [demoBusy, setDemoBusy] = useState(false);
-  const [demoConfirmOpen, setDemoConfirmOpen] = useState(false);
   // Audit #11: track the auto-close timer for the change-password modal so
   // it can't fire setState after this screen unmounts.
   const pwCloseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -391,39 +388,6 @@ export default function MoreScreen() {
   );
   // Also refresh on app resume (e.g. after a backgrounded subscription change).
   useAppResume(useCallback(() => { refreshAccountState(); }, [refreshAccountState]));
-
-  // Prefilled Demo System — wipe the seeded demo data. `mode` is either
-  // "everything" (also removes dealers/locations/tags/categories for a blank
-  // app) or "keep_taxonomy" (keeps that setup, removes only demo records).
-  const runClearDemo = useCallback(async (mode: "everything" | "keep_taxonomy") => {
-    setDemoBusy(true);
-    try {
-      await api.demoClear(mode);
-      setDemoPresent(false);
-      Alert.alert(
-        "Demo Data Removed",
-        mode === "everything"
-          ? "All sample data — including dealers, locations, tags & categories — has been deleted. You now have a blank app."
-          : "Sample tools, claims and other demo records were removed. Your dealers, locations, tags & categories were kept.",
-      );
-    } catch {
-      Alert.alert("Couldn't Remove Demo Data", "Something went wrong. Please try again.");
-    } finally {
-      setDemoBusy(false);
-    }
-  }, []);
-
-  const promptClearDemo = useCallback(() => {
-    setDemoConfirmOpen(true);
-  }, []);
-
-  const chooseClearDemo = useCallback(
-    (mode: "everything" | "keep_taxonomy") => {
-      setDemoConfirmOpen(false);
-      runClearDemo(mode);
-    },
-    [runClearDemo],
-  );
 
   // Biometric (Face ID / Touch ID) status — re-read on focus so any
   // change made elsewhere is reflected here. Disabling on web is fine
@@ -780,6 +744,13 @@ export default function MoreScreen() {
             subtitle="Bulk-upload tools or back up to a spreadsheet"
             testID="more-import-export"
             onPress={() => router.push("/import-export" as any)}
+          />
+          <SectionRow
+            icon="server"
+            title="Manage Data"
+            subtitle="Install starter data, bulk-remove categories & prefilled info"
+            testID="more-data-management"
+            onPress={() => router.push("/data-management" as any)}
             isLast
           />
         </SectionCard>
@@ -1012,13 +983,9 @@ export default function MoreScreen() {
               icon="sparkles"
               iconColor={theme.colors.accent}
               title="Delete Prefilled Information"
-              subtitle={
-                demoBusy
-                  ? "Removing sample data…"
-                  : "Remove the sample/demo data added when you signed up"
-              }
+              subtitle="Remove the sample data — moved to Manage Data"
               testID="more-delete-demo"
-              onPress={demoBusy ? undefined : promptClearDemo}
+              onPress={() => router.push("/data-management" as any)}
             />
           )}
           <SectionRow
@@ -1223,77 +1190,8 @@ export default function MoreScreen() {
         </KeyboardAvoidingView>
       </Modal>
 
-      {/* Delete Prefilled Information — choice modal (web-parity for the
-          3-option Alert: keep setup vs wipe everything). */}
-      <Modal
-        visible={demoConfirmOpen}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setDemoConfirmOpen(false)}
-      >
-        <View style={demoStyles.backdrop}>
-          <View style={demoStyles.card} testID="demo-clear-modal">
-            <View style={demoStyles.header}>
-              <Ionicons name="sparkles" size={20} color={theme.colors.accent} />
-              <Text style={demoStyles.title}>DELETE PREFILLED INFO</Text>
-              <TouchableOpacity
-                onPress={() => setDemoConfirmOpen(false)}
-                hitSlop={10}
-                testID="demo-clear-close"
-              >
-                <Ionicons name="close" size={22} color={theme.colors.textPrimary} />
-              </TouchableOpacity>
-            </View>
-            <Text style={demoStyles.body}>
-              Choose how much of the sample data to remove. This can&apos;t be
-              undone.
-            </Text>
-
-            <TouchableOpacity
-              testID="demo-clear-keep"
-              style={demoStyles.optBtn}
-              activeOpacity={0.85}
-              onPress={() => chooseClearDemo("keep_taxonomy")}
-            >
-              <Ionicons name="albums-outline" size={18} color={theme.colors.accent} />
-              <View style={{ flex: 1 }}>
-                <Text style={demoStyles.optTitle}>Keep My Setup</Text>
-                <Text style={demoStyles.optSub}>
-                  Remove demo tools, claims & contacts — keep dealers, locations,
-                  tags & categories
-                </Text>
-              </View>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              testID="demo-clear-everything"
-              style={demoStyles.optBtn}
-              activeOpacity={0.85}
-              onPress={() => chooseClearDemo("everything")}
-            >
-              <Ionicons name="trash-outline" size={18} color={theme.colors.danger} />
-              <View style={{ flex: 1 }}>
-                <Text style={[demoStyles.optTitle, { color: theme.colors.danger }]}>
-                  Remove Everything
-                </Text>
-                <Text style={demoStyles.optSub}>
-                  Wipe all sample data including dealers, locations, tags &
-                  categories — start with a blank app
-                </Text>
-              </View>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              testID="demo-clear-cancel"
-              style={demoStyles.cancelBtn}
-              activeOpacity={0.85}
-              onPress={() => setDemoConfirmOpen(false)}
-            >
-              <Text style={demoStyles.cancelText}>CANCEL</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
+      {/* Delete Prefilled Information now lives on the Manage Data screen
+          (Vault → Data Management). */}
 
 
     </SafeAreaView>

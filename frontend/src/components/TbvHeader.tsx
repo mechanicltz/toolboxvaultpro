@@ -22,9 +22,9 @@ import {
 import { APP_VERSION_LABEL } from "../version";
 import { useSkin } from "../themeContext";
 
-// Plain + Light theme wordmark (transparent, trimmed). Aspect = 1536 / 570.
+// Plain + Light theme wordmark (transparent, trimmed). Aspect = 1536 / 530.
 const LIGHT_LOGO_SRC = require("../../assets/light-header-logo.png");
-const LIGHT_LOGO_ASPECT = 1536 / 570;
+const LIGHT_LOGO_ASPECT = 1536 / 530;
 
 export function TbvHeader({
   style,

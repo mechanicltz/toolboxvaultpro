@@ -861,6 +861,17 @@ export const api = {
   demoIntroSeen: () => request<any>(`/demo/intro-seen`, { method: "POST" }),
   demoClear: (mode: "everything" | "keep_taxonomy") =>
     request<any>(`/demo/clear`, { method: "POST", body: JSON.stringify({ mode }) }),
+  // Data Management — bulk-remove selected categories / install starter content.
+  removeData: (items: string[]) =>
+    request<{ ok: boolean; removed: Record<string, number> }>(`/data-management/remove`, {
+      method: "POST",
+      body: JSON.stringify({ items }),
+    }),
+  installPreloaded: (items: string[]) =>
+    request<{ ok: boolean; installed: Record<string, number> }>(`/data-management/install-preloaded`, {
+      method: "POST",
+      body: JSON.stringify({ items }),
+    }),
 
   // Locations
   listLocations: () => request<any[]>(`/locations`),

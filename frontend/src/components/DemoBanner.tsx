@@ -64,7 +64,7 @@ export function DemoBanner() {
 
   const goManage = useCallback(async () => {
     await dismissIntro();
-    router.push("/(tabs)/more" as any);
+    router.push("/data-management" as any);
   }, [dismissIntro, router]);
 
   // Primary "GOT IT" on the demo popup → dismiss demo intro, then (one time
@@ -159,7 +159,7 @@ export function DemoBanner() {
               <Text style={[styles.cardBody, { marginTop: 12 }]}>
                 Ready to start fresh? Remove it anytime from{" "}
                 <Text style={styles.bodyStrong}>
-                  Account → Delete Prefilled Information
+                  Vault → Manage Data → Delete Prefilled Information
                 </Text>
                 . You&apos;ll choose whether to wipe everything or keep your
                 dealers, locations, tags &amp; categories.
@@ -177,7 +177,7 @@ export function DemoBanner() {
                 size={16}
                 color={theme.colors.textSecondary}
               />
-              <Text style={styles.secondaryBtnText}>Manage in Account</Text>
+              <Text style={styles.secondaryBtnText}>Manage Data</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
