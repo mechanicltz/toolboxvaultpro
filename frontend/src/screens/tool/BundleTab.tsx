@@ -150,6 +150,50 @@ export function BundleTab({
     ]);
   };
 
+  // ---------- absorb-from-inventory picker (moves a standalone tool INTO the set) ----------
+  const [showAbsorb, setShowAbsorb] = useState(false);
+  const [absorbItems, setAbsorbItems] = useState<any[]>([]);
+  const [absorbLoading, setAbsorbLoading] = useState(false);
+  const [absorbSearch, setAbsorbSearch] = useState("");
+  const [absorbBusy, setAbsorbBusy] = useState(false);
+
+  const openAbsorbPicker = async () => {
+    setShowAbsorb(true);
+    setAbsorbLoading(true);
+    try {
+      const list = await api.listTools({}, { forceFresh: true } as any);
+      const filtered = (Array.isArray(list) ? list : []).filter(
+        (t) => !t.is_bundle && t.id !== bundle.id,
+      );
+      setAbsorbItems(filtered);
+    } catch { setAbsorbItems([]); }
+    finally { setAbsorbLoading(false); }
+  };
+
+  const absorb = (t: any) => {
+    Alert.alert(
+      "Move into set?",
+      `"${t.name || "This item"}" will be moved into this set and removed from your standalone inventory. Its photo, model and price are kept. This can't be undone.`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Move In",
+          style: "destructive",
+          onPress: async () => {
+            setAbsorbBusy(true);
+            try {
+              await api.absorbToolIntoBundle(bundle.id, t.id);
+              setShowAbsorb(false);
+              setAbsorbSearch("");
+              onChanged();
+            } catch (e: any) { Alert.alert("Error", String(e?.message || e)); }
+            finally { setAbsorbBusy(false); }
+          },
+        },
+      ],
+    );
+  };
+
   // ---------- expansion-only view (item IS an add-on) ----------
   if (!isBundle) {
     if (!bundle?.expansion_of) {
@@ -176,7 +220,12 @@ export function BundleTab({
       <View style={boxStyle}>
         <View style={s.headerRow}>
           <Text style={s.sectionLabel}>ITEMS IN THIS SET{insideItems.length ? ` (${insideItems.length})` : ""}</Text>
-          {editing && <PillButton testID="add-inside-item-btn" label="ADD" icon="add-circle" variant="active" compact onPress={openAdd} />}
+          {editing && (
+            <View style={{ flexDirection: "row", gap: 8 }}>
+              <PillButton testID="absorb-inventory-btn" label="FROM INVENTORY" icon="albums" variant="active" compact onPress={openAbsorbPicker} />
+              <PillButton testID="add-inside-item-btn" label="NEW" icon="add-circle" variant="active" compact onPress={openAdd} />
+            </View>
+          )}
         </View>
         {insideItems.length === 0 ? (
           <Text style={s.empty}>No items yet. Add the individual pieces that come in this set (e.g. each socket).</Text>
@@ -310,6 +359,45 @@ export function BundleTab({
               </ScrollView>
             )}
             <TouchableOpacity style={[s.btnGhost, { marginTop: 12 }]} onPress={() => { setShowPicker(false); setSearch(""); }}><Text style={s.btnGhostText}>CLOSE</Text></TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* ABSORB-FROM-INVENTORY PICKER MODAL */}
+      <Modal visible={showAbsorb} transparent animationType="slide" onRequestClose={() => setShowAbsorb(false)}>
+        <View style={s.modalBg}>
+          <View style={[s.modalCard, { maxHeight: "85%" }]}>
+            <Text style={s.modalTitle}>ADD ITEMS FROM INVENTORY</Text>
+            <Text style={[s.empty, { marginBottom: 10 }]}>
+              Pick a standalone inventory item to move into this set. It keeps its
+              photo, model & price and is removed from your inventory.
+            </Text>
+            <View style={s.searchWrap}>
+              <Ionicons name="search" size={16} color={theme.colors.textMuted} />
+              <TextInput testID="absorb-search" style={s.searchInput} value={absorbSearch} onChangeText={setAbsorbSearch} placeholder="Search your inventory" placeholderTextColor={theme.colors.textMuted} />
+            </View>
+            {absorbLoading ? <ActivityIndicator color={theme.colors.accent} style={{ marginVertical: 20 }} /> : (
+              <ScrollView keyboardShouldPersistTaps="handled" style={{ maxHeight: 440 }}>
+                {absorbItems.filter((t) => {
+                  const q = absorbSearch.trim().toLowerCase();
+                  if (!q) return true;
+                  return (t.name || "").toLowerCase().includes(q) || (t.model_numbers || []).join(" ").toLowerCase().includes(q);
+                }).map((t) => (
+                  <TouchableOpacity key={t.id} style={s.row} testID={`absorb-item-${t.id}`} onPress={() => !absorbBusy && absorb(t)} activeOpacity={0.7} disabled={absorbBusy}>
+                    {t.photos?.[0] ? <AppImage source={{ uri: t.photos[0] }} style={s.thumb} /> : (
+                      <View style={[s.thumb, s.thumbEmpty]}><Ionicons name="construct" size={16} color={theme.colors.accent} /></View>
+                    )}
+                    <View style={{ flex: 1, minWidth: 0 }}>
+                      <Text style={s.rowName} numberOfLines={1}>{t.name}</Text>
+                      <Text style={s.rowSub} numberOfLines={1}>{t.cost ? money(t.cost) : "No price"}</Text>
+                    </View>
+                    <Ionicons name="enter" size={20} color={theme.colors.accent} />
+                  </TouchableOpacity>
+                ))}
+                {absorbItems.length === 0 && <Text style={s.empty}>No eligible inventory items to move in. Add items to your inventory first.</Text>}
+              </ScrollView>
+            )}
+            <TouchableOpacity style={[s.btnGhost, { marginTop: 12 }]} onPress={() => { setShowAbsorb(false); setAbsorbSearch(""); }}><Text style={s.btnGhostText}>CLOSE</Text></TouchableOpacity>
           </View>
         </View>
       </Modal>

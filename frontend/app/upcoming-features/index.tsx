@@ -17,6 +17,7 @@ import { themedStyles, useColors } from "../../src/themeContext";
 import { SkinnedCard } from "../../src/components/SkinnedCard";
 import { IndustrialBanner } from "../../src/components/IndustrialBanner";
 import ReportBugBadge from "../../src/components/ReportBugBadge";
+import { markUpcomingSeen } from "../../src/upcomingBadge";
 
 function formatDate(iso: string): string {
   try {
@@ -64,6 +65,8 @@ export default function UpcomingFeaturesScreen() {
   useFocusEffect(
     useCallback(() => {
       load();
+      // Opening this screen clears the "new features" red dot everywhere.
+      markUpcomingSeen();
     }, [load]),
   );
 

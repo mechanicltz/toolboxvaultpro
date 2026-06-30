@@ -854,6 +854,10 @@ export const api = {
     request<any>(`/tools/${bundleId}/expansion/${toolId}`, { method: "POST" }),
   unlinkExpansionItem: (bundleId: string, toolId: string) =>
     request<any>(`/tools/${bundleId}/expansion/${toolId}`, { method: "DELETE" }),
+  // Move an existing standalone tool INTO a set as an inside item (keeps its
+  // photo/model/price, deletes the standalone tool). Returns the updated set.
+  absorbToolIntoBundle: (bundleId: string, toolId: string) =>
+    request<any>(`/tools/${bundleId}/absorb/${toolId}`, { method: "POST" }),
 
   // Prefilled Demo System
   demoStatus: (opts?: { forceFresh?: boolean }) =>

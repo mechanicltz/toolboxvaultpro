@@ -1,0 +1,36 @@
+{
+  "summary": "Verified TASK 2 (absorb-tool-into-bundle) and TASK 3 (upcoming-features badges) end-to-end. Backend: created /app/backend/tests/test_iter75_absorb_upcoming.py with 7 pytest cases — ALL PASS (7/7). Absorb flow: bundle+standalone-tool created → POST /api/tools/{bundle_id}/absorb/{tool_id} → 200 with preserved name/model/cost/photo in inside_items, the standalone tool returns 404 on GET (deleted), bundle GET still lists the absorbed item. Error paths covered: 404 for missing tool, 400 when trying to absorb another bundle. Upcoming-features: GET /api/upcoming-features returns list with id/created_at/updated_at; admin POST + PUT update updated_at; non-admin (ryan@ryan.com) gets 401/403 on POST. Frontend: logged in as MechanicLTZ@gmail.com (admin), cleared localStorage 'tbv_upcoming_seen_sig'. Verified both badges render on Dashboard via DOM inspection — tab-more-dot is a 9x9 red dot at x=358,y=791 (bottom-right Vault tab icon, computed display=flex, visibility=visible, opacity=1) AND tbv-header-badge is a 12x12 red dot at x=354,y=10 in the TOOLBOX VAULT wordmark area (also visible). The red dots are clearly visible in screenshots iter75_dashboard_with_dots.png and iter75_dashboard_dots.png. Upcoming-features screen opens via Vault → 'Upcoming Features' row (testID more-upcoming-features) and displays existing 'July 2026' release with feature cards (Completed/On The List status pills). Admin Upcoming Features page at /admin/upcoming-features loads with testIDs upcoming-add and upcoming-create available. No console pageerrors, no red screen, no broken navigation. NO mocked APIs. Task 2 frontend UI absorb-* testIDs verified by source grep (absorb-inventory-btn, absorb-search, absorb-item-<id>) — backend test covers full data path.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iter75_absorb_upcoming.py",
+    "/app/test_reports/pytest/iter75_results.xml",
+    "/app/test_reports/screens/iter75_dashboard_with_dots.png",
+    "/app/test_reports/screens/iter75_dashboard_dots.png",
+    "/app/test_reports/screens/iter75_upcoming_screen.png",
+    "/app/test_reports/screens/iter75_vault_row.png"
+  ],
+  "action_items": [
+    "Suggest exposing the 'NEW' pill on the Vault → Upcoming Features row with a stronger testID (e.g. more-upcoming-new-badge) so future tests can deterministically assert the in-row badge without relying on innerText regex.",
+    "Suggest exposing the admin release-form fields (release-date-input, release-title-input, release-save) with testIDs so the admin-add flow can be exercised end-to-end from Playwright (currently the modal opens but field testIDs are absent)."
+  ],
+  "critical_code_review_comments": [
+    "routes_bundles.py absorb_tool_into_bundle: photo URL transfer preserves photos[0] only; if tool had multiple photos, the extras are deleted via media.delete_values — by design per docstring. OK.",
+    "upcomingBadge.ts uses a single module-level currentSig/hasNew shared globally. On web full reloads this is fine, but on native (Hermes) the in-memory hasNew survives across navigation, so markUpcomingSeen correctly emits to all subscribers. Good design.",
+    "BottomBar.tsx renders the dot only when t.name === 'more' — matches spec; testID 'tab-more-dot' is exposed correctly."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iter75_absorb_upcoming.py (NEW backend test suite, 7 cases, all pass)"
+  ],
+  "success_rate": {"backend": "100% (7/7 pytest)", "frontend": "Task 3 verified visually + DOM inspection; Task 2 backend verified, frontend testIDs present in code"},
+  "seed_data_creation": "Backend tests create/teardown their own TEST_-prefixed bundles, tools, and upcoming releases — no residual data. No new user accounts registered (used existing admin MechanicLTZ@gmail.com).",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Login endpoint returns {token, user} (NOT access_token). Admin upcoming-features create flow currently lacks testIDs on the form fields inside the ADD modal — the modal exposes upcoming-add (button) and upcoming-create (route entry) but no release-date-input / release-save testIDs. Badge testIDs: tab-more-dot (BottomBar.tsx:171), tbv-header-badge (TbvHeader.tsx:68 and :102 — there are TWO render paths, one for plain-light wordmark and one for industrial banner). Both have non-zero size and visible computed style when the badge prop is true. AsyncStorage on web is backed by localStorage; key is 'tbv_upcoming_seen_sig'. Clear via localStorage.removeItem to re-show dots in tests. The Vault → Upcoming Features row uses the same upcomingNew bool to render an inline 'NEW' pill — visible in row.innerText regex /NEW/.",
+  "rca_of_issue": "No bugs found this iteration. All target behavior verified."
+}

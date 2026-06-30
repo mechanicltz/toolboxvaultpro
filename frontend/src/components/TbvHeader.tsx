@@ -30,10 +30,12 @@ export function TbvHeader({
   style,
   showVersion = true,
   testID,
+  badge = false,
 }: {
   style?: StyleProp<ViewStyle>;
   showVersion?: boolean;
   testID?: string;
+  badge?: boolean;
 }) {
   const [w, setW] = useState(0);
   const h = w > 0 ? w / HEADER_ASPECT : 0;
@@ -63,6 +65,7 @@ export function TbvHeader({
             fadeDuration={0}
           />
         ) : null}
+        {badge ? <View style={styles.badgeDot} testID="tbv-header-badge" /> : null}
       </View>
     );
   }
@@ -96,6 +99,7 @@ export function TbvHeader({
               {APP_VERSION_LABEL}
             </Text>
           ) : null}
+          {badge ? <View style={styles.badgeDot} testID="tbv-header-badge" /> : null}
         </View>
       ) : null}
     </View>
@@ -109,6 +113,17 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: "800",
     letterSpacing: 0.3,
+  },
+  badgeDot: {
+    position: "absolute",
+    top: 2,
+    right: 8,
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: "#FF3B30",
+    borderWidth: 2,
+    borderColor: "#FFFFFF",
   },
 });
 

@@ -89,6 +89,43 @@ def register_bundle_routes(api_router: APIRouter) -> None:
         new = await db.tools.find_one({"id": bundle_id}, {"_id": 0})
         return Tool(**new)
 
+    @api_router.post("/tools/{bundle_id}/absorb/{tool_id}", response_model=Tool)
+    async def absorb_tool_into_bundle(bundle_id: str, tool_id: str, user: User = Depends(get_current_user)):
+        """Move an existing standalone inventory tool INTO this set as an inside
+        item, preserving its name / model / price / cover photo, then delete the
+        standalone tool. The cover photo URL is transferred (NOT deleted) so it
+        keeps rendering inside the set; the tool's extra media + warranty claims
+        are cleaned up."""
+        await _get_bundle_tool(bundle_id)
+        if tool_id == bundle_id:
+            raise HTTPException(400, "A set cannot absorb itself")
+        tool = await db.tools.find_one({"id": tool_id}, {"_id": 0})
+        if not tool:
+            raise HTTPException(404, "Tool not found")
+        if tool.get("is_bundle"):
+            raise HTTPException(400, "Cannot add a set inside another set")
+        photos = tool.get("photos") or []
+        model = (tool.get("model") or "").strip() or ((tool.get("model_numbers") or [None])[0] or "")
+        item = InsideItem(
+            name=tool.get("name") or "Item",
+            model=model or "",
+            cost=float(tool.get("cost") or 0),
+            photo=(photos[0] if photos else "") or "",
+        )
+        await db.tools.update_one(
+            {"id": bundle_id},
+            {"$push": {"inside_items": item.dict()}, "$set": {"updated_at": now_iso()}},
+        )
+        res = await db.tools.delete_one({"id": tool_id})
+        if res.deleted_count:
+            # Keep photos[0] (now owned by the inside item); drop the rest.
+            await media.delete_values(photos[1:] if len(photos) > 1 else [])
+            await media.delete_values(tool.get("receipts"))
+            await media.delete_values(tool.get("documents"))
+            await db.warranty_claims.delete_many({"tool_id": tool_id})
+        doc = await db.tools.find_one({"id": bundle_id}, {"_id": 0})
+        return Tool(**doc)
+
     @api_router.get("/tools/{bundle_id}/expansion-items", response_model=List[Tool])
     async def list_expansion_items(bundle_id: str, user: User = Depends(get_current_user)):
         items = await db.tools.find({"expansion_of": bundle_id}, {"_id": 0}).sort("created_at", -1).to_list(2000)

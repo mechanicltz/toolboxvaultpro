@@ -17,6 +17,7 @@ import { theme } from "./theme";
 import { useResponsive, CONTENT_MAX_WIDTH_WIDE } from "./responsive";
 
 import { themedStyles } from "./themeContext";
+import { useUpcomingBadge } from "./upcomingBadge";
 
 // ----------------------------------------------------------------------------
 // ANDROID NAV-BAR SAFE PADDING
@@ -98,6 +99,7 @@ export function BottomBar() {
   const pathname = usePathname() || "/";
   const { isPhone, isTablet } = useResponsive();
   const insets = useSafeAreaInsets();
+  const upcomingNew = useUpcomingBadge();
   const [chooserOpen, setChooserOpen] = useState<null | (typeof TABS)[number]>(null);
 
   // Add the bottom safe-area inset on top of our base padding so the tab bar
@@ -159,11 +161,16 @@ export function BottomBar() {
                 }}
                 activeOpacity={0.7}
               >
-                <Ionicons
-                  name={t.icon}
-                  size={isPhone ? 22 : 26}
-                  color={active ? theme.colors.accent : theme.colors.textMuted}
-                />
+                <View>
+                  <Ionicons
+                    name={t.icon}
+                    size={isPhone ? 22 : 26}
+                    color={active ? theme.colors.accent : theme.colors.textMuted}
+                  />
+                  {t.name === "more" && upcomingNew ? (
+                    <View style={styles.dot} testID="tab-more-dot" />
+                  ) : null}
+                </View>
                 <Text
                   numberOfLines={1}
                   allowFontScaling={false}
@@ -251,6 +258,17 @@ const styles = themedStyles((c) => ({
     fontSize: 7,
     fontWeight: "800",
     letterSpacing: 0.5,
+  },
+  dot: {
+    position: "absolute",
+    top: -3,
+    right: -5,
+    width: 9,
+    height: 9,
+    borderRadius: 5,
+    backgroundColor: "#FF3B30",
+    borderWidth: 1,
+    borderColor: c.tabBarBg,
   },
   modalBg: {
     flex: 1,

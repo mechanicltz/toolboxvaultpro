@@ -44,6 +44,7 @@ import { useIsSteel, useSteelPanelFrame } from "../../src/tbv/steel";
 import TbvFrame from "../../src/tbv/components/TbvFrame";
 
 import NotificationsSettingsSection from "../../src/sections/NotificationsSettingsSection";
+import { useUpcomingBadge } from "../../src/upcomingBadge";
 
 // Fixed brand hues for the two industrial themes. Per the user spec these
 // labels MUST always render in their signature colour regardless of the active
@@ -327,12 +328,12 @@ export default function MoreScreen() {
   const [isAdmin, setIsAdmin] = useState(false);
   // Admin-only FREE/SUB account counter shown in the VAULT header.
   const [userStats, setUserStats] = useState<{ free: number; subscribed: number } | null>(null);
-  // Roadmap — show a "NEW" badge on the Upcoming Features row whenever the
-  // admin has published at least one release (hidden when the list is empty).
-  const [hasUpcoming, setHasUpcoming] = useState(false);
   // Prefilled Demo System — show the "Delete Prefilled Information" row only
   // while seeded demo data is still present on the account.
   const [demoPresent, setDemoPresent] = useState(false);
+  // Red-dot when the admin has published new roadmap items since this user's
+  // last visit to Upcoming Features (cleared globally on that screen).
+  const upcomingNew = useUpcomingBadge();
   // Audit #11: track the auto-close timer for the change-password modal so
   // it can't fire setState after this screen unmounts.
   const pwCloseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -370,12 +371,6 @@ export default function MoreScreen() {
       setDemoPresent(!!ds?.present);
     } catch {
       setDemoPresent(false);
-    }
-    try {
-      const ru = await api.listUpcomingFeatures();
-      setHasUpcoming(Array.isArray(ru) && ru.length > 0);
-    } catch {
-      setHasUpcoming(false);
     }
   }, []);
   useEffect(() => {
@@ -652,7 +647,7 @@ export default function MoreScreen() {
             subtitle="See what we're building next"
             testID="more-upcoming-features"
             onPress={() => router.push("/upcoming-features" as any)}
-            newBadge={hasUpcoming}
+            newBadge={upcomingNew}
             isLast={!isAdmin}
           />
           {isAdmin && (
