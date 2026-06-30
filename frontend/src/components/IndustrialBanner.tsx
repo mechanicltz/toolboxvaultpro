@@ -71,18 +71,18 @@ const LIGHT_LOGO_ASPECT = 1419 / 206;
 
 export function IndustrialBanner({ title, subtitle, rightSlot, leftSlot, onBack, backIcon, centerSlot }: Props) {
   const c = useColors();
-  const { metalStyle, industrialVariant, skin, mode, appearance } = useSkin();
+  const { metalStyle, industrialVariant, skin } = useSkin();
   // Steel theme swaps the dark iron nameplate for the brushed-silver "TOOLBOX
   // VAULT" plate (recoloured to the active steel colour), keeping the page
   // title + back row beneath it so every screen reads as Steel.
   // The plain Light/Dark themes ALSO use the Steel nameplate now: Dark gets the
   // orange plate, Light gets the transparent wordmark (matches the dashboard).
   const isPlain = skin === "plain";
-  const isPlainLight = isPlain && appearance === "light";
-  const useSteelHeader = metalStyle === "steel" || (isPlain && !isPlainLight);
-  const headerVariant: typeof industrialVariant = isPlain
-    ? (mode === "light" ? "arctic" : "orange")
-    : industrialVariant;
+  // Plain Light AND Plain Dark share the EXACT same header (transparent
+  // wordmark). Plain dark no longer falls back to the steel nameplate.
+  const isPlainLight = isPlain;
+  const useSteelHeader = metalStyle === "steel" && !isPlain;
+  const headerVariant: typeof industrialVariant = industrialVariant;
   const isSteel = useSteelHeader;
   const { width } = useWindowDimensions();
   const nameplateW = Math.min(width * 0.94, 400);
