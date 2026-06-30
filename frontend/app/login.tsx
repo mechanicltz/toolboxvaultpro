@@ -53,6 +53,10 @@ import { APP_VERSION_LABEL } from "../src/version";
 import { SKIN, getIndustrialVariant, VARIANT_ACCENT } from "../src/tbv/skins";
 
 const AR = { logo: 0.968, card: 2.407, nameplate: 3.746 };
+// Transparent "TOOLBOX VAULT" wordmark image — the same header art used in-app
+// on plain themes. Shown on the login screen for plain (light & dark).
+const LIGHT_LOGO = require("../assets/light-header-logo.png");
+const LIGHT_LOGO_ASPECT = 1419 / 206; // ≈ 6.89 (width / height)
 const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
 
 // Screen backdrop. Plain (Light/Dark) themes paint a flat theme colour exactly
@@ -335,13 +339,12 @@ export default function LoginScreen() {
                     wordmark (no steel plate); Steel/Iron keep the metal art. */}
                 {isPlain ? (
                   <View style={{ alignItems: "center" }}>
-                    <Text
-                      style={{ fontFamily: "BebasNeue_400Regular", fontSize: clamp(WORK_W * 0.135, 34, 54), letterSpacing: 3, color: c.textPrimary }}
-                      allowFontScaling={false}
-                    >
-                      TOOLBOX VAULT
-                    </Text>
-                    <Text style={{ color: c.accent, fontSize: 12, fontWeight: "800", letterSpacing: 1, marginTop: 2 }} allowFontScaling={false}>
+                    <Image
+                      source={LIGHT_LOGO}
+                      style={{ width: WORK_W * 0.9, height: (WORK_W * 0.9) / LIGHT_LOGO_ASPECT }}
+                      resizeMode="contain"
+                    />
+                    <Text style={{ color: c.accent, fontSize: 12, fontWeight: "800", letterSpacing: 1, marginTop: 4 }} allowFontScaling={false}>
                       {APP_VERSION_LABEL}
                     </Text>
                   </View>

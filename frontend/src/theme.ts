@@ -90,7 +90,9 @@ export const darkPalette: ColorPalette = {
   accentSecondary: "#E55F00",
   textPrimary: "#FFFFFF",
   textSecondary: "#E5E5E5",
-  textMuted: "#737373",
+  // Lifted from the old #737373 (which was too dark to read on the #0A0A0A
+  // plain-dark page) so dashboard labels / muted text stay legible.
+  textMuted: "#A3A3A3",
   textOnAccent: "#000000",
   border: "#2D2D2D",
   switchTrackOff: "#2D2D2D",
