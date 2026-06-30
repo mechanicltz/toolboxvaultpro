@@ -39,6 +39,7 @@ import {
 import { BevelCard } from "../../src/components/BevelCard";
 import { IndustrialBanner } from "../../src/components/IndustrialBanner";
 import ReportBugBadge from "../../src/components/ReportBugBadge";
+import { RemovePrefilledModal } from "../../src/components/RemovePrefilledModal";
 import { SKIN, CAP } from "../../src/tbv/skins";
 import { useIsSteel, useSteelPanelFrame } from "../../src/tbv/steel";
 import TbvFrame from "../../src/tbv/components/TbvFrame";
@@ -288,6 +289,7 @@ export default function MoreScreen() {
   const [pwErr, setPwErr] = useState("");
   const [pwOk, setPwOk] = useState("");
   const [homeRowsModal, setHomeRowsModal] = useState(false);
+  const [prefilledModal, setPrefilledModal] = useState(false);
   // Which theme family accordion is expanded ("iron" | "steel" | "plain").
   // Only one open at a time; all start closed.
   const [openFamily, setOpenFamily] = useState<"iron" | "steel" | "plain" | null>(null);
@@ -295,10 +297,17 @@ export default function MoreScreen() {
 
   // Deep-link from the new-account "choose your theme" popup. When arriving
   // with ?openTheme=1, pre-open the Theme accordion and scroll to it.
-  const params = useLocalSearchParams<{ openTheme?: string }>();
+  const params = useLocalSearchParams<{ openTheme?: string; openPrefilled?: string }>();
   const scrollRef = useRef<ScrollView>(null);
   const settingsYRef = useRef(0);
   const themeParamHandledRef = useRef(false);
+  const prefilledParamHandledRef = useRef(false);
+  useEffect(() => {
+    if (params?.openPrefilled === "1" && !prefilledParamHandledRef.current) {
+      prefilledParamHandledRef.current = true;
+      setPrefilledModal(true);
+    }
+  }, [params?.openPrefilled]);
   useEffect(() => {
     if (params?.openTheme === "1" && !themeParamHandledRef.current) {
       themeParamHandledRef.current = true;
@@ -749,8 +758,19 @@ export default function MoreScreen() {
             subtitle="Install starter data, bulk-remove categories & prefilled info"
             testID="more-data-management"
             onPress={() => router.push("/data-management" as any)}
-            isLast
+            isLast={!demoPresent}
           />
+          {demoPresent && (
+            <SectionRow
+              icon="sparkles"
+              iconColor={theme.colors.accent}
+              title="Remove Preloaded Data"
+              subtitle="Delete the sample data loaded for new accounts"
+              testID="more-remove-preloaded"
+              onPress={() => setPrefilledModal(true)}
+              isLast
+            />
+          )}
         </SectionCard>
 
         <SectionCard title="INSURANCE CLAIMS" testID="more-section-insurance">
@@ -976,16 +996,6 @@ export default function MoreScreen() {
               )
             }
           />
-          {demoPresent && (
-            <SectionRow
-              icon="sparkles"
-              iconColor={theme.colors.accent}
-              title="Delete Prefilled Information"
-              subtitle="Remove the sample data — moved to Manage Data"
-              testID="more-delete-demo"
-              onPress={() => router.push("/data-management" as any)}
-            />
-          )}
           <SectionRow
             icon="log-out"
             iconColor={theme.colors.danger}
@@ -1188,9 +1198,15 @@ export default function MoreScreen() {
         </KeyboardAvoidingView>
       </Modal>
 
-      {/* Delete Prefilled Information now lives on the Manage Data screen
-          (Vault → Data Management). */}
-
+      {/* Remove Preloaded / prefilled data choice modal (Data Management). */}
+      <RemovePrefilledModal
+        visible={prefilledModal}
+        onClose={() => setPrefilledModal(false)}
+        onRemoved={() => {
+          setDemoPresent(false);
+          refreshAccountState();
+        }}
+      />
 
     </SafeAreaView>
   );

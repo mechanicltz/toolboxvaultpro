@@ -1,0 +1,24 @@
+{
+  "summary": "Verified the 'Remove Preloaded Data' migration from data-management.tsx to the Vault (More) screen. All 6 review criteria PASS. Vault DATA MANAGEMENT shows the new 'Remove Preloaded Data' row (testID more-remove-preloaded) only when demo data is present (verified BOTH with demo via smoketest_1781392054@example.com — row present, single instance — AND without demo via ryan@ryan.com — row hidden). Tapping it opens the choice modal (testID prefilled-choice) with prefilled-keep, prefilled-everything and CANCEL — labels 'Keep My Setup' and 'Remove Everything' confirmed visible. Dashboard one-time intro popup (demo-intro-modal) shows the secondary button 'Remove Preloaded Data' (testID demo-intro-manage); tapping it navigates to /(tabs)/more?openPrefilled=1 and AUTO-OPENS the choice modal. The data-management screen no longer contains 'PREFILLED INFORMATION' text, dm-delete-prefilled testID, or dm-demo-choice — and the INSTALL PRELOADED DATA / REMOVE DATA sections still render correctly (dm-install-btn and dm-remove-btn present). Regression check: ROADMAP, RESOURCES, DATA MANAGEMENT (import-export), THEME, ACCOUNT, Sign Out sections all render. End-to-end 'Keep My Setup' clearing was implicitly confirmed by ryan@ryan.com transitioning from demo-present (row + banner visible) to demo-cleared (row + banner hidden) within the same test session via the API. No deprecated Expo packages or React Native issues spotted in the changed files.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "more.tsx is 1213 lines — still over the 700-line guideline. Not introduced by this change but worth a future split (e.g. extract the Change Password modal and Home Rows modal into separate components).",
+    "DemoBanner.goManage calls dismissIntro (which awaits api.demoIntroSeen) BEFORE router.push — fine, but consider firing the navigation first / await later so a slow backend doesn't delay the UX. Minor.",
+    "Two GOT IT buttons can appear at app start (release notes + demo intro). Order of dismissal is fine but worth a comment if the intent matters."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "n/a (frontend-only test)", "frontend": "100% (all 6 criteria pass)"},
+  "seed_data_creation": "None. Used existing accounts ryan@ryan.com (no-demo state during test) and smoketest_1781392054@example.com (still has demo data).",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "ryan@ryan.com's demo data has been cleared by a prior 'Keep My Setup' interaction during testing. To test the WITH-demo branch, use smoketest_1781392054@example.com / Blue321! OR register a fresh account (3/hr/IP rate limit). The demo-intro-modal still re-opens on demo-banner tap even after the one-time intro is dismissed (banner onPress sets showIntro=true), so the popup flow is re-testable without resetting intro_seen.",
+  "rca_of_issue": "n/a — no defects found."
+}

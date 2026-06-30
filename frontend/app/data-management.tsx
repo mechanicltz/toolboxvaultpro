@@ -10,8 +10,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter, useFocusEffect } from "expo-router";
-import { useAppResume } from "../src/appLifecycle";
+import { useRouter } from "expo-router";
 import { theme } from "../src/theme";
 import { themedStyles } from "../src/themeContext";
 import { api } from "../src/api";
@@ -82,22 +81,6 @@ export default function DataManagementScreen() {
   const [busyRemove, setBusyRemove] = useState(false);
   const [removeConfirm, setRemoveConfirm] = useState(false);
 
-  // Prefilled / demo data state.
-  const [demoPresent, setDemoPresent] = useState(false);
-  const [demoBusy, setDemoBusy] = useState(false);
-  const [demoChoice, setDemoChoice] = useState(false);
-
-  const loadDemo = useCallback(async () => {
-    try {
-      const s = await api.demoStatus({ forceFresh: true });
-      setDemoPresent(!!s?.present);
-    } catch {
-      setDemoPresent(false);
-    }
-  }, []);
-  useFocusEffect(useCallback(() => { loadDemo(); }, [loadDemo]));
-  useAppResume(useCallback(() => { loadDemo(); }, [loadDemo]));
-
   const toggle = (set: Set<string>, key: string, setter: (s: Set<string>) => void) => {
     const next = new Set(set);
     if (next.has(key)) next.delete(key);
@@ -164,7 +147,6 @@ export default function DataManagementScreen() {
       const res = await api.removeData([...removeSel]);
       const total = Object.values(res?.removed || {}).reduce((a, b) => a + (b || 0), 0);
       setRemoveSel(new Set());
-      await loadDemo();
       Alert.alert(
         "Data Removed",
         `${total} record${total === 1 ? "" : "s"} were permanently deleted.`,
@@ -174,7 +156,7 @@ export default function DataManagementScreen() {
     } finally {
       setBusyRemove(false);
     }
-  }, [removeSel, loadDemo]);
+  }, [removeSel]);
 
   const onRemovePress = useCallback(() => {
     if (removeSel.size === 0) {
@@ -183,25 +165,6 @@ export default function DataManagementScreen() {
     }
     setRemoveConfirm(true);
   }, [removeSel]);
-
-  const runClearDemo = useCallback(async (mode: "everything" | "keep_taxonomy") => {
-    setDemoChoice(false);
-    setDemoBusy(true);
-    try {
-      await api.demoClear(mode);
-      setDemoPresent(false);
-      Alert.alert(
-        "Prefilled Data Removed",
-        mode === "everything"
-          ? "All sample data — including dealers, locations, tags & categories — has been deleted."
-          : "Sample tools, claims and other demo records were removed. Your dealers, locations, tags & categories were kept.",
-      );
-    } catch {
-      Alert.alert("Couldn't Remove", "Something went wrong. Please try again.");
-    } finally {
-      setDemoBusy(false);
-    }
-  }, []);
 
   const selectedRemoveLabels = REMOVE_OPTIONS.filter((o) => removeSel.has(o.key)).map((o) => o.label);
 
@@ -293,36 +256,6 @@ export default function DataManagementScreen() {
             )}
           </TouchableOpacity>
         </SkinPlate>
-
-        {/* Delete prefilled / demo data (only while present) */}
-        {demoPresent && (
-          <>
-            <Text style={[styles.sectionLabel, { marginTop: 22 }]}>PREFILLED INFORMATION</Text>
-            <SkinPlate frame="window" style={styles.panel} padX={14} padTop={12} padBottom={12}>
-              <Text style={styles.helpText}>
-                Your account still holds the sample/demo data added when you
-                signed up. Remove it whenever you&apos;re ready to work with only
-                your own data.
-              </Text>
-              <TouchableOpacity
-                testID="dm-delete-prefilled"
-                style={[styles.primaryBtn, demoBusy && { opacity: 0.6 }]}
-                onPress={() => setDemoChoice(true)}
-                disabled={demoBusy}
-                activeOpacity={0.85}
-              >
-                {demoBusy ? (
-                  <ActivityIndicator color="#000" />
-                ) : (
-                  <>
-                    <Ionicons name="sparkles" size={16} color="#000" />
-                    <Text style={styles.primaryBtnText}>DELETE PREFILLED INFORMATION</Text>
-                  </>
-                )}
-              </TouchableOpacity>
-            </SkinPlate>
-          </>
-        )}
       </ScrollView>
 
       {/* Remove-data confirmation */}
@@ -350,45 +283,6 @@ export default function DataManagementScreen() {
               <Text style={styles.dangerBtnText}>DELETE PERMANENTLY</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.cancelBtn} onPress={() => setRemoveConfirm(false)} activeOpacity={0.85}>
-              <Text style={styles.cancelText}>CANCEL</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
-
-      {/* Prefilled-data choice modal */}
-      <Modal visible={demoChoice} transparent animationType="fade" onRequestClose={() => setDemoChoice(false)}>
-        <View style={styles.backdrop}>
-          <View style={styles.modalCard} testID="dm-demo-choice">
-            <View style={styles.modalHeader}>
-              <Ionicons name="sparkles" size={20} color={theme.colors.accent} />
-              <Text style={styles.modalTitle}>DELETE PREFILLED INFO</Text>
-              <TouchableOpacity onPress={() => setDemoChoice(false)} hitSlop={10}>
-                <Ionicons name="close" size={22} color={theme.colors.textPrimary} />
-              </TouchableOpacity>
-            </View>
-            <Text style={styles.modalBody}>
-              Choose how much of the sample data to remove. This can&apos;t be undone.
-            </Text>
-            <TouchableOpacity testID="dm-demo-keep" style={styles.optBtn} activeOpacity={0.85} onPress={() => runClearDemo("keep_taxonomy")}>
-              <Ionicons name="albums-outline" size={18} color={theme.colors.accent} />
-              <View style={{ flex: 1 }}>
-                <Text style={styles.optTitle}>Keep My Setup</Text>
-                <Text style={styles.optSub}>
-                  Remove demo tools, claims & contacts — keep dealers, locations, tags & categories
-                </Text>
-              </View>
-            </TouchableOpacity>
-            <TouchableOpacity testID="dm-demo-everything" style={styles.optBtn} activeOpacity={0.85} onPress={() => runClearDemo("everything")}>
-              <Ionicons name="trash-outline" size={18} color={theme.colors.danger} />
-              <View style={{ flex: 1 }}>
-                <Text style={[styles.optTitle, { color: theme.colors.danger }]}>Remove Everything</Text>
-                <Text style={styles.optSub}>
-                  Wipe all sample data including dealers, locations, tags & categories — start blank
-                </Text>
-              </View>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.cancelBtn} activeOpacity={0.85} onPress={() => setDemoChoice(false)}>
               <Text style={styles.cancelText}>CANCEL</Text>
             </TouchableOpacity>
           </View>
@@ -484,19 +378,6 @@ const styles = themedStyles((c) => ({
   modalBody: { color: c.textSecondary, fontSize: 13, lineHeight: 19 },
   bulletRow: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 8 },
   bulletText: { flex: 1, color: c.textPrimary, fontSize: 13, fontWeight: "700" },
-  optBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    marginTop: 12,
-    padding: 14,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: c.border,
-    backgroundColor: c.canvas,
-  },
-  optTitle: { color: c.textPrimary, fontSize: 14, fontWeight: "800" },
-  optSub: { color: c.textSecondary, fontSize: 12, marginTop: 2, lineHeight: 16 },
   cancelBtn: { marginTop: 12, paddingVertical: 12, alignItems: "center" },
   cancelText: { color: c.textSecondary, fontWeight: "800", letterSpacing: 1 },
   linkBtn: {
