@@ -256,6 +256,9 @@ export function BundleTab({
         )}
       </View>
 
+      {/* Divider between the set items and the expansion items (all themes). */}
+      <View style={s.setDivider} />
+
       {/* EXPANSION ITEMS */}
       <View style={boxStyle}>
         <View style={s.headerRow}>
@@ -444,6 +447,7 @@ const s = themedStyles((c) => ({
   headerRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 10, flexWrap: "wrap", gap: 8 },
   headerBtns: { flexDirection: "row", alignItems: "center", gap: 8, flexShrink: 0, flexWrap: "wrap", justifyContent: "flex-end" },
   sectionLabel: { color: c.textPrimary, fontSize: 11, fontWeight: "900", letterSpacing: 1.5 },
+  setDivider: { height: 1, backgroundColor: c.border, marginVertical: 2 },
   empty: { color: c.textMuted, fontSize: 12, lineHeight: 18 },
   muted: { color: c.textSecondary, fontSize: 12, textAlign: "center" },
   row: { flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 8, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: c.border },
