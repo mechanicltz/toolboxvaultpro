@@ -39,6 +39,8 @@ type BoxProps = {
   onLongPress?: () => void;
   activeOpacity?: number;
   testID?: string;
+  /** Render as a PLAIN box (no floating drop-shadow) — used for list rows. */
+  flat?: boolean;
 };
 
 function Box({
@@ -70,9 +72,9 @@ function Box({
   );
 }
 
-/** Outer floating description card. */
-export function ShadowBox(props: BoxProps) {
-  return <Box baseStyle={styles.box} {...props} />;
+/** Outer floating description card. Pass `flat` for a plain (no-shadow) box. */
+export function ShadowBox({ flat, ...props }: BoxProps) {
+  return <Box baseStyle={flat ? styles.boxFlat : styles.box} {...props} />;
 }
 
 /** Nested floating sub-card, shown inside an expanded row / accordion body. */
@@ -98,15 +100,22 @@ const styles = themedStyles((c) => ({
     paddingVertical: 2,
     ...(theme.elevation.md as object),
   },
-  subCard: {
+  // Plain box — same chrome as `box` but WITHOUT the floating drop-shadow.
+  boxFlat: {
     backgroundColor: c.bgSecondary,
     borderWidth: 1,
     borderColor: c.border,
-    borderRadius: 6,
-    paddingHorizontal: 10,
+    borderRadius: 8,
+    paddingHorizontal: 12,
     paddingVertical: 2,
-    marginVertical: 8,
-    ...(theme.elevation.md as object),
+  },
+  // Flattened: content now sits directly inside the parent ShadowBox, with a
+  // simple divider separating consecutive items (no nested floating card).
+  subCard: {
+    paddingHorizontal: 0,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: c.border,
   },
   mini: {
     backgroundColor: c.bgSecondary,

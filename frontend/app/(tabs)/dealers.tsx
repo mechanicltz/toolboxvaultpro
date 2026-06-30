@@ -319,6 +319,7 @@ export default function DealersScreen() {
 
           return (
             <ShadowBox
+              flat
               testID={`dealer-card-${item.id}`}
               style={[
                 styles.row,
