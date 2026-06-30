@@ -20,14 +20,13 @@ import ReportBugBadge from "../../src/components/ReportBugBadge";
 
 function formatDate(iso: string): string {
   try {
-    // Parse as a plain calendar date (avoid TZ shifting "YYYY-MM-DD").
-    const [y, m, d] = (iso || "").split("-").map((n) => parseInt(n, 10));
-    if (!y || !m || !d) return iso;
-    const dt = new Date(y, m - 1, d);
+    // Month + Year only (the day is intentionally ignored / not collected).
+    const [y, m] = (iso || "").split("-").map((n) => parseInt(n, 10));
+    if (!y || !m) return iso;
+    const dt = new Date(y, m - 1, 1);
     return dt.toLocaleDateString(undefined, {
       year: "numeric",
       month: "long",
-      day: "numeric",
     });
   } catch {
     return iso;

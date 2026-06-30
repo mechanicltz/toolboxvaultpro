@@ -28,7 +28,6 @@ import {
 import { themedStyles, useColors } from "../../src/themeContext";
 import { SkinnedCard } from "../../src/components/SkinnedCard";
 import { IndustrialBanner } from "../../src/components/IndustrialBanner";
-import { DateField } from "../../src/DateField";
 
 const STATUSES: UpcomingFeatureStatus[] = ["On The List", "Work Started", "Completed"];
 
@@ -41,16 +40,64 @@ type DraftFeature = {
 
 function formatDate(iso: string): string {
   try {
-    const [y, m, d] = (iso || "").split("-").map((n) => parseInt(n, 10));
-    if (!y || !m || !d) return iso || "No date";
-    return new Date(y, m - 1, d).toLocaleDateString(undefined, {
+    const [y, m] = (iso || "").split("-").map((n) => parseInt(n, 10));
+    if (!y || !m) return iso || "No date";
+    return new Date(y, m - 1, 1).toLocaleDateString(undefined, {
       year: "numeric",
       month: "long",
-      day: "numeric",
     });
   } catch {
     return iso;
   }
+}
+
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+/** Month + Year only picker (no day — an exact day could upset users if a
+ *  release slips). Emits an ISO "YYYY-MM-01" string. */
+function MonthYearField({ value, onChange, testID }: { value: string; onChange: (v: string) => void; testID?: string }) {
+  const c = useColors();
+  const now = new Date();
+  const [yStr, mStr] = (value || "").split("-");
+  const year = parseInt(yStr, 10) || now.getFullYear();
+  const month = parseInt(mStr, 10) || now.getMonth() + 1;
+  const emit = (y: number, m: number) => onChange(`${y}-${String(m).padStart(2, "0")}-01`);
+  return (
+    <View testID={testID}>
+      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+        <TouchableOpacity testID={`${testID}-year-prev`} onPress={() => emit(year - 1, month)} hitSlop={8} style={{ padding: 8 }}>
+          <Ionicons name="chevron-back" size={20} color={c.accent} />
+        </TouchableOpacity>
+        <Text style={{ color: c.textPrimary, fontSize: 18, fontWeight: "900", letterSpacing: 1 }}>{year}</Text>
+        <TouchableOpacity testID={`${testID}-year-next`} onPress={() => emit(year + 1, month)} hitSlop={8} style={{ padding: 8 }}>
+          <Ionicons name="chevron-forward" size={20} color={c.accent} />
+        </TouchableOpacity>
+      </View>
+      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
+        {MONTHS.map((mm, i) => {
+          const active = month === i + 1;
+          return (
+            <TouchableOpacity
+              key={mm}
+              testID={`${testID}-m${i + 1}`}
+              onPress={() => emit(year, i + 1)}
+              style={{
+                width: "23%",
+                paddingVertical: 9,
+                borderRadius: 8,
+                borderWidth: 1,
+                borderColor: active ? c.accent : c.border,
+                backgroundColor: active ? c.accent : "transparent",
+                alignItems: "center",
+              }}
+            >
+              <Text style={{ color: active ? "#000" : c.textSecondary, fontWeight: "800", fontSize: 12 }}>{mm}</Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+    </View>
+  );
 }
 
 export default function AdminUpcomingFeaturesScreen() {
@@ -110,7 +157,8 @@ export default function AdminUpcomingFeaturesScreen() {
 
   const openCreate = () => {
     setEditId(null);
-    setDraftDate("");
+    const n = new Date();
+    setDraftDate(`${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, "0")}-01`);
     setDraftTitle("");
     setDraftFeatures([]);
     setEditOpen(true);
@@ -326,8 +374,8 @@ export default function AdminUpcomingFeaturesScreen() {
             </View>
 
             <ScrollView style={{ maxHeight: 460 }} keyboardShouldPersistTaps="handled">
-              <Text style={styles.label}>RELEASE DATE</Text>
-              <DateField value={draftDate} onChange={setDraftDate} testID="upcoming-date" />
+              <Text style={styles.label}>RELEASE MONTH</Text>
+              <MonthYearField value={draftDate} onChange={setDraftDate} testID="upcoming-date" />
 
               <Text style={styles.label}>UPDATE NAME (optional)</Text>
               <TextInput
