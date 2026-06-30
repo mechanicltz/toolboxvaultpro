@@ -56,7 +56,17 @@ export async function printReportHtml(
   // base64 images), we want to surface an error instead of an infinite spinner.
   let uri: string;
   try {
-    const printPromise = Print.printToFileAsync({ html, base64: false });
+    // Pin the output to a full US-Letter page (612 x 792 pt @ 72dpi) so the
+    // generated PDF matches the backend reports exactly. Without an explicit
+    // size, iOS can emit a page sized to the content, which then "floats" in
+    // the in-app viewer surrounded by the viewer's dark backdrop — the
+    // "tacky black areas" users reported on the For-Sale poster.
+    const printPromise = Print.printToFileAsync({
+      html,
+      base64: false,
+      width: 612,
+      height: 792,
+    });
     const timeoutPromise = new Promise<never>((_, reject) =>
       setTimeout(
         () =>
