@@ -44,7 +44,7 @@ import { useIsSteel, useSteelPanelFrame } from "../../src/tbv/steel";
 import TbvFrame from "../../src/tbv/components/TbvFrame";
 
 import NotificationsSettingsSection from "../../src/sections/NotificationsSettingsSection";
-import { useUpcomingBadge } from "../../src/upcomingBadge";
+import { useUpcomingBadge, refreshUpcomingBadge } from "../../src/upcomingBadge";
 
 // Fixed brand hues for the two industrial themes. Per the user spec these
 // labels MUST always render in their signature colour regardless of the active
@@ -379,6 +379,9 @@ export default function MoreScreen() {
   useFocusEffect(
     useCallback(() => {
       refreshAccountState();
+      // Re-evaluate the Upcoming Features "NEW" badge whenever the menu regains
+      // focus (e.g. after viewing the roadmap) so it clears reliably.
+      refreshUpcomingBadge(true);
     }, [refreshAccountState]),
   );
   // Also refresh on app resume (e.g. after a backgrounded subscription change).

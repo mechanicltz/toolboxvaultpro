@@ -1123,7 +1123,7 @@ const styles = themedStyles((c) => ({
   factLabel: { color: c.textMuted, fontSize: 12, fontWeight: "700", letterSpacing: 0.3 },
   factValue: { color: c.textPrimary, fontSize: 13, fontWeight: "500", maxWidth: "58%", textAlign: "right" },
   factValueAccent: { color: c.accent },
-  tasksLink: { flexDirection: "row", alignItems: "center", gap: 8, alignSelf: "flex-end", paddingVertical: 6, marginTop: 4 },
+  tasksLink: { flexDirection: "row", alignItems: "center", gap: 8, alignSelf: "flex-end", paddingVertical: 6 },
   tasksLinkText: { color: c.accent, fontWeight: "800", fontSize: 13 },
   tasksBadge: { minWidth: 18, paddingHorizontal: 5, borderRadius: 9, backgroundColor: c.accent, alignItems: "center" },
   tasksBadgeText: { color: c.textOnAccent, fontSize: 10, fontWeight: "900" },

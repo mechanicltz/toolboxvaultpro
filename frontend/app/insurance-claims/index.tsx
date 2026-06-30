@@ -331,12 +331,12 @@ const styles = themedStyles((c) => ({
   // Summary stat rows
   statRow: {
     flexDirection: "row", alignItems: "center",
-    paddingVertical: 11, paddingHorizontal: 4,
+    paddingVertical: 6, paddingHorizontal: 4,
     borderBottomWidth: 1, borderBottomColor: c.borderSubtle,
   },
   statIcon: {
-    width: 28, height: 28, borderRadius: 6, alignItems: "center", justifyContent: "center",
-    backgroundColor: "rgba(0,0,0,0.25)", marginRight: 10,
+    width: 22, height: 22, alignItems: "center", justifyContent: "center",
+    marginRight: 8,
   },
   statRowLabel: { color: c.textSecondary, fontWeight: "800", fontSize: 11, letterSpacing: 0.8 },
   statRowValue: { fontWeight: "800", fontSize: 11, letterSpacing: 0.3, textAlign: "right", color: c.textPrimary },
