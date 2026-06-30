@@ -630,19 +630,6 @@ export default function HomeScreen() {
         >
           <NotificationsAccordion notifications={homeNotifs} />
 
-          {/* #23 — Quick actions row: Add Item + New Claim. ShadowBox style
-              for the plain (light/dark) themes. */}
-          <View style={styles.quickRow}>
-            <ShadowBox style={styles.quickBtn} onPress={() => setShowAddChooser(true)} testID="quick-add-item">
-              <Ionicons name="add-circle-outline" size={20} color={theme.colors.accent} />
-              <Text style={styles.quickBtnText}>ADD ITEM</Text>
-            </ShadowBox>
-            <ShadowBox style={styles.quickBtn} onPress={() => router.push("/claims?newClaim=1")} testID="quick-new-claim">
-              <Ionicons name="construct-outline" size={20} color={theme.colors.accent} />
-              <Text style={styles.quickBtnText}>NEW CLAIM</Text>
-            </ShadowBox>
-          </View>
-
           <DriveAlertBanner />
           <DemoBanner />
           {prefs.home_logo_mode === "custom" && prefs.home_logo_data && (
@@ -826,60 +813,6 @@ export default function HomeScreen() {
         }
       >
         <NotificationsAccordion notifications={homeNotifs} />
-
-        {/* #23 — Quick actions row: Add Item + New Claim. Steel theme uses the
-            brushed-metal TbvButton; all other themes use the skin's button plate. */}
-        <View style={styles.quickRow}>
-          {isSteel ? (
-            <>
-              <TbvButton
-                label="ADD ITEM"
-                onPress={() => setShowAddChooser(true)}
-                style={{ flex: 1 }}
-                testID="quick-add-item"
-              />
-              <TbvButton
-                label="NEW CLAIM"
-                onPress={() => router.push("/claims?newClaim=1")}
-                style={{ flex: 1 }}
-                testID="quick-new-claim"
-              />
-            </>
-          ) : (
-            <>
-              <TouchableOpacity
-                style={styles.quickBtnSkin}
-                activeOpacity={0.85}
-                onPress={() => setShowAddChooser(true)}
-                testID="quick-add-item"
-              >
-                <ImageBackground
-                  source={SKIN.btnPrimary}
-                  style={styles.quickBtnSkinFill}
-                  imageStyle={styles.quickBtnSkinImg}
-                  resizeMode="stretch"
-                >
-                  <Text style={styles.quickBtnSkinText}>ADD ITEM</Text>
-                </ImageBackground>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.quickBtnSkin}
-                activeOpacity={0.85}
-                onPress={() => router.push("/claims?newClaim=1")}
-                testID="quick-new-claim"
-              >
-                <ImageBackground
-                  source={SKIN.btnPrimary}
-                  style={styles.quickBtnSkinFill}
-                  imageStyle={styles.quickBtnSkinImg}
-                  resizeMode="stretch"
-                >
-                  <Text style={styles.quickBtnSkinText}>NEW CLAIM</Text>
-                </ImageBackground>
-              </TouchableOpacity>
-            </>
-          )}
-        </View>
 
         <DemoBanner />
 
