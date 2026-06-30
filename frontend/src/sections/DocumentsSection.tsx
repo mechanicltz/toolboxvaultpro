@@ -24,7 +24,7 @@ import { api } from "../api";
 import { confirm } from "../confirm";
 import { PillButton } from "../components/PillButton";
 
-import { themedStyles } from "../themeContext";
+import { themedStyles, useSkin } from "../themeContext";
 
 const MAX_BYTES = 5 * 1024 * 1024; // 5 MB
 
@@ -345,6 +345,8 @@ export function DocumentsSection({
   const [renameValue, setRenameValue] = useState<string>("");
   const insets = useSafeAreaInsets();
   const docs: any[] = tool?.documents || [];
+  const { skin } = useSkin();
+  const isPlain = skin === "plain";
 
   // Add a photo (camera/library) as a DOCUMENT entry. Images are kept in the
   // documents list (rendered as a row, never a thumbnail) per user request.
@@ -698,10 +700,17 @@ export function DocumentsSection({
           No documents yet. Upload manuals, receipts, or warranty papers.
         </Text>
       ) : (
-        docs.map((d: any) => {
+        docs.map((d: any, idx: number, arr: any[]) => {
           const ic = iconForMime(d.mime_type);
           return (
-            <View key={d.id} style={styles.docRow}>
+            <View
+              key={d.id}
+              style={[
+                styles.docRow,
+                isPlain && styles.docRowFlat,
+                isPlain && idx === arr.length - 1 && styles.docRowFlatLast,
+              ]}
+            >
               <TouchableOpacity
                 testID={`doc-open-${d.id}`}
                 style={{ flex: 1, flexDirection: "row", alignItems: "center", gap: 10 }}
@@ -996,6 +1005,17 @@ const styles = themedStyles((c) => ({
     marginBottom: 6,
     gap: 6,
   },
+  // Plain themes: flat row inside the big box (no sub-card chrome), divider only.
+  docRowFlat: {
+    backgroundColor: "transparent",
+    borderWidth: 0,
+    borderRadius: 0,
+    marginBottom: 0,
+    paddingHorizontal: 0,
+    borderBottomWidth: 1,
+    borderBottomColor: c.borderSubtle,
+  },
+  docRowFlatLast: { borderBottomWidth: 0 },
   docName: {
     color: c.textPrimary,
     fontSize: 10,

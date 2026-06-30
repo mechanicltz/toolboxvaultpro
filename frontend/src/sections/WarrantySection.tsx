@@ -5,7 +5,7 @@ import { theme } from "../theme";
 import { PillButton } from "../components/PillButton";
 import { formatDateUS } from "../dateUtil";
 
-import { themedStyles } from "../themeContext";
+import { themedStyles, useSkin } from "../themeContext";
 
 const COVERAGE_LABEL: Record<string, string> = {
   months: "TIME-LIMITED",
@@ -27,6 +27,8 @@ export function WarrantySection({ tool, onEdit }: { tool: any; onEdit?: () => vo
   const router = useRouter();
   const w = tool.warranty || {};
   const has = w.has_warranty;
+  const { skin } = useSkin();
+  const isPlain = skin === "plain";
   const startEdit = () => {
     if (onEdit) onEdit();
     else router.push(`/tool/${tool.id}?startEdit=1`);
@@ -39,7 +41,7 @@ export function WarrantySection({ tool, onEdit }: { tool: any; onEdit?: () => vo
           <Ionicons name="shield-outline" size={18} color={theme.colors.textMuted} />
           <Text style={styles.title}>WARRANTY</Text>
         </View>
-        <View style={styles.emptyCard}>
+        <View style={[styles.emptyCard, isPlain && styles.cardFlat]}>
           <Text style={styles.emptyText}>No warranty information available.</Text>
           <PillButton
             testID="add-warranty-link"
@@ -92,7 +94,7 @@ export function WarrantySection({ tool, onEdit }: { tool: any; onEdit?: () => vo
           <Text style={[styles.badgeText, { color: badgeColor }]}>{badgeLabel}</Text>
         </View>
       </View>
-      <View style={styles.card}>
+      <View style={[styles.card, isPlain && styles.cardFlat]}>
         {!!w.provider && <Row label="Provider" value={w.provider} />}
         {!!w.contact && <Row label="Contact" value={w.contact} />}
         {!isLifetime && !!w.start_date && (
@@ -189,6 +191,14 @@ const styles = themedStyles((c) => ({
     borderColor: c.border,
     borderRadius: 6,
     padding: 12,
+  },
+  // Plain themes: warranty content sits directly in the big box (no sub-card).
+  cardFlat: {
+    backgroundColor: "transparent",
+    borderWidth: 0,
+    borderRadius: 0,
+    paddingHorizontal: 0,
+    paddingTop: 0,
   },
   emptyCard: {
     backgroundColor: c.bgSecondary,

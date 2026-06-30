@@ -19,7 +19,7 @@ import { DateField } from "../DateField";
 import { confirm } from "../confirm";
 import { formatDateUS } from "../dateUtil";
 
-import { themedStyles } from "../themeContext";
+import { themedStyles, useSkin } from "../themeContext";
 
 const TYPES = ["Calibration", "Service", "Inspection", "Cleaning", "Custom"];
 
@@ -47,6 +47,8 @@ export function MaintenanceSection({
   onChange: () => void;
 }) {
   const schedules: any[] = tool?.maintenance || [];
+  const { skin } = useSkin();
+  const isPlain = skin === "plain";
   const [editTarget, setEditTarget] = useState<any | null>(null);
   const [showAdd, setShowAdd] = useState(false);
   const [serviceTarget, setServiceTarget] = useState<any | null>(null);
@@ -83,10 +85,17 @@ export function MaintenanceSection({
           No schedules yet. Add calibration / service intervals to track due dates.
         </Text>
       ) : (
-        schedules.map((sch: any) => {
+        schedules.map((sch: any, sIdx: number) => {
           const status = statusFor(sch.next_due_date || "");
           return (
-            <View key={sch.id} style={styles.row}>
+            <View
+              key={sch.id}
+              style={[
+                styles.row,
+                isPlain && styles.rowFlat,
+                isPlain && sIdx === schedules.length - 1 && styles.rowFlatLast,
+              ]}
+            >
               <View style={{ flex: 1 }}>
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
                   <Ionicons name="construct" size={16} color={theme.colors.accent} />
@@ -560,6 +569,17 @@ const styles = themedStyles((c) => ({
     marginBottom: 8,
     gap: 8,
   },
+  // Plain themes: flat schedule row inside the big box (no sub-card), divider only.
+  rowFlat: {
+    backgroundColor: "transparent",
+    borderWidth: 0,
+    borderRadius: 0,
+    marginBottom: 0,
+    paddingHorizontal: 0,
+    borderBottomWidth: 1,
+    borderBottomColor: c.borderSubtle,
+  },
+  rowFlatLast: { borderBottomWidth: 0 },
   rowTitle: {
     color: c.textPrimary,
     fontSize: 10,
