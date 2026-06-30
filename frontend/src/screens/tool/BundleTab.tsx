@@ -330,6 +330,7 @@ export function BundleTab({
 
       {/* EXPANSION PICKER MODAL */}
       <Modal visible={showPicker} transparent animationType="slide" onRequestClose={() => setShowPicker(false)}>
+        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : "height"}>
         <View style={s.modalBg}>
           <View style={[s.modalCard, { maxHeight: "85%" }]}>
             <Text style={s.modalTitle}>ADD EXPANSION ITEMS</Text>
@@ -361,10 +362,12 @@ export function BundleTab({
             <TouchableOpacity style={[s.btnGhost, { marginTop: 12 }]} onPress={() => { setShowPicker(false); setSearch(""); }}><Text style={s.btnGhostText}>CLOSE</Text></TouchableOpacity>
           </View>
         </View>
+        </KeyboardAvoidingView>
       </Modal>
 
       {/* ABSORB-FROM-INVENTORY PICKER MODAL */}
       <Modal visible={showAbsorb} transparent animationType="slide" onRequestClose={() => setShowAbsorb(false)}>
+        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : "height"}>
         <View style={s.modalBg}>
           <View style={[s.modalCard, { maxHeight: "85%" }]}>
             <Text style={s.modalTitle}>ADD ITEMS FROM INVENTORY</Text>
@@ -400,6 +403,7 @@ export function BundleTab({
             <TouchableOpacity style={[s.btnGhost, { marginTop: 12 }]} onPress={() => { setShowAbsorb(false); setAbsorbSearch(""); }}><Text style={s.btnGhostText}>CLOSE</Text></TouchableOpacity>
           </View>
         </View>
+        </KeyboardAvoidingView>
       </Modal>
     </View>
   );
