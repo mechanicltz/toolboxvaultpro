@@ -109,13 +109,15 @@ const styles = themedStyles((c) => ({
     paddingHorizontal: 12,
     paddingVertical: 2,
   },
-  // Flattened: content now sits directly inside the parent ShadowBox, with a
-  // simple divider separating consecutive items (no nested floating card).
   subCard: {
-    paddingHorizontal: 0,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: c.border,
+    backgroundColor: c.bgSecondary,
+    borderWidth: 1,
+    borderColor: c.border,
+    borderRadius: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 2,
+    marginVertical: 8,
+    ...(theme.elevation.md as object),
   },
   mini: {
     backgroundColor: c.bgSecondary,
