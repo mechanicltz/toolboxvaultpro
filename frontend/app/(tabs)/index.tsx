@@ -615,7 +615,7 @@ export default function HomeScreen() {
     return (
       <SafeAreaView style={styles.plainSafe} edges={["top"]}>
         {isPlainLight ? (
-          <TbvHeader testID="tbv-header" showVersion={false} badge={upcomingNew} />
+          <TbvHeader testID="tbv-header" showVersion={false} badgeCount={upcomingNew} />
         ) : (
           <IndustrialBanner title="DASHBOARD" />
         )}
@@ -806,10 +806,10 @@ export default function HomeScreen() {
         {/* Unified nameplate header. Steel theme swaps in the brushed-metal
             TOOLBOX VAULT nameplate; all other themes keep the standard banner. */}
         {isPlainLight ? (
-          <TbvHeader testID="tbv-header" badge={upcomingNew} />
+          <TbvHeader testID="tbv-header" badgeCount={upcomingNew} />
         ) : isSteel ? (
           <View style={STEEL_HEADER_WRAP}>
-            <TbvHeader testID="tbv-header" badge={upcomingNew} />
+            <TbvHeader testID="tbv-header" badgeCount={upcomingNew} />
           </View>
         ) : (
           <IndustrialBanner title="DASHBOARD" />

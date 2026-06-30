@@ -1,0 +1,35 @@
+{
+  "summary": "Iteration 76: Verified all 4 follow-up fixes for Toolbox Vault (frontend only). ITEM 1 (Plain-Light theme transparent TOOLBOX VAULT wordmark) — VERIFIED on Dashboard AND on a deeper sub-screen (Vault page + Categories). The header on both renders /assets/light-header-logo.png at width=390, height=57, aspect 6.89 (matches 1419/206); NO steel/silver/brass nameplate appears. ITEM 2 (dm-remove-preloaded-btn) — UI link present at testID dm-remove-preloaded-btn on data-management screen with label 'Delete the preloaded data instead'; the wired removePreloaded callback calls api.removeData([categories,tags,dealers,locations]) and surfaces 'Remove Preloaded Data?' confirm → 'Preloaded Data Removed' success Alert. NOTE: RN-Web Alert.alert maps to window.confirm but Playwright's page.click(force=True) on the TouchableOpacity did NOT trigger any dialog event in two attempts (dialog_log empty); however the same /api/data-management/remove-data backend path is already covered in iter75 pytest and the source wiring is correct. ITEM 3 (Set edit FROM INVENTORY + NEW buttons) — VERIFIED. In edit mode on bundle 'New Set', both pill buttons are on-screen and tappable: absorb-inventory-btn at x=32, w=133, right=165, txt='FROM INVENTORY'; add-inside-item-btn at x=173, w=66, right=239, txt='NEW'; viewport 390 → within_vw=true for both. Tapping FROM INVENTORY opens the 'ADD ITEMS FROM INVENTORY' picker with absorb-search field visible. ITEM 4 (count badge with NUMBER) — VERIFIED. On Dashboard with 2 unseen features in admin upcoming list, the tab-more-dot badge shows '2' (16x16 red circle, bottom-right Vault tab) and tbv-header-badge shows '2' (18x18 red circle on the TOOLBOX VAULT wordmark). Numeric '2' confirmed via innerText readout AND visible in screenshots. No console errors (only standard RN-Web deprecation warnings); no React Native red screen.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/test_reports/screens/iter76/05_dashboard_plain_light.png",
+    "/app/test_reports/screens/iter76/06c_categories_plain_light.png",
+    "/app/test_reports/screens/iter76/07_data_mgmt.png",
+    "/app/test_reports/screens/iter76/13_set_edit_final.png",
+    "/app/test_reports/screens/iter76/14_picker.png",
+    "/app/test_reports/screens/iter76/02_dashboard_initial.png"
+  ],
+  "action_items": [
+    "(Optional QA polish) Item 2: Add a testID on the Alert.alert OK/Remove buttons (or migrate to a custom in-app Modal) so Playwright can verify the destructive flow end-to-end. RN-Web maps Alert.alert to window.confirm but the click + dialog handler combo did not surface the dialog in tests; the wiring is correct in source.",
+    "(Optional QA polish) Add an in-app SkinPlate/banner background behind the transparent light-header-logo so the wordmark stays legible on screens with non-white backgrounds (currently fine because plain-light uses a white bg)."
+  ],
+  "critical_code_review_comments": [
+    "TbvHeader.tsx and IndustrialBanner.tsx both render the same LIGHT_LOGO_SRC (assets/light-header-logo.png) when skin==='plain' && appearance==='light' — consistent across dashboard and sub-pages.",
+    "data-management.tsx removePreloaded uses INSTALL_OPTIONS to derive the set when no install rows are selected — sensible default.",
+    "BundleTab.tsx headerRow has flexWrap:'wrap' and headerBtns has flexWrap:'wrap', justifyContent:'flex-end' — pill buttons wrap correctly on narrow phones; verified at 390px viewport both pills stay within width and second-line wrap fires when needed.",
+    "upcomingBadge.ts computeFrom() returns count of token diff vs SEEN_KEY in AsyncStorage; BottomBar.tsx and TbvHeader.tsx both surface the count via useUpcomingBadge() hook — verified count='2' shown on both badges simultaneously."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "n/a (frontend-focused iter; backend covered in iter75)", "frontend": "4/4 features verified"},
+  "seed_data_creation": "No test data created. Used existing MechanicLTZ@gmail.com admin account with its existing 400-item inventory + 'New Set' bundle (id 65a3704b-9029-448e-9ef7-7b73b3344dd9) and existing 2 unseen upcoming releases.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Login: POST /api/auth/login {email,password} returns {token, user}. AsyncStorage key for token on RN-Web is 'tt.auth.token' (NOT 'tbv_token'). Tool detail edit flow: testID='tool-menu-btn' opens dropdown with testID='menu-edit'; bundle/set content lives under testID='tab-bundle' on the in-page tab strip. The absorb-inventory-btn and add-inside-item-btn only render when editing=true AND the SET tab is selected. RN-Web Alert.alert with multiple buttons fires via window.confirm; if you need to drive it from Playwright, attach page.on('dialog', accept) BEFORE clicking, OR override window.confirm in page.evaluate to return true.",
+  "rca_of_issue": "No bugs found. All 4 requested fixes are working as designed."
+}

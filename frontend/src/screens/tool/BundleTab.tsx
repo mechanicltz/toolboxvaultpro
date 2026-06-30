@@ -219,9 +219,9 @@ export function BundleTab({
       {/* INSIDE ITEMS */}
       <View style={boxStyle}>
         <View style={s.headerRow}>
-          <Text style={s.sectionLabel}>ITEMS IN THIS SET{insideItems.length ? ` (${insideItems.length})` : ""}</Text>
+          <Text style={[s.sectionLabel, { flexShrink: 1 }]} numberOfLines={1}>ITEMS IN THIS SET{insideItems.length ? ` (${insideItems.length})` : ""}</Text>
           {editing && (
-            <View style={{ flexDirection: "row", gap: 8 }}>
+            <View style={s.headerBtns}>
               <PillButton testID="absorb-inventory-btn" label="FROM INVENTORY" icon="albums" variant="active" compact onPress={openAbsorbPicker} />
               <PillButton testID="add-inside-item-btn" label="NEW" icon="add-circle" variant="active" compact onPress={openAdd} />
             </View>
@@ -437,7 +437,8 @@ function ExpansionParent({ expansionOf, boxStyle }: { expansionOf: string; boxSt
 }
 
 const s = themedStyles((c) => ({
-  headerRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 10 },
+  headerRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 10, flexWrap: "wrap", gap: 8 },
+  headerBtns: { flexDirection: "row", alignItems: "center", gap: 8, flexShrink: 0, flexWrap: "wrap", justifyContent: "flex-end" },
   sectionLabel: { color: c.textPrimary, fontSize: 11, fontWeight: "900", letterSpacing: 1.5 },
   empty: { color: c.textMuted, fontSize: 12, lineHeight: 18 },
   muted: { color: c.textSecondary, fontSize: 12, textAlign: "center" },

@@ -22,20 +22,20 @@ import {
 import { APP_VERSION_LABEL } from "../version";
 import { useSkin } from "../themeContext";
 
-// Plain + Light theme wordmark (transparent, trimmed). Aspect = 1536 / 530.
+// Plain + Light theme wordmark (transparent, trimmed). Aspect = 1419 / 206.
 const LIGHT_LOGO_SRC = require("../../assets/light-header-logo.png");
-const LIGHT_LOGO_ASPECT = 1536 / 530;
+const LIGHT_LOGO_ASPECT = 1419 / 206;
 
 export function TbvHeader({
   style,
   showVersion = true,
   testID,
-  badge = false,
+  badgeCount = 0,
 }: {
   style?: StyleProp<ViewStyle>;
   showVersion?: boolean;
   testID?: string;
-  badge?: boolean;
+  badgeCount?: number;
 }) {
   const [w, setW] = useState(0);
   const h = w > 0 ? w / HEADER_ASPECT : 0;
@@ -65,7 +65,13 @@ export function TbvHeader({
             fadeDuration={0}
           />
         ) : null}
-        {badge ? <View style={styles.badgeDot} testID="tbv-header-badge" /> : null}
+        {badgeCount > 0 ? (
+          <View style={styles.badgeDot} testID="tbv-header-badge">
+            <Text style={styles.badgeText} allowFontScaling={false}>
+              {badgeCount > 9 ? "9+" : badgeCount}
+            </Text>
+          </View>
+        ) : null}
       </View>
     );
   }
@@ -99,7 +105,13 @@ export function TbvHeader({
               {APP_VERSION_LABEL}
             </Text>
           ) : null}
-          {badge ? <View style={styles.badgeDot} testID="tbv-header-badge" /> : null}
+          {badgeCount > 0 ? (
+          <View style={styles.badgeDot} testID="tbv-header-badge">
+            <Text style={styles.badgeText} allowFontScaling={false}>
+              {badgeCount > 9 ? "9+" : badgeCount}
+            </Text>
+          </View>
+        ) : null}
         </View>
       ) : null}
     </View>
@@ -118,13 +130,17 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: 2,
     right: 8,
-    width: 12,
-    height: 12,
-    borderRadius: 6,
+    minWidth: 18,
+    height: 18,
+    paddingHorizontal: 4,
+    borderRadius: 9,
     backgroundColor: "#FF3B30",
+    alignItems: "center",
+    justifyContent: "center",
     borderWidth: 2,
     borderColor: "#FFFFFF",
   },
+  badgeText: { color: "#fff", fontSize: 10, fontWeight: "900", lineHeight: 12 },
 });
 
 export default TbvHeader;

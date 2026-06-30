@@ -64,24 +64,38 @@ type Props = {
 
 const ACCENT = "#F97316";
 
+// Plain + Light theme wordmark (transparent). Same asset the dashboard uses so
+// every light-theme page shows a consistent header instead of the steel plate.
+const LIGHT_LOGO = require("../../assets/light-header-logo.png");
+const LIGHT_LOGO_ASPECT = 1419 / 206;
+
 export function IndustrialBanner({ title, subtitle, rightSlot, leftSlot, onBack, backIcon, centerSlot }: Props) {
   const c = useColors();
-  const { metalStyle, industrialVariant, skin, mode } = useSkin();
+  const { metalStyle, industrialVariant, skin, mode, appearance } = useSkin();
   // Steel theme swaps the dark iron nameplate for the brushed-silver "TOOLBOX
   // VAULT" plate (recoloured to the active steel colour), keeping the page
   // title + back row beneath it so every screen reads as Steel.
   // The plain Light/Dark themes ALSO use the Steel nameplate now: Dark gets the
-  // orange plate, Light gets the blue (arctic) plate.
+  // orange plate, Light gets the transparent wordmark (matches the dashboard).
   const isPlain = skin === "plain";
-  const useSteelHeader = metalStyle === "steel" || isPlain;
+  const isPlainLight = isPlain && appearance === "light";
+  const useSteelHeader = metalStyle === "steel" || (isPlain && !isPlainLight);
   const headerVariant: typeof industrialVariant = isPlain
     ? (mode === "light" ? "arctic" : "orange")
     : industrialVariant;
   const isSteel = useSteelHeader;
   const { width } = useWindowDimensions();
   const nameplateW = Math.min(width * 0.94, 400);
-  const nameplateH = isSteel ? nameplateW / HEADER_ASPECT : nameplateW / 4.0;
-  const nameplateSrc = isSteel ? HEADER_SRC_BY_COLOR[headerVariant] : SKIN.nameplate;
+  const nameplateH = isPlainLight
+    ? nameplateW / LIGHT_LOGO_ASPECT
+    : isSteel
+      ? nameplateW / HEADER_ASPECT
+      : nameplateW / 4.0;
+  const nameplateSrc = isPlainLight
+    ? LIGHT_LOGO
+    : isSteel
+      ? HEADER_SRC_BY_COLOR[headerVariant]
+      : SKIN.nameplate;
   return (
     <View style={styles.wrap}>
       {/* The brand nameplate (silver for Steel, dark iron otherwise). The app
@@ -93,7 +107,7 @@ export function IndustrialBanner({ title, subtitle, rightSlot, leftSlot, onBack,
           resizeMode="contain"
           fadeDuration={0}
         />
-        {isSteel ? (
+        {isPlainLight ? null : isSteel ? (
           <Text
             pointerEvents="none"
             allowFontScaling={false}

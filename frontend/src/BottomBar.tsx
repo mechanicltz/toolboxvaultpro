@@ -167,8 +167,12 @@ export function BottomBar() {
                     size={isPhone ? 22 : 26}
                     color={active ? theme.colors.accent : theme.colors.textMuted}
                   />
-                  {t.name === "more" && upcomingNew ? (
-                    <View style={styles.dot} testID="tab-more-dot" />
+                  {t.name === "more" && upcomingNew > 0 ? (
+                    <View style={styles.countBadge} testID="tab-more-dot">
+                      <Text style={styles.countText} allowFontScaling={false}>
+                        {upcomingNew > 9 ? "9+" : upcomingNew}
+                      </Text>
+                    </View>
                   ) : null}
                 </View>
                 <Text
@@ -259,17 +263,21 @@ const styles = themedStyles((c) => ({
     fontWeight: "800",
     letterSpacing: 0.5,
   },
-  dot: {
+  countBadge: {
     position: "absolute",
-    top: -3,
-    right: -5,
-    width: 9,
-    height: 9,
-    borderRadius: 5,
+    top: -6,
+    right: -10,
+    minWidth: 16,
+    height: 16,
+    paddingHorizontal: 3,
+    borderRadius: 8,
     backgroundColor: "#FF3B30",
+    alignItems: "center",
+    justifyContent: "center",
     borderWidth: 1,
     borderColor: c.tabBarBg,
   },
+  countText: { color: "#fff", fontSize: 9, fontWeight: "900", lineHeight: 11 },
   modalBg: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.55)",

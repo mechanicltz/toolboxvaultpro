@@ -647,7 +647,7 @@ export default function MoreScreen() {
             subtitle="See what we're building next"
             testID="more-upcoming-features"
             onPress={() => router.push("/upcoming-features" as any)}
-            newBadge={upcomingNew}
+            newBadge={upcomingNew > 0}
             isLast={!isAdmin}
           />
           {isAdmin && (

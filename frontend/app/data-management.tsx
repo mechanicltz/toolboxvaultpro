@@ -128,6 +128,35 @@ export default function DataManagementScreen() {
     }
   }, [installSel]);
 
+  const removePreloaded = useCallback(() => {
+    const types = installSel.size > 0 ? [...installSel] : INSTALL_OPTIONS.map((o) => o.key);
+    const labels = INSTALL_OPTIONS.filter((o) => types.includes(o.key)).map((o) => o.label).join(", ");
+    Alert.alert(
+      "Remove Preloaded Data?",
+      `This permanently deletes the starter ${labels} the app loads for new users. This can't be undone.`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Remove",
+          style: "destructive",
+          onPress: async () => {
+            setBusyInstall(true);
+            try {
+              const res = await api.removeData(types);
+              const total = Object.values(res?.removed || {}).reduce((a, b) => a + (b || 0), 0);
+              setInstallSel(new Set());
+              Alert.alert("Preloaded Data Removed", `${total} starter record${total === 1 ? "" : "s"} deleted.`);
+            } catch {
+              Alert.alert("Couldn't Remove", "Something went wrong. Please try again.");
+            } finally {
+              setBusyInstall(false);
+            }
+          },
+        },
+      ],
+    );
+  }, [installSel]);
+
   const confirmRemove = useCallback(async () => {
     setRemoveConfirm(false);
     setBusyRemove(true);
@@ -213,6 +242,16 @@ export default function DataManagementScreen() {
                 <Text style={styles.primaryBtnText}>INSTALL SELECTED</Text>
               </>
             )}
+          </TouchableOpacity>
+          <TouchableOpacity
+            testID="dm-remove-preloaded-btn"
+            style={styles.linkBtn}
+            onPress={removePreloaded}
+            disabled={busyInstall}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="trash-outline" size={13} color={theme.colors.danger} />
+            <Text style={styles.linkBtnText}>Delete the preloaded data instead</Text>
           </TouchableOpacity>
         </SkinPlate>
 
@@ -460,4 +499,13 @@ const styles = themedStyles((c) => ({
   optSub: { color: c.textSecondary, fontSize: 12, marginTop: 2, lineHeight: 16 },
   cancelBtn: { marginTop: 12, paddingVertical: 12, alignItems: "center" },
   cancelText: { color: c.textSecondary, fontWeight: "800", letterSpacing: 1 },
+  linkBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    marginTop: 12,
+    paddingVertical: 6,
+  },
+  linkBtnText: { color: c.danger, fontSize: 12, fontWeight: "700", textDecorationLine: "underline" },
 }));
