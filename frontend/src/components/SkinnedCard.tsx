@@ -2,6 +2,7 @@ import React, { ReactNode } from "react";
 import { View, StyleProp, ViewStyle } from "react-native";
 import { useSkin } from "../themeContext";
 import { SKIN, CAP } from "../tbv/skins";
+import { useIsSteel, useSteelPanelFrame } from "../tbv/steel";
 import TbvFrame from "../tbv/components/TbvFrame";
 import { BevelCard } from "./BevelCard";
 
@@ -23,7 +24,28 @@ export function SkinnedCard({
   padding?: number;
 }) {
   const { skin } = useSkin();
+  const isSteel = useIsSteel();
+  const steelFrame = useSteelPanelFrame();
   if (skin === "industrial") {
+    // STEEL family → brushed-silver frame (recolored per variant) so this card
+    // matches the rest of the Steel skin instead of the Iron Forge art.
+    if (isSteel) {
+      return (
+        <View style={style}>
+          <TbvFrame
+            source={steelFrame.source}
+            capInsets={steelFrame.capInsets}
+            frameScale={steelFrame.frameScale}
+            padX={Math.max(padding + 8, steelFrame.padX)}
+            padTop={Math.max(padding + 4, steelFrame.padTop)}
+            padBottom={Math.max(padding + 4, steelFrame.padBottom)}
+            testID={testID}
+          >
+            {children}
+          </TbvFrame>
+        </View>
+      );
+    }
     return (
       <View style={style}>
         <TbvFrame
