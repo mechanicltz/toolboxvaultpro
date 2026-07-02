@@ -73,6 +73,28 @@ export type Prefs = {
 const KEY = "toolbox_prefs_v2";
 const LEGACY_KEY = "toolbox_prefs_v1";
 
+// Prefs are namespaced PER logged-in account. Switching accounts on the same
+// device must never leak settings (e.g. notification times) across users.
+// This must match AuthContext's USER_CACHE_KEY.
+const USER_CACHE_KEY = "tt.auth.user";
+
+async function currentUserId(): Promise<string> {
+  try {
+    const raw = await AsyncStorage.getItem(USER_CACHE_KEY);
+    if (raw) {
+      const u = JSON.parse(raw);
+      if (u?.id) return String(u.id);
+    }
+  } catch {
+    /* fall through to anon */
+  }
+  return "anon";
+}
+
+function userKey(uid: string): string {
+  return `${KEY}::${uid}`;
+}
+
 const DEFAULT_HOME_ROWS: HomeRowVis = {
   total_items: true,
   invested: true,
@@ -152,22 +174,25 @@ export const loadPrefs = async (): Promise<Prefs> => {
     return out;
   };
   try {
-    const raw = await AsyncStorage.getItem(KEY);
+    const uid = await currentUserId();
+    const perUserKey = userKey(uid);
+    let raw = await AsyncStorage.getItem(perUserKey);
     if (!raw) {
-      const legacy = await AsyncStorage.getItem(LEGACY_KEY);
-      if (legacy) {
+      // One-time migration: adopt this device's previous (pre-namespacing)
+      // prefs so existing single-account users keep their settings. After this,
+      // every account has its own isolated copy.
+      const legacyGlobal = await AsyncStorage.getItem(KEY);
+      const source = legacyGlobal || (await AsyncStorage.getItem(LEGACY_KEY));
+      if (source) {
         try {
-          const lp = JSON.parse(legacy);
-          return {
-            ...DEFAULTS,
-            ...lp,
-            home_rows: { ...DEFAULT_HOME_ROWS, ...(lp.home_rows || {}) },
-            home_row_order: normalizeOrder(lp.home_row_order),
-          };
+          await AsyncStorage.setItem(perUserKey, source);
         } catch {
-          return DEFAULTS;
+          /* best-effort */
         }
+        raw = source;
       }
+    }
+    if (!raw) {
       return DEFAULTS;
     }
     const parsed = JSON.parse(raw);
@@ -208,7 +233,7 @@ export const savePrefs = async (prefs: Partial<Prefs>) => {
         ? prefs.home_row_order
         : current.home_row_order,
   };
-  await AsyncStorage.setItem(KEY, JSON.stringify(merged));
+  await AsyncStorage.setItem(userKey(await currentUserId()), JSON.stringify(merged));
   return merged;
 };
 

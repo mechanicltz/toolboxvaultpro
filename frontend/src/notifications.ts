@@ -70,7 +70,7 @@ export async function requestPermissions(): Promise<boolean> {
     if (current.status === "granted") return true;
     if (!current.canAskAgain) return false;
     const next = await Notifications.requestPermissionsAsync({
-      ios: { allowAlert: true, allowBadge: false, allowSound: true },
+      ios: { allowAlert: true, allowBadge: true, allowSound: true },
     });
     return next.status === "granted";
   } catch {

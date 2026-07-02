@@ -8,7 +8,9 @@
  * in AsyncStorage.
  */
 import { useEffect, useState } from "react";
+import { Platform } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as Notifications from "expo-notifications";
 import { api } from "./api";
 
 const SEEN_KEY = "tbv_upcoming_seen_tokens";
@@ -17,6 +19,18 @@ let currentTokens: string[] = [];
 let newCount = 0;
 let lastFetch = 0;
 const listeners = new Set<() => void>();
+
+// Mirror the unseen-features count onto the native iOS/Android app-icon badge
+// (the red bubble on the home-screen icon). Best-effort: no-op on web and when
+// notification/badge permission hasn't been granted.
+async function syncAppIconBadge(count: number): Promise<void> {
+  if (Platform.OS === "web") return;
+  try {
+    await Notifications.setBadgeCountAsync(count);
+  } catch {
+    /* permission not granted / unsupported — ignore */
+  }
+}
 
 function emit() {
   listeners.forEach((l) => l());
@@ -54,6 +68,8 @@ async function computeFrom(releases: any[]) {
     newCount = next;
     emit();
   }
+  // Always keep the native app-icon badge in sync with the unseen count.
+  syncAppIconBadge(next);
 }
 
 export async function refreshUpcomingBadge(force = false): Promise<void> {
@@ -84,6 +100,8 @@ export async function markUpcomingSeen(): Promise<void> {
     newCount = 0;
     emit();
   }
+  // Clear the native app-icon badge too.
+  syncAppIconBadge(0);
 }
 
 /** Subscribe a component to the unseen count. Triggers a throttled refresh on mount. */
