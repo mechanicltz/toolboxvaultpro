@@ -147,9 +147,10 @@ export default function AdminBackupsPage() {
 
   useEffect(() => {
     if (allowed === false) {
-      Alert.alert("Admins only", "This screen is for admin accounts.", [
-        { text: "OK", onPress: () => router.replace("/(tabs)/more") },
-      ]);
+      // Non-admins can end up here if the app restored this route after an
+      // account switch. All admin data is protected server-side, so just send
+      // them home quietly instead of showing an alarming "Admins only" popup.
+      router.replace("/(tabs)");
     }
   }, [allowed, router]);
 
