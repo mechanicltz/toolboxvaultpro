@@ -648,19 +648,14 @@ export const api = {
       gdrive_filename?: string;
     }>(`/admin/backups/full-now`, { method: "POST" }),
 
-  // ---- Disaster recovery: encrypted full snapshot + restore + verify/sandbox ----
-  // Build the complete ENCRYPTED code+data+env snapshot and push to Drive +
-  // passphrase file. Heavy (hundreds of MB) — uses raw fetch with NO client
-  // timeout so the long Drive upload isn't aborted mid-flight.
+  // ---- Disaster recovery: full snapshot + restore + verify/sandbox ----
+  // Build the complete code+data+env snapshot and push to Drive. This is heavy
+  // (hundreds of MB) and can take a few minutes, so the server runs it as a
+  // BACKGROUND job and returns immediately — otherwise the live-app edge proxy
+  // drops the long request and reports a 520. We start the job, then poll the
+  // status endpoint until it finishes.
   adminFullSnapshot: async () => {
-    const token = await getToken();
-    const res = await fetch(`${API_BASE}/api/admin/backups/full-snapshot`, {
-      method: "POST",
-      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-    });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error((data as any)?.detail || `Server ${res.status}`);
-    return data as {
+    type SnapResult = {
       ok: boolean;
       filename: string;
       size_human: string;
@@ -669,8 +664,42 @@ export const api = {
       encrypted: boolean;
       selfcheck_ok: boolean;
       gdrive_uploaded: boolean;
+      gdrive_error?: string;
       passphrase_uploaded: boolean;
     };
+    const token = await getToken();
+    const authHeaders = token ? { Authorization: `Bearer ${token}` } : undefined;
+    // 1) Kick off the background job.
+    const start = await fetch(`${API_BASE}/api/admin/backups/full-snapshot`, {
+      method: "POST",
+      headers: authHeaders,
+    });
+    const startData = await start.json().catch(() => ({}));
+    if (!start.ok) throw new Error((startData as any)?.detail || `Server ${start.status}`);
+
+    // 2) Poll for completion (up to ~10 minutes).
+    const deadline = Date.now() + 10 * 60 * 1000;
+    const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+    while (Date.now() < deadline) {
+      await sleep(3000);
+      let res: Response;
+      try {
+        res = await fetch(`${API_BASE}/api/admin/backups/full-snapshot/status`, {
+          headers: authHeaders,
+        });
+      } catch {
+        // Transient network blip while the server is busy — keep polling.
+        continue;
+      }
+      if (!res.ok) continue; // transient proxy hiccup; keep polling
+      const s = (await res.json().catch(() => ({}))) as {
+        status: string; result?: SnapResult; error?: string;
+      };
+      if (s.status === "done" && s.result) return s.result;
+      if (s.status === "error") throw new Error(s.error || "Snapshot failed on the server");
+      // status === "running" | "idle" | "started" → keep polling
+    }
+    throw new Error("Snapshot is taking longer than expected. It may still finish in the background — check your Google Drive shortly.");
   },
 
   // Restore production DB directly from a Drive backup file id. The server

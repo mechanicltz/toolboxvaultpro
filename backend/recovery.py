@@ -392,6 +392,94 @@ def selfcheck_snapshot(zip_bytes: bytes, passphrase: Optional[str]) -> Dict[str,
         return {"ok": False, "error": str(exc)}
 
 
+FULL_SNAPSHOT_JOB_ID = "full_snapshot_job"
+# If a job has been "running" longer than this, treat it as stale/crashed and
+# allow a fresh run (guards against a pod restart mid-snapshot leaving the flag stuck).
+_SNAPSHOT_STALE_SECONDS = 20 * 60
+
+
+async def _do_full_snapshot(real_db) -> Dict[str, Any]:
+    """Heavy lifting for the manual full snapshot: build the code+data+env ZIP,
+    self-check it, upload to Drive, apply retention, and audit. Returns the same
+    result payload the endpoint used to return synchronously.
+
+    Runs in the background (see the POST endpoint) so the HTTP request returns
+    immediately — long snapshots used to exceed the edge-proxy timeout on the
+    live app and surface as a 520 error.
+    """
+    snap = await _build_full_snapshot(real_db, trigger="manual", encrypt=False)
+    check = await asyncio.to_thread(selfcheck_snapshot, snap["zip_bytes"], None)
+    gdrive_uploaded = False
+    gdrive_id = None
+    gdrive_error = None
+    try:
+        import gdrive
+        status = await gdrive.get_status(real_db)
+        if status.get("connected"):
+            up = await gdrive.upload_backup(
+                real_db, file_bytes=snap["zip_bytes"],
+                filename=snap["filename"], mime_type="application/zip",
+            )
+            gdrive_uploaded = True
+            gdrive_id = up.get("id")
+            try:
+                await gdrive.apply_retention_policy(real_db)
+            except Exception as rexc:
+                logger.warning("Drive retention after full snapshot failed: %s", rexc)
+        else:
+            gdrive_error = "auth_expired" if status.get("needs_reauth") else "not_connected"
+    except Exception as exc:
+        from google.auth.exceptions import RefreshError
+        gdrive_error = "auth_expired" if isinstance(exc, RefreshError) else "upload_failed"
+        logger.warning("Full snapshot Drive upload failed (%s): %s", gdrive_error, exc)
+    await _audit(real_db, "full_snapshot", {
+        "filename": snap["filename"], "size": snap["size_human"],
+        "encrypted": False, "selfcheck": check,
+        "gdrive_uploaded": gdrive_uploaded,
+        "gdrive_error": gdrive_error,
+    })
+    return {
+        "ok": True,
+        "filename": snap["filename"],
+        "size_human": snap["size_human"],
+        "size_bytes": snap["size_bytes"],
+        "document_count": snap["document_count"],
+        "encrypted": False,
+        "selfcheck_ok": check.get("ok", False),
+        "selfcheck": check,
+        "gdrive_uploaded": gdrive_uploaded,
+        "gdrive_id": gdrive_id,
+        "gdrive_error": gdrive_error,
+        "passphrase_uploaded": False,
+    }
+
+
+async def _run_full_snapshot_job(real_db) -> None:
+    """Background runner: executes the snapshot and records status/result in
+    the job doc so the client can poll for completion."""
+    try:
+        result = await _do_full_snapshot(real_db)
+        await real_db.system_config.update_one(
+            {"_id": FULL_SNAPSHOT_JOB_ID},
+            {"$set": {
+                "status": "done",
+                "finished_at": datetime.now(timezone.utc).isoformat(),
+                "result": result,
+                "error": None,
+            }},
+        )
+    except Exception as exc:  # pragma: no cover
+        logger.exception("Full snapshot background job failed")
+        await real_db.system_config.update_one(
+            {"_id": FULL_SNAPSHOT_JOB_ID},
+            {"$set": {
+                "status": "error",
+                "finished_at": datetime.now(timezone.utc).isoformat(),
+                "error": str(exc),
+            }},
+        )
+
+
 async def _audit(real_db, action: str, detail: Dict[str, Any]) -> None:
     try:
         import uuid
@@ -419,60 +507,53 @@ def make_recovery_router(get_real_db, get_current_user, require_admin) -> APIRou
     # ---------------- Full snapshot ----------------
     @router.post("/admin/backups/full-snapshot")
     async def full_snapshot(user=Depends(get_current_user)):
-        """Build the complete code+data+env snapshot as a PLAIN (unencrypted)
-        ZIP, push it to Google Drive, run an integrity self-check, and apply
-        15-day retention. No passphrase is generated or stored."""
+        """Kick off the full code+data+env snapshot as a BACKGROUND job and
+        return immediately. Building the ZIP + uploading to Drive can take a few
+        minutes; running it inside the HTTP request used to exceed the live-app
+        edge-proxy timeout and surface as a 520 error. The client polls
+        GET /admin/backups/full-snapshot/status for the result."""
         require_admin(user)
         real_db = get_real_db()
-        snap = await _build_full_snapshot(real_db, trigger="manual", encrypt=False)
-        # Integrity self-check BEFORE we rely on it (validate readable ZIP).
-        check = await asyncio.to_thread(
-            selfcheck_snapshot, snap["zip_bytes"], None
-        )
-        gdrive_uploaded = False
-        gdrive_id = None
-        gdrive_error = None
-        try:
-            import gdrive
-            status = await gdrive.get_status(real_db)
-            if status.get("connected"):
-                up = await gdrive.upload_backup(
-                    real_db, file_bytes=snap["zip_bytes"],
-                    filename=snap["filename"], mime_type="application/zip",
-                )
-                gdrive_uploaded = True
-                gdrive_id = up.get("id")
-                # Enforce 15-day retention on Drive.
+        existing = await real_db.system_config.find_one({"_id": FULL_SNAPSHOT_JOB_ID}) or {}
+        if existing.get("status") == "running":
+            started = existing.get("started_at")
+            stale = True
+            if started:
                 try:
-                    await gdrive.apply_retention_policy(real_db)
-                except Exception as rexc:
-                    logger.warning("Drive retention after full snapshot failed: %s", rexc)
-            else:
-                # Drive is NOT usable — surface WHY instead of a silent "skipped".
-                gdrive_error = "auth_expired" if status.get("needs_reauth") else "not_connected"
-        except Exception as exc:
-            from google.auth.exceptions import RefreshError
-            gdrive_error = "auth_expired" if isinstance(exc, RefreshError) else "upload_failed"
-            logger.warning("Full snapshot Drive upload failed (%s): %s", gdrive_error, exc)
-        await _audit(real_db, "full_snapshot", {
-            "filename": snap["filename"], "size": snap["size_human"],
-            "encrypted": False, "selfcheck": check,
-            "gdrive_uploaded": gdrive_uploaded,
-            "gdrive_error": gdrive_error,
-        })
+                    age = (datetime.now(timezone.utc) - datetime.fromisoformat(started)).total_seconds()
+                    stale = age > _SNAPSHOT_STALE_SECONDS
+                except Exception:
+                    stale = True
+            if not stale:
+                return {"ok": True, "status": "running", "already_running": True}
+        await real_db.system_config.update_one(
+            {"_id": FULL_SNAPSHOT_JOB_ID},
+            {"$set": {
+                "status": "running",
+                "started_at": datetime.now(timezone.utc).isoformat(),
+                "finished_at": None,
+                "result": None,
+                "error": None,
+            }},
+            upsert=True,
+        )
+        asyncio.create_task(_run_full_snapshot_job(real_db))
+        return {"ok": True, "status": "started"}
+
+    @router.get("/admin/backups/full-snapshot/status")
+    async def full_snapshot_status(user=Depends(get_current_user)):
+        """Poll the background snapshot job: status is one of
+        'idle' | 'running' | 'done' | 'error'. When 'done', `result` holds the
+        same payload the endpoint used to return synchronously."""
+        require_admin(user)
+        real_db = get_real_db()
+        doc = await real_db.system_config.find_one({"_id": FULL_SNAPSHOT_JOB_ID}) or {}
         return {
-            "ok": True,
-            "filename": snap["filename"],
-            "size_human": snap["size_human"],
-            "size_bytes": snap["size_bytes"],
-            "document_count": snap["document_count"],
-            "encrypted": False,
-            "selfcheck_ok": check.get("ok", False),
-            "selfcheck": check,
-            "gdrive_uploaded": gdrive_uploaded,
-            "gdrive_id": gdrive_id,
-            "gdrive_error": gdrive_error,
-            "passphrase_uploaded": False,
+            "status": doc.get("status", "idle"),
+            "started_at": doc.get("started_at"),
+            "finished_at": doc.get("finished_at"),
+            "result": doc.get("result"),
+            "error": doc.get("error"),
         }
 
     # ---------------- Verify (no writes) ----------------
