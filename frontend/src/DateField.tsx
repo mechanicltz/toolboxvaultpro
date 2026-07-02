@@ -12,7 +12,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { theme } from "./theme";
 import { formatDateUS, parseDateUS, todayISO } from "./dateUtil";
 
-import { themedStyles, useThemeMode, useColors } from "./themeContext";
+import { themedStyles, useThemeMode } from "./themeContext";
 
 /**
  * Cross-platform date field. Always displays/inputs in MM/DD/YYYY (US).
@@ -154,7 +154,6 @@ function NativePickerModal({
   // was hardcoded to "dark" — in Light mode the highlighted month became
   // black-on-light-gray and was unreadable. (User report #5.)
   const { mode } = useThemeMode();
-  const colors = useColors();
   const isDark = mode === "dark";
 
   const initDate = (() => {
@@ -201,7 +200,6 @@ function NativePickerModal({
             mode="date"
             display="spinner"
             themeVariant={isDark ? "dark" : "light"}
-            textColor={colors.textPrimary}
             onChange={(_event: any, date?: Date) => {
               if (date) setPicked(date);
             }}
