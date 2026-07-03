@@ -19,6 +19,7 @@ import { Ionicons } from "@expo/vector-icons";
 import * as Clipboard from "expo-clipboard";
 import * as ImagePicker from "expo-image-picker";
 import * as ImageManipulator from "expo-image-manipulator";
+import { AppImage } from "../../src/components/AppImage";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { useAppResume } from "../../src/appLifecycle";
 import { theme } from "../../src/theme";
@@ -209,7 +210,7 @@ export default function DealerDetail() {
         notes: (wishForm.notes || "").trim(),
         dealer_id: id,
         dealer_name: dealer?.name || "",
-        photos: [],
+        photos: wishForm.photos || [],
       });
       setWishForm(null);
       await load();
@@ -293,6 +294,58 @@ export default function DealerDetail() {
     }
   };
 
+  // Photo picker for the dealer wishlist add form. Stored as a data: URI so it
+  // matches the main Wishlist / Tool photo format.
+  const pickWishPhotoFrom = async (camera: boolean) => {
+    try {
+      const perm = camera
+        ? await ImagePicker.requestCameraPermissionsAsync()
+        : await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!perm.granted) {
+        if (!perm.canAskAgain) {
+          Alert.alert(
+            "Photo access needed",
+            "Allow photo access in Settings to add a photo.",
+            [
+              { text: "Cancel", style: "cancel" },
+              { text: "Open Settings", onPress: () => Linking.openSettings() },
+            ],
+          );
+        } else {
+          Alert.alert("Photo access needed", "Photo access is required to add a photo.");
+        }
+        return;
+      }
+      const opts: any = { quality: 0.6, allowsEditing: false };
+      const res = camera
+        ? await ImagePicker.launchCameraAsync(opts)
+        : await ImagePicker.launchImageLibraryAsync({ ...opts, mediaTypes: ImagePicker.MediaTypeOptions.Images });
+      if (res.canceled || !res.assets?.[0]?.uri) return;
+      const out = await ImageManipulator.manipulateAsync(
+        res.assets[0].uri,
+        [{ resize: { width: 800 } }],
+        { compress: 0.6, format: ImageManipulator.SaveFormat.JPEG, base64: true },
+      );
+      if (out.base64) {
+        setWishForm((f: any) => ({ ...f, photos: [`data:image/jpeg;base64,${out.base64}`] }));
+      }
+    } catch (e: any) {
+      Alert.alert("Could not load image", String(e?.message || e));
+    }
+  };
+
+  const chooseWishPhoto = () => {
+    Alert.alert(
+      "Add a photo",
+      "Where do you want the photo from?",
+      [
+        { text: "Take Photo", onPress: () => pickWishPhotoFrom(true) },
+        { text: "Choose from Library", onPress: () => pickWishPhotoFrom(false) },
+        { text: "Cancel", style: "cancel" },
+      ],
+      { cancelable: true },
+    );
+  };
   const saveDealer = async () => {
     setSavingEdit(true);
     try {
@@ -1223,6 +1276,31 @@ export default function DealerDetail() {
               </TouchableOpacity>
             </View>
             <Text style={styles.wishModalDealer}>Dealer: {dealer.name}</Text>
+            <TouchableOpacity
+              testID="wish-photo-btn"
+              style={styles.wishPhotoBtn}
+              onPress={chooseWishPhoto}
+              activeOpacity={0.8}
+            >
+              {wishForm?.photos && wishForm.photos[0] ? (
+                <AppImage source={{ uri: wishForm.photos[0] }} style={styles.wishPhotoPreview} resizeMode="cover" />
+              ) : (
+                <View style={styles.wishPhotoPlaceholder}>
+                  <Ionicons name="camera" size={22} color={theme.colors.accent} />
+                  <Text style={styles.wishPhotoText}>ADD PHOTO</Text>
+                </View>
+              )}
+            </TouchableOpacity>
+            {!!(wishForm?.photos && wishForm.photos[0]) && (
+              <TouchableOpacity
+                testID="wish-photo-remove"
+                onPress={() => setWishForm({ ...wishForm, photos: [] })}
+                style={styles.wishPhotoRemove}
+              >
+                <Ionicons name="trash-outline" size={13} color={theme.colors.danger} />
+                <Text style={styles.wishPhotoRemoveText}>REMOVE PHOTO</Text>
+              </TouchableOpacity>
+            )}
             {([
               { k: "name", placeholder: "Name", multiline: false, kb: "default" },
               { k: "model_number", placeholder: "Model #", multiline: false, kb: "default" },
@@ -2115,6 +2193,19 @@ const styles = themedStyles((c) => ({
   wishPurchased: { color: c.accent, fontSize: 8, fontWeight: "900", letterSpacing: 1 },
   wishNotes: { color: c.textMuted, fontSize: 9, fontStyle: "italic", marginTop: 5 },
   wishModalDealer: { color: c.accent, fontSize: 10, fontWeight: "800", letterSpacing: 0.5, marginBottom: 12 },
+  wishPhotoBtn: { alignSelf: "flex-start", marginBottom: 6 },
+  wishPhotoPreview: {
+    width: 96, height: 96, borderRadius: 8,
+    backgroundColor: c.surfaceAlt, borderWidth: 1, borderColor: c.border,
+  },
+  wishPhotoPlaceholder: {
+    width: 96, height: 96, borderRadius: 8,
+    alignItems: "center", justifyContent: "center", gap: 4,
+    borderWidth: 1, borderColor: c.accent, borderStyle: "dashed", backgroundColor: c.bg,
+  },
+  wishPhotoText: { color: c.accent, fontSize: 8, fontWeight: "900", letterSpacing: 1 },
+  wishPhotoRemove: { flexDirection: "row", alignItems: "center", gap: 5, marginBottom: 12 },
+  wishPhotoRemoveText: { color: c.danger, fontSize: 8, fontWeight: "800", letterSpacing: 1 },
   wishPrioRow: { flexDirection: "row", gap: 8, marginBottom: 10 },
   wishPrioBtn: {
     flex: 1, paddingVertical: 10, alignItems: "center",
