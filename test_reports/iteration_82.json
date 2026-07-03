@@ -1,0 +1,27 @@
+{
+  "summary": "Full backend + frontend regression of the new 'ship a release' feature on Upcoming Features. Added 6 pytest regressions in tests/test_upcoming_releases_ship.py covering version/released/type persistence, released=true auto-completing all features, PUT flip released true<->false preserving data, and public GET ordering (unreleased soonest-first, then released newest-first). All 6 new tests + 12 existing test_upcoming_features.py tests pass (18/18). Frontend admin editor at /admin/upcoming-features exposes testIDs upcoming-version, upcoming-released-toggle, upcoming-feature-type-0, upcoming-add-feature, upcoming-title, upcoming-save, upcoming-date, upcoming-add and works end-to-end: created release v9.8.7 with released=on and a BUG FIX feature, saw it persist in the admin list with status 'Completed'. Public /upcoming-features screen renders the green 'Available in v9.8.7' banner with correct counts ('0 new features · 1 bug fix · Built on v9.8.7') AND the update hint ('Update available — you're on v3.1.5. Update to get these.') comparing installed APP_VERSION (3.1.5) to release version. Test data cleaned up. No React Native / Expo deprecated packages introduced by this feature. Note: expo.err.log shows pre-existing 'shadow*/textShadow*' style deprecation warnings and expo-notifications web listener warnings — unrelated to this feature.",
+  "backend_issues": { "critical": [], "minor": [] },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_upcoming_releases_ship.py",
+    "/app/backend/tests/test_upcoming_features.py",
+    "/app/test_reports/pytest/iter82_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "routes_upcoming.py PUT: when released is toggled False, previously auto-completed feature statuses remain 'Completed' (they are not restored). This is the documented behavior per user-choice B, but worth noting for admins editing history.",
+    "Admin editor cycleStatus() still lets admins set a status locally; when released=true the server correctly overrides to 'Completed', so the pill in the editor may briefly show a non-Completed status until re-fetch."
+  ],
+  "updated_files": ["/app/backend/tests/test_upcoming_releases_ship.py"],
+  "success_rate": { "backend": "100% (18/18)", "frontend": "100%" },
+  "seed_data_creation": "Test releases (TEST_UI_ship v9.8.7) created via UI and cleaned up via DELETE /api/admin/upcoming-features/{id}. All pytest-created TEST_* releases are cleaned up by the test_zz_cleanup fixture in the new test file.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "New test file: /app/backend/tests/test_upcoming_releases_ship.py runs in <2s and covers all v3.1.6 'ship a release' regressions. Admin UI testIDs are upcoming-add (banner + icon), upcoming-create (button), upcoming-version, upcoming-released-toggle, upcoming-title, upcoming-date, upcoming-add-feature, upcoming-feature-{idx}, upcoming-feature-desc-{idx}, upcoming-feature-status-{idx}, upcoming-feature-type-{idx}, upcoming-save. Admin login is MechanicLTZ@gmail.com / Blue321!. Note: after login you must dismiss the 'What's New' modal (click 'GOT IT') before interacting with the app.",
+  "rca_of_issue": "N/A — no bugs found."
+}

@@ -19,6 +19,21 @@ import { ShadowBox } from "../../src/components/ShadowBox";
 import { IndustrialBanner } from "../../src/components/IndustrialBanner";
 import ReportBugBadge from "../../src/components/ReportBugBadge";
 import { markUpcomingSeen } from "../../src/upcomingBadge";
+import { APP_VERSION } from "../../src/version";
+
+/** Compare dotted numeric versions ("3.1.6"). Returns -1/0/1, or null if unparseable. */
+function compareVersions(a?: string, b?: string): number | null {
+  if (!a || !b) return null;
+  const pa = a.trim().replace(/^v/i, "").split(".").map((n) => parseInt(n, 10));
+  const pb = b.trim().replace(/^v/i, "").split(".").map((n) => parseInt(n, 10));
+  if (pa.some(isNaN) || pb.some(isNaN)) return null;
+  for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+    const x = pa[i] || 0;
+    const y = pb[i] || 0;
+    if (x !== y) return x < y ? -1 : 1;
+  }
+  return 0;
+}
 
 function formatDate(iso: string): string {
   try {
@@ -120,15 +135,47 @@ export default function UpcomingFeaturesScreen() {
               </View>
           </Card>
           ) : (
-            releases.map((rel) => (
+            releases.map((rel) => {
+              const featureCount = rel.features.filter((f) => f.type !== "fix").length;
+              const fixCount = rel.features.filter((f) => f.type === "fix").length;
+              const cmp = rel.released ? compareVersions(APP_VERSION, rel.version) : null;
+              return (
               <Card key={rel.id} style={styles.card}>
                 <View style={styles.cardHeader}>
-                  <Ionicons name="calendar" size={18} color={c.accent} />
+                  <Ionicons
+                    name={rel.released ? "checkmark-circle" : "calendar"}
+                    size={18}
+                    color={rel.released ? c.success : c.accent}
+                  />
                   <View style={{ flex: 1 }}>
                     <Text style={styles.cardDate}>{formatDate(rel.release_date)}</Text>
                     {!!rel.title && <Text style={styles.cardTitle}>{rel.title}</Text>}
                   </View>
                 </View>
+
+                {rel.released && (
+                  <View style={styles.releasedBanner}>
+                    <Ionicons name="rocket" size={16} color={c.success} />
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.releasedTitle}>
+                        {rel.version ? `Available in v${rel.version.replace(/^v/i, "")}` : "Available now"}
+                      </Text>
+                      <Text style={styles.releasedSub}>
+                        {(featureCount > 0 || fixCount > 0)
+                          ? `${featureCount} new feature${featureCount === 1 ? "" : "s"} · ${fixCount} bug fix${fixCount === 1 ? "" : "es"}${rel.version ? ` · Built on v${rel.version.replace(/^v/i, "")}` : ""}`
+                          : "Update your app to get these changes."}
+                      </Text>
+                      {cmp !== null && (
+                        <Text style={[styles.updateHint, { color: cmp < 0 ? c.warning : c.success }]}>
+                          {cmp < 0
+                            ? `Update available — you're on v${APP_VERSION}. Update to get these.`
+                            : `You're up to date (v${APP_VERSION}).`}
+                        </Text>
+                      )}
+                    </View>
+                  </View>
+                )}
+
                 <View style={styles.divider} />
                 {rel.features.length === 0 ? (
                   <Text style={styles.noFeatures}>Details coming soon.</Text>
@@ -157,7 +204,8 @@ export default function UpcomingFeaturesScreen() {
                   })
                 )}
             </Card>
-            ))
+              );
+            })
           )}
 
           {/* Feature-request prompt + bug/feature badge. */}
@@ -184,6 +232,20 @@ const styles = themedStyles((c) => ({
   cardDate: { fontSize: 16, fontWeight: "800", color: c.accent, letterSpacing: 0.3 },
   cardTitle: { fontSize: 13, fontWeight: "600", color: c.textSecondary, marginTop: 2 },
   divider: { height: 1, backgroundColor: c.borderSubtle, marginVertical: 12 },
+  releasedBanner: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 10,
+    marginTop: 10,
+    padding: 10,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: c.success,
+    backgroundColor: c.surfaceAlt,
+  },
+  releasedTitle: { fontSize: 13, fontWeight: "900", color: c.success, letterSpacing: 0.3 },
+  releasedSub: { fontSize: 11, color: c.textSecondary, marginTop: 2, lineHeight: 15 },
+  updateHint: { fontSize: 11, fontWeight: "800", marginTop: 4 },
   noFeatures: { fontSize: 13, color: c.textMuted, fontStyle: "italic" },
   featureRow: {
     flexDirection: "row",

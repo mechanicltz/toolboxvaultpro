@@ -36,6 +36,7 @@ type DraftFeature = {
   title: string;
   description: string;
   status: UpcomingFeatureStatus;
+  type: "feature" | "fix";
 };
 
 function formatDate(iso: string): string {
@@ -114,6 +115,8 @@ export default function AdminUpcomingFeaturesScreen() {
   const [editId, setEditId] = useState<string | null>(null);
   const [draftDate, setDraftDate] = useState("");
   const [draftTitle, setDraftTitle] = useState("");
+  const [draftVersion, setDraftVersion] = useState("");
+  const [draftReleased, setDraftReleased] = useState(false);
   const [draftFeatures, setDraftFeatures] = useState<DraftFeature[]>([]);
 
   // Admin gate
@@ -160,6 +163,8 @@ export default function AdminUpcomingFeaturesScreen() {
     const n = new Date();
     setDraftDate(`${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, "0")}-01`);
     setDraftTitle("");
+    setDraftVersion("");
+    setDraftReleased(false);
     setDraftFeatures([]);
     setEditOpen(true);
   };
@@ -168,12 +173,15 @@ export default function AdminUpcomingFeaturesScreen() {
     setEditId(rel.id);
     setDraftDate(rel.release_date || "");
     setDraftTitle(rel.title || "");
+    setDraftVersion(rel.version || "");
+    setDraftReleased(!!rel.released);
     setDraftFeatures(
       (rel.features || []).map((f: UpcomingFeatureItem) => ({
         id: f.id,
         title: f.title,
         description: f.description || "",
         status: f.status,
+        type: f.type === "fix" ? "fix" : "feature",
       })),
     );
     setEditOpen(true);
@@ -187,6 +195,7 @@ export default function AdminUpcomingFeaturesScreen() {
         title: "",
         description: "",
         status: "On The List",
+        type: "feature",
       },
     ]);
 
@@ -215,6 +224,7 @@ export default function AdminUpcomingFeaturesScreen() {
         title: f.title.trim(),
         description: f.description.trim(),
         status: f.status,
+        type: f.type,
       }))
       .filter((f) => f.title);
     setSaving(true);
@@ -223,12 +233,16 @@ export default function AdminUpcomingFeaturesScreen() {
         await api.adminUpdateUpcomingFeature(editId, {
           release_date: draftDate,
           title: draftTitle.trim(),
+          version: draftVersion.trim(),
+          released: draftReleased,
           features,
         });
       } else {
         await api.adminCreateUpcomingFeature({
           release_date: draftDate,
           title: draftTitle.trim(),
+          version: draftVersion.trim(),
+          released: draftReleased,
           features,
         });
       }
@@ -387,6 +401,38 @@ export default function AdminUpcomingFeaturesScreen() {
                 testID="upcoming-title"
               />
 
+              <Text style={styles.label}>VERSION # (e.g. 3.1.6)</Text>
+              <TextInput
+                value={draftVersion}
+                onChangeText={setDraftVersion}
+                placeholder="Version this update ships in"
+                placeholderTextColor={c.textMuted}
+                style={styles.input}
+                autoCapitalize="none"
+                testID="upcoming-version"
+              />
+
+              <TouchableOpacity
+                style={[styles.releaseToggle, draftReleased && styles.releaseToggleOn]}
+                onPress={() => setDraftReleased((v) => !v)}
+                activeOpacity={0.8}
+                testID="upcoming-released-toggle"
+              >
+                <Ionicons
+                  name={draftReleased ? "checkbox" : "square-outline"}
+                  size={22}
+                  color={draftReleased ? c.success : c.textMuted}
+                />
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.releaseToggleTitle}>Released &amp; available to update</Text>
+                  <Text style={styles.releaseToggleSub}>
+                    {draftReleased
+                      ? "Marks every fix Completed and shows users a green “Available in v” banner."
+                      : "Turn on once this version is live in the App Store / Play Store."}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+
               <View style={styles.featuresHeader}>
                 <Text style={styles.label}>FEATURES</Text>
                 <TouchableOpacity onPress={addFeatureRow} hitSlop={8} testID="upcoming-add-feature">
@@ -408,6 +454,15 @@ export default function AdminUpcomingFeaturesScreen() {
                       >
                         <Text style={[styles.statusText, { color: statusColor(f.status) }]}>
                           {f.status}
+                        </Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        onPress={() => updateFeature(idx, { type: f.type === "fix" ? "feature" : "fix" })}
+                        style={[styles.typePill, f.type === "fix" && styles.typePillOn]}
+                        testID={`upcoming-feature-type-${idx}`}
+                      >
+                        <Text style={[styles.typePillText, f.type === "fix" && { color: "#000" }]}>
+                          {f.type === "fix" ? "BUG FIX" : "FEATURE"}
                         </Text>
                       </TouchableOpacity>
                       <TouchableOpacity onPress={() => removeFeature(idx)} hitSlop={6}>
@@ -532,6 +587,29 @@ const styles = themedStyles((c) => ({
   },
   draftCardHead: { flexDirection: "row", alignItems: "center", gap: 10 },
   draftIndex: { flex: 1, fontSize: 11, fontWeight: "900", color: c.textSecondary, letterSpacing: 0.8 },
+  releaseToggle: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    borderWidth: 1,
+    borderColor: c.border,
+    borderRadius: 10,
+    padding: 12,
+    marginTop: 14,
+    backgroundColor: c.surface,
+  },
+  releaseToggleOn: { borderColor: c.success, backgroundColor: c.surfaceAlt },
+  releaseToggleTitle: { fontSize: 12, fontWeight: "800", color: c.textPrimary },
+  releaseToggleSub: { fontSize: 10, color: c.textMuted, marginTop: 3, lineHeight: 14 },
+  typePill: {
+    borderWidth: 1,
+    borderColor: c.accent,
+    borderRadius: 999,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  typePillOn: { backgroundColor: c.accent },
+  typePillText: { fontSize: 9, fontWeight: "900", letterSpacing: 0.5, color: c.accent },
   saveBtn: {
     backgroundColor: c.accent,
     alignItems: "center",

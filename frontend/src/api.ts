@@ -473,18 +473,22 @@ export interface DealerPaymentDue {
 }
 
 export type UpcomingFeatureStatus = "On The List" | "Work Started" | "Completed";
+export type UpcomingFeatureType = "feature" | "fix";
 
 export interface UpcomingFeatureItem {
   id: string;
   title: string;
   description?: string;
   status: UpcomingFeatureStatus;
+  type?: UpcomingFeatureType;
 }
 
 export interface UpcomingRelease {
   id: string;
   release_date: string; // ISO "YYYY-MM-DD"
   title?: string;
+  version?: string;      // app version that ships these, e.g. "3.1.6"
+  released?: boolean;    // true once available to update to
   features: UpcomingFeatureItem[];
   created_at?: string;
   updated_at?: string;
@@ -513,7 +517,9 @@ export const api = {
   adminCreateUpcomingFeature: (body: {
     release_date: string;
     title?: string;
-    features?: { id?: string; title: string; description?: string; status?: string }[];
+    version?: string;
+    released?: boolean;
+    features?: { id?: string; title: string; description?: string; status?: string; type?: string }[];
   }) =>
     request<UpcomingRelease>(`/admin/upcoming-features`, {
       method: "POST",
@@ -524,7 +530,9 @@ export const api = {
     body: {
       release_date?: string;
       title?: string;
-      features?: { id?: string; title: string; description?: string; status?: string }[];
+      version?: string;
+      released?: boolean;
+      features?: { id?: string; title: string; description?: string; status?: string; type?: string }[];
     },
   ) =>
     request<UpcomingRelease>(`/admin/upcoming-features/${id}`, {
