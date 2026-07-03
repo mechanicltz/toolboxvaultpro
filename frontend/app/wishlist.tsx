@@ -582,8 +582,22 @@ export default function WishlistScreen() {
               padBottom={14}
               onPress={selectMode ? () => toggleSelected(item.id) : undefined}
             >
-              {/* Top-right 3-dot menu (share / edit / delete) */}
-              <View style={styles.cardTopActions}>
+              {/* Row 1: photo · name · priority · 3-dot menu (all one line) */}
+              <View style={styles.cardHead}>
+                {selectMode && (
+                  <View style={[styles.checkbox, isSelected && styles.checkboxOn]}>
+                    {isSelected && <Ionicons name="checkmark" size={14} color="#000" />}
+                  </View>
+                )}
+                {!!(item.photos && item.photos[0]) && (
+                  <AppImage source={{ uri: item.photos[0] }} style={styles.cardThumb} resizeMode="cover" />
+                )}
+                <Text style={styles.itemName} numberOfLines={2}>
+                  {item.name}
+                </Text>
+                <View style={[styles.priorityPill, { borderColor: meta.color }]}>
+                  <Text style={[styles.priorityText, { color: meta.color }]}>{meta.label}</Text>
+                </View>
                 <TouchableOpacity
                   testID={`wish-menu-${item.id}`}
                   style={styles.cardIconBtn}
@@ -594,29 +608,26 @@ export default function WishlistScreen() {
                   <Ionicons name="ellipsis-vertical" size={18} color={theme.colors.textPrimary} />
                 </TouchableOpacity>
               </View>
-              <View style={styles.cardHead}>
-                {selectMode && (
-                  <View style={[styles.checkbox, isSelected && styles.checkboxOn]}>
-                    {isSelected && <Ionicons name="checkmark" size={14} color="#000" />}
-                  </View>
-                )}
-                {!!(item.photos && item.photos[0]) && (
-                  <AppImage source={{ uri: item.photos[0] }} style={styles.cardThumb} resizeMode="cover" />
-                )}
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.itemName} numberOfLines={2}>
-                    {item.name}
-                  </Text>
-                  {!!item.model_number && (
-                    <Text style={styles.modelText} numberOfLines={1}>
-                      Model: {item.model_number}
-                    </Text>
+              {/* Row 2: model # */}
+              {!!item.model_number && (
+                <Text style={styles.modelText} numberOfLines={1}>
+                  Model: {item.model_number}
+                </Text>
+              )}
+              {/* Row 3: dealer (left) · cost (right) */}
+              {(!!item.dealer_name || !!item.price) && (
+                <View style={styles.metaRow}>
+                  {item.dealer_name ? (
+                    <Text style={styles.dealerText}>{item.dealer_name}</Text>
+                  ) : (
+                    <View />
+                  )}
+                  {!!item.price && (
+                    <Text style={styles.priceText}>${item.price.toFixed(2)}</Text>
                   )}
                 </View>
-                <View style={[styles.priorityPill, { borderColor: meta.color }]}>
-                  <Text style={[styles.priorityText, { color: meta.color }]}>{meta.label}</Text>
-                </View>
-              </View>
+              )}
+              {/* Row 4: website */}
               {!!item.url && (
                 <TouchableOpacity
                   testID={`wish-open-${item.id}`}
@@ -632,14 +643,7 @@ export default function WishlistScreen() {
                   </Text>
                 </TouchableOpacity>
               )}
-              <View style={styles.metaRow}>
-                {!!item.price && (
-                  <Text style={styles.priceText}>${item.price.toFixed(2)}</Text>
-                )}
-                {!!item.dealer_name && (
-                  <Text style={styles.dealerText}>{item.dealer_name}</Text>
-                )}
-              </View>
+              {/* Row 5: notes */}
               {!!item.notes && <Text style={styles.notesText}>{item.notes}</Text>}
               <View style={styles.cardBottomActions}>
                 {!item.purchased ? (
@@ -927,20 +931,20 @@ const styles = themedStyles((c) => ({
     marginHorizontal: 16,
     marginBottom: 12,
   },
-  cardHead: { flexDirection: "row", alignItems: "flex-start", gap: 10 },
+  cardHead: { flexDirection: "row", alignItems: "center", gap: 10 },
   cardThumb: {
     width: 48, height: 48, borderRadius: 6,
     backgroundColor: c.surfaceAlt,
     borderWidth: 1, borderColor: c.border,
   },
   itemName: { flex: 1, color: c.textPrimary, fontSize: 12, fontWeight: "700" },
-  // Model number shown under the wish name on the card.
+  // Model number shown on its own row under the head row.
   modelText: {
     color: c.textMuted,
     fontSize: 9,
     fontWeight: "700",
     letterSpacing: 0.5,
-    marginTop: 2,
+    marginTop: 8,
   },
   priorityPill: { paddingHorizontal: 8, paddingVertical: 3, borderWidth: 1, borderRadius: 3 },
   priorityText: { fontSize: 7, fontWeight: "800", letterSpacing: 1 },
@@ -961,12 +965,11 @@ const styles = themedStyles((c) => ({
     textDecorationLine: "underline",
   },
   itemDesc: { color: c.textSecondary, fontSize: 10, marginTop: 6 },
-  metaRow: { flexDirection: "row", gap: 14, marginTop: 8 },
-  priceText: { color: c.accent, fontSize: 10, fontWeight: "800" },
-  dealerText: { color: c.textMuted, fontSize: 8, fontWeight: "700", letterSpacing: 0.5 },
+  metaRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginTop: 8 },
+  priceText: { color: c.accent, fontSize: 12, fontWeight: "800" },
+  dealerText: { color: c.textMuted, fontSize: 9, fontWeight: "700", letterSpacing: 0.5 },
   notesText: { color: c.textMuted, fontSize: 8, fontStyle: "italic", marginTop: 6 },
   actions: { flexDirection: "row", gap: 8, alignItems: "center", marginTop: 10 },
-  cardTopActions: { flexDirection: "row", justifyContent: "flex-end", alignItems: "center", gap: 8, marginBottom: 4 },
   cardIconBtn: {
     width: 34, height: 34, alignItems: "center", justifyContent: "center",
     borderWidth: 1, borderColor: c.border, borderRadius: 8, backgroundColor: c.bg,

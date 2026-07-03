@@ -25,10 +25,12 @@ logger = logging.getLogger("routes_wishlist")
 def register_wishlist_routes(api_router: APIRouter) -> None:
     # ---------- Wishlist ----------
     @api_router.get("/wishlist", response_model=List[WishlistItem])
-    async def list_wishlist(purchased: Optional[bool] = None):
+    async def list_wishlist(purchased: Optional[bool] = None, dealer_id: Optional[str] = None):
         q: Dict[str, Any] = {}
         if purchased is not None:
             q["purchased"] = purchased
+        if dealer_id:
+            q["dealer_id"] = dealer_id
         items = await db.wishlist_items.find(q, {"_id": 0}).sort("created_at", -1).to_list(2000)
         return [WishlistItem(**i) for i in items]
 

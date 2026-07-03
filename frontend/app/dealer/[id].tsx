@@ -108,7 +108,10 @@ export default function DealerDetail() {
   const [tools, setTools] = useState<any[]>([]);
   const [editing, setEditing] = useState(false);
   const [savingEdit, setSavingEdit] = useState(false);
-  const [activeTab, setActiveTab] = useState<"company" | "agents" | "accounts">("company");
+  const [activeTab, setActiveTab] = useState<"company" | "agents" | "accounts" | "wishlist">("company");
+  const [wishlist, setWishlist] = useState<any[]>([]);
+  const [wishForm, setWishForm] = useState<any>(null);
+  const [savingWish, setSavingWish] = useState(false);
   const [agentForm, setAgentForm] = useState<any>(null);
   const [editForm, setEditForm] = useState<any>({});
   const [routeEditOpen, setRouteEditOpen] = useState(false);
@@ -176,13 +179,46 @@ export default function DealerDetail() {
   const load = useCallback(async () => {
     if (!id) return;
     try {
-      const [d, t] = await Promise.all([api.getDealer(id), api.listTools({ dealer_id: id })]);
+      const [d, t, w] = await Promise.all([
+        api.getDealer(id),
+        api.listTools({ dealer_id: id }),
+        api.listWishlist({ dealer_id: id }),
+      ]);
       setDealer(d);
       setTools(t);
+      setWishlist(w || []);
     } catch {
       router.back();
     }
   }, [id, router]);
+
+  const saveWish = async () => {
+    const name = (wishForm?.name || "").trim();
+    if (!name) {
+      Alert.alert("Name required", "Please enter a name for the wishlist item.");
+      return;
+    }
+    setSavingWish(true);
+    try {
+      await api.createWishlist({
+        name,
+        model_number: (wishForm.model_number || "").trim(),
+        price: wishForm.price ? parseFloat(wishForm.price) || null : null,
+        url: (wishForm.url || "").trim(),
+        priority: wishForm.priority || "normal",
+        notes: (wishForm.notes || "").trim(),
+        dealer_id: id,
+        dealer_name: dealer?.name || "",
+        photos: [],
+      });
+      setWishForm(null);
+      await load();
+    } catch {
+      Alert.alert("Error", "Could not save the wishlist item. Please try again.");
+    } finally {
+      setSavingWish(false);
+    }
+  };
 
   useFocusEffect(
     useCallback(() => {
@@ -435,7 +471,7 @@ export default function DealerDetail() {
 
         {/* TAB BAR */}
         <View style={styles.tabBar}>
-          {(["company", "agents", "accounts"] as const).map((k) => (
+          {(["company", "agents", "accounts", "wishlist"] as const).map((k) => (
             <TouchableOpacity
               key={k}
               testID={`dealer-tab-${k}`}
@@ -444,7 +480,13 @@ export default function DealerDetail() {
               activeOpacity={0.8}
             >
               <Text style={[styles.tabText, activeTab === k && styles.tabTextOn]} numberOfLines={1}>
-                {k === "company" ? "COMPANY" : k === "agents" ? `AGENTS (${allAgents.length})` : "ACCOUNTS"}
+                {k === "company"
+                  ? "COMPANY"
+                  : k === "agents"
+                  ? `AGENTS (${allAgents.length})`
+                  : k === "accounts"
+                  ? "ACCOUNTS"
+                  : `WISHLIST (${wishlist.length})`}
               </Text>
             </TouchableOpacity>
           ))}
@@ -698,6 +740,58 @@ export default function DealerDetail() {
         {activeTab === "accounts" && (
         <CardShell plainStyle={styles.detailsBox} testID="dealer-accounts-box">
           <BalanceSection dealer={dealer} onChange={load} flat />
+        </CardShell>
+        )}
+
+        {activeTab === "wishlist" && (
+        <CardShell plainStyle={styles.detailsBox} testID="dealer-wishlist-box">
+          <TouchableOpacity
+            testID="dealer-wish-add"
+            style={styles.wishAddBtn}
+            onPress={() => setWishForm({ name: "", model_number: "", price: "", url: "", priority: "normal", notes: "" })}
+            activeOpacity={0.85}
+          >
+            <Ionicons name="add-circle" size={16} color={theme.colors.accent} />
+            <Text style={styles.wishAddText}>ADD WISHLIST ITEM</Text>
+          </TouchableOpacity>
+
+          {wishlist.length === 0 ? (
+            <View style={styles.wishEmpty}>
+              <Ionicons name="heart-outline" size={40} color={theme.colors.textMuted} />
+              <Text style={styles.wishEmptyText}>
+                No wishlist items for {dealer.name} yet. Tap “Add Wishlist Item” to save one — it’ll appear here and in your main Wishlist.
+              </Text>
+            </View>
+          ) : (
+            wishlist.map((w, idx) => (
+              <TouchableOpacity
+                key={w.id}
+                testID={`dealer-wish-${w.id}`}
+                activeOpacity={0.7}
+                onPress={() => router.push("/wishlist")}
+                style={[styles.wishRow, idx === wishlist.length - 1 && styles.wishRowLast]}
+              >
+                {!!(w.photos && w.photos[0]) && (
+                  <AppImage source={{ uri: w.photos[0] }} style={styles.wishThumb} resizeMode="cover" />
+                )}
+                <View style={{ flex: 1 }}>
+                  <View style={styles.wishRowTop}>
+                    <Text style={styles.wishName} numberOfLines={2}>{w.name}</Text>
+                    {!!w.price && <Text style={styles.wishPrice}>${Number(w.price).toFixed(2)}</Text>}
+                  </View>
+                  {!!w.model_number && (
+                    <Text style={styles.wishMeta} numberOfLines={1}>Model: {w.model_number}</Text>
+                  )}
+                  <View style={styles.wishTagRow}>
+                    <Text style={styles.wishPriority}>{String(w.priority || "normal").toUpperCase()}</Text>
+                    {w.purchased && <Text style={styles.wishPurchased}>PURCHASED</Text>}
+                  </View>
+                  {!!w.notes && <Text style={styles.wishNotes} numberOfLines={2}>{w.notes}</Text>}
+                </View>
+                <Ionicons name="chevron-forward" size={16} color={theme.colors.textMuted} />
+              </TouchableOpacity>
+            ))
+          )}
         </CardShell>
         )}
         </ScrollView>
@@ -1114,6 +1208,74 @@ export default function DealerDetail() {
           { label: "Delete agent", icon: "trash-outline" as const, color: theme.colors.danger, dividerAbove: true, onPress: () => removeAgent(menuAgent.id, menuAgent.name), testID: "agent-menu-delete" },
         ] : []}
       />
+
+      {/* Add wishlist item modal (auto-assigns this dealer) */}
+      <Modal visible={!!wishForm} transparent animationType="slide" onRequestClose={() => setWishForm(null)}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          style={styles.modalBg}
+        >
+          <ScrollView style={styles.modalCard} contentContainerStyle={{ paddingBottom: 28 }} keyboardShouldPersistTaps="handled">
+            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
+              <Text style={[styles.modalTitle, { marginBottom: 0 }]}>NEW WISHLIST ITEM</Text>
+              <TouchableOpacity testID="wish-modal-close" hitSlop={10} onPress={() => setWishForm(null)}>
+                <Ionicons name="close" size={24} color={theme.colors.textMuted} />
+              </TouchableOpacity>
+            </View>
+            <Text style={styles.wishModalDealer}>Dealer: {dealer.name}</Text>
+            {([
+              { k: "name", placeholder: "Name", multiline: false, kb: "default" },
+              { k: "model_number", placeholder: "Model #", multiline: false, kb: "default" },
+              { k: "price", placeholder: "Cost ($)", multiline: false, kb: "decimal-pad" },
+              { k: "url", placeholder: "Website (optional)", multiline: false, kb: "url" },
+            ] as const).map((f) => (
+              <TextInput
+                key={f.k}
+                testID={`wish-${f.k}`}
+                placeholder={f.placeholder}
+                placeholderTextColor={theme.colors.textMuted}
+                style={styles.input}
+                value={wishForm?.[f.k] || ""}
+                onChangeText={(v) => setWishForm({ ...wishForm, [f.k]: v })}
+                keyboardType={f.kb as any}
+                autoCapitalize={f.k === "url" ? "none" : "sentences"}
+              />
+            ))}
+            <View style={styles.wishPrioRow}>
+              {(["low", "normal", "high"] as const).map((p) => (
+                <TouchableOpacity
+                  key={p}
+                  testID={`wish-prio-${p}`}
+                  style={[styles.wishPrioBtn, (wishForm?.priority || "normal") === p && styles.wishPrioBtnOn]}
+                  onPress={() => setWishForm({ ...wishForm, priority: p })}
+                  activeOpacity={0.8}
+                >
+                  <Text style={[styles.wishPrioText, (wishForm?.priority || "normal") === p && styles.wishPrioTextOn]}>
+                    {p.toUpperCase()}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            <TextInput
+              testID="wish-notes"
+              placeholder="Notes"
+              placeholderTextColor={theme.colors.textMuted}
+              style={[styles.input, { height: 80 }]}
+              value={wishForm?.notes || ""}
+              onChangeText={(v) => setWishForm({ ...wishForm, notes: v })}
+              multiline
+            />
+            <View style={{ flexDirection: "row", gap: 10 }}>
+              <TouchableOpacity style={styles.btnGhost} onPress={() => setWishForm(null)} disabled={savingWish}>
+                <Text style={styles.btnGhostText}>CANCEL</Text>
+              </TouchableOpacity>
+              <TouchableOpacity testID="save-wish-btn" style={styles.btn} onPress={saveWish} disabled={savingWish}>
+                <Text style={styles.btnText}>{savingWish ? "SAVING…" : "ADD"}</Text>
+              </TouchableOpacity>
+            </View>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -1914,6 +2076,53 @@ const styles = themedStyles((c) => ({
     paddingHorizontal: 6,
     paddingVertical: 2,
   },
+  // ---- Dealer Wishlist tab ----
+  wishAddBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingVertical: 12,
+    borderWidth: 1,
+    borderColor: c.accent,
+    borderRadius: 8,
+    marginTop: 6,
+    marginBottom: 12,
+  },
+  wishAddText: { color: c.accent, fontSize: 11, fontWeight: "900", letterSpacing: 1 },
+  wishEmpty: { alignItems: "center", paddingVertical: 28, paddingHorizontal: 16 },
+  wishEmptyText: { color: c.textSecondary, fontSize: 11, textAlign: "center", marginTop: 10, lineHeight: 16 },
+  wishRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: c.borderSubtle,
+  },
+  wishRowLast: { borderBottomWidth: 0 },
+  wishThumb: {
+    width: 44, height: 44, borderRadius: 6,
+    backgroundColor: c.surfaceAlt,
+    borderWidth: 1, borderColor: c.border,
+  },
+  wishRowTop: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", gap: 8 },
+  wishName: { flex: 1, color: c.textPrimary, fontSize: 12, fontWeight: "800" },
+  wishPrice: { color: c.accent, fontSize: 12, fontWeight: "900" },
+  wishMeta: { color: c.textMuted, fontSize: 9, fontWeight: "700", marginTop: 3 },
+  wishTagRow: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 5 },
+  wishPriority: { color: c.textSecondary, fontSize: 8, fontWeight: "900", letterSpacing: 1 },
+  wishPurchased: { color: c.accent, fontSize: 8, fontWeight: "900", letterSpacing: 1 },
+  wishNotes: { color: c.textMuted, fontSize: 9, fontStyle: "italic", marginTop: 5 },
+  wishModalDealer: { color: c.accent, fontSize: 10, fontWeight: "800", letterSpacing: 0.5, marginBottom: 12 },
+  wishPrioRow: { flexDirection: "row", gap: 8, marginBottom: 10 },
+  wishPrioBtn: {
+    flex: 1, paddingVertical: 10, alignItems: "center",
+    borderWidth: 1, borderColor: c.border, borderRadius: 8, backgroundColor: c.bg,
+  },
+  wishPrioBtnOn: { borderColor: c.accent, backgroundColor: c.accent },
+  wishPrioText: { color: c.textSecondary, fontSize: 9, fontWeight: "900", letterSpacing: 1 },
+  wishPrioTextOn: { color: "#000" },
   detailsRow: {
     flexDirection: "row",
     justifyContent: "space-between",
