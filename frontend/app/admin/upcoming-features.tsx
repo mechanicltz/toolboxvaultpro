@@ -119,6 +119,13 @@ export default function AdminUpcomingFeaturesScreen() {
   const [draftReleased, setDraftReleased] = useState(false);
   const [draftFeatures, setDraftFeatures] = useState<DraftFeature[]>([]);
 
+  // Per-release 3-dot menu + quick "add feature" modal
+  const [menuRel, setMenuRel] = useState<UpcomingRelease | null>(null);
+  const [addFeatRel, setAddFeatRel] = useState<UpcomingRelease | null>(null);
+  const [qfTitle, setQfTitle] = useState("");
+  const [qfDesc, setQfDesc] = useState("");
+  const [qfType, setQfType] = useState<"feature" | "fix">("feature");
+
   // Admin gate
   useEffect(() => {
     let active = true;
@@ -280,6 +287,74 @@ export default function AdminUpcomingFeaturesScreen() {
   const statusColor = (s: UpcomingFeatureStatus) =>
     s === "Completed" ? c.success : s === "Work Started" ? c.warning : c.textMuted;
 
+  // Persist a new feature list for a release (used by inline status pills + quick-add).
+  const patchFeatures = async (rel: UpcomingRelease, newFeatures: any[]) => {
+    try {
+      await api.adminUpdateUpcomingFeature(rel.id, {
+        features: newFeatures.map((f) => ({
+          id: f.id,
+          title: f.title,
+          description: f.description || "",
+          status: f.status,
+          type: f.type || "feature",
+        })),
+      });
+      await load();
+    } catch (e: any) {
+      Alert.alert("Couldn't update", String(e?.message || e));
+    }
+  };
+
+  // Tap a feature's status pill on the card to cycle it (no need to open Edit).
+  const cycleFeatureStatus = (rel: UpcomingRelease, featureId: string) => {
+    const nf = rel.features.map((f) => {
+      if (f.id !== featureId) return f;
+      const next = STATUSES[(STATUSES.indexOf(f.status) + 1) % STATUSES.length];
+      return { ...f, status: next };
+    });
+    patchFeatures(rel, nf);
+  };
+
+  const toggleReleased = async (rel: UpcomingRelease) => {
+    setMenuRel(null);
+    try {
+      await api.adminUpdateUpcomingFeature(rel.id, { released: !rel.released });
+      await load();
+    } catch (e: any) {
+      Alert.alert("Couldn't update", String(e?.message || e));
+    }
+  };
+
+  const openQuickAdd = (rel: UpcomingRelease) => {
+    setMenuRel(null);
+    setAddFeatRel(rel);
+    setQfTitle("");
+    setQfDesc("");
+    setQfType("feature");
+  };
+
+  const saveQuickAdd = async () => {
+    if (!qfTitle.trim() || !addFeatRel) {
+      Alert.alert("Title required", "Please enter a title for the feature.");
+      return;
+    }
+    const rel = addFeatRel;
+    const nf = [
+      ...rel.features,
+      {
+        id: `new-${Date.now()}`,
+        title: qfTitle.trim(),
+        description: qfDesc.trim(),
+        status: "On The List" as UpcomingFeatureStatus,
+        type: qfType,
+      },
+    ];
+    setSaving(true);
+    await patchFeatures(rel, nf);
+    setSaving(false);
+    setAddFeatRel(null);
+  };
+
   if (checking) {
     return (
       <SafeAreaView style={styles.safe} edges={["top"]}>
@@ -296,11 +371,6 @@ export default function AdminUpcomingFeaturesScreen() {
         title="UPCOMING FEATURES"
         subtitle="Admin · manage the roadmap"
         onBack={() => router.back()}
-        rightSlot={
-          <TouchableOpacity onPress={openCreate} hitSlop={10} testID="upcoming-add">
-            <Ionicons name="add-circle" size={26} color={c.accent} />
-          </TouchableOpacity>
-        }
       />
       {loading ? (
         <View style={styles.center}>
@@ -320,29 +390,29 @@ export default function AdminUpcomingFeaturesScreen() {
             />
           }
         >
-          <TouchableOpacity style={styles.createBtn} onPress={openCreate} testID="upcoming-create">
-            <Ionicons name="add" size={18} color="#000" />
-            <Text style={styles.createBtnText}>NEW DATED UPDATE</Text>
-          </TouchableOpacity>
-
           {releases.length === 0 ? (
             <Text style={styles.emptyText}>
-              No releases yet. Tap “New Dated Update” to publish your first roadmap entry.
+              No releases yet. Tap the + button to publish your first roadmap entry.
             </Text>
           ) : (
             releases.map((rel) => (
               <SkinnedCard key={rel.id} style={styles.card}>
                 <View style={styles.cardHeader}>
-                  <Ionicons name="calendar" size={18} color={c.accent} />
+                  <Ionicons name={rel.released ? "checkmark-circle" : "calendar"} size={18} color={rel.released ? c.success : c.accent} />
                   <View style={{ flex: 1 }}>
-                    <Text style={styles.cardDate}>{formatDate(rel.release_date)}</Text>
+                    <Text style={styles.cardDate}>
+                      {formatDate(rel.release_date)}
+                      {rel.released && !!rel.version ? `  ·  v${rel.version.replace(/^v/i, "")}` : ""}
+                    </Text>
                     {!!rel.title && <Text style={styles.cardTitle}>{rel.title}</Text>}
                   </View>
-                  <TouchableOpacity onPress={() => openEdit(rel)} hitSlop={8} style={styles.iconBtn}>
-                    <Ionicons name="create-outline" size={20} color={c.accent} />
-                  </TouchableOpacity>
-                  <TouchableOpacity onPress={() => confirmDelete(rel)} hitSlop={8} style={styles.iconBtn}>
-                    <Ionicons name="trash-outline" size={20} color={c.danger} />
+                  <TouchableOpacity
+                    onPress={() => setMenuRel(rel)}
+                    hitSlop={8}
+                    style={styles.iconBtn}
+                    testID={`upcoming-menu-${rel.id}`}
+                  >
+                    <Ionicons name="ellipsis-vertical" size={20} color={c.textPrimary} />
                   </TouchableOpacity>
                 </View>
                 <View style={styles.divider} />
@@ -353,11 +423,16 @@ export default function AdminUpcomingFeaturesScreen() {
                     <View key={f.id} style={styles.featureBlock}>
                       <View style={styles.featureRow}>
                         <Text style={styles.featureTitle}>{f.title}</Text>
-                        <View style={[styles.statusPill, { borderColor: statusColor(f.status) }]}>
+                        <TouchableOpacity
+                          onPress={() => cycleFeatureStatus(rel, f.id)}
+                          activeOpacity={0.7}
+                          testID={`upcoming-pill-${f.id}`}
+                          style={[styles.statusPill, { borderColor: statusColor(f.status) }]}
+                        >
                           <Text style={[styles.statusText, { color: statusColor(f.status) }]}>
                             {f.status}
                           </Text>
-                        </View>
+                        </TouchableOpacity>
                       </View>
                       {!!f.description && (
                         <Text style={styles.featureDesc}>{f.description}</Text>
@@ -370,6 +445,93 @@ export default function AdminUpcomingFeaturesScreen() {
           )}
         </ScrollView>
       )}
+
+      {/* Floating + button (create a new dated update) */}
+      {!loading && (
+        <TouchableOpacity style={styles.fab} onPress={openCreate} testID="upcoming-fab" activeOpacity={0.85}>
+          <Ionicons name="add" size={30} color="#000" />
+        </TouchableOpacity>
+      )}
+
+      {/* Per-release 3-dot action menu */}
+      <Modal visible={!!menuRel} transparent animationType="fade" onRequestClose={() => setMenuRel(null)}>
+        <TouchableOpacity style={styles.menuOverlay} activeOpacity={1} onPress={() => setMenuRel(null)}>
+          <View style={styles.menuSheet}>
+            <Text style={styles.menuHeader} numberOfLines={1}>
+              {menuRel ? formatDate(menuRel.release_date) : ""}{menuRel?.title ? ` · ${menuRel.title}` : ""}
+            </Text>
+            <TouchableOpacity style={styles.menuItem} onPress={() => { const r = menuRel; setMenuRel(null); if (r) openEdit(r); }} testID="menu-edit">
+              <Ionicons name="create-outline" size={20} color={c.textPrimary} />
+              <Text style={styles.menuItemText}>Edit update</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.menuItem} onPress={() => menuRel && openQuickAdd(menuRel)} testID="menu-add-feature">
+              <Ionicons name="add-circle-outline" size={20} color={c.textPrimary} />
+              <Text style={styles.menuItemText}>Add a feature</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.menuItem} onPress={() => menuRel && toggleReleased(menuRel)} testID="menu-toggle-released">
+              <Ionicons name={menuRel?.released ? "cloud-offline-outline" : "rocket-outline"} size={20} color={c.success} />
+              <Text style={[styles.menuItemText, { color: c.success }]}>
+                {menuRel?.released ? "Unmark released" : "Released & available to download"}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.menuItem, styles.menuItemLast]} onPress={() => { const r = menuRel; setMenuRel(null); if (r) confirmDelete(r); }} testID="menu-delete">
+              <Ionicons name="trash-outline" size={20} color={c.danger} />
+              <Text style={[styles.menuItemText, { color: c.danger }]}>Delete update</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* Quick "add a feature" modal */}
+      <Modal visible={!!addFeatRel} transparent animationType="slide" onRequestClose={() => setAddFeatRel(null)}>
+        <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={styles.modalBg}>
+          <View style={styles.modalCard}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>ADD A FEATURE</Text>
+              <TouchableOpacity onPress={() => setAddFeatRel(null)} hitSlop={10}>
+                <Ionicons name="close" size={22} color={c.textPrimary} />
+              </TouchableOpacity>
+            </View>
+            <Text style={styles.label}>TITLE</Text>
+            <TextInput
+              value={qfTitle}
+              onChangeText={setQfTitle}
+              placeholder="e.g. QR label printing"
+              placeholderTextColor={c.textMuted}
+              style={styles.input}
+              testID="quickfeat-title"
+            />
+            <Text style={styles.label}>DESCRIPTION (optional)</Text>
+            <TextInput
+              value={qfDesc}
+              onChangeText={setQfDesc}
+              placeholder="Short detail"
+              placeholderTextColor={c.textMuted}
+              style={[styles.input, { height: 70 }]}
+              multiline
+              testID="quickfeat-desc"
+            />
+            <View style={styles.qfTypeRow}>
+              {(["feature", "fix"] as const).map((t) => (
+                <TouchableOpacity
+                  key={t}
+                  onPress={() => setQfType(t)}
+                  style={[styles.qfTypeBtn, qfType === t && styles.qfTypeBtnOn]}
+                  testID={`quickfeat-type-${t}`}
+                >
+                  <Text style={[styles.qfTypeText, qfType === t && { color: "#000" }]}>
+                    {t === "fix" ? "BUG FIX" : "FEATURE"}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            <TouchableOpacity style={styles.createBtn} onPress={saveQuickAdd} disabled={saving} testID="quickfeat-save">
+              <Ionicons name="add" size={18} color="#000" />
+              <Text style={styles.createBtnText}>{saving ? "SAVING…" : "ADD FEATURE"}</Text>
+            </TouchableOpacity>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
 
       {/* Create / Edit modal */}
       <Modal visible={editOpen} transparent animationType="slide" onRequestClose={() => setEditOpen(false)}>
@@ -513,7 +675,61 @@ export default function AdminUpcomingFeaturesScreen() {
 const styles = themedStyles((c) => ({
   safe: { flex: 1, backgroundColor: c.canvas },
   center: { flex: 1, alignItems: "center", justifyContent: "center" },
-  content: { padding: 16, paddingBottom: 60 },
+  content: { padding: 16, paddingBottom: 100 },
+  fab: {
+    position: "absolute",
+    right: 20,
+    bottom: 28,
+    width: 58,
+    height: 58,
+    borderRadius: 29,
+    backgroundColor: c.accent,
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#000",
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 6,
+  },
+  menuOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "flex-end" },
+  menuSheet: {
+    backgroundColor: c.surface,
+    borderTopLeftRadius: 18,
+    borderTopRightRadius: 18,
+    paddingTop: 8,
+    paddingBottom: 34,
+  },
+  menuHeader: {
+    color: c.textMuted,
+    fontSize: 11,
+    fontWeight: "800",
+    letterSpacing: 0.5,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+  },
+  menuItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 14,
+    paddingHorizontal: 20,
+    paddingVertical: 15,
+    borderTopWidth: 1,
+    borderTopColor: c.borderSubtle,
+  },
+  menuItemLast: {},
+  menuItemText: { color: c.textPrimary, fontSize: 15, fontWeight: "600" },
+  qfTypeRow: { flexDirection: "row", gap: 10, marginTop: 6, marginBottom: 14 },
+  qfTypeBtn: {
+    flex: 1,
+    paddingVertical: 10,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: c.accent,
+    borderRadius: 999,
+  },
+  qfTypeBtnOn: { backgroundColor: c.accent },
+  qfTypeText: { fontSize: 11, fontWeight: "900", letterSpacing: 0.5, color: c.accent },
   createBtn: {
     backgroundColor: c.accent,
     flexDirection: "row",

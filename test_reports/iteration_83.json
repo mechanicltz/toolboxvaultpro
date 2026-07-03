@@ -1,0 +1,45 @@
+{
+  "summary": "Frontend-only regression of the reorganized Admin > Upcoming Features screen. Verified all 6 user stories from the review request end-to-end via Playwright against the public EXPO_BACKEND_URL, using MechanicLTZ@gmail.com admin login (token pre-seeded to localStorage due to preview auth quirk). RESULTS: (T1) Floating orange + FAB (testID upcoming-fab) is present at bottom-right and opens the 'NEW UPDATE' modal; the old top-right + and 'NEW DATED UPDATE'/upcoming-add/upcoming-create testIDs are gone (verified absent). (T2) Each release card exposes a single 3-dot ellipsis-vertical button testID upcoming-menu-<id>; tapping it opens a bottom sheet with all four expected items testID'd menu-edit, menu-add-feature, menu-toggle-released, menu-delete. (T3) 'Add a feature' opens the quick modal with quickfeat-title, quickfeat-desc, quickfeat-type-feature, quickfeat-type-fix, quickfeat-save; saving persists the feature on that release (type=fix persisted correctly via API), and the full edit modal is NOT opened (upcoming-save absent afterward). Feature appears on the card immediately (visible=True). (T4) 'Released & available to download' toggles the release's released flag on -> released=True + all features auto-Completed + card shows the version 'v9.9.9' next to the date; menu label flips to 'Unmark released'; tapping again flips released back to False. (T5) Tapping upcoming-pill-<featureId> on the card cycles status without opening a modal, and status persists across full page reload (verified 'Work Started' survived a page.reload()). (T6) menu-edit opens the full EDIT UPDATE modal with the title prefilled. (T7) menu-delete triggers the confirmation Alert; deletion via API cleanup afterwards succeeded. Test release TEST_UI iter83 (v9.9.9) plus its 'QuickAdd A' feature were used and fully cleaned up via DELETE /api/admin/upcoming-features/{id}. No new deprecated Expo packages introduced by this change. Pre-existing warnings noted (shadow*/textShadow* deprecations, expo-notifications web listener) are unrelated to this feature.",
+  "backend_issues": { "critical": [], "minor": [] },
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "upcoming-pill-<id> (release card status pill)",
+        "issue": "Very first synthetic tap after mount/reload sometimes appears to be a no-op — the pill required a 2nd tap to advance from 'On The List' -> 'Work Started', and again after a reload the 1st post-reload tap did not advance. Subsequent taps advance normally and persistence works. Likely a race between load() re-render and the closure capturing `rel.features`. Repro is 1-in-2 under Playwright el.click() dispatch; manual user taps in Expo Go may behave differently. Consider using a functional state update / re-reading the release from state at tap time in cycleFeatureStatus() to eliminate the stale-closure edge case.",
+        "testID": "upcoming-pill-<featureId>",
+        "priority": "LOW"
+      }
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {
+        "screen": "admin/upcoming-features",
+        "issues": [
+          "FAB (upcoming-fab) sits ~28px above the bottom of the screen and slightly overlaps the tab bar area in the web preview — visually it's above the tab bar, but tab-bar overlay z-index intercepts real pointer events (page.click force=True never fired; only el.click() JS dispatch worked). Consider raising the FAB above the tab-bar height (bottom: 90-100 on web / bottom: 24 + safe-area-inset on native) so real touches land on the FAB, not the tab bar."
+        ]
+      }
+    ],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/test_reports/iteration_82.json",
+    "/app/backend/tests/test_upcoming_releases_ship.py"
+  ],
+  "action_items": [
+    "OPTIONAL: In cycleFeatureStatus(), re-read the release from the latest `releases` state (or pass featureId + relId and look them up on tap) to avoid the stale-closure double-tap edge case observed on the FIRST pill tap after mount/reload.",
+    "OPTIONAL: Bump FAB `bottom` on web to sit above the bottom tab bar (currently 28px). Native touches work; on web/preview the tab bar can intercept clicks even though the FAB paints on top.",
+    "No functional/business-logic fixes needed — every user-facing behavior in the request works as specified."
+  ],
+  "critical_code_review_comments": [
+    "cycleFeatureStatus uses the `rel` captured at render time; if load() runs between two rapid taps, the second tap could operate on a stale feature list. Not observed as a data corruption, but the double-tap-to-advance flake likely stems from this. Consider computing the next status from a fresh lookup at tap time.",
+    "Alert.alert with 3 buttons on RN web renders a custom modal (not window.confirm); Playwright can't auto-accept it via page.on('dialog'). This is expected but worth documenting for future testing agents — target the Delete button inside the modal DOM to complete the flow.",
+    "upcoming-features.tsx is now 838 lines; nearing the 700-line soft ceiling in the code-review guidelines. Consider splitting the two modals (NEW/EDIT and Quick-Add) into their own components."
+  ],
+  "updated_files": [],
+  "success_rate": { "backend": "not tested (frontend-only round)", "frontend": "100% functional (6/6 stories pass); 1 minor flake on first pill tap" },
+  "seed_data_creation": "Created and DELETED one test release: TEST_UI iter83 (v9.9.9) with one quick-added feature 'QuickAdd A' (type=fix). All test data was cleaned up via DELETE /api/admin/upcoming-features/{id} at the end of the run.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Preview auth quirk: page.click on TouchableOpacity for the FAB and the ellipsis menu button often does not fire under Playwright — use `page.locator(sel).evaluate('el => el.click()')` instead. Admin gate: /admin/upcoming-features redirects to /more if adminWhoAmI (GET /api/admin/me) returns not-admin; seed the token via `localStorage.setItem('tt.auth.token', <jwt>)` before navigating. Admin login: MechanicLTZ@gmail.com / Blue321!. All new testIDs on this screen: upcoming-fab, upcoming-menu-<id>, upcoming-pill-<featureId>, menu-edit, menu-add-feature, menu-toggle-released, menu-delete, quickfeat-title, quickfeat-desc, quickfeat-type-feature, quickfeat-type-fix, quickfeat-save. Retained edit-modal testIDs: upcoming-title, upcoming-version, upcoming-released-toggle, upcoming-date, upcoming-add-feature, upcoming-feature-<idx>, upcoming-feature-desc-<idx>, upcoming-feature-status-<idx>, upcoming-feature-type-<idx>, upcoming-save. Delete confirm is an Alert.alert with buttons → renders a custom modal, not window.confirm; page.on('dialog') will not fire.",
+  "rca_of_issue": "N/A — no blocking bugs. Two low-severity notes: (1) first pill tap is occasionally swallowed (stale closure over `rel.features` in cycleFeatureStatus); (2) FAB overlaps the web tab bar's touch area so only JS-dispatched clicks land on it under Playwright — visually fine, but a real web user tapping the extreme bottom-right could hit the VAULT tab instead of the FAB."
+}
