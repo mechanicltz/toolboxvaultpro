@@ -307,12 +307,14 @@ export default function AdminUpcomingFeaturesScreen() {
 
   // Tap a feature's status pill on the card to cycle it (no need to open Edit).
   const cycleFeatureStatus = (rel: UpcomingRelease, featureId: string) => {
-    const nf = rel.features.map((f) => {
+    // Read the freshest copy from state to avoid a stale-closure first-tap miss.
+    const current = releases.find((r) => r.id === rel.id) || rel;
+    const nf = current.features.map((f) => {
       if (f.id !== featureId) return f;
       const next = STATUSES[(STATUSES.indexOf(f.status) + 1) % STATUSES.length];
       return { ...f, status: next };
     });
-    patchFeatures(rel, nf);
+    patchFeatures(current, nf);
   };
 
   const toggleReleased = async (rel: UpcomingRelease) => {
@@ -679,7 +681,7 @@ const styles = themedStyles((c) => ({
   fab: {
     position: "absolute",
     right: 20,
-    bottom: 28,
+    bottom: Platform.OS === "web" ? 90 : 28,
     width: 58,
     height: 58,
     borderRadius: 29,
