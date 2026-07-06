@@ -105,6 +105,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Hydrate the in-memory cache from disk BEFORE any screen renders so
       // every list shows previously-fetched data instantly.
       await loadCacheFromDisk();
+      // Load the saved display currency for the cached account so money
+      // renders correctly even on an offline cold start (before /auth/me).
+      await initCurrency();
       // Kick off the global online/offline watcher.
       startNetworkWatcher();
       await refresh();

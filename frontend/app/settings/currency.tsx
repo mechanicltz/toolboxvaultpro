@@ -171,4 +171,4 @@ const useStyles = () =>
     symbol: { color: c.textPrimary, fontSize: 13, fontWeight: "800" },
     rowName: { color: c.textPrimary, fontSize: 14, fontWeight: "600" },
     rowCode: { color: c.textMuted, fontSize: 11, fontWeight: "700", marginTop: 2 },
-  }))();
+  }));
