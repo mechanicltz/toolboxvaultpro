@@ -508,12 +508,21 @@ global_currency_selector:
     file: "/app/frontend/src/currency.ts, /app/frontend/app/settings/currency.tsx, /app/frontend/src/AuthContext.tsx, /app/frontend/app/(tabs)/more.tsx"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
+      - working: true
+        agent: "testing"
+        comment: >
+          ALL 7 user stories PASS (iteration_84). Found + fixed a 2nd crash bug:
+          settings/currency.tsx L174 had a trailing () on themedStyles((c)=>({...}))()
+          (themedStyles returns a Proxy, not a factory) → red-screen on opening the
+          picker. Removed the trailing (). Verified: More→Currency opens picker; USD
+          pinned first; search by code/name works; selecting EUR/INR/JPY persists to
+          tbv_currency_code::<userId> and money renders with €/₹/¥ across Home,
+          Inventory, Dealer detail, Tool detail, Reports with zero residual $; JPY
+          0-decimals honoured; reverting to USD restores $. No crashes. Reset to USD.
       - working: "NA"
         agent: "main"
-        comment: >
-          Implemented a global currency selector (display-only, no FX conversion).
           currency.ts holds COMMON_CURRENCIES (25, USD pinned top) + OTHER_CURRENCIES
           (alphabetical), a formatMoney() util (symbol + grouped amount), a per-account
           AsyncStorage key (tbv_currency_code::{userId}), initCurrency(), setCurrency(),
