@@ -28,6 +28,19 @@
 
 ---
 
+## F. Platform reach (user-requested 2026-07-06) 🟠 soon
+- **F1 🟠 Tablet-friendly layout** — keep 100% of current features/look; add responsive
+  tablet layouts (multi-column grids, master-detail, capped widths) gated behind
+  `isTablet`/`isDesktop` so the phone experience is pixel-identical. Preservation contract +
+  6-phase plan in `memory/FUTURE_tablet_friendly.md`. Foundation already exists
+  (`src/responsive.ts`, `ResponsiveContainer`) but is applied to only ~8 of ~44 screens.
+  Suggested order: Phase 0 audit → 1 foundation → 2 grids first.
+- **F2 🟠 Web (browser) access** — same app at a public URL, sign-in-only for existing
+  mobile accounts (no web payments). Full concept + phased plan in
+  `memory/FUTURE_web_access.md`. Shares ~70% of the tablet responsive work → do tablet first.
+
+---
+
 ### Recently shipped (for context — not backlog)
 - BUILD 283: **Insurance Claims module** (new) — full documentation & reporting system
   (claims CRUD, item attachment referencing inventory, claim-only evidence photos/docs,
