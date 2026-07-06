@@ -14,6 +14,7 @@
  * even with several dealers this stays comfortably under the cap.
  */
 import * as Notifications from "expo-notifications";
+import { formatMoney } from "./currency";
 import { Platform } from "react-native";
 import { nextRouteDate } from "./route";
 import { loadPrefs } from "./prefs";
@@ -291,7 +292,7 @@ export async function reschedulePaymentRemindersNow(): Promise<void> {
     if (!y || !m || !d) continue;
     const who = it.dealer_name ? `${it.dealer_name} ` : "";
     const acct = it.account_label || "";
-    const money = `${who}${acct} payment ($${Number(it.amount).toFixed(2)})`;
+    const money = `${who}${acct} payment (${formatMoney(Number(it.amount))})`;
 
     // Day-of reminder always fires when payment notifications are on.
     {

@@ -683,6 +683,13 @@ export default function MoreScreen() {
             onPress={() => router.push("/wishlist")}
           />
           <SectionRow
+            icon="cash-outline"
+            title="Currency"
+            subtitle="Choose the currency used across the app"
+            testID="more-currency"
+            onPress={() => router.push("/settings/currency")}
+          />
+          <SectionRow
             icon="pricetag"
             title="Inventory for Sale"
             subtitle="List items, mark as sold, sale & sold reports"

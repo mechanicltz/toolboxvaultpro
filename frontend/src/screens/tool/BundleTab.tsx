@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState } from "react";
+import { formatMoney } from "../../currency";
 import {
   View, Text, TouchableOpacity, TextInput, Modal, ScrollView,
   ActivityIndicator, Alert, StyleSheet, Platform, KeyboardAvoidingView,
@@ -13,7 +14,7 @@ import { AppImage } from "../../components/AppImage";
 import { PillButton } from "../../components/PillButton";
 import { compressToDataUri } from "../../lib/imageCompress";
 
-const money = (n: any) => `$${(Number(n) || 0).toFixed(2)}`;
+const money = (n: any) => `${formatMoney((Number(n) || 0))}`;
 
 type InsideForm = { id: string | null; name: string; model: string; cost: string; photo: string };
 const EMPTY_FORM: InsideForm = { id: null, name: "", model: "", cost: "", photo: "" };

@@ -1,4 +1,5 @@
 import { AppImage } from "../../src/components/AppImage";
+import { formatMoney } from "../../src/currency";
 import { useState, useCallback, type ReactNode } from "react";
 import {
   View, Text, ScrollView, TouchableOpacity, Image, ActivityIndicator, RefreshControl, Alert,
@@ -86,7 +87,7 @@ export default function BundlesList() {
           {(b.inside_items?.length || 0)} item{(b.inside_items?.length || 0) === 1 ? "" : "s"}
         </Text>
       </View>
-      <Text style={styles.price}>${(Number(b.cost) || 0).toFixed(2)}</Text>
+      <Text style={styles.price}>{formatMoney((Number(b.cost) || 0))}</Text>
       <Ionicons name="chevron-forward" size={14} color={theme.colors.textMuted} />
     </TouchableOpacity>
   ));

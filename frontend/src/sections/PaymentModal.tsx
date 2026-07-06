@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { formatMoney } from "../currency";
 import {
   View,
   Text,
@@ -108,7 +109,7 @@ export function PaymentModal({
             <View style={styles.balRow}>
               <Text style={styles.balLabel}>Current</Text>
               <Text style={[styles.balVal, currentBalance > 0 && { color: theme.colors.danger }]}>
-                ${currentBalance.toFixed(2)}
+                {formatMoney(currentBalance)}
               </Text>
               <Ionicons name="arrow-forward" size={14} color={theme.colors.textMuted} />
               <Text
@@ -118,7 +119,7 @@ export function PaymentModal({
                   projected < currentBalance && { color: theme.colors.success },
                 ]}
               >
-                ${projected.toFixed(2)}
+                {formatMoney(projected)}
               </Text>
             </View>
 

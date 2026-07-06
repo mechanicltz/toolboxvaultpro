@@ -1,4 +1,5 @@
 import { useState, useCallback, useMemo, ReactNode } from "react";
+import { formatMoney } from "../../src/currency";
 import {
   View,
   Text,
@@ -133,11 +134,11 @@ export default function HomeScreen() {
       "Which account do you want to adjust?",
       [
         {
-          text: `Truck Acct  ($${(Number(d.personal_balance) || 0).toFixed(2)})`,
+          text: `Truck Acct  (${formatMoney((Number(d.personal_balance) || 0))})`,
           onPress: () => setPaymentTarget({ dealer: d, account: "personal" }),
         },
         {
-          text: `Credit Acct  ($${(Number(d.credit_balance) || 0).toFixed(2)})`,
+          text: `Credit Acct  (${formatMoney((Number(d.credit_balance) || 0))})`,
           onPress: () => setPaymentTarget({ dealer: d, account: "credit" }),
         },
         { text: "Cancel", style: "cancel" },
@@ -381,7 +382,7 @@ export default function HomeScreen() {
       <SummaryRow
         icon="cash"
         label="NET WORTH"
-        value={`$${totalInvested.toFixed(2)}`}
+        value={`${formatMoney(totalInvested)}`}
         valueColor={theme.colors.success}
       />
     ),
@@ -542,7 +543,7 @@ export default function HomeScreen() {
     invested: prefs.show_prices
       ? {
           label: "NET WORTH",
-          value: `$${totalInvested.toFixed(2)}`,
+          value: `${formatMoney(totalInvested)}`,
           valueColor: theme.colors.success,
         }
       : null,
@@ -713,7 +714,7 @@ export default function HomeScreen() {
                                     dTotal === 0 && { color: theme.colors.textMuted },
                                   ]}
                                 >
-                                  ${dTotal.toFixed(2)}
+                                  {formatMoney(dTotal)}
                                 </Text>
                                 <TouchableOpacity
                                   testID={`adjust-${d.id}`}
@@ -738,7 +739,7 @@ export default function HomeScreen() {
                               totalOwed === 0 && { color: theme.colors.textMuted },
                             ]}
                           >
-                            ${totalOwed.toFixed(2)}
+                            {formatMoney(totalOwed)}
                           </Text>
                         </View>
                       </>
@@ -891,7 +892,7 @@ export default function HomeScreen() {
                       </TouchableOpacity>
                       <View style={styles.detailsValueWrap}>
                         <Text style={[styles.detailsValue, steelValueStyle, dTotal === 0 && styles.valueMuted]}>
-                          ${dTotal.toFixed(2)}
+                          {formatMoney(dTotal)}
                         </Text>
                         <TouchableOpacity
                           testID={`adjust-${d.id}`}
@@ -911,7 +912,7 @@ export default function HomeScreen() {
                 >
                   <Text style={styles.nestedTotalLabel}>TOTAL</Text>
                   <Text style={[styles.nestedTotalValue, totalOwed === 0 && styles.valueMuted]}>
-                    ${totalOwed.toFixed(2)}
+                    {formatMoney(totalOwed)}
                   </Text>
                 </View>
               </>

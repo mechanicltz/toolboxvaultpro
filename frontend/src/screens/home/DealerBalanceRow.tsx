@@ -1,6 +1,7 @@
 // DealerBalanceRow — one dealer's combined balance row. Extracted from
 // app/(tabs)/index.tsx. Behaviour/appearance unchanged.
 import React from "react";
+import { formatMoney } from "../../currency";
 import { View, Text, TouchableOpacity } from "react-native";
 import { theme } from "../../theme";
 import { styles } from "./homeStyles";
@@ -37,7 +38,7 @@ export function DealerBalanceRow({
             total === 0 && { color: theme.colors.textMuted },
           ]}
         >
-          ${total.toFixed(2)}
+          {formatMoney(total)}
         </Text>
       </TouchableOpacity>
       <TouchableOpacity

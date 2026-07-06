@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { formatMoney } from "../currency";
 import {
   View,
   Text,
@@ -499,7 +500,7 @@ function HistoryModal({
                 events.map((ev: any, i: number) => (
                   <View key={ev.id || i} style={styles.histRow}>
                     <Text style={styles.histDate}>{ev.date}</Text>
-                    {!!ev.cost && <Text style={styles.histCost}>${(ev.cost || 0).toFixed(2)}</Text>}
+                    {!!ev.cost && <Text style={styles.histCost}>{formatMoney((ev.cost || 0))}</Text>}
                     {!!ev.technician && (
                       <Text style={styles.histLine}>By: {ev.technician}</Text>
                     )}

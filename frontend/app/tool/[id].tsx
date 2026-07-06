@@ -1,4 +1,5 @@
 import { compressToDataUri } from "../../src/lib/imageCompress";
+import { formatMoney } from "../../src/currency";
 import { AppImage, resolveUri } from "../../src/components/AppImage";
 import React, { useState, useCallback, useEffect, useRef } from "react";
 import {
@@ -1256,7 +1257,7 @@ export default function ToolDetail() {
     const esc = (s: any) => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;");
     const fmtMoney = (v: any) => {
       const n = Number(v);
-      return isFinite(n) ? `$${n.toFixed(2)}` : "—";
+      return isFinite(n) ? `${formatMoney(n)}` : "—";
     };
 
     // ---- Bundle/set content (per report spec) -----------------------------
@@ -1722,7 +1723,7 @@ export default function ToolDetail() {
   const photos = tool.photos || [];
 
   // ---- Helpers for the new layout ----------------------------------------
-  const fmtMoney = (n: any) => `$${(Number(n) || 0).toFixed(2)}`;
+  const fmtMoney = (n: any) => `${formatMoney((Number(n) || 0))}`;
   const statusInfo = (() => {
     if (tool.lost_status?.is_lost)
       return {
@@ -2043,7 +2044,7 @@ export default function ToolDetail() {
                 {!!tool.repair_info?.repair_cost && Number(tool.repair_info.repair_cost) > 0 && (
                   <View style={newStyles.claimRow}>
                     <Text style={newStyles.claimRowLabel} allowFontScaling={false}>Repair cost</Text>
-                    <Text style={newStyles.claimRowValue} allowFontScaling={false}>${Number(tool.repair_info.repair_cost).toFixed(2)}</Text>
+                    <Text style={newStyles.claimRowValue} allowFontScaling={false}>{formatMoney(Number(tool.repair_info.repair_cost))}</Text>
                   </View>
                 )}
                 {!!tool.repair_info?.notes && (
@@ -2194,7 +2195,7 @@ export default function ToolDetail() {
           </View>
           {vRow("CATEGORY", "folder", tool.category_name ? String(tool.category_name) : "—")}
           {vRow("TAGS", "pricetags", tagSummary)}
-          {tool.msrp_price && Number(tool.msrp_price) > 0 ? vRow("MSRP", "cash", `$${Number(tool.msrp_price).toFixed(2)}`) : null}
+          {tool.msrp_price && Number(tool.msrp_price) > 0 ? vRow("MSRP", "cash", `${formatMoney(Number(tool.msrp_price))}`) : null}
           {vRow("CONSUMABLE", "flask", tool.is_consumable ? "Yes" : "No", undefined, !(tool.is_consumable && tool.consumable_info))}
           {tool.is_consumable && tool.consumable_info && (
             <View style={{ paddingTop: 6, gap: 4 }}>
@@ -4154,7 +4155,7 @@ function QuantityStepper({
         <Text style={qsStyles.label}>QUANTITY IN STOCK</Text>
         {tool.cost ? (
           <Text style={qsStyles.sub}>
-            ${(Number(tool.cost) || 0).toFixed(2)} ea  ·  Total ${ext.toFixed(2)}
+            {formatMoney((Number(tool.cost) || 0))} ea  ·  Total {formatMoney(ext)}
           </Text>
         ) : (
           <Text style={qsStyles.sub}>Tap +/− to adjust</Text>

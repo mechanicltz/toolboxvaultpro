@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { formatMoney } from "../currency";
 import {
   View,
   Text,
@@ -85,7 +86,7 @@ export function BalanceSection({
     const label = account === "credit" ? "Credit" : "Truck";
     const ok = await confirm(
       "Confirm payment?",
-      `Record a ${label} account payment of $${Number(sched.amount).toFixed(2)} as made today and advance to the next due date.`,
+      `Record a ${label} account payment of ${formatMoney(Number(sched.amount))} as made today and advance to the next due date.`,
       "Mark Paid",
     );
     if (!ok) return;
@@ -265,7 +266,7 @@ function BalanceCard({
       <View style={styles.acctRow}>
         <Text style={styles.acctRowLabel}>Balance</Text>
         <Text style={[styles.acctRowValueStrong, { color: owed ? theme.colors.danger : theme.colors.success }]}>
-          ${balance.toFixed(2)}
+          {formatMoney(balance)}
         </Text>
       </View>
       <View style={[styles.acctRow, !hasSched && styles.acctRowLast]}>
@@ -280,7 +281,7 @@ function BalanceCard({
           <View style={styles.acctRow}>
             <Text style={styles.acctRowLabel}>Auto Payment</Text>
             <Text style={styles.acctRowValue}>
-              ${Number(schedule?.amount || 0).toFixed(2)} · {freqLabel(schedule?.frequency)}
+              {formatMoney(Number(schedule?.amount || 0))} · {freqLabel(schedule?.frequency)}
             </Text>
           </View>
           <View style={[styles.acctRow, styles.acctRowLast]}>

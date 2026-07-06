@@ -1,4 +1,5 @@
 import { useCallback, useState, useMemo } from "react";
+import { formatMoney } from "../../src/currency";
 import {
   View,
   Text,
@@ -177,7 +178,7 @@ export default function DealersScreen() {
           </Text>
           <Text style={[styles.rowMeta, isIndustrial && styles.skinTextBright]}>
             {s.count} TOOL{s.count === 1 ? "" : "S"}
-            {prefs.show_prices ? `  ·  $${s.total.toFixed(2)}` : ""}
+            {prefs.show_prices ? `  ·  ${formatMoney(s.total)}` : ""}
             {`  ·  ${routeLabel(item)}`}
           </Text>
           {(() => {

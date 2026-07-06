@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useState } from "react";
+import { formatMoney } from "../../src/currency";
 import {
   View,
   Text,
@@ -504,7 +505,7 @@ export default function DealerDetail() {
             >
               <Text style={styles.heroLabel}>TOTAL PURCHASED</Text>
               <Text style={styles.heroValue} numberOfLines={1}>
-                ${total.toFixed(2)} · {tools.length} item{tools.length === 1 ? "" : "s"}
+                {formatMoney(total)} · {tools.length} item{tools.length === 1 ? "" : "s"}
               </Text>
             </TouchableOpacity>
             <View style={styles.heroSep} />
@@ -830,7 +831,7 @@ export default function DealerDetail() {
                 <View style={{ flex: 1 }}>
                   <View style={styles.wishRowTop}>
                     <Text style={styles.wishName} numberOfLines={2}>{w.name}</Text>
-                    {!!w.price && <Text style={styles.wishPrice}>${Number(w.price).toFixed(2)}</Text>}
+                    {!!w.price && <Text style={styles.wishPrice}>{formatMoney(Number(w.price))}</Text>}
                   </View>
                   {!!w.model_number && (
                     <Text style={styles.wishMeta} numberOfLines={1}>Model: {w.model_number}</Text>

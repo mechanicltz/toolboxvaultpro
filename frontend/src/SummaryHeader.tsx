@@ -1,4 +1,5 @@
 import { View, Text, TouchableOpacity } from "react-native";
+import { formatMoney } from "./currency";
 import { Ionicons } from "@expo/vector-icons";
 import { theme } from "./theme";
 
@@ -95,7 +96,7 @@ function fmtMoney(n: number): string {
   if (v >= 1_000_000) return `$${(v / 1_000_000).toFixed(1)}M`;
   if (v >= 100_000) return `$${Math.round(v / 1000)}k`;
   if (v >= 10_000) return `$${(v / 1000).toFixed(1)}k`;
-  if (v >= 1000) return `$${(v / 1000).toFixed(2)}k`;
+  if (v >= 1000) return `${formatMoney((v / 1000))}k`;
   return `$${Math.round(v)}`;
 }
 

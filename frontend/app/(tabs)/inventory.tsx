@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback, useMemo, memo } from "react";
+import { formatMoney } from "../../src/currency";
 import {
   View,
   Text,
@@ -1189,7 +1190,7 @@ export default function InventoryScreen() {
                 <Text style={[styles.rowSub, isIndustrial && styles.rowSubSkin]} numberOfLines={1}>
                   {item.location_name || "No location"}
                   {prefs.show_prices && item.cost
-                    ? `  ·  $${(Number(item.cost) * Math.max(1, Number(item.quantity) || 1)).toFixed(0)}`
+                    ? `  ·  ${formatMoney((Number(item.cost) * Math.max(1, Number(item.quantity) || 1)), { decimals: 0 })}`
                     : ""}
                 </Text>
                 <View style={styles.rowDealerLine}>

@@ -4,6 +4,7 @@ import { api, ApiError, getToken, setToken, setUnauthorizedHandler, bootstrapTok
 import { loadCacheFromDisk, clearCached } from "./cache";
 import { startNetworkWatcher } from "./network";
 import { logoutRevenueCat } from "./revenuecat";
+import { initCurrency } from "./currency";
 
 const USER_CACHE_KEY = "tt.auth.user";
 
@@ -44,6 +45,7 @@ async function writeCachedUser(u: AuthUser | null) {
   try {
     if (u) await AsyncStorage.setItem(USER_CACHE_KEY, JSON.stringify(u));
     else await AsyncStorage.removeItem(USER_CACHE_KEY);
+    await initCurrency();
   } catch {}
 }
 

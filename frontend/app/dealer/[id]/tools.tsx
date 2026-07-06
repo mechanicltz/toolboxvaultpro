@@ -1,4 +1,5 @@
 import { AppImage } from "../../../src/components/AppImage";
+import { formatMoney } from "../../../src/currency";
 import { useCallback, useState } from "react";
 import {
   View,
@@ -121,7 +122,7 @@ export default function DealerToolsScreen() {
             </View>
             {isIndustrial && <View style={styles.summaryDividerSkin} />}
             <View style={[styles.summaryCell, styles.summaryCellAccent, isIndustrial && styles.summaryCellSkin]}>
-              <Text style={[styles.summaryValueAccent, isIndustrial && styles.summaryValueAccentSkin]}>${total.toFixed(2)}</Text>
+              <Text style={[styles.summaryValueAccent, isIndustrial && styles.summaryValueAccentSkin]}>{formatMoney(total)}</Text>
               <Text style={[styles.summaryLabelAccent, isIndustrial && styles.summaryLabelAccentSkin]}>TOTAL INVESTED</Text>
             </View>
           </>
@@ -196,10 +197,10 @@ export default function DealerToolsScreen() {
                 </View>
                 {prefs.show_prices && (
                   <View style={{ alignItems: "flex-end", marginRight: 4 }}>
-                    <Text style={styles.rowCost}>${ext.toFixed(2)}</Text>
+                    <Text style={styles.rowCost}>{formatMoney(ext)}</Text>
                     {qty > 1 && (
                       <Text style={styles.rowUnit}>
-                        ${(Number(t.cost) || 0).toFixed(2)} ea
+                        {formatMoney((Number(t.cost) || 0))} ea
                       </Text>
                     )}
                   </View>

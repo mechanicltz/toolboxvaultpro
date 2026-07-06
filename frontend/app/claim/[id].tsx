@@ -1,4 +1,5 @@
 import { AppImage } from "../../src/components/AppImage";
+import { formatMoney } from "../../src/currency";
 import { useState, useEffect, useCallback } from "react";
 import {
   View,
@@ -195,7 +196,7 @@ export default function ClaimDetailScreen() {
 
             {!!claim.repair_cost && Number(claim.repair_cost) > 0 && (
               <DetailRow label="REPAIR COST">
-                <Text style={styles.detCost}>${Number(claim.repair_cost).toFixed(2)}</Text>
+                <Text style={styles.detCost}>{formatMoney(Number(claim.repair_cost))}</Text>
               </DetailRow>
             )}
 

@@ -14,6 +14,7 @@
  * due item is prompted at most once per session (keyed by dealer:account:date).
  */
 import { useEffect, useRef } from "react";
+import { formatMoney } from "../../currency";
 import { Alert } from "react-native";
 import { api } from "../../api";
 import { formatDateUS } from "../../dateUtil";
@@ -85,7 +86,7 @@ export function useDealerPaymentsDue(
     if (soonest) {
       // Account label intentionally omitted (no "Truck"/"Credit" prefix) so the
       // dealer sub-line stays clean: just the amount + when it's due.
-      paymentSubByDealer[d.id] = `$${soonest.amount.toFixed(2)} ${dueLabel(soonest.days)}`;
+      paymentSubByDealer[d.id] = `${formatMoney(soonest.amount)} ${dueLabel(soonest.days)}`;
     }
   }
 
@@ -112,7 +113,7 @@ export function useDealerPaymentsDue(
       promptedRef.current.add(`${p.dealerId}:${p.account}:${p.nextDue}`);
       Alert.alert(
         "Payment due",
-        `You have a ${p.dealerName} ${p.accountLabel} payment of $${p.amount.toFixed(2)} due ${formatDateUS(p.nextDue)}. Was it processed?`,
+        `You have a ${p.dealerName} ${p.accountLabel} payment of ${formatMoney(p.amount)} due ${formatDateUS(p.nextDue)}. Was it processed?`,
         [
           {
             text: "No",

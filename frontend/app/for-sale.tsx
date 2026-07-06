@@ -1,4 +1,5 @@
 import { AppImage } from "../src/components/AppImage";
+import { formatMoney } from "../src/currency";
 import { useState, useEffect, useCallback, useMemo } from "react";
 import {
   View,
@@ -162,7 +163,7 @@ export default function ForSaleScreen() {
           {!!item.brand && <Text style={styles.cardSub} numberOfLines={1}>{item.brand}{item.model ? `  ·  ${item.model}` : ""}</Text>}
           <View style={styles.priceRow}>
             <Text style={[styles.cardPrice, isSold && { color: "#27AE60" }]}>
-              ${price.toFixed(2)}
+              {formatMoney(price)}
             </Text>
             {isSold ? (
               <View style={styles.soldPill}>
@@ -254,7 +255,7 @@ export default function ForSaleScreen() {
           <View style={styles.statBox}>
             <Text style={styles.statLabel}>{tab === "listed" ? "ASKING TOTAL" : "SOLD TOTAL"}</Text>
             <Text style={[styles.statValue, { color: tab === "sold" ? "#27AE60" : theme.colors.accent }]}>
-              ${totals.value.toFixed(2)}
+              {formatMoney(totals.value)}
             </Text>
           </View>
         </SkinPlate>

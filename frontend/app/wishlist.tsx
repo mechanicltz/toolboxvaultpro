@@ -1,4 +1,5 @@
 import { compressToDataUri } from "../src/lib/imageCompress";
+import { formatMoney } from "../src/currency";
 import { AppImage } from "../src/components/AppImage";
 import { useState, useCallback } from "react";
 import {
@@ -289,7 +290,7 @@ export default function WishlistScreen() {
     const lines: string[] = [];
     lines.push(`🔧 ${it.name}`);
     if (it.model_number) lines.push(`Model: ${it.model_number}`);
-    if (it.price) lines.push(`Price: $${Number(it.price).toFixed(2)}`);
+    if (it.price) lines.push(`Price: ${formatMoney(Number(it.price))}`);
     if (it.dealer_name) lines.push(`Dealer: ${it.dealer_name}`);
     const meta = PRIORITIES.find((p) => p.key === (it.priority || "normal"))?.label;
     if (meta && meta !== "NORMAL") lines.push(`Priority: ${meta}`);
@@ -316,7 +317,7 @@ export default function WishlistScreen() {
           ? `<span style="display:inline-block;padding:2px 8px;font-size:10px;font-weight:700;letter-spacing:1px;border:1px solid ${prio.color};color:${prio.color};border-radius:3px;margin-left:6px;">${prio.label}</span>`
           : "";
         const price = it.price
-          ? `<div style="color:#f97316;font-size:16px;font-weight:800;margin-top:6px;">$${Number(it.price).toFixed(2)}</div>`
+          ? `<div style="color:#f97316;font-size:16px;font-weight:800;margin-top:6px;">${formatMoney(Number(it.price))}</div>`
           : "";
         const dealer = it.dealer_name
           ? `<div style="color:#666;font-size:11px;font-weight:600;letter-spacing:0.5px;text-transform:uppercase;margin-top:4px;">${escapeHtml(it.dealer_name)}</div>`
@@ -535,8 +536,8 @@ export default function WishlistScreen() {
 
       <SkinPlate style={styles.statPlate} innerStyle={styles.statRowInner} padTop={11} padBottom={11}>
         <Stat label="Open" value={String(openCount)} />
-        <Stat label="Planned" value={`$${totalPlanned.toFixed(0)}`} color={theme.colors.accent} />
-        <Stat label="Spent" value={`$${totalSpent.toFixed(0)}`} color={theme.colors.success} />
+        <Stat label="Planned" value={`${formatMoney(totalPlanned, { decimals: 0 })}`} color={theme.colors.accent} />
+        <Stat label="Spent" value={`${formatMoney(totalSpent, { decimals: 0 })}`} color={theme.colors.success} />
       </SkinPlate>
 
       <View style={styles.toggleRow}>
@@ -623,7 +624,7 @@ export default function WishlistScreen() {
                     <View />
                   )}
                   {!!item.price && (
-                    <Text style={styles.priceText}>${item.price.toFixed(2)}</Text>
+                    <Text style={styles.priceText}>{formatMoney(item.price)}</Text>
                   )}
                 </View>
               )}
