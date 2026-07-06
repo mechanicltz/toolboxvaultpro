@@ -11,6 +11,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { themedStyles } from "../themeContext";
 import { theme } from "../theme";
 import { APP_VERSION } from "../version";
+import { useIntroFinished } from "../introState";
 
 // One-time "What's New" popup. Shows once on the first launch after the app is
 // updated to APP_VERSION, then never again (gated by a version-stamped flag so
@@ -35,9 +36,13 @@ const WHATS_NEW: string[] = [
 
 export function WhatsNewModal() {
   const [visible, setVisible] = useState(false);
+  const introDone = useIntroFinished();
   const s = styles;
 
   useEffect(() => {
+    // Hold off until the intro video overlay is gone — otherwise this
+    // native Modal renders on top of the splash.
+    if (!introDone) return;
     let cancelled = false;
     (async () => {
       try {
@@ -55,7 +60,7 @@ export function WhatsNewModal() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [introDone]);
 
   const dismiss = useCallback(async () => {
     setVisible(false);

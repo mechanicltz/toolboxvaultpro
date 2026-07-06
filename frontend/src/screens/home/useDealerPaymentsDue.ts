@@ -18,6 +18,7 @@ import { formatMoney } from "../../currency";
 import { Alert } from "react-native";
 import { api } from "../../api";
 import { formatDateUS } from "../../dateUtil";
+import { useIntroFinished } from "../../introState";
 
 type DealerLike = {
   id: string;
@@ -92,11 +93,15 @@ export function useDealerPaymentsDue(
 
   const promptedRef = useRef<Set<string>>(new Set());
   const promptingRef = useRef(false);
+  const introDone = useIntroFinished();
   const dueKey = duePaymentsNow
     .map((p) => `${p.dealerId}:${p.account}:${p.nextDue}`)
     .join("|");
 
   useEffect(() => {
+    // Don't fire the native "was it processed?" Alert over the intro video —
+    // wait until the splash overlay is gone.
+    if (!introDone) return;
     if (promptingRef.current) return;
     const pending = duePaymentsNow.filter(
       (p) => !promptedRef.current.has(`${p.dealerId}:${p.account}:${p.nextDue}`),
@@ -149,7 +154,7 @@ export function useDealerPaymentsDue(
     };
     runNext(0);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [dueKey]);
+  }, [dueKey, introDone]);
 
   return { paymentSubByDealer };
 }

@@ -28,6 +28,7 @@ import { initRevenueCat, identifyRevenueCatUser, getCurrentCustomerInfo, buildSy
 import { setPaymentRequiredHandler, api, abortAllInFlight } from "../src/api";
 import { shouldShowIntro, markAppActive, getIntroVideoEnabledAsync } from "../src/idle";
 import { IntroOverlay } from "../src/IntroOverlay";
+import { setIntroFinished } from "../src/introState";
 import { ThemeProvider, useColors, useThemeMode, useSkin } from "../src/themeContext";
 import { IndustrialThemeProvider } from "../src/components/industrial";
 import { notifyAppResume } from "../src/appLifecycle";
@@ -201,6 +202,14 @@ function AuthGate({ children }: { children: React.ReactNode }) {
     markAppActive();
     setShowIntro(false);
   };
+
+  // Broadcast the intro's visibility to the global signal so first-launch
+  // popups (What's New, demo-data welcome, "was this payment processed?")
+  // — which render as native Modals/Alerts ABOVE the overlay's zIndex —
+  // hold off until the video is gone, then appear on the dashboard.
+  useEffect(() => {
+    setIntroFinished(!showIntro);
+  }, [showIntro]);
 
   // While we're still figuring out whether to play the intro, just
   // show a black canvas — no spinner, no chrome. This avoids the

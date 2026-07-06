@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -12,6 +12,7 @@ import { useRouter, useFocusEffect } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { theme } from "../theme";
 import { api } from "../api";
+import { useIntroFinished } from "../introState";
 
 // One-time flag for the post-demo "choose your theme" popup. Shown once, right
 // after the user dismisses the demo-data intro on a fresh account.
@@ -31,19 +32,24 @@ const THEME_INTRO_KEY = "tbv_theme_intro_seen";
  */
 export function DemoBanner() {
   const router = useRouter();
+  const introDone = useIntroFinished();
   const [present, setPresent] = useState(false);
   const [showIntro, setShowIntro] = useState(false);
   const [showThemeIntro, setShowThemeIntro] = useState(false);
+  // The welcome popup is a native Modal, so it would draw over the intro
+  // video. We remember that it WANTS to open, then reveal it only once the
+  // intro overlay is gone (see the effect below).
+  const [pendingIntro, setPendingIntro] = useState(false);
 
   const load = useCallback(async () => {
     try {
       const s = await api.demoStatus({ forceFresh: true });
       setPresent(!!s?.present);
-      setShowIntro(!!s?.present && !s?.intro_seen);
+      setPendingIntro(!!s?.present && !s?.intro_seen);
     } catch {
       // not logged in / backend down — stay silent
       setPresent(false);
-      setShowIntro(false);
+      setPendingIntro(false);
     }
   }, []);
 
@@ -52,6 +58,14 @@ export function DemoBanner() {
       load();
     }, [load]),
   );
+
+  // Open the queued welcome popup only after the intro video finishes.
+  useEffect(() => {
+    if (introDone && pendingIntro) {
+      setShowIntro(true);
+      setPendingIntro(false);
+    }
+  }, [introDone, pendingIntro]);
 
   const dismissIntro = useCallback(async () => {
     setShowIntro(false);
