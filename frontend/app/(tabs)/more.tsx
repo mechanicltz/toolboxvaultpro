@@ -29,6 +29,7 @@ import { useSkin } from "../../src/themeContext";import {
   type BiometricStatus,
 } from "../../src/biometric";
 import { usePrefs, HOME_ROW_LABELS, HomeRowKey } from "../../src/prefs";
+import { useCurrency } from "../../src/currency";
 import { api } from "../../src/api";
 import { useAuth } from "../../src/AuthContext";
 import {
@@ -281,6 +282,7 @@ export default function MoreScreen() {
   const router = useRouter();
   const { prefs, update } = usePrefs();
   const { user, logout } = useAuth();
+  const currency = useCurrency();
   const [mntDue, setMntDue] = useState({ overdue: 0, due_soon: 0 });
   const [pwOpen, setPwOpen] = useState(false);
   const [pwNew, setPwNew] = useState("");
@@ -683,13 +685,6 @@ export default function MoreScreen() {
             onPress={() => router.push("/wishlist")}
           />
           <SectionRow
-            icon="cash-outline"
-            title="Currency"
-            subtitle="Choose the currency used across the app"
-            testID="more-currency"
-            onPress={() => router.push("/settings/currency")}
-          />
-          <SectionRow
             icon="pricetag"
             title="Inventory for Sale"
             subtitle="List items, mark as sold, sale & sold reports"
@@ -889,6 +884,13 @@ export default function MoreScreen() {
                 thumbColor="#fff"
               />
             }
+          />
+          <SectionRow
+            icon="cash-outline"
+            title="Currency"
+            subtitle={`${currency.symbol.trim() || currency.code} · ${currency.name}`}
+            testID="more-currency"
+            onPress={() => router.push("/settings/currency")}
           />
           {/* Dashboard route + warranty toggles removed — these alerts now live
               in the always-on Notifications panel on the home screen. */}
