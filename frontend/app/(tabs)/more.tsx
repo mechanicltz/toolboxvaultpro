@@ -541,13 +541,19 @@ export default function MoreScreen() {
       );
       return;
     }
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      quality: 1,
-    });
-    if (result.canceled || !result.assets?.[0]?.uri) return;
-    await saveResizedLogo(result.assets[0].uri);
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        quality: 1,
+      });
+      if (result.canceled || !result.assets?.[0]?.uri) return;
+      await saveResizedLogo(result.assets[0].uri);
+    } catch {
+      // The Android crop/edit step can throw on some devices
+      // (expo-image-picker CropImageContract). Fail gracefully.
+      Alert.alert("Couldn't open the photo editor", "Please try again.");
+    }
   }, [saveResizedLogo]);
 
   const takeHomeLogoPhoto = useCallback(async () => {
@@ -559,12 +565,17 @@ export default function MoreScreen() {
       );
       return;
     }
-    const result = await ImagePicker.launchCameraAsync({
-      allowsEditing: true,
-      quality: 1,
-    });
-    if (result.canceled || !result.assets?.[0]?.uri) return;
-    await saveResizedLogo(result.assets[0].uri);
+    try {
+      const result = await ImagePicker.launchCameraAsync({
+        allowsEditing: true,
+        quality: 1,
+      });
+      if (result.canceled || !result.assets?.[0]?.uri) return;
+      await saveResizedLogo(result.assets[0].uri);
+    } catch {
+      // Same graceful fallback for the camera + crop path.
+      Alert.alert("Couldn't open the photo editor", "Please try again.");
+    }
   }, [saveResizedLogo]);
 
   // Open the logo-customization action sheet. Choices are: pick from
