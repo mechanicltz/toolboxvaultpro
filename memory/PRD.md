@@ -1,5 +1,17 @@
 # Toolbox Vault — PRD
 
+## Upcoming-Features version chip + dashboard "notifications off" chip (2026-06 — DONE)
+(A) app/upcoming-features/index.tsx: each release header now shows a VERSION chip
+so users see which app version ships the updates — "Version X" (green) for
+released, "Planned for vX" (accent) for upcoming — always visible even when the
+accordion is collapsed. Uses rel.version. DOM-verified ("Planned for v3.1.6"
+renders). (B) New src/components/NotificationsReminderChip.tsx on the dashboard
+(both plain + skin branches, after DemoBanner): a dismissible chip shown when
+notification permission is NOT granted (e.g. user tapped "Not Now" in the
+first-launch flow). TURN ON re-asks if canAskAgain else Linking.openSettings();
+re-checks on focus + app resume. Native-only (skipped on web). Lint clean.
+
+
 ## First-launch permission onboarding + Upcoming-Features accordions (2026-06 — DONE & tested, iter_86)
 (A) PERMISSION PRIMING: new src/components/PermissionsOnboarding.tsx shows 3
 sequential "why we need this" cards AFTER the intro video and BEFORE any other

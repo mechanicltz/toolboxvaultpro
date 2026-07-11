@@ -164,6 +164,29 @@ export default function UpcomingFeaturesScreen() {
                   <View style={{ flex: 1 }}>
                     <Text style={styles.cardDate}>{formatDate(rel.release_date)}</Text>
                     {!!rel.title && <Text style={styles.cardTitle}>{rel.title}</Text>}
+                    {!!rel.version && (
+                      <View
+                        style={[
+                          styles.versionChip,
+                          { borderColor: rel.released ? c.success : c.accent },
+                        ]}
+                      >
+                        <Ionicons
+                          name="pricetag"
+                          size={10}
+                          color={rel.released ? c.success : c.accent}
+                        />
+                        <Text
+                          style={[
+                            styles.versionChipText,
+                            { color: rel.released ? c.success : c.accent },
+                          ]}
+                        >
+                          {rel.released ? "Version " : "Planned for v"}
+                          {rel.version.replace(/^v/i, "")}
+                        </Text>
+                      </View>
+                    )}
                     {!open && (
                       <Text style={styles.collapsedSummary}>
                         {featureCount > 0 || fixCount > 0
@@ -262,6 +285,18 @@ const styles = themedStyles((c) => ({
   cardDate: { fontSize: 16, fontWeight: "800", color: c.accent, letterSpacing: 0.3 },
   cardTitle: { fontSize: 13, fontWeight: "600", color: c.textSecondary, marginTop: 2 },
   collapsedSummary: { fontSize: 12, color: c.textMuted, marginTop: 3 },
+  versionChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    alignSelf: "flex-start",
+    gap: 4,
+    marginTop: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderWidth: 1,
+    borderRadius: 999,
+  },
+  versionChipText: { fontSize: 11, fontWeight: "800", letterSpacing: 0.3 },
   divider: { height: 1, backgroundColor: c.borderSubtle, marginVertical: 12 },
   releasedBanner: {
     flexDirection: "row",
