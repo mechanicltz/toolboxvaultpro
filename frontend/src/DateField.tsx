@@ -170,14 +170,15 @@ function NativePickerModal({
     return `${yyyy}-${mm}-${dd}`;
   };
 
-  // Android shows a modal natively — so we render the picker inline only when visible
+  // Android shows the native Material CALENDAR dialog (a pop-up) — render only
+  // when visible; it manages its own pop-up UI.
   if (Platform.OS === "android") {
     if (!visible) return null;
     return (
       <DateTimePicker
         value={picked}
         mode="date"
-        display="spinner"
+        display="calendar"
         onChange={(_event: any, date?: Date) => {
           if (date) {
             onConfirm(toISO(date));
@@ -189,7 +190,7 @@ function NativePickerModal({
     );
   }
 
-  // iOS — wrap in our own themed modal
+  // iOS — wrap the INLINE calendar grid in our own themed pop-up card
   return (
     <Modal visible={visible} transparent animationType="fade">
       <View style={styles.modalBg}>
@@ -198,8 +199,9 @@ function NativePickerModal({
           <DateTimePicker
             value={picked}
             mode="date"
-            display="spinner"
+            display="inline"
             themeVariant={isDark ? "dark" : "light"}
+            accentColor={theme.colors.accent}
             onChange={(_event: any, date?: Date) => {
               if (date) setPicked(date);
             }}

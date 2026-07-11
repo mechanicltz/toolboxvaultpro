@@ -1,0 +1,35 @@
+{
+  "summary": "Iter85 — Verified item-edit overhaul: field order + testIDs match spec exactly; BrandAutocomplete uses brand-suggest-<name> rows and lists /api/brands; DateField on web is a masked MM/DD/YYYY TextInput storing ISO; saveEdit only sets chargePrompt when freshUnsavedRef.current AND dealer_id AND totalCost>0 (i.e. NEW items only, not edits); charge modal wires charge-truck/charge-credit to POST /api/dealers/{id}/transactions {account,type:'charge'}. Backend regression (8/8 passing) confirms brand upsert (manual + auto via tool save) and dealer charge tx increases personal_balance / credit_balance and rejects bad payloads.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Tool detail (all skins)", "issues": ["Web preview renders Steel skin as solid black (known artifact per review note); manual UI walk-through of the edit form on the web preview is unreliable. Verification of field order, testIDs, and charge-prompt gating was done via static code review of /app/frontend/app/tool/[id].tsx (lines 2269-2372 for form order, 1883-1968 for saveEdit + chargeToDealer, 4031-4070 for the CHARGE TO DEALER? modal)."]}
+    ],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iter85_charge_brand.py",
+    "/app/test_reports/pytest/iter85_results.xml"
+  ],
+  "action_items": [
+    "None — all requested surfaces verified. Optional follow-up: consider adding a runtime guard so the charge prompt cannot fire twice if the user re-opens the same fresh-item detail (currently guarded by freshUnsavedRef=false after first save, which is correct)."
+  ],
+  "critical_code_review_comments": [
+    "routes_taxonomy.py::_ensure_brand_saved is idempotent (case-insensitive regex) — good; confirmed auto-create via tool PUT path.",
+    "routes_dealers.py::add_dealer_transaction correctly validates account/type/amount, applies +amount on 'charge' and -amount on 'payment', persists tx list, returns updated Dealer without _id.",
+    "tool/[id].tsx saveEdit uses (parseFloat(form.cost) || 0) * quantity for chargePrompt.amount — matches the spec 'price>0' (per-item price × qty).",
+    "BrandAutocomplete: focused+blur delay (150ms) allows tap-to-select on the suggestion row; testID='brand-suggest-<name>' matches spec exactly.",
+    "DateField web branch is masked MM/DD/YYYY numeric input with maxLength=10; iOS uses inline calendar Modal; Android uses native display='calendar' — no scroll/spinner wheel."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iter85_charge_brand.py (new)"
+  ],
+  "success_rate": {"backend": "100% (8/8)", "frontend": "static-review only — web-preview UI walkthrough blocked by Steel-skin black-screen artifact"},
+  "seed_data_creation": "None persisted — all TEST_ prefixed brands/dealers/tools created by tests are cleaned up on teardown; brand auto-created via tool save leaves a stub TEST_AutoBrand_<hex> row (harmless).",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Field-order/testID and charge-prompt logic in /app/frontend/app/tool/[id].tsx already match the review spec verbatim. Backend endpoint POST /api/dealers/{id}/transactions {account,type:'charge',amount,note} works and is covered by /app/backend/tests/test_iter85_charge_brand.py. If UI e2e is desired, switch the account skin to 'plain' (POST /api/prefs {skin:'plain'} or via Settings) BEFORE testing so the web preview isn't black, then log in as mechanicltz@gmail.com / Blue321! (Pro, no free-tier cap) and use the FAB → 'Add Item' path (routes to /tool/{id}?startEdit=1&startFresh=1).",
+  "rca_of_issue": "N/A — no bugs found."
+}

@@ -20,6 +20,7 @@ import {
   ImageBackground,
 } from "react-native";
 import { AppSwitch } from "../../src/components/AppSwitch";
+import { BrandAutocomplete } from "../../src/components/BrandAutocomplete";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter, useFocusEffect } from "expo-router";
@@ -265,6 +266,16 @@ export default function ToolDetail() {
   const [showEditCategory, setShowEditCategory] = useState(false);
   const [showEditTags, setShowEditTags] = useState(false);
   const [showEditLocation, setShowEditLocation] = useState(false);
+  // "Charge to dealer" prompt — shown after saving a brand-new item that has a
+  // dealer + a price, so the user can add that cost to the dealer's Truck or
+  // Credit account. New-item-only per the user's spec.
+  const [chargePrompt, setChargePrompt] = useState<null | {
+    dealerId: string;
+    dealerName: string;
+    amount: number;
+    itemName: string;
+  }>(null);
+  const [chargeBusy, setChargeBusy] = useState(false);
   const [allCategories, setAllCategories] = useState<any[]>([]);
   const [allTags, setAllTags] = useState<any[]>([]);
   const [newCatName, setNewCatName] = useState("");
@@ -1907,16 +1918,52 @@ export default function ToolDetail() {
     };
     try {
       await api.updateTool(tool.id, payload);
+      // New-item only: offer to charge the item's price to the dealer's account.
+      const totalCost = (parseFloat(form.cost) || 0) * Math.max(1, parseInt(form.quantity, 10) || 1);
+      const shouldPromptCharge =
+        freshUnsavedRef.current && !!form.dealer_id && totalCost > 0;
       freshUnsavedRef.current = false;
       setEditing(false);
       setForm(null);
       await load();
+      if (shouldPromptCharge) {
+        setChargePrompt({
+          dealerId: form.dealer_id,
+          dealerName: form.dealer_name || "this dealer",
+          amount: totalCost,
+          itemName: payload.name,
+        });
+      }
     } catch (e: any) {
       if (!(e?.paymentRequired || e?.status === 402)) {
         Alert.alert("Couldn't save", String(e?.detail || e?.message || e));
       }
     } finally {
       setSavingEdit(false);
+    }
+  };
+
+  // Add the just-saved item's price to the dealer's Truck (personal) or Credit
+  // account as a "charge" transaction. Backend increases the account balance.
+  const chargeToDealer = async (account: "personal" | "credit") => {
+    if (!chargePrompt) return;
+    setChargeBusy(true);
+    try {
+      await api.addDealerTransaction(chargePrompt.dealerId, {
+        account,
+        type: "charge",
+        amount: chargePrompt.amount,
+        note: chargePrompt.itemName,
+      });
+      setChargePrompt(null);
+      Alert.alert(
+        "Charged",
+        `${formatMoney(chargePrompt.amount)} added to ${chargePrompt.dealerName}'s ${account === "personal" ? "Truck" : "Credit"} account.`,
+      );
+    } catch (e: any) {
+      Alert.alert("Couldn't charge", String(e?.detail || e?.message || e));
+    } finally {
+      setChargeBusy(false);
     }
   };
 
@@ -2223,11 +2270,26 @@ export default function ToolDetail() {
     if (!form) return null;
     return (
       <View style={{ gap: 4 }}>
+        {eLabel("PURCHASED", "calendar")}
+        <DateField value={form.purchase_date} onChange={(iso) => setF({ purchase_date: iso })} placeholder="MM/DD/YYYY" />
+
+        {eLabel("LOCATION", "location")}
+        <TouchableOpacity style={newStyles.editPickRow} onPress={() => setShowEditLocation(true)} testID="edit-location">
+          <Text style={newStyles.editPickValue} numberOfLines={1}>{form.location_name || "No location"}</Text>
+          <Ionicons name="chevron-forward" size={16} color={theme.colors.textMuted} />
+        </TouchableOpacity>
+
         {eLabel(form.is_bundle || tool.is_bundle ? "SET NAME" : "ITEM NAME", "pricetag")}
         <TextInput style={styles.input} value={form.name} onChangeText={(v) => setF({ name: v })} placeholder={tool.is_bundle ? "e.g. Metric Socket Set" : "e.g. 1/2\" Impact Wrench"} placeholderTextColor={theme.colors.textMuted} testID="edit-name" />
 
+        {eLabel("DEALER", "business")}
+        <TouchableOpacity style={newStyles.editPickRow} onPress={() => setShowEditDealer(true)} testID="edit-dealer">
+          <Text style={newStyles.editPickValue} numberOfLines={1}>{form.dealer_name || "No dealer"}</Text>
+          <Ionicons name="chevron-forward" size={16} color={theme.colors.textMuted} />
+        </TouchableOpacity>
+
         {eLabel("BRAND", "ribbon")}
-        <TextInput style={styles.input} value={form.brand} onChangeText={(v) => setF({ brand: v })} placeholder="DeWalt" placeholderTextColor={theme.colors.textMuted} testID="edit-brand" />
+        <BrandAutocomplete value={form.brand} onChange={(v) => setF({ brand: v })} inputStyle={styles.input} testID="edit-brand" />
 
         {eLabel(form.model_numbers.length > 1 ? "MODEL NUMBERS" : "MODEL #", "barcode")}
         {form.model_numbers.map((m: string, i: number) => (
@@ -2245,6 +2307,20 @@ export default function ToolDetail() {
           <Text style={newStyles.editAddLineText}>ADD MODEL #</Text>
         </TouchableOpacity>
 
+        <View style={{ flexDirection: "row", gap: 10 }}>
+          <View style={{ flex: 1 }}>
+            {eLabel("PRICE EACH", "cash")}
+            <TextInput style={styles.input} value={form.cost} onChangeText={(v) => setF({ cost: v })} placeholder="0.00" keyboardType="decimal-pad" placeholderTextColor={theme.colors.textMuted} testID="edit-cost" />
+          </View>
+          <View style={{ flex: 1 }}>
+            {eLabel("MSRP (OPTIONAL)", "pricetag")}
+            <TextInput style={styles.input} value={form.msrp_price} onChangeText={(v) => setF({ msrp_price: v })} placeholder="0.00" keyboardType="decimal-pad" placeholderTextColor={theme.colors.textMuted} testID="edit-msrp" />
+          </View>
+        </View>
+
+        {eLabel("QUANTITY", "layers")}
+        <TextInput style={styles.input} value={form.quantity} onChangeText={(v) => setF({ quantity: v })} placeholder="1" keyboardType="number-pad" placeholderTextColor={theme.colors.textMuted} testID="edit-qty" />
+
         {eLabel(form.serial_numbers.length > 1 ? "SERIAL NUMBERS" : "SERIAL #", "key")}
         {form.serial_numbers.map((s: string, i: number) => (
           <View key={`sn-${i}`} style={newStyles.editArrRow}>
@@ -2259,35 +2335,6 @@ export default function ToolDetail() {
         <TouchableOpacity onPress={() => addArrLine("serial_numbers")} style={newStyles.editAddLine} testID="edit-add-serial">
           <Ionicons name="add-circle-outline" size={16} color={theme.colors.accent} />
           <Text style={newStyles.editAddLineText}>ADD SERIAL #</Text>
-        </TouchableOpacity>
-
-        <View style={{ flexDirection: "row", gap: 10 }}>
-          <View style={{ flex: 1 }}>
-            {eLabel("PRICE EACH", "cash")}
-            <TextInput style={styles.input} value={form.cost} onChangeText={(v) => setF({ cost: v })} placeholder="0.00" keyboardType="decimal-pad" placeholderTextColor={theme.colors.textMuted} testID="edit-cost" />
-          </View>
-          <View style={{ flex: 1 }}>
-            {eLabel("QUANTITY", "layers")}
-            <TextInput style={styles.input} value={form.quantity} onChangeText={(v) => setF({ quantity: v })} placeholder="1" keyboardType="number-pad" placeholderTextColor={theme.colors.textMuted} testID="edit-qty" />
-          </View>
-        </View>
-
-        {eLabel("MSRP (OPTIONAL)", "pricetag")}
-        <TextInput style={styles.input} value={form.msrp_price} onChangeText={(v) => setF({ msrp_price: v })} placeholder="0.00" keyboardType="decimal-pad" placeholderTextColor={theme.colors.textMuted} testID="edit-msrp" />
-
-        {eLabel("PURCHASED", "calendar")}
-        <DateField value={form.purchase_date} onChange={(iso) => setF({ purchase_date: iso })} placeholder="MM/DD/YYYY" />
-
-        {eLabel("LOCATION", "location")}
-        <TouchableOpacity style={newStyles.editPickRow} onPress={() => setShowEditLocation(true)} testID="edit-location">
-          <Text style={newStyles.editPickValue} numberOfLines={1}>{form.location_name || "No location"}</Text>
-          <Ionicons name="chevron-forward" size={16} color={theme.colors.textMuted} />
-        </TouchableOpacity>
-
-        {eLabel("DEALER", "business")}
-        <TouchableOpacity style={newStyles.editPickRow} onPress={() => setShowEditDealer(true)} testID="edit-dealer">
-          <Text style={newStyles.editPickValue} numberOfLines={1}>{form.dealer_name || "No dealer"}</Text>
-          <Ionicons name="chevron-forward" size={16} color={theme.colors.textMuted} />
         </TouchableOpacity>
 
         {eLabel("CATEGORY", "folder")}
@@ -3978,6 +4025,48 @@ export default function ToolDetail() {
             <TouchableOpacity style={[styles.btnGhost, { marginTop: 10 }]} onPress={() => setShowEditTags(false)}><Text style={styles.btnGhostText}>DONE</Text></TouchableOpacity>
           </View>
         </KeyboardAvoidingView>
+      </Modal>
+
+      {/* Charge-to-dealer prompt (new items only) */}
+      <Modal visible={!!chargePrompt} transparent animationType="fade" onRequestClose={() => setChargePrompt(null)}>
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalCard}>
+            <View style={styles.modalHeader}>
+              <Ionicons name="card" size={20} color={theme.colors.accent} />
+              <Text style={styles.modalTitle}>CHARGE TO DEALER?</Text>
+            </View>
+            {chargePrompt && (
+              <>
+                <Text style={{ color: theme.colors.textSecondary, fontSize: 14, lineHeight: 20, marginBottom: 16 }}>
+                  Add <Text style={{ color: theme.colors.textPrimary, fontWeight: "800" }}>{formatMoney(chargePrompt.amount)}</Text> for{" "}
+                  <Text style={{ color: theme.colors.textPrimary, fontWeight: "800" }}>{chargePrompt.itemName}</Text> to{" "}
+                  <Text style={{ color: theme.colors.textPrimary, fontWeight: "800" }}>{chargePrompt.dealerName}</Text>'s account? Pick which account to charge:
+                </Text>
+                <TouchableOpacity
+                  style={[styles.btnPrimary, { opacity: chargeBusy ? 0.6 : 1, marginBottom: 10 }]}
+                  disabled={chargeBusy}
+                  testID="charge-truck"
+                  onPress={() => chargeToDealer("personal")}
+                >
+                  <Ionicons name="car" size={16} color="#000" />
+                  <Text style={styles.btnPrimaryText}>  TRUCK ACCOUNT</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.btnPrimary, { opacity: chargeBusy ? 0.6 : 1, marginBottom: 10 }]}
+                  disabled={chargeBusy}
+                  testID="charge-credit"
+                  onPress={() => chargeToDealer("credit")}
+                >
+                  <Ionicons name="card-outline" size={16} color="#000" />
+                  <Text style={styles.btnPrimaryText}>  CREDIT ACCOUNT</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.btnGhost} disabled={chargeBusy} onPress={() => setChargePrompt(null)} testID="charge-skip">
+                  <Text style={styles.btnGhostText}>NOT NOW</Text>
+                </TouchableOpacity>
+              </>
+            )}
+          </View>
+        </View>
       </Modal>
 
     </SafeAreaView>
