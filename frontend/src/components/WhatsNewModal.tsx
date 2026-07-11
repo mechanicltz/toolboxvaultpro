@@ -12,6 +12,7 @@ import { themedStyles } from "../themeContext";
 import { theme } from "../theme";
 import { APP_VERSION } from "../version";
 import { useIntroFinished } from "../introState";
+import { usePermissionsOnboardingDone } from "../onboardingState";
 
 // One-time "What's New" popup. Shows once on the first launch after the app is
 // updated to APP_VERSION, then never again (gated by a version-stamped flag so
@@ -37,12 +38,14 @@ const WHATS_NEW: string[] = [
 export function WhatsNewModal() {
   const [visible, setVisible] = useState(false);
   const introDone = useIntroFinished();
+  const onbDone = usePermissionsOnboardingDone();
   const s = styles;
 
   useEffect(() => {
-    // Hold off until the intro video overlay is gone — otherwise this
-    // native Modal renders on top of the splash.
-    if (!introDone) return;
+    // Hold off until the intro video overlay is gone AND the first-launch
+    // permission cards have been handled — otherwise this native Modal would
+    // render on top of the splash / permission flow.
+    if (!introDone || !onbDone) return;
     let cancelled = false;
     (async () => {
       try {
@@ -60,7 +63,7 @@ export function WhatsNewModal() {
     return () => {
       cancelled = true;
     };
-  }, [introDone]);
+  }, [introDone, onbDone]);
 
   const dismiss = useCallback(async () => {
     setVisible(false);

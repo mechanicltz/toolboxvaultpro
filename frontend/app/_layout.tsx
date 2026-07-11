@@ -29,6 +29,7 @@ import { setPaymentRequiredHandler, api, abortAllInFlight } from "../src/api";
 import { shouldShowIntro, markAppActive, getIntroVideoEnabledAsync } from "../src/idle";
 import { IntroOverlay } from "../src/IntroOverlay";
 import { setIntroFinished } from "../src/introState";
+import { PermissionsOnboarding } from "../src/components/PermissionsOnboarding";
 import { ThemeProvider, useColors, useThemeMode, useSkin } from "../src/themeContext";
 import { IndustrialThemeProvider } from "../src/components/industrial";
 import { notifyAppResume } from "../src/appLifecycle";
@@ -239,6 +240,7 @@ function AuthGate({ children }: { children: React.ReactNode }) {
   return (
     <>
       {children}
+      {user ? <PermissionsOnboarding /> : null}
       {showIntro && (
         <View
           pointerEvents="auto"

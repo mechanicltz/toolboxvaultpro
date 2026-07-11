@@ -8,6 +8,7 @@ import {
   ScrollView,
   ActivityIndicator,
   RefreshControl,
+  TouchableOpacity,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -66,6 +67,13 @@ export default function UpcomingFeaturesScreen() {
   const [releases, setReleases] = useState<UpcomingRelease[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  // Accordion open/closed per release id. Undefined => use the default (open
+  // for not-yet-released/upcoming, collapsed for already-published releases).
+  const [openIds, setOpenIds] = useState<Record<string, boolean>>({});
+  const isOpen = (rel: UpcomingRelease) =>
+    openIds[rel.id] !== undefined ? openIds[rel.id] : !rel.released;
+  const toggle = (rel: UpcomingRelease) =>
+    setOpenIds((p) => ({ ...p, [rel.id]: !isOpen(rel) }));
 
   const load = useCallback(async () => {
     try {
@@ -139,9 +147,15 @@ export default function UpcomingFeaturesScreen() {
               const featureCount = rel.features.filter((f) => f.type !== "fix").length;
               const fixCount = rel.features.filter((f) => f.type === "fix").length;
               const cmp = rel.released ? compareVersions(APP_VERSION, rel.version) : null;
+              const open = isOpen(rel);
               return (
               <Card key={rel.id} style={styles.card}>
-                <View style={styles.cardHeader}>
+                <TouchableOpacity
+                  activeOpacity={0.7}
+                  onPress={() => toggle(rel)}
+                  style={styles.cardHeader}
+                  testID={`upcoming-accordion-${rel.id}`}
+                >
                   <Ionicons
                     name={rel.released ? "checkmark-circle" : "calendar"}
                     size={18}
@@ -150,9 +164,23 @@ export default function UpcomingFeaturesScreen() {
                   <View style={{ flex: 1 }}>
                     <Text style={styles.cardDate}>{formatDate(rel.release_date)}</Text>
                     {!!rel.title && <Text style={styles.cardTitle}>{rel.title}</Text>}
+                    {!open && (
+                      <Text style={styles.collapsedSummary}>
+                        {featureCount > 0 || fixCount > 0
+                          ? `${featureCount} feature${featureCount === 1 ? "" : "s"} · ${fixCount} fix${fixCount === 1 ? "" : "es"}`
+                          : "Tap to view details"}
+                      </Text>
+                    )}
                   </View>
-                </View>
+                  <Ionicons
+                    name={open ? "chevron-up" : "chevron-down"}
+                    size={20}
+                    color={c.textMuted}
+                  />
+                </TouchableOpacity>
 
+                {open && (
+                <>
                 {rel.released && (
                   <View style={styles.releasedBanner}>
                     <Ionicons name="rocket" size={16} color={c.success} />
@@ -203,6 +231,8 @@ export default function UpcomingFeaturesScreen() {
                     );
                   })
                 )}
+                </>
+                )}
             </Card>
               );
             })
@@ -231,6 +261,7 @@ const styles = themedStyles((c) => ({
   cardHeader: { flexDirection: "row", alignItems: "center", gap: 10 },
   cardDate: { fontSize: 16, fontWeight: "800", color: c.accent, letterSpacing: 0.3 },
   cardTitle: { fontSize: 13, fontWeight: "600", color: c.textSecondary, marginTop: 2 },
+  collapsedSummary: { fontSize: 12, color: c.textMuted, marginTop: 3 },
   divider: { height: 1, backgroundColor: c.borderSubtle, marginVertical: 12 },
   releasedBanner: {
     flexDirection: "row",

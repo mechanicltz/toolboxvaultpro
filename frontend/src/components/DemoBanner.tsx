@@ -13,6 +13,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { theme } from "../theme";
 import { api } from "../api";
 import { useIntroFinished } from "../introState";
+import { usePermissionsOnboardingDone } from "../onboardingState";
 
 // One-time flag for the post-demo "choose your theme" popup. Shown once, right
 // after the user dismisses the demo-data intro on a fresh account.
@@ -33,6 +34,7 @@ const THEME_INTRO_KEY = "tbv_theme_intro_seen";
 export function DemoBanner() {
   const router = useRouter();
   const introDone = useIntroFinished();
+  const onbDone = usePermissionsOnboardingDone();
   const [present, setPresent] = useState(false);
   const [showIntro, setShowIntro] = useState(false);
   const [showThemeIntro, setShowThemeIntro] = useState(false);
@@ -59,13 +61,14 @@ export function DemoBanner() {
     }, [load]),
   );
 
-  // Open the queued welcome popup only after the intro video finishes.
+  // Open the queued welcome popup only after the intro video finishes and the
+  // first-launch permission cards are done.
   useEffect(() => {
-    if (introDone && pendingIntro) {
+    if (introDone && onbDone && pendingIntro) {
       setShowIntro(true);
       setPendingIntro(false);
     }
-  }, [introDone, pendingIntro]);
+  }, [introDone, onbDone, pendingIntro]);
 
   const dismissIntro = useCallback(async () => {
     setShowIntro(false);
