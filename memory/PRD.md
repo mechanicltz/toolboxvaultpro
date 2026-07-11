@@ -1,5 +1,25 @@
 # Toolbox Vault — PRD
 
+## Add/Edit Item overhaul (2026-06 — DONE & tested, iter_85)
+User-driven 4-part rework of the item edit form (app/tool/[id].tsx renderDetailsEdit):
+(1) Field order now EXACTLY: Purchased → Location → Name → Dealer → Brand → Model
+→ Price + MSRP (row) → Quantity → Serial → Category → Tags → Consumable → Details.
+(2) BRAND is now a smart single-value autocomplete (new src/components/
+BrandAutocomplete.tsx): loads api.listBrands() on mount, filters suggestions as you
+type (testID brand-suggest-<name>), tap to fill; new brands persist via existing
+_ensure_brand_saved on tool save. (3) CHARGE-TO-DEALER prompt — saving a BRAND-NEW
+item (freshUnsavedRef, i.e. from the Add flow with startFresh=1) that has a dealer +
+price>0 opens a "CHARGE TO DEALER?" modal (charge-truck / charge-credit / charge-skip)
+→ chargeToDealer() calls existing POST /api/dealers/{id}/transactions
+{account:'personal'(Truck)|'credit', type:'charge', amount=price*qty}. NEW ITEMS ONLY
+(does not fire on edits). NO backend change — reused existing endpoint. (4) DateField
+(src/DateField.tsx) native picker switched from display='spinner' to a CALENDAR grid:
+iOS display='inline' (in themed modal card), Android display='calendar' (native
+pop-up dialog); web unchanged (masked MM/DD/YYYY TextInput). Verified: backend 8/8
+pytest (tests/test_iter85_charge_brand.py) + frontend field order/testIDs/gating via
+review. Calendar grid feel is native-only (web can't show it).
+
+
 ## BACKLOG (on hold) — Dealer Catalog Lookup System (proposed 2026-06, HELD by user)
 Large multi-phase feature. Admin panel to store direct URLs to dealer tool-catalog
 PDFs (Matco, Mac Tools, Cornwell, Snap-on; later retail: Amazon/Home Depot/Harbor
