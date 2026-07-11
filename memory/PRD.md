@@ -1,5 +1,29 @@
 # Toolbox Vault — PRD
 
+## First-launch permission onboarding + Upcoming-Features accordions (2026-06 — DONE & tested, iter_86)
+(A) PERMISSION PRIMING: new src/components/PermissionsOnboarding.tsx shows 3
+sequential "why we need this" cards AFTER the intro video and BEFORE any other
+first-launch popup — order Notifications → Photos → Contacts. ALLOW fires the
+real OS prompt (notifications via existing requestPermissions() incl. allowBadge;
+photos via ImagePicker.requestMediaLibraryPermissionsAsync; contacts via
+Contacts.requestPermissionsAsync); NOT NOW skips. Runs ONCE/device (AsyncStorage
+tbv_permissions_onboarded_v1). NATIVE-ONLY: on web it is skipped and immediately
+unblocks other popups. Mounted at root in app/_layout.tsx AuthGate (only when
+user). New src/onboardingState.ts is a global signal (mirror of introState);
+WhatsNewModal, DemoBanner and useDealerPaymentsDue now gate on BOTH introDone &&
+onbDone so nothing draws over the permission cards. NO remote push (user chose to
+skip) — the existing local reminders are unchanged. The iOS app-icon BADGE
+(upcomingBadge.ts setBadgeCountAsync) was already wired; it now actually appears
+once the user grants notifications — badge/notifs only work on a real installed
+build, not web/preview. (B) UPCOMING FEATURES accordions: app/upcoming-features/
+index.tsx — each release card header (testID upcoming-accordion-<id>) is now
+tappable with a chevron; released/published releases start COLLAPSED (show a
+"N features · M fixes" summary), upcoming releases start OPEN. openIds state +
+isOpen()/toggle(). Verified iter_86 (accordion toggle, no boot regression). Minor
+known: first tap after mount can be a no-op (pre-existing font-warmer/intro
+overlay pointer race, global, cosmetic).
+
+
 ## Add/Edit Item overhaul (2026-06 — DONE & tested, iter_85)
 User-driven 4-part rework of the item edit form (app/tool/[id].tsx renderDetailsEdit):
 (1) Field order now EXACTLY: Purchased → Location → Name → Dealer → Brand → Model
