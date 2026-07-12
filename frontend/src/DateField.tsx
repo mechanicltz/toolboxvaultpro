@@ -12,7 +12,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { theme } from "./theme";
 import { formatDateUS, parseDateUS, todayISO } from "./dateUtil";
 
-import { themedStyles, useThemeMode } from "./themeContext";
+import { themedStyles, useThemeMode, useSkin } from "./themeContext";
 
 /**
  * Cross-platform date field. Always displays/inputs in MM/DD/YYYY (US).
@@ -150,11 +150,14 @@ function NativePickerModal({
   // Lazy import to avoid web bundle issues
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   const DateTimePicker = require("@react-native-community/datetimepicker").default;
-  // Sync the iOS spinner picker with the user's chosen theme. Previously this
-  // was hardcoded to "dark" — in Light mode the highlighted month became
-  // black-on-light-gray and was unreadable. (User report #5.)
+  // Sync the iOS inline calendar with the user's chosen theme. The picker's
+  // day numbers must contrast with our modal card: skinned (Steel/Iron) themes
+  // are always dark, otherwise follow the light/dark mode. Previously this only
+  // checked `mode`, so on a dark skin the numbers rendered black-on-dark and
+  // were unreadable (user report).
   const { mode } = useThemeMode();
-  const isDark = mode === "dark";
+  const { skin } = useSkin();
+  const isDark = skin === "industrial" ? true : mode === "dark";
 
   const initDate = (() => {
     const d = new Date(initial);

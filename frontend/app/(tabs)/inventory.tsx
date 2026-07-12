@@ -27,7 +27,7 @@ import { usePrefs } from "../../src/prefs";
 import { SummaryHeader } from "../../src/SummaryHeader";
 import { confirm } from "../../src/confirm";
 import { ReportLostModal } from "../../src/sections/LostStatusSection";
-import { buildLocationTree, flattenLocationTree } from "../../src/locationTree";
+import { buildLocationTree, flattenLocationTree, buildLocationPathMap, topAncestorId } from "../../src/locationTree";
 import { useAuth } from "../../src/AuthContext";
 import { useSubscriptionChange } from "../../src/subscriptionEvents";
 import { useAppResume } from "../../src/appLifecycle";
@@ -41,6 +41,7 @@ import { AddChooser } from "../../src/components/AddChooser";
 // Iron Forge (industrial) skin — metal background + framed chrome, mirrors the
 // dashboard's dual-render pattern. Plain themes keep the flat canvas look.
 import { SKIN, CAP } from "../../src/tbv/skins";
+import { TBV_FONT } from "../../src/tbv/useTbvFonts";
 import { TbvFrame } from "../../src/tbv/components/TbvFrame";
 import { TbvListPanel } from "../../src/tbv/components/TbvListPanel";
 import { useIsSteel, useSteelPanelFrame } from "../../src/tbv/steel";
@@ -354,6 +355,31 @@ export default function InventoryScreen() {
     const found = allLocations.find((l) => l.id === locationFilter);
     return found?.name || null;
   }, [locationFilter, allLocations]);
+
+  // Full hierarchical path per location id, e.g. "Main › Drawer 1".
+  const locationPathById = useMemo(
+    () => buildLocationPathMap(allLocations, " › "),
+    [allLocations],
+  );
+
+  // Top-level locations for the horizontal quick-filter bar at the top of the
+  // list. Tapping one sets locationFilter (which already includes descendants).
+  const topLocations = useMemo(
+    () =>
+      (allLocations || [])
+        .filter((l) => !l.parent_id)
+        .sort((a, b) => String(a.name).localeCompare(String(b.name))),
+    [allLocations],
+  );
+
+  // Which top-level chip is active (the selected location's root ancestor).
+  const activeTopLocationId = useMemo(
+    () =>
+      locationFilter && locationFilter !== "__none"
+        ? topAncestorId(allLocations, locationFilter)
+        : null,
+    [locationFilter, allLocations],
+  );
 
   // No subscription tiers — every tool is fully editable for everyone.
   const lockedToolIds = useMemo(() => new Set<string>(), []);
@@ -1028,24 +1054,66 @@ export default function InventoryScreen() {
         windowSize={5}
         updateCellsBatchingPeriod={40}
         ListHeaderComponent={
-          hiddenCount > 0 ? (
-            <TouchableOpacity
-              testID="upgrade-banner-top"
-              activeOpacity={0.85}
-              onPress={() => router.push("/paywall")}
-              style={[styles.lockedFooter, { marginTop: 4, marginBottom: 12 }]}
-            >
-              <View style={styles.lockedFooterIcon}>
-                <Ionicons name="lock-closed" size={16} color={theme.colors.accent} />
+          <>
+            {topLocations.length > 0 && (
+              <View style={styles.locBar}>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.locBarContent}
+                  keyboardShouldPersistTaps="handled"
+                >
+                  <TouchableOpacity
+                    testID="locbar-all"
+                    activeOpacity={0.8}
+                    onPress={() => setLocationFilter(null)}
+                    style={[styles.locChip, !activeTopLocationId && styles.locChipActive]}
+                  >
+                    <Text style={[styles.locChipText, !activeTopLocationId && styles.locChipTextActive]}>
+                      ALL
+                    </Text>
+                  </TouchableOpacity>
+                  {topLocations.map((loc) => {
+                    const active = activeTopLocationId === loc.id;
+                    return (
+                      <TouchableOpacity
+                        key={loc.id}
+                        testID={`locbar-${loc.id}`}
+                        activeOpacity={0.8}
+                        onPress={() => setLocationFilter(active ? null : loc.id)}
+                        style={[styles.locChip, active && styles.locChipActive]}
+                      >
+                        <Text
+                          style={[styles.locChipText, active && styles.locChipTextActive]}
+                          numberOfLines={1}
+                        >
+                          {loc.name}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </ScrollView>
               </View>
-              <Text style={styles.lockedFooterText}>
-                Free plan item limit reached - {hiddenCount} Hidden {hiddenCount === 1 ? "tool" : "tools"}
-              </Text>
-              <View style={styles.lockedFooterCta}>
-                <Text style={styles.lockedFooterCtaText}>UPGRADE</Text>
-              </View>
-            </TouchableOpacity>
-          ) : null
+            )}
+            {hiddenCount > 0 ? (
+              <TouchableOpacity
+                testID="upgrade-banner-top"
+                activeOpacity={0.85}
+                onPress={() => router.push("/paywall")}
+                style={[styles.lockedFooter, { marginTop: 4, marginBottom: 12 }]}
+              >
+                <View style={styles.lockedFooterIcon}>
+                  <Ionicons name="lock-closed" size={16} color={theme.colors.accent} />
+                </View>
+                <Text style={styles.lockedFooterText}>
+                  Free plan item limit reached - {hiddenCount} Hidden {hiddenCount === 1 ? "tool" : "tools"}
+                </Text>
+                <View style={styles.lockedFooterCta}>
+                  <Text style={styles.lockedFooterCtaText}>UPGRADE</Text>
+                </View>
+              </TouchableOpacity>
+            ) : null}
+          </>
         }
         ListFooterComponent={
           hiddenCount > 0 ? (
@@ -1188,7 +1256,7 @@ export default function InventoryScreen() {
                       state. Showing both was redundant. */}
                 </View>
                 <Text style={[styles.rowSub, isIndustrial && styles.rowSubSkin]} numberOfLines={1}>
-                  {item.location_name || "No location"}
+                  {(item.location_id && locationPathById[item.location_id]) || item.location_name || "No location"}
                   {prefs.show_prices && item.cost
                     ? `  ·  ${formatMoney((Number(item.cost) * Math.max(1, Number(item.quantity) || 1)), { decimals: 0 })}`
                     : ""}
@@ -2750,6 +2818,37 @@ const styles = themedStyles((c) => ({
     backgroundColor: c.bgSecondary,
     borderWidth: 1,
     borderColor: c.border,
+  },
+  locBar: {
+    marginBottom: 10,
+    marginTop: 2,
+  },
+  locBarContent: {
+    gap: 8,
+    paddingHorizontal: 4,
+    paddingVertical: 2,
+  },
+  locChip: {
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: c.border,
+    backgroundColor: c.bgSecondary,
+    maxWidth: 160,
+  },
+  locChipActive: {
+    backgroundColor: c.accent,
+    borderColor: c.accent,
+  },
+  locChipText: {
+    fontFamily: TBV_FONT.label,
+    fontSize: 12,
+    letterSpacing: 0.5,
+    color: c.textSecondary,
+  },
+  locChipTextActive: {
+    color: "#000",
   },
   lockedFooterIcon: {
     width: 30,

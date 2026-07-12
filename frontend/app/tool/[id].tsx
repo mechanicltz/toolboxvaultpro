@@ -46,7 +46,7 @@ import {
   ReportLostModal,
 } from "../../src/sections/LostStatusSection";
 import { DocumentsSection } from "../../src/sections/DocumentsSection";
-import { buildLocationTree, flattenLocationTree } from "../../src/locationTree";
+import { buildLocationTree, flattenLocationTree, buildLocationPathMap } from "../../src/locationTree";
 import { ReceiptsSection } from "../../src/sections/ReceiptsSection";
 import { MaintenanceSection } from "../../src/sections/MaintenanceSection";
 import { WarrantySection } from "../../src/sections/WarrantySection";
@@ -2596,7 +2596,10 @@ export default function ToolDetail() {
     <SafeAreaView style={[styles.container, isIndustrial && styles.containerSkin]} edges={["top"]}>
       <IndustrialBanner
         title={tool.name || "Untitled Tool"}
-        subtitle={tool.location_name ? String(tool.location_name) : "No location"}
+        subtitle={
+          (tool.location_id && buildLocationPathMap(allLocations, " › ")[tool.location_id]) ||
+          (tool.location_name ? String(tool.location_name) : "No location")
+        }
         onBack={editing ? undefined : () => router.back()}
         centerSlot={
           editing ? (

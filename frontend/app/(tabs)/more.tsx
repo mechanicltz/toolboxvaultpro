@@ -741,6 +741,13 @@ export default function MoreScreen() {
             onPress={() => router.push("/manage/tags")}
           />
           <SectionRow
+            icon="ribbon"
+            title="Brands"
+            subtitle="Add, edit or delete brands"
+            testID="more-brands"
+            onPress={() => router.push("/manage/brands")}
+          />
+          <SectionRow
             icon="location"
             title="Locations"
             subtitle="Nested storage hierarchy"

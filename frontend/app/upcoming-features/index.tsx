@@ -20,6 +20,7 @@ import { ShadowBox } from "../../src/components/ShadowBox";
 import { IndustrialBanner } from "../../src/components/IndustrialBanner";
 import ReportBugBadge from "../../src/components/ReportBugBadge";
 import { markUpcomingSeen } from "../../src/upcomingBadge";
+import { TBV_FONT } from "../../src/tbv/useTbvFonts";
 import { APP_VERSION } from "../../src/version";
 
 /** Compare dotted numeric versions ("3.1.6"). Returns -1/0/1, or null if unparseable. */
@@ -263,13 +264,13 @@ const styles = themedStyles((c) => ({
   content: { padding: 16, paddingBottom: 60 },
   emptyWrap: { marginTop: 4 },
   emptyInner: { alignItems: "center", gap: 10 },
-  emptyTitle: { fontSize: 16, fontWeight: "800", color: c.textPrimary, textAlign: "center" },
-  emptyText: { fontSize: 13, color: c.textMuted, textAlign: "center", lineHeight: 19 },
+  emptyTitle: { fontFamily: TBV_FONT.head, fontSize: 18, letterSpacing: 0.5, color: c.textPrimary, textAlign: "center" },
+  emptyText: { fontFamily: TBV_FONT.small, fontSize: 13, color: c.textMuted, textAlign: "center", lineHeight: 19 },
   card: { marginBottom: 14 },
   cardHeader: { flexDirection: "row", alignItems: "center", gap: 10 },
-  cardBuild: { fontSize: 17, fontWeight: "900", color: c.accent, letterSpacing: 0.3 },
-  cardDateSub: { fontSize: 12, fontWeight: "600", color: c.textSecondary, marginTop: 2 },
-  updateCount: { fontSize: 12, fontWeight: "800", color: c.textMuted, letterSpacing: 0.2 },
+  cardBuild: { fontFamily: TBV_FONT.head, fontSize: 18, color: c.accent, letterSpacing: 0.8 },
+  cardDateSub: { fontFamily: TBV_FONT.bodyMed, fontSize: 12, color: c.textSecondary, marginTop: 2 },
+  updateCount: { fontFamily: TBV_FONT.label, fontSize: 12, color: c.textMuted, letterSpacing: 0.3 },
   divider: { height: 1, backgroundColor: c.borderSubtle, marginVertical: 12 },
   releasedBanner: {
     flexDirection: "row",
@@ -282,10 +283,10 @@ const styles = themedStyles((c) => ({
     borderColor: c.success,
     backgroundColor: c.surfaceAlt,
   },
-  releasedTitle: { fontSize: 13, fontWeight: "900", color: c.success, letterSpacing: 0.3 },
-  releasedSub: { fontSize: 11, color: c.textSecondary, marginTop: 2, lineHeight: 15 },
-  updateHint: { fontSize: 11, fontWeight: "800", marginTop: 4 },
-  noFeatures: { fontSize: 13, color: c.textMuted, fontStyle: "italic" },
+  releasedTitle: { fontFamily: TBV_FONT.label, fontSize: 13, color: c.success, letterSpacing: 0.3 },
+  releasedSub: { fontFamily: TBV_FONT.small, fontSize: 11, color: c.textSecondary, marginTop: 2, lineHeight: 15 },
+  updateHint: { fontFamily: TBV_FONT.label, fontSize: 11, marginTop: 4 },
+  noFeatures: { fontFamily: TBV_FONT.small, fontSize: 13, color: c.textMuted, fontStyle: "italic" },
   featureRow: {
     flexDirection: "row",
     alignItems: "flex-start",
@@ -293,18 +294,18 @@ const styles = themedStyles((c) => ({
     paddingVertical: 7,
   },
   featureTitleRow: { flexDirection: "row", alignItems: "center", gap: 8 },
-  featureTitle: { flex: 1, fontSize: 14, fontWeight: "600", color: c.textPrimary },
-  featureDesc: { fontSize: 12, color: c.textMuted, marginTop: 3, lineHeight: 17 },
+  featureTitle: { flex: 1, fontFamily: TBV_FONT.body, fontSize: 14, color: c.textPrimary },
+  featureDesc: { fontFamily: TBV_FONT.small, fontSize: 12, color: c.textMuted, marginTop: 3, lineHeight: 17 },
   statusPill: {
     borderWidth: 1,
     borderRadius: 999,
     paddingHorizontal: 9,
     paddingVertical: 3,
   },
-  statusText: { fontSize: 10, fontWeight: "800", letterSpacing: 0.4 },
+  statusText: { fontFamily: TBV_FONT.small, fontSize: 10, letterSpacing: 0.4 },
   requestPrompt: {
+    fontFamily: TBV_FONT.body,
     fontSize: 13,
-    fontWeight: "700",
     color: c.textSecondary,
     textAlign: "center",
     marginTop: 18,

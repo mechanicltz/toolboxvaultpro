@@ -13,6 +13,7 @@ from fastapi import APIRouter, HTTPException, Depends
 
 from core import db, get_current_user
 from auth import User
+from routes_taxonomy import _ensure_brand_saved
 from models import (
     now_iso, Dealer, DealerCreate, DealerUpdate,
     Agent, AgentCreate, TransactionCreate, BalanceTransaction,
@@ -26,6 +27,9 @@ def register_dealer_routes(api_router: APIRouter) -> None:
     async def create_dealer(payload: DealerCreate, user: User = Depends(get_current_user)):
         d = Dealer(**payload.dict())
         await db.dealers.insert_one(d.dict())
+        # A dealer's name is also a brand the user buys — surface it in the
+        # Brand typeahead automatically (idempotent).
+        await _ensure_brand_saved(d.name)
         return d
 
 

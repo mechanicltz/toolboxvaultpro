@@ -23,12 +23,13 @@ import { TbvListPanel } from "../../src/tbv/components/TbvListPanel";
 import { useIsSteel, useSteelPanelFrame } from "../../src/tbv/steel";
 import { SKIN, CAP } from "../../src/tbv/skins";
 
-type Kind = "categories" | "tags" | "locations";
+type Kind = "categories" | "tags" | "locations" | "brands";
 
 const TITLES: Record<Kind, string> = {
   categories: "CATEGORIES",
   tags: "TAGS",
   locations: "LOCATIONS",
+  brands: "BRANDS",
 };
 
 export default function ManageScreen() {
@@ -52,6 +53,7 @@ export default function ManageScreen() {
     categories: { list: api.listCategories, create: api.createCategory, update: api.updateCategory, del: api.deleteCategory },
     tags: { list: api.listTags, create: api.createTag, update: api.updateTag, del: api.deleteTag },
     locations: { list: api.listLocations, create: api.createLocation, update: api.updateLocation, del: api.deleteLocation },
+    brands: { list: api.listBrands, create: api.createBrand, update: api.updateBrand, del: api.deleteBrand },
   } as const;
 
   const load = useCallback(async () => {
@@ -149,7 +151,7 @@ export default function ManageScreen() {
                 return (
                   <View key={i.id} style={[styles.row, idx < items.length - 1 && styles.rowDivider]}>
                     <Ionicons
-                      name={k === "categories" ? "folder" : k === "tags" ? "pricetag" : "location"}
+                      name={k === "categories" ? "folder" : k === "tags" ? "pricetag" : k === "brands" ? "ribbon" : "location"}
                       size={18}
                       color={theme.colors.accent}
                     />

@@ -929,6 +929,7 @@ export const api = {
   // Brands — typeahead source for the Brand field on tools
   listBrands: () => request<any[]>(`/brands`),
   createBrand: (data: any) => request<any>(`/brands`, { method: "POST", body: JSON.stringify(data) }),
+  updateBrand: (id: string, data: any) => request<any>(`/brands/${id}`, { method: "PUT", body: JSON.stringify(data) }),
   deleteBrand: (id: string) => request<any>(`/brands/${id}`, { method: "DELETE" }),
 
   // Categories

@@ -204,6 +204,25 @@ def register_taxonomy_routes(api_router: APIRouter) -> None:
             raise HTTPException(404, "Brand not found")
         return {"ok": True}
 
+    @api_router.put("/brands/{brand_id}", response_model=Brand)
+    async def update_brand(brand_id: str, payload: BrandCreate):
+        name = (payload.name or "").strip()
+        if not name:
+            raise HTTPException(400, "Name required")
+        # Block renaming onto an existing (different) brand of the same name.
+        dupe = await db.brands.find_one(
+            {"name": {"$regex": f"^{re.escape(name)}$", "$options": "i"},
+             "id": {"$ne": brand_id}},
+            {"_id": 0},
+        )
+        if dupe:
+            raise HTTPException(400, "A brand with that name already exists")
+        res = await db.brands.update_one({"id": brand_id}, {"$set": {"name": name}})
+        if res.matched_count == 0:
+            raise HTTPException(404, "Brand not found")
+        updated = await db.brands.find_one({"id": brand_id}, {"_id": 0})
+        return Brand(**updated)
+
 
     # ---------- Categories ----------
     @api_router.post("/categories", response_model=Category)
