@@ -1,5 +1,14 @@
 # Toolbox Vault — PRD
 
+## Upcoming-Features accordion header = Build number + update count (2026-06 — DONE)
+Reworked app/upcoming-features/index.tsx header: LEFT shows the BUILD label
+("Build X" from rel.version, or the date if no version); RIGHT shows the update
+count ("N updates"). Collapsed = just those two. Expanded adds a subtitle
+(date · title · Available/Planned) so the build number stays visible at top, plus
+the normal released banner + feature rows. Replaced the earlier version-chip.
+DOM-verified: "Build 3.1.6 … 3 updates".
+
+
 ## Upcoming-Features version chip + dashboard "notifications off" chip (2026-06 — DONE)
 (A) app/upcoming-features/index.tsx: each release header now shows a VERSION chip
 so users see which app version ships the updates — "Version X" (green) for

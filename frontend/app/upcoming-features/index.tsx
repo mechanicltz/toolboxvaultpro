@@ -148,6 +148,10 @@ export default function UpcomingFeaturesScreen() {
               const fixCount = rel.features.filter((f) => f.type === "fix").length;
               const cmp = rel.released ? compareVersions(APP_VERSION, rel.version) : null;
               const open = isOpen(rel);
+              const totalUpdates = rel.features.length;
+              const buildLabel = rel.version
+                ? `Build ${rel.version.replace(/^v/i, "")}`
+                : formatDate(rel.release_date);
               return (
               <Card key={rel.id} style={styles.card}>
                 <TouchableOpacity
@@ -162,39 +166,20 @@ export default function UpcomingFeaturesScreen() {
                     color={rel.released ? c.success : c.accent}
                   />
                   <View style={{ flex: 1 }}>
-                    <Text style={styles.cardDate}>{formatDate(rel.release_date)}</Text>
-                    {!!rel.title && <Text style={styles.cardTitle}>{rel.title}</Text>}
-                    {!!rel.version && (
-                      <View
-                        style={[
-                          styles.versionChip,
-                          { borderColor: rel.released ? c.success : c.accent },
-                        ]}
-                      >
-                        <Ionicons
-                          name="pricetag"
-                          size={10}
-                          color={rel.released ? c.success : c.accent}
-                        />
-                        <Text
-                          style={[
-                            styles.versionChipText,
-                            { color: rel.released ? c.success : c.accent },
-                          ]}
-                        >
-                          {rel.released ? "Version " : "Planned for v"}
-                          {rel.version.replace(/^v/i, "")}
-                        </Text>
-                      </View>
-                    )}
-                    {!open && (
-                      <Text style={styles.collapsedSummary}>
-                        {featureCount > 0 || fixCount > 0
-                          ? `${featureCount} feature${featureCount === 1 ? "" : "s"} · ${fixCount} fix${fixCount === 1 ? "" : "es"}`
-                          : "Tap to view details"}
+                    <Text style={styles.cardBuild}>{buildLabel}</Text>
+                    {open && (
+                      <Text style={styles.cardDateSub}>
+                        {formatDate(rel.release_date)}
+                        {rel.title ? ` · ${rel.title}` : ""}
+                        {rel.released ? " · Available" : " · Planned"}
                       </Text>
                     )}
                   </View>
+                  <Text style={styles.updateCount}>
+                    {totalUpdates > 0
+                      ? `${totalUpdates} update${totalUpdates === 1 ? "" : "s"}`
+                      : "Details soon"}
+                  </Text>
                   <Ionicons
                     name={open ? "chevron-up" : "chevron-down"}
                     size={20}
@@ -282,21 +267,9 @@ const styles = themedStyles((c) => ({
   emptyText: { fontSize: 13, color: c.textMuted, textAlign: "center", lineHeight: 19 },
   card: { marginBottom: 14 },
   cardHeader: { flexDirection: "row", alignItems: "center", gap: 10 },
-  cardDate: { fontSize: 16, fontWeight: "800", color: c.accent, letterSpacing: 0.3 },
-  cardTitle: { fontSize: 13, fontWeight: "600", color: c.textSecondary, marginTop: 2 },
-  collapsedSummary: { fontSize: 12, color: c.textMuted, marginTop: 3 },
-  versionChip: {
-    flexDirection: "row",
-    alignItems: "center",
-    alignSelf: "flex-start",
-    gap: 4,
-    marginTop: 6,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderWidth: 1,
-    borderRadius: 999,
-  },
-  versionChipText: { fontSize: 11, fontWeight: "800", letterSpacing: 0.3 },
+  cardBuild: { fontSize: 17, fontWeight: "900", color: c.accent, letterSpacing: 0.3 },
+  cardDateSub: { fontSize: 12, fontWeight: "600", color: c.textSecondary, marginTop: 2 },
+  updateCount: { fontSize: 12, fontWeight: "800", color: c.textMuted, letterSpacing: 0.2 },
   divider: { height: 1, backgroundColor: c.borderSubtle, marginVertical: 12 },
   releasedBanner: {
     flexDirection: "row",
