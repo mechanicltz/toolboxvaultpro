@@ -13,6 +13,11 @@
   (severity, expiry, audience). Full spec + endpoints in `PRD.md`. ~4–6 hrs.
 - **C3 🟢 Combine / Bundle items** — group several tools into a "bundle" with its own model #,
   shown/exported as one item, members still inspectable. Open design Qs in `PRD.md`.
+- **C4 🟢 Community Product Database (crowdsourced tool catalog)** — big feature: dual-write
+  every item to a shared Brand+Model catalog so users can import previously-entered product
+  data instead of typing it. FULL design captured in `FUTURE_community_product_database.md`
+  (data model, user journey, anti-junk strategy, open decisions, phasing). Revisit later —
+  do NOT re-analyze, just read that file.
 
 ## D. Launch / compliance
 - **D1 🟠 Google OAuth → Production** — move the consent screen out of Testing (Drive token
