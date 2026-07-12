@@ -1,5 +1,31 @@
 # Toolbox Vault — PRD
 
+## 6-part inventory/brands/locations update (2026-06 — DONE & tested, iter_87)
+(1) DATE PICKER readability on dark themes: src/DateField.tsx now derives isDark
+from skin too (skin==="industrial" → dark, else mode) so the iOS inline calendar's
+day numbers contrast the themed card (was black-on-dark). Native-only.
+(2) UPCOMING-FEATURES fonts: app/upcoming-features/index.tsx text now uses the
+app's TBV fonts (TBV_FONT head/label/body/bodyMed/small) to match other lists.
+(3) DEALER → BRAND: backend routes_dealers.create_dealer now calls
+_ensure_brand_saved(name) so a new dealer's name auto-appears in the Brand
+typeahead. Curl+pytest verified.
+(4) BRANDS MANAGE screen: new PUT /api/brands/{id} (routes_taxonomy, dup-name 400)
++ api.updateBrand; app/manage/[kind].tsx now supports kind="brands"; Vault >
+ORGANIZATION > "Brands" row (more.tsx) → /manage/brands (add/edit/delete).
+(5) LOCATION HIERARCHY display: new locationTree.buildLocationPathMap(flat, " › ")
++ topAncestorId(). Inventory rows and the tool-detail header subtitle now show the
+full path "Main › Drawer 1". FIX (iter_87 H1): tool/[id].tsx now loads
+api.listLocations() on mount (was gated on the move-picker) so the path shows
+immediately.
+(6) INVENTORY LOCATION BAR: horizontal scrolling chip menu at the top of the list
+(ListHeaderComponent) — "ALL" (locbar-all) + one chip per TOP-LEVEL location
+(locbar-<id>); tapping sets locationFilter (already includes descendants) and
+highlights the active root (activeTopLocationId via topAncestorId). Backend 6/6
+pytest (test_iter87_brands_dealer.py) + frontend flows verified.
+KNOWN (cosmetic, RN-Web-preview only, not on device): first tap on a locbar chip
+/ upcoming accordion can be a no-op (font-warmer overlay pointer race).
+
+
 ## Upcoming-Features accordion header = Build number + update count (2026-06 — DONE)
 Reworked app/upcoming-features/index.tsx header: LEFT shows the BUILD label
 ("Build X" from rel.version, or the date if no version); RIGHT shows the update

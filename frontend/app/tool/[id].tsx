@@ -244,6 +244,11 @@ export default function ToolDetail() {
   // All locations (flattened) for the inline picker inside the Move modal —
   // loaded when the modal opens so the user picks in-place (no 2nd popup).
   const [allLocations, setAllLocations] = useState<any[]>([]);
+  // Load locations once on mount so the header can show the full location
+  // hierarchy path immediately (re-fetched when the move picker opens too).
+  useEffect(() => {
+    api.listLocations().then(setAllLocations).catch(() => {});
+  }, []);
   useEffect(() => {
     if (showLocationPicker) {
       api.listLocations().then(setAllLocations).catch(() => {});
