@@ -1026,9 +1026,49 @@ export default function InventoryScreen() {
       </Modal>
 
       {(() => {
+        const locBarEl = topLocations.length > 0 ? (
+          <View style={styles.locBar}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.locBarContent}
+              keyboardShouldPersistTaps="handled"
+            >
+              <TouchableOpacity
+                testID="locbar-all"
+                activeOpacity={0.8}
+                onPress={() => setLocationFilter(null)}
+                style={[styles.locChip, !activeTopLocationId && styles.locChipActive]}
+              >
+                <Text style={[styles.locChipText, !activeTopLocationId && styles.locChipTextActive]}>
+                  ALL
+                </Text>
+              </TouchableOpacity>
+              {topLocations.map((loc) => {
+                const active = activeTopLocationId === loc.id;
+                return (
+                  <TouchableOpacity
+                    key={loc.id}
+                    testID={`locbar-${loc.id}`}
+                    activeOpacity={0.8}
+                    onPress={() => setLocationFilter(active ? null : loc.id)}
+                    style={[styles.locChip, active && styles.locChipActive]}
+                  >
+                    <Text
+                      style={[styles.locChipText, active && styles.locChipTextActive]}
+                      numberOfLines={1}
+                    >
+                      {loc.name}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+          </View>
+        ) : null;
         const listEl = (
       <FlatList
-        style={(isIndustrial || (isPlain && gridCols === 1)) ? styles.listFlexed : undefined}
+        style={styles.listFlexed}
         data={displayedTools}
         keyExtractor={keyExtractor}
         key={`grid-${gridCols}`}
@@ -1054,66 +1094,24 @@ export default function InventoryScreen() {
         windowSize={5}
         updateCellsBatchingPeriod={40}
         ListHeaderComponent={
-          <>
-            {topLocations.length > 0 && (
-              <View style={styles.locBar}>
-                <ScrollView
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={styles.locBarContent}
-                  keyboardShouldPersistTaps="handled"
-                >
-                  <TouchableOpacity
-                    testID="locbar-all"
-                    activeOpacity={0.8}
-                    onPress={() => setLocationFilter(null)}
-                    style={[styles.locChip, !activeTopLocationId && styles.locChipActive]}
-                  >
-                    <Text style={[styles.locChipText, !activeTopLocationId && styles.locChipTextActive]}>
-                      ALL
-                    </Text>
-                  </TouchableOpacity>
-                  {topLocations.map((loc) => {
-                    const active = activeTopLocationId === loc.id;
-                    return (
-                      <TouchableOpacity
-                        key={loc.id}
-                        testID={`locbar-${loc.id}`}
-                        activeOpacity={0.8}
-                        onPress={() => setLocationFilter(active ? null : loc.id)}
-                        style={[styles.locChip, active && styles.locChipActive]}
-                      >
-                        <Text
-                          style={[styles.locChipText, active && styles.locChipTextActive]}
-                          numberOfLines={1}
-                        >
-                          {loc.name}
-                        </Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </ScrollView>
+          hiddenCount > 0 ? (
+            <TouchableOpacity
+              testID="upgrade-banner-top"
+              activeOpacity={0.85}
+              onPress={() => router.push("/paywall")}
+              style={[styles.lockedFooter, { marginTop: 4, marginBottom: 12 }]}
+            >
+              <View style={styles.lockedFooterIcon}>
+                <Ionicons name="lock-closed" size={16} color={theme.colors.accent} />
               </View>
-            )}
-            {hiddenCount > 0 ? (
-              <TouchableOpacity
-                testID="upgrade-banner-top"
-                activeOpacity={0.85}
-                onPress={() => router.push("/paywall")}
-                style={[styles.lockedFooter, { marginTop: 4, marginBottom: 12 }]}
-              >
-                <View style={styles.lockedFooterIcon}>
-                  <Ionicons name="lock-closed" size={16} color={theme.colors.accent} />
-                </View>
-                <Text style={styles.lockedFooterText}>
-                  Free plan item limit reached - {hiddenCount} Hidden {hiddenCount === 1 ? "tool" : "tools"}
-                </Text>
-                <View style={styles.lockedFooterCta}>
-                  <Text style={styles.lockedFooterCtaText}>UPGRADE</Text>
-                </View>
-              </TouchableOpacity>
-            ) : null}
-          </>
+              <Text style={styles.lockedFooterText}>
+                Free plan item limit reached - {hiddenCount} Hidden {hiddenCount === 1 ? "tool" : "tools"}
+              </Text>
+              <View style={styles.lockedFooterCta}>
+                <Text style={styles.lockedFooterCtaText}>UPGRADE</Text>
+              </View>
+            </TouchableOpacity>
+          ) : null
         }
         ListFooterComponent={
           hiddenCount > 0 ? (
@@ -1397,12 +1395,19 @@ export default function InventoryScreen() {
             padTop={22}
             padBottom={14}
           >
+            {locBarEl}
             {listEl}
           </TbvListPanel>
         ) : (isPlain && gridCols === 1) ? (
-          <ShadowBox style={styles.invListBox}>{listEl}</ShadowBox>
+          <ShadowBox style={styles.invListBox}>
+            {locBarEl}
+            {listEl}
+          </ShadowBox>
         ) : (
-          listEl
+          <View style={styles.listFlexed}>
+            {locBarEl}
+            {listEl}
+          </View>
         );
       })()}
 
@@ -2820,22 +2825,25 @@ const styles = themedStyles((c) => ({
     borderColor: c.border,
   },
   locBar: {
-    marginBottom: 10,
+    marginBottom: 8,
     marginTop: 2,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: c.borderSubtle,
+    paddingBottom: 8,
   },
   locBarContent: {
-    gap: 8,
-    paddingHorizontal: 4,
-    paddingVertical: 2,
+    gap: 6,
+    paddingHorizontal: 2,
+    paddingVertical: 1,
   },
   locChip: {
-    paddingHorizontal: 16,
-    paddingVertical: 9,
-    borderRadius: 10,
+    paddingHorizontal: 11,
+    paddingVertical: 5,
+    borderRadius: 8,
     borderWidth: 1,
-    borderColor: c.border,
-    backgroundColor: c.bgSecondary,
-    maxWidth: 160,
+    borderColor: c.borderSubtle,
+    backgroundColor: "transparent",
+    maxWidth: 140,
   },
   locChipActive: {
     backgroundColor: c.accent,
@@ -2843,9 +2851,9 @@ const styles = themedStyles((c) => ({
   },
   locChipText: {
     fontFamily: TBV_FONT.label,
-    fontSize: 12,
-    letterSpacing: 0.5,
-    color: c.textSecondary,
+    fontSize: 10.5,
+    letterSpacing: 0.3,
+    color: c.textMuted,
   },
   locChipTextActive: {
     color: "#000",
