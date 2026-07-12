@@ -2829,9 +2829,9 @@ const styles = themedStyles((c) => ({
     paddingVertical: 2,
   },
   locChip: {
-    paddingHorizontal: 14,
-    paddingVertical: 7,
-    borderRadius: 999,
+    paddingHorizontal: 16,
+    paddingVertical: 9,
+    borderRadius: 10,
     borderWidth: 1,
     borderColor: c.border,
     backgroundColor: c.bgSecondary,
