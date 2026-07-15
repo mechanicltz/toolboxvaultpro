@@ -30,6 +30,7 @@ import { shouldShowIntro, markAppActive, getIntroVideoEnabledAsync } from "../sr
 import { IntroOverlay } from "../src/IntroOverlay";
 import { setIntroFinished } from "../src/introState";
 import { PermissionsOnboarding } from "../src/components/PermissionsOnboarding";
+import { AdminStatsModal } from "../src/components/AdminStatsModal";
 import { ThemeProvider, useColors, useThemeMode, useSkin } from "../src/themeContext";
 import { IndustrialThemeProvider } from "../src/components/industrial";
 import { notifyAppResume } from "../src/appLifecycle";
@@ -241,6 +242,7 @@ function AuthGate({ children }: { children: React.ReactNode }) {
     <>
       {children}
       {user ? <PermissionsOnboarding /> : null}
+      {user ? <AdminStatsModal /> : null}
       {showIntro && (
         <View
           pointerEvents="auto"

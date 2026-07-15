@@ -11,7 +11,7 @@
  *   <TbvHeader style={{ marginBottom: 16 }} />
  */
 import React, { useState } from "react";
-import { View, Image, Text, StyleSheet, StyleProp, ViewStyle } from "react-native";
+import { View, Image, Text, StyleSheet, StyleProp, ViewStyle, TouchableOpacity } from "react-native";
 import {
   HEADER_SRC_BY_COLOR,
   HEADER_ASPECT,
@@ -21,6 +21,7 @@ import {
 } from "../tbv/header";
 import { APP_VERSION_LABEL } from "../version";
 import { useSkin } from "../themeContext";
+import { openAdminStats } from "../adminStats";
 
 // Plain + Light theme wordmark (transparent, trimmed). Aspect = 1419 / 206.
 const LIGHT_LOGO_SRC = require("../../assets/light-header-logo.png");
@@ -65,9 +66,11 @@ export function TbvHeader({
           />
         ) : null}
         {showVersion && w > 0 ? (
-          <Text style={styles.lightVersion} allowFontScaling={false}>
-            {APP_VERSION_LABEL}
-          </Text>
+          <TouchableOpacity onPress={openAdminStats} hitSlop={{ top: 12, bottom: 12, left: 20, right: 20 }} testID="tbv-header-version-btn">
+            <Text style={styles.lightVersion} allowFontScaling={false}>
+              {APP_VERSION_LABEL}
+            </Text>
+          </TouchableOpacity>
         ) : null}
       </View>
     );
@@ -91,16 +94,23 @@ export function TbvHeader({
             fadeDuration={0}
           />
           {showVersion ? (
-            <Text
+            <TouchableOpacity
+              onPress={openAdminStats}
+              hitSlop={{ top: 14, bottom: 14, left: 24, right: 24 }}
               style={[
-                styles.version,
-                { right: w * HEADER_VERSION_POS.rightPct, bottom: h * HEADER_VERSION_POS.bottomPct, color: vaultColor },
+                styles.versionBtn,
+                { right: w * HEADER_VERSION_POS.rightPct, bottom: h * HEADER_VERSION_POS.bottomPct },
               ]}
-              numberOfLines={1}
-              testID="tbv-header-version"
+              testID="tbv-header-version-btn"
             >
-              {APP_VERSION_LABEL}
-            </Text>
+              <Text
+                style={[styles.version, { color: vaultColor }]}
+                numberOfLines={1}
+                testID="tbv-header-version"
+              >
+                {APP_VERSION_LABEL}
+              </Text>
+            </TouchableOpacity>
           ) : null}
         </View>
       ) : null}
@@ -109,8 +119,10 @@ export function TbvHeader({
 }
 
 const styles = StyleSheet.create({
-  version: {
+  versionBtn: {
     position: "absolute",
+  },
+  version: {
     color: HEADER_VAULT_ORANGE,
     fontSize: 11,
     fontWeight: "800",

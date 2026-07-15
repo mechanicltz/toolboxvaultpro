@@ -1,5 +1,29 @@
 # Toolbox Vault — PRD
 
+## Admin stats popup on the build-number badge (2026-06 — DONE & verified)
+Admin-only dashboard opened by tapping the version/build badge in the header
+(TbvHeader version now wrapped in a TouchableOpacity → openAdminStats()).
+- Backend: GET /api/admin/dashboard-stats (subscriptions.py make_router, uses the
+  RAW real_db, _require_admin). Returns items_today, items_total, users_total,
+  users_today, users_7d, users_30d, promos, monthly, yearly, apple, google,
+  total_subscribers. Time windows = UTC; created_at is ISO string (lexicographic
+  >= works). "active subscriber" = {is_active:true, entitlement!=free}. promos =
+  active & (is_lifetime OR store=PROMOTIONAL OR promo_code set). monthly/yearly =
+  product_id regex month/year. apple=APP_STORE, google=PLAY_STORE.
+- Frontend: src/adminStats.ts (open signal), src/components/AdminStatsModal.tsx
+  (mounted at root in _layout when user; fetches adminWhoAmI once, ignores taps
+  from non-admins; loads stats on open). api.adminDashboardStats added. Sections:
+  Inventory / Users / Subscriptions; TOTAL SUBSCRIBERS shown in red (c.danger).
+- Verified via DOM on admin acct (mechanicltz@gmail.com): shows 690 items, 86
+  users, 38 in 30d, 7 promos/total subscribers.
+- IMPORTANT: these numbers are from the DEV/preview DB only. Real production
+  counts come from the deployed DB (synced from RevenueCat webhook). RevenueCat
+  dashboard remains the source of truth for real paying/trial subs.
+- Minor: on the Home screen the once-ever "What's New" popup can overlap the
+  admin popup the very first launch; on all other pages / subsequent taps it
+  shows cleanly on top.
+
+
 ## 6-part inventory/brands/locations update (2026-06 — DONE & tested, iter_87)
 (1) DATE PICKER readability on dark themes: src/DateField.tsx now derives isDark
 from skin too (skin==="industrial" → dark, else mode) so the iOS inline calendar's

@@ -557,6 +557,69 @@ def make_router(db, get_current_user) -> APIRouter:
         free = max(0, total_users - subscribed)
         return {"free": free, "subscribed": subscribed, "total": total_users}
 
+    @router.get("/admin/dashboard-stats")
+    async def admin_dashboard_stats(user=Depends(get_current_user)):
+        """Admin-only glanceable metrics for the build-badge popup.
+
+        All time windows are computed in UTC. `created_at` is stored as an
+        ISO8601 UTC string, so lexicographic >= comparison is valid.
+        A subscriber = any account with an ACTIVE non-free entitlement
+        (is_active == true), which includes paid renewals + lifetime/promo.
+        """
+        _require_admin(user)
+        from datetime import datetime, timezone, timedelta
+
+        now = datetime.now(timezone.utc)
+        start_today = now.replace(hour=0, minute=0, second=0, microsecond=0).isoformat()
+        since_7 = (now - timedelta(days=7)).isoformat()
+        since_30 = (now - timedelta(days=30)).isoformat()
+
+        # ---- Inventory ----
+        items_total = await db.tools.count_documents({})
+        items_today = await db.tools.count_documents({"created_at": {"$gte": start_today}})
+
+        # ---- Users ----
+        users_total = await db.users.count_documents({})
+        users_today = await db.users.count_documents({"created_at": {"$gte": start_today}})
+        users_7d = await db.users.count_documents({"created_at": {"$gte": since_7}})
+        users_30d = await db.users.count_documents({"created_at": {"$gte": since_30}})
+
+        # ---- Subscriptions ----
+        ACTIVE = {"is_active": True, "entitlement": {"$ne": "free"}}
+        total_subscribers = await db.subscriptions.count_documents(ACTIVE)
+        promos = await db.subscriptions.count_documents({
+            **ACTIVE,
+            "$or": [
+                {"is_lifetime": True},
+                {"store": "PROMOTIONAL"},
+                {"promo_code": {"$nin": [None, ""]}},
+            ],
+        })
+        monthly = await db.subscriptions.count_documents({
+            **ACTIVE, "product_id": {"$regex": "month", "$options": "i"},
+        })
+        yearly = await db.subscriptions.count_documents({
+            **ACTIVE, "product_id": {"$regex": "year", "$options": "i"},
+        })
+        apple = await db.subscriptions.count_documents({**ACTIVE, "store": "APP_STORE"})
+        google = await db.subscriptions.count_documents({**ACTIVE, "store": "PLAY_STORE"})
+
+        return {
+            "items_today": items_today,
+            "items_total": items_total,
+            "users_total": users_total,
+            "users_today": users_today,
+            "users_7d": users_7d,
+            "users_30d": users_30d,
+            "promos": promos,
+            "monthly": monthly,
+            "yearly": yearly,
+            "apple": apple,
+            "google": google,
+            "total_subscribers": total_subscribers,
+            "generated_at": now.isoformat(),
+        }
+
     @router.post("/admin/promo-codes")
     async def admin_create_promo(body: CreatePromoBody, user=Depends(get_current_user)):
         _require_admin(user)

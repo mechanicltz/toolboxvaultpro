@@ -510,6 +510,22 @@ export const api = {
 
   // Admin (gated by ADMIN_EMAILS server-side)
   adminWhoAmI: () => request<{ is_admin: boolean; email: string }>(`/admin/me`),
+  adminDashboardStats: () =>
+    request<{
+      items_today: number;
+      items_total: number;
+      users_total: number;
+      users_today: number;
+      users_7d: number;
+      users_30d: number;
+      promos: number;
+      monthly: number;
+      yearly: number;
+      apple: number;
+      google: number;
+      total_subscribers: number;
+      generated_at: string;
+    }>(`/admin/dashboard-stats`),
 
   // ---- Upcoming Features / Roadmap ----
   listUpcomingFeatures: () =>
