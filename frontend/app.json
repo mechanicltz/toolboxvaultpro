@@ -2,7 +2,7 @@
   "expo": {
     "name": "Toolbox Vault",
     "slug": "frontend",
-    "version": "3.1.6",
+    "version": "3.1.8",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "frontend",
@@ -14,7 +14,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "app.emergent.assetlocator128c92565d",
-      "buildNumber": "30",
+      "buildNumber": "31",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
         "NSCameraUsageDescription": "Take photos of your tools",
@@ -26,7 +26,7 @@
     },
     "android": {
       "package": "app.emergent.assetlocator128c92565d",
-      "versionCode": 216,
+      "versionCode": 218,
       "edgeToEdgeEnabled": false,
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
