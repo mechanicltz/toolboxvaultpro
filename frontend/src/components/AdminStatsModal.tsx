@@ -90,13 +90,13 @@ export function AdminStatsModal() {
           ) : stats ? (
             <ScrollView showsVerticalScrollIndicator={false}>
               <Text style={s.section}>INVENTORY</Text>
+              <Row label="Total items (all users)" value={stats.items_total} red />
               <Row label="Items logged today (all users)" value={stats.items_today} />
-              <Row label="Total items (all users)" value={stats.items_total} />
 
               <View style={s.divider} />
 
               <Text style={s.section}>USERS</Text>
-              <Row label="Total registered users" value={stats.users_total} />
+              <Row label="Total registered users" value={stats.users_total} red />
               <Row label="New accounts today" value={stats.users_today} />
               <Row label="New accounts — last 7 days" value={stats.users_7d} />
               <Row label="New accounts — last 30 days" value={stats.users_30d} />
@@ -104,12 +104,12 @@ export function AdminStatsModal() {
               <View style={s.divider} />
 
               <Text style={s.section}>SUBSCRIPTIONS</Text>
+              <Row label="TOTAL SUBSCRIBERS" value={stats.total_subscribers} red />
               <Row label="Users on promos" value={stats.promos} />
               <Row label="Monthly subscribers" value={stats.monthly} />
               <Row label="Yearly subscribers" value={stats.yearly} />
               <Row label="Apple subscribers" value={stats.apple} />
               <Row label="Google Play subscribers" value={stats.google} />
-              <Row label="TOTAL SUBSCRIBERS" value={stats.total_subscribers} red />
             </ScrollView>
           ) : null}
         </View>
