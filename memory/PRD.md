@@ -1,6 +1,14 @@
 # Toolbox Vault — PRD
 
-## Admin stats popup on the build-number badge (2026-06 — DONE & verified)
+## Admin stats popup — layout + PDF share (2026-06 — DONE & verified)
+Order/red tweaks: INVENTORY leads with "Total items (all users)" (red); USERS
+"Total registered users" is red; SUBSCRIPTIONS leads with "TOTAL SUBSCRIBERS"
+(red). Added a "SHARE / EXPORT PDF" button (testID admin-stats-share) at the
+bottom → builds an HTML report (buildStatsHtml) and calls the shared
+printReportHtml() (native = expo-print PDF → pdf-viewer/share sheet; web =
+/api/render-pdf download). Closes the popup first so the share sheet isn't
+buried. Verified via DOM on admin acct.
+
 Admin-only dashboard opened by tapping the version/build badge in the header
 (TbvHeader version now wrapped in a TouchableOpacity → openAdminStats()).
 - Backend: GET /api/admin/dashboard-stats (subscriptions.py make_router, uses the

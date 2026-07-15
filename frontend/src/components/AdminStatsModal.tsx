@@ -12,8 +12,66 @@ import { themedStyles } from "../themeContext";
 import { theme } from "../theme";
 import { api } from "../api";
 import { useAdminStatsOpenSignal } from "../adminStats";
+import { printReportHtml } from "../printHtml";
 
 type Stats = Awaited<ReturnType<typeof api.adminDashboardStats>>;
+
+function buildStatsHtml(st: Stats): string {
+  const generated = (() => {
+    try {
+      return new Date(st.generated_at).toLocaleString();
+    } catch {
+      return st.generated_at || "";
+    }
+  })();
+  const row = (label: string, value: number, red?: boolean) => `
+    <tr>
+      <td class="label">${label}</td>
+      <td class="value${red ? " red" : ""}">${(value ?? 0).toLocaleString()}</td>
+    </tr>`;
+  return `<!DOCTYPE html><html><head><meta charset="utf-8" />
+  <style>
+    * { font-family: Helvetica, Arial, sans-serif; }
+    body { padding: 32px; color: #111; }
+    h1 { font-size: 22px; margin: 0 0 2px; letter-spacing: 1px; }
+    .sub { color: #666; font-size: 12px; margin: 0 0 24px; }
+    h2 { font-size: 13px; letter-spacing: 2px; color: #C2410C; margin: 22px 0 6px;
+         border-bottom: 2px solid #eee; padding-bottom: 4px; }
+    table { width: 100%; border-collapse: collapse; }
+    td { padding: 8px 0; font-size: 14px; border-bottom: 1px solid #f0f0f0; }
+    td.label { color: #333; }
+    td.value { text-align: right; font-weight: 800; font-size: 15px; width: 30%; }
+    td.value.red { color: #DC2626; font-size: 17px; }
+  </style></head>
+  <body>
+    <h1>TOOLBOX VAULT — ADMIN DASHBOARD</h1>
+    <p class="sub">Generated ${generated}</p>
+
+    <h2>INVENTORY</h2>
+    <table>
+      ${row("Total items (all users)", st.items_total, true)}
+      ${row("Items logged today (all users)", st.items_today)}
+    </table>
+
+    <h2>USERS</h2>
+    <table>
+      ${row("Total registered users", st.users_total, true)}
+      ${row("New accounts today", st.users_today)}
+      ${row("New accounts — last 7 days", st.users_7d)}
+      ${row("New accounts — last 30 days", st.users_30d)}
+    </table>
+
+    <h2>SUBSCRIPTIONS</h2>
+    <table>
+      ${row("TOTAL SUBSCRIBERS", st.total_subscribers, true)}
+      ${row("Users on promos", st.promos)}
+      ${row("Monthly subscribers", st.monthly)}
+      ${row("Yearly subscribers", st.yearly)}
+      ${row("Apple subscribers", st.apple)}
+      ${row("Google Play subscribers", st.google)}
+    </table>
+  </body></html>`;
+}
 
 // Owner/admin-only metrics popup, opened by tapping the build-number badge in
 // the header. Non-admins never see it (the fetch is gated on adminWhoAmI, and
@@ -25,6 +83,7 @@ export function AdminStatsModal() {
   const [loading, setLoading] = useState(false);
   const [stats, setStats] = useState<Stats | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [sharing, setSharing] = useState(false);
   const lastSignal = useRef(openSignal);
   const s = styles;
 
@@ -54,6 +113,22 @@ export function AdminStatsModal() {
     setVisible(true);
     load();
   }, [openSignal, isAdmin, load]);
+
+  const onShare = useCallback(async () => {
+    if (!stats || sharing) return;
+    setSharing(true);
+    try {
+      const date = new Date().toISOString().slice(0, 10);
+      // Close this modal first so the share sheet / PDF preview isn't buried
+      // underneath it (the popup is a root-level RN Modal).
+      setVisible(false);
+      await printReportHtml(buildStatsHtml(stats), `toolbox-vault-stats-${date}.pdf`);
+    } catch {
+      /* printReportHtml surfaces its own errors */
+    } finally {
+      setSharing(false);
+    }
+  }, [stats, sharing]);
 
   const Row = ({ label, value, red }: { label: string; value?: number; red?: boolean }) => (
     <View style={s.row}>
@@ -111,6 +186,24 @@ export function AdminStatsModal() {
               <Row label="Apple subscribers" value={stats.apple} />
               <Row label="Google Play subscribers" value={stats.google} />
             </ScrollView>
+          ) : null}
+
+          {stats && !loading && !error ? (
+            <TouchableOpacity
+              style={[s.shareBtn, sharing && { opacity: 0.6 }]}
+              onPress={onShare}
+              disabled={sharing}
+              testID="admin-stats-share"
+            >
+              {sharing ? (
+                <ActivityIndicator color="#000" />
+              ) : (
+                <>
+                  <Ionicons name="share-outline" size={18} color="#000" />
+                  <Text style={s.shareBtnText}>SHARE / EXPORT PDF</Text>
+                </>
+              )}
+            </TouchableOpacity>
           ) : null}
         </View>
       </View>
@@ -171,6 +264,17 @@ const styles = themedStyles((c) => ({
   rowValue: { color: c.textPrimary, fontSize: 16, fontWeight: "800" },
   rowValueRed: { color: c.danger, fontSize: 18, fontWeight: "900" },
   divider: { height: 1, backgroundColor: c.borderSubtle, marginVertical: 12 },
+  shareBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    marginTop: 16,
+    paddingVertical: 14,
+    borderRadius: 12,
+    backgroundColor: c.accent,
+  },
+  shareBtnText: { color: "#000", fontSize: 14, fontWeight: "900", letterSpacing: 0.8 },
 }));
 
 export default AdminStatsModal;
