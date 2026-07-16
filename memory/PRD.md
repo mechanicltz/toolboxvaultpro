@@ -1,6 +1,32 @@
 # Toolbox Vault — PRD
 
-## BUGFIX — Auto-backups stopped (~July 5) + manual backup "server unavailable" (2026-06 — FIXED, needs DEPLOY)
+## BUGFIX — Full Drive snapshot hung / stopped (memory + non-resumable upload) (2026-06 — FIXED, needs DEPLOY)
+"Full backup" button (POST /admin/backups/full-snapshot, background job) built the
+ENTIRE ~290MB bundle (all data + base64 photos + source code) in RAM as several
+simultaneous copies (bundle dict, db.json string, full zip BytesIO, getvalue copy)
+and then uploaded it via MediaIoBaseUpload with resumable=False (another full
+in-RAM copy + single-shot POST). As data grew (~July) this OOM-killed the worker
+mid-job → status stuck "running" → button spins forever, nothing in Drive.
+FIX:
+- recovery._build_full_snapshot now writes the ZIP straight to a TEMP FILE on
+  disk (returns zip_path, not zip_bytes) and clears the in-memory bundle right
+  after db.json is built → peak RAM ~1 copy instead of ~4.
+- New recovery.selfcheck_snapshot_file(path): low-mem integrity check (opens zip
+  from disk, testzip CRC, checks db.json/manifest present) — replaces the
+  bytes-based selfcheck in both callers.
+- gdrive.upload_backup now accepts file_path → MediaFileUpload(resumable=True,
+  chunksize=8MB): streamed chunked upload from disk (low mem + survives big
+  files / no single-shot timeout). file_bytes path kept for the small in-DB
+  mirror.
+- Both callers (_do_full_snapshot, backups._run_full_snapshot_to_drive) updated
+  to build→selfcheck-file→upload-from-path→delete temp file in finally.
+VERIFIED end-to-end: 289.8MB snapshot built, selfcheck OK, uploaded to Drive
+(gdrive_id returned) in ~41s. Must DEPLOY for the live app.
+Note: full snapshot = all data + photos + env + source + RESTORE.md — the
+portable "migrate anywhere" bundle the user relies on. It ALSO runs in the daily
+self-healing scheduler, so an up-to-date copy stays in their Drive automatically.
+
+ + manual backup "server unavailable" (2026-06 — FIXED, needs DEPLOY)
 Two real root causes, both fixed in backups.py (+ recovery.py):
 1. FRAGILE SCHEDULER (primary): the daily-03:00-UTC job is an in-process asyncio
    loop that only fired if the process was alive AT 03:00. Production/containers

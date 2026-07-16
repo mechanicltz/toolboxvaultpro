@@ -278,7 +278,7 @@ async def _build_full_snapshot(
     except Exception:
         pass
 
-    def _encode() -> bytes:
+    def _encode(out_path: str) -> None:
         fe = _tar_dir_bytes("/app/frontend", "frontend", _FE_EXCLUDE_DIRS, _EXCLUDE_SUFFIXES)
         be = _tar_dir_bytes("/app/backend", "backend", _BE_EXCLUDE_DIRS, _EXCLUDE_SUFFIXES)
         manifest = {
@@ -338,22 +338,31 @@ async def _build_full_snapshot(
             members["backend.env"] = backend_env.encode("utf-8")
         if frontend_env:
             members["frontend.env"] = frontend_env.encode("utf-8")
+        # Free the in-memory collections now that db.json bytes are built — keeps
+        # peak memory to ~one copy instead of several (prevents OOM on big DBs).
+        bundle.clear()
 
         if encrypt:
-            return _build_encrypted_zip(members, passphrase)  # type: ignore[arg-type]
-        buf = io.BytesIO()
-        with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED, compresslevel=6) as zf:
+            data = _build_encrypted_zip(members, passphrase)  # type: ignore[arg-type]
+            with open(out_path, "wb") as fh:
+                fh.write(data)
+            return
+        # Write the ZIP straight to disk (never hold the whole archive in RAM).
+        with zipfile.ZipFile(out_path, "w", zipfile.ZIP_DEFLATED, compresslevel=6) as zf:
             for name, data in members.items():
                 zf.writestr(name, data)
-        return buf.getvalue()
 
-    zip_bytes = await asyncio.to_thread(_encode)
+    import tempfile
+    fd, tmp_path = tempfile.mkstemp(suffix=".zip", prefix="tbv_snapshot_")
+    os.close(fd)
+    await asyncio.to_thread(_encode, tmp_path)
+    size_bytes = os.path.getsize(tmp_path)
     filename = f"{now.strftime('%m-%d-%Y %H-%M')} FULL SNAPSHOT.zip"
     return {
-        "zip_bytes": zip_bytes,
+        "zip_path": tmp_path,
         "filename": filename,
-        "size_bytes": len(zip_bytes),
-        "size_human": backups._human_size(len(zip_bytes)),
+        "size_bytes": size_bytes,
+        "size_human": backups._human_size(size_bytes),
         "document_count": total,
         "created_at": now.isoformat(),
         "encrypted": bool(encrypt),
@@ -369,6 +378,31 @@ def passphrase_filename(backup_filename: str) -> str:
     if base.lower().endswith(".zip"):
         base = base[:-4]
     return f"{base} PASSPHRASE.txt"
+
+
+def selfcheck_snapshot_file(zip_path: str) -> Dict[str, Any]:
+    """Low-memory integrity check of a snapshot ZIP on disk: verify it opens,
+    every member's CRC is valid, and the key files are present. Reads in chunks
+    (never loads the whole archive into RAM). Never touches any DB."""
+    try:
+        with zipfile.ZipFile(zip_path, "r") as zf:
+            names = set(zf.namelist())
+            corrupt = zf.testzip()  # chunked CRC verification
+            manifest: Dict[str, Any] = {}
+            if "manifest.json" in names:
+                manifest = json.loads(zf.read("manifest.json").decode("utf-8"))
+        missing = [n for n in ("db.json", "manifest.json") if n not in names]
+        ok = corrupt is None and not missing
+        return {
+            "ok": ok,
+            "members": len(names),
+            "missing": missing,
+            "corrupt_member": corrupt,
+            "total_documents": manifest.get("document_count"),
+            "has_code": "code/backend_src.tar.gz" in names,
+        }
+    except Exception as exc:
+        return {"ok": False, "error": str(exc)}
 
 
 def selfcheck_snapshot(zip_bytes: bytes, passphrase: Optional[str]) -> Dict[str, Any]:
@@ -408,30 +442,38 @@ async def _do_full_snapshot(real_db) -> Dict[str, Any]:
     live app and surface as a 520 error.
     """
     snap = await _build_full_snapshot(real_db, trigger="manual", encrypt=False)
-    check = await asyncio.to_thread(selfcheck_snapshot, snap["zip_bytes"], None)
+    zip_path = snap["zip_path"]
     gdrive_uploaded = False
     gdrive_id = None
     gdrive_error = None
     try:
-        import gdrive
-        status = await gdrive.get_status(real_db)
-        if status.get("connected"):
-            up = await gdrive.upload_backup(
-                real_db, file_bytes=snap["zip_bytes"],
-                filename=snap["filename"], mime_type="application/zip",
-            )
-            gdrive_uploaded = True
-            gdrive_id = up.get("id")
-            try:
-                await gdrive.apply_retention_policy(real_db)
-            except Exception as rexc:
-                logger.warning("Drive retention after full snapshot failed: %s", rexc)
-        else:
-            gdrive_error = "auth_expired" if status.get("needs_reauth") else "not_connected"
-    except Exception as exc:
-        from google.auth.exceptions import RefreshError
-        gdrive_error = "auth_expired" if isinstance(exc, RefreshError) else "upload_failed"
-        logger.warning("Full snapshot Drive upload failed (%s): %s", gdrive_error, exc)
+        check = await asyncio.to_thread(selfcheck_snapshot_file, zip_path)
+        try:
+            import gdrive
+            status = await gdrive.get_status(real_db)
+            if status.get("connected"):
+                up = await gdrive.upload_backup(
+                    real_db, file_path=zip_path,
+                    filename=snap["filename"], mime_type="application/zip",
+                )
+                gdrive_uploaded = True
+                gdrive_id = up.get("id")
+                try:
+                    await gdrive.apply_retention_policy(real_db)
+                except Exception as rexc:
+                    logger.warning("Drive retention after full snapshot failed: %s", rexc)
+            else:
+                gdrive_error = "auth_expired" if status.get("needs_reauth") else "not_connected"
+        except Exception as exc:
+            from google.auth.exceptions import RefreshError
+            gdrive_error = "auth_expired" if isinstance(exc, RefreshError) else "upload_failed"
+            logger.warning("Full snapshot Drive upload failed (%s): %s", gdrive_error, exc)
+    finally:
+        # Always clean up the temp file so the disk doesn't fill up.
+        try:
+            os.remove(zip_path)
+        except Exception:
+            pass
     await _audit(real_db, "full_snapshot", {
         "filename": snap["filename"], "size": snap["size_human"],
         "encrypted": False, "selfcheck": check,

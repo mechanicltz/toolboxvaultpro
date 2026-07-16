@@ -278,18 +278,23 @@ async def _run_full_snapshot_to_drive(db, *, trigger: str = "scheduled") -> Dict
         return {"uploaded": False, "reason": "drive_not_connected"}
 
     snap = await recovery._build_full_snapshot(db, trigger=trigger, encrypt=False)
-    check = await asyncio.to_thread(
-        recovery.selfcheck_snapshot, snap["zip_bytes"], None
-    )
-    if not check.get("ok"):
-        logger.error("Full snapshot self-check FAILED — NOT uploading: %s",
-                     check.get("error"))
-        raise RuntimeError(f"Snapshot self-check failed: {check.get('error')}")
+    zip_path = snap["zip_path"]
+    try:
+        check = await asyncio.to_thread(recovery.selfcheck_snapshot_file, zip_path)
+        if not check.get("ok"):
+            logger.error("Full snapshot self-check FAILED — NOT uploading: %s",
+                         check.get("error") or check.get("missing"))
+            raise RuntimeError(f"Snapshot self-check failed: {check.get('error')}")
 
-    up = await gdrive.upload_backup(
-        db, file_bytes=snap["zip_bytes"], filename=snap["filename"],
-        mime_type="application/zip",
-    )
+        up = await gdrive.upload_backup(
+            db, file_path=zip_path, filename=snap["filename"],
+            mime_type="application/zip",
+        )
+    finally:
+        try:
+            os.remove(zip_path)
+        except Exception:
+            pass
     retention = await gdrive.apply_retention_policy(db)
     logger.info(
         "Scheduled FULL snapshot mirrored to Drive: %s (id=%s, selfcheck OK, "

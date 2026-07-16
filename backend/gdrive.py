@@ -33,7 +33,7 @@ from google_auth_oauthlib.flow import Flow
 from google.auth.transport.requests import Request as GoogleAuthRequest
 from google.auth.exceptions import RefreshError
 from googleapiclient.discovery import build
-from googleapiclient.http import MediaIoBaseUpload
+from googleapiclient.http import MediaIoBaseUpload, MediaFileUpload
 
 logger = logging.getLogger(__name__)
 
@@ -282,19 +282,32 @@ async def _build_drive_service(db):
 async def upload_backup(
     db,
     *,
-    file_bytes: bytes,
+    file_bytes: Optional[bytes] = None,
+    file_path: Optional[str] = None,
     filename: str,
     mime_type: str = "application/zip",
 ) -> Dict[str, Any]:
-    """Upload bytes to the configured folder. Returns Drive file metadata."""
+    """Upload a backup to the configured folder. Returns Drive file metadata.
+
+    Pass `file_path` for large snapshots — it streams from disk with a RESUMABLE
+    chunked upload (low memory, survives big files). `file_bytes` is kept for
+    small in-memory uploads (e.g. the tiny in-DB backup mirror).
+    """
     cfg = _settings()
     drive = await _build_drive_service(db)
 
-    media = MediaIoBaseUpload(
-        io.BytesIO(file_bytes),
-        mimetype=mime_type,
-        resumable=False,
-    )
+    if file_path is not None:
+        # Streamed, resumable upload straight from disk — never loads the whole
+        # file into memory (fixes OOM + single-shot timeout on large snapshots).
+        media = MediaFileUpload(
+            file_path, mimetype=mime_type, resumable=True, chunksize=8 * 1024 * 1024,
+        )
+    else:
+        media = MediaIoBaseUpload(
+            io.BytesIO(file_bytes or b""),
+            mimetype=mime_type,
+            resumable=False,
+        )
     created = drive.files().create(
         body={
             "name": filename,
