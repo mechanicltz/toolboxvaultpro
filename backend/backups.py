@@ -29,8 +29,55 @@ from typing import Any, Dict, List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Response
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
+from motor.motor_asyncio import AsyncIOMotorGridFSBucket
+from bson import ObjectId
 
 logger = logging.getLogger(__name__)
+
+# ---------------------------------------------------------------------------
+# Payload storage — GridFS (NOT a single Mongo document).
+# ---------------------------------------------------------------------------
+# The backup ZIP (whole DB + env, incl. base64 photos) routinely exceeds
+# MongoDB's hard 16MB per-document limit as a user's data grows. Storing it in a
+# single `payload_b64` field therefore makes insert_one() fail once the payload
+# crosses ~16MB — which silently killed all backups (manual + scheduled).
+# We now stream the ZIP into GridFS (chunked, no size limit) and keep only tiny
+# metadata + a `gridfs_id` in the `backups` collection. Legacy backups that
+# still carry an inline `payload_b64` are read transparently for restore.
+_BACKUP_BUCKET = "backups_fs"
+
+
+def _backup_bucket(db) -> AsyncIOMotorGridFSBucket:
+    return AsyncIOMotorGridFSBucket(db, bucket_name=_BACKUP_BUCKET)
+
+
+async def _store_payload(db, backup_id: str, zip_bytes: bytes) -> str:
+    """Upload the ZIP into GridFS and return the file id (as a string)."""
+    gid = await _backup_bucket(db).upload_from_stream(f"{backup_id}.zip", zip_bytes)
+    return str(gid)
+
+
+async def _load_payload(db, doc: Dict[str, Any]) -> bytes:
+    """Read a backup's raw ZIP bytes — from GridFS (new) or inline b64 (legacy)."""
+    gid = doc.get("gridfs_id")
+    if gid:
+        stream = await _backup_bucket(db).open_download_stream(ObjectId(gid))
+        return await stream.read()
+    b64 = doc.get("payload_b64") or ""
+    if not b64:
+        raise HTTPException(500, "Backup payload missing — possibly corrupted")
+    return base64.b64decode(b64)
+
+
+async def _delete_payload(db, doc: Dict[str, Any]) -> None:
+    """Best-effort delete of a backup's GridFS file (legacy docs are no-ops)."""
+    gid = doc.get("gridfs_id")
+    if not gid:
+        return
+    try:
+        await _backup_bucket(db).delete(ObjectId(gid))
+    except Exception as e:
+        logger.warning("Could not delete GridFS backup file %s: %s", gid, e)
 
 # Collections we back up. Skips ephemeral / large-but-rebuildable ones.
 BACKUP_COLLECTIONS = [
@@ -162,32 +209,39 @@ async def _create_backup_doc(db, *, trigger: str) -> Dict[str, Any]:
             f"{_human_size(MAX_BACKUP_BYTES)} cap. Migrate to external storage.",
         )
 
-    payload_b64 = base64.b64encode(zip_bytes).decode("ascii")
+    backup_id = str(uuid.uuid4())
+    # Store the (potentially >16MB) ZIP in GridFS, not inline in the document.
+    gridfs_id = await _store_payload(db, backup_id, zip_bytes)
 
     doc = {
-        "id": str(uuid.uuid4()),
+        "id": backup_id,
         "created_at": now.isoformat(),
         "trigger": trigger,
         "collections": BACKUP_COLLECTIONS,
         "document_count": total_docs,
         "size_bytes": len(zip_bytes),
-        "payload_b64": payload_b64,
+        "gridfs_id": gridfs_id,
         "format": "zip",  # marker so future code can tell new ZIPs from old gzip
     }
     await db.backups.insert_one(doc)
 
-    # Retention prune — keep MAX_BACKUPS_RETAINED most recent.
-    cursor = (
-        db.backups.find({}, {"id": 1, "_id": 0})
+    # Retention prune — keep MAX_BACKUPS_RETAINED most recent (delete GridFS too).
+    old_docs = (
+        await db.backups
+        .find({}, {"id": 1, "gridfs_id": 1, "_id": 0})
         .sort("created_at", -1)
         .skip(MAX_BACKUPS_RETAINED)
+        .to_list(length=None)
     )
-    ids_to_delete = [row["id"] async for row in cursor if row.get("id")]
-    if ids_to_delete:
-        await db.backups.delete_many({"id": {"$in": ids_to_delete}})
-        logger.info(
-            "Backup retention: pruned %d old snapshots", len(ids_to_delete)
-        )
+    if old_docs:
+        for od in old_docs:
+            await _delete_payload(db, od)
+        ids_to_delete = [od["id"] for od in old_docs if od.get("id")]
+        if ids_to_delete:
+            await db.backups.delete_many({"id": {"$in": ids_to_delete}})
+            logger.info(
+                "Backup retention: pruned %d old snapshots", len(ids_to_delete)
+            )
 
     return {
         "id": doc["id"],
@@ -443,56 +497,84 @@ async def run_backup_health_check(db, snapshot_result: Optional[Dict[str, Any]] 
     return await _maybe_send_backup_alert(db, health)
 
 
-async def _scheduler_loop(get_db):
-    """Background task — runs forever, fires a backup once per day at 03:00 UTC.
+async def _run_scheduled_cycle(db, *, reason: str = "scheduled") -> None:
+    """One full backup cycle: in-DB snapshot → Drive full snapshot → health check.
+    Shared by the daily 03:00 run and the self-healing catch-up run."""
+    try:
+        row = await _create_backup_doc(db, trigger="scheduled")
+        logger.info(
+            "Scheduled in-DB backup created (%s): %s (%s, %d docs)",
+            reason, row["id"], row["size_human"], row["document_count"],
+        )
+    except Exception as e:
+        logger.exception("Scheduled in-DB backup failed: %s", e)
+    # Push the FULL snapshot to Drive (best-effort).
+    snapshot_result: Dict[str, Any] = {"uploaded": False, "reason": "unknown"}
+    try:
+        snapshot_result = await _run_full_snapshot_to_drive(db, trigger="scheduled")
+    except Exception as drive_exc:
+        logger.warning("Scheduled full snapshot to Drive failed: %s", drive_exc)
+        snapshot_result = {"uploaded": False, "reason": "snapshot_error",
+                           "error": str(drive_exc)}
+    # Daily HEALTH CHECK: email the admin if offsite backup is down.
+    try:
+        result = await run_backup_health_check(db, snapshot_result)
+        if not result["health"]["healthy"]:
+            logger.warning(
+                "Backup health UNHEALTHY (%s) — alert_sent=%s",
+                result["health"]["reason"], result["alert_sent"],
+            )
+    except Exception as alert_exc:
+        logger.exception("Backup health alert check failed: %s", alert_exc)
 
-    Each cycle:
-      1) Creates a small in-DB data backup (for the in-app restore list +
-         pre-restore safety snapshots, prunes to MAX_BACKUPS_RETAINED).
-      2) Builds the FULL snapshot (code+data+env) as a plain ZIP, self-checks it,
-         and uploads it + its passphrase to Google Drive (if connected).
-      3) Applies the Drive retention policy (keep min N + delete >15 days old).
+
+async def _hours_since_last_backup(db) -> Optional[float]:
+    """Hours since the most recent backup of ANY trigger, or None if there are
+    no backups yet (treated as 'stale' → catch up immediately)."""
+    try:
+        last = await db.backups.find_one({}, sort=[("created_at", -1)])
+        if not last or not last.get("created_at"):
+            return None
+        created = datetime.fromisoformat(last["created_at"])
+        if created.tzinfo is None:
+            created = created.replace(tzinfo=timezone.utc)
+        return (datetime.now(timezone.utc) - created).total_seconds() / 3600.0
+    except Exception:
+        return None
+
+
+async def _scheduler_loop(get_db):
+    """Background task — runs forever, fires a backup daily at 03:00 UTC.
+
+    SELF-HEALING: on every boot (and each loop), if no backup has succeeded in
+    the last 24h — because the process was asleep/restarted across 03:00, or a
+    previous run was failing — it runs a catch-up backup IMMEDIATELY instead of
+    waiting a whole day. This makes backups resilient to the daily window being
+    missed in production.
     """
-    logger.info("Backup scheduler started (daily @ 03:00 UTC, keep last %d in DB)",
+    logger.info("Backup scheduler started (daily @ 03:00 UTC + self-heal, keep last %d in DB)",
                 MAX_BACKUPS_RETAINED)
     while True:
         try:
+            db = get_db()
+            # Catch up a missed/failed backup right away.
+            hrs = await _hours_since_last_backup(db)
+            if hrs is None or hrs >= 24.0:
+                logger.info(
+                    "Self-heal: last backup was %s → running catch-up now",
+                    "never" if hrs is None else f"{hrs:.1f}h ago",
+                )
+                await _run_scheduled_cycle(db, reason="catch-up")
+            # Wait for the next daily 03:00 UTC window, then run.
             sleep_for = await _seconds_until_next_run()
             await asyncio.sleep(sleep_for)
-            db = get_db()
-            try:
-                row = await _create_backup_doc(db, trigger="scheduled")
-                logger.info(
-                    "Scheduled in-DB backup created: %s (%s, %d docs)",
-                    row["id"], row["size_human"], row["document_count"],
-                )
-            except Exception as e:
-                logger.exception("Scheduled in-DB backup failed: %s", e)
-            # Push the FULL snapshot to Drive (best-effort).
-            snapshot_result: Dict[str, Any] = {"uploaded": False, "reason": "unknown"}
-            try:
-                snapshot_result = await _run_full_snapshot_to_drive(db, trigger="scheduled")
-            except Exception as drive_exc:
-                logger.warning("Scheduled full snapshot to Drive failed: %s", drive_exc)
-                snapshot_result = {"uploaded": False, "reason": "snapshot_error",
-                                   "error": str(drive_exc)}
-            # Daily HEALTH CHECK: email the admin if offsite backup is down so a
-            # dead backup is never silently missed (throttled inside).
-            try:
-                result = await run_backup_health_check(db, snapshot_result)
-                if not result["health"]["healthy"]:
-                    logger.warning(
-                        "Backup health UNHEALTHY (%s) — alert_sent=%s",
-                        result["health"]["reason"], result["alert_sent"],
-                    )
-            except Exception as alert_exc:
-                logger.exception("Backup health alert check failed: %s", alert_exc)
+            await _run_scheduled_cycle(get_db(), reason="daily")
         except asyncio.CancelledError:
             logger.info("Backup scheduler cancelled")
             raise
         except Exception as e:
-            logger.exception("Backup scheduler hiccup, retrying tomorrow: %s", e)
-            await asyncio.sleep(86400)
+            logger.exception("Backup scheduler hiccup, retrying in 1h: %s", e)
+            await asyncio.sleep(3600)
 
 
 async def _push_latest_backup_to_drive(db, backup_id: str) -> None:
@@ -504,11 +586,11 @@ async def _push_latest_backup_to_drive(db, backup_id: str) -> None:
         logger.info("Drive not connected — skipping Drive upload for %s", backup_id)
         return
 
-    # Fetch full backup payload (ZIP file) — this IS our backup file
+    # Fetch backup metadata, then load the ZIP bytes (GridFS or legacy inline).
     doc = await db.backups.find_one({"id": backup_id})
     if not doc:
         raise RuntimeError(f"Backup {backup_id} not found")
-    raw = base64.b64decode(doc["payload_b64"])
+    raw = await _load_payload(db, doc)
 
     # User-friendly filename: "MM-DD-YYYY HH-MM Full Backup.zip"
     # Use ISO created_at to format. Falls back to "Full Backup.zip" if parse fails.
@@ -620,13 +702,12 @@ def make_backup_router(
         doc = await db.backups.find_one({"id": backup_id}, {"_id": 0})
         if not doc:
             raise HTTPException(404, "Backup not found")
-        payload_b64 = doc.get("payload_b64") or ""
-        if not payload_b64:
-            raise HTTPException(500, "Backup payload missing — possibly corrupted")
         try:
-            gz_bytes = base64.b64decode(payload_b64)
+            gz_bytes = await _load_payload(db, doc)
+        except HTTPException:
+            raise
         except Exception:
-            raise HTTPException(500, "Backup payload could not be decoded")
+            raise HTTPException(500, "Backup payload could not be read")
 
         is_zip = doc.get("format") == "zip"
         # Friendly filename — matches Drive: "MM-DD-YYYY HH-MM Full Backup.zip"
@@ -655,9 +736,11 @@ def make_backup_router(
         """Remove a single backup."""
         require_admin(user)
         db = get_db()
-        res = await db.backups.delete_one({"id": backup_id})
-        if res.deleted_count == 0:
+        doc = await db.backups.find_one({"id": backup_id}, {"gridfs_id": 1, "_id": 0})
+        if not doc:
             raise HTTPException(404, "Backup not found")
+        await _delete_payload(db, doc)
+        await db.backups.delete_one({"id": backup_id})
         return {"ok": True, "deleted_id": backup_id}
 
     # =========================================================================

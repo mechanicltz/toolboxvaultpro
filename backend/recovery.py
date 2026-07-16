@@ -660,7 +660,9 @@ def make_recovery_router(get_real_db, get_current_user, require_admin) -> APIRou
         doc = await real_db.backups.find_one({"id": backup_id}, {"_id": 0})
         if not doc:
             raise HTTPException(404, "Backup not found")
-        raw = base64.b64decode(doc.get("payload_b64") or "")
+        # Read ZIP bytes from GridFS (new) or inline base64 (legacy backups).
+        from backups import _load_payload
+        raw = await _load_payload(real_db, doc)
         parsed = _parse_backup_bytes(raw)
         return await _do_production_restore(
             real_db=real_db, parsed=parsed,

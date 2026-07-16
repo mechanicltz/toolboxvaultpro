@@ -1,5 +1,31 @@
 # Toolbox Vault — PRD
 
+## BUGFIX — Auto-backups stopped (~July 5) + manual backup "server unavailable" (2026-06 — FIXED, needs DEPLOY)
+Two real root causes, both fixed in backups.py (+ recovery.py):
+1. FRAGILE SCHEDULER (primary): the daily-03:00-UTC job is an in-process asyncio
+   loop that only fired if the process was alive AT 03:00. Production/containers
+   restart, so the window was missed → no backups. Reproduced in DEV (also
+   stopped 07-06). FIX: `_scheduler_loop` is now SELF-HEALING — on every boot and
+   each loop it checks `_hours_since_last_backup`; if >=24h (or never), it runs a
+   catch-up cycle IMMEDIATELY, then waits for the next 03:00. Extracted
+   `_run_scheduled_cycle()`. Verified: on restart it logged "Self-heal: last
+   backup was 237.2h ago → running catch-up now" and produced a backup + Drive
+   snapshot.
+2. 16MB DOC LIMIT: the in-DB backup stored the whole zipped DB (incl. base64
+   photos) in ONE Mongo doc field `payload_b64`. Once >16MB (live data crossed
+   it) insert_one failed → manual "server unavailable" + scheduled in-DB backup
+   died. FIX: backup ZIP now streamed to GridFS (bucket "backups_fs"); doc keeps
+   only metadata + `gridfs_id`. Helpers `_store_payload/_load_payload/
+   _delete_payload`. Updated all read sites (download, drive push, restore in
+   recovery.py) + delete/retention to remove GridFS files. Legacy `payload_b64`
+   docs still restore transparently. Verified create/list/download end-to-end.
+IMPORTANT: fix is in code — user must DEPLOY (Publish) to fix the LIVE app. On
+first prod boot after deploy, self-heal creates an immediate catch-up backup.
+FOLLOW-UP (not done): the FULL Drive snapshot is ~300MB in dev (code+data+media)
+— the synchronous "full backup" button can time out in the UI even though the
+background scheduler completes it. Consider streaming/slimming later.
+
+
 ## Admin stats popup — layout + PDF share (2026-06 — DONE & verified)
 Order/red tweaks: INVENTORY leads with "Total items (all users)" (red); USERS
 "Total registered users" is red; SUBSCRIPTIONS leads with "TOTAL SUBSCRIBERS"
