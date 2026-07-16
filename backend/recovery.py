@@ -255,12 +255,28 @@ async def _build_full_snapshot(
     if encrypt and not passphrase:
         passphrase = generate_passphrase()
 
-    bundle: Dict[str, List[Dict[str, Any]]] = {}
+    # Stream the ENTIRE database to a temp file on disk, one document at a time,
+    # so peak memory stays FLAT regardless of how large the DB grows (never hold
+    # a whole collection — or the whole db.json — in RAM). Output is identical to
+    # json.dumps({coll: [...docs]}) so the restore path is unchanged.
+    import tempfile
+    db_fd, db_json_path = tempfile.mkstemp(suffix=".json", prefix="tbv_db_")
+    os.close(db_fd)
     total = 0
-    for coll in backups.BACKUP_COLLECTIONS:
-        rows = await real_db[coll].find({}, {"_id": 0}).to_list(length=None)
-        bundle[coll] = rows
-        total += len(rows)
+    with open(db_json_path, "w", encoding="utf-8") as jf:
+        jf.write("{")
+        for ci, coll in enumerate(backups.BACKUP_COLLECTIONS):
+            if ci:
+                jf.write(",")
+            jf.write(json.dumps(coll) + ":[")
+            first = True
+            async for doc in real_db[coll].find({}, {"_id": 0}):
+                jf.write(("" if first else ",") + json.dumps(doc, default=str))
+                first = False
+                total += 1
+            jf.write("]")
+            await asyncio.sleep(0)  # yield between collections
+        jf.write("}")
 
     def _read(p: str) -> str:
         try:
@@ -328,7 +344,6 @@ async def _build_full_snapshot(
             "- ENV: copy values from backend.env/frontend.env into the new project.\n"
         )
         members = {
-            "db.json": json.dumps(bundle, default=str).encode("utf-8"),
             "manifest.json": json.dumps(manifest, indent=2).encode("utf-8"),
             "RESTORE.md": restore_md.encode("utf-8"),
             "code/frontend_src.tar.gz": fe,
@@ -338,24 +353,32 @@ async def _build_full_snapshot(
             members["backend.env"] = backend_env.encode("utf-8")
         if frontend_env:
             members["frontend.env"] = frontend_env.encode("utf-8")
-        # Free the in-memory collections now that db.json bytes are built — keeps
-        # peak memory to ~one copy instead of several (prevents OOM on big DBs).
-        bundle.clear()
 
         if encrypt:
+            # Rare path (unused by auto/Drive backups): read db.json into memory.
+            with open(db_json_path, "rb") as dbf:
+                members["db.json"] = dbf.read()
             data = _build_encrypted_zip(members, passphrase)  # type: ignore[arg-type]
             with open(out_path, "wb") as fh:
                 fh.write(data)
             return
-        # Write the ZIP straight to disk (never hold the whole archive in RAM).
+        # Write the ZIP straight to disk; db.json is streamed FROM its temp file
+        # (never loaded into RAM) — memory stays flat at any DB size.
         with zipfile.ZipFile(out_path, "w", zipfile.ZIP_DEFLATED, compresslevel=6) as zf:
             for name, data in members.items():
                 zf.writestr(name, data)
+            zf.write(db_json_path, arcname="db.json")
 
     import tempfile
     fd, tmp_path = tempfile.mkstemp(suffix=".zip", prefix="tbv_snapshot_")
     os.close(fd)
-    await asyncio.to_thread(_encode, tmp_path)
+    try:
+        await asyncio.to_thread(_encode, tmp_path)
+    finally:
+        try:
+            os.remove(db_json_path)  # drop the intermediate DB dump
+        except Exception:
+            pass
     size_bytes = os.path.getsize(tmp_path)
     filename = f"{now.strftime('%m-%d-%Y %H-%M')} FULL SNAPSHOT.zip"
     return {
