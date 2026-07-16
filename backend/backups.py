@@ -51,10 +51,21 @@ def _backup_bucket(db) -> AsyncIOMotorGridFSBucket:
     return AsyncIOMotorGridFSBucket(db, bucket_name=_BACKUP_BUCKET)
 
 
-async def _store_payload(db, backup_id: str, zip_bytes: bytes) -> str:
-    """Upload the ZIP into GridFS and return the file id (as a string)."""
-    gid = await _backup_bucket(db).upload_from_stream(f"{backup_id}.zip", zip_bytes)
-    return str(gid)
+async def _store_payload_from_file(db, backup_id: str, zip_path: str) -> str:
+    """Stream a ZIP file on disk into GridFS in chunks (never loads the whole
+    file into RAM). Returns the GridFS file id as a string. This keeps the
+    in-app backup copy flat-memory regardless of how large the DB grows."""
+    grid_in = _backup_bucket(db).open_upload_stream(f"{backup_id}.zip")
+    try:
+        with open(zip_path, "rb") as fh:
+            while True:
+                chunk = fh.read(8 * 1024 * 1024)  # 8MB at a time
+                if not chunk:
+                    break
+                await grid_in.write(chunk)
+    finally:
+        await grid_in.close()
+    return str(grid_in._id)
 
 
 async def _load_payload(db, doc: Dict[str, Any]) -> bytes:
@@ -103,9 +114,6 @@ BACKUP_COLLECTIONS = [
 # Retention: keep the 12 most recent backups; older ones auto-pruned.
 MAX_BACKUPS_RETAINED = 12
 
-# Compression-then-base64 encoded payloads can be large; cap at 100 MB.
-MAX_BACKUP_BYTES = 100 * 1024 * 1024
-
 
 class BackupListItem(BaseModel):
     id: str
@@ -134,20 +142,37 @@ async def _create_backup_doc(db, *, trigger: str) -> Dict[str, Any]:
         • manifest.json    — metadata (timestamp, doc counts, schema version)
         • RESTORE.md       — human-readable recovery instructions
 
-    The ZIP is base64-encoded for storage in Mongo. Future restore-from-snapshot
-    flow extracts back the same files.
+    FLAT MEMORY: db.json is streamed to a temp file on disk one document at a
+    time, and the ZIP is written straight to disk — peak RAM stays constant no
+    matter how large the DB grows. The finished ZIP is then streamed into GridFS
+    in chunks, so there is NO size cap anywhere in this path.
     """
     import uuid
+    import tempfile
     import zipfile
 
     now = datetime.now(timezone.utc)
-    bundle: Dict[str, List[Dict[str, Any]]] = {}
-    total_docs = 0
 
-    for coll_name in BACKUP_COLLECTIONS:
-        rows = await db[coll_name].find({}, {"_id": 0}).to_list(length=None)
-        bundle[coll_name] = rows
-        total_docs += len(rows)
+    # 1) Stream the ENTIRE database to a temp file on disk, one document at a
+    #    time. Output is identical to json.dumps({coll: [...docs]}) so the
+    #    restore path is unchanged.
+    db_fd, db_json_path = tempfile.mkstemp(suffix=".json", prefix="tbv_dbdoc_")
+    os.close(db_fd)
+    total_docs = 0
+    with open(db_json_path, "w", encoding="utf-8") as jf:
+        jf.write("{")
+        for ci, coll_name in enumerate(BACKUP_COLLECTIONS):
+            if ci:
+                jf.write(",")
+            jf.write(json.dumps(coll_name) + ":[")
+            first = True
+            async for doc in db[coll_name].find({}, {"_id": 0}):
+                jf.write(("" if first else ",") + json.dumps(doc, default=str))
+                first = False
+                total_docs += 1
+            jf.write("]")
+            await asyncio.sleep(0)  # yield between collections
+        jf.write("}")
 
     # Snapshot .env files (best-effort — if they don't exist we skip silently).
     def _read_env(path: str) -> str:
@@ -188,30 +213,38 @@ async def _create_backup_doc(db, *, trigger: str) -> Dict[str, Any]:
         "4. Restart backend if env was changed\n"
     )
 
-    def _encode() -> bytes:
-        """Build the ZIP in a worker thread (avoids blocking event loop)."""
-        buf = io.BytesIO()
-        with zipfile.ZipFile(buf, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=6) as zf:
-            zf.writestr("db.json", json.dumps(bundle, default=str, indent=2))
+    # 2) Build the ZIP straight to disk. db.json is streamed FROM its temp file
+    #    (never loaded into RAM) — memory stays flat at any DB size.
+    def _encode(out_path: str) -> None:
+        with zipfile.ZipFile(out_path, "w", zipfile.ZIP_DEFLATED, compresslevel=6) as zf:
             if backend_env:
                 zf.writestr("backend.env", backend_env)
             if frontend_env:
                 zf.writestr("frontend.env", frontend_env)
             zf.writestr("manifest.json", json.dumps(manifest, indent=2))
             zf.writestr("RESTORE.md", restore_md)
-        return buf.getvalue()
+            zf.write(db_json_path, arcname="db.json")
 
-    zip_bytes = await asyncio.to_thread(_encode)
-    if len(zip_bytes) > MAX_BACKUP_BYTES:
-        raise HTTPException(
-            413,
-            f"Backup payload {_human_size(len(zip_bytes))} exceeds the "
-            f"{_human_size(MAX_BACKUP_BYTES)} cap. Migrate to external storage.",
-        )
+    zip_fd, zip_path = tempfile.mkstemp(suffix=".zip", prefix="tbv_dbbackup_")
+    os.close(zip_fd)
+    try:
+        await asyncio.to_thread(_encode, zip_path)
+    finally:
+        try:
+            os.remove(db_json_path)  # drop the intermediate DB dump
+        except Exception:
+            pass
 
+    size_bytes = os.path.getsize(zip_path)
     backup_id = str(uuid.uuid4())
-    # Store the (potentially >16MB) ZIP in GridFS, not inline in the document.
-    gridfs_id = await _store_payload(db, backup_id, zip_bytes)
+    try:
+        # 3) Stream the ZIP into GridFS in chunks (no size limit, flat memory).
+        gridfs_id = await _store_payload_from_file(db, backup_id, zip_path)
+    finally:
+        try:
+            os.remove(zip_path)
+        except Exception:
+            pass
 
     doc = {
         "id": backup_id,
@@ -219,7 +252,7 @@ async def _create_backup_doc(db, *, trigger: str) -> Dict[str, Any]:
         "trigger": trigger,
         "collections": BACKUP_COLLECTIONS,
         "document_count": total_docs,
-        "size_bytes": len(zip_bytes),
+        "size_bytes": size_bytes,
         "gridfs_id": gridfs_id,
         "format": "zip",  # marker so future code can tell new ZIPs from old gzip
     }
