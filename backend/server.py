@@ -166,6 +166,10 @@ register_dealer_routes(api_router)
 from routes_tools import register_tools_routes  # noqa: E402
 register_tools_routes(api_router)
 
+# ---------- Community Product Database (crowdsourced catalog) ----------
+from community import register_community_routes  # noqa: E402
+register_community_routes(api_router)
+
 # ---------- Prefilled Demo System ----------
 class DemoClearRequest(BaseModel):
     mode: str = "keep_taxonomy"  # "everything" | "keep_taxonomy"

@@ -342,6 +342,16 @@ export default function MoreScreen() {
   // Prefilled Demo System — show the "Delete Prefilled Information" row only
   // while seeded demo data is still present on the account.
   const [demoPresent, setDemoPresent] = useState(false);
+  const [communityOptIn, setCommunityOptIn] = useState(true);
+  const onToggleCommunity = useCallback(async (v: boolean) => {
+    setCommunityOptIn(v); // optimistic
+    try {
+      await api.setCommunitySettings(v);
+    } catch (e: any) {
+      setCommunityOptIn(!v); // revert on failure
+      Alert.alert("Couldn't update", String(e?.message || e));
+    }
+  }, []);
   // Red-dot when the admin has published new roadmap items since this user's
   // last visit to Upcoming Features (cleared globally on that screen).
   const upcomingNew = useUpcomingBadge();
@@ -382,6 +392,12 @@ export default function MoreScreen() {
       setDemoPresent(!!ds?.present);
     } catch {
       setDemoPresent(false);
+    }
+    try {
+      const cs = await api.getCommunitySettings();
+      setCommunityOptIn(!!cs?.opt_in);
+    } catch {
+      // leave as-is
     }
   }, []);
   useEffect(() => {
@@ -930,6 +946,20 @@ export default function MoreScreen() {
         </SectionCard>
 
         <SectionCard title="ACCOUNT" testID="more-section-account">
+          <SectionRow
+            icon="people-circle"
+            title="Contribute to Community Catalog"
+            subtitle="Share non-personal item info (brand, model, name) to power model # lookups. Never shares serial #, price or notes."
+            rightSlot={
+              <AppSwitch
+                testID="toggle-community"
+                value={communityOptIn}
+                onValueChange={onToggleCommunity}
+                trackColor={{ true: theme.colors.accent, false: theme.colors.border }}
+                thumbColor="#fff"
+              />
+            }
+          />
           <SectionRow
             icon="person-circle"
             title="Personal Information"

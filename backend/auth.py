@@ -35,6 +35,10 @@ class User(BaseModel):
     email: str
     password_hash: str
     name: Optional[str] = ""
+    # Community Product Database: contribute this user's non-personal item data
+    # (brand, model, name, category, tags, MSRP, dealer name, consumable flag)
+    # to the shared catalog. Default ON; user can opt out in Settings.
+    community_opt_in: bool = True
     created_at: str = Field(default_factory=now_iso)
     updated_at: str = Field(default_factory=now_iso)
 

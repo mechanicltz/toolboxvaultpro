@@ -50,6 +50,17 @@ export function AddChooser({
         <View style={styles.sheet}>
           <Text style={styles.title}>WHAT DO YOU WANT TO ADD?</Text>
 
+          <TouchableOpacity testID="add-choose-quick" style={styles.option} onPress={() => go("/quick-add")}>
+            <View style={[styles.iconWrap, { backgroundColor: theme.colors.accent + "1F" }]}>
+              <Ionicons name="flash" size={22} color={theme.colors.accent} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.optTitle}>Quick Add</Text>
+              <Text style={styles.optSub}>Look up a model # in the community catalog</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color={theme.colors.textMuted} />
+          </TouchableOpacity>
+
           <TouchableOpacity testID="add-choose-item" style={styles.option} onPress={addItem}>
             <View style={[styles.iconWrap, { backgroundColor: theme.colors.accent + "1F" }]}>
               <Ionicons name="construct" size={22} color={theme.colors.accent} />

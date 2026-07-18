@@ -20,10 +20,11 @@ from typing import List, Dict, Any, Optional
 from pydantic import BaseModel
 from fastapi import APIRouter, HTTPException, Depends
 
-from core import db, real_db, get_current_user
+from core import db, real_db, get_current_user, current_user_id_var
 from auth import User
 from helpers import build_tool_query, _validate_photo_payload
 from routes_taxonomy import _ensure_brand_saved, _ensure_size_saved
+import community
 import media
 from models import now_iso, ToolCreate, ToolUpdate, Tool, RepairInfo, Category, Location, Dealer, Tag, WarrantyClaim
 
@@ -167,6 +168,12 @@ def register_tools_routes(api_router: APIRouter) -> None:
         # tools see it as a typeahead suggestion (per user 2026-05-27).
         await _ensure_brand_saved(tool.brand)
         await _ensure_size_saved(tool.size)
+        # Community catalog dual-write (non-personal fields only), if opted in.
+        if getattr(user, "community_opt_in", True):
+            try:
+                await community.contribute_tool(real_db, user.id, tool.dict())
+            except Exception as _ce:
+                logging.getLogger(__name__).warning("community contribute failed: %s", _ce)
         return tool
 
 
@@ -903,6 +910,15 @@ def register_tools_routes(api_router: APIRouter) -> None:
         # tools see it as a typeahead suggestion (per user 2026-05-27).
         await _ensure_brand_saved(new_doc.get("brand"))
         await _ensure_size_saved(new_doc.get("size"))
+        # Community catalog dual-write — keep this user's votes in sync on edit.
+        _uid = current_user_id_var.get()
+        if _uid:
+            try:
+                _u = await real_db.users.find_one({"id": _uid}, {"_id": 0, "community_opt_in": 1})
+                if not _u or _u.get("community_opt_in", True):
+                    await community.contribute_tool(real_db, _uid, new_doc)
+            except Exception as _ce:
+                logging.getLogger(__name__).warning("community contribute (update) failed: %s", _ce)
         return Tool(**new_doc)
 
 
@@ -920,6 +936,13 @@ def register_tools_routes(api_router: APIRouter) -> None:
         # otherwise the dealer-claims summary keeps counting orphaned claims
         # but the detail screen can't resolve them back to a tool.
         await db.warranty_claims.delete_many({"tool_id": tool_id})
+        # Retract this tool's community contributions.
+        _uid = current_user_id_var.get()
+        if _uid:
+            try:
+                await community.retract_tool(real_db, _uid, tool_id)
+            except Exception as _ce:
+                logging.getLogger(__name__).warning("community retract failed: %s", _ce)
         return {"ok": True}
 
 

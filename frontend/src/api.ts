@@ -954,6 +954,22 @@ export const api = {
   updateSize: (id: string, data: any) => request<any>(`/sizes/${id}`, { method: "PUT", body: JSON.stringify(data) }),
   deleteSize: (id: string) => request<any>(`/sizes/${id}`, { method: "DELETE" }),
 
+  // ---------- Community Product Database (crowdsourced catalog) ----------
+  communityLookup: (model: string, brand?: string) =>
+    request<{ branch: "none" | "one" | "multiple"; matches: any[] }>(
+      `/community/lookup?model=${encodeURIComponent(model)}${
+        brand ? `&brand=${encodeURIComponent(brand)}` : ""
+      }`,
+    ),
+  communityProfile: (profileKey: string) =>
+    request<any>(`/community/profile/${encodeURIComponent(profileKey)}`),
+  getCommunitySettings: () => request<{ opt_in: boolean }>(`/community/settings`),
+  setCommunitySettings: (optIn: boolean) =>
+    request<any>(`/community/settings`, {
+      method: "PUT",
+      body: JSON.stringify({ opt_in: optIn }),
+    }),
+
   // Categories
   listCategories: () => request<any[]>(`/categories`),
   createCategory: (data: any) => request<any>(`/categories`, { method: "POST", body: JSON.stringify(data) }),
