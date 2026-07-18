@@ -63,9 +63,10 @@ export default function CommunityCatalogScreen() {
   }, []);
 
   useEffect(() => {
+    // Categories load once; the debounced effect below handles the initial and
+    // all subsequent list loads (so we don't fire two requests on mount).
     api.communityCategories().then((r) => setCats(r.categories || [])).catch(() => {});
-    load("", "");
-  }, [load]);
+  }, []);
 
   useEffect(() => {
     if (debounce.current) clearTimeout(debounce.current);
