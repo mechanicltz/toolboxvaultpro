@@ -210,3 +210,28 @@ add 4–5 as fast-follows once data volume exists.
 > NEXT ACTION WHEN REVISITING: get answers to Section 7, then agent produces the
 > concrete build plan (collections + API surface + screen list + phase detail).
 > Do NOT re-run analysis — everything is captured here.
+
+---
+
+## PHASE 1 — IMPLEMENTED (June 2026)
+
+Locked decisions: opt-in toggle default ON (opt-out anytime, retracts contributions); consensus threshold = 2 distinct users; show-card-to-import (no silent autofill); dedicated Quick Add popup; bootstrap existing items (wired, run in PRODUCTION only — NOT yet run on live data).
+
+Privacy split — PUBLIC: name, brand, model, category, tags, MSRP, dealer name, consumable. PRIVATE (never shared): serial #, price/cost, purchase date, warranty, maintenance, notes, location, receipts, documents, photos.
+
+Backend (`/app/backend/community.py`, global collections via `real_db`):
+- `community_contributions` (per-user field votes) + `community_profiles` (canonical Brand+Model, contributor_count).
+- Endpoints: GET `/community/lookup` (branch none/one/multiple), GET `/community/profile/{key}`, GET/PUT `/community/settings`, POST `/community/admin/bootstrap` (admin only).
+- Dual-write hooks in create/update/delete tool (routes_tools.py); opt-out retracts, opt-in re-contributes.
+- Quality layers: consensus gating (>=2 users OR self), length/profanity/gibberish filter. Values shown only if >= threshold (or the requester's own).
+
+Frontend:
+- `app/quick-add.tsx` — model# lookup, 3-branch UI, import checkboxes w/ counts, personal fields (dealer/date/price), creates tool then opens editor.
+- `AddChooser` — new "Quick Add" option (first).
+- `more.tsx` ACCOUNT — "Contribute to Community Catalog" toggle (default ON).
+
+Verified: backend curl (all flows incl. consensus, retraction, brand narrowing) + testing_agent iteration_90 (frontend 5/5 pass).
+
+### TODO before/at production
+- RUN `/community/admin/bootstrap` ONCE after deploy to roll existing live items into the catalog.
+- Phase 2 (not started): AI cleanup, community photos, price stats, bundles. Phase 3: reputation + moderation.
