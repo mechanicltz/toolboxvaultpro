@@ -2300,9 +2300,6 @@ export default function ToolDetail() {
         {eLabel("BRAND", "ribbon")}
         <BrandAutocomplete value={form.brand} onChange={(v) => setF({ brand: v })} inputStyle={styles.input} testID="edit-brand" />
 
-        {eLabel("SIZE", "resize")}
-        <SizeAutocomplete value={form.size} onChange={(v) => setF({ size: v })} inputStyle={styles.input} testID="edit-size" />
-
         {eLabel(form.model_numbers.length > 1 ? "MODEL NUMBERS" : "MODEL #", "barcode")}
         {form.model_numbers.map((m: string, i: number) => (
           <View key={`mn-${i}`} style={newStyles.editArrRow}>
@@ -2318,6 +2315,9 @@ export default function ToolDetail() {
           <Ionicons name="add-circle-outline" size={16} color={theme.colors.accent} />
           <Text style={newStyles.editAddLineText}>ADD MODEL #</Text>
         </TouchableOpacity>
+
+        {eLabel("SIZE", "resize")}
+        <SizeAutocomplete value={form.size} onChange={(v) => setF({ size: v })} inputStyle={styles.input} testID="edit-size" />
 
         <View style={{ flexDirection: "row", gap: 10 }}>
           <View style={{ flex: 1 }}>
