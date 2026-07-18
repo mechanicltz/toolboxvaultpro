@@ -23,7 +23,7 @@ from fastapi import APIRouter, HTTPException, Depends
 from core import db, real_db, get_current_user
 from auth import User
 from helpers import build_tool_query, _validate_photo_payload
-from routes_taxonomy import _ensure_brand_saved
+from routes_taxonomy import _ensure_brand_saved, _ensure_size_saved
 import media
 from models import now_iso, ToolCreate, ToolUpdate, Tool, RepairInfo, Category, Location, Dealer, Tag, WarrantyClaim
 
@@ -166,6 +166,7 @@ def register_tools_routes(api_router: APIRouter) -> None:
         # Persist any new brand string to the brands collection so future
         # tools see it as a typeahead suggestion (per user 2026-05-27).
         await _ensure_brand_saved(tool.brand)
+        await _ensure_size_saved(tool.size)
         return tool
 
 
@@ -901,6 +902,7 @@ def register_tools_routes(api_router: APIRouter) -> None:
         # Persist any new brand string to the brands collection so future
         # tools see it as a typeahead suggestion (per user 2026-05-27).
         await _ensure_brand_saved(new_doc.get("brand"))
+        await _ensure_size_saved(new_doc.get("size"))
         return Tool(**new_doc)
 
 

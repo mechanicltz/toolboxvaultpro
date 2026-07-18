@@ -21,6 +21,7 @@ import {
 } from "react-native";
 import { AppSwitch } from "../../src/components/AppSwitch";
 import { BrandAutocomplete } from "../../src/components/BrandAutocomplete";
+import { SizeAutocomplete } from "../../src/components/SizeAutocomplete";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter, useFocusEffect } from "expo-router";
@@ -1816,6 +1817,7 @@ export default function ToolDetail() {
     setForm({
       name: freshUnsavedRef.current ? "" : (t.name || ""),
       brand: t.brand || "",
+      size: t.size || "",
       model_numbers: mns.length ? mns : [""],
       serial_numbers: sns.length ? sns : [""],
       cost: (t.cost != null && Number(t.cost) !== 0) ? String(t.cost) : "",
@@ -1893,6 +1895,7 @@ export default function ToolDetail() {
     const payload: any = {
       name: (form.name || "").trim() || (freshUnsavedRef.current ? (tool.is_bundle ? "New Set" : "New Item") : (tool.name || "")),
       brand: form.brand,
+      size: form.size,
       model_numbers: cleanModels,
       serial_numbers: cleanSerials,
       cost: parseFloat(form.cost) || 0,
@@ -2223,6 +2226,7 @@ export default function ToolDetail() {
           {vRow("PURCHASED", "calendar", tool.purchase_date ? formatDateUS(tool.purchase_date) : "—")}
           {vRow("DEALER", "business", tool.dealer_name || "—", tool.dealer_id ? () => router.push(`/dealer/${tool.dealer_id}`) : undefined)}
           {vRow("BRAND", "ribbon", tool.brand ? String(tool.brand) : "—")}
+          {vRow("SIZE", "resize", tool.size ? String(tool.size) : "—")}
           <View style={[newStyles.detailsRow]}>
             <View style={newStyles.detailsLabelWrap}>
               <Ionicons name="barcode" size={13} color={theme.colors.accent} />
@@ -2295,6 +2299,9 @@ export default function ToolDetail() {
 
         {eLabel("BRAND", "ribbon")}
         <BrandAutocomplete value={form.brand} onChange={(v) => setF({ brand: v })} inputStyle={styles.input} testID="edit-brand" />
+
+        {eLabel("SIZE", "resize")}
+        <SizeAutocomplete value={form.size} onChange={(v) => setF({ size: v })} inputStyle={styles.input} testID="edit-size" />
 
         {eLabel(form.model_numbers.length > 1 ? "MODEL NUMBERS" : "MODEL #", "barcode")}
         {form.model_numbers.map((m: string, i: number) => (

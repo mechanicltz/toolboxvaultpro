@@ -948,6 +948,12 @@ export const api = {
   updateBrand: (id: string, data: any) => request<any>(`/brands/${id}`, { method: "PUT", body: JSON.stringify(data) }),
   deleteBrand: (id: string) => request<any>(`/brands/${id}`, { method: "DELETE" }),
 
+  // Sizes — typeahead source for the Size field on tools (grows from user input)
+  listSizes: () => request<any[]>(`/sizes`),
+  createSize: (data: any) => request<any>(`/sizes`, { method: "POST", body: JSON.stringify(data) }),
+  updateSize: (id: string, data: any) => request<any>(`/sizes/${id}`, { method: "PUT", body: JSON.stringify(data) }),
+  deleteSize: (id: string) => request<any>(`/sizes/${id}`, { method: "DELETE" }),
+
   // Categories
   listCategories: () => request<any[]>(`/categories`),
   createCategory: (data: any) => request<any>(`/categories`, { method: "POST", body: JSON.stringify(data) }),

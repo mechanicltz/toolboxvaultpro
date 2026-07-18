@@ -77,6 +77,20 @@ class BrandCreate(BaseModel):
     name: str
 
 
+# ---------- Sizes ----------
+# Sizes work exactly like Brands — each user-entered size string (e.g. 1/2",
+# 10mm, XL) is saved once and re-suggested as a typeahead option when filling
+# future tools, so the option list grows from the user's own input over time.
+class Size(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    name: str
+    created_at: str = Field(default_factory=now_iso)
+
+
+class SizeCreate(BaseModel):
+    name: str
+
+
 class Borrower(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     name: str
@@ -459,6 +473,7 @@ class Tool(BaseModel):
     name: str
     description: Optional[str] = ""
     brand: Optional[str] = ""
+    size: Optional[str] = ""
     # Legacy single-value fields (kept for backward compat with older app
     # builds and CSV import). New code reads/writes model_numbers / serial_numbers
     # arrays. See _resolve_model_serial_arrays() for the migration glue.
@@ -530,6 +545,7 @@ class ToolCreate(BaseModel):
     name: str
     description: Optional[str] = ""
     brand: Optional[str] = ""
+    size: Optional[str] = ""
     model: Optional[str] = ""
     serial_number: Optional[str] = ""
     model_numbers: Optional[List[str]] = None
@@ -570,6 +586,7 @@ class ToolUpdate(BaseModel):
     name: Optional[str] = None
     description: Optional[str] = None
     brand: Optional[str] = None
+    size: Optional[str] = None
     model: Optional[str] = None
     serial_number: Optional[str] = None
     model_numbers: Optional[List[str]] = None

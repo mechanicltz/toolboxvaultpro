@@ -15,6 +15,7 @@ from models import (
     Location, LocationCreate, LocationUpdate,
     Tag, TagCreate, Category, CategoryCreate,
     Brand, BrandCreate, Borrower, BorrowerCreate,
+    Size, SizeCreate,
 )
 
 
@@ -31,6 +32,22 @@ async def _ensure_brand_saved(brand_name: Optional[str]):
         return
     b = Brand(name=name)
     await db.brands.insert_one(b.dict())
+
+
+async def _ensure_size_saved(size_name: Optional[str]):
+    """Idempotent upsert — call after a tool save so any new size string is
+    immediately available in the typeahead for future tool entries (mirrors
+    _ensure_brand_saved)."""
+    name = (size_name or "").strip()
+    if not name:
+        return
+    existing = await db.sizes.find_one(
+        {"name": {"$regex": f"^{re.escape(name)}$", "$options": "i"}}, {"_id": 0}
+    )
+    if existing:
+        return
+    s = Size(name=name)
+    await db.sizes.insert_one(s.dict())
 
 
 def register_taxonomy_routes(api_router: APIRouter) -> None:
@@ -222,6 +239,58 @@ def register_taxonomy_routes(api_router: APIRouter) -> None:
             raise HTTPException(404, "Brand not found")
         updated = await db.brands.find_one({"id": brand_id}, {"_id": 0})
         return Brand(**updated)
+
+
+    # ---------- Sizes (typeahead source for the Size field on tools) ----------
+    # Same upsert / list / delete pattern as Brands. Sizes are auto-created when
+    # a tool is saved with a size that doesn't already exist (see
+    # _ensure_size_saved in create_tool / update_tool).
+    @api_router.post("/sizes", response_model=Size)
+    async def create_size(payload: SizeCreate):
+        name = (payload.name or "").strip()
+        if not name:
+            raise HTTPException(400, "Name required")
+        existing = await db.sizes.find_one(
+            {"name": {"$regex": f"^{re.escape(name)}$", "$options": "i"}}, {"_id": 0}
+        )
+        if existing:
+            return Size(**existing)
+        s = Size(name=name)
+        await db.sizes.insert_one(s.dict())
+        return s
+
+
+    @api_router.get("/sizes", response_model=List[Size])
+    async def list_sizes():
+        items = await db.sizes.find({}, {"_id": 0}).sort("name", 1).to_list(2000)
+        return [Size(**i) for i in items]
+
+
+    @api_router.delete("/sizes/{size_id}")
+    async def delete_size(size_id: str):
+        res = await db.sizes.delete_one({"id": size_id})
+        if res.deleted_count == 0:
+            raise HTTPException(404, "Size not found")
+        return {"ok": True}
+
+
+    @api_router.put("/sizes/{size_id}", response_model=Size)
+    async def update_size(size_id: str, payload: SizeCreate):
+        name = (payload.name or "").strip()
+        if not name:
+            raise HTTPException(400, "Name required")
+        dupe = await db.sizes.find_one(
+            {"name": {"$regex": f"^{re.escape(name)}$", "$options": "i"},
+             "id": {"$ne": size_id}},
+            {"_id": 0},
+        )
+        if dupe:
+            raise HTTPException(400, "A size with that name already exists")
+        res = await db.sizes.update_one({"id": size_id}, {"$set": {"name": name}})
+        if res.matched_count == 0:
+            raise HTTPException(404, "Size not found")
+        updated = await db.sizes.find_one({"id": size_id}, {"_id": 0})
+        return Size(**updated)
 
 
     # ---------- Categories ----------
