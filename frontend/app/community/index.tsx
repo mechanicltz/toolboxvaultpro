@@ -11,11 +11,13 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Stack, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { ResponsiveContainer } from "../../src/ResponsiveContainer";
 import { IndustrialBanner } from "../../src/components/IndustrialBanner";
-import { themedStyles } from "../../src/themeContext";
+import { themedStyles, useSkin } from "../../src/themeContext";
 import { theme } from "../../src/theme";
 import { api } from "../../src/api";
+import { TbvListPanel } from "../../src/tbv/components/TbvListPanel";
+import { useIsSteel, useSteelPanelFrame } from "../../src/tbv/steel";
+import { SKIN, CAP } from "../../src/tbv/skins";
 
 type Item = {
   profile_key: string;
@@ -35,6 +37,13 @@ const FIELD_LABELS: Record<string, string> = {
 
 export default function CommunityCatalogScreen() {
   const router = useRouter();
+  const { skin } = useSkin();
+  const isIndustrial = skin === "industrial";
+  const isSteel = useIsSteel();
+  const steelPanel = useSteelPanelFrame();
+  const winSrc = isSteel ? steelPanel.source : SKIN.window;
+  const winCap = isSteel ? steelPanel.capInsets : CAP.window;
+  const steelScale = isSteel ? steelPanel.frameScale : undefined;
   const [q, setQ] = useState("");
   const [cats, setCats] = useState<string[]>([]);
   const [activeCat, setActiveCat] = useState("");
@@ -105,7 +114,7 @@ export default function CommunityCatalogScreen() {
         onBack={() => router.back()}
         backIcon="chevron-back"
       />
-      <ResponsiveContainer>
+      <View style={styles.headerArea}>
         {/* Search */}
         <View style={styles.searchRow}>
           <Ionicons name="search" size={18} color={theme.colors.textSecondary} />
@@ -125,47 +134,67 @@ export default function CommunityCatalogScreen() {
           ) : null}
         </View>
 
-        {/* Category chips */}
+        {/* Category filter — horizontal scrolling menu bar */}
         {cats.length > 0 && (
-          <View style={styles.chips}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.chips}
+            contentContainerStyle={{ gap: 8, paddingRight: 16 }}
+            keyboardShouldPersistTaps="handled"
+          >
             <Chip label="All" active={activeCat === ""} onPress={() => setActiveCat("")} />
             {cats.map((c) => (
               <Chip key={c} label={c} active={activeCat === c} onPress={() => setActiveCat(activeCat === c ? "" : c)} />
             ))}
-          </View>
-        )}
-
-        {loading ? (
-          <ActivityIndicator color={theme.colors.accent} style={{ marginTop: 40 }} />
-        ) : items.length === 0 ? (
-          <View style={styles.empty}>
-            <Ionicons name="cube-outline" size={40} color={theme.colors.textMuted} />
-            <Text style={styles.emptyText}>
-              {q || activeCat ? "No matching products." : "The catalog is still filling up. Add tools with model numbers to help build it."}
-            </Text>
-          </View>
-        ) : (
-          <ScrollView contentContainerStyle={{ paddingBottom: 40 }} keyboardShouldPersistTaps="handled">
-            <Text style={styles.count}>{total} product{total === 1 ? "" : "s"}</Text>
-            {items.map((it) => (
-              <TouchableOpacity key={it.profile_key} style={styles.row} onPress={() => openDetail(it)} testID={`cc-row-${it.model}`}>
-                <View style={styles.rowIcon}>
-                  <Ionicons name="construct" size={18} color={theme.colors.accent} />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.rowBrand}>{it.brand || "Unknown"} · {it.model}</Text>
-                  <Text style={styles.rowName} numberOfLines={1}>{it.official_name || "—"}</Text>
-                  {!!it.category && <Text style={styles.rowCat}>{it.category}</Text>}
-                </View>
-                <View style={styles.usersPill}>
-                  <Ionicons name="people" size={12} color={theme.colors.textSecondary} />
-                  <Text style={styles.usersText}>{it.contributor_count}</Text>
-                </View>
-              </TouchableOpacity>
-            ))}
           </ScrollView>
         )}
-      </ResponsiveContainer>
+      </View>
+
+      {/* Everything below sits in ONE themed panel that scrolls */}
+      {(() => {
+        const listInner = (
+          <ScrollView contentContainerStyle={{ padding: isIndustrial ? 0 : 4, paddingBottom: 40 }} keyboardShouldPersistTaps="handled">
+            {loading ? (
+              <ActivityIndicator color={theme.colors.accent} style={{ marginTop: 40 }} />
+            ) : items.length === 0 ? (
+              <View style={styles.empty}>
+                <Ionicons name="cube-outline" size={40} color={theme.colors.textMuted} />
+                <Text style={styles.emptyText}>
+                  {q || activeCat ? "No matching products." : "The catalog is still filling up. Add tools with model numbers to help build it."}
+                </Text>
+              </View>
+            ) : (
+              <>
+                <Text style={styles.count}>{total} product{total === 1 ? "" : "s"}</Text>
+                {items.map((it) => (
+                  <TouchableOpacity key={it.profile_key} style={styles.row} onPress={() => openDetail(it)} testID={`cc-row-${it.model}`}>
+                    <View style={styles.rowIcon}>
+                      <Ionicons name="construct" size={18} color={theme.colors.accent} />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.rowBrand}>{it.brand || "Unknown"} · {it.model}</Text>
+                      <Text style={styles.rowName} numberOfLines={1}>{it.official_name || "—"}</Text>
+                      {!!it.category && <Text style={styles.rowCat}>{it.category}</Text>}
+                    </View>
+                    <View style={styles.usersPill}>
+                      <Ionicons name="people" size={12} color={theme.colors.textSecondary} />
+                      <Text style={styles.usersText}>{it.contributor_count}</Text>
+                    </View>
+                  </TouchableOpacity>
+                ))}
+              </>
+            )}
+          </ScrollView>
+        );
+        return isIndustrial ? (
+          <TbvListPanel source={winSrc} capInsets={winCap} frameScale={steelScale} style={styles.listPanel} padX={28} padTop={20} padBottom={14}>
+            {listInner}
+          </TbvListPanel>
+        ) : (
+          <View style={styles.listPanelPlain}>{listInner}</View>
+        );
+      })()}
 
       {/* Detail modal */}
       <Modal visible={!!sel} transparent animationType="slide" onRequestClose={() => setSel(null)}>
@@ -236,14 +265,17 @@ const chipStyles = themedStyles((c) => ({
 }));
 
 const styles = themedStyles((c) => ({
-  container: { flex: 1, backgroundColor: c.bg },
+  container: { flex: 1, backgroundColor: c.canvas },
+  headerArea: { paddingHorizontal: 12, paddingTop: 4 },
   searchRow: {
     flexDirection: "row", alignItems: "center", gap: 10,
     backgroundColor: c.surface, borderRadius: 10, borderWidth: 1, borderColor: c.border,
     paddingHorizontal: 12, paddingVertical: 11, marginTop: 12,
   },
   searchInput: { flex: 1, color: c.textPrimary, fontSize: 14, padding: 0 },
-  chips: { marginTop: 12, flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  chips: { marginTop: 12, flexGrow: 0 },
+  listPanel: { flex: 1, marginHorizontal: 12, marginTop: 10, marginBottom: 8 },
+  listPanelPlain: { flex: 1, paddingHorizontal: 12, marginTop: 8 },
   count: { color: c.textMuted, fontSize: 11, fontWeight: "700", marginTop: 14, marginBottom: 6, letterSpacing: 0.5 },
   row: {
     flexDirection: "row", alignItems: "center", gap: 12,

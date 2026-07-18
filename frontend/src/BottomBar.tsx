@@ -66,6 +66,7 @@ const TABS: {
 }[] = [
   { name: "home", label: "DASHBOARD", icon: "home", route: "/" },
   { name: "inventory", label: "INVENTORY", icon: "construct", route: "/inventory" },
+  { name: "catalog", label: "CATALOG", icon: "library", route: "/community" },
   {
     name: "contacts",
     label: "CONTACTS",
@@ -164,7 +165,7 @@ export function BottomBar() {
                 <View>
                   <Ionicons
                     name={t.icon}
-                    size={isPhone ? 22 : 26}
+                    size={isPhone ? 21 : 26}
                     color={active ? theme.colors.accent : theme.colors.textMuted}
                   />
                   {t.name === "more" && upcomingNew > 0 ? (
@@ -256,12 +257,12 @@ const styles = themedStyles((c) => ({
     alignItems: "center",
     justifyContent: "center",
     gap: 4,
-    paddingHorizontal: 2,
+    paddingHorizontal: 1,
   },
   label: {
     fontSize: 7,
     fontWeight: "800",
-    letterSpacing: 0.5,
+    letterSpacing: 0.3,
   },
   countBadge: {
     position: "absolute",

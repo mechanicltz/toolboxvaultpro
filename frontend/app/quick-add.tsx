@@ -4,15 +4,15 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  ScrollView,
   ActivityIndicator,
   Alert,
 } from "react-native";
+import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Stack, useRouter, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { ResponsiveContainer } from "../src/ResponsiveContainer";
 import { IndustrialBanner } from "../src/components/IndustrialBanner";
+import { SkinPlate } from "../src/components/SkinPlate";
 import { DateField } from "../src/DateField";
 import { themedStyles } from "../src/themeContext";
 import { theme } from "../src/theme";
@@ -173,14 +173,18 @@ export default function QuickAddScreen() {
         onBack={() => router.back()}
         backIcon="chevron-back"
       />
-      <ResponsiveContainer>
-        <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingBottom: 40 }}>
-          <TouchableOpacity style={styles.browseLink} onPress={() => router.push("/community" as any)} testID="qa-browse">
-            <Ionicons name="library-outline" size={16} color={theme.colors.accent} />
-            <Text style={styles.browseLinkText}>Browse the community catalog</Text>
-            <Ionicons name="chevron-forward" size={16} color={theme.colors.accent} />
-          </TouchableOpacity>
+      <KeyboardAwareScrollView
+        keyboardShouldPersistTaps="handled"
+        bottomOffset={24}
+        contentContainerStyle={{ padding: 14, paddingBottom: 160 }}
+      >
+        <TouchableOpacity style={styles.browseLink} onPress={() => router.push("/community" as any)} testID="qa-browse">
+          <Ionicons name="library-outline" size={16} color={theme.colors.accent} />
+          <Text style={styles.browseLinkText}>Browse the community catalog</Text>
+          <Ionicons name="chevron-forward" size={16} color={theme.colors.accent} />
+        </TouchableOpacity>
 
+        <SkinPlate frame="window" style={styles.panel} padX={14} padTop={6} padBottom={16}>
           {/* Model # */}
           <Text style={styles.label}>MODEL / PART #</Text>
           <View style={styles.inputRow}>
@@ -297,6 +301,7 @@ export default function QuickAddScreen() {
               keyboardType="decimal-pad"
             />
           </View>
+        </SkinPlate>
 
           <TouchableOpacity
             testID="qa-save"
@@ -313,14 +318,14 @@ export default function QuickAddScreen() {
               </>
             )}
           </TouchableOpacity>
-        </ScrollView>
-      </ResponsiveContainer>
+      </KeyboardAwareScrollView>
     </SafeAreaView>
   );
 }
 
 const styles = themedStyles((c) => ({
-  container: { flex: 1, backgroundColor: c.bg },
+  container: { flex: 1, backgroundColor: c.canvas },
+  panel: { marginTop: 12 },
   label: { color: c.textMuted, fontSize: 11, fontWeight: "800", letterSpacing: 0.5, marginTop: 16, marginBottom: 6 },
   browseLink: {
     flexDirection: "row",
