@@ -1,0 +1,27 @@
+{
+  "summary": "Retested Community Catalog category filter (iteration_91 fix). The chip fix is CONFIRMED WORKING: chips are wrapped in a flex-wrap View with testIDs cc-cat-<label>, and tapping them correctly filters items via /community/browse?category=... All 5 chips (All, Power Tools, Hand Tools, Consumables, Test Equipment) are rendered and tappable. Hand Tools -> 6 products (SOEX710, FHF80, FHLF80, D213-9NE, 9012, 48-22-4025). Power Tools -> 6 products. All -> 15 products. Combined test: Hand Tools + search 'wrench' -> 2 products (SOEX710 + 9012). Clearing the search retains the Hand Tools filter (6 products). SEPARATE ISSUE FOUND: the IntroOverlay <video src='/assets/videos/intro.mp4'> DOM node lingers on web after navigation and intercepts the FIRST pointer click on /community, so the very first tap on a chip after page load gets swallowed (subsequent taps work fine). The IntroOverlay source file itself acknowledges this exact class of bug in its comments. This is a pre-existing overlay issue, not a regression from the iteration_91 fix.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "IntroOverlay", "issue": "The expo-video DOM <video src='/assets/videos/intro.mp4'> element lingers in the DOM after the overlay is dismissed and intercepts pointer events on subsequent screens. First tap on Community Catalog category chips (and likely elsewhere on the app on web) is swallowed by this lingering video overlay. Reproduces reliably on Playwright with force=True click; workaround is to dispatch pointerdown+pointerup+click, or to tap twice. Reference: /app/frontend/src/IntroOverlay.tsx (the comment on line 24-26 acknowledges the risk).", "testID": "n/a", "priority": "MEDIUM"}
+    ],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [],
+  "action_items": [
+    "The iteration_91 category-chip fix is verified working. No action needed on /community chips themselves.",
+    "SEPARATE (non-blocking for this iteration's scope): investigate why the IntroOverlay <video> DOM node persists on web after setGone(true). Possible fixes: (a) forcibly remove the DOM node in an effect cleanup (document.querySelector('video[src*=intro]')?.remove()), (b) render the whole overlay behind an outer wrapper whose pointerEvents is set to 'none' the moment gone=true, (c) route the intro to a modal/route that fully unmounts. Users can tap anywhere once to dismiss (already the behavior on the intended intro screen); the bug only manifests as a lost-first-tap on the NEXT screen."
+  ],
+  "critical_code_review_comments": [
+    "/app/frontend/app/community/index.tsx has two useEffects that both call load() on mount (the immediate load('', '') on line 67, and the debounced load in the [q, activeCat] effect which fires 350ms after mount as well). This yields two concurrent network calls whose responses can arrive out of order. Not user-visible today because both request the same data, but is a latent race for future changes. Consider gating the debounced effect with a mounted-ref or removing the immediate load."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "n/a (frontend-only per request)", "frontend": "100% for category filter functionality"},
+  "seed_data_creation": "None",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Category filter on /community works. If you test with a single force-click after fresh page load, the click may be swallowed by the IntroOverlay video DOM node still lingering — use dispatch_event('pointerdown')/('pointerup')/('click') or click twice. Real mobile touch users are less likely affected because the intro overlay is dismissed by a tap before they see the catalog, but the lingering DOM behavior is documented in IntroOverlay.tsx itself.",
+  "rca_of_issue": "First-tap-swallow RCA: /app/frontend/src/IntroOverlay.tsx uses expo-video's VideoView. When setGone(true) unmounts the React component, the underlying <video> DOM node is not always removed synchronously on web (documented behavior in the file's own comments, lines 24-26). During that gap, the video's parent <div> with pointerEvents='auto' (zIndex 9999) is still in the DOM and captures the first pointer event on subsequent screens. Reproduction: login → navigate to /community → first click on any interactive element is absorbed by the video overlay, not delivered to the target. Mitigation: after setGone(true), explicitly remove the video DOM node OR wrap the overlay with pointerEvents='none' toggled on gone=true. Not a blocker for the current review since chip logic itself is correct."
+}

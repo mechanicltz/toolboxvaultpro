@@ -126,12 +126,12 @@ export default function CommunityCatalogScreen() {
 
         {/* Category chips */}
         {cats.length > 0 && (
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chips} contentContainerStyle={{ gap: 8, paddingRight: 16 }}>
+          <View style={styles.chips}>
             <Chip label="All" active={activeCat === ""} onPress={() => setActiveCat("")} />
             {cats.map((c) => (
               <Chip key={c} label={c} active={activeCat === c} onPress={() => setActiveCat(activeCat === c ? "" : c)} />
             ))}
-          </ScrollView>
+          </View>
         )}
 
         {loading ? (
@@ -214,15 +214,20 @@ export default function CommunityCatalogScreen() {
 }
 
 function Chip({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) {
-  const styles = useChipStyles;
+  const styles = chipStyles;
   return (
-    <TouchableOpacity style={[styles.chip, active && styles.chipActive]} onPress={onPress}>
+    <TouchableOpacity
+      testID={`cc-cat-${label}`}
+      style={[styles.chip, active && styles.chipActive]}
+      onPress={onPress}
+      activeOpacity={0.7}
+    >
       <Text style={[styles.chipText, active && styles.chipTextActive]}>{label}</Text>
     </TouchableOpacity>
   );
 }
 
-const useChipStyles = themedStyles((c) => ({
+const chipStyles = themedStyles((c) => ({
   chip: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 16, backgroundColor: c.surface, borderWidth: 1, borderColor: c.border },
   chipActive: { backgroundColor: c.accent, borderColor: c.accent },
   chipText: { color: c.textSecondary, fontSize: 12, fontWeight: "700" },
@@ -237,7 +242,7 @@ const styles = themedStyles((c) => ({
     paddingHorizontal: 12, paddingVertical: 11, marginTop: 12,
   },
   searchInput: { flex: 1, color: c.textPrimary, fontSize: 14, padding: 0 },
-  chips: { marginTop: 12, flexGrow: 0 },
+  chips: { marginTop: 12, flexDirection: "row", flexWrap: "wrap", gap: 8 },
   count: { color: c.textMuted, fontSize: 11, fontWeight: "700", marginTop: 14, marginBottom: 6, letterSpacing: 0.5 },
   row: {
     flexDirection: "row", alignItems: "center", gap: 12,
