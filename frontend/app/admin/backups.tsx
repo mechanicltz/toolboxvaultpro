@@ -98,29 +98,21 @@ export default function AdminBackupsPage() {
   const [refreshing, setRefreshing] = useState(false);
   const [busyAction, setBusyAction] = useState<string | null>(null);
   const [gdrive, setGdrive] = useState<GdriveStatus | null>(null);
+  const [gdriveLoading, setGdriveLoading] = useState(false);
   const [gdriveFiles, setGdriveFiles] = useState<GdriveFile[] | null>(null);
   // Disaster-recovery UI state
   const [restoreTarget, setRestoreTarget] = useState<GdriveFile | null>(null);
   const [confirmEmailText, setConfirmEmailText] = useState("");
   const [recoveryResult, setRecoveryResult] = useState<string | null>(null);
 
-  const load = useCallback(async () => {
+  const loadDrive = useCallback(async () => {
+    // Google Drive calls hit the network (OAuth token refresh + file list) and
+    // can take several seconds. They run SEPARATELY so the main screen renders
+    // instantly instead of waiting on them (was a ~30s blank spinner).
+    setGdriveLoading(true);
     try {
-      const me = await api.adminWhoAmI();
-      if (!me.is_admin) {
-        setAllowed(false);
-        return;
-      }
-      setAllowed(true);
-      const [list, cfg, gd] = await Promise.all([
-        api.adminListBackups(),
-        api.adminBackupConfig(),
-        api.adminGdriveStatus().catch(() => ({ connected: false })),
-      ]);
-      setRows(list);
-      setConfig(cfg);
+      const gd = await api.adminGdriveStatus().catch(() => ({ connected: false }));
       setGdrive(gd as GdriveStatus);
-      // If connected, load file list too (best-effort)
       if ((gd as GdriveStatus).connected) {
         try {
           const f = await api.adminGdriveListFiles();
@@ -131,13 +123,35 @@ export default function AdminBackupsPage() {
       } else {
         setGdriveFiles(null);
       }
+    } finally {
+      setGdriveLoading(false);
+    }
+  }, []);
+
+  const load = useCallback(async () => {
+    try {
+      const me = await api.adminWhoAmI();
+      if (!me.is_admin) {
+        setAllowed(false);
+        return;
+      }
+      setAllowed(true);
+      // Fast, local-only data — renders the screen immediately.
+      const [list, cfg] = await Promise.all([
+        api.adminListBackups(),
+        api.adminBackupConfig(),
+      ]);
+      setRows(list);
+      setConfig(cfg);
     } catch (e: any) {
       Alert.alert("Failed to load backups", String(e?.message || e));
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+    // Load Drive status in the background (don't block the screen on it).
+    loadDrive();
+  }, [loadDrive]);
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
   // iOS suspends in-flight fetches when the app is backgrounded; on resume
@@ -226,9 +240,16 @@ export default function AdminBackupsPage() {
   const triggerFullBackup = useCallback(async () => {
     setBusyAction("full-backup");
     try {
-      const r = await api.adminBackupFullNow();
+      // Uses the BACKGROUND snapshot job (builds flat-memory, streams to Drive
+      // with resumable chunks, and polls for completion) so it works no matter
+      // how large the database gets and never hits the request timeout.
+      const r = await api.adminFullSnapshot();
       const driveLine = r.gdrive_uploaded
-        ? `\n☁️ Uploaded to Google Drive${r.gdrive_filename ? `\n📄 ${r.gdrive_filename}` : ""}`
+        ? `\n☁️ Uploaded to Google Drive${r.filename ? `\n📄 ${r.filename}` : ""}`
+        : r.gdrive_error === "auth_expired"
+        ? "\n⛔ Drive upload FAILED — reconnect Google Drive."
+        : r.gdrive_error === "upload_failed"
+        ? "\n⛔ Drive upload failed (network). It will retry on the next daily run."
         : "\n⚠️ Not uploaded to Drive (connect Google Drive to enable offsite copy).";
       Alert.alert(
         "Backup complete ✓",
@@ -519,7 +540,12 @@ export default function AdminBackupsPage() {
             />
             <Text style={styles.bannerTitle}>Google Drive (offsite backup)</Text>
           </View>
-          {gdrive?.connected ? (
+          {gdrive === null && gdriveLoading ? (
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginTop: 4 }}>
+              <ActivityIndicator size="small" color={theme.colors.accent} />
+              <Text style={styles.bannerLine}>Checking Google Drive…</Text>
+            </View>
+          ) : gdrive?.connected ? (
             <>
               <Text style={styles.bannerLine}>
                 Connected as <Text style={{ fontWeight: "900" }}>{gdrive.email}</Text>
@@ -530,7 +556,7 @@ export default function AdminBackupsPage() {
                   : "Loading file list…"}
               </Text>
               <Text style={styles.bannerLine}>
-                Daily backups auto-upload at 03:00 UTC. Keeps the 3 most recent and anything &lt; 30 days.
+                Daily backups auto-upload at 03:00 (US Central). Keeps the 3 most recent and anything &lt; 30 days.
               </Text>
               <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 12 }}>
                 <PillButton
@@ -593,7 +619,7 @@ export default function AdminBackupsPage() {
             <Text style={styles.bannerTitle}>Backup-down email alerts</Text>
           </View>
           <Text style={styles.bannerLine}>
-            A daily server check (03:00 UTC) emails the admin if offsite backups
+            A daily server check (03:00 US Central) emails the admin if offsite backups
             stop working — even if you never open the app. You will get one alert
             when it breaks, a weekly reminder while it is down, and a confirmation
             once it is fixed.
@@ -644,13 +670,14 @@ export default function AdminBackupsPage() {
           testID="admin-backup-trigger"
         >
           {busyAction === "full-backup" ? (
-            <ActivityIndicator color={theme.colors.bg} />
+            <>
+              <ActivityIndicator color={theme.colors.bg} />
+              <Text style={styles.triggerBtnText}>BACKING UP… (a few min)</Text>
+            </>
           ) : (
             <>
               <Ionicons name="cloud-upload" size={18} color={theme.colors.bg} />
-              <Text style={styles.triggerBtnText}>
-                {gdrive?.connected ? "BACKUP NOW (DB + DRIVE)" : "BACKUP NOW"}
-              </Text>
+              <Text style={styles.triggerBtnText}>BACK UP EVERYTHING NOW</Text>
             </>
           )}
         </TouchableOpacity>
@@ -665,7 +692,7 @@ export default function AdminBackupsPage() {
           </View>
           <Text style={styles.bannerLine}>
             One plain ZIP (no password) with ALL code + database + secrets,
-            pushed to Drive. Runs automatically every day at 03:00 UTC.
+            pushed to Drive. Runs automatically every day at 03:00 (US Central).
           </Text>
           <View style={{ marginTop: 12 }}>
             <PillButton

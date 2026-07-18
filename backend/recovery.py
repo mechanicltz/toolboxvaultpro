@@ -380,7 +380,8 @@ async def _build_full_snapshot(
         except Exception:
             pass
     size_bytes = os.path.getsize(tmp_path)
-    filename = f"{now.strftime('%m-%d-%Y %H-%M')} FULL SNAPSHOT.zip"
+    import app_time
+    filename = f"{app_time.local_stamp(now)} FULL SNAPSHOT.zip"
     return {
         "zip_path": tmp_path,
         "filename": filename,

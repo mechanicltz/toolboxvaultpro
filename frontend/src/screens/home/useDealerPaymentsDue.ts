@@ -50,8 +50,26 @@ const dueLabel = (days: number) =>
 export function useDealerPaymentsDue(
   dealers: DealerLike[],
   reload: () => void,
-): { paymentSubByDealer: Record<string, string> } {
+): {
+  paymentSubByDealer: Record<string, string>;
+  paymentsDueSoon: {
+    dealerId: string;
+    dealerName: string;
+    accountLabel: string;
+    amount: number;
+    days: number;
+    nextDue: string;
+  }[];
+} {
   const paymentSubByDealer: Record<string, string> = {};
+  const paymentsDueSoon: {
+    dealerId: string;
+    dealerName: string;
+    accountLabel: string;
+    amount: number;
+    days: number;
+    nextDue: string;
+  }[] = [];
   const duePaymentsNow: {
     dealerId: string;
     dealerName: string;
@@ -81,6 +99,17 @@ export function useDealerPaymentsDue(
           nextDue: e.sched.next_due_date,
         });
       }
+      // Feed item for anything due within the next 7 days (incl. overdue).
+      if (days <= 7) {
+        paymentsDueSoon.push({
+          dealerId: d.id,
+          dealerName: d.name,
+          accountLabel: e.label,
+          amount: Number(e.sched.amount) || 0,
+          days,
+          nextDue: e.sched.next_due_date,
+        });
+      }
       if (days <= 7 && (!soonest || days < soonest.days)) {
         soonest = { days, label: e.label, amount: Number(e.sched.amount) || 0 };
       }
@@ -91,6 +120,9 @@ export function useDealerPaymentsDue(
       paymentSubByDealer[d.id] = `${formatMoney(soonest.amount)} ${dueLabel(soonest.days)}`;
     }
   }
+
+  // Soonest first (overdue at the top).
+  paymentsDueSoon.sort((a, b) => a.days - b.days);
 
   const promptedRef = useRef<Set<string>>(new Set());
   const promptingRef = useRef(false);
@@ -158,5 +190,5 @@ export function useDealerPaymentsDue(
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dueKey, introDone, onbDone]);
 
-  return { paymentSubByDealer };
+  return { paymentSubByDealer, paymentsDueSoon };
 }

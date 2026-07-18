@@ -288,8 +288,11 @@ async def _create_backup_doc(db, *, trigger: str) -> Dict[str, Any]:
 
 
 async def _seconds_until_next_run() -> float:
-    """Return seconds until the next 03:00 UTC (i.e. once per day)."""
-    now = datetime.now(timezone.utc)
+    """Return seconds until the next 03:00 LOCAL time (America/Chicago by
+    default). Backups are stamped and scheduled in local time so a backup taken
+    'today' never shows tomorrow's date."""
+    import app_time
+    now = app_time.local_now()
     next_run = now.replace(hour=3, minute=0, second=0, microsecond=0)
     if next_run <= now:
         # 03:00 already passed today → schedule for tomorrow
@@ -364,6 +367,15 @@ async def _evaluate_backup_health(db, snapshot_result: Dict[str, Any]) -> Dict[s
             "healthy": True,
             "reason": "ok",
             "detail": "Offsite backup uploaded to Google Drive successfully.",
+        }
+    # Already uploaded earlier today (a later cycle skipped the redundant run).
+    # The drive guard is ONLY set on a real successful upload, so this reliably
+    # means today's offsite backup already succeeded → healthy.
+    if snapshot_result.get("reason") == "already_done_today":
+        return {
+            "healthy": True,
+            "reason": "ok",
+            "detail": "Offsite backup already completed today.",
         }
     # Snapshot didn't upload — inspect Drive status for the precise reason.
     try:
@@ -535,26 +547,64 @@ async def run_backup_health_check(db, snapshot_result: Optional[Dict[str, Any]] 
     return await _maybe_send_backup_alert(db, health)
 
 
+_SCHEDULER_STATE_ID = "backup_scheduler_state"
+
+
+async def _get_scheduler_state(db) -> Dict[str, Any]:
+    return await db.system_config.find_one({"_id": _SCHEDULER_STATE_ID}) or {}
+
+
+async def _set_scheduler_state(db, **fields) -> None:
+    await db.system_config.update_one(
+        {"_id": _SCHEDULER_STATE_ID}, {"$set": fields}, upsert=True,
+    )
+
+
 async def _run_scheduled_cycle(db, *, reason: str = "scheduled") -> None:
     """One full backup cycle: in-DB snapshot → Drive full snapshot → health check.
-    Shared by the daily 03:00 run and the self-healing catch-up run."""
-    try:
-        row = await _create_backup_doc(db, trigger="scheduled")
-        logger.info(
-            "Scheduled in-DB backup created (%s): %s (%s, %d docs)",
-            reason, row["id"], row["size_human"], row["document_count"],
-        )
-    except Exception as e:
-        logger.exception("Scheduled in-DB backup failed: %s", e)
-    # Push the FULL snapshot to Drive (best-effort).
-    snapshot_result: Dict[str, Any] = {"uploaded": False, "reason": "unknown"}
-    try:
-        snapshot_result = await _run_full_snapshot_to_drive(db, trigger="scheduled")
-    except Exception as drive_exc:
-        logger.warning("Scheduled full snapshot to Drive failed: %s", drive_exc)
-        snapshot_result = {"uploaded": False, "reason": "snapshot_error",
-                           "error": str(drive_exc)}
-    # Daily HEALTH CHECK: email the admin if offsite backup is down.
+
+    IDEMPOTENT PER LOCAL DAY: two independent guards ensure at most ONE in-DB
+    backup and ONE Drive upload per local calendar day, no matter how many times
+    the server restarts or the self-heal fires. A step that FAILS does not set
+    its guard, so it will be retried on the next loop (same day) until it works.
+    This is what prevents the "2-3 duplicate backups per day" problem.
+    """
+    import app_time
+    today = app_time.local_today_str()
+    state = await _get_scheduler_state(db)
+
+    # ---- 1) In-DB snapshot (local restore copy) — once per local day ----
+    if state.get("indb_local_date") != today:
+        try:
+            row = await _create_backup_doc(db, trigger="scheduled")
+            await _set_scheduler_state(db, indb_local_date=today)
+            logger.info(
+                "Scheduled in-DB backup created (%s): %s (%s, %d docs)",
+                reason, row["id"], row["size_human"], row["document_count"],
+            )
+        except Exception as e:
+            logger.exception("Scheduled in-DB backup failed (will retry): %s", e)
+    else:
+        logger.info("In-DB backup already done today (%s) — skipping.", today)
+
+    # ---- 2) Full snapshot → Google Drive — once per local day ----
+    snapshot_result: Dict[str, Any] = {"uploaded": False, "reason": "already_done_today"}
+    if state.get("drive_local_date") != today:
+        try:
+            snapshot_result = await _run_full_snapshot_to_drive(db, trigger="scheduled")
+            if snapshot_result.get("uploaded"):
+                # Only mark the day done on a REAL successful upload. If Drive is
+                # disconnected we intentionally leave the guard unset so the next
+                # cycle re-checks (cheap) and the health alert stays accurate.
+                await _set_scheduler_state(db, drive_local_date=today)
+        except Exception as drive_exc:
+            logger.warning("Scheduled full snapshot to Drive failed (will retry): %s", drive_exc)
+            snapshot_result = {"uploaded": False, "reason": "snapshot_error",
+                               "error": str(drive_exc)}
+    else:
+        logger.info("Drive snapshot already done today (%s) — skipping.", today)
+
+    # ---- 3) Daily HEALTH CHECK: email the admin if offsite backup is down ----
     try:
         result = await run_backup_health_check(db, snapshot_result)
         if not result["health"]["healthy"]:
@@ -566,44 +616,23 @@ async def _run_scheduled_cycle(db, *, reason: str = "scheduled") -> None:
         logger.exception("Backup health alert check failed: %s", alert_exc)
 
 
-async def _hours_since_last_backup(db) -> Optional[float]:
-    """Hours since the most recent backup of ANY trigger, or None if there are
-    no backups yet (treated as 'stale' → catch up immediately)."""
-    try:
-        last = await db.backups.find_one({}, sort=[("created_at", -1)])
-        if not last or not last.get("created_at"):
-            return None
-        created = datetime.fromisoformat(last["created_at"])
-        if created.tzinfo is None:
-            created = created.replace(tzinfo=timezone.utc)
-        return (datetime.now(timezone.utc) - created).total_seconds() / 3600.0
-    except Exception:
-        return None
-
-
 async def _scheduler_loop(get_db):
-    """Background task — runs forever, fires a backup daily at 03:00 UTC.
+    """Background task — runs forever, fires a backup daily at 03:00 LOCAL time.
 
-    SELF-HEALING: on every boot (and each loop), if no backup has succeeded in
-    the last 24h — because the process was asleep/restarted across 03:00, or a
-    previous run was failing — it runs a catch-up backup IMMEDIATELY instead of
-    waiting a whole day. This makes backups resilient to the daily window being
-    missed in production.
+    SELF-HEALING + DUPLICATE-PROOF: on every boot (and each loop) it runs the
+    backup cycle immediately. The cycle itself is guarded to be idempotent per
+    local calendar day (see _run_scheduled_cycle), so:
+      • a missed 03:00 window (pod asleep/restarted) is caught up right away, and
+      • repeated restarts in the same day can NOT create duplicate backups.
     """
-    logger.info("Backup scheduler started (daily @ 03:00 UTC + self-heal, keep last %d in DB)",
-                MAX_BACKUPS_RETAINED)
+    logger.info("Backup scheduler started (daily @ 03:00 local + self-heal, "
+                "idempotent-per-day, keep last %d in DB)", MAX_BACKUPS_RETAINED)
     while True:
         try:
-            db = get_db()
-            # Catch up a missed/failed backup right away.
-            hrs = await _hours_since_last_backup(db)
-            if hrs is None or hrs >= 24.0:
-                logger.info(
-                    "Self-heal: last backup was %s → running catch-up now",
-                    "never" if hrs is None else f"{hrs:.1f}h ago",
-                )
-                await _run_scheduled_cycle(db, reason="catch-up")
-            # Wait for the next daily 03:00 UTC window, then run.
+            # Run a (guarded) cycle now — catches up a missed day; no-op if the
+            # current local day's backup already succeeded.
+            await _run_scheduled_cycle(get_db(), reason="boot/self-heal")
+            # Sleep until the next 03:00 local window, then run again.
             sleep_for = await _seconds_until_next_run()
             await asyncio.sleep(sleep_for)
             await _run_scheduled_cycle(get_db(), reason="daily")
@@ -634,8 +663,9 @@ async def _push_latest_backup_to_drive(db, backup_id: str) -> None:
     # Use ISO created_at to format. Falls back to "Full Backup.zip" if parse fails.
     try:
         ts = datetime.fromisoformat(doc["created_at"])
-        # Format like "05-30-2026 18-09 Full Backup.zip"
-        filename = f"{ts.strftime('%m-%d-%Y %H-%M')} Full Backup.zip"
+        import app_time
+        # Format like "05-30-2026 18-09 Full Backup.zip" in LOCAL time.
+        filename = f"{app_time.local_stamp(ts)} Full Backup.zip"
     except Exception:
         filename = "Full Backup.zip"
 
@@ -723,7 +753,7 @@ def make_backup_router(
         next_run = datetime.now(timezone.utc) + timedelta(seconds=seconds)
         return {
             "schedule": "daily",
-            "schedule_human": "Every day at 03:00 UTC",
+            "schedule_human": "Every day at 03:00 (US Central time)",
             "next_run_at": next_run.isoformat(),
             "next_run_in_seconds": int(seconds),
             "max_retained": MAX_BACKUPS_RETAINED,
@@ -751,7 +781,8 @@ def make_backup_router(
         # Friendly filename — matches Drive: "MM-DD-YYYY HH-MM Full Backup.zip"
         try:
             ts_obj = datetime.fromisoformat(doc.get("created_at", ""))
-            stamp = ts_obj.strftime("%m-%d-%Y %H-%M")
+            import app_time
+            stamp = app_time.local_stamp(ts_obj)
         except Exception:
             stamp = doc.get("created_at", "").replace(":", "-").replace("+00:00", "")
         if is_zip:

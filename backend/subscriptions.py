@@ -561,16 +561,21 @@ def make_router(db, get_current_user) -> APIRouter:
     async def admin_dashboard_stats(user=Depends(get_current_user)):
         """Admin-only glanceable metrics for the build-badge popup.
 
-        All time windows are computed in UTC. `created_at` is stored as an
-        ISO8601 UTC string, so lexicographic >= comparison is valid.
-        A subscriber = any account with an ACTIVE non-free entitlement
-        (is_active == true), which includes paid renewals + lifetime/promo.
+        The "today" window is computed from LOCAL midnight (US Central). Other
+        windows (7d/30d) are rolling from now. `created_at` is stored as an
+        ISO8601 UTC string, so lexicographic >= comparison against a UTC ISO
+        boundary is valid. A subscriber = any account with an ACTIVE non-free
+        entitlement (is_active == true), incl. paid renewals + lifetime/promo.
         """
         _require_admin(user)
         from datetime import datetime, timezone, timedelta
+        import app_time
 
         now = datetime.now(timezone.utc)
-        start_today = now.replace(hour=0, minute=0, second=0, microsecond=0).isoformat()
+        # "Today" must be measured from LOCAL midnight (US Central), not UTC —
+        # otherwise the daily count resets in the early evening when UTC rolls
+        # over (e.g. "8 new users" suddenly dropping to 1).
+        start_today = app_time.start_of_local_day_utc_iso()
         since_7 = (now - timedelta(days=7)).isoformat()
         since_30 = (now - timedelta(days=30)).isoformat()
 

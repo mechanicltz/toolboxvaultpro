@@ -279,46 +279,75 @@ export default function HomeScreen() {
 
   // Scheduled-payment sub-lines + the in-app "was it processed?" prompt, all
   // derived from the dealers we already have (see the hook for details).
-  const { paymentSubByDealer } = useDealerPaymentsDue(dealers, () =>
+  const { paymentSubByDealer, paymentsDueSoon } = useDealerPaymentsDue(dealers, () =>
     load({ forceFresh: true }),
   );
 
-  // ---------- Next-route banner ----------
-  const upcomingRoutes = dealers
-    .map((d) => ({ dealer: d, when: nextRouteDate(d) }))
-    .filter((x): x is { dealer: any; when: Date } => !!x.when);
-  let nextRouteBanner: { dateStr: string; dealers: string[] } | null = null;
-  if (upcomingRoutes.length) {
-    upcomingRoutes.sort((a, b) => a.when.getTime() - b.when.getTime());
-    const earliest = upcomingRoutes[0].when.getTime();
-    const sameDay = upcomingRoutes.filter(
-      (x) => x.when.getTime() === earliest,
+  // ---------- Dealer routes within the next 7 days ----------
+  // Group by calendar day so each day shows once with all dealers on it.
+  const routesWithin7 = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const horizon = new Date(today);
+    horizon.setDate(today.getDate() + 7);
+    const upcoming = dealers
+      .map((d) => ({ dealer: d, when: nextRouteDate(d) }))
+      .filter((x): x is { dealer: any; when: Date } => !!x.when)
+      .filter((x) => x.when >= today && x.when <= horizon);
+    // Bucket by ISO date.
+    const byDate = new Map<string, { when: Date; dealers: string[] }>();
+    for (const x of upcoming) {
+      const key = x.when.toISOString().slice(0, 10);
+      if (!byDate.has(key)) byDate.set(key, { when: x.when, dealers: [] });
+      byDate.get(key)!.dealers.push(x.dealer.name);
+    }
+    return Array.from(byDate.values()).sort(
+      (a, b) => a.when.getTime() - b.when.getTime(),
     );
-    const dt = upcomingRoutes[0].when;
-    const dateStr = `${DAY_NAMES[dt.getDay()]} ${formatDateUS(
-      dt.toISOString().slice(0, 10),
-    )}`;
-    nextRouteBanner = {
-      dateStr,
-      dealers: sameDay.map((x) => x.dealer.name),
-    };
-  }
+  }, [dealers]);
 
-  // Build the home Notifications feed: next dealer route + maintenance + warranty.
+  // Build the home Notifications feed: dealer routes + payments due (next 7
+  // days) + maintenance (30 days) + warranty alerts.
   const homeNotifs = useMemo(() => {
     const arr: HomeNotif[] = [];
-    if (nextRouteBanner) {
+
+    // --- Payments due within 7 days (overdue first) ---
+    paymentsDueSoon.forEach((p) => {
+      const whenTxt =
+        p.days < 0
+          ? `overdue ${Math.abs(p.days)}d`
+          : p.days === 0
+            ? "due today"
+            : p.days === 1
+              ? "due tomorrow"
+              : `due in ${p.days}d`;
       arr.push({
-        id: "route",
+        id: `pay-${p.dealerId}-${p.accountLabel}-${p.nextDue}`,
+        icon: "cash",
+        label: p.days < 0 ? "PAYMENT OVERDUE" : "PAYMENT DUE",
+        text: `${p.dealerName} · ${p.accountLabel} · ${formatMoney(p.amount)} ${whenTxt}`,
+        color: p.days <= 0 ? theme.colors.danger : theme.colors.warning,
+        onPress: () => router.push("/(tabs)/dealers"),
+      });
+    });
+
+    // --- Dealer routes within 7 days (one row per day) ---
+    routesWithin7.forEach((r, i) => {
+      const dateStr = `${DAY_NAMES[r.when.getDay()]} ${formatDateUS(
+        r.when.toISOString().slice(0, 10),
+      )}`;
+      arr.push({
+        id: `route-${i}`,
         icon: "navigate",
-        label: "NEXT DEALER ROUTE",
-        text: `${nextRouteBanner.dealers.join(" & ")} · ${nextRouteBanner.dateStr}`,
+        label: i === 0 ? "NEXT DEALER ROUTE" : "DEALER ROUTE",
+        text: `${r.dealers.join(" & ")} · ${dateStr}`,
         // Fixed brand orange so the route icon stays orange regardless of the
         // active theme/colour variant (matches the standard accent icons).
         color: "#FF6A00",
         onPress: () => router.push("/(tabs)/dealers"),
       });
-    }
+    });
+
     const overdue = Number(mnt?.overdue || 0);
     const dueSoon = Number(mnt?.due_soon || 0);
     if (overdue > 0) {
@@ -362,7 +391,7 @@ export default function HomeScreen() {
       });
     });
     return arr;
-  }, [nextRouteBanner, mnt, warAlerts, router]);
+  }, [paymentsDueSoon, routesWithin7, mnt, warAlerts, router]);
 
 
   const visible = prefs.home_rows;
