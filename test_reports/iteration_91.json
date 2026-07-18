@@ -1,0 +1,35 @@
+{
+  "summary": "Frontend testing for Community Catalog (Phase 1) & Quick Add integration. Found and fixed a CRITICAL runtime crash on /community screen (useChipStyles is not a function), after which 6 of 7 flows pass end-to-end. Only remaining issue: category chip filter (Hand Tools) does not filter the list — click on the chip is registered visually but the returned list still contains all 15 products. Search, detail modal, cc-use -> quick-add prefill, and qa-browse back link all verified working.",
+  "backend_issues": { "critical": [], "minor": [] },
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "CommunityCatalogScreen category Chip",
+        "issue": "Tapping the 'Hand Tools' category chip does not filter the list — 15 items still returned instead of the expected ~6. Verified programmatic click on chip text lands inside the TouchableOpacity bounding box (x=217, y=213, w=64, h=14) but `activeCat` state doesn't update and API call is not re-issued with the category filter. Search filter (typing 'impact' -> 4 items) works fine, so debounce/effect wiring is OK — the click on the chip's TouchableOpacity onPress inside the horizontal ScrollView is not firing. Reference: /app/frontend/app/community/index.tsx:131 (Chip inside <ScrollView horizontal>). Suggest adding a testID prop to Chip (e.g. testID={`cc-cat-${label}`}) so it's independently tappable, and/or ensuring `keyboardShouldPersistTaps` isn't required on the horizontal ScrollView.",
+        "testID": "(missing – chips have no testID)",
+        "priority": "HIGH"
+      }
+    ],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": ["/app/test_reports/iteration_91.json"],
+  "action_items": [
+    "Investigate why the Chip TouchableOpacity onPress isn't firing on web. Verify by adding testID={`cc-cat-${label}`} to each Chip in /app/frontend/app/community/index.tsx so it's directly targetable. Confirm activeCat updates and load() is re-run.",
+    "Add testID to Chip component so both filter-tap behaviour and future regression tests are testable.",
+    "Consider migrating the misleading `useChipStyles` naming — it's not a hook, it's a Proxy object. Same applies to any other file that uses `themedStyles` behind a `useX` name (see fix applied)."
+  ],
+  "critical_code_review_comments": [
+    "app/community/index.tsx: `const useChipStyles = themedStyles(...)` returns a Proxy object, but `Chip` originally called it as `useChipStyles()`, causing a hard runtime crash on the /community route. Fixed by using `const styles = useChipStyles` (no call). The naming still suggests a hook — recommend renaming to `chipStyles` or wrapping in an actual hook.",
+    "The horizontal category chip ScrollView has no testID on individual chips, making both testing and touch-target debugging harder. Add testID={`cc-cat-${label}`} to each Chip.",
+    "quick-add.tsx: `top()`, `tagVals`, `Check` are recreated on every render inside the component (Check is defined as an inner functional component). This is fine functionally but causes remount of each Check on every keystroke; consider hoisting Check or wrapping in useCallback."
+  ],
+  "updated_files": ["/app/frontend/app/community/index.tsx"],
+  "success_rate": { "backend": "not tested (frontend only)", "frontend": "6/7 (86%)" },
+  "seed_data_creation": "None — used the 15 seeded catalog items and the existing lifetime-Pro test account mechanicltz@gmail.com.",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Login flow requires waiting ~5s after clicking auth-submit and then dismissing the 'What's New' modal (GOT IT button). The Community screen is at /community. Confirmed working: search (`cc-search`), detail modal (`cc-row-<model>` -> modal with Names/Brand/Category/Tags/MSRP/Consumable + N users counts + `cc-use`), navigation to /quick-add?model=... with prefilled qa-model and auto-loaded community match (imp-name/brand/category/tags/msrp/consumable checkboxes), and qa-browse link back to /community. The category filter chip DOES render but its onPress is not firing on web — reproduce by clicking 'Hand Tools' text and verifying rows count stays at 15.",
+  "rca_of_issue": "PRIMARY BUG (fixed): /app/frontend/app/community/index.tsx line 217 had `const styles = useChipStyles();` inside the Chip component. `useChipStyles` is a Proxy object returned by themedStyles (see /app/frontend/src/themeContext.tsx line 416), NOT a hook function, so calling it as `useChipStyles()` threw 'useChipStyles is not a function' whenever any Chip tried to render. This caused an Uncaught Error on the /community route and broke the entire screen. Fix: replaced with `const styles = useChipStyles;`. After fix, screen renders 15 products, chips are visible, search works. SECONDARY (not fixed): Chip onPress doesn't fire from Playwright-simulated mouse.click on the chip text/bounding box; suspect the horizontal ScrollView's touch handling on web is intercepting. Recommend adding testID to Chip so it's individually targetable in DOM."
+}

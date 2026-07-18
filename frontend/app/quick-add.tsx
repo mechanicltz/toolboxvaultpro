@@ -9,7 +9,7 @@ import {
   Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Stack, useRouter } from "expo-router";
+import { Stack, useRouter, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { ResponsiveContainer } from "../src/ResponsiveContainer";
 import { IndustrialBanner } from "../src/components/IndustrialBanner";
@@ -37,8 +37,9 @@ type FieldOpt = { value: string; count: number };
  */
 export default function QuickAddScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams<{ model?: string }>();
 
-  const [model, setModel] = useState("");
+  const [model, setModel] = useState(typeof params.model === "string" ? params.model : "");
   const [name, setName] = useState("");
   const [dealer, setDealer] = useState("");
   const [dateIso, setDateIso] = useState("");
@@ -174,6 +175,12 @@ export default function QuickAddScreen() {
       />
       <ResponsiveContainer>
         <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingBottom: 40 }}>
+          <TouchableOpacity style={styles.browseLink} onPress={() => router.push("/community" as any)} testID="qa-browse">
+            <Ionicons name="library-outline" size={16} color={theme.colors.accent} />
+            <Text style={styles.browseLinkText}>Browse the community catalog</Text>
+            <Ionicons name="chevron-forward" size={16} color={theme.colors.accent} />
+          </TouchableOpacity>
+
           {/* Model # */}
           <Text style={styles.label}>MODEL / PART #</Text>
           <View style={styles.inputRow}>
@@ -315,6 +322,17 @@ export default function QuickAddScreen() {
 const styles = themedStyles((c) => ({
   container: { flex: 1, backgroundColor: c.bg },
   label: { color: c.textMuted, fontSize: 11, fontWeight: "800", letterSpacing: 0.5, marginTop: 16, marginBottom: 6 },
+  browseLink: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: c.surfaceAlt,
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    marginTop: 12,
+  },
+  browseLinkText: { flex: 1, color: c.accent, fontSize: 13, fontWeight: "700" },
   inputRow: {
     flexDirection: "row",
     alignItems: "center",

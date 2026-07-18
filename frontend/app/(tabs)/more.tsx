@@ -705,6 +705,13 @@ export default function MoreScreen() {
 
         <SectionCard title="RESOURCES" testID="more-section-system">
           <SectionRow
+            icon="people-circle"
+            title="Community Catalog"
+            subtitle="Browse tools & specs shared by the community"
+            testID="more-community-catalog"
+            onPress={() => router.push("/community")}
+          />
+          <SectionRow
             icon="heart"
             title="Wish List"
             subtitle="Saved links to tools you want"

@@ -121,27 +121,52 @@ def _tool_contributions(tool: Dict[str, Any]) -> List[Dict[str, str]]:
     return deduped
 
 
+async def _top_value(rdb, key: str, field: str) -> str:
+    """Return the single value for `field` with the most distinct-user backing
+    (the 'official'/consensus value). Empty string when there are none."""
+    pipeline = [
+        {"$match": {"profile_key": key, "field": field}},
+        {"$group": {"_id": "$value_norm", "users": {"$addToSet": "$user_id"},
+                     "sample": {"$first": "$value"}}},
+    ]
+    best = ""
+    best_n = -1
+    async for row in rdb.community_contributions.aggregate(pipeline):
+        n = len(row.get("users") or [])
+        if n > best_n:
+            best_n = n
+            best = row.get("sample") or ""
+    return best
+
+
 async def _recompute_profile(rdb, key: str, *, brand: str = "", model: str = "") -> None:
-    """Recompute a profile's distinct-contributor count. Deletes the profile
-    when it has zero contributions left."""
+    """Recompute a profile's distinct-contributor count + cached display fields
+    (official_name, category, search_text) so browse/lookup stay cheap. Deletes
+    the profile when it has zero contributions left."""
     users = await rdb.community_contributions.distinct("user_id", {"profile_key": key})
     count = len(users)
     if count == 0:
         await rdb.community_profiles.delete_one({"profile_key": key})
         return
     b_norm, m_norm = (key.split("|", 1) + [""])[:2]
+    existing = await rdb.community_profiles.find_one({"profile_key": key}, {"_id": 0}) or {}
+    disp_brand = brand or existing.get("brand") or ""
+    disp_model = model or existing.get("model") or ""
+    official_name = await _top_value(rdb, key, "name")
+    category = await _top_value(rdb, key, "category")
+    search_text = " ".join([disp_brand, disp_model, official_name]).lower().strip()
     set_fields = {
         "profile_key": key,
+        "brand": disp_brand,
         "brand_norm": b_norm,
+        "model": disp_model,
         "model_norm": m_norm,
+        "official_name": official_name,
+        "category": category,
+        "search_text": search_text,
         "contributor_count": count,
         "updated_at": _now(),
     }
-    # Only overwrite display brand/model when provided (keep first-seen otherwise).
-    if brand:
-        set_fields["brand"] = brand
-    if model:
-        set_fields["model"] = model
     await rdb.community_profiles.update_one(
         {"profile_key": key},
         {"$set": set_fields, "$setOnInsert": {"created_at": _now()}},
@@ -306,19 +331,56 @@ def register_community_routes(api_router: APIRouter) -> None:
                 visible = bool(mine)
             if not visible:
                 continue
-            # Top-ranked official name for the card.
-            fields = await _ranked_fields(real_db, p["profile_key"], requester_id=user.id)
-            name_opts = fields.get("name") or []
             matches.append({
                 "profile_key": p["profile_key"],
                 "brand": p.get("brand") or "",
                 "model": p.get("model") or "",
-                "official_name": name_opts[0]["value"] if name_opts else "",
+                "official_name": p.get("official_name") or "",
                 "contributor_count": p.get("contributor_count", 0),
             })
         matches.sort(key=lambda x: -x["contributor_count"])
         branch = "none" if not matches else ("one" if len(matches) == 1 else "multiple")
         return {"branch": branch, "matches": matches}
+
+    @api_router.get("/community/browse")
+    async def community_browse(
+        q: str = "", category: str = "", limit: int = 40, skip: int = 0,
+        user: "User" = Depends(get_current_user),
+    ):
+        """Browse/search the shared catalog. Only profiles with cross-user
+        consensus (>= threshold contributors) are listed."""
+        query: Dict[str, Any] = {"contributor_count": {"$gte": CONSENSUS_THRESHOLD}}
+        if q.strip():
+            query["search_text"] = {"$regex": re.escape(q.strip().lower())}
+        if category.strip():
+            query["category"] = {"$regex": f"^{re.escape(category.strip())}$", "$options": "i"}
+        limit = max(1, min(limit, 100))
+        cursor = (
+            real_db.community_profiles.find(query, {"_id": 0})
+            .sort([("contributor_count", -1), ("official_name", 1)])
+            .skip(max(0, skip))
+            .limit(limit)
+        )
+        items = []
+        async for p in cursor:
+            items.append({
+                "profile_key": p["profile_key"],
+                "brand": p.get("brand") or "",
+                "model": p.get("model") or "",
+                "official_name": p.get("official_name") or "",
+                "category": p.get("category") or "",
+                "contributor_count": p.get("contributor_count", 0),
+            })
+        total = await real_db.community_profiles.count_documents(query)
+        return {"items": items, "total": total, "skip": skip, "limit": limit}
+
+    @api_router.get("/community/categories")
+    async def community_categories(user: "User" = Depends(get_current_user)):
+        """Distinct categories among visible catalog profiles (for the filter)."""
+        cats = await real_db.community_profiles.distinct(
+            "category", {"contributor_count": {"$gte": CONSENSUS_THRESHOLD}, "category": {"$ne": ""}}
+        )
+        return {"categories": sorted([c for c in cats if c], key=lambda s: s.lower())}
 
     @api_router.get("/community/profile/{profile_key:path}")
     async def community_profile(profile_key: str, user: "User" = Depends(get_current_user)):

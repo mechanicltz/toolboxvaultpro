@@ -963,6 +963,13 @@ export const api = {
     ),
   communityProfile: (profileKey: string) =>
     request<any>(`/community/profile/${encodeURIComponent(profileKey)}`),
+  communityBrowse: (q?: string, category?: string) =>
+    request<{ items: any[]; total: number }>(
+      `/community/browse?limit=60${q ? `&q=${encodeURIComponent(q)}` : ""}${
+        category ? `&category=${encodeURIComponent(category)}` : ""
+      }`,
+    ),
+  communityCategories: () => request<{ categories: string[] }>(`/community/categories`),
   getCommunitySettings: () => request<{ opt_in: boolean }>(`/community/settings`),
   setCommunitySettings: (optIn: boolean) =>
     request<any>(`/community/settings`, {
