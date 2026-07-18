@@ -108,8 +108,11 @@ export function AdminStatsModal() {
   // React to the header badge tap.
   useEffect(() => {
     if (openSignal === lastSignal.current) return;
+    // Don't consume the tap until we know admin status — otherwise a tap that
+    // arrives before adminWhoAmI() resolves gets swallowed and the modal never
+    // opens. Once isAdmin flips true this effect re-runs and opens correctly.
+    if (!isAdmin) return;
     lastSignal.current = openSignal;
-    if (!isAdmin) return; // silently ignore taps from non-admins
     setVisible(true);
     load();
   }, [openSignal, isAdmin, load]);
