@@ -231,9 +231,10 @@ export function BottomBar() {
               <TouchableOpacity
                 key={opt.route}
                 testID={`tab-${chooserOpen.name}-${opt.label.toLowerCase()}`}
-                style={styles.sheetRow}
-                activeOpacity={0.7}
+                style={[styles.sheetRow, opt.comingSoon && { opacity: 0.6 }]}
+                activeOpacity={opt.comingSoon ? 1 : 0.7}
                 onPress={() => {
+                  if (opt.comingSoon) return; // gated — not navigable yet
                   setChooserOpen(null);
                   router.push(opt.route as never);
                 }}
@@ -242,10 +243,19 @@ export function BottomBar() {
                   <Ionicons name={opt.icon} size={22} color={theme.colors.accent} />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.sheetRowTitle}>{opt.label}</Text>
+                  <View style={styles.sheetTitleRow}>
+                    <Text style={styles.sheetRowTitle}>{opt.label}</Text>
+                    {opt.comingSoon && (
+                      <View style={styles.soonBadge}>
+                        <Text style={styles.soonBadgeText}>COMING SOON</Text>
+                      </View>
+                    )}
+                  </View>
                   <Text style={styles.sheetRowSub}>{opt.sub}</Text>
                 </View>
-                <Ionicons name="chevron-forward" size={20} color={theme.colors.textMuted} />
+                {!opt.comingSoon && (
+                  <Ionicons name="chevron-forward" size={20} color={theme.colors.textMuted} />
+                )}
               </TouchableOpacity>
             ))}
             <TouchableOpacity
@@ -354,10 +364,29 @@ const styles = themedStyles((c) => ({
     alignItems: "center",
     justifyContent: "center",
   },
+  sheetTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
   sheetRowTitle: {
     color: c.textPrimary,
     fontWeight: "800",
     fontSize: 11,
+  },
+  soonBadge: {
+    backgroundColor: c.surface,
+    borderWidth: 1,
+    borderColor: c.border,
+    borderRadius: 4,
+    paddingHorizontal: 5,
+    paddingVertical: 1,
+  },
+  soonBadgeText: {
+    color: c.textMuted,
+    fontSize: 7,
+    fontWeight: "900",
+    letterSpacing: 0.5,
   },
   sheetRowSub: {
     color: c.textSecondary,
