@@ -230,7 +230,7 @@ export function BottomBar() {
             <Text style={styles.sheetTitle}>{chooserOpen?.chooser?.title || "Open"}</Text>
             {chooserOpen?.chooser?.options.map((opt) => (
               <TouchableOpacity
-                key={opt.route}
+                key={opt.label}
                 testID={`tab-${chooserOpen.name}-${opt.label.toLowerCase()}`}
                 style={[styles.sheetRow, opt.comingSoon && { opacity: 0.7 }]}
                 activeOpacity={0.7}
