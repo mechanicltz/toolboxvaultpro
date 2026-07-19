@@ -49,6 +49,9 @@ export default function QuickAddScreen() {
   const [dealers, setDealers] = useState<any[]>([]);
   const [showDealerModal, setShowDealerModal] = useState(false);
   const [newDealerName, setNewDealerName] = useState("");
+  // Community dealer awaiting reconciliation (shown in a custom modal so it
+  // works on web + native; RN Alert with buttons is silent on react-native-web).
+  const [reconcile, setReconcile] = useState<string | null>(null);
   const [dateIso, setDateIso] = useState("");
   const [price, setPrice] = useState("");
   const [isBundle, setIsBundle] = useState(false);
@@ -113,28 +116,26 @@ export default function QuickAddScreen() {
       setDealerName(exact.name);
       return;
     }
-    Alert.alert(
-      "Dealer from community",
-      `This product is commonly bought from "${dn}", which isn't in your dealer list. Do you have this dealer saved under a different name?`,
-      [
-        { text: "Yes — pick mine", onPress: () => setShowDealerModal(true) },
-        {
-          text: `Create "${dn}"`,
-          onPress: async () => {
-            try {
-              const created = await api.createDealer({ name: dn });
-              setDealers((prev) => [...prev, created]);
-              setDealerId(created.id);
-              setDealerName(created.name);
-            } catch (e: any) {
-              Alert.alert("Couldn't create dealer", String(e?.message || e));
-            }
-          },
-        },
-        { text: "Skip", style: "cancel" },
-      ],
-    );
+    // No exact match — ask the user (custom modal, web-safe) whether they have
+    // it under a different name (pick) or want to create it.
+    setReconcile(dn);
   }, [dealers]);
+
+  // Create the community dealer as-is and select it.
+  const createReconciledDealer = useCallback(async () => {
+    const dn = (reconcile || "").trim();
+    if (!dn) return;
+    try {
+      const created = await api.createDealer({ name: dn });
+      setDealers((prev) => [...prev, created]);
+      setDealerId(created.id);
+      setDealerName(created.name);
+    } catch (e: any) {
+      Alert.alert("Couldn't create dealer", String(e?.message || e));
+    } finally {
+      setReconcile(null);
+    }
+  }, [reconcile]);
 
   const selectMatch = useCallback(async (m: Match) => {
     setSelected(m);
@@ -420,6 +421,40 @@ export default function QuickAddScreen() {
           </TouchableOpacity>
       </KeyboardAwareScrollView>
 
+      {/* Dealer reconciliation (community match had a dealer not in the list) */}
+      <Modal visible={!!reconcile} transparent animationType="fade" onRequestClose={() => setReconcile(null)}>
+        <View style={styles.centerBg}>
+          <View style={styles.reconcileCard}>
+            <Ionicons name="business" size={28} color={theme.colors.accent} style={{ alignSelf: "center" }} />
+            <Text style={styles.reconcileTitle}>DEALER FROM COMMUNITY</Text>
+            <Text style={styles.reconcileBody}>
+              This product is commonly bought from{" "}
+              <Text style={{ color: theme.colors.textPrimary, fontWeight: "800" }}>{`"${reconcile}"`}</Text>
+              , which isn{"'"}t in your dealer list. Have it saved under a different name?
+            </Text>
+            <TouchableOpacity
+              testID="qa-reconcile-pick"
+              style={styles.reconcileBtn}
+              onPress={() => { setReconcile(null); setShowDealerModal(true); }}
+            >
+              <Ionicons name="list" size={18} color={theme.colors.bg} />
+              <Text style={styles.reconcileBtnText}>YES — PICK FROM MY DEALERS</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              testID="qa-reconcile-create"
+              style={[styles.reconcileBtn, styles.reconcileBtnAlt]}
+              onPress={createReconciledDealer}
+            >
+              <Ionicons name="add-circle" size={18} color={theme.colors.accent} />
+              <Text style={[styles.reconcileBtnText, { color: theme.colors.accent }]}>{`CREATE "${reconcile}"`}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity testID="qa-reconcile-skip" style={styles.reconcileSkip} onPress={() => setReconcile(null)}>
+              <Text style={styles.reconcileSkipText}>SKIP</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
       {/* Dealer picker */}
       <Modal visible={showDealerModal} transparent animationType="slide" onRequestClose={() => setShowDealerModal(false)}>
         <View style={styles.modalBg}>
@@ -516,6 +551,18 @@ const styles = themedStyles((c) => ({
   bundleLabel: { color: c.textPrimary, fontSize: 13.5, fontWeight: "800" },
   bundleSub: { color: c.textMuted, fontSize: 11, marginTop: 2 },
   modalBg: { flex: 1, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "flex-end" },
+  centerBg: { flex: 1, backgroundColor: "rgba(0,0,0,0.6)", justifyContent: "center", padding: 24 },
+  reconcileCard: { backgroundColor: c.surface, borderRadius: 16, padding: 22, borderWidth: 1, borderColor: c.border },
+  reconcileTitle: { color: c.textPrimary, fontSize: 14, fontWeight: "900", letterSpacing: 0.8, textAlign: "center", marginTop: 10 },
+  reconcileBody: { color: c.textSecondary, fontSize: 13, lineHeight: 19, textAlign: "center", marginTop: 8, marginBottom: 18 },
+  reconcileBtn: {
+    flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8,
+    backgroundColor: c.accent, borderRadius: 10, paddingVertical: 13, marginBottom: 10,
+  },
+  reconcileBtnAlt: { backgroundColor: "transparent", borderWidth: 1, borderColor: c.accent },
+  reconcileBtnText: { color: c.bg, fontSize: 12, fontWeight: "900", letterSpacing: 0.4 },
+  reconcileSkip: { paddingVertical: 10, alignItems: "center" },
+  reconcileSkipText: { color: c.textMuted, fontSize: 12, fontWeight: "800", letterSpacing: 1 },
   modalCard: { backgroundColor: c.surface, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20, paddingBottom: 34 },
   modalHead: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 10 },
   modalTitle: { color: c.textPrimary, fontSize: 14, fontWeight: "900", letterSpacing: 0.8 },
