@@ -108,6 +108,7 @@ def _tool_contributions(tool: Dict[str, Any]) -> List[Dict[str, str]]:
         # store MSRP as a clean numeric string so identical prices collide
         add("msrp", f"{float(msrp):.2f}")
     add("consumable", "Yes" if tool.get("is_consumable") else "No")
+    add("bundle", "Yes" if tool.get("is_bundle") else "No")
 
     # De-dupe within one tool by (field, normalized value).
     seen = set()
@@ -154,6 +155,7 @@ async def _recompute_profile(rdb, key: str, *, brand: str = "", model: str = "")
     disp_model = model or existing.get("model") or ""
     official_name = await _top_value(rdb, key, "name")
     category = await _top_value(rdb, key, "category")
+    is_bundle = (await _top_value(rdb, key, "bundle")) == "Yes"
     search_text = " ".join([disp_brand, disp_model, official_name]).lower().strip()
     set_fields = {
         "profile_key": key,
@@ -163,6 +165,7 @@ async def _recompute_profile(rdb, key: str, *, brand: str = "", model: str = "")
         "model_norm": m_norm,
         "official_name": official_name,
         "category": category,
+        "is_bundle": is_bundle,
         "search_text": search_text,
         "contributor_count": count,
         "updated_at": _now(),
@@ -263,6 +266,8 @@ async def _ranked_fields(rdb, key: str, *, requester_id: Optional[str]) -> Dict[
     grouped: Dict[str, List[Dict[str, Any]]] = {}
     async for row in rdb.community_contributions.aggregate(pipeline):
         field = row["_id"]["field"]
+        if field == "bundle":
+            continue  # internal flag, surfaced via profile.is_bundle (not a checkbox)
         users = row.get("users") or []
         count = len(users)
         visible = count >= CONSENSUS_THRESHOLD or (requester_id in users)
@@ -336,6 +341,7 @@ def register_community_routes(api_router: APIRouter) -> None:
                 "brand": p.get("brand") or "",
                 "model": p.get("model") or "",
                 "official_name": p.get("official_name") or "",
+                "is_bundle": bool(p.get("is_bundle")),
                 "contributor_count": p.get("contributor_count", 0),
             })
         matches.sort(key=lambda x: -x["contributor_count"])
@@ -393,6 +399,7 @@ def register_community_routes(api_router: APIRouter) -> None:
             "profile_key": profile_key,
             "brand": p.get("brand") or "",
             "model": p.get("model") or "",
+            "is_bundle": bool(p.get("is_bundle")),
             "contributor_count": p.get("contributor_count", 0),
             "fields": fields,
         }

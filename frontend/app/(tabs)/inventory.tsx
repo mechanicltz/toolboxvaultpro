@@ -1494,7 +1494,7 @@ export default function InventoryScreen() {
       ) : (
         // Non-skinned round "+" FAB — matches the Contacts/Wishlist page on ALL
         // themes (per user: keep this button un-skinned).
-        <AddFab testID="add-item-fab" onPress={() => setShowAddChooser(true)} />
+        <AddFab testID="add-item-fab" onPress={() => router.push("/quick-add")} />
       )}
 
       <AddChooser visible={showAddChooser} onClose={() => setShowAddChooser(false)} />

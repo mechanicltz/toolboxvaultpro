@@ -62,11 +62,35 @@ const TABS: {
   route: string;
   altRoutes?: string[];
   // If set, tapping the tab opens an inline chooser instead of navigating.
-  chooser?: { title: string; options: { label: string; sub: string; icon: IconName; route: string }[] };
+  chooser?: { title: string; options: { label: string; sub: string; icon: IconName; route: string; comingSoon?: boolean }[] };
 }[] = [
   { name: "home", label: "DASHBOARD", icon: "home", route: "/" },
   { name: "inventory", label: "INVENTORY", icon: "construct", route: "/inventory" },
-  { name: "catalog", label: "CATALOG", icon: "library", route: "/community" },
+  {
+    name: "catalog",
+    label: "CATALOG",
+    icon: "library",
+    route: "/community",
+    altRoutes: ["/community"],
+    chooser: {
+      title: "Catalogs",
+      options: [
+        {
+          label: "Community Catalog",
+          sub: "Tools & specs shared by the community",
+          icon: "people-circle",
+          route: "/community",
+        },
+        {
+          label: "Dealer Catalogs",
+          sub: "Search dealer product catalogs",
+          icon: "briefcase",
+          route: "/community",
+          comingSoon: true,
+        },
+      ],
+    },
+  },
   {
     name: "contacts",
     label: "CONTACTS",

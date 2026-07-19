@@ -90,6 +90,9 @@ async def main():
                 "tag_names": tags,
                 "msrp_price": float(msrp),
                 "is_consumable": cons,
+                # Treat "Set" products as bundles so the bundle auto-check flow
+                # can be tested against real catalog data.
+                "is_bundle": "Set" in name,
                 "created_at": _now(),
             }
             await db.tools.insert_one(tool)
