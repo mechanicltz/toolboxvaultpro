@@ -22,23 +22,26 @@ USERS = [
     {"id": "seed-comm-user-c", "email": "seed_comm_c@example.com", "name": "Seed C"},
 ]
 
-# (brand, model, name, category, tags, msrp, consumable)
+# (brand, model, name, category, tags, msrp, consumable, dealer)
+# The dealer is the same across a product's owners so it reaches cross-user
+# consensus and surfaces on the profile — this powers the Quick Add dealer
+# reconciliation flow (match a community dealer to the user's own dealers).
 PRODUCTS = [
-    ("Milwaukee", "2767-20", 'M18 FUEL High Torque Impact Wrench 1/2"', "Power Tools", ["Impact", "Cordless"], 399, False),
-    ("Milwaukee", "2860-20", 'M18 FUEL Mid-Torque Impact Wrench 3/8"', "Power Tools", ["Impact", "Cordless"], 279, False),
-    ("DeWalt", "DCF899B", '20V MAX Impact Wrench 1/2"', "Power Tools", ["Impact", "Cordless"], 299, False),
-    ("Milwaukee", "2853-20", 'M18 FUEL 1/4" Hex Impact Driver', "Power Tools", ["Driver", "Cordless"], 179, False),
-    ("DeWalt", "DCD791B", "20V MAX XR Drill/Driver", "Power Tools", ["Drill", "Cordless"], 169, False),
-    ("Makita", "XPH07Z", "18V LXT Hammer Driver-Drill", "Power Tools", ["Drill", "Cordless"], 199, False),
-    ("Snap-on", "FHF80", '3/8" Drive Ratchet', "Hand Tools", ["Ratchet"], 189, False),
-    ("Snap-on", "FHLF80", '3/8" Long Handle Ratchet', "Hand Tools", ["Ratchet"], 219, False),
-    ("Snap-on", "SOEX710", "10pc Combination Wrench Set", "Hand Tools", ["Wrench", "Set"], 449, False),
-    ("Klein Tools", "D213-9NE", 'Lineman\'s Pliers 9"', "Hand Tools", ["Pliers"], 39, False),
-    ("Gearwrench", "9012", "12pc Ratcheting Wrench Set", "Hand Tools", ["Wrench", "Set"], 129, False),
-    ("Milwaukee", "48-22-4025", "4pc Screwdriver Set", "Hand Tools", ["Screwdriver", "Set"], 29, False),
-    ("Fluke", "87V", "Digital Multimeter", "Test Equipment", ["Electrical"], 449, False),
-    ("WD-40", "490057", "Multi-Use Lubricant", "Consumables", ["Lubricant"], 8, True),
-    ("Loctite", "242", "Threadlocker Blue", "Consumables", ["Adhesive"], 12, True),
+    ("Milwaukee", "2767-20", 'M18 FUEL High Torque Impact Wrench 1/2"', "Power Tools", ["Impact", "Cordless"], 399, False, "Home Depot"),
+    ("Milwaukee", "2860-20", 'M18 FUEL Mid-Torque Impact Wrench 3/8"', "Power Tools", ["Impact", "Cordless"], 279, False, "Home Depot"),
+    ("DeWalt", "DCF899B", '20V MAX Impact Wrench 1/2"', "Power Tools", ["Impact", "Cordless"], 299, False, "Acme Tools"),
+    ("Milwaukee", "2853-20", 'M18 FUEL 1/4" Hex Impact Driver', "Power Tools", ["Driver", "Cordless"], 179, False, "Home Depot"),
+    ("DeWalt", "DCD791B", "20V MAX XR Drill/Driver", "Power Tools", ["Drill", "Cordless"], 169, False, "Lowe's"),
+    ("Makita", "XPH07Z", "18V LXT Hammer Driver-Drill", "Power Tools", ["Drill", "Cordless"], 199, False, "Acme Tools"),
+    ("Snap-on", "FHF80", '3/8" Drive Ratchet', "Hand Tools", ["Ratchet"], 189, False, "Snap-on Truck"),
+    ("Snap-on", "FHLF80", '3/8" Long Handle Ratchet', "Hand Tools", ["Ratchet"], 219, False, "Snap-on Truck"),
+    ("Snap-on", "SOEX710", "10pc Combination Wrench Set", "Hand Tools", ["Wrench", "Set"], 449, False, "Snap-on Truck"),
+    ("Klein Tools", "D213-9NE", 'Lineman\'s Pliers 9"', "Hand Tools", ["Pliers"], 39, False, "Home Depot"),
+    ("Gearwrench", "9012", "12pc Ratcheting Wrench Set", "Hand Tools", ["Wrench", "Set"], 129, False, "Amazon"),
+    ("Milwaukee", "48-22-4025", "4pc Screwdriver Set", "Hand Tools", ["Screwdriver", "Set"], 29, False, "Home Depot"),
+    ("Fluke", "87V", "Digital Multimeter", "Test Equipment", ["Electrical"], 449, False, "Grainger"),
+    ("WD-40", "490057", "Multi-Use Lubricant", "Consumables", ["Lubricant"], 8, True, "Home Depot"),
+    ("Loctite", "242", "Threadlocker Blue", "Consumables", ["Adhesive"], 12, True, "Home Depot"),
 ]
 
 # Which users own which product index (>=2 users -> passes consensus threshold).
@@ -78,7 +81,7 @@ async def main():
 
     # 3) Insert tools + dual-write contributions (mirrors production path).
     n_tools = 0
-    for idx, (brand, model, name, cat, tags, msrp, cons) in enumerate(PRODUCTS):
+    for idx, (brand, model, name, cat, tags, msrp, cons, dealer) in enumerate(PRODUCTS):
         for uid in owners_for(idx):
             tool = {
                 "id": str(uuid.uuid4()),
@@ -90,6 +93,7 @@ async def main():
                 "tag_names": tags,
                 "msrp_price": float(msrp),
                 "is_consumable": cons,
+                "dealer_name": dealer,
                 # Treat "Set" products as bundles so the bundle auto-check flow
                 # can be tested against real catalog data.
                 "is_bundle": "Set" in name,

@@ -9,6 +9,7 @@ import {
   Pressable,
   Dimensions,
   StatusBar,
+  Alert,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -231,10 +232,13 @@ export function BottomBar() {
               <TouchableOpacity
                 key={opt.route}
                 testID={`tab-${chooserOpen.name}-${opt.label.toLowerCase()}`}
-                style={[styles.sheetRow, opt.comingSoon && { opacity: 0.6 }]}
-                activeOpacity={opt.comingSoon ? 1 : 0.7}
+                style={[styles.sheetRow, opt.comingSoon && { opacity: 0.7 }]}
+                activeOpacity={0.7}
                 onPress={() => {
-                  if (opt.comingSoon) return; // gated — not navigable yet
+                  if (opt.comingSoon) {
+                    Alert.alert("Coming soon", "Dealer catalogs are coming soon.");
+                    return;
+                  }
                   setChooserOpen(null);
                   router.push(opt.route as never);
                 }}

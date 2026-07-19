@@ -199,8 +199,11 @@ export default function QuickAddScreen() {
         if (imp.consumable) payload.is_consumable = top("consumable") === "Yes";
       }
       const created = await api.createTool(payload);
-      // Open the full item so they can add anything else (photos, warranty…).
-      router.replace(`/tool/${created.id}?startEdit=1` as any);
+      // Open the full item so they can add anything else. When it's a set,
+      // route into the bundle/set editor exactly like the normal Add-Bundle
+      // flow (startFresh) so the user can add the items inside the set.
+      const q = isBundle ? "startEdit=1&startFresh=1" : "startEdit=1";
+      router.replace(`/tool/${created.id}?${q}` as any);
     } catch (e: any) {
       Alert.alert("Couldn't add item", String(e?.message || e));
       setSaving(false);
